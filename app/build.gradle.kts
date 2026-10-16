@@ -8,7 +8,6 @@ plugins {
 android {
     namespace = "com.abhisheksati.mydoc"
     compileSdk = 35
-    buildToolsVersion = "36.0.0"
 
     defaultConfig {
         applicationId = "com.abhisheksati.mydoc"
