@@ -30,11 +30,23 @@ class MuPdfRenderer(
             if (filePath != null && File(filePath).exists()) {
                 Document.openDocument(filePath)
             } else if (documentBytes != null) {
-                Document.openDocument(documentBytes, mimeType)
+                try {
+                    Document.openDocument(documentBytes, mimeType)
+                } catch (_: Throwable) {
+                    try {
+                        Document.openDocument(documentBytes, "application/pdf")
+                    } catch (_: Throwable) {
+                        try {
+                            Document.openDocument(documentBytes, "pdf")
+                        } catch (_: Throwable) {
+                            null
+                        }
+                    }
+                }
             } else {
                 null
             }
-        } catch (e: Exception) {
+        } catch (_: Throwable) {
             null
         }
     }

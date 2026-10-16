@@ -67,18 +67,55 @@ class ViewerViewModel(
             withContext(Dispatchers.IO) {
                 try {
                     val uri = Uri.parse(documentFile.uri)
-                    val inputStream = context.contentResolver.openInputStream(uri)
-                        ?: throw IllegalStateException("Could not open input stream for URI: $uri")
+                    val cacheFile = java.io.File(context.cacheDir, "temp_view_${System.currentTimeMillis()}.pdf")
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        cacheFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    } ?: throw IllegalStateException("Could not open file input stream for: $uri")
 
-                    val bytes = inputStream.use { it.readBytes() }
+                    var activeRenderer: DocumentRenderer? = null
 
-                    val mupdf = MuPdfRenderer(
-                        documentBytes = bytes,
-                        mimeType = documentFile.mimeType
-                    )
-                    renderer = mupdf
+                    // 1. First attempt: MuPDF Fitz
+                    try {
+                        val mupdf = MuPdfRenderer(
+                            filePath = cacheFile.absolutePath,
+                            mimeType = "application/pdf"
+                        )
+                        if (mupdf.pageCount > 0 || mupdf.isPasswordProtected) {
+                            activeRenderer = mupdf
+                        } else {
+                            mupdf.close()
+                        }
+                    } catch (_: Throwable) {
+                    }
 
-                    if (mupdf.isPasswordProtected) {
+                    // 2. Fallback attempt: Built-in Android OS PdfRenderer
+                    if (activeRenderer == null) {
+                        try {
+                            val nativeRenderer = com.abhisheksati.mydoc.rendering.engine.AndroidPdfRenderer(cacheFile)
+                            if (nativeRenderer.pageCount > 0) {
+                                activeRenderer = nativeRenderer
+                            } else {
+                                nativeRenderer.close()
+                            }
+                        } catch (_: Throwable) {
+                        }
+                    }
+
+                    if (activeRenderer == null || activeRenderer.pageCount == 0) {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                errorMessage = "Unable to display document pages. The file may be empty, encrypted, or corrupted."
+                            )
+                        }
+                        return@withContext
+                    }
+
+                    renderer = activeRenderer
+
+                    if (activeRenderer.isPasswordProtected) {
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
@@ -86,8 +123,8 @@ class ViewerViewModel(
                             )
                         }
                     } else {
-                        val totalPages = mupdf.pageCount
-                        val outline = mupdf.getOutline()
+                        val totalPages = activeRenderer.pageCount
+                        val outline = activeRenderer.getOutline()
                         val initialPage = savedState?.lastPage?.coerceIn(0, maxOf(0, totalPages - 1)) ?: 0
                         val defaultMode = (context.applicationContext as? com.abhisheksati.mydoc.MyDocApp)?.settingsRepository?.defaultReadingMode?.value ?: ReadingMode.NORMAL
                         val initialMode = savedState?.readingMode ?: defaultMode

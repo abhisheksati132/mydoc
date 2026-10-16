@@ -228,6 +228,15 @@ fun PdfViewerScreen(
                     }
                 }
             }
+        } else {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = "No pages found in this document.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(Spacing.large)
+                )
+            }
         }
 
         // Top Toolbar
