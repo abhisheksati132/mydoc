@@ -22,6 +22,7 @@ import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.ui.home.HomeScreen
 import com.abhisheksati.mydoc.ui.theme.MyDocTheme
 import com.abhisheksati.mydoc.ui.viewer.DocumentPreviewScreen
+import com.abhisheksati.mydoc.update.UpdateManager
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import kotlinx.coroutines.launch
 
@@ -32,11 +33,20 @@ class MainActivity : ComponentActivity() {
         HomeViewModel.Factory(app.documentRepository)
     }
 
+    private lateinit var updateManager: UpdateManager
     private var currentDocument by mutableStateOf<DocumentFile?>(null)
+    private var isSettingsOpen by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        updateManager = UpdateManager(this)
+
+        // Silent launch update check (throttled to max once every 24h)
+        lifecycleScope.launch {
+            updateManager.checkForUpdates(isLaunchCheck = true)
+        }
 
         handleIncomingIntent(intent)
 
@@ -44,7 +54,12 @@ class MainActivity : ComponentActivity() {
             MyDocTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val activeDoc = currentDocument
-                    if (activeDoc != null) {
+                    if (isSettingsOpen) {
+                        com.abhisheksati.mydoc.ui.settings.SettingsScreen(
+                            updateManager = updateManager,
+                            onBackClick = { isSettingsOpen = false }
+                        )
+                    } else if (activeDoc != null) {
                         DocumentPreviewScreen(
                             document = activeDoc,
                             onBackClick = { currentDocument = null },
@@ -55,9 +70,7 @@ class MainActivity : ComponentActivity() {
                         HomeScreen(
                             viewModel = homeViewModel,
                             onDocumentClick = { doc -> currentDocument = doc },
-                            onSettingsClick = {
-                                Toast.makeText(this, "Settings (Phase 6)", Toast.LENGTH_SHORT).show()
-                            },
+                            onSettingsClick = { isSettingsOpen = true },
                             onShareDocument = { doc -> shareDocument(doc) }
                         )
                     }
