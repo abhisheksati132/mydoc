@@ -12,8 +12,10 @@ materialIconsExtended = "1.7.6"
 junit = "4.13.2"
 androidxJunit = "1.2.1"
 espresso = "3.6.1"
+mupdf = "1.24.4"
 
 [libraries]
+mupdf-fitz = { group = "com.artifex.mupdf", name = "fitz", version.ref = "mupdf" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
 androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle" }

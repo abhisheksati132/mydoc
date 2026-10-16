@@ -60,11 +60,10 @@ class MainActivity : ComponentActivity() {
                             onBackClick = { isSettingsOpen = false }
                         )
                     } else if (activeDoc != null) {
-                        DocumentPreviewScreen(
+                        com.abhisheksati.mydoc.ui.viewer.DocumentViewerScreen(
                             document = activeDoc,
                             onBackClick = { currentDocument = null },
-                            onToggleFavorite = { homeViewModel.toggleFavorite(activeDoc) },
-                            onShare = { shareDocument(activeDoc) }
+                            onShareClick = { shareDocument(activeDoc) }
                         )
                     } else {
                         HomeScreen(
