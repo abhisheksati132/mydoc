@@ -40,6 +40,13 @@ class PackageInstallerHelper(private val context: Context) {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
+
+        val resInfoList = context.packageManager.queryIntentActivities(installIntent, 0)
+        for (resolveInfo in resInfoList) {
+            val pkg = resolveInfo.activityInfo.packageName
+            context.grantUriPermission(pkg, apkUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
         context.startActivity(installIntent)
     }
 }

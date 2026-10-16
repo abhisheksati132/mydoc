@@ -9,3 +9,10 @@
     <init>();
 }
 -keep class * extends androidx.room.RoomDatabase
+
+# MuPDF Fitz JNI native bindings
+-keep class com.artifex.mupdf.fitz.** { *; }
+-keepclassmembers class com.artifex.mupdf.fitz.** { *; }
+
+# Domain models
+-keep class com.abhisheksati.mydoc.domain.model.** { *; }

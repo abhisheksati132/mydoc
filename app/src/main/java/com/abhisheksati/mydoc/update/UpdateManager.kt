@@ -11,7 +11,7 @@ import java.io.File
 sealed interface UpdateUiState {
     object Idle : UpdateUiState
     object Checking : UpdateUiState
-    data class NoUpdate(val currentVersion: String) : UpdateUiState
+    data class NoUpdate(val currentVersion: String, val latestRelease: AppRelease? = null) : UpdateUiState
     data class UpdateAvailable(val release: AppRelease, val currentVersion: String) : UpdateUiState
     data class Downloading(val progressPercent: Int, val downloadedBytes: Long, val totalBytes: Long) : UpdateUiState
     data class ReadyToInstall(val apkFile: File, val release: AppRelease) : UpdateUiState
@@ -55,14 +55,14 @@ class UpdateManager(
         val result = updateService.fetchLatestRelease()
         result.onSuccess { release ->
             if (release == null) {
-                _state.value = UpdateUiState.NoUpdate(currentVersionName)
+                _state.value = UpdateUiState.NoUpdate(currentVersionName, null)
                 return
             }
 
             if (isNewerVersion(release.versionName, currentVersionName)) {
                 _state.value = UpdateUiState.UpdateAvailable(release, currentVersionName)
             } else {
-                _state.value = UpdateUiState.NoUpdate(currentVersionName)
+                _state.value = UpdateUiState.NoUpdate(currentVersionName, release)
             }
         }.onFailure { error ->
             if (!isLaunchCheck) {

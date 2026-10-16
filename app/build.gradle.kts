@@ -5,16 +5,37 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+fun getGitCommitCount(): Int {
+    return try {
+        val process = ProcessBuilder("git", "rev-list", "--count", "HEAD").start()
+        val count = process.inputStream.bufferedReader().readText().trim().toIntOrNull()
+        count ?: 1
+    } catch (_: Exception) {
+        1
+    }
+}
+
+val commitCount = getGitCommitCount()
+
 android {
     namespace = "com.abhisheksati.mydoc"
     compileSdk = 35
+
+    signingConfigs {
+        create("shared") {
+            storeFile = file("keystore/debug.keystore")
+            storePassword = "android"
+            keyAlias = "mydoc"
+            keyPassword = "android"
+        }
+    }
 
     defaultConfig {
         applicationId = "com.abhisheksati.mydoc"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = commitCount
+        versionName = "1.0.$commitCount"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -26,6 +47,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("shared")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -33,7 +55,7 @@ android {
         }
         debug {
             isMinifyEnabled = false
-            applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("shared")
         }
     }
 

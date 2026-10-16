@@ -18,7 +18,8 @@ class ApkDownloader(private val context: Context) {
         onProgress: (bytesDownloaded: Long, totalBytes: Long) -> Unit
     ): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
-            val updatesDir = File(context.cacheDir, "updates").apply {
+            val baseDir = context.externalCacheDir ?: context.cacheDir
+            val updatesDir = File(baseDir, "updates").apply {
                 if (!exists()) mkdirs()
             }
             val destinationFile = File(updatesDir, targetFileName)
@@ -40,7 +41,7 @@ class ApkDownloader(private val context: Context) {
                 }
 
                 val code = connection.responseCode
-                if (code == HttpURLConnection.HTTP_MOVED_PERM || code == HttpURLConnection.HTTP_MOVED_TEMP || code == 307 || code == 308) {
+                if (code == HttpURLConnection.HTTP_MOVED_PERM || code == HttpURLConnection.HTTP_MOVED_TEMP || code == HttpURLConnection.HTTP_SEE_OTHER || code == 307 || code == 308) {
                     val location = connection.getHeaderField("Location")
                         ?: throw IllegalStateException("Redirected with no Location header")
                     currentUrl = location

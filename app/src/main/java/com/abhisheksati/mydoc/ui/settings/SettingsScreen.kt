@@ -181,11 +181,22 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Spacer(modifier = Modifier.height(Spacing.small))
-                        OutlinedButton(
-                            onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
-                            shape = RoundedCornerShape(6.dp)
-                        ) {
-                            Text("Check again")
+                        Row {
+                            OutlinedButton(
+                                onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text("Check again")
+                            }
+                            if (state.latestRelease != null) {
+                                Spacer(modifier = Modifier.width(Spacing.small))
+                                OutlinedButton(
+                                    onClick = { scope.launch { updateManager.downloadAndInstall(state.latestRelease) } },
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Text("Reinstall APK")
+                                }
+                            }
                         }
                     }
                 }
