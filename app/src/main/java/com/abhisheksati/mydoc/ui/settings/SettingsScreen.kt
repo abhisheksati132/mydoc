@@ -1,5 +1,8 @@
 package com.abhisheksati.mydoc.ui.settings
 
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -115,6 +118,60 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            }
+
+            val isLegacyDebugInstalled = remember {
+                try {
+                    context.packageManager.getPackageInfo("com.abhisheksati.mydoc.debug", 0)
+                    true
+                } catch (_: Exception) {
+                    false
+                }
+            }
+
+            if (isLegacyDebugInstalled) {
+                Spacer(modifier = Modifier.height(Spacing.medium))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outline,
+                            shape = RoundedCornerShape(6.dp)
+                        )
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(6.dp)
+                        )
+                        .padding(Spacing.medium)
+                ) {
+                    Column {
+                        Text(
+                            text = "Old Duplicate App Detected",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.extraSmall))
+                        Text(
+                            text = "The initial preview build (com.abhisheksati.mydoc.debug) is still on your device. Tap below to uninstall it.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.small))
+                        Button(
+                            onClick = {
+                                val uninstallIntent = Intent(Intent.ACTION_DELETE).apply {
+                                    data = Uri.parse("package:com.abhisheksati.mydoc.debug")
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                context.startActivity(uninstallIntent)
+                            },
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text("Uninstall Old Duplicate")
+                        }
+                    }
                 }
             }
 
