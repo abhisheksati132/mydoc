@@ -20,8 +20,9 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.ui.home.HomeScreen
+import com.abhisheksati.mydoc.ui.settings.SettingsScreen
 import com.abhisheksati.mydoc.ui.theme.MyDocTheme
-import com.abhisheksati.mydoc.ui.viewer.DocumentPreviewScreen
+import com.abhisheksati.mydoc.ui.viewer.DocumentViewerScreen
 import com.abhisheksati.mydoc.update.UpdateManager
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import kotlinx.coroutines.launch
@@ -55,12 +56,12 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val activeDoc = currentDocument
                     if (isSettingsOpen) {
-                        com.abhisheksati.mydoc.ui.settings.SettingsScreen(
+                        SettingsScreen(
                             updateManager = updateManager,
                             onBackClick = { isSettingsOpen = false }
                         )
                     } else if (activeDoc != null) {
-                        com.abhisheksati.mydoc.ui.viewer.DocumentViewerScreen(
+                        DocumentViewerScreen(
                             document = activeDoc,
                             onBackClick = { currentDocument = null },
                             onShareClick = { shareDocument(activeDoc) }
