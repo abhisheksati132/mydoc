@@ -4,6 +4,8 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.abhisheksati.mydoc.data.local.DocumentSortOrder
+import com.abhisheksati.mydoc.data.local.SettingsRepository
 import com.abhisheksati.mydoc.domain.model.DocumentCategory
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.repository.DocumentRepository
@@ -18,12 +20,14 @@ data class HomeUiState(
     val selectedCategory: DocumentCategory = DocumentCategory.ALL,
     val searchQuery: String = "",
     val documents: List<DocumentFile> = emptyList(),
+    val sortOrder: DocumentSortOrder = DocumentSortOrder.LAST_OPENED,
     val isSearching: Boolean = false,
     val isLoading: Boolean = false
 )
 
 class HomeViewModel(
-    private val repository: DocumentRepository
+    private val repository: DocumentRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _selectedCategory = MutableStateFlow(DocumentCategory.ALL)
@@ -33,8 +37,9 @@ class HomeViewModel(
         repository.getRecents(),
         repository.getFavorites(),
         _selectedCategory,
-        _searchQuery
-    ) { recents, favorites, category, query ->
+        _searchQuery,
+        settingsRepository.sortOrder
+    ) { recents, favorites, category, query, sortOrder ->
         val sourceList = when (category) {
             DocumentCategory.FAVORITES -> favorites
             DocumentCategory.PDF -> recents.filter { it.category == DocumentCategory.PDF }
@@ -51,10 +56,19 @@ class HomeViewModel(
             sourceList.filter { it.displayName.contains(trimmed, ignoreCase = true) }
         }
 
+        val sorted = when (sortOrder) {
+            DocumentSortOrder.LAST_OPENED -> filtered.sortedByDescending { it.lastOpenedTimestamp }
+            DocumentSortOrder.NAME_ASC -> filtered.sortedBy { it.displayName.lowercase() }
+            DocumentSortOrder.NAME_DESC -> filtered.sortedByDescending { it.displayName.lowercase() }
+            DocumentSortOrder.SIZE_DESC -> filtered.sortedByDescending { it.sizeBytes }
+            DocumentSortOrder.SIZE_ASC -> filtered.sortedBy { it.sizeBytes }
+        }
+
         HomeUiState(
             selectedCategory = category,
             searchQuery = query,
-            documents = filtered,
+            documents = sorted,
+            sortOrder = sortOrder,
             isSearching = query.isNotBlank(),
             isLoading = false
         )
@@ -72,6 +86,10 @@ class HomeViewModel(
         _searchQuery.value = query
     }
 
+    fun setSortOrder(order: DocumentSortOrder) {
+        settingsRepository.setSortOrder(order)
+    }
+
     fun toggleFavorite(document: DocumentFile) {
         viewModelScope.launch {
             repository.toggleFavorite(document)
@@ -84,6 +102,12 @@ class HomeViewModel(
         }
     }
 
+    fun clearAllRecents() {
+        viewModelScope.launch {
+            repository.clearAllRecents()
+        }
+    }
+
     fun onDocumentOpened(uri: Uri, onResult: (Result<DocumentFile>) -> Unit) {
         viewModelScope.launch {
             val result = repository.registerOpenedDocument(uri)
@@ -91,10 +115,13 @@ class HomeViewModel(
         }
     }
 
-    class Factory(private val repository: DocumentRepository) : ViewModelProvider.Factory {
+    class Factory(
+        private val repository: DocumentRepository,
+        private val settingsRepository: SettingsRepository
+    ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return HomeViewModel(repository) as T
+            return HomeViewModel(repository, settingsRepository) as T
         }
     }
 }

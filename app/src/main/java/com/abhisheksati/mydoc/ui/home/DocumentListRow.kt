@@ -1,7 +1,8 @@
 package com.abhisheksati.mydoc.ui.home
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.StarBorder
@@ -36,6 +38,7 @@ import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.ui.common.AppDivider
 import com.abhisheksati.mydoc.ui.theme.Spacing
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DocumentListRow(
     document: DocumentFile,
@@ -43,6 +46,7 @@ fun DocumentListRow(
     onToggleFavorite: () -> Unit,
     onRemoveFromRecents: () -> Unit,
     onShare: () -> Unit,
+    onShowDetails: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -51,7 +55,10 @@ fun DocumentListRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onShowDetails
+                )
                 .padding(horizontal = Spacing.medium, vertical = Spacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -133,6 +140,16 @@ fun DocumentListRow(
                     expanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false }
                 ) {
+                    DropdownMenuItem(
+                        text = { Text("Details & Info") },
+                        leadingIcon = {
+                            Icon(Icons.Outlined.Info, contentDescription = null)
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onShowDetails()
+                        }
+                    )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.share)) },
                         onClick = {

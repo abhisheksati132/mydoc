@@ -38,6 +38,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.BrightnessMedium
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ViewerTopBar(
@@ -47,12 +51,15 @@ fun ViewerTopBar(
     isContinuousScroll: Boolean,
     hasOutline: Boolean,
     isKeepScreenOn: Boolean = true,
+    isBookmarked: Boolean = false,
     onBackClick: () -> Unit,
     onSearchClick: () -> Unit,
     onToggleReadingMode: () -> Unit,
     onToggleScrollMode: () -> Unit,
     onOutlineClick: () -> Unit,
     onShareClick: () -> Unit,
+    onToggleBookmark: () -> Unit = {},
+    onBrightnessClick: () -> Unit = {},
     onOpenWithClick: () -> Unit = {},
     onPrintClick: () -> Unit = {},
     onToggleKeepScreenOn: () -> Unit = {},
@@ -124,6 +131,13 @@ fun ViewerTopBar(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                IconButton(onClick = onToggleBookmark) {
+                    Icon(
+                        imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                        contentDescription = if (isBookmarked) "Remove Bookmark" else "Bookmark Page",
+                        tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 Box {
                     IconButton(onClick = { isMenuOpen = true }) {
                         Icon(
@@ -136,6 +150,16 @@ fun ViewerTopBar(
                         expanded = isMenuOpen,
                         onDismissRequest = { isMenuOpen = false }
                     ) {
+                        DropdownMenuItem(
+                            text = { Text("Screen Dimmer") },
+                            leadingIcon = {
+                                Icon(Icons.Outlined.BrightnessMedium, contentDescription = null)
+                            },
+                            onClick = {
+                                isMenuOpen = false
+                                onBrightnessClick()
+                            }
+                        )
                         DropdownMenuItem(
                             text = { Text("Open with another app") },
                             leadingIcon = {

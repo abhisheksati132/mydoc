@@ -55,10 +55,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.MainActivity
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.ui.theme.Spacing
+import com.abhisheksati.mydoc.ui.viewer.controls.BrightnessDialog
 import com.abhisheksati.mydoc.ui.viewer.controls.OutlineDrawer
 import com.abhisheksati.mydoc.ui.viewer.controls.PageJumpDialog
 import com.abhisheksati.mydoc.ui.viewer.controls.PasswordDialog
@@ -90,6 +92,24 @@ fun PdfViewerScreen(
     var panOffset by remember { mutableStateOf(Offset.Zero) }
     var isPageJumpDialogOpen by remember { mutableStateOf(false) }
 
+    var bookmarks by remember {
+        mutableStateOf(app?.settingsRepository?.getBookmarks(document.uri) ?: emptySet())
+    }
+    val isCurrentBookmarked = bookmarks.contains(state.currentPage)
+
+    var isBrightnessDialogOpen by remember { mutableStateOf(false) }
+    var currentBrightness by remember { mutableFloatStateOf(-1f) }
+
+    val updateBrightness: (Float) -> Unit = { b ->
+        currentBrightness = b
+        val activity = context as? Activity
+        val lp = activity?.window?.attributes
+        if (lp != null) {
+            lp.screenBrightness = b
+            activity.window.attributes = lp
+        }
+    }
+
     var isKeepScreenOn by remember {
         mutableStateOf(app?.settingsRepository?.keepScreenOn?.value ?: true)
     }
@@ -105,6 +125,12 @@ fun PdfViewerScreen(
     DisposableEffect(Unit) {
         onDispose {
             (context as? Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            val activity = context as? Activity
+            val lp = activity?.window?.attributes
+            if (lp != null) {
+                lp.screenBrightness = -1f
+                activity.window.attributes = lp
+            }
         }
     }
 
@@ -113,6 +139,25 @@ fun PdfViewerScreen(
         initialPage = state.currentPage,
         pageCount = { state.pageCount }
     )
+
+    // Volume key page turning listener
+    LaunchedEffect(Unit) {
+        MainActivity.pageTurnEvents.collect { isNext ->
+            val target = if (isNext) {
+                (state.currentPage + 1).coerceAtMost(state.pageCount - 1)
+            } else {
+                (state.currentPage - 1).coerceAtLeast(0)
+            }
+            if (target != state.currentPage) {
+                viewModel.jumpToPage(target)
+                if (state.isContinuousScroll) {
+                    lazyListState.animateScrollToItem(target)
+                } else {
+                    pagerState.animateScrollToPage(target)
+                }
+            }
+        }
+    }
 
     // Sync current page with viewmodel
     LaunchedEffect(lazyListState) {
@@ -247,12 +292,19 @@ fun PdfViewerScreen(
             isContinuousScroll = state.isContinuousScroll,
             hasOutline = state.outline.isNotEmpty(),
             isKeepScreenOn = isKeepScreenOn,
+            isBookmarked = isCurrentBookmarked,
             onBackClick = onBackClick,
             onSearchClick = viewModel::openSearch,
             onToggleReadingMode = viewModel::toggleReadingMode,
             onToggleScrollMode = viewModel::toggleScrollMode,
             onOutlineClick = { viewModel.setOutlineDrawerOpen(true) },
             onShareClick = onShareClick,
+            onToggleBookmark = {
+                val added = app?.settingsRepository?.toggleBookmark(document.uri, state.currentPage) ?: false
+                bookmarks = app?.settingsRepository?.getBookmarks(document.uri) ?: emptySet()
+                Toast.makeText(context, if (added) "Bookmarked page ${state.currentPage + 1}" else "Bookmark removed", Toast.LENGTH_SHORT).show()
+            },
+            onBrightnessClick = { isBrightnessDialogOpen = true },
             onOpenWithClick = {
                 val sendIntent = Intent(Intent.ACTION_VIEW).apply {
                     val mime = document.mimeType.ifEmpty { "application/pdf" }
@@ -361,9 +413,10 @@ fun PdfViewerScreen(
             onDismiss = { isPageJumpDialogOpen = false }
         )
 
-        // Table of Contents Drawer
+        // Table of Contents & Bookmarks Drawer
         OutlineDrawer(
             outline = state.outline,
+            bookmarks = bookmarks,
             isOpen = state.isOutlineDrawerOpen,
             onDismiss = { viewModel.setOutlineDrawerOpen(false) },
             onItemSelected = { page ->
@@ -375,7 +428,19 @@ fun PdfViewerScreen(
                         pagerState.scrollToPage(page)
                     }
                 }
+            },
+            onRemoveBookmark = { page ->
+                app?.settingsRepository?.toggleBookmark(document.uri, page)
+                bookmarks = app?.settingsRepository?.getBookmarks(document.uri) ?: emptySet()
             }
+        )
+
+        // Brightness Dimmer Dialog
+        BrightnessDialog(
+            isOpen = isBrightnessDialogOpen,
+            currentBrightness = currentBrightness,
+            onBrightnessChanged = updateBrightness,
+            onDismiss = { isBrightnessDialogOpen = false }
         )
 
         // Password Dialog

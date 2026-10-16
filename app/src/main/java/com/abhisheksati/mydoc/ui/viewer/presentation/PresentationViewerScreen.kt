@@ -115,6 +115,22 @@ fun PresentationViewerScreen(
     val slides = presentationData?.slides ?: emptyList()
     val pagerState = rememberPagerState(pageCount = { slides.size })
 
+    // Volume key slide navigation
+    LaunchedEffect(slides.size) {
+        if (slides.isNotEmpty()) {
+            com.abhisheksati.mydoc.MainActivity.pageTurnEvents.collect { isNext ->
+                val target = if (isNext) {
+                    (pagerState.currentPage + 1).coerceAtMost(slides.size - 1)
+                } else {
+                    (pagerState.currentPage - 1).coerceAtLeast(0)
+                }
+                if (target != pagerState.currentPage) {
+                    pagerState.animateScrollToPage(target)
+                }
+            }
+        }
+    }
+
     val bgColor = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color.Black
         ReadingMode.SEPIA -> Color(0xFFF4ECD8)

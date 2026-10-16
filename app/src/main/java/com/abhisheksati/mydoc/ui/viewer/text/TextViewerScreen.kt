@@ -128,6 +128,21 @@ fun TextViewerScreen(
 
     val listState = rememberLazyListState()
 
+    // Volume key line scrolling
+    LaunchedEffect(lines.size) {
+        if (lines.isNotEmpty()) {
+            com.abhisheksati.mydoc.MainActivity.pageTurnEvents.collect { isNext ->
+                val current = listState.firstVisibleItemIndex
+                val target = if (isNext) {
+                    (current + 15).coerceAtMost(lines.size - 1)
+                } else {
+                    (current - 15).coerceAtLeast(0)
+                }
+                listState.animateScrollToItem(target)
+            }
+        }
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {

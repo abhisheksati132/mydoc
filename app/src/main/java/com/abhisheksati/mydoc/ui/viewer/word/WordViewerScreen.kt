@@ -313,8 +313,24 @@ fun WordViewerScreen(
                         }
                     }
                 }
+                val lazyListState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+                androidx.compose.runtime.LaunchedEffect(filteredBlocks.size) {
+                    if (filteredBlocks.isNotEmpty()) {
+                        com.abhisheksati.mydoc.MainActivity.pageTurnEvents.collect { isNext ->
+                            val current = lazyListState.firstVisibleItemIndex
+                            val target = if (isNext) {
+                                (current + 5).coerceAtMost(filteredBlocks.size - 1)
+                            } else {
+                                (current - 5).coerceAtLeast(0)
+                            }
+                            lazyListState.animateScrollToItem(target)
+                        }
+                    }
+                }
 
                 LazyColumn(
+                    state = lazyListState,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = Spacing.large, vertical = Spacing.medium)

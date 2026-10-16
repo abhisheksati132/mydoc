@@ -1,5 +1,7 @@
 package com.abhisheksati.mydoc.ui.settings
 
+import android.app.KeyguardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -24,6 +26,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Refresh
@@ -84,9 +88,12 @@ fun SettingsScreen(
     val currentTheme by settingsRepository.themeMode.collectAsState()
     val currentReadingMode by settingsRepository.defaultReadingMode.collectAsState()
     val keepScreenOn by settingsRepository.keepScreenOn.collectAsState()
+    val volumeKeyTurning by settingsRepository.volumeKeyPageTurning.collectAsState()
+    val biometricLockEnabled by settingsRepository.isBiometricLockEnabled.collectAsState()
     val grantedFolderUri by settingsRepository.grantedFolderUri.collectAsState()
     val grantedFolderName by settingsRepository.grantedFolderName.collectAsState()
 
+    var cacheSizeBytes by remember { mutableStateOf(settingsRepository.getCacheSizeBytes(context)) }
     var isScanningFolder by remember { mutableStateOf(false) }
 
     val openFolderLauncher = rememberLauncherForActivityResult(
@@ -264,6 +271,83 @@ fun SettingsScreen(
                 )
             }
 
+            Spacer(modifier = Modifier.height(Spacing.medium))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Volume button page turning",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = "Use hardware volume up/down buttons to turn pages in document reader",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = volumeKeyTurning,
+                    onCheckedChange = { settingsRepository.setVolumeKeyPageTurning(it) }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.large))
+            AppDivider()
+            Spacer(modifier = Modifier.height(Spacing.medium))
+
+            // PRIVACY & SECURITY
+            Text(
+                text = "PRIVACY & SECURITY",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(Spacing.extraSmall))
+            Text(
+                text = "Secure your documents using device biometrics (fingerprint, face, or screen lock PIN/pattern).",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(Spacing.medium))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Biometric App Lock",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = "Require authentication to unlock mydoc",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = biometricLockEnabled,
+                    onCheckedChange = { isChecked ->
+                        if (isChecked) {
+                            val km = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+                            if (km?.isDeviceSecure == false) {
+                                Toast.makeText(context, "Please set a PIN, password, or fingerprint in device settings first", Toast.LENGTH_LONG).show()
+                            } else {
+                                settingsRepository.setBiometricLockEnabled(true)
+                            }
+                        } else {
+                            settingsRepository.setBiometricLockEnabled(false)
+                        }
+                    }
+                )
+            }
+
             Spacer(modifier = Modifier.height(Spacing.large))
             AppDivider()
             Spacer(modifier = Modifier.height(Spacing.medium))
@@ -334,6 +418,48 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(Spacing.small))
                         Text(if (isScanningFolder) "Scanning…" else "Rescan")
                     }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.medium))
+
+            // Cache Cleaner
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Temporary Render Cache",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    val formattedCache = if (cacheSizeBytes < 1024) {
+                        "$cacheSizeBytes B"
+                    } else if (cacheSizeBytes < 1024 * 1024) {
+                        String.format(Locale.US, "%.1f KB", cacheSizeBytes / 1024.0)
+                    } else {
+                        String.format(Locale.US, "%.1f MB", cacheSizeBytes / (1024.0 * 1024.0))
+                    }
+                    Text(
+                        text = "Cached page bitmaps: $formattedCache",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                OutlinedButton(
+                    onClick = {
+                        val freed = settingsRepository.clearCache(context)
+                        cacheSizeBytes = settingsRepository.getCacheSizeBytes(context)
+                        val freedStr = if (freed < 1024 * 1024) "${freed / 1024} KB" else String.format(Locale.US, "%.1f MB", freed / (1024.0 * 1024.0))
+                        Toast.makeText(context, "Cache cleared (freed $freedStr)", Toast.LENGTH_SHORT).show()
+                    },
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Icon(Icons.Outlined.DeleteSweep, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Clear")
                 }
             }
 

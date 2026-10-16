@@ -14,4 +14,5 @@ interface DocumentRepository {
     suspend fun updatePageProgress(uri: String, lastPage: Int, pageCount: Int)
     suspend fun getViewState(uri: String): ViewState?
     suspend fun saveViewState(viewState: ViewState)
+    suspend fun clearAllRecents()
 }

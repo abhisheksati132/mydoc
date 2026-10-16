@@ -133,6 +133,10 @@ class DocumentRepositoryImpl(
         recentDao.deleteRecent(uri)
     }
 
+    override suspend fun clearAllRecents() = withContext(Dispatchers.IO) {
+        recentDao.clearAllRecents()
+    }
+
     override suspend fun updatePageProgress(uri: String, lastPage: Int, pageCount: Int) = withContext(Dispatchers.IO) {
         recentDao.updatePageProgress(
             uri = uri,
