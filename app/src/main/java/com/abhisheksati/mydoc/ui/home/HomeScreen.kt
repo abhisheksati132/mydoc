@@ -1,11 +1,14 @@
 package com.abhisheksati.mydoc.ui.home
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FileOpen
+import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -37,9 +41,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.R
+import com.abhisheksati.mydoc.data.local.FolderScanner
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.ui.common.AppDivider
 import com.abhisheksati.mydoc.ui.common.EmptyState
@@ -72,6 +79,8 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val app = context.applicationContext as? MyDocApp
 
     // SAF Document Picker launcher
     val openDocumentLauncher = rememberLauncherForActivityResult(
@@ -90,6 +99,31 @@ fun HomeScreen(
         }
     }
 
+    // SAF Folder Picker launcher
+    val openFolderLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        if (uri != null && app != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+                val segment = uri.lastPathSegment ?: "Folder"
+                val cleanName = segment.substringAfterLast(':').ifEmpty { segment }
+                app.settingsRepository.setGrantedFolder(uri.toString(), cleanName)
+                scope.launch {
+                    val count = FolderScanner.scanTree(context, uri, app.documentRepository)
+                    snackbarHostState.showSnackbar("Added $count documents from $cleanName")
+                }
+            } catch (e: Exception) {
+                scope.launch {
+                    snackbarHostState.showSnackbar("Unable to access folder: ${e.message}")
+                }
+            }
+        }
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -103,6 +137,13 @@ fun HomeScreen(
                     )
                 },
                 actions = {
+                    IconButton(onClick = { openFolderLauncher.launch(null) }) {
+                        Icon(
+                            imageVector = Icons.Outlined.FolderOpen,
+                            contentDescription = "Scan Folder",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Outlined.Settings,
@@ -181,18 +222,33 @@ fun HomeScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(Spacing.large))
-                            Button(
-                                onClick = { openDocumentLauncher.launch(SUPPORTED_MIME_TYPES) },
-                                shape = RoundedCornerShape(6.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    contentColor = MaterialTheme.colorScheme.onBackground
-                                )
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.open_document),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
+                            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.small)) {
+                                Button(
+                                    onClick = { openDocumentLauncher.launch(SUPPORTED_MIME_TYPES) },
+                                    shape = RoundedCornerShape(6.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        contentColor = MaterialTheme.colorScheme.onBackground
+                                    )
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.open_document),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                                Button(
+                                    onClick = { openFolderLauncher.launch(null) },
+                                    shape = RoundedCornerShape(6.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        contentColor = MaterialTheme.colorScheme.onBackground
+                                    )
+                                ) {
+                                    Text(
+                                        text = "Scan Folder",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
                             }
                         }
                     }

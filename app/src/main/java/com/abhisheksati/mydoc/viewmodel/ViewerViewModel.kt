@@ -89,7 +89,8 @@ class ViewerViewModel(
                         val totalPages = mupdf.pageCount
                         val outline = mupdf.getOutline()
                         val initialPage = savedState?.lastPage?.coerceIn(0, maxOf(0, totalPages - 1)) ?: 0
-                        val initialMode = savedState?.readingMode ?: ReadingMode.NORMAL
+                        val defaultMode = (context.applicationContext as? com.abhisheksati.mydoc.MyDocApp)?.settingsRepository?.defaultReadingMode?.value ?: ReadingMode.NORMAL
+                        val initialMode = savedState?.readingMode ?: defaultMode
                         val initialContinuous = savedState?.isContinuousScroll ?: true
 
                         _uiState.update {

@@ -13,9 +13,13 @@ class MyDocApp : Application() {
     lateinit var documentRepository: DocumentRepository
         private set
 
+    lateinit var settingsRepository: com.abhisheksati.mydoc.data.local.SettingsRepository
+        private set
+
     override fun onCreate() {
         super.onCreate()
         database = AppDatabase.getInstance(this)
         documentRepository = DocumentRepositoryImpl(this, database)
+        settingsRepository = com.abhisheksati.mydoc.data.local.SettingsRepository(this)
     }
 }

@@ -1,6 +1,12 @@
 package com.abhisheksati.mydoc.ui.viewer.pdf
 
+import android.app.Activity
+import android.content.Intent
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -27,6 +33,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -34,6 +41,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -44,12 +52,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.ui.theme.Spacing
 import com.abhisheksati.mydoc.ui.viewer.controls.OutlineDrawer
+import com.abhisheksati.mydoc.ui.viewer.controls.PageJumpDialog
 import com.abhisheksati.mydoc.ui.viewer.controls.PasswordDialog
+import com.abhisheksati.mydoc.ui.viewer.controls.PrintHelper
 import com.abhisheksati.mydoc.ui.viewer.controls.SearchOverlay
 import com.abhisheksati.mydoc.ui.viewer.controls.ThumbnailStrip
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerBottomBar
@@ -57,6 +70,7 @@ import com.abhisheksati.mydoc.ui.viewer.controls.ViewerTopBar
 import com.abhisheksati.mydoc.viewmodel.ViewerViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -67,10 +81,32 @@ fun PdfViewerScreen(
     onShareClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val app = context.applicationContext as? MyDocApp
+    val coroutineScope = rememberCoroutineScope()
     val state by viewModel.uiState.collectAsState()
 
     var zoomScale by remember { mutableFloatStateOf(1f) }
     var panOffset by remember { mutableStateOf(Offset.Zero) }
+    var isPageJumpDialogOpen by remember { mutableStateOf(false) }
+
+    var isKeepScreenOn by remember {
+        mutableStateOf(app?.settingsRepository?.keepScreenOn?.value ?: true)
+    }
+
+    val currentView = LocalView.current
+    DisposableEffect(isKeepScreenOn) {
+        currentView.keepScreenOn = isKeepScreenOn
+        onDispose {
+            currentView.keepScreenOn = false
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            (context as? Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
 
     val lazyListState = rememberLazyListState(initialFirstVisibleItemIndex = state.currentPage)
     val pagerState = rememberPagerState(
@@ -201,12 +237,44 @@ fun PdfViewerScreen(
             readingMode = state.readingMode,
             isContinuousScroll = state.isContinuousScroll,
             hasOutline = state.outline.isNotEmpty(),
+            isKeepScreenOn = isKeepScreenOn,
             onBackClick = onBackClick,
             onSearchClick = viewModel::openSearch,
             onToggleReadingMode = viewModel::toggleReadingMode,
             onToggleScrollMode = viewModel::toggleScrollMode,
             onOutlineClick = { viewModel.setOutlineDrawerOpen(true) },
             onShareClick = onShareClick,
+            onOpenWithClick = {
+                val sendIntent = Intent(Intent.ACTION_VIEW).apply {
+                    val mime = document.mimeType.ifEmpty { "application/pdf" }
+                    setDataAndType(Uri.parse(document.uri), mime)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                try {
+                    context.startActivity(Intent.createChooser(sendIntent, "Open with"))
+                } catch (_: Exception) {
+                    Toast.makeText(context, "No app found to open this document", Toast.LENGTH_SHORT).show()
+                }
+            },
+            onPrintClick = {
+                PrintHelper.printDocument(context, document)
+            },
+            onToggleKeepScreenOn = {
+                val newKeep = !isKeepScreenOn
+                isKeepScreenOn = newKeep
+                app?.settingsRepository?.setKeepScreenOn(newKeep)
+            },
+            onToggleOrientation = {
+                val activity = context as? Activity
+                if (activity != null) {
+                    val isLandscape = activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                    activity.requestedOrientation = if (isLandscape) {
+                        ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                    } else {
+                        ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                    }
+                }
+            },
             modifier = Modifier.align(Alignment.TopCenter)
         )
 
@@ -235,8 +303,12 @@ fun PdfViewerScreen(
                 visible = state.isThumbnailStripVisible && state.areControlsVisible,
                 onPageSelected = { page ->
                     viewModel.jumpToPage(page)
-                    if (state.isContinuousScroll) {
-                        // Launch scroll
+                    coroutineScope.launch {
+                        if (state.isContinuousScroll) {
+                            lazyListState.scrollToItem(page)
+                        } else {
+                            pagerState.scrollToPage(page)
+                        }
                     }
                 },
                 renderThumbnail = { p, s -> viewModel.renderPageBitmap(p, s) }
@@ -247,17 +319,54 @@ fun PdfViewerScreen(
                 pageCount = state.pageCount,
                 visible = state.areControlsVisible,
                 isThumbnailStripOpen = state.isThumbnailStripVisible,
-                onPageJump = viewModel::jumpToPage,
-                onToggleThumbnails = viewModel::toggleThumbnailStrip
+                onPageJump = { page ->
+                    viewModel.jumpToPage(page)
+                    coroutineScope.launch {
+                        if (state.isContinuousScroll) {
+                            lazyListState.scrollToItem(page)
+                        } else {
+                            pagerState.scrollToPage(page)
+                        }
+                    }
+                },
+                onToggleThumbnails = viewModel::toggleThumbnailStrip,
+                onPageTextClick = { isPageJumpDialogOpen = true }
             )
         }
+
+        // Page Jump Dialog
+        PageJumpDialog(
+            isOpen = isPageJumpDialogOpen,
+            currentPage = state.currentPage,
+            pageCount = state.pageCount,
+            onJump = { targetPage ->
+                viewModel.jumpToPage(targetPage)
+                coroutineScope.launch {
+                    if (state.isContinuousScroll) {
+                        lazyListState.scrollToItem(targetPage)
+                    } else {
+                        pagerState.scrollToPage(targetPage)
+                    }
+                }
+            },
+            onDismiss = { isPageJumpDialogOpen = false }
+        )
 
         // Table of Contents Drawer
         OutlineDrawer(
             outline = state.outline,
             isOpen = state.isOutlineDrawerOpen,
             onDismiss = { viewModel.setOutlineDrawerOpen(false) },
-            onItemSelected = viewModel::jumpToPage
+            onItemSelected = { page ->
+                viewModel.jumpToPage(page)
+                coroutineScope.launch {
+                    if (state.isContinuousScroll) {
+                        lazyListState.scrollToItem(page)
+                    } else {
+                        pagerState.scrollToPage(page)
+                    }
+                }
+            }
         )
 
         // Password Dialog

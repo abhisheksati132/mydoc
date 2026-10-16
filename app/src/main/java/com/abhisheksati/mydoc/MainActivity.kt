@@ -9,15 +9,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
+import com.abhisheksati.mydoc.data.local.AppThemeMode
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.ui.home.HomeScreen
 import com.abhisheksati.mydoc.ui.settings.SettingsScreen
@@ -52,12 +55,21 @@ class MainActivity : ComponentActivity() {
         handleIncomingIntent(intent)
 
         setContent {
-            MyDocTheme {
+            val app = application as MyDocApp
+            val themeMode by app.settingsRepository.themeMode.collectAsState()
+            val isDark = when (themeMode) {
+                AppThemeMode.AMOLED_DARK -> true
+                AppThemeMode.LIGHT -> false
+                AppThemeMode.SYSTEM -> isSystemInDarkTheme()
+            }
+
+            MyDocTheme(darkTheme = isDark) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val activeDoc = currentDocument
                     if (isSettingsOpen) {
                         SettingsScreen(
                             updateManager = updateManager,
+                            settingsRepository = app.settingsRepository,
                             onBackClick = { isSettingsOpen = false }
                         )
                     } else if (activeDoc != null) {

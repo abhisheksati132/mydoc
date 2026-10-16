@@ -25,6 +25,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Print
+import androidx.compose.material.icons.outlined.ScreenRotation
+import androidx.compose.material.icons.outlined.StayCurrentPortrait
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ViewerTopBar(
@@ -33,14 +46,21 @@ fun ViewerTopBar(
     readingMode: ReadingMode,
     isContinuousScroll: Boolean,
     hasOutline: Boolean,
+    isKeepScreenOn: Boolean = true,
     onBackClick: () -> Unit,
     onSearchClick: () -> Unit,
     onToggleReadingMode: () -> Unit,
     onToggleScrollMode: () -> Unit,
     onOutlineClick: () -> Unit,
     onShareClick: () -> Unit,
+    onOpenWithClick: () -> Unit = {},
+    onPrintClick: () -> Unit = {},
+    onToggleKeepScreenOn: () -> Unit = {},
+    onToggleOrientation: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    var isMenuOpen by remember { mutableStateOf(false) }
+
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn(),
@@ -103,6 +123,60 @@ fun ViewerTopBar(
                         contentDescription = stringResource(R.string.share),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+                Box {
+                    IconButton(onClick = { isMenuOpen = true }) {
+                        Icon(
+                            imageVector = Icons.Outlined.MoreVert,
+                            contentDescription = "More Options",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = isMenuOpen,
+                        onDismissRequest = { isMenuOpen = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Open with another app") },
+                            leadingIcon = {
+                                Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
+                            },
+                            onClick = {
+                                isMenuOpen = false
+                                onOpenWithClick()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Print") },
+                            leadingIcon = {
+                                Icon(Icons.Outlined.Print, contentDescription = null)
+                            },
+                            onClick = {
+                                isMenuOpen = false
+                                onPrintClick()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(if (isKeepScreenOn) "Keep Screen On: Yes" else "Keep Screen On: No") },
+                            leadingIcon = {
+                                Icon(Icons.Outlined.StayCurrentPortrait, contentDescription = null)
+                            },
+                            onClick = {
+                                isMenuOpen = false
+                                onToggleKeepScreenOn()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Rotate Screen") },
+                            leadingIcon = {
+                                Icon(Icons.Outlined.ScreenRotation, contentDescription = null)
+                            },
+                            onClick = {
+                                isMenuOpen = false
+                                onToggleOrientation()
+                            }
+                        )
+                    }
                 }
             },
             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(

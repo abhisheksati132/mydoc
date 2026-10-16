@@ -2,9 +2,12 @@ package com.abhisheksati.mydoc.ui.settings
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.runtime.remember
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,32 +18,49 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.MyDocApp
+import com.abhisheksati.mydoc.data.local.AppThemeMode
+import com.abhisheksati.mydoc.data.local.FolderScanner
+import com.abhisheksati.mydoc.data.local.SettingsRepository
+import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.ui.common.AppDivider
 import com.abhisheksati.mydoc.ui.theme.Spacing
 import com.abhisheksati.mydoc.update.UpdateManager
@@ -52,12 +72,47 @@ import java.util.Locale
 @Composable
 fun SettingsScreen(
     updateManager: UpdateManager,
+    settingsRepository: SettingsRepository,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val updateState by updateManager.state.collectAsState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val app = context.applicationContext as? MyDocApp
+
+    val currentTheme by settingsRepository.themeMode.collectAsState()
+    val currentReadingMode by settingsRepository.defaultReadingMode.collectAsState()
+    val keepScreenOn by settingsRepository.keepScreenOn.collectAsState()
+    val grantedFolderUri by settingsRepository.grantedFolderUri.collectAsState()
+    val grantedFolderName by settingsRepository.grantedFolderName.collectAsState()
+
+    var isScanningFolder by remember { mutableStateOf(false) }
+
+    val openFolderLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        if (uri != null && app != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+                val segment = uri.lastPathSegment ?: "Folder"
+                val cleanName = segment.substringAfterLast(':').ifEmpty { segment }
+                settingsRepository.setGrantedFolder(uri.toString(), cleanName)
+
+                isScanningFolder = true
+                scope.launch {
+                    val count = FolderScanner.scanTree(context, uri, app.documentRepository)
+                    isScanningFolder = false
+                    Toast.makeText(context, "Added $count documents from $cleanName", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to access folder: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -90,12 +145,203 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = Spacing.medium)
         ) {
             AppDivider()
             Spacer(modifier = Modifier.height(Spacing.medium))
 
-            // App Version Info
+            // APPEARANCE SECTION
+            Text(
+                text = "APPEARANCE",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(Spacing.extraSmall))
+            Text(
+                text = "Choose your display theme. AMOLED Black uses pure #000000 for zero OLED power consumption.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(Spacing.small))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.small)
+            ) {
+                FilterChip(
+                    selected = currentTheme == AppThemeMode.AMOLED_DARK,
+                    onClick = { settingsRepository.setThemeMode(AppThemeMode.AMOLED_DARK) },
+                    label = { Text("AMOLED Black") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.DarkMode,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                )
+                FilterChip(
+                    selected = currentTheme == AppThemeMode.LIGHT,
+                    onClick = { settingsRepository.setThemeMode(AppThemeMode.LIGHT) },
+                    label = { Text("Crisp Light") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.LightMode,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                )
+                FilterChip(
+                    selected = currentTheme == AppThemeMode.SYSTEM,
+                    onClick = { settingsRepository.setThemeMode(AppThemeMode.SYSTEM) },
+                    label = { Text("System") }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.large))
+            AppDivider()
+            Spacer(modifier = Modifier.height(Spacing.medium))
+
+            // READER PREFERENCES
+            Text(
+                text = "READER PREFERENCES",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(Spacing.extraSmall))
+            Text(
+                text = "Default page color mode when opening documents:",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(Spacing.small))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.small)
+            ) {
+                FilterChip(
+                    selected = currentReadingMode == ReadingMode.NORMAL,
+                    onClick = { settingsRepository.setDefaultReadingMode(ReadingMode.NORMAL) },
+                    label = { Text("Normal") }
+                )
+                FilterChip(
+                    selected = currentReadingMode == ReadingMode.INVERTED_DARK,
+                    onClick = { settingsRepository.setDefaultReadingMode(ReadingMode.INVERTED_DARK) },
+                    label = { Text("AMOLED Inverted") }
+                )
+                FilterChip(
+                    selected = currentReadingMode == ReadingMode.SEPIA,
+                    onClick = { settingsRepository.setDefaultReadingMode(ReadingMode.SEPIA) },
+                    label = { Text("Sepia") }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.medium))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Keep screen awake",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = "Prevent the display from turning off while reading",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = keepScreenOn,
+                    onCheckedChange = { settingsRepository.setKeepScreenOn(it) }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.large))
+            AppDivider()
+            Spacer(modifier = Modifier.height(Spacing.medium))
+
+            // STORAGE & FOLDERS
+            Text(
+                text = "DOCUMENT STORAGE",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(Spacing.extraSmall))
+            Text(
+                text = "Grant access to a local folder (e.g. Documents or Downloads) to automatically scan and index your documents.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(Spacing.small))
+
+            if (grantedFolderName != null) {
+                Text(
+                    text = "Indexed folder: $grantedFolderName",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(modifier = Modifier.height(Spacing.small))
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.small)
+            ) {
+                OutlinedButton(
+                    onClick = { openFolderLauncher.launch(null) },
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.FolderOpen,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(Spacing.small))
+                    Text(if (grantedFolderName != null) "Change Folder" else "Select Folder")
+                }
+
+                if (grantedFolderUri != null && app != null) {
+                    OutlinedButton(
+                        onClick = {
+                            val uri = Uri.parse(grantedFolderUri)
+                            isScanningFolder = true
+                            scope.launch {
+                                val count = FolderScanner.scanTree(context, uri, app.documentRepository)
+                                isScanningFolder = false
+                                Toast.makeText(context, "Scanned $count documents", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        enabled = !isScanningFolder,
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        if (isScanningFolder) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(
+                                imageVector = Icons.Outlined.Sync,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(Spacing.small))
+                        Text(if (isScanningFolder) "Scanning…" else "Rescan")
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.large))
+            AppDivider()
+            Spacer(modifier = Modifier.height(Spacing.medium))
+
+            // ABOUT
             Text(
                 text = "ABOUT",
                 style = MaterialTheme.typography.titleSmall,
@@ -154,7 +400,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(Spacing.extraSmall))
                         Text(
-                            text = "The initial preview build (com.abhisheksati.mydoc.debug) is still on your device. Tap below to uninstall it.",
+                            text = "The initial preview build (com.abhisheksati.mydoc.debug) is still on your device. Tap below to uninstall it. Future updates will update this app directly.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -179,7 +425,7 @@ fun SettingsScreen(
             AppDivider()
             Spacer(modifier = Modifier.height(Spacing.medium))
 
-            // Self-updater Section
+            // UPDATES SECTION
             Text(
                 text = "UPDATES",
                 style = MaterialTheme.typography.titleSmall,
@@ -388,6 +634,8 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(Spacing.extraLarge))
         }
     }
 }
