@@ -172,13 +172,6 @@ fun HomeScreen(
         }
     }
 
-    // Intercept back presses: return to FILES tab if on another tab
-    BackHandler(enabled = currentTab != HomeTab.FILES) {
-        scope.launch {
-            pagerState.animateScrollToPage(HomeTab.FILES.ordinal)
-        }
-    }
-
     var showCameraScanner by remember { mutableStateOf(false) }
     var showSignaturePad by remember { mutableStateOf(false) }
     var isSortMenuOpen by remember { mutableStateOf(false) }
@@ -381,6 +374,8 @@ fun HomeScreen(
                             viewModel = fileManagerViewModel,
                             onOpenFile = onOpenFile,
                             onSettingsClick = onSettingsClick,
+                            onToggleTheme = onToggleTheme,
+                            isDarkTheme = isDarkTheme,
                             modifier = Modifier.fillMaxSize()
                         )
                     }

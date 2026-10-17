@@ -45,13 +45,18 @@ import coil.request.ImageRequest
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
+import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
+import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.MediaFilter
 import com.abhisheksati.mydoc.domain.model.MediaItem
 import com.abhisheksati.mydoc.viewmodel.MediaViewModel
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
@@ -102,46 +107,66 @@ fun MediaTabContent(
         permissionLauncher.launch(permissions)
     }
 
+    var isSearchActive by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val displayedGroups = remember(uiState.groups, searchQuery) {
+        if (searchQuery.isBlank()) {
+            uiState.groups
+        } else {
+            uiState.groups.mapNotNull { group ->
+                val matched = group.items.filter { it.displayName.contains(searchQuery, ignoreCase = true) }
+                if (matched.isNotEmpty()) group.copy(items = matched) else null
+            }
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(colors.background)
     ) {
-        // Top Header Bar with Title, Theme Toggle, and Settings
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(colors.surface)
-                .padding(horizontal = 16.dp, vertical = 6.dp)
-        ) {
-            Text(
-                text = "Media",
-                style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 20.sp),
-                color = colors.textPrimary
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (onToggleTheme != null) {
-                    IconButton(onClick = onToggleTheme) {
-                        Icon(
-                            imageVector = if (isDarkTheme) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
-                            contentDescription = "Toggle theme",
-                            tint = colors.textSecondary
+        AppTabHeader(
+            title = "Media",
+            onSearchClick = { isSearchActive = !isSearchActive },
+            isSearchActive = isSearchActive || searchQuery.isNotEmpty(),
+            searchContent = {
+                AppSearchField(
+                    query = searchQuery,
+                    onQueryChanged = { searchQuery = it },
+                    placeholder = "Search photos & videos..."
+                )
+            },
+            isDarkTheme = isDarkTheme,
+            onToggleTheme = onToggleTheme,
+            onSettingsClick = onSettingsClick,
+            bottomContent = if (uiState.hasPermission) {
+                {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        AppFilterChip(
+                            selected = uiState.filter == MediaFilter.ALL,
+                            onClick = { viewModel.setFilter(MediaFilter.ALL) },
+                            label = "All"
+                        )
+                        AppFilterChip(
+                            selected = uiState.filter == MediaFilter.PHOTOS,
+                            onClick = { viewModel.setFilter(MediaFilter.PHOTOS) },
+                            label = "Photos"
+                        )
+                        AppFilterChip(
+                            selected = uiState.filter == MediaFilter.VIDEOS,
+                            onClick = { viewModel.setFilter(MediaFilter.VIDEOS) },
+                            label = "Videos"
                         )
                     }
                 }
-                if (onSettingsClick != null) {
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = "Settings",
-                            tint = colors.textSecondary
-                        )
-                    }
-                }
-            }
-        }
+            } else null
+        )
 
         if (!uiState.hasPermission) {
             Box(
@@ -158,35 +183,11 @@ fun MediaTabContent(
                 )
             }
         } else {
-            // Filter chips (All, Photos, Videos)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = AppSpacing.paddingLarge, vertical = AppSpacing.paddingSmall),
-                horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
-            ) {
-                AppFilterChip(
-                    selected = uiState.filter == MediaFilter.ALL,
-                    onClick = { viewModel.setFilter(MediaFilter.ALL) },
-                    label = "All"
-                )
-                AppFilterChip(
-                    selected = uiState.filter == MediaFilter.PHOTOS,
-                    onClick = { viewModel.setFilter(MediaFilter.PHOTOS) },
-                    label = "Photos"
-                )
-                AppFilterChip(
-                    selected = uiState.filter == MediaFilter.VIDEOS,
-                    onClick = { viewModel.setFilter(MediaFilter.VIDEOS) },
-                    label = "Videos"
-                )
-            }
-
             if (uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     AppProgressIndicator()
                 }
-            } else if (uiState.items.isEmpty()) {
+            } else if (displayedGroups.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -194,8 +195,8 @@ fun MediaTabContent(
                     contentAlignment = Alignment.Center
                 ) {
                     AppEmptyState(
-                        title = "No media found",
-                        message = "No photos or videos were found on your device."
+                        title = if (searchQuery.isNotEmpty()) "No matching media" else "No media found",
+                        message = if (searchQuery.isNotEmpty()) "No photos or videos matched \"$searchQuery\"." else "No photos or videos were found on your device."
                     )
                 }
             } else {
@@ -212,7 +213,7 @@ fun MediaTabContent(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    uiState.groups.forEach { group ->
+                    displayedGroups.forEach { group ->
                         item(span = { GridItemSpan(3) }) {
                             AppSectionHeader(
                                 title = group.title,

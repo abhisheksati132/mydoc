@@ -39,8 +39,10 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
+import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
+import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
@@ -84,103 +86,76 @@ fun ToolsScreen(
         filteredTools.groupBy { it.group }
     }
 
+    var isSearchActive by remember { mutableStateOf(searchQuery.isNotEmpty()) }
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(colors.background)
     ) {
-        // Top Header Bar with Title, Theme Toggle, and Settings
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(colors.surface)
-                .padding(horizontal = 16.dp, vertical = 6.dp)
-        ) {
-            Text(
-                text = "PDF Tools",
-                style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 20.sp),
-                color = colors.textPrimary
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (onToggleTheme != null) {
-                    IconButton(onClick = onToggleTheme) {
-                        Icon(
-                            imageVector = if (isDarkTheme) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
-                            contentDescription = "Toggle theme",
-                            tint = colors.textSecondary
-                        )
-                    }
-                }
-                if (onSettingsClick != null) {
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = "Settings",
-                            tint = colors.textSecondary
-                        )
-                    }
-                }
-            }
-        }
-
-        // Plain list grouped by section headers
-        LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-        ) {
-            ToolGroup.entries.forEach { group ->
-                val toolsInGroup = groupedTools[group]
-                if (!toolsInGroup.isNullOrEmpty()) {
-                    item(key = "header_${group.name}") {
-                        AppSectionHeader(
-                            title = group.title,
-                            modifier = Modifier.padding(top = AppSpacing.paddingSmall)
-                        )
-                    }
-
-                    items(
-                        items = toolsInGroup,
-                        key = { it.id }
-                    ) { tool ->
-                        ToolListRow(
-                            tool = tool,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onToolClick(tool)
-                            }
-                        )
-                        AppDivider()
-                    }
-                }
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
-            }
-        }
-
-        // Lower-half search input field (One-Hand Reach)
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(colors.surface)
-                .navigationBarsPadding()
-        ) {
-            AppDivider()
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = AppSpacing.paddingLarge, vertical = AppSpacing.paddingSmall)
-            ) {
+        AppTabHeader(
+            title = "Tools",
+            onSearchClick = { isSearchActive = !isSearchActive },
+            isSearchActive = isSearchActive || searchQuery.isNotEmpty(),
+            searchContent = {
                 AppSearchField(
                     query = searchQuery,
                     onQueryChanged = { searchQuery = it },
                     placeholder = "Search 30 PDF tools...",
                     modifier = Modifier.fillMaxWidth()
                 )
+            },
+            isDarkTheme = isDarkTheme,
+            onToggleTheme = onToggleTheme,
+            onSettingsClick = onSettingsClick
+        )
+
+        if (filteredTools.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(AppSpacing.paddingLarge),
+                contentAlignment = Alignment.Center
+            ) {
+                AppEmptyState(
+                    title = "No tools found",
+                    message = "No tools matched \"$searchQuery\"."
+                )
+            }
+        } else {
+            // Plain list grouped by section headers
+            LazyColumn(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                ToolGroup.entries.forEach { group ->
+                    val toolsInGroup = groupedTools[group]
+                    if (!toolsInGroup.isNullOrEmpty()) {
+                        item(key = "header_${group.name}") {
+                            AppSectionHeader(
+                                title = group.title,
+                                modifier = Modifier.padding(top = AppSpacing.paddingSmall)
+                            )
+                        }
+
+                        items(
+                            items = toolsInGroup,
+                            key = { it.id }
+                        ) { tool ->
+                            ToolListRow(
+                                tool = tool,
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    onToolClick(tool)
+                                }
+                            )
+                            AppDivider()
+                        }
+                    }
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
+                }
             }
         }
     }

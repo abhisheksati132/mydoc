@@ -460,60 +460,12 @@ fun PresentationViewerScreen(
                                     )
                                 }
 
-                                // Toggle between Visual Slides and Outline View
-                                IconButton(
-                                    onClick = {
-                                        isVisualMode = !isVisualMode
-                                        val modeName = if (isVisualMode) "Visual Slide View" else "Outline Text View"
-                                        Toast.makeText(context, modeName, Toast.LENGTH_SHORT).show()
-                                    }
-                                ) {
-                                    Icon(
-                                        imageVector = if (isVisualMode) Icons.Default.Slideshow else Icons.AutoMirrored.Filled.Article,
-                                        contentDescription = "Toggle Visual / Outline",
-                                        tint = if (isVisualMode) MaterialTheme.colorScheme.primary else secondaryTextColor
-                                    )
-                                }
-
-                                // Toggle Reading Mode
-                                IconButton(onClick = {
-                                    readingMode = when (readingMode) {
-                                        ReadingMode.NORMAL -> ReadingMode.INVERTED_DARK
-                                        ReadingMode.INVERTED_DARK -> ReadingMode.SEPIA
-                                        ReadingMode.SEPIA -> ReadingMode.NORMAL
-                                    }
-                                }) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Brightness4,
-                                        contentDescription = "Toggle Reading Mode",
-                                        tint = if (readingMode != ReadingMode.NORMAL) MaterialTheme.colorScheme.primary else secondaryTextColor
-                                    )
-                                }
-
-                                // Share
-                                IconButton(onClick = onShareClick) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Share,
-                                        contentDescription = "Share",
-                                        tint = secondaryTextColor
-                                    )
-                                }
-
-                                // Open in PowerPoint / Google Slides for full desktop graphics
-                                IconButton(onClick = { openPresentationInOfficeApp(context, document) }) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
-                                        contentDescription = "Open in PowerPoint or Google Slides",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-
-                                // More options
+                                // Clean More Options Menu
                                 Box {
                                     IconButton(onClick = { isMenuOpen = true }) {
                                         Icon(
                                             imageVector = Icons.Outlined.MoreVert,
-                                            contentDescription = "Options",
+                                            contentDescription = "More Options",
                                             tint = secondaryTextColor
                                         )
                                     }
@@ -522,7 +474,80 @@ fun PresentationViewerScreen(
                                         onDismissRequest = { isMenuOpen = false }
                                     ) {
                                         DropdownMenuItem(
-                                            text = { Text("Open in PowerPoint / Google Slides") },
+                                            text = { Text(if (isVisualMode) "Switch to Outline View" else "Switch to Visual View") },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = if (isVisualMode) Icons.AutoMirrored.Filled.Article else Icons.Default.Slideshow,
+                                                    contentDescription = null
+                                                )
+                                            },
+                                            onClick = {
+                                                isMenuOpen = false
+                                                isVisualMode = !isVisualMode
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(when (readingMode) {
+                                                    ReadingMode.NORMAL -> "Theme: Dark"
+                                                    ReadingMode.INVERTED_DARK -> "Theme: Sepia"
+                                                    ReadingMode.SEPIA -> "Theme: Light"
+                                                })
+                                            },
+                                            leadingIcon = {
+                                                Icon(Icons.Outlined.Brightness4, contentDescription = null)
+                                            },
+                                            onClick = {
+                                                isMenuOpen = false
+                                                readingMode = when (readingMode) {
+                                                    ReadingMode.NORMAL -> ReadingMode.INVERTED_DARK
+                                                    ReadingMode.INVERTED_DARK -> ReadingMode.SEPIA
+                                                    ReadingMode.SEPIA -> ReadingMode.NORMAL
+                                                }
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Jump to Slide...") },
+                                            leadingIcon = {
+                                                Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = null)
+                                            },
+                                            onClick = {
+                                                isMenuOpen = false
+                                                isJumpDialogOpen = true
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Thumbnail Strip") },
+                                            leadingIcon = {
+                                                Icon(Icons.Outlined.ViewCarousel, contentDescription = null)
+                                            },
+                                            onClick = {
+                                                isMenuOpen = false
+                                                isThumbnailStripOpen = !isThumbnailStripOpen
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Speaker Notes") },
+                                            leadingIcon = {
+                                                Icon(Icons.Outlined.Description, contentDescription = null)
+                                            },
+                                            onClick = {
+                                                isMenuOpen = false
+                                                isNotesSheetOpen = true
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Share Presentation") },
+                                            leadingIcon = {
+                                                Icon(Icons.Outlined.Share, contentDescription = null)
+                                            },
+                                            onClick = {
+                                                isMenuOpen = false
+                                                onShareClick()
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Open in Office App") },
                                             leadingIcon = {
                                                 Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
                                             },
@@ -654,15 +679,22 @@ fun PresentationViewerScreen(
                             )
                         }
 
-                        // Slide counter & page jump
-                        Text(
-                            text = "Slide ${pagerState.currentPage + 1} of ${slides.size}",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                            color = textColor,
+                        // Slide counter & page jump pill
+                        Box(
                             modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(cardBgColor)
+                                .border(1.dp, Color(0x22888888), RoundedCornerShape(16.dp))
                                 .clickable { isJumpDialogOpen = true }
-                                .padding(AppSpacing.paddingSmall)
-                        )
+                                .padding(horizontal = 14.dp, vertical = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Slide ${pagerState.currentPage + 1} of ${slides.size}",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = textColor
+                            )
+                        }
 
                         // Speaker Notes button
                         val currentSlide = slides.getOrNull(pagerState.currentPage)
@@ -729,7 +761,40 @@ fun PresentationViewerScreen(
                         Text("Open with PowerPoint / Google Slides")
                     }
                 }
-            } else if (slides.isNotEmpty()) {
+            } else if (slides.isEmpty()) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(AppSpacing.paddingLarge)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Description,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = secondaryTextColor
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "No slides found in this presentation",
+                        color = textColor,
+                        style = MaterialTheme.typography.titleMedium,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "The presentation could not be rendered directly. Tap below to open with an external presentation app.",
+                        color = secondaryTextColor,
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(onClick = { openPresentationInOfficeApp(context, document) }) {
+                        Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Open with PowerPoint / Google Slides")
+                    }
+                }
+            } else {
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize()
@@ -829,38 +894,6 @@ fun PresentationViewerScreen(
                             contentDescription = "Exit Slideshow",
                             tint = Color.White
                         )
-                }
-            } else {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(AppSpacing.paddingLarge)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Description,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = secondaryTextColor
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "No slides found in this presentation",
-                        color = textColor,
-                        style = MaterialTheme.typography.titleMedium,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "The presentation could not be rendered directly. Tap below to open with an external presentation app.",
-                        color = secondaryTextColor,
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(onClick = { openPresentationInOfficeApp(context, document) }) {
-                        Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Open with PowerPoint / Google Slides")
                     }
                 }
             }
@@ -918,7 +951,6 @@ fun PresentationViewerScreen(
             }
         }
     }
-}
 }
 
 /**
@@ -1213,9 +1245,9 @@ private fun VisualSlideCard(
 
         Box(
             modifier = cardModifier
-                .background(slideBg, RoundedCornerShape(8.dp))
-                .border(1.dp, Color(0x33888888), RoundedCornerShape(8.dp))
-                .clip(RoundedCornerShape(8.dp))
+                .background(slideBg, RoundedCornerShape(12.dp))
+                .border(1.dp, Color(0x1F888888), RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(12.dp))
         ) {
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                 val totalWidth = maxWidth
@@ -1490,8 +1522,9 @@ private fun OutlineSlideCard(
 
         Box(
             modifier = cardModifier
-                .background(cardBgColor, RoundedCornerShape(8.dp))
-                .border(1.dp, Color(0x33888888), RoundedCornerShape(8.dp))
+                .background(cardBgColor, RoundedCornerShape(12.dp))
+                .border(1.dp, Color(0x1F888888), RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .padding(AppSpacing.paddingLarge)
         ) {
             Column(

@@ -57,6 +57,8 @@ import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.foundation.layout.statusBarsPadding
+import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.outlined.Bookmark
@@ -140,6 +142,8 @@ fun FileManagerScreen(
     viewModel: FileManagerViewModel,
     onOpenFile: (File) -> Unit,
     onSettingsClick: (() -> Unit)? = null,
+    onToggleTheme: (() -> Unit)? = null,
+    isDarkTheme: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -239,7 +243,9 @@ fun FileManagerScreen(
                 Surface(
                     color = colors.surface,
                     tonalElevation = 3.dp,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -292,321 +298,281 @@ fun FileManagerScreen(
                 }
 
             } else {
-                // Normal Top Bar
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(colors.surface)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (uiState.canGoBack) {
+                Box {
+                    AppTabHeader(
+                        title = if (uiState.canGoBack) uiState.currentDirectory.name else "Files",
+                        navigationIcon = if (uiState.canGoBack) {
+                            {
                                 IconButton(onClick = { viewModel.navigateUp() }) {
-                                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colors.textPrimary)
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                                        contentDescription = "Back",
+                                        tint = colors.textPrimary
+                                    )
                                 }
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Outlined.Folder,
-                                    contentDescription = null,
-                                    tint = colors.accent,
-                                    modifier = Modifier
-                                        .padding(start = 6.dp, end = 10.dp)
-                                        .size(24.dp)
-                                )
                             }
-                            Text(
-                                text = "Files",
-                                style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 18.sp),
-                                color = colors.textPrimary
+                        } else null,
+                        onSearchClick = { isSearchActive = !isSearchActive },
+                        isSearchActive = isSearchActive,
+                        searchContent = {
+                            AppSearchField(
+                                query = uiState.searchQuery,
+                                onQueryChanged = { viewModel.setSearchQuery(it) },
+                                placeholder = "Search files..."
                             )
-                        }
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { isSearchActive = !isSearchActive }) {
-                                Icon(Icons.Outlined.Search, contentDescription = "Search", tint = colors.textPrimary)
-                            }
-                            Box {
-                                IconButton(onClick = { showSortMenu = true }) {
-                                    Icon(Icons.AutoMirrored.Outlined.Sort, contentDescription = "Sort", tint = colors.textPrimary)
+                        },
+                        isDarkTheme = isDarkTheme,
+                        onToggleTheme = onToggleTheme,
+                        onSettingsClick = onSettingsClick,
+                        moreMenuContent = { onDismiss ->
+                            DropdownMenuItem(
+                                text = { Text(if (uiState.isGridView) "Switch to List View" else "Switch to Grid View", style = typography.body, color = colors.textPrimary) },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = if (uiState.isGridView) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
+                                        contentDescription = null,
+                                        tint = colors.accent
+                                    )
+                                },
+                                onClick = {
+                                    onDismiss()
+                                    viewModel.toggleViewMode()
                                 }
-                                SortOrderDropdownMenu(
-                                    expanded = showSortMenu,
-                                    currentSort = uiState.sortOrder,
-                                    onDismiss = { showSortMenu = false },
-                                    onSortSelected = { viewModel.toggleSort(it) }
-                                )
-                            }
-                            IconButton(onClick = { viewModel.toggleViewMode() }) {
-                                Icon(
-                                    imageVector = if (uiState.isGridView) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
-                                    contentDescription = "Toggle View",
-                                    tint = colors.textPrimary
-                                )
-                            }
-                            IconButton(onClick = { viewModel.openTrash() }) {
-                                BadgedBox(
-                                    badge = {
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Sort files...", style = typography.body, color = colors.textPrimary) },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Sort, contentDescription = null, tint = colors.accent) },
+                                onClick = {
+                                    onDismiss()
+                                    showSortMenu = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Row(
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Recycle Bin", style = typography.body, color = colors.textPrimary)
                                         if (uiState.trashItems.isNotEmpty()) {
                                             Badge { Text(uiState.trashItems.size.toString()) }
                                         }
                                     }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.DeleteSweep,
-                                        contentDescription = "Recycle Bin",
-                                        tint = colors.textPrimary
-                                    )
+                                },
+                                leadingIcon = { Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.accent) },
+                                onClick = {
+                                    onDismiss()
+                                    viewModel.openTrash()
                                 }
-                            }
-                            val myDocApp = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
-                            val isWifiActive = myDocApp?.wifiServerManager?.isRunning?.collectAsState()?.value ?: false
-                            if (isWifiActive) {
-                                IconButton(onClick = { showWifiSharingSheet = true }) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Wifi,
-                                        contentDescription = "PC Wi-Fi Transfer Active",
-                                        tint = Color(0xFF4CAF50)
-                                    )
+                            )
+
+                            HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 4.dp))
+
+                            Text(
+                                text = "TOOLS & VAULT",
+                                style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp),
+                                color = colors.accent,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                            )
+                            DropdownMenuItem(
+                                text = { Text("PC Wi-Fi Transfer", style = typography.body, color = colors.textPrimary) },
+                                leadingIcon = { Icon(Icons.Outlined.Wifi, contentDescription = null, tint = colors.accent) },
+                                onClick = {
+                                    onDismiss()
+                                    showWifiSharingSheet = true
                                 }
-                            }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Storage Cleaner", style = typography.body, color = colors.textPrimary) },
+                                leadingIcon = { Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.accent) },
+                                onClick = {
+                                    onDismiss()
+                                    showStorageCleanerSheet = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("App Manager & APKs", style = typography.body, color = colors.textPrimary) },
+                                leadingIcon = { Icon(Icons.Outlined.Android, contentDescription = null, tint = colors.accent) },
+                                onClick = {
+                                    onDismiss()
+                                    showAppManagerSheet = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Safe Vault (Encrypted)", style = typography.body, color = colors.textPrimary) },
+                                leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.accent) },
+                                onClick = {
+                                    onDismiss()
+                                    showVaultSheet = true
+                                }
+                            )
+
+                            HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 4.dp))
+
+                            Text(
+                                text = "ACTIONS",
+                                style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp),
+                                color = colors.accent,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                            )
+                            DropdownMenuItem(
+                                text = { Text("New Folder", style = typography.body, color = colors.textPrimary) },
+                                leadingIcon = { Icon(Icons.Outlined.CreateNewFolder, contentDescription = null, tint = colors.textSecondary) },
+                                onClick = {
+                                    onDismiss()
+                                    showNewFolderDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("New File", style = typography.body, color = colors.textPrimary) },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Outlined.NoteAdd, contentDescription = null, tint = colors.textSecondary) },
+                                onClick = {
+                                    onDismiss()
+                                    showNewFileDialog = true
+                                }
+                            )
+
+                            HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 4.dp))
+
+                            Text(
+                                text = "PREFERENCES",
+                                style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp),
+                                color = colors.accent,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        if (uiState.showHiddenFiles) "Hide hidden files" else "Show hidden files",
+                                        style = typography.body,
+                                        color = colors.textPrimary
+                                    )
+                                },
+                                onClick = {
+                                    onDismiss()
+                                    viewModel.toggleHiddenFiles()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Refresh", style = typography.body, color = colors.textPrimary) },
+                                onClick = {
+                                    onDismiss()
+                                    viewModel.loadDirectory(uiState.currentDirectory, addToHistory = false)
+                                    viewModel.refreshVolumes()
+                                }
+                            )
                             if (onSettingsClick != null) {
-                                IconButton(onClick = onSettingsClick) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Settings,
-                                        contentDescription = "Settings",
-                                        tint = colors.textPrimary
-                                    )
-                                }
+                                DropdownMenuItem(
+                                    text = { Text("Settings", style = typography.body, color = colors.textPrimary) },
+                                    leadingIcon = { Icon(Icons.Outlined.Settings, contentDescription = null, tint = colors.textSecondary) },
+                                    onClick = {
+                                        onDismiss()
+                                        onSettingsClick()
+                                    }
+                                )
                             }
-                            Box {
-                                IconButton(onClick = { showOverflowMenu = true }) {
-                                    Icon(Icons.Outlined.MoreVert, contentDescription = "More", tint = colors.textPrimary)
-                                }
-                                DropdownMenu(
-                                    expanded = showOverflowMenu,
-                                    onDismissRequest = { showOverflowMenu = false },
-                                    modifier = Modifier
-                                        .background(colors.surface)
-                                        .width(230.dp)
-                                ) {
-                                    // 1. QUICK TOOLS
-                                    Text(
-                                        text = "TOOLS & VAULT",
-                                        style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp),
-                                        color = colors.accent,
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("PC Wi-Fi Transfer", style = typography.body, color = colors.textPrimary) },
-                                        leadingIcon = { Icon(Icons.Outlined.Wifi, contentDescription = null, tint = colors.accent) },
-                                        onClick = {
-                                            showOverflowMenu = false
-                                            showWifiSharingSheet = true
+                        },
+                        bottomContent = {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                // Fast Categories Chips
+                                FileManagerCategoryChips(
+                                    activeCategory = uiState.activeCategory,
+                                    onCategorySelected = { category ->
+                                        if (uiState.activeCategory == category) {
+                                            viewModel.selectCategory(null)
+                                        } else {
+                                            viewModel.selectCategory(category)
                                         }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Storage Cleaner", style = typography.body, color = colors.textPrimary) },
-                                        leadingIcon = { Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.accent) },
-                                        onClick = {
-                                            showOverflowMenu = false
-                                            showStorageCleanerSheet = true
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("App Manager & APKs", style = typography.body, color = colors.textPrimary) },
-                                        leadingIcon = { Icon(Icons.Outlined.Android, contentDescription = null, tint = colors.accent) },
-                                        onClick = {
-                                            showOverflowMenu = false
-                                            showAppManagerSheet = true
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Safe Vault (Encrypted)", style = typography.body, color = colors.textPrimary) },
-                                        leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.accent) },
-                                        onClick = {
-                                            showOverflowMenu = false
-                                            showVaultSheet = true
-                                        }
-                                    )
+                                    }
+                                )
 
-                                    HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 4.dp))
-
-                                    // 2. CREATE ACTIONS
-                                    Text(
-                                        text = "ACTIONS",
-                                        style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp),
-                                        color = colors.accent,
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("New Folder", style = typography.body, color = colors.textPrimary) },
-                                        leadingIcon = { Icon(Icons.Outlined.CreateNewFolder, contentDescription = null, tint = colors.textSecondary) },
-                                        onClick = {
-                                            showOverflowMenu = false
-                                            showNewFolderDialog = true
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("New File", style = typography.body, color = colors.textPrimary) },
-                                        leadingIcon = { Icon(Icons.AutoMirrored.Outlined.NoteAdd, contentDescription = null, tint = colors.textSecondary) },
-                                        onClick = {
-                                            showOverflowMenu = false
-                                            showNewFileDialog = true
-                                        }
-                                    )
-
-                                    HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 4.dp))
-
-                                    // 3. PREFERENCES & VIEW
-                                    Text(
-                                        text = "PREFERENCES",
-                                        style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp),
-                                        color = colors.accent,
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                                    )
-                                    DropdownMenuItem(
-                                        text = {
+                                // Breadcrumb Trail or Category Banner
+                                if (uiState.activeCategory != null) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(
-                                                if (uiState.showHiddenFiles) "Hide hidden files" else "Show hidden files",
-                                                style = typography.body,
-                                                color = colors.textPrimary
+                                                text = "Category: ${uiState.activeCategory?.displayName}",
+                                                style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 14.sp),
+                                                color = colors.accent
                                             )
-                                        },
-                                        onClick = {
-                                            showOverflowMenu = false
-                                            viewModel.toggleHiddenFiles()
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "(${uiState.filteredItems.size} items)",
+                                                style = typography.caption.copy(fontSize = 12.sp),
+                                                color = colors.textSecondary
+                                            )
                                         }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Refresh", style = typography.body, color = colors.textPrimary) },
-                                        onClick = {
-                                            showOverflowMenu = false
-                                            viewModel.loadDirectory(uiState.currentDirectory, addToHistory = false)
-                                            viewModel.refreshVolumes()
+                                        IconButton(
+                                            onClick = { viewModel.selectCategory(null) },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Close,
+                                                contentDescription = "Exit Category",
+                                                tint = colors.textSecondary,
+                                                modifier = Modifier.size(16.dp)
+                                            )
                                         }
-                                    )
-                                    if (onSettingsClick != null) {
-                                        DropdownMenuItem(
-                                            text = { Text("Settings", style = typography.body, color = colors.textPrimary) },
-                                            leadingIcon = { Icon(Icons.Outlined.Settings, contentDescription = null, tint = colors.textSecondary) },
-                                            onClick = {
-                                                showOverflowMenu = false
-                                                onSettingsClick()
+                                    }
+                                } else {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState())
+                                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                                    ) {
+                                        uiState.breadcrumbTrail.forEachIndexed { index, crumb ->
+                                            val isLast = index == uiState.breadcrumbTrail.size - 1
+                                            val volumeForCrumb = uiState.storageVolumes.firstOrNull { it.path == crumb.absolutePath }
+                                            val crumbName = when {
+                                                volumeForCrumb != null -> volumeForCrumb.title
+                                                crumb.absolutePath == "/storage/emulated/0" -> "Internal Storage"
+                                                index == 0 -> "Storage"
+                                                else -> crumb.name
                                             }
-                                        )
+
+                                            Text(
+                                                text = crumbName,
+                                                style = typography.body.copy(
+                                                    fontWeight = if (isLast) FontWeight.Bold else FontWeight.Normal,
+                                                    fontSize = 13.sp
+                                                ),
+                                                color = if (isLast) colors.accent else colors.textSecondary,
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(6.dp))
+                                                    .clickable { viewModel.navigateToCrumb(crumb) }
+                                                    .padding(horizontal = 6.dp, vertical = 4.dp)
+                                            )
+
+                                            if (!isLast) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.ChevronRight,
+                                                    contentDescription = null,
+                                                    tint = colors.divider,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-
-                    // Search Field (if toggled)
-                    if (isSearchActive) {
-                        AppSearchField(
-                            query = uiState.searchQuery,
-                            onQueryChanged = { viewModel.setSearchQuery(it) },
-                            placeholder = "Search current folder...",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
-                    }
-
-                    // Fast Categories Chips
-                    FileManagerCategoryChips(
-                        activeCategory = uiState.activeCategory,
-                        onCategorySelected = { category ->
-                            if (uiState.activeCategory == category) {
-                                viewModel.selectCategory(null)
-                            } else {
-                                viewModel.selectCategory(category)
-                            }
-                        }
                     )
 
-                    // Breadcrumb Trail or Category Banner
-                    if (uiState.activeCategory != null) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 6.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "Category: ${uiState.activeCategory?.displayName}",
-                                    style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 14.sp),
-                                    color = colors.accent
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "(${uiState.filteredItems.size} items)",
-                                    style = typography.caption.copy(fontSize = 12.sp),
-                                    color = colors.textSecondary
-                                )
-                            }
-                            IconButton(
-                                onClick = { viewModel.selectCategory(null) },
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Close,
-                                    contentDescription = "Exit Category",
-                                    tint = colors.textSecondary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    } else {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 14.dp, vertical = 6.dp)
-                        ) {
-                            uiState.breadcrumbTrail.forEachIndexed { index, crumb ->
-                                val isLast = index == uiState.breadcrumbTrail.size - 1
-                                val volumeForCrumb = uiState.storageVolumes.firstOrNull { it.path == crumb.absolutePath }
-                                val crumbName = when {
-                                    volumeForCrumb != null -> volumeForCrumb.title
-                                    crumb.absolutePath == "/storage/emulated/0" -> "Internal Storage"
-                                    index == 0 -> "Storage"
-                                    else -> crumb.name
-                                }
-
-                                Text(
-                                    text = crumbName,
-                                    style = typography.body.copy(
-                                        fontWeight = if (isLast) FontWeight.Bold else FontWeight.Normal,
-                                        fontSize = 13.sp
-                                    ),
-                                    color = if (isLast) colors.accent else colors.textSecondary,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .clickable { viewModel.navigateToCrumb(crumb) }
-                                        .padding(horizontal = 6.dp, vertical = 4.dp)
-                                )
-
-                                if (!isLast) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.ChevronRight,
-                                        contentDescription = null,
-                                        tint = colors.divider,
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    HorizontalDivider(color = colors.divider, thickness = 0.8.dp)
+                    SortOrderDropdownMenu(
+                        expanded = showSortMenu,
+                        currentSort = uiState.sortOrder,
+                        onDismiss = { showSortMenu = false },
+                        onSortSelected = { viewModel.toggleSort(it) }
+                    )
                 }
             }
         },

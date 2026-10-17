@@ -1593,9 +1593,25 @@ class PptxParser {
         var currentTitle = ""
         val currentContent = mutableListOf<String>()
 
+        val fontNoiseSet = setOf(
+            "verdana", "wingdings", "times", "times new roman", "calibri", "arial",
+            "courier", "courier new", "tahoma", "symbol", "segoe ui", "cambria",
+            "georgia", "helvetica", "garamond", "comic sans ms", "trebuchet ms",
+            "_ppt10", "_ppt9", "_ppt8", "_ppt11", "_ppt12", "ms sans serif"
+        )
+
+        fun isFontNoise(text: String): Boolean {
+            val lower = text.trim().lowercase()
+            return lower in fontNoiseSet || lower.startsWith("_ppt")
+        }
+
         fun flushSlide() {
-            if (currentTitle.isNotBlank() || currentContent.isNotEmpty()) {
-                val t = if (currentTitle.isNotBlank()) currentTitle else "Slide $slideCounter"
+            val validContent = currentContent.filter { !isFontNoise(it) }
+            val validTitle = if (!isFontNoise(currentTitle)) currentTitle else (validContent.firstOrNull() ?: "")
+            val finalContent = if (validTitle.isNotEmpty() && validTitle == validContent.firstOrNull()) validContent.drop(1) else validContent
+
+            if (validTitle.isNotBlank() || finalContent.isNotEmpty()) {
+                val t = if (validTitle.isNotBlank()) validTitle else "Slide $slideCounter"
                 val visuals = mutableListOf<VisualElement>()
 
                 // Title shape
@@ -1617,12 +1633,12 @@ class PptxParser {
                 val bodyWidth = if (hasPic) 0.46f else 0.88f
 
                 // Body content / bullet points
-                if (currentContent.isNotEmpty()) {
+                if (finalContent.isNotEmpty()) {
                     visuals.add(
                         VisualElement(
                             type = VisualElementType.TEXT_BOX,
                             bounds = SlideBounds(0.06f, 0.28f, bodyWidth, 0.64f),
-                            paragraphs = currentContent.map { line ->
+                            paragraphs = finalContent.map { line ->
                                 SlideParagraph(
                                     runs = listOf(SlideTextRun(text = line, fontSizeSp = 15f)),
                                     isBullet = true
@@ -1819,9 +1835,17 @@ class PptxParser {
         val strings = mutableListOf<String>()
         val seen = mutableSetOf<String>()
 
+        val fontNoiseSet = setOf(
+            "verdana", "wingdings", "times", "times new roman", "calibri", "arial",
+            "courier", "courier new", "tahoma", "symbol", "segoe ui", "cambria",
+            "georgia", "helvetica", "garamond", "comic sans ms", "trebuchet ms",
+            "_ppt10", "_ppt9", "_ppt8", "_ppt11", "_ppt12", "ms sans serif"
+        )
+
         fun isMetadataOrGarbage(s: String): Boolean {
             if (s.length < 3 || !s.any { it.isLetter() }) return true
-            val lower = s.lowercase()
+            val lower = s.lowercase().trim()
+            if (lower in fontNoiseSet || lower.startsWith("_ppt")) return true
             return lower.contains("root entry") ||
                 lower.contains("current user") ||
                 lower.contains("powerpoint document") ||

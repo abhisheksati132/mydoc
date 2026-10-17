@@ -53,7 +53,9 @@ import com.abhisheksati.mydoc.data.local.DocumentSortOrder
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppFileRow
 import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
+import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
+import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.DocumentCategory
@@ -88,278 +90,187 @@ fun DocumentsTabContent(
             .fillMaxSize()
             .background(colors.background)
     ) {
-        // 1. Google Drive / Files style Pill Search Bar
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(colors.background)
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(26.dp),
-                color = colors.surface,
-                tonalElevation = 2.dp,
-                shadowElevation = 1.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Search,
-                        contentDescription = "Search",
-                        tint = colors.textSecondary,
-                        modifier = Modifier.size(22.dp)
+        var isSearchActive by remember { mutableStateOf(uiState.searchQuery.isNotEmpty()) }
+
+        Box {
+            AppTabHeader(
+                title = "Documents",
+                onSearchClick = { isSearchActive = !isSearchActive },
+                isSearchActive = isSearchActive || uiState.searchQuery.isNotEmpty(),
+                searchContent = {
+                    AppSearchField(
+                        query = uiState.searchQuery,
+                        onQueryChanged = viewModel::onSearchQueryChanged,
+                        placeholder = "Search documents..."
                     )
-
-                    Spacer(modifier = Modifier.width(10.dp))
-
-                    BasicTextField(
-                        value = uiState.searchQuery,
-                        onValueChange = viewModel::onSearchQueryChanged,
-                        modifier = Modifier.weight(1f),
-                        textStyle = typography.body.copy(color = colors.textPrimary),
-                        singleLine = true,
-                        decorationBox = { innerTextField ->
-                            if (uiState.searchQuery.isEmpty()) {
-                                Text(
-                                    text = "Search documents...",
-                                    style = typography.body,
-                                    color = colors.textSecondary
-                                )
-                            }
-                            innerTextField()
-                        }
-                    )
-
-                    if (uiState.searchQuery.isNotEmpty()) {
-                        IconButton(
-                            onClick = { viewModel.onSearchQueryChanged("") },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Close,
-                                contentDescription = "Clear search",
-                                tint = colors.textSecondary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-
-                    // Theme toggle (Sun / Moon)
-                    IconButton(
+                },
+                isDarkTheme = isDarkTheme,
+                onToggleTheme = onToggleTheme,
+                onSettingsClick = onSettingsClick,
+                moreMenuContent = { onDismiss ->
+                    DropdownMenuItem(
+                        text = { Text("Sort documents...", style = typography.body) },
+                        leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Sort, contentDescription = null, tint = colors.accent) },
                         onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onToggleTheme()
+                            onDismiss()
+                            isSortMenuOpen = true
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Scan folder", style = typography.body) },
+                        leadingIcon = {
+                            Icon(Icons.Outlined.FolderOpen, contentDescription = null, tint = colors.textSecondary)
                         },
-                        modifier = Modifier.size(36.dp)
+                        onClick = {
+                            onDismiss()
+                            openFolderLauncher.launch(null)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Clear recents", style = typography.body) },
+                        leadingIcon = {
+                            Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.error)
+                        },
+                        onClick = {
+                            onDismiss()
+                            onShowClearRecentsDialog()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Settings", style = typography.body) },
+                        leadingIcon = {
+                            Icon(Icons.Outlined.Settings, contentDescription = null, tint = colors.textSecondary)
+                        },
+                        onClick = {
+                            onDismiss()
+                            onSettingsClick()
+                        }
+                    )
+                },
+                bottomContent = {
+                    // Category Filter Chips
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = if (isDarkTheme) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
-                            contentDescription = if (isDarkTheme) "Light mode" else "Dark mode",
-                            tint = colors.textSecondary,
-                            modifier = Modifier.size(20.dp)
+                        AppFilterChip(
+                            label = "All",
+                            isSelected = uiState.selectedCategory == DocumentCategory.ALL,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                viewModel.selectCategory(DocumentCategory.ALL)
+                            }
+                        )
+                        AppFilterChip(
+                            label = "PDF",
+                            isSelected = uiState.selectedCategory == DocumentCategory.PDF,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                viewModel.selectCategory(DocumentCategory.PDF)
+                            }
+                        )
+                        AppFilterChip(
+                            label = "Word",
+                            isSelected = uiState.selectedCategory == DocumentCategory.WORD,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                viewModel.selectCategory(DocumentCategory.WORD)
+                            }
+                        )
+                        AppFilterChip(
+                            label = "Excel",
+                            isSelected = uiState.selectedCategory == DocumentCategory.EXCEL,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                viewModel.selectCategory(DocumentCategory.EXCEL)
+                            }
+                        )
+                        AppFilterChip(
+                            label = "PPT",
+                            isSelected = uiState.selectedCategory == DocumentCategory.PPT,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                viewModel.selectCategory(DocumentCategory.PPT)
+                            }
+                        )
+                        AppFilterChip(
+                            label = "Text",
+                            isSelected = uiState.selectedCategory == DocumentCategory.TEXT,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                viewModel.selectCategory(DocumentCategory.TEXT)
+                            }
                         )
                     }
-
-                    // Sort Menu
-                    Box {
-                        IconButton(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                isSortMenuOpen = true
-                            },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.Sort,
-                                contentDescription = "Sort documents",
-                                tint = colors.textSecondary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = isSortMenuOpen,
-                            onDismissRequest = { isSortMenuOpen = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Last opened", style = typography.body) },
-                                trailingIcon = {
-                                    if (uiState.sortOrder == DocumentSortOrder.LAST_OPENED) {
-                                        Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
-                                    }
-                                },
-                                onClick = {
-                                    viewModel.setSortOrder(DocumentSortOrder.LAST_OPENED)
-                                    isSortMenuOpen = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Name (A to Z)", style = typography.body) },
-                                trailingIcon = {
-                                    if (uiState.sortOrder == DocumentSortOrder.NAME_ASC) {
-                                        Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
-                                    }
-                                },
-                                onClick = {
-                                    viewModel.setSortOrder(DocumentSortOrder.NAME_ASC)
-                                    isSortMenuOpen = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Name (Z to A)", style = typography.body) },
-                                trailingIcon = {
-                                    if (uiState.sortOrder == DocumentSortOrder.NAME_DESC) {
-                                        Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
-                                    }
-                                },
-                                onClick = {
-                                    viewModel.setSortOrder(DocumentSortOrder.NAME_DESC)
-                                    isSortMenuOpen = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Size (largest first)", style = typography.body) },
-                                trailingIcon = {
-                                    if (uiState.sortOrder == DocumentSortOrder.SIZE_DESC) {
-                                        Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
-                                    }
-                                },
-                                onClick = {
-                                    viewModel.setSortOrder(DocumentSortOrder.SIZE_DESC)
-                                    isSortMenuOpen = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Size (smallest first)", style = typography.body) },
-                                trailingIcon = {
-                                    if (uiState.sortOrder == DocumentSortOrder.SIZE_ASC) {
-                                        Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
-                                    }
-                                },
-                                onClick = {
-                                    viewModel.setSortOrder(DocumentSortOrder.SIZE_ASC)
-                                    isSortMenuOpen = false
-                                }
-                            )
-                        }
-                    }
-
-                    // More options menu (Scan folder, Settings, Clear recents)
-                    Box {
-                        IconButton(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                isMoreMenuOpen = true
-                            },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.MoreVert,
-                                contentDescription = "More options",
-                                tint = colors.textSecondary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = isMoreMenuOpen,
-                            onDismissRequest = { isMoreMenuOpen = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Scan folder", style = typography.body) },
-                                leadingIcon = {
-                                    Icon(Icons.Outlined.FolderOpen, contentDescription = null, tint = colors.textSecondary)
-                                },
-                                onClick = {
-                                    isMoreMenuOpen = false
-                                    openFolderLauncher.launch(null)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Settings", style = typography.body) },
-                                leadingIcon = {
-                                    Icon(Icons.Outlined.Settings, contentDescription = null, tint = colors.textSecondary)
-                                },
-                                onClick = {
-                                    isMoreMenuOpen = false
-                                    onSettingsClick()
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Clear recents", style = typography.body) },
-                                leadingIcon = {
-                                    Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.error)
-                                },
-                                onClick = {
-                                    isMoreMenuOpen = false
-                                    onShowClearRecentsDialog()
-                                }
-                            )
-                        }
-                    }
                 }
-            }
+            )
 
-            // Category Filter Chips
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Sort Menu
+            DropdownMenu(
+                expanded = isSortMenuOpen,
+                onDismissRequest = { isSortMenuOpen = false }
             ) {
-                AppFilterChip(
-                    label = "All",
-                    isSelected = uiState.selectedCategory == DocumentCategory.ALL,
+                DropdownMenuItem(
+                    text = { Text("Last opened", style = typography.body) },
+                    trailingIcon = {
+                        if (uiState.sortOrder == DocumentSortOrder.LAST_OPENED) {
+                            Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
+                        }
+                    },
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        viewModel.selectCategory(DocumentCategory.ALL)
+                        viewModel.setSortOrder(DocumentSortOrder.LAST_OPENED)
+                        isSortMenuOpen = false
                     }
                 )
-                AppFilterChip(
-                    label = "PDF",
-                    isSelected = uiState.selectedCategory == DocumentCategory.PDF,
+                DropdownMenuItem(
+                    text = { Text("Name (A to Z)", style = typography.body) },
+                    trailingIcon = {
+                        if (uiState.sortOrder == DocumentSortOrder.NAME_ASC) {
+                            Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
+                        }
+                    },
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        viewModel.selectCategory(DocumentCategory.PDF)
+                        viewModel.setSortOrder(DocumentSortOrder.NAME_ASC)
+                        isSortMenuOpen = false
                     }
                 )
-                AppFilterChip(
-                    label = "Word",
-                    isSelected = uiState.selectedCategory == DocumentCategory.WORD,
+                DropdownMenuItem(
+                    text = { Text("Name (Z to A)", style = typography.body) },
+                    trailingIcon = {
+                        if (uiState.sortOrder == DocumentSortOrder.NAME_DESC) {
+                            Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
+                        }
+                    },
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        viewModel.selectCategory(DocumentCategory.WORD)
+                        viewModel.setSortOrder(DocumentSortOrder.NAME_DESC)
+                        isSortMenuOpen = false
                     }
                 )
-                AppFilterChip(
-                    label = "Excel",
-                    isSelected = uiState.selectedCategory == DocumentCategory.EXCEL,
+                DropdownMenuItem(
+                    text = { Text("Size (largest first)", style = typography.body) },
+                    trailingIcon = {
+                        if (uiState.sortOrder == DocumentSortOrder.SIZE_DESC) {
+                            Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
+                        }
+                    },
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        viewModel.selectCategory(DocumentCategory.EXCEL)
+                        viewModel.setSortOrder(DocumentSortOrder.SIZE_DESC)
+                        isSortMenuOpen = false
                     }
                 )
-                AppFilterChip(
-                    label = "PPT",
-                    isSelected = uiState.selectedCategory == DocumentCategory.PPT,
+                DropdownMenuItem(
+                    text = { Text("Size (smallest first)", style = typography.body) },
+                    trailingIcon = {
+                        if (uiState.sortOrder == DocumentSortOrder.SIZE_ASC) {
+                            Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
+                        }
+                    },
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        viewModel.selectCategory(DocumentCategory.PPT)
-                    }
-                )
-                AppFilterChip(
-                    label = "Text",
-                    isSelected = uiState.selectedCategory == DocumentCategory.TEXT,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        viewModel.selectCategory(DocumentCategory.TEXT)
+                        viewModel.setSortOrder(DocumentSortOrder.SIZE_ASC)
+                        isSortMenuOpen = false
                     }
                 )
             }
