@@ -6,5 +6,6 @@ enum class DocumentCategory(val label: String) {
     WORD("Word"),
     EXCEL("Excel"),
     PPT("PPT"),
+    TEXT("Text"),
     FAVORITES("Favorites")
 }

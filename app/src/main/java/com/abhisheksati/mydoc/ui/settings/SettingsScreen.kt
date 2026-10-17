@@ -78,6 +78,7 @@ fun SettingsScreen(
     updateManager: UpdateManager,
     settingsRepository: SettingsRepository,
     onBackClick: () -> Unit,
+    onDesignSystemPreviewClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val updateState by updateManager.state.collectAsState()
@@ -179,7 +180,7 @@ fun SettingsScreen(
                 FilterChip(
                     selected = currentTheme == AppThemeMode.AMOLED_DARK,
                     onClick = { settingsRepository.setThemeMode(AppThemeMode.AMOLED_DARK) },
-                    label = { Text("AMOLED Black") },
+                    label = { Text("Dark (#0F0F10)") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Outlined.DarkMode,
@@ -191,7 +192,7 @@ fun SettingsScreen(
                 FilterChip(
                     selected = currentTheme == AppThemeMode.LIGHT,
                     onClick = { settingsRepository.setThemeMode(AppThemeMode.LIGHT) },
-                    label = { Text("Crisp Light") },
+                    label = { Text("Light (#F9F9FB)") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Outlined.LightMode,
@@ -205,6 +206,16 @@ fun SettingsScreen(
                     onClick = { settingsRepository.setThemeMode(AppThemeMode.SYSTEM) },
                     label = { Text("System") }
                 )
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.medium))
+
+            OutlinedButton(
+                onClick = onDesignSystemPreviewClick,
+                shape = RoundedCornerShape(4.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("View Design System Showcase & Tokens")
             }
 
             Spacer(modifier = Modifier.height(Spacing.large))

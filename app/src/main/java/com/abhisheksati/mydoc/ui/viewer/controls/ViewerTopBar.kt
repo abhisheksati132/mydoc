@@ -3,70 +3,53 @@ package com.abhisheksati.mydoc.ui.viewer.controls
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
-import androidx.compose.material.icons.outlined.Brightness4
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material.icons.outlined.SwapVert
-import androidx.compose.material.icons.outlined.ViewDay
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
-import com.abhisheksati.mydoc.R
-import com.abhisheksati.mydoc.domain.model.ReadingMode
-
-import androidx.compose.foundation.layout.Box
-import androidx.compose.material.icons.automirrored.outlined.OpenInNew
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.Print
-import androidx.compose.material.icons.outlined.ScreenRotation
-import androidx.compose.material.icons.outlined.StayCurrentPortrait
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.material.icons.outlined.BrightnessMedium
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.components.AppDivider
+import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
+import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Clean, uncluttered top bar for document viewer.
+ * All reading controls are consolidated in the lower-half bottom sheet.
+ */
 @Composable
 fun ViewerTopBar(
     title: String,
     visible: Boolean,
-    readingMode: ReadingMode,
-    isContinuousScroll: Boolean,
-    hasOutline: Boolean,
-    isKeepScreenOn: Boolean = true,
-    isBookmarked: Boolean = false,
+    isBookmarked: Boolean,
     onBackClick: () -> Unit,
-    onSearchClick: () -> Unit,
-    onToggleReadingMode: () -> Unit,
-    onToggleScrollMode: () -> Unit,
-    onOutlineClick: () -> Unit,
     onShareClick: () -> Unit,
-    onToggleBookmark: () -> Unit = {},
-    onBrightnessClick: () -> Unit = {},
-    onOpenWithClick: () -> Unit = {},
-    onPrintClick: () -> Unit = {},
-    onToggleKeepScreenOn: () -> Unit = {},
-    onToggleOrientation: () -> Unit = {},
+    onToggleBookmark: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var isMenuOpen by remember { mutableStateOf(false) }
+    val colors = LocalAppColors.current
+    val typography = LocalAppTypography.current
+    val haptic = LocalHapticFeedback.current
 
     AnimatedVisibility(
         visible = visible,
@@ -74,138 +57,76 @@ fun ViewerTopBar(
         exit = fadeOut(),
         modifier = modifier
     ) {
-        CenterAlignedTopAppBar(
-            title = {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            },
-            navigationIcon = {
-                IconButton(onClick = onBackClick) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(colors.surface)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(AppSpacing.minTouchTarget),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Back button (48dp touch target)
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onBackClick()
+                    },
+                    modifier = Modifier.size(AppSpacing.minTouchTarget)
+                ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                         contentDescription = "Back",
-                        tint = MaterialTheme.colorScheme.onBackground
+                        tint = colors.textPrimary
                     )
                 }
-            },
-            actions = {
-                if (hasOutline) {
-                    IconButton(onClick = onOutlineClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.FormatListBulleted,
-                            contentDescription = "Outline",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                IconButton(onClick = onSearchClick) {
-                    Icon(
-                        imageVector = Icons.Outlined.Search,
-                        contentDescription = "Search",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                IconButton(onClick = onToggleReadingMode) {
-                    Icon(
-                        imageVector = Icons.Outlined.Brightness4,
-                        contentDescription = "Reading Mode: ${readingMode.name}",
-                        tint = if (readingMode != ReadingMode.NORMAL) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                IconButton(onClick = onToggleScrollMode) {
-                    Icon(
-                        imageVector = if (isContinuousScroll) Icons.Outlined.SwapVert else Icons.Outlined.ViewDay,
-                        contentDescription = if (isContinuousScroll) "Continuous Scroll" else "Page Flip",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                IconButton(onClick = onShareClick) {
-                    Icon(
-                        imageVector = Icons.Outlined.Share,
-                        contentDescription = stringResource(R.string.share),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                IconButton(onClick = onToggleBookmark) {
+
+                // Middle-truncated document title
+                Text(
+                    text = formatMiddleTruncated(title, maxChars = 32),
+                    style = typography.title,
+                    color = colors.textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = AppSpacing.paddingSmall)
+                )
+
+                // Bookmark toggle
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onToggleBookmark()
+                    },
+                    modifier = Modifier.size(AppSpacing.minTouchTarget)
+                ) {
                     Icon(
                         imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                        contentDescription = if (isBookmarked) "Remove Bookmark" else "Bookmark Page",
-                        tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        contentDescription = if (isBookmarked) "Remove bookmark" else "Add bookmark",
+                        tint = if (isBookmarked) colors.accent else colors.textSecondary
                     )
                 }
-                Box {
-                    IconButton(onClick = { isMenuOpen = true }) {
-                        Icon(
-                            imageVector = Icons.Outlined.MoreVert,
-                            contentDescription = "More Options",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = isMenuOpen,
-                        onDismissRequest = { isMenuOpen = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Screen Dimmer") },
-                            leadingIcon = {
-                                Icon(Icons.Outlined.BrightnessMedium, contentDescription = null)
-                            },
-                            onClick = {
-                                isMenuOpen = false
-                                onBrightnessClick()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Open with another app") },
-                            leadingIcon = {
-                                Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
-                            },
-                            onClick = {
-                                isMenuOpen = false
-                                onOpenWithClick()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Print") },
-                            leadingIcon = {
-                                Icon(Icons.Outlined.Print, contentDescription = null)
-                            },
-                            onClick = {
-                                isMenuOpen = false
-                                onPrintClick()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(if (isKeepScreenOn) "Keep Screen On: Yes" else "Keep Screen On: No") },
-                            leadingIcon = {
-                                Icon(Icons.Outlined.StayCurrentPortrait, contentDescription = null)
-                            },
-                            onClick = {
-                                isMenuOpen = false
-                                onToggleKeepScreenOn()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Rotate Screen") },
-                            leadingIcon = {
-                                Icon(Icons.Outlined.ScreenRotation, contentDescription = null)
-                            },
-                            onClick = {
-                                isMenuOpen = false
-                                onToggleOrientation()
-                            }
-                        )
-                    }
+
+                // Share button
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onShareClick()
+                    },
+                    modifier = Modifier.size(AppSpacing.minTouchTarget)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Share,
+                        contentDescription = "Share document",
+                        tint = colors.textSecondary
+                    )
                 }
-            },
-            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
-            )
-        )
+            }
+
+            AppDivider()
+        }
     }
 }

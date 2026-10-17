@@ -28,9 +28,10 @@ import com.abhisheksati.mydoc.data.local.AppThemeMode
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.security.AppLockScreen
 import com.abhisheksati.mydoc.security.BiometricLockHelper
+import com.abhisheksati.mydoc.designsystem.preview.DesignSystemPreviewScreen
+import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
 import com.abhisheksati.mydoc.ui.home.HomeScreen
 import com.abhisheksati.mydoc.ui.settings.SettingsScreen
-import com.abhisheksati.mydoc.ui.theme.MyDocTheme
 import com.abhisheksati.mydoc.ui.viewer.DocumentViewerScreen
 import com.abhisheksati.mydoc.update.UpdateManager
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
@@ -51,6 +52,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var updateManager: UpdateManager
     private var currentDocument by mutableStateOf<DocumentFile?>(null)
     private var isSettingsOpen by mutableStateOf(false)
+    private var isDesignSystemPreviewOpen by mutableStateOf(false)
     private var isAppUnlocked by mutableStateOf(true)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -104,17 +106,22 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            MyDocTheme(darkTheme = isDark) {
+            AppDesignSystemTheme(darkTheme = isDark) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     if (!isAppUnlocked && app.settingsRepository.isBiometricLockEnabled.value) {
                         AppLockScreen(
                             onUnlockClick = { attemptUnlock() }
                         )
+                    } else if (isDesignSystemPreviewOpen) {
+                        DesignSystemPreviewScreen(
+                            onBackClick = { isDesignSystemPreviewOpen = false }
+                        )
                     } else if (isSettingsOpen) {
                         SettingsScreen(
                             updateManager = updateManager,
                             settingsRepository = app.settingsRepository,
-                            onBackClick = { isSettingsOpen = false }
+                            onBackClick = { isSettingsOpen = false },
+                            onDesignSystemPreviewClick = { isDesignSystemPreviewOpen = true }
                         )
                     } else {
                         val activeDoc = currentDocument

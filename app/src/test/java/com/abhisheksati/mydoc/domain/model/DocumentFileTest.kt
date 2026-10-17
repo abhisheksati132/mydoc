@@ -20,7 +20,7 @@ class DocumentFileTest {
         val file3 = createTestFile("notes.txt")
         assertEquals("txt", file3.extension)
         assertEquals("TXT", file3.typeBadge)
-        assertEquals(DocumentCategory.ALL, file3.category)
+        assertEquals(DocumentCategory.TEXT, file3.category)
 
         val file4 = createTestFile("presentation.PPTX")
         assertEquals("pptx", file4.extension)

@@ -2,9 +2,13 @@ package com.abhisheksati.mydoc.ui.home
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,9 +17,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Sort
@@ -25,23 +33,13 @@ import androidx.compose.material.icons.outlined.FileOpen
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,21 +49,32 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.data.local.DocumentSortOrder
 import com.abhisheksati.mydoc.data.local.FolderScanner
+import com.abhisheksati.mydoc.designsystem.components.AppDialog
+import com.abhisheksati.mydoc.designsystem.components.AppDivider
+import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
+import com.abhisheksati.mydoc.designsystem.components.AppFileRow
+import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
+import com.abhisheksati.mydoc.designsystem.components.AppSearchField
+import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
+import com.abhisheksati.mydoc.designsystem.components.AppToolbar
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
+import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.domain.model.DocumentCategory
 import com.abhisheksati.mydoc.domain.model.DocumentFile
-import com.abhisheksati.mydoc.ui.common.AppDivider
-import com.abhisheksati.mydoc.ui.common.EmptyState
-import com.abhisheksati.mydoc.ui.theme.Spacing
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import kotlinx.coroutines.launch
 
-// Supported MIME types for Storage Access Framework document picker
 val SUPPORTED_MIME_TYPES = arrayOf(
     "application/pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -78,7 +87,6 @@ val SUPPORTED_MIME_TYPES = arrayOf(
     "text/csv"
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
@@ -88,7 +96,9 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val colors = LocalAppColors.current
+    val typography = LocalAppTypography.current
+    val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp
@@ -107,9 +117,7 @@ fun HomeScreen(
                 result.onSuccess { doc ->
                     onDocumentClick(doc)
                 }.onFailure {
-                    scope.launch {
-                        snackbarHostState.showSnackbar("Unable to access the selected document.")
-                    }
+                    Toast.makeText(context, "Unable to access the selected document", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -130,36 +138,33 @@ fun HomeScreen(
                 app.settingsRepository.setGrantedFolder(uri.toString(), cleanName)
                 scope.launch {
                     val count = FolderScanner.scanTree(context, uri, app.documentRepository)
-                    snackbarHostState.showSnackbar("Added $count documents from $cleanName")
+                    Toast.makeText(context, "Added $count documents from $cleanName", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                scope.launch {
-                    snackbarHostState.showSnackbar("Unable to access folder: ${e.message}")
-                }
+                Toast.makeText(context, "Unable to access folder: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                },
+            AppToolbar(
+                title = stringResource(R.string.app_name),
                 actions = {
-                    // Sort order menu
+                    // Sort order dropdown
                     Box {
-                        IconButton(onClick = { isSortMenuOpen = true }) {
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                isSortMenuOpen = true
+                            },
+                            modifier = Modifier.size(AppSpacing.minTouchTarget)
+                        ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.Sort,
-                                contentDescription = "Sort Documents",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                contentDescription = "Sort documents",
+                                tint = colors.textSecondary
                             )
                         }
                         DropdownMenu(
@@ -167,10 +172,10 @@ fun HomeScreen(
                             onDismissRequest = { isSortMenuOpen = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Last Opened") },
+                                text = { Text("Last opened", style = typography.body) },
                                 trailingIcon = {
                                     if (uiState.sortOrder == DocumentSortOrder.LAST_OPENED) {
-                                        Icon(Icons.Outlined.Check, contentDescription = null)
+                                        Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
                                     }
                                 },
                                 onClick = {
@@ -179,10 +184,10 @@ fun HomeScreen(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Name (A to Z)") },
+                                text = { Text("Name (A to Z)", style = typography.body) },
                                 trailingIcon = {
                                     if (uiState.sortOrder == DocumentSortOrder.NAME_ASC) {
-                                        Icon(Icons.Outlined.Check, contentDescription = null)
+                                        Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
                                     }
                                 },
                                 onClick = {
@@ -191,10 +196,10 @@ fun HomeScreen(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Name (Z to A)") },
+                                text = { Text("Name (Z to A)", style = typography.body) },
                                 trailingIcon = {
                                     if (uiState.sortOrder == DocumentSortOrder.NAME_DESC) {
-                                        Icon(Icons.Outlined.Check, contentDescription = null)
+                                        Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
                                     }
                                 },
                                 onClick = {
@@ -203,10 +208,10 @@ fun HomeScreen(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Size (Largest First)") },
+                                text = { Text("Size (largest first)", style = typography.body) },
                                 trailingIcon = {
                                     if (uiState.sortOrder == DocumentSortOrder.SIZE_DESC) {
-                                        Icon(Icons.Outlined.Check, contentDescription = null)
+                                        Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
                                     }
                                 },
                                 onClick = {
@@ -215,10 +220,10 @@ fun HomeScreen(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Size (Smallest First)") },
+                                text = { Text("Size (smallest first)", style = typography.body) },
                                 trailingIcon = {
                                     if (uiState.sortOrder == DocumentSortOrder.SIZE_ASC) {
-                                        Icon(Icons.Outlined.Check, contentDescription = null)
+                                        Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
                                     }
                                 },
                                 onClick = {
@@ -229,29 +234,49 @@ fun HomeScreen(
                         }
                     }
 
-                    IconButton(onClick = { openFolderLauncher.launch(null) }) {
+                    // Folder scan button
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            openFolderLauncher.launch(null)
+                        },
+                        modifier = Modifier.size(AppSpacing.minTouchTarget)
+                    ) {
                         Icon(
                             imageVector = Icons.Outlined.FolderOpen,
-                            contentDescription = "Scan Folder",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            contentDescription = "Scan folder",
+                            tint = colors.textSecondary
                         )
                     }
 
-                    IconButton(onClick = onSettingsClick) {
+                    // Settings button
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onSettingsClick()
+                        },
+                        modifier = Modifier.size(AppSpacing.minTouchTarget)
+                    ) {
                         Icon(
                             imageVector = Icons.Outlined.Settings,
                             contentDescription = "Settings",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = colors.textSecondary
                         )
                     }
 
-                    // Overflow actions (Clear Recents)
+                    // Clear recents menu
                     Box {
-                        IconButton(onClick = { isMoreMenuOpen = true }) {
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                isMoreMenuOpen = true
+                            },
+                            modifier = Modifier.size(AppSpacing.minTouchTarget)
+                        ) {
                             Icon(
                                 imageVector = Icons.Outlined.MoreVert,
-                                contentDescription = "More",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                contentDescription = "More options",
+                                tint = colors.textSecondary
                             )
                         }
                         DropdownMenu(
@@ -259,9 +284,9 @@ fun HomeScreen(
                             onDismissRequest = { isMoreMenuOpen = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Clear Recents") },
+                                text = { Text("Clear recents", style = typography.body) },
                                 leadingIcon = {
-                                    Icon(Icons.Outlined.DeleteSweep, contentDescription = null)
+                                    Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.error)
                                 },
                                 onClick = {
                                     isMoreMenuOpen = false
@@ -270,124 +295,232 @@ fun HomeScreen(
                             )
                         }
                     }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                }
             )
         },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { openDocumentLauncher.launch(SUPPORTED_MIME_TYPES) },
-                icon = {
-                    Icon(
-                        imageVector = Icons.Outlined.FileOpen,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary
+        bottomBar = {
+            // Lower-half one-hand reach control surface
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.surface)
+                    .navigationBarsPadding()
+            ) {
+                AppDivider()
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = AppSpacing.paddingLarge, vertical = AppSpacing.paddingSmall)
+                ) {
+                    // Search Field (lower half reach)
+                    AppSearchField(
+                        query = uiState.searchQuery,
+                        onQueryChanged = viewModel::onSearchQueryChanged,
+                        placeholder = "Search documents...",
+                        modifier = Modifier.fillMaxWidth()
                     )
-                },
-                text = {
-                    Text(
-                        text = stringResource(R.string.open_document),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                },
-                shape = RoundedCornerShape(6.dp),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
+
+                    Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+
+                    // Horizontal Category Filter Chips
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
+                    ) {
+                        AppFilterChip(
+                            label = "All",
+                            isSelected = uiState.selectedCategory == DocumentCategory.ALL,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                viewModel.selectCategory(DocumentCategory.ALL)
+                            }
+                        )
+                        AppFilterChip(
+                            label = "PDF",
+                            isSelected = uiState.selectedCategory == DocumentCategory.PDF,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                viewModel.selectCategory(DocumentCategory.PDF)
+                            }
+                        )
+                        AppFilterChip(
+                            label = "Word",
+                            isSelected = uiState.selectedCategory == DocumentCategory.WORD,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                viewModel.selectCategory(DocumentCategory.WORD)
+                            }
+                        )
+                        AppFilterChip(
+                            label = "Excel",
+                            isSelected = uiState.selectedCategory == DocumentCategory.EXCEL,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                viewModel.selectCategory(DocumentCategory.EXCEL)
+                            }
+                        )
+                        AppFilterChip(
+                            label = "PPT",
+                            isSelected = uiState.selectedCategory == DocumentCategory.PPT,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                viewModel.selectCategory(DocumentCategory.PPT)
+                            }
+                        )
+                        AppFilterChip(
+                            label = "Text",
+                            isSelected = uiState.selectedCategory == DocumentCategory.TEXT,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                viewModel.selectCategory(DocumentCategory.TEXT)
+                            }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+
+                    // Primary Action Button (Open Document, >=48dp touch target)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(AppSpacing.minTouchTarget)
+                            .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+                            .background(colors.accent)
+                            .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                openDocumentLauncher.launch(SUPPORTED_MIME_TYPES)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.FileOpen,
+                                contentDescription = null,
+                                tint = colors.background,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(AppSpacing.paddingSmall))
+                            Text(
+                                text = stringResource(R.string.open_document),
+                                style = typography.body,
+                                color = colors.background
+                            )
+                        }
+                    }
+                }
+            }
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = colors.background
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            SearchAndFilterBar(
-                searchQuery = uiState.searchQuery,
-                onSearchQueryChanged = viewModel::onSearchQueryChanged,
-                selectedCategory = uiState.selectedCategory,
-                onCategorySelected = viewModel::selectCategory
-            )
-
-            Spacer(modifier = Modifier.height(Spacing.small))
-            AppDivider()
-
             if (uiState.documents.isEmpty()) {
                 if (uiState.isSearching) {
-                    EmptyState(
-                        title = stringResource(R.string.no_search_results),
-                        subtitle = ""
+                    AppEmptyState(
+                        title = "No documents matched your search.",
+                        message = "Try another search term or clear the filter."
                     )
                 } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = Spacing.large),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = stringResource(R.string.no_documents_title),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                            Spacer(modifier = Modifier.height(Spacing.small))
-                            Text(
-                                text = stringResource(R.string.no_documents_subtitle),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(Spacing.large))
-                            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.small)) {
-                                Button(
-                                    onClick = { openDocumentLauncher.launch(SUPPORTED_MIME_TYPES) },
-                                    shape = RoundedCornerShape(6.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                        contentColor = MaterialTheme.colorScheme.onBackground
-                                    )
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.open_document),
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                }
-                                Button(
-                                    onClick = { openFolderLauncher.launch(null) },
-                                    shape = RoundedCornerShape(6.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                        contentColor = MaterialTheme.colorScheme.onBackground
-                                    )
-                                ) {
-                                    Text(
-                                        text = "Scan Folder",
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    AppEmptyState(
+                        title = "No documents found.",
+                        message = "Open a file or scan a folder to begin.",
+                        actionLabel = "Open document",
+                        onAction = { openDocumentLauncher.launch(SUPPORTED_MIME_TYPES) }
+                    )
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(
-                        items = uiState.documents,
-                        key = { it.uri }
-                    ) { document ->
-                        DocumentListRow(
-                            document = document,
-                            onClick = { onDocumentClick(document) },
-                            onToggleFavorite = { viewModel.toggleFavorite(document) },
-                            onRemoveFromRecents = { viewModel.removeFromRecents(document) },
-                            onShare = { onShareDocument(document) },
-                            onShowDetails = { selectedDocForDetails = document }
-                        )
+                    if (uiState.isSearching) {
+                        item {
+                            AppSectionHeader(title = "SEARCH RESULTS")
+                        }
+                        items(
+                            items = uiState.documents,
+                            key = { "search_${it.uri}" }
+                        ) { document ->
+                            AppFileRow(
+                                document = document,
+                                onClick = { onDocumentClick(document) },
+                                onToggleFavorite = { viewModel.toggleFavorite(document) },
+                                onRemoveFromRecents = { viewModel.removeFromRecents(document) },
+                                onShare = { onShareDocument(document) },
+                                onShowDetails = { selectedDocForDetails = document }
+                            )
+                            AppDivider()
+                        }
+                    } else {
+                        // 1. "Continue reading" row at very top showing last opened file and progress
+                        val continueDoc = uiState.continueReadingDoc
+                        if (continueDoc != null) {
+                            item {
+                                AppSectionHeader(title = "CONTINUE READING")
+                            }
+                            item(key = "continue_${continueDoc.uri}") {
+                                AppFileRow(
+                                    document = continueDoc,
+                                    showContinueReading = true,
+                                    onClick = { onDocumentClick(continueDoc) },
+                                    onToggleFavorite = { viewModel.toggleFavorite(continueDoc) },
+                                    onRemoveFromRecents = { viewModel.removeFromRecents(continueDoc) },
+                                    onShare = { onShareDocument(continueDoc) },
+                                    onShowDetails = { selectedDocForDetails = continueDoc }
+                                )
+                                AppDivider()
+                            }
+                        }
+
+                        // 2. Recents plain list
+                        if (uiState.recents.isNotEmpty()) {
+                            item {
+                                AppSectionHeader(title = "RECENTS")
+                            }
+                            items(
+                                items = uiState.recents,
+                                key = { "recent_${it.uri}" }
+                            ) { document ->
+                                AppFileRow(
+                                    document = document,
+                                    onClick = { onDocumentClick(document) },
+                                    onToggleFavorite = { viewModel.toggleFavorite(document) },
+                                    onRemoveFromRecents = { viewModel.removeFromRecents(document) },
+                                    onShare = { onShareDocument(document) },
+                                    onShowDetails = { selectedDocForDetails = document }
+                                )
+                                AppDivider()
+                            }
+                        }
+
+                        // 3. Favorites plain list
+                        if (uiState.favorites.isNotEmpty()) {
+                            item {
+                                AppSectionHeader(title = "FAVORITES")
+                            }
+                            items(
+                                items = uiState.favorites,
+                                key = { "fav_${it.uri}" }
+                            ) { document ->
+                                AppFileRow(
+                                    document = document,
+                                    onClick = { onDocumentClick(document) },
+                                    onToggleFavorite = { viewModel.toggleFavorite(document) },
+                                    onRemoveFromRecents = { viewModel.removeFromRecents(document) },
+                                    onShare = { onShareDocument(document) },
+                                    onShowDetails = { selectedDocForDetails = document }
+                                )
+                                AppDivider()
+                            }
+                        }
                     }
                 }
             }
@@ -413,52 +546,18 @@ fun HomeScreen(
         )
     }
 
-    // Clear Recents Confirmation Dialog
-    if (showClearRecentsDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearRecentsDialog = false },
-            title = {
-                Text(
-                    text = "Clear Recent Documents?",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-            },
-            text = {
-                Text(
-                    text = "This will clear your recent document history in mydoc. Your actual files on storage will not be deleted.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showClearRecentsDialog = false
-                        viewModel.clearAllRecents()
-                        scope.launch {
-                            snackbarHostState.showSnackbar("Recent history cleared.")
-                        }
-                    },
-                    shape = RoundedCornerShape(6.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    )
-                ) {
-                    Text("Clear All")
-                }
-            },
-            dismissButton = {
-                OutlinedButton(
-                    onClick = { showClearRecentsDialog = false },
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Text("Cancel")
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surface,
-            shape = RoundedCornerShape(8.dp)
-        )
-    }
+    // Clear Recents Confirmation Dialog (Destructive action confirms, no undo snackbar)
+    AppDialog(
+        isOpen = showClearRecentsDialog,
+        title = "Clear recent history",
+        message = "Recent document history will be cleared. Files on storage will remain intact.",
+        confirmLabel = "Clear all",
+        dismissLabel = "Cancel",
+        onConfirm = {
+            showClearRecentsDialog = false
+            viewModel.clearAllRecents()
+            Toast.makeText(context, "Recent history cleared", Toast.LENGTH_SHORT).show()
+        },
+        onDismiss = { showClearRecentsDialog = false }
+    )
 }

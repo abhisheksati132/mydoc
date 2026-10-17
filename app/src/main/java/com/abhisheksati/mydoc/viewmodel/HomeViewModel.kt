@@ -20,6 +20,9 @@ data class HomeUiState(
     val selectedCategory: DocumentCategory = DocumentCategory.ALL,
     val searchQuery: String = "",
     val documents: List<DocumentFile> = emptyList(),
+    val continueReadingDoc: DocumentFile? = null,
+    val recents: List<DocumentFile> = emptyList(),
+    val favorites: List<DocumentFile> = emptyList(),
     val sortOrder: DocumentSortOrder = DocumentSortOrder.LAST_OPENED,
     val isSearching: Boolean = false,
     val isLoading: Boolean = false
@@ -46,6 +49,7 @@ class HomeViewModel(
             DocumentCategory.WORD -> recents.filter { it.category == DocumentCategory.WORD }
             DocumentCategory.EXCEL -> recents.filter { it.category == DocumentCategory.EXCEL }
             DocumentCategory.PPT -> recents.filter { it.category == DocumentCategory.PPT }
+            DocumentCategory.TEXT -> recents.filter { it.category == DocumentCategory.TEXT }
             DocumentCategory.ALL -> recents
         }
 
@@ -64,10 +68,15 @@ class HomeViewModel(
             DocumentSortOrder.SIZE_ASC -> filtered.sortedBy { it.sizeBytes }
         }
 
+        val continueDoc = recents.firstOrNull { it.lastPage > 0 && it.pageCount > 0 } ?: recents.firstOrNull()
+
         HomeUiState(
             selectedCategory = category,
             searchQuery = query,
             documents = sorted,
+            continueReadingDoc = continueDoc,
+            recents = recents,
+            favorites = favorites,
             sortOrder = sortOrder,
             isSearching = query.isNotBlank(),
             isLoading = false
@@ -75,7 +84,7 @@ class HomeViewModel(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = HomeUiState(isLoading = true)
+        initialValue = HomeUiState(isLoading = false)
     )
 
     fun selectCategory(category: DocumentCategory) {

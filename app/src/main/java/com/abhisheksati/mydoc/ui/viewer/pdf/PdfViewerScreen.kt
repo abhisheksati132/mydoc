@@ -1,11 +1,8 @@
 package com.abhisheksati.mydoc.ui.viewer.pdf
 
 import android.app.Activity
-import android.content.Intent
 import android.content.pm.ActivityInfo
-import android.content.res.Configuration
 import android.graphics.Bitmap
-import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -15,9 +12,11 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,9 +27,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -51,20 +47,25 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.MainActivity
 import com.abhisheksati.mydoc.MyDocApp
+import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
+import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
-import com.abhisheksati.mydoc.ui.theme.Spacing
-import com.abhisheksati.mydoc.ui.viewer.controls.BrightnessDialog
+import com.abhisheksati.mydoc.ui.viewer.controls.FastScrollbar
 import com.abhisheksati.mydoc.ui.viewer.controls.OutlineDrawer
 import com.abhisheksati.mydoc.ui.viewer.controls.PageJumpDialog
 import com.abhisheksati.mydoc.ui.viewer.controls.PasswordDialog
-import com.abhisheksati.mydoc.ui.viewer.controls.PrintHelper
+import com.abhisheksati.mydoc.ui.viewer.controls.ReadingControlsBottomSheet
 import com.abhisheksati.mydoc.ui.viewer.controls.SearchOverlay
 import com.abhisheksati.mydoc.ui.viewer.controls.ThumbnailStrip
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerBottomBar
@@ -85,21 +86,22 @@ fun PdfViewerScreen(
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp
+    val colors = LocalAppColors.current
+    val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
     val state by viewModel.uiState.collectAsState()
 
     var zoomScale by remember { mutableFloatStateOf(1f) }
     var panOffset by remember { mutableStateOf(Offset.Zero) }
     var isPageJumpDialogOpen by remember { mutableStateOf(false) }
+    var isReadingControlsOpen by remember { mutableStateOf(false) }
 
     var bookmarks by remember {
         mutableStateOf(app?.settingsRepository?.getBookmarks(document.uri) ?: emptySet())
     }
     val isCurrentBookmarked = bookmarks.contains(state.currentPage)
 
-    var isBrightnessDialogOpen by remember { mutableStateOf(false) }
     var currentBrightness by remember { mutableFloatStateOf(-1f) }
-
     val updateBrightness: (Float) -> Unit = { b ->
         currentBrightness = b
         val activity = context as? Activity
@@ -149,6 +151,7 @@ fun PdfViewerScreen(
                 (state.currentPage - 1).coerceAtLeast(0)
             }
             if (target != state.currentPage) {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 viewModel.jumpToPage(target)
                 if (state.isContinuousScroll) {
                     lazyListState.animateScrollToItem(target)
@@ -164,7 +167,7 @@ fun PdfViewerScreen(
         snapshotFlow { lazyListState.firstVisibleItemIndex }
             .distinctUntilChanged()
             .collect { page ->
-                if (state.isContinuousScroll) {
+                if (state.isContinuousScroll && !state.isDualPageView) {
                     viewModel.onPageChanged(page)
                 }
             }
@@ -174,16 +177,17 @@ fun PdfViewerScreen(
         snapshotFlow { pagerState.currentPage }
             .distinctUntilChanged()
             .collect { page ->
-                if (!state.isContinuousScroll) {
+                if (!state.isContinuousScroll && !state.isDualPageView) {
                     viewModel.onPageChanged(page)
                 }
             }
     }
 
+    // Non-pure background colors (no pure #000000)
     val pageBgColor = when (state.readingMode) {
-        ReadingMode.INVERTED_DARK -> Color(0xFF000000)
+        ReadingMode.INVERTED_DARK -> Color(0xFF121214)
         ReadingMode.SEPIA -> Color(0xFFF4ECD8)
-        ReadingMode.NORMAL -> Color(0xFF141414)
+        ReadingMode.NORMAL -> colors.background
     }
 
     Box(
@@ -193,26 +197,52 @@ fun PdfViewerScreen(
     ) {
         if (state.isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                AppProgressIndicator()
             }
         } else if (state.errorMessage != null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = state.errorMessage ?: "Unknown error",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(Spacing.large)
+                AppEmptyState(
+                    title = "Document could not be displayed",
+                    message = state.errorMessage ?: "The file may be corrupted or inaccessible.",
+                    actionLabel = "Go back",
+                    onAction = onBackClick
                 )
             }
         } else if (state.pageCount > 0) {
-            // Main viewport with pinch zoom and pan
+            // Main viewport with double-tap zoom, pinch-pan, and tap-zones
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .pointerInput(Unit) {
+                    .pointerInput(state.isContinuousScroll, state.currentPage, state.pageCount) {
                         detectTapGestures(
-                            onTap = { viewModel.toggleControls() },
+                            onTap = { offset ->
+                                if (!state.isContinuousScroll && !state.isDualPageView) {
+                                    val viewWidth = size.width.toFloat()
+                                    if (offset.x < viewWidth * 0.2f) {
+                                        // Left 20% zone: Previous page
+                                        val prev = (state.currentPage - 1).coerceAtLeast(0)
+                                        if (prev != state.currentPage) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            viewModel.jumpToPage(prev)
+                                            coroutineScope.launch { pagerState.animateScrollToPage(prev) }
+                                        }
+                                    } else if (offset.x > viewWidth * 0.8f) {
+                                        // Right 20% zone: Next page
+                                        val next = (state.currentPage + 1).coerceAtMost(state.pageCount - 1)
+                                        if (next != state.currentPage) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            viewModel.jumpToPage(next)
+                                            coroutineScope.launch { pagerState.animateScrollToPage(next) }
+                                        }
+                                    } else {
+                                        viewModel.toggleControls()
+                                    }
+                                } else {
+                                    viewModel.toggleControls()
+                                }
+                            },
                             onDoubleTap = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 zoomScale = if (zoomScale > 1.5f) 1f else 2.5f
                                 panOffset = Offset.Zero
                             }
@@ -239,7 +269,45 @@ fun PdfViewerScreen(
                         translationY = panOffset.y
                     }
             ) {
-                if (state.isContinuousScroll) {
+                if (state.isDualPageView) {
+                    // Two-page spread for tablets and landscape
+                    val pairCount = (state.pageCount + 1) / 2
+                    LazyColumn(
+                        state = lazyListState,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(pairCount) { pairIndex ->
+                            val leftPage = pairIndex * 2
+                            val rightPage = leftPage + 1
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = AppSpacing.paddingSmall),
+                                horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
+                            ) {
+                                Box(modifier = Modifier.weight(1f)) {
+                                    PageItemView(
+                                        pageIndex = leftPage,
+                                        viewModel = viewModel,
+                                        readingMode = state.readingMode,
+                                        searchMatches = state.searchMatches.filter { it.pageIndex == leftPage }
+                                    )
+                                }
+                                Box(modifier = Modifier.weight(1f)) {
+                                    if (rightPage < state.pageCount) {
+                                        PageItemView(
+                                            pageIndex = rightPage,
+                                            viewModel = viewModel,
+                                            readingMode = state.readingMode,
+                                            searchMatches = state.searchMatches.filter { it.pageIndex == rightPage }
+                                        )
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                        }
+                    }
+                } else if (state.isContinuousScroll) {
                     LazyColumn(
                         state = lazyListState,
                         modifier = Modifier.fillMaxSize()
@@ -251,7 +319,7 @@ fun PdfViewerScreen(
                                 readingMode = state.readingMode,
                                 searchMatches = state.searchMatches.filter { it.pageIndex == pageIndex }
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                         }
                     }
                 } else {
@@ -273,68 +341,45 @@ fun PdfViewerScreen(
                     }
                 }
             }
+
+            // Draggable Fast Scrollbar on side showing page bubble
+            FastScrollbar(
+                currentPage = state.currentPage,
+                pageCount = state.pageCount,
+                onPageSelected = { targetPage ->
+                    viewModel.jumpToPage(targetPage)
+                    coroutineScope.launch {
+                        if (state.isContinuousScroll) {
+                            lazyListState.scrollToItem(targetPage)
+                        } else {
+                            pagerState.scrollToPage(targetPage)
+                        }
+                    }
+                },
+                modifier = Modifier.align(Alignment.CenterEnd)
+            )
         } else {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "No pages found in this document.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(Spacing.large)
+                AppEmptyState(
+                    title = "No pages found",
+                    message = "This document does not contain readable pages.",
+                    actionLabel = "Go back",
+                    onAction = onBackClick
                 )
             }
         }
 
-        // Top Toolbar
+        // Clean, uncluttered Top Toolbar
         ViewerTopBar(
             title = document.displayName,
             visible = state.areControlsVisible && !state.isSearchOpen,
-            readingMode = state.readingMode,
-            isContinuousScroll = state.isContinuousScroll,
-            hasOutline = state.outline.isNotEmpty(),
-            isKeepScreenOn = isKeepScreenOn,
             isBookmarked = isCurrentBookmarked,
             onBackClick = onBackClick,
-            onSearchClick = viewModel::openSearch,
-            onToggleReadingMode = viewModel::toggleReadingMode,
-            onToggleScrollMode = viewModel::toggleScrollMode,
-            onOutlineClick = { viewModel.setOutlineDrawerOpen(true) },
             onShareClick = onShareClick,
             onToggleBookmark = {
                 val added = app?.settingsRepository?.toggleBookmark(document.uri, state.currentPage) ?: false
                 bookmarks = app?.settingsRepository?.getBookmarks(document.uri) ?: emptySet()
                 Toast.makeText(context, if (added) "Bookmarked page ${state.currentPage + 1}" else "Bookmark removed", Toast.LENGTH_SHORT).show()
-            },
-            onBrightnessClick = { isBrightnessDialogOpen = true },
-            onOpenWithClick = {
-                val sendIntent = Intent(Intent.ACTION_VIEW).apply {
-                    val mime = document.mimeType.ifEmpty { "application/pdf" }
-                    setDataAndType(Uri.parse(document.uri), mime)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                try {
-                    context.startActivity(Intent.createChooser(sendIntent, "Open with"))
-                } catch (_: Exception) {
-                    Toast.makeText(context, "No app found to open this document", Toast.LENGTH_SHORT).show()
-                }
-            },
-            onPrintClick = {
-                PrintHelper.printDocument(context, document)
-            },
-            onToggleKeepScreenOn = {
-                val newKeep = !isKeepScreenOn
-                isKeepScreenOn = newKeep
-                app?.settingsRepository?.setKeepScreenOn(newKeep)
-            },
-            onToggleOrientation = {
-                val activity = context as? Activity
-                if (activity != null) {
-                    val isLandscape = activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                    activity.requestedOrientation = if (isLandscape) {
-                        ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                    } else {
-                        ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                    }
-                }
             },
             modifier = Modifier.align(Alignment.TopCenter)
         )
@@ -352,7 +397,7 @@ fun PdfViewerScreen(
             modifier = Modifier.align(Alignment.TopCenter)
         )
 
-        // Bottom Controls
+        // Ergonomic Bottom Controls
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -379,21 +424,35 @@ fun PdfViewerScreen(
                 currentPage = state.currentPage,
                 pageCount = state.pageCount,
                 visible = state.areControlsVisible,
+                hasOutline = state.outline.isNotEmpty(),
                 isThumbnailStripOpen = state.isThumbnailStripVisible,
-                onPageJump = { page ->
-                    viewModel.jumpToPage(page)
-                    coroutineScope.launch {
-                        if (state.isContinuousScroll) {
-                            lazyListState.scrollToItem(page)
-                        } else {
-                            pagerState.scrollToPage(page)
-                        }
-                    }
-                },
+                onSearchClick = viewModel::openSearch,
+                onOutlineClick = { viewModel.setOutlineDrawerOpen(true) },
                 onToggleThumbnails = viewModel::toggleThumbnailStrip,
+                onOpenSettings = { isReadingControlsOpen = true },
                 onPageTextClick = { isPageJumpDialogOpen = true }
             )
         }
+
+        // Consolidated Reading Controls Bottom Sheet
+        ReadingControlsBottomSheet(
+            isOpen = isReadingControlsOpen,
+            onDismiss = { isReadingControlsOpen = false },
+            readingMode = state.readingMode,
+            onReadingModeChange = viewModel::setReadingMode,
+            isContinuousScroll = state.isContinuousScroll,
+            onScrollModeChange = viewModel::setContinuousScroll,
+            isDualPageView = state.isDualPageView,
+            onDualPageViewChange = viewModel::setDualPageView,
+            currentBrightness = currentBrightness,
+            onBrightnessChange = updateBrightness,
+            isKeepScreenOn = isKeepScreenOn,
+            onKeepScreenOnChange = { newKeep ->
+                isKeepScreenOn = newKeep
+                app?.settingsRepository?.setKeepScreenOn(newKeep)
+            },
+            document = document
+        )
 
         // Page Jump Dialog
         PageJumpDialog(
@@ -435,14 +494,6 @@ fun PdfViewerScreen(
             }
         )
 
-        // Brightness Dimmer Dialog
-        BrightnessDialog(
-            isOpen = isBrightnessDialogOpen,
-            currentBrightness = currentBrightness,
-            onBrightnessChanged = updateBrightness,
-            onDismiss = { isBrightnessDialogOpen = false }
-        )
-
         // Password Dialog
         PasswordDialog(
             isOpen = state.isPasswordRequired,
@@ -453,6 +504,10 @@ fun PdfViewerScreen(
     }
 }
 
+/**
+ * Page renderer with immediate low-resolution preview followed by progressive sharpening.
+ * Fulfills: "Show content immediately: render a low-resolution page preview the instant a file opens, then sharpen it."
+ */
 @Composable
 private fun PageItemView(
     pageIndex: Int,
@@ -464,21 +519,32 @@ private fun PageItemView(
     val aspectRatio = if (origHeight > 0) origWidth / origHeight else 0.707f
 
     val bitmap by produceState<Bitmap?>(initialValue = null, pageIndex, readingMode) {
-        value = withContext(Dispatchers.Default) {
-            // Render at high resolution for crystal clarity
+        // Step 1: Render low-resolution preview immediately for instant feedback
+        val lowRes = withContext(Dispatchers.Default) {
+            viewModel.renderPageBitmap(pageIndex, 0.35f)
+        }
+        value = lowRes
+
+        // Step 2: Sharpen to full high resolution
+        val highRes = withContext(Dispatchers.Default) {
             viewModel.renderPageBitmap(pageIndex, 1.8f)
         }
+        if (highRes != null) {
+            value = highRes
+        }
+    }
+
+    val itemBg = when (readingMode) {
+        ReadingMode.INVERTED_DARK -> Color(0xFF161618)
+        ReadingMode.SEPIA -> Color(0xFFF4ECD8)
+        ReadingMode.NORMAL -> Color(0xFFFAFAFC) // Off-white, no pure white
     }
 
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(aspectRatio)
-            .background(
-                if (readingMode == ReadingMode.INVERTED_DARK) Color.Black
-                else if (readingMode == ReadingMode.SEPIA) Color(0xFFF4ECD8)
-                else Color.White
-            )
+            .background(itemBg)
     ) {
         val bmp = bitmap
         if (bmp != null && !bmp.isRecycled) {
@@ -510,11 +576,7 @@ private fun PageItemView(
             }
         } else {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(
-                    modifier = Modifier.padding(16.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                AppProgressIndicator()
             }
         }
     }

@@ -39,6 +39,7 @@ data class DocumentFile(
             "docx", "doc" -> DocumentCategory.WORD
             "xlsx", "xls", "csv" -> DocumentCategory.EXCEL
             "pptx", "ppt" -> DocumentCategory.PPT
+            "txt", "log", "md", "json", "xml" -> DocumentCategory.TEXT
             else -> DocumentCategory.ALL
         }
 

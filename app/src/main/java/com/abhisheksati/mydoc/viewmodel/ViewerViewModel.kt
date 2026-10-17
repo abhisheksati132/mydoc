@@ -28,6 +28,7 @@ data class ViewerUiState(
     val zoomScale: Float = 1.0f,
     val readingMode: ReadingMode = ReadingMode.NORMAL,
     val isContinuousScroll: Boolean = true,
+    val isDualPageView: Boolean = false,
     val areControlsVisible: Boolean = true,
     val isSearchOpen: Boolean = false,
     val searchQuery: String = "",
@@ -211,9 +212,23 @@ class ViewerViewModel(
         persistViewState()
     }
 
+    fun setReadingMode(mode: ReadingMode) {
+        _uiState.update { it.copy(readingMode = mode) }
+        persistViewState()
+    }
+
     fun toggleScrollMode() {
         _uiState.update { it.copy(isContinuousScroll = !it.isContinuousScroll) }
         persistViewState()
+    }
+
+    fun setContinuousScroll(continuous: Boolean) {
+        _uiState.update { it.copy(isContinuousScroll = continuous) }
+        persistViewState()
+    }
+
+    fun setDualPageView(dual: Boolean) {
+        _uiState.update { it.copy(isDualPageView = dual) }
     }
 
     fun toggleControls() {

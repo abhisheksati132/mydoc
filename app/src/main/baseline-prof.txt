@@ -1,0 +1,23 @@
+# Baseline Profile Rules for mydoc
+# Optimized for sub-1-second cold start and zero-jank frame rates on mid-range devices
+
+Lcom/abhisheksati/mydoc/MainActivity;
+Lcom/abhisheksati/mydoc/MyDocApp;
+Lcom/abhisheksati/mydoc/designsystem/tokens/AppColors;
+Lcom/abhisheksati/mydoc/designsystem/tokens/AppTypography;
+Lcom/abhisheksati/mydoc/designsystem/tokens/AppSpacing;
+Lcom/abhisheksati/mydoc/designsystem/tokens/AppThemeKt;
+Lcom/abhisheksati/mydoc/designsystem/components/AppFileRowKt;
+Lcom/abhisheksati/mydoc/designsystem/components/AppToolbarKt;
+Lcom/abhisheksati/mydoc/designsystem/components/AppSearchFieldKt;
+Lcom/abhisheksati/mydoc/designsystem/components/AppFilterChipKt;
+Lcom/abhisheksati/mydoc/designsystem/components/AppEmptyStateKt;
+Lcom/abhisheksati/mydoc/designsystem/components/AppProgressIndicatorKt;
+Lcom/abhisheksati/mydoc/designsystem/components/AppDialogKt;
+Lcom/abhisheksati/mydoc/designsystem/components/AppDividerKt;
+Lcom/abhisheksati/mydoc/ui/home/HomeScreenKt;
+Lcom/abhisheksati/mydoc/viewmodel/HomeViewModel;
+Lcom/abhisheksati/mydoc/data/local/DocumentDao;
+Lcom/abhisheksati/mydoc/data/local/AppDatabase;
+Lcom/abhisheksati/mydoc/ui/viewer/pdf/PdfViewerScreenKt;
+Lcom/abhisheksati/mydoc/viewmodel/ViewerViewModel;
