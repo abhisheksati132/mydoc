@@ -104,32 +104,30 @@ class MuPdfRenderer(
             try {
                 val page = doc.loadPage(pageIndex)
                 val matrix = Matrix(scale)
-                val pixmap = page.toPixmap(matrix, ColorSpace.DeviceRGB, false)
-
-                when (mode) {
-                    ReadingMode.INVERTED_DARK -> {
-                        // Native MuPDF luminance inversion: true AMOLED black background (#000000)
-                        pixmap.invertLuminance()
+                val baseBitmap = try {
+                    com.artifex.mupdf.fitz.android.AndroidDrawDevice.drawPage(page, matrix)
+                } catch (_: Throwable) {
+                    val pixmap = page.toPixmap(matrix, ColorSpace.DeviceRGB, true)
+                    val width = pixmap.width
+                    val height = pixmap.height
+                    val pixels = pixmap.pixels
+                    for (i in pixels.indices) {
+                        pixels[i] = pixels[i] or (0xFF shl 24)
                     }
-                    ReadingMode.SEPIA -> {
-                        // Soft warm parchment reading mode (#3A3125 text, #F4ECD8 bg)
-                        pixmap.tint(0x3A3125, 0xF4ECD8)
-                    }
-                    ReadingMode.NORMAL -> {
-                        // Standard document colors
-                    }
+                    val b = Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
+                    pixmap.destroy()
+                    b
                 }
-
-                val width = pixmap.width
-                val height = pixmap.height
-                val pixels = pixmap.pixels
-
-                val bitmap = Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
-                pixmap.destroy()
                 page.destroy()
 
-                tileCache.put(pageIndex, scale, mode, bitmap)
-                bitmap
+                val finalBitmap = when (mode) {
+                    ReadingMode.INVERTED_DARK -> AndroidPdfRenderer.invertBitmapColors(baseBitmap)
+                    ReadingMode.SEPIA -> AndroidPdfRenderer.applySepiaFilter(baseBitmap)
+                    ReadingMode.NORMAL -> baseBitmap
+                }
+
+                tileCache.put(pageIndex, scale, mode, finalBitmap)
+                finalBitmap
             } catch (e: Exception) {
                 null
             }

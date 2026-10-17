@@ -124,8 +124,16 @@ class ViewerViewModel(
                             filePath = cacheFile.absolutePath,
                             mimeType = "application/pdf"
                         )
-                        if (mupdf.pageCount > 0 || mupdf.isPasswordProtected) {
+                        if (mupdf.isPasswordProtected) {
                             activeRenderer = mupdf
+                        } else if (mupdf.pageCount > 0) {
+                            // Smoke test rendering first page to verify native Fitz device works
+                            val testBitmap = mupdf.renderPage(0, 0.2f, ReadingMode.NORMAL)
+                            if (testBitmap != null) {
+                                activeRenderer = mupdf
+                            } else {
+                                mupdf.close()
+                            }
                         } else {
                             mupdf.close()
                         }
@@ -156,6 +164,7 @@ class ViewerViewModel(
                         return@withContext
                     }
 
+                    renderer?.close()
                     renderer = activeRenderer
 
                     if (activeRenderer.isPasswordProtected) {

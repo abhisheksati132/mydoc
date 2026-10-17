@@ -703,18 +703,6 @@ fun SettingsScreen(
             }
 
             Spacer(modifier = Modifier.height(Spacing.large))
-            AppDivider()
-            Spacer(modifier = Modifier.height(Spacing.medium))
-
-            OutlinedButton(
-                onClick = onDesignSystemPreviewClick,
-                shape = RoundedCornerShape(6.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Design tokens showcase")
-            }
-
-            Spacer(modifier = Modifier.height(Spacing.extraLarge))
         }
     }
 }

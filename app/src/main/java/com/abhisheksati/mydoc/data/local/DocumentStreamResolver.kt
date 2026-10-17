@@ -44,6 +44,11 @@ object DocumentStreamResolver {
                 }
             }
 
+            if (targetCacheFile.length() == 0L) {
+                targetCacheFile.delete()
+                throw java.io.IOException("File could not be loaded or is empty (0 bytes)")
+            }
+
             // Immediately cache into saved_docs as permanent backup if not already present
             try {
                 val savedDocsDir = File(context.filesDir, "saved_docs").apply { mkdirs() }

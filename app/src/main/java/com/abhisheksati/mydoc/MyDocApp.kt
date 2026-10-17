@@ -18,6 +18,9 @@ class MyDocApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        try {
+            com.artifex.mupdf.fitz.Context.init()
+        } catch (_: Throwable) {}
         database = AppDatabase.getInstance(this)
         documentRepository = DocumentRepositoryImpl(this, database)
         settingsRepository = com.abhisheksati.mydoc.data.local.SettingsRepository(this)
