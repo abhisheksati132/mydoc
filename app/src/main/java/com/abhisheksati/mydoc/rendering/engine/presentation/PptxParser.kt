@@ -9,7 +9,9 @@ import org.xmlpull.v1.XmlPullParser
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.InputStream
+import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
+import java.util.zip.ZipInputStream
 
 data class SlideBounds(
     val left: Float,
@@ -76,14 +78,14 @@ data class PptxPresentation(
 /**
  * Resilient multi-format presentation engine.
  * Supports:
- * 1. Modern OOXML PowerPoint presentations (.pptx) via safe random-access ZipFile, layout placeholder mapping,
- *    slide relationships, speaker notes, and vector shapes.
+ * 1. Modern OOXML PowerPoint presentations (.pptx) via safe random-access ZipFile in cacheDir or in-memory map,
+ *    layout placeholder mapping, slide backgrounds, slide relationships, speaker notes, and vector shapes.
  * 2. Legacy binary PowerPoint presentations (.ppt, PowerPoint 97-2003 OLE2) via binary record parsing
- *    (RT_Slide, RT_TextCharsAtom, RT_TextBytesAtom) and string stream extraction fallback.
+ *    (RT_Slide, RT_TextCharsAtom, RT_TextBytesAtom).
  */
 class PptxParser {
 
-    suspend fun parse(inputStream: InputStream): PptxPresentation = withContext(Dispatchers.IO) {
+    suspend fun parse(inputStream: InputStream, cacheDir: File? = null): PptxPresentation = withContext(Dispatchers.IO) {
         val bytes = inputStream.readBytes()
         if (bytes.isEmpty()) {
             return@withContext emptyPresentation()
@@ -102,18 +104,14 @@ class PptxParser {
 
         if (isZip) {
             // Modern .pptx format
-            val pres = parsePptxZip(bytes)
+            val pres = parsePptxZip(bytes, cacheDir)
             if (pres.slides.isNotEmpty()) {
                 return@withContext pres
             }
+            return@withContext emptyPresentation()
         }
 
-        // Fallback: Attempt both parsers if magic detection was ambiguous
-        try {
-            val pres = parsePptxZip(bytes)
-            if (pres.slides.isNotEmpty()) return@withContext pres
-        } catch (_: Exception) {}
-
+        // Fallback: If not zip and not ole2, attempt binary PPT parsing
         parseBinaryPpt(bytes)
     }
 
@@ -132,95 +130,123 @@ class PptxParser {
     }
 
     /**
-     * Modern .pptx parser using temporary ZipFile for random-access, immune to streaming ZipInputStream bugs.
+     * Modern .pptx parser using cacheDir temp file or in-memory ZipInputStream.
      */
-    private fun parsePptxZip(bytes: ByteArray): PptxPresentation {
-        val tempFile = File.createTempFile("pptx_doc_", ".pptx")
-        try {
-            tempFile.writeBytes(bytes)
-            val zip = ZipFile(tempFile)
+    private fun parsePptxZip(bytes: ByteArray, cacheDir: File?): PptxPresentation {
+        // Try ZipFile via cacheDir first if cacheDir is provided and writable
+        if (cacheDir != null && cacheDir.exists()) {
             try {
-                return parseZipFile(zip)
-            } finally {
-                zip.close()
-            }
-        } finally {
-            tempFile.delete()
+                val tempFile = File.createTempFile("pptx_view_", ".pptx", cacheDir)
+                try {
+                    tempFile.writeBytes(bytes)
+                    val zip = ZipFile(tempFile)
+                    try {
+                        val entryMap = mutableMapOf<String, ByteArray>()
+                        val entries = zip.entries()
+                        while (entries.hasMoreElements()) {
+                            val entry = entries.nextElement()
+                            if (!entry.isDirectory) {
+                                val norm = entry.name.replace('\\', '/').trimStart('/')
+                                val data = zip.getInputStream(entry).readBytes()
+                                entryMap[norm] = data
+                                entryMap[norm.lowercase()] = data
+                            }
+                        }
+                        val pres = parseFromEntryMap(entryMap)
+                        if (pres.slides.isNotEmpty()) return pres
+                    } finally {
+                        zip.close()
+                    }
+                } finally {
+                    tempFile.delete()
+                }
+            } catch (_: Exception) {}
         }
+
+        // In-memory fallback
+        return parseZipInMemory(bytes)
     }
 
-    private fun parseZipFile(zip: ZipFile): PptxPresentation {
+    private fun parseZipInMemory(bytes: ByteArray): PptxPresentation {
+        val entryMap = mutableMapOf<String, ByteArray>()
+        try {
+            val zip = ZipInputStream(ByteArrayInputStream(bytes))
+            var entry: ZipEntry? = zip.nextEntry
+            while (entry != null) {
+                if (!entry.isDirectory) {
+                    val data = zip.readBytes()
+                    val norm = entry.name.replace('\\', '/').trimStart('/')
+                    entryMap[norm] = data
+                    entryMap[norm.lowercase()] = data
+                }
+                zip.closeEntry()
+                entry = zip.nextEntry
+            }
+        } catch (_: Exception) {}
+
+        return parseFromEntryMap(entryMap)
+    }
+
+    private fun parseFromEntryMap(entryMap: Map<String, ByteArray>): PptxPresentation {
         val mediaMap = mutableMapOf<String, ByteArray>()
         val relsMap = mutableMapOf<String, MutableMap<String, String>>()
         val notesMap = mutableMapOf<String, String>()
         var slideWidth = 9144000L
         var slideHeight = 5143500L
 
-        // Index all entries with normalized paths (lowercase, forward slashes)
-        val entries = zip.entries().asSequence().toList()
-        val entryMap = entries.associateBy { it.name.replace('\\', '/').trimStart('/') }
-
         // 1. Parse presentation dimensions and slide ordering from ppt/presentation.xml
-        val presEntry = entryMap["ppt/presentation.xml"]
-            ?: entries.firstOrNull { it.name.endsWith("presentation.xml", ignoreCase = true) }
+        val presXmlBytes = entryMap["ppt/presentation.xml"]
+            ?: entryMap.entries.firstOrNull { it.key.endsWith("presentation.xml", ignoreCase = true) }?.value
 
         val orderedSlideRelIds = mutableListOf<String>()
-        if (presEntry != null) {
-            val presXml = zip.getInputStream(presEntry).readBytes()
-            val (dims, slideRels) = parsePresentationInfo(presXml)
+        if (presXmlBytes != null) {
+            val (dims, slideRels) = parsePresentationInfo(presXmlBytes)
             slideWidth = dims.first
             slideHeight = dims.second
             orderedSlideRelIds.addAll(slideRels)
         }
 
         // 2. Parse presentation relationships (maps rId -> slide path)
-        val presRelsEntry = entryMap["ppt/_rels/presentation.xml.rels"]
-            ?: entries.firstOrNull { it.name.endsWith("presentation.xml.rels", ignoreCase = true) }
-        val presRelsMap = if (presRelsEntry != null) {
-            parseRelationshipsXml(zip.getInputStream(presRelsEntry).readBytes())
+        val presRelsBytes = entryMap["ppt/_rels/presentation.xml.rels"]
+            ?: entryMap.entries.firstOrNull { it.key.endsWith("presentation.xml.rels", ignoreCase = true) }?.value
+        val presRelsMap = if (presRelsBytes != null) {
+            parseRelationshipsXml(presRelsBytes)
         } else emptyMap()
 
         // 3. Extract media files (pictures, photos, diagrams)
-        for (entry in entries) {
-            val normName = entry.name.replace('\\', '/').trimStart('/')
-            if (normName.contains("ppt/media/", ignoreCase = true)) {
-                val mediaBytes = zip.getInputStream(entry).readBytes()
-                mediaMap[normName] = mediaBytes
-                val shortName = normName.removePrefix("ppt/")
-                mediaMap[shortName] = mediaBytes
-                mediaMap[normName.substringAfterLast('/')] = mediaBytes
+        for ((name, data) in entryMap) {
+            if (name.contains("ppt/media/", ignoreCase = true)) {
+                mediaMap[name] = data
+                val shortName = name.removePrefix("ppt/")
+                mediaMap[shortName] = data
+                mediaMap[name.substringAfterLast('/')] = data
             }
         }
 
         // 4. Extract slide relationships (slide*.xml.rels)
-        for (entry in entries) {
-            val normName = entry.name.replace('\\', '/').trimStart('/')
-            if (normName.contains("_rels/") && normName.endsWith(".rels", ignoreCase = true)) {
-                val relsBytes = zip.getInputStream(entry).readBytes()
-                val map = parseRelationshipsXml(relsBytes)
-                relsMap[normName] = map
-                // Also store with slide base name
-                val base = normName.substringAfterLast('/').removeSuffix(".rels")
+        for ((name, data) in entryMap) {
+            if (name.contains("_rels/") && name.endsWith(".rels", ignoreCase = true)) {
+                val map = parseRelationshipsXml(data)
+                relsMap[name] = map
+                val base = name.substringAfterLast('/').removeSuffix(".rels")
                 relsMap[base] = map
             }
         }
 
         // 5. Extract Speaker Notes (notesSlide*.xml)
-        for (entry in entries) {
-            val normName = entry.name.replace('\\', '/').trimStart('/')
-            if (normName.contains("notesSlide", ignoreCase = true) && normName.endsWith(".xml", ignoreCase = true)) {
-                val notesBytes = zip.getInputStream(entry).readBytes()
-                val noteText = parseNotesXml(notesBytes)
+        for ((name, data) in entryMap) {
+            if (name.contains("notesslide", ignoreCase = true) && name.endsWith(".xml", ignoreCase = true)) {
+                val noteText = parseNotesXml(data)
                 if (noteText.isNotEmpty()) {
-                    notesMap[normName] = noteText
-                    notesMap[normName.removePrefix("ppt/")] = noteText
-                    notesMap[normName.substringAfterLast('/')] = noteText
+                    notesMap[name] = noteText
+                    notesMap[name.removePrefix("ppt/")] = noteText
+                    notesMap[name.substringAfterLast('/')] = noteText
                 }
             }
         }
 
         // 6. Determine slide entries in true presentation order
-        val slideEntries = mutableListOf<java.util.zip.ZipEntry>()
+        val slideKeys = mutableListOf<String>()
         if (orderedSlideRelIds.isNotEmpty()) {
             for (relId in orderedSlideRelIds) {
                 val target = presRelsMap[relId]
@@ -230,39 +256,39 @@ class PptxParser {
                         else if (!it.startsWith("ppt/")) "ppt/slides/$it"
                         else it
                     }
-                    val found = entryMap[targetNorm]
-                        ?: entryMap[targetNorm.lowercase()]
-                        ?: entries.firstOrNull { it.name.replace('\\', '/').endsWith(target.substringAfterLast('/'), ignoreCase = true) }
-                    if (found != null && !slideEntries.contains(found)) {
-                        slideEntries.add(found)
+                    val foundKey = if (entryMap.containsKey(targetNorm)) targetNorm
+                    else if (entryMap.containsKey(targetNorm.lowercase())) targetNorm.lowercase()
+                    else entryMap.keys.firstOrNull { it.endsWith(target.substringAfterLast('/'), ignoreCase = true) }
+
+                    if (foundKey != null && !slideKeys.contains(foundKey)) {
+                        slideKeys.add(foundKey)
                     }
                 }
             }
         }
 
         // Fallback: If ordered list is empty, scan all slide XML files and sort them numerically
-        if (slideEntries.isEmpty()) {
-            val candidateSlides = entries.filter { entry ->
-                val n = entry.name.replace('\\', '/').lowercase()
+        if (slideKeys.isEmpty()) {
+            val candidateSlides = entryMap.keys.filter { key ->
+                val n = key.lowercase()
                 n.contains("ppt/slides/slide") && n.endsWith(".xml") && !n.contains("_rels")
-            }.sortedBy { entry ->
-                val numStr = entry.name.filter { it.isDigit() }
+            }.distinctBy { it.substringAfterLast('/') }.sortedBy { key ->
+                val numStr = key.filter { it.isDigit() }
                 numStr.toIntOrNull() ?: 0
             }
-            slideEntries.addAll(candidateSlides)
+            slideKeys.addAll(candidateSlides)
         }
 
         val presAspectRatio = if (slideHeight > 0) slideWidth.toFloat() / slideHeight.toFloat() else 16f / 9f
 
         // 7. Parse each slide XML into rich visual elements
         val slidesList = mutableListOf<PptxSlide>()
-        for ((index, slideEntry) in slideEntries.withIndex()) {
+        for ((index, key) in slideKeys.withIndex()) {
             val slideNum = index + 1
-            val normName = slideEntry.name.replace('\\', '/').trimStart('/')
-            val slideBase = normName.substringAfterLast('/')
-            val relsEntryName = "ppt/slides/_rels/$slideBase.rels"
+            val slideBase = key.substringAfterLast('/')
+            val relsKey = "ppt/slides/_rels/$slideBase.rels"
 
-            val slideRels = relsMap[relsEntryName]
+            val slideRels = relsMap[relsKey]
                 ?: relsMap[slideBase]
                 ?: relsMap["slide$slideNum.xml"]
                 ?: emptyMap()
@@ -274,9 +300,9 @@ class PptxParser {
                 ?: notesMap["ppt/notesSlides/notesSlide$slideNum.xml"]
                 ?: notesMap["notesSlide$slideNum.xml"]
 
-            val slideXmlBytes = zip.getInputStream(slideEntry).readBytes()
+            val slideBytes = entryMap[key] ?: continue
             val slide = parseSlideXml(
-                stream = ByteArrayInputStream(slideXmlBytes),
+                stream = ByteArrayInputStream(slideBytes),
                 slideNum = slideNum,
                 slideWidth = slideWidth,
                 slideHeight = slideHeight,
@@ -316,7 +342,6 @@ class PptxParser {
                         if (cx != null && cx > 0L) w = cx
                         if (cy != null && cy > 0L) h = cy
                     } else if (name.endsWith("sldId", ignoreCase = true)) {
-                        // Attribute r:id
                         var rId: String? = null
                         for (i in 0 until parser.attributeCount) {
                             if (parser.getAttributeName(i).contains("id", ignoreCase = true)) {
@@ -424,6 +449,7 @@ class PptxParser {
             var inPic = false
             var inGraphicFrame = false
             var inTable = false
+            var inBg = false
             var shapeCounter = 0
 
             var curOffX = 0L
@@ -462,6 +488,10 @@ class PptxParser {
                         currentTag = tagName
 
                         when {
+                            tagName.endsWith("bg", ignoreCase = true) || tagName.endsWith("bgPr", ignoreCase = true) -> {
+                                inBg = true
+                            }
+
                             tagName.endsWith("sp", ignoreCase = true) && !tagName.endsWith("grpSp", ignoreCase = true) -> {
                                 inShape = true
                                 curOffX = 0L; curOffY = 0L; curExtX = 0L; curExtY = 0L
@@ -532,7 +562,9 @@ class PptxParser {
                                 val hex = parser.getAttributeValue(null, "val")
                                 val color = parseHexColor(hex)
                                 if (color != null) {
-                                    if (inShape && curFillColor == null) {
+                                    if (inBg) {
+                                        slideBgColor = color
+                                    } else if (inShape && curFillColor == null) {
                                         curFillColor = color
                                     } else if (curRunColor == null) {
                                         curRunColor = color
@@ -544,7 +576,9 @@ class PptxParser {
                                 val scheme = parser.getAttributeValue(null, "val") ?: ""
                                 val color = parseSchemeColor(scheme)
                                 if (color != null) {
-                                    if (inShape && curFillColor == null) {
+                                    if (inBg) {
+                                        slideBgColor = color
+                                    } else if (inShape && curFillColor == null) {
                                         curFillColor = color
                                     } else if (curRunColor == null) {
                                         curRunColor = color
@@ -616,6 +650,10 @@ class PptxParser {
 
                     XmlPullParser.END_TAG -> {
                         when {
+                            tagName.endsWith("bg", ignoreCase = true) || tagName.endsWith("bgPr", ignoreCase = true) -> {
+                                inBg = false
+                            }
+
                             tagName.endsWith("r", ignoreCase = true) -> {
                                 val text = currentRunText.toString()
                                 if (text.isNotEmpty()) {
@@ -746,7 +784,7 @@ class PptxParser {
 
     /**
      * Computes bounds for a visual element.
-     * If the slide omitted xfrm (very common for standard PowerPoint placeholders), assigns
+     * If the slide omitted xfrm (standard for placeholders in PowerPoint), assigns
      * standard layout coordinates so shapes and text do not stack on top of each other at (0, 0).
      */
     private fun calculateBounds(
@@ -789,7 +827,7 @@ class PptxParser {
     /**
      * Resilient parser for legacy PowerPoint 97-2003 binary files (.ppt).
      * Scans PowerPoint Document atom records (RT_Slide = 0x03EE, RT_TextCharsAtom = 0x0F9E,
-     * RT_TextBytesAtom = 0x0F9F) and falls back to string extraction so every .ppt is readable.
+     * RT_TextBytesAtom = 0x0F9F).
      */
     private fun parseBinaryPpt(bytes: ByteArray): PptxPresentation {
         val slides = mutableListOf<PptxSlide>()
@@ -976,7 +1014,7 @@ class PptxParser {
             } else {
                 if (sb.length >= 4) {
                     val candidate = sb.toString().trim()
-                    if (candidate.length >= 4 && candidate.any { it.isLetter() }) {
+                    if (candidate.length >= 4 && candidate.any { it.isLetter() } && !candidate.startsWith("<?xml") && !candidate.startsWith("[Content_")) {
                         strings.add(candidate)
                     }
                 }

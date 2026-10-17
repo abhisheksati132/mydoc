@@ -159,7 +159,7 @@ fun PresentationViewerScreen(
                 val uri = Uri.parse(document.uri)
                 val inputStream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri, document.displayName)
                     ?: throw IllegalStateException("Could not open presentation stream")
-                val parsed = inputStream.use { PptxParser().parse(it) }
+                val parsed = inputStream.use { PptxParser().parse(it, context.cacheDir) }
                 presentationData = parsed
                 isLoading = false
             } catch (e: Exception) {
@@ -254,6 +254,9 @@ fun PresentationViewerScreen(
         }
     }
 
+    val uiTextColor = MaterialTheme.colorScheme.onSurface
+    val uiSecondaryTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+
     val bgColor = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color(0xFF0F0F10)
         ReadingMode.SEPIA -> Color(0xFFF4ECD8)
@@ -269,13 +272,13 @@ fun PresentationViewerScreen(
     val textColor = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color(0xFFEDEDED)
         ReadingMode.SEPIA -> Color(0xFF3A3125)
-        ReadingMode.NORMAL -> Color(0xFF1E293B)
+        ReadingMode.NORMAL -> uiTextColor
     }
 
     val secondaryTextColor = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color(0xFFA0A0A5)
         ReadingMode.SEPIA -> Color(0xFF5A4E3A)
-        ReadingMode.NORMAL -> Color(0xFF64748B)
+        ReadingMode.NORMAL -> uiSecondaryTextColor
     }
 
     Scaffold(
@@ -685,7 +688,7 @@ fun PresentationViewerScreen(
                             OutlineSlideCard(
                                 slide = slide,
                                 cardBgColor = cardBgColor,
-                                textColor = textColor,
+                                textColor = if (cardBgColor.isColorDark()) Color(0xFFEDEDED) else Color(0xFF1E293B),
                                 highlightQuery = if (isSearchOpen) searchQuery else ""
                             )
                         }
@@ -924,6 +927,8 @@ private fun VisualSlideCard(
     highlightQuery: String = ""
 ) {
     val slideBg = slide.backgroundColor ?: cardBgColor
+    val isBgDark = slideBg.isColorDark()
+    val baseContentColor = if (isBgDark) Color(0xFFF1F5F9) else Color(0xFF1E293B)
 
     Box(
         modifier = Modifier
@@ -1015,7 +1020,14 @@ private fun VisualSlideCard(
                                     for (para in element.paragraphs) {
                                         val annotated = buildAnnotatedString {
                                             for (run in para.runs) {
-                                                val runColor = run.color ?: defaultTextColor
+                                                val rawColor = run.color ?: baseContentColor
+                                                val runColor = if (isBgDark && rawColor.isColorDark()) {
+                                                    Color(0xFFF1F5F9)
+                                                } else if (!isBgDark && !rawColor.isColorDark() && rawColor != Color.Transparent) {
+                                                    Color(0xFF1E293B)
+                                                } else {
+                                                    rawColor
+                                                }
                                                 val isMatch = highlightQuery.length >= 2 && run.text.contains(highlightQuery, ignoreCase = true)
                                                 val scaledSp = (run.fontSizeSp * (totalWidth.value / 640f)).coerceIn(8.5f, 26f).sp
 
@@ -1152,4 +1164,9 @@ private fun OutlineSlideCard(
             }
         }
     }
+}
+
+private fun Color.isColorDark(): Boolean {
+    val lum = 0.299f * red + 0.587f * green + 0.114f * blue
+    return lum < 0.5f
 }
