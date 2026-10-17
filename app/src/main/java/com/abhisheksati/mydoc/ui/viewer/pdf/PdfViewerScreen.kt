@@ -1,9 +1,13 @@
 package com.abhisheksati.mydoc.ui.viewer.pdf
 
 import android.app.Activity
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -23,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
@@ -96,6 +101,20 @@ fun PdfViewerScreen(
     var panOffset by remember { mutableStateOf(Offset.Zero) }
     var isPageJumpDialogOpen by remember { mutableStateOf(false) }
     var isReadingControlsOpen by remember { mutableStateOf(false) }
+
+    val reopenLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { newUri: Uri? ->
+        if (newUri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    newUri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {}
+            viewModel.updateDocumentUri(newUri)
+        }
+    }
 
     var bookmarks by remember {
         mutableStateOf(app?.settingsRepository?.getBookmarks(document.uri) ?: emptySet())
@@ -201,12 +220,28 @@ fun PdfViewerScreen(
                 AppProgressIndicator()
             }
         } else if (state.errorMessage != null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(AppSpacing.paddingLarge),
+                contentAlignment = Alignment.Center
+            ) {
                 AppEmptyState(
-                    title = "Document could not be displayed",
-                    message = state.errorMessage ?: "The file may be corrupted or inaccessible.",
-                    actionLabel = "Go back",
-                    onAction = onBackClick
+                    title = if (state.isPermissionExpired) "Permission expired" else "Document could not be displayed",
+                    message = if (state.isPermissionExpired) {
+                        "Access permission has expired for this file. Please select it again to open."
+                    } else {
+                        state.errorMessage ?: "The file may be corrupted or inaccessible."
+                    },
+                    actionLabel = if (state.isPermissionExpired) "Select file" else "Go back",
+                    onAction = {
+                        if (state.isPermissionExpired) {
+                            reopenLauncher.launch(arrayOf("application/pdf", "*/*"))
+                        } else {
+                            onBackClick()
+                        }
+                    }
                 )
             }
         } else if (state.pageCount > 0) {

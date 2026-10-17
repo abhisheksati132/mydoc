@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.KeyEvent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -115,6 +116,25 @@ class MainActivity : ComponentActivity() {
             }
 
             AppDesignSystemTheme(darkTheme = isDark) {
+                val selectedTool by toolsViewModel.selectedTool.collectAsState()
+
+                // Intercept back presses smoothly so the app never exits abruptly
+                BackHandler(enabled = isDesignSystemPreviewOpen) {
+                    isDesignSystemPreviewOpen = false
+                }
+
+                BackHandler(enabled = !isDesignSystemPreviewOpen && isSettingsOpen) {
+                    isSettingsOpen = false
+                }
+
+                BackHandler(enabled = !isDesignSystemPreviewOpen && !isSettingsOpen && selectedTool != null) {
+                    toolsViewModel.closeTool()
+                }
+
+                BackHandler(enabled = !isDesignSystemPreviewOpen && !isSettingsOpen && selectedTool == null && currentDocument != null) {
+                    currentDocument = null
+                }
+
                 Surface(modifier = Modifier.fillMaxSize()) {
                     if (!isAppUnlocked && app.settingsRepository.isBiometricLockEnabled.value) {
                         AppLockScreen(
@@ -144,7 +164,6 @@ class MainActivity : ComponentActivity() {
                                     }
                                 )
 
-                                val selectedTool by toolsViewModel.selectedTool.collectAsState()
                                 if (selectedTool != null) {
                                     ToolRunnerSheet(
                                         viewModel = toolsViewModel,
@@ -166,6 +185,11 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(
                                 viewModel = homeViewModel,
                                 toolsViewModel = toolsViewModel,
+                                isDarkTheme = isDark,
+                                onToggleTheme = {
+                                    val nextTheme = if (isDark) AppThemeMode.LIGHT else AppThemeMode.AMOLED_DARK
+                                    app.settingsRepository.setThemeMode(nextTheme)
+                                },
                                 onDocumentClick = { doc -> currentDocument = doc },
                                 onSettingsClick = { isSettingsOpen = true },
                                 onShareDocument = { doc -> shareDocument(doc) }

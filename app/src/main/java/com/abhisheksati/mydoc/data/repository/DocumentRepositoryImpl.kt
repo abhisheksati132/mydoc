@@ -86,6 +86,21 @@ class DocumentRepositoryImpl(
             val metadata = extractMetadata(uri)
             val now = System.currentTimeMillis()
 
+            // Cache an internal offline copy so documents remain readable even if Android revokes transient URI grants
+            try {
+                val savedDocsDir = java.io.File(context.filesDir, "saved_docs").apply { mkdirs() }
+                val docKey = uri.toString().hashCode().toString(16)
+                val safeName = metadata.displayName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+                val localFile = java.io.File(savedDocsDir, "${docKey}_$safeName")
+                if (!localFile.exists() || localFile.length() == 0L) {
+                    contentResolver.openInputStream(uri)?.use { input ->
+                        localFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+
             val existing = recentDao.getRecentByUri(uri.toString())
             val recentEntity = RecentDocumentEntity(
                 uri = uri.toString(),

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,9 +29,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.FileOpen
 import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.ripple.rememberRipple
@@ -102,6 +105,8 @@ enum class HomeTab {
 fun HomeScreen(
     viewModel: HomeViewModel,
     toolsViewModel: ToolsViewModel,
+    isDarkTheme: Boolean = false,
+    onToggleTheme: () -> Unit = {},
     onDocumentClick: (DocumentFile) -> Unit,
     onSettingsClick: () -> Unit,
     onShareDocument: (DocumentFile) -> Unit,
@@ -128,6 +133,12 @@ fun HomeScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {}
             viewModel.onDocumentOpened(uri) { result ->
                 result.onSuccess { doc ->
                     onDocumentClick(doc)
@@ -168,10 +179,26 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(colors.surface)
+                    .statusBarsPadding()
             ) {
                 AppToolbar(
                     title = stringResource(R.string.app_name),
                     actions = {
+                        // Day / Night mode toggle directly on main page (Sun & Moon logo)
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onToggleTheme()
+                            },
+                            modifier = Modifier.size(AppSpacing.minTouchTarget)
+                        ) {
+                            Icon(
+                                imageVector = if (isDarkTheme) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
+                                contentDescription = if (isDarkTheme) "Switch to light mode" else "Switch to dark mode",
+                                tint = colors.textPrimary
+                            )
+                        }
+
                         // Sort order dropdown
                     Box {
                         IconButton(

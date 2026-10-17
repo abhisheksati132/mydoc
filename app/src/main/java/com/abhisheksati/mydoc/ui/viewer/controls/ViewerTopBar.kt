@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
@@ -63,11 +64,12 @@ fun ViewerTopBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(colors.surface)
+                .statusBarsPadding()
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(AppSpacing.minTouchTarget),
+                    .height(56.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Back button (48dp touch target)

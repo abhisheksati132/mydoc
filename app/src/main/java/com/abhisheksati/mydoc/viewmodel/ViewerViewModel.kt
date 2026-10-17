@@ -40,6 +40,7 @@ data class ViewerUiState(
     val isPasswordRequired: Boolean = false,
     val isPasswordIncorrect: Boolean = false,
     val isLoading: Boolean = true,
+    val isPermissionExpired: Boolean = false,
     val errorMessage: String? = null
 )
 
@@ -53,27 +54,69 @@ class ViewerViewModel(
     val uiState: StateFlow<ViewerUiState> = _uiState.asStateFlow()
 
     private var renderer: DocumentRenderer? = null
+    private var activeDocumentFile: DocumentFile = documentFile
 
     init {
         loadDocument()
     }
 
+    fun updateDocumentUri(newUri: Uri) {
+        viewModelScope.launch {
+            val res = repository.registerOpenedDocument(newUri)
+            res.onSuccess { newDoc ->
+                activeDocumentFile = newDoc
+                loadDocument()
+            }
+        }
+    }
+
     private fun loadDocument() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, isPermissionExpired = false, errorMessage = null) }
 
             // Restore per-file view state from Room
-            val savedState = repository.getViewState(documentFile.uri)
+            val savedState = repository.getViewState(activeDocumentFile.uri)
 
             withContext(Dispatchers.IO) {
                 try {
-                    val uri = Uri.parse(documentFile.uri)
+                    val uri = Uri.parse(activeDocumentFile.uri)
                     val cacheFile = java.io.File(context.cacheDir, "temp_view_${System.currentTimeMillis()}.pdf")
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        cacheFile.outputStream().use { output ->
-                            input.copyTo(output)
+
+                    var streamOpened = false
+                    try {
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            cacheFile.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                            streamOpened = true
                         }
-                    } ?: throw IllegalStateException("Could not open file input stream for: $uri")
+                    } catch (secEx: SecurityException) {
+                        // Check if an offline internal copy was cached in saved_docs
+                        val savedDocsDir = java.io.File(context.filesDir, "saved_docs")
+                        val docKey = uri.toString().hashCode().toString(16)
+                        val cached = savedDocsDir.listFiles()?.firstOrNull { it.name.startsWith(docKey) }
+                        if (cached != null && cached.exists() && cached.length() > 0L) {
+                            cached.inputStream().use { input ->
+                                cacheFile.outputStream().use { output ->
+                                    input.copyTo(output)
+                                }
+                            }
+                            streamOpened = true
+                        } else {
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    isPermissionExpired = true,
+                                    errorMessage = "Storage permission has expired for this file."
+                                )
+                            }
+                            return@withContext
+                        }
+                    }
+
+                    if (!streamOpened) {
+                        throw IllegalStateException("Could not read document contents.")
+                    }
 
                     var activeRenderer: DocumentRenderer? = null
 
@@ -142,13 +185,15 @@ class ViewerViewModel(
                             )
                         }
 
-                        repository.updatePageProgress(documentFile.uri, initialPage, totalPages)
+                        repository.updatePageProgress(activeDocumentFile.uri, initialPage, totalPages)
                     }
                 } catch (e: Exception) {
+                    val isPerm = e is SecurityException || (e.localizedMessage?.contains("Permission Denial", ignoreCase = true) == true)
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = e.localizedMessage ?: "Failed to open document"
+                            isPermissionExpired = isPerm,
+                            errorMessage = if (isPerm) "Storage permission has expired for this file." else (e.localizedMessage ?: "Failed to open document")
                         )
                     }
                 }

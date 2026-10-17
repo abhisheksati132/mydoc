@@ -159,17 +159,11 @@ fun SettingsScreen(
             AppDivider()
             Spacer(modifier = Modifier.height(Spacing.medium))
 
-            // APPEARANCE SECTION
+            // APPEARANCE
             Text(
                 text = "APPEARANCE",
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(Spacing.extraSmall))
-            Text(
-                text = "Choose your display theme. AMOLED Black uses pure #000000 for zero OLED power consumption.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(Spacing.small))
 
@@ -180,7 +174,7 @@ fun SettingsScreen(
                 FilterChip(
                     selected = currentTheme == AppThemeMode.AMOLED_DARK,
                     onClick = { settingsRepository.setThemeMode(AppThemeMode.AMOLED_DARK) },
-                    label = { Text("Dark (#0F0F10)") },
+                    label = { Text("Dark") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Outlined.DarkMode,
@@ -192,7 +186,7 @@ fun SettingsScreen(
                 FilterChip(
                     selected = currentTheme == AppThemeMode.LIGHT,
                     onClick = { settingsRepository.setThemeMode(AppThemeMode.LIGHT) },
-                    label = { Text("Light (#F9F9FB)") },
+                    label = { Text("Light") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Outlined.LightMode,
@@ -208,31 +202,15 @@ fun SettingsScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(Spacing.medium))
-
-            OutlinedButton(
-                onClick = onDesignSystemPreviewClick,
-                shape = RoundedCornerShape(4.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("View Design System Showcase & Tokens")
-            }
-
             Spacer(modifier = Modifier.height(Spacing.large))
             AppDivider()
             Spacer(modifier = Modifier.height(Spacing.medium))
 
-            // READER PREFERENCES
+            // READER
             Text(
-                text = "READER PREFERENCES",
+                text = "READER",
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(Spacing.extraSmall))
-            Text(
-                text = "Default page color mode when opening documents:",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(Spacing.small))
 
@@ -248,7 +226,7 @@ fun SettingsScreen(
                 FilterChip(
                     selected = currentReadingMode == ReadingMode.INVERTED_DARK,
                     onClick = { settingsRepository.setDefaultReadingMode(ReadingMode.INVERTED_DARK) },
-                    label = { Text("AMOLED Inverted") }
+                    label = { Text("Dark") }
                 )
                 FilterChip(
                     selected = currentReadingMode == ReadingMode.SEPIA,
@@ -264,18 +242,11 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Keep screen awake",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = "Prevent the display from turning off while reading",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = "Keep screen awake",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
                 Switch(
                     checked = keepScreenOn,
                     onCheckedChange = { settingsRepository.setKeepScreenOn(it) }
@@ -289,18 +260,11 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Volume button page turning",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = "Use hardware volume up/down buttons to turn pages in document reader",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = "Volume button page turn",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
                 Switch(
                     checked = volumeKeyTurning,
                     onCheckedChange = { settingsRepository.setVolumeKeyPageTurning(it) }
@@ -311,19 +275,13 @@ fun SettingsScreen(
             AppDivider()
             Spacer(modifier = Modifier.height(Spacing.medium))
 
-            // PRIVACY & SECURITY
+            // SECURITY
             Text(
-                text = "PRIVACY & SECURITY",
+                text = "SECURITY",
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(Spacing.extraSmall))
-            Text(
-                text = "Secure your documents using device biometrics (fingerprint, face, or screen lock PIN/pattern).",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(Spacing.medium))
+            Spacer(modifier = Modifier.height(Spacing.small))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -332,12 +290,12 @@ fun SettingsScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Biometric App Lock",
+                        text = "Biometric app lock",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "Require authentication to unlock mydoc",
+                        text = "Require fingerprint or PIN to open",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -348,7 +306,7 @@ fun SettingsScreen(
                         if (isChecked) {
                             val km = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
                             if (km?.isDeviceSecure == false) {
-                                Toast.makeText(context, "Please set a PIN, password, or fingerprint in device settings first", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, "Set a screen lock in device settings first", Toast.LENGTH_SHORT).show()
                             } else {
                                 settingsRepository.setBiometricLockEnabled(true)
                             }
@@ -363,78 +321,14 @@ fun SettingsScreen(
             AppDivider()
             Spacer(modifier = Modifier.height(Spacing.medium))
 
-            // STORAGE & FOLDERS
+            // STORAGE
             Text(
-                text = "DOCUMENT STORAGE",
+                text = "STORAGE",
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(Spacing.extraSmall))
-            Text(
-                text = "Grant access to a local folder (e.g. Documents or Downloads) to automatically scan and index your documents.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
             Spacer(modifier = Modifier.height(Spacing.small))
 
-            if (grantedFolderName != null) {
-                Text(
-                    text = "Indexed folder: $grantedFolderName",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Spacer(modifier = Modifier.height(Spacing.small))
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.small)
-            ) {
-                OutlinedButton(
-                    onClick = { openFolderLauncher.launch(null) },
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.FolderOpen,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(Spacing.small))
-                    Text(if (grantedFolderName != null) "Change Folder" else "Select Folder")
-                }
-
-                if (grantedFolderUri != null && app != null) {
-                    OutlinedButton(
-                        onClick = {
-                            val uri = Uri.parse(grantedFolderUri)
-                            isScanningFolder = true
-                            scope.launch {
-                                val count = FolderScanner.scanTree(context, uri, app.documentRepository)
-                                isScanningFolder = false
-                                Toast.makeText(context, "Scanned $count documents", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        enabled = !isScanningFolder,
-                        shape = RoundedCornerShape(6.dp)
-                    ) {
-                        if (isScanningFolder) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(
-                                imageVector = Icons.Outlined.Sync,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(Spacing.small))
-                        Text(if (isScanningFolder) "Scanning…" else "Rescan")
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(Spacing.medium))
-
-            // Cache Cleaner
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -442,7 +336,54 @@ fun SettingsScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Temporary Render Cache",
+                        text = "Document folder",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = grantedFolderName ?: "None selected",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.small)) {
+                    OutlinedButton(
+                        onClick = { openFolderLauncher.launch(null) },
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(if (grantedFolderName != null) "Change" else "Select")
+                    }
+                    if (grantedFolderUri != null && app != null) {
+                        OutlinedButton(
+                            onClick = {
+                                val uri = Uri.parse(grantedFolderUri)
+                                isScanningFolder = true
+                                scope.launch {
+                                    val count = FolderScanner.scanTree(context, uri, app.documentRepository)
+                                    isScanningFolder = false
+                                    Toast.makeText(context, "Scanned $count documents", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            enabled = !isScanningFolder,
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(if (isScanningFolder) "…" else "Rescan")
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.medium))
+
+            // Render Cache
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Render cache",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onBackground
                     )
@@ -454,7 +395,7 @@ fun SettingsScreen(
                         String.format(Locale.US, "%.1f MB", cacheSizeBytes / (1024.0 * 1024.0))
                     }
                     Text(
-                        text = "Cached page bitmaps: $formattedCache",
+                        text = formattedCache,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -463,13 +404,10 @@ fun SettingsScreen(
                     onClick = {
                         val freed = settingsRepository.clearCache(context)
                         cacheSizeBytes = settingsRepository.getCacheSizeBytes(context)
-                        val freedStr = if (freed < 1024 * 1024) "${freed / 1024} KB" else String.format(Locale.US, "%.1f MB", freed / (1024.0 * 1024.0))
-                        Toast.makeText(context, "Cache cleared (freed $freedStr)", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Cache cleared", Toast.LENGTH_SHORT).show()
                     },
                     shape = RoundedCornerShape(6.dp)
                 ) {
-                    Icon(Icons.Outlined.DeleteSweep, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
                     Text("Clear")
                 }
             }
@@ -537,7 +475,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(Spacing.extraSmall))
                         Text(
-                            text = "The initial preview build (com.abhisheksati.mydoc.debug) is still on your device. Tap below to uninstall it. Future updates will update this app directly.",
+                            text = "An old preview build is installed. Tap below to remove it.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -552,7 +490,7 @@ fun SettingsScreen(
                             },
                             shape = RoundedCornerShape(6.dp)
                         ) {
-                            Text("Uninstall Old Duplicate")
+                            Text("Uninstall Duplicate")
                         }
                     }
                 }
@@ -562,21 +500,13 @@ fun SettingsScreen(
             AppDivider()
             Spacer(modifier = Modifier.height(Spacing.medium))
 
-            // UPDATES SECTION
+            // UPDATES
             Text(
                 text = "UPDATES",
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(Spacing.small))
-
-            Text(
-                text = "Check GitHub releases for updates. The app only accesses the network when checking or downloading an update.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(Spacing.medium))
 
             when (val state = updateState) {
                 is UpdateUiState.Idle -> {
@@ -770,6 +700,18 @@ fun SettingsScreen(
                         }
                     }
                 }
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.large))
+            AppDivider()
+            Spacer(modifier = Modifier.height(Spacing.medium))
+
+            OutlinedButton(
+                onClick = onDesignSystemPreviewClick,
+                shape = RoundedCornerShape(6.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Design tokens showcase")
             }
 
             Spacer(modifier = Modifier.height(Spacing.extraLarge))
