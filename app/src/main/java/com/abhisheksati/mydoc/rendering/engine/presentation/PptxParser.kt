@@ -35,13 +35,18 @@ data class SlideTextRun(
     val fontSizeSp: Float = 14f,
     val isBold: Boolean = false,
     val isItalic: Boolean = false,
+    val isUnderline: Boolean = false,
+    val isStrikeThrough: Boolean = false,
+    val fontFamily: String? = null,
     val color: Color? = null
 )
 
 data class SlideParagraph(
     val runs: List<SlideTextRun> = emptyList(),
     val alignment: TextAlign = TextAlign.Start,
-    val isBullet: Boolean = false
+    val isBullet: Boolean = false,
+    val bulletChar: String? = null,
+    val indentLevel: Int = 0
 ) {
     val plainText: String get() = runs.joinToString("") { it.text }
 }
@@ -79,7 +84,8 @@ data class PptxPresentation(
  * Resilient multi-format presentation engine.
  * Supports:
  * 1. Modern OOXML PowerPoint presentations (.pptx) via safe random-access ZipFile in cacheDir or in-memory map,
- *    layout placeholder mapping, slide backgrounds, slide relationships, speaker notes, and vector shapes.
+ *    layout placeholder mapping, slide backgrounds, slide relationships, speaker notes, vector shapes,
+ *    theme fonts (majorFont/minorFont), default paragraph run properties (<a:defRPr>), underline/strike, and bullet formatting.
  * 2. Legacy binary PowerPoint presentations (.ppt, PowerPoint 97-2003 OLE2) via binary record parsing
  *    (RT_Slide, RT_TextCharsAtom, RT_TextBytesAtom).
  */
@@ -133,7 +139,6 @@ class PptxParser {
      * Modern .pptx parser using cacheDir temp file or in-memory ZipInputStream.
      */
     private fun parsePptxZip(bytes: ByteArray, cacheDir: File?): PptxPresentation {
-        // Try ZipFile via cacheDir first if cacheDir is provided and writable
         if (cacheDir != null && cacheDir.exists()) {
             try {
                 val tempFile = File.createTempFile("pptx_view_", ".pptx", cacheDir)
@@ -206,14 +211,25 @@ class PptxParser {
             orderedSlideRelIds.addAll(slideRels)
         }
 
-        // 2. Parse presentation relationships (maps rId -> slide path)
+        // 2. Parse theme fonts (majorFont for titles, minorFont for body)
+        var majorFont = "Arial"
+        var minorFont = "Calibri"
+        val themeBytes = entryMap["ppt/theme/theme1.xml"]
+            ?: entryMap.entries.firstOrNull { it.key.contains("theme/theme", ignoreCase = true) }?.value
+        if (themeBytes != null) {
+            val (maj, min) = parseThemeFonts(themeBytes)
+            if (!maj.isNullOrBlank()) majorFont = maj
+            if (!min.isNullOrBlank()) minorFont = min
+        }
+
+        // 3. Parse presentation relationships (maps rId -> slide path)
         val presRelsBytes = entryMap["ppt/_rels/presentation.xml.rels"]
             ?: entryMap.entries.firstOrNull { it.key.endsWith("presentation.xml.rels", ignoreCase = true) }?.value
         val presRelsMap = if (presRelsBytes != null) {
             parseRelationshipsXml(presRelsBytes)
         } else emptyMap()
 
-        // 3. Extract media files (pictures, photos, diagrams)
+        // 4. Extract media files (pictures, photos, diagrams)
         for ((name, data) in entryMap) {
             if (name.contains("ppt/media/", ignoreCase = true)) {
                 mediaMap[name] = data
@@ -223,7 +239,7 @@ class PptxParser {
             }
         }
 
-        // 4. Extract slide relationships (slide*.xml.rels)
+        // 5. Extract slide relationships (slide*.xml.rels)
         for ((name, data) in entryMap) {
             if (name.contains("_rels/") && name.endsWith(".rels", ignoreCase = true)) {
                 val map = parseRelationshipsXml(data)
@@ -233,7 +249,7 @@ class PptxParser {
             }
         }
 
-        // 5. Extract Speaker Notes (notesSlide*.xml)
+        // 6. Extract Speaker Notes (notesSlide*.xml)
         for ((name, data) in entryMap) {
             if (name.contains("notesslide", ignoreCase = true) && name.endsWith(".xml", ignoreCase = true)) {
                 val noteText = parseNotesXml(data)
@@ -245,7 +261,7 @@ class PptxParser {
             }
         }
 
-        // 6. Determine slide entries in true presentation order
+        // 7. Determine slide entries in true presentation order
         val slideKeys = mutableListOf<String>()
         if (orderedSlideRelIds.isNotEmpty()) {
             for (relId in orderedSlideRelIds) {
@@ -281,7 +297,7 @@ class PptxParser {
 
         val presAspectRatio = if (slideHeight > 0) slideWidth.toFloat() / slideHeight.toFloat() else 16f / 9f
 
-        // 7. Parse each slide XML into rich visual elements
+        // 8. Parse each slide XML into rich visual elements
         val slidesList = mutableListOf<PptxSlide>()
         for ((index, key) in slideKeys.withIndex()) {
             val slideNum = index + 1
@@ -309,6 +325,8 @@ class PptxParser {
                 aspectRatio = presAspectRatio,
                 mediaMap = mediaMap,
                 relsMap = slideRels,
+                majorFont = majorFont,
+                minorFont = minorFont,
                 notes = slideNotes
             )
             slidesList.add(slide)
@@ -319,6 +337,40 @@ class PptxParser {
         } else {
             emptyPresentation()
         }
+    }
+
+    private fun parseThemeFonts(xmlBytes: ByteArray): Pair<String?, String?> {
+        var major: String? = null
+        var minor: String? = null
+        try {
+            val parser = Xml.newPullParser().apply {
+                setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
+                setInput(ByteArrayInputStream(xmlBytes), "UTF-8")
+            }
+            var eventType = parser.eventType
+            var inMajor = false
+            var inMinor = false
+            while (eventType != XmlPullParser.END_DOCUMENT) {
+                if (eventType == XmlPullParser.START_TAG) {
+                    val tag = parser.name ?: ""
+                    when {
+                        tag.endsWith("majorFont", ignoreCase = true) -> inMajor = true
+                        tag.endsWith("minorFont", ignoreCase = true) -> inMinor = true
+                        tag.endsWith("latin", ignoreCase = true) -> {
+                            val tf = parser.getAttributeValue(null, "typeface")
+                            if (inMajor && major == null) major = tf
+                            if (inMinor && minor == null) minor = tf
+                        }
+                    }
+                } else if (eventType == XmlPullParser.END_TAG) {
+                    val tag = parser.name ?: ""
+                    if (tag.endsWith("majorFont", ignoreCase = true)) inMajor = false
+                    if (tag.endsWith("minorFont", ignoreCase = true)) inMinor = false
+                }
+                eventType = parser.next()
+            }
+        } catch (_: Exception) {}
+        return Pair(major, minor)
     }
 
     private fun parsePresentationInfo(xmlBytes: ByteArray): Pair<Pair<Long, Long>, List<String>> {
@@ -432,6 +484,8 @@ class PptxParser {
         aspectRatio: Float,
         mediaMap: Map<String, ByteArray>,
         relsMap: Map<String, String>,
+        majorFont: String,
+        minorFont: String,
         notes: String? = null
     ): PptxSlide {
         val visualElements = mutableListOf<VisualElement>()
@@ -446,10 +500,16 @@ class PptxParser {
 
             var currentTag = ""
             var inShape = false
+            var inSpPr = false
+            var inLn = false
+            var inTxBody = false
             var inPic = false
             var inGraphicFrame = false
             var inTable = false
             var inBg = false
+            var inPPr = false
+            var inDefRPr = false
+            var inRPr = false
             var shapeCounter = 0
 
             var curOffX = 0L
@@ -465,14 +525,28 @@ class PptxParser {
             var curPlaceholderType: String? = null
             var curBlipEmbed: String? = null
 
+            // Paragraph styling defaults
+            var paraDefSize: Float? = null
+            var paraDefBold = false
+            var paraDefItalic = false
+            var paraDefUnderline = false
+            var paraDefStrike = false
+            var paraDefFont: String? = null
+            var paraDefColor: Color? = null
+            var curBulletChar: String? = null
+            var curIndentLvl = 0
+            var curParaAlign = TextAlign.Start
+
             val curParagraphs = mutableListOf<SlideParagraph>()
             val curRuns = mutableListOf<SlideTextRun>()
             val currentRunText = StringBuilder()
             var curRunSize = 14f
             var curRunBold = false
             var curRunItalic = false
+            var curRunUnderline = false
+            var curRunStrike = false
+            var curRunFont: String? = null
             var curRunColor: Color? = null
-            var curParaAlign = TextAlign.Start
 
             val curTableRows = mutableListOf<MutableList<String>>()
             var curTableRow = mutableListOf<String>()
@@ -494,12 +568,41 @@ class PptxParser {
 
                             tagName.endsWith("sp", ignoreCase = true) && !tagName.endsWith("grpSp", ignoreCase = true) -> {
                                 inShape = true
+                                inSpPr = false
+                                inLn = false
+                                inTxBody = false
+                                inRPr = false
+                                inDefRPr = false
                                 curOffX = 0L; curOffY = 0L; curExtX = 0L; curExtY = 0L
                                 curFillColor = null; curBorderColor = null; curBorderWidth = 0f
                                 curIsRounded = false; curIsEllipse = false
                                 curShapePreset = null
                                 curPlaceholderType = null
                                 curParagraphs.clear()
+                            }
+
+                            tagName.endsWith("spPr", ignoreCase = true) -> {
+                                inSpPr = true
+                            }
+
+                            tagName.endsWith("ln", ignoreCase = true) -> {
+                                inLn = true
+                                val w = parser.getAttributeValue(null, "w")?.toFloatOrNull()
+                                if (w != null) {
+                                    curBorderWidth = (w / 12700f).coerceIn(0.5f, 10f)
+                                }
+                            }
+
+                            tagName.endsWith("txBody", ignoreCase = true) -> {
+                                inTxBody = true
+                            }
+
+                            tagName.endsWith("noFill", ignoreCase = true) -> {
+                                if (inLn) {
+                                    curBorderColor = null
+                                } else if (inSpPr) {
+                                    curFillColor = Color.Transparent
+                                }
                             }
 
                             tagName.endsWith("pic", ignoreCase = true) -> {
@@ -529,7 +632,13 @@ class PptxParser {
 
                             tagName.endsWith("ph", ignoreCase = true) -> {
                                 val phType = parser.getAttributeValue(null, "type")
-                                curPlaceholderType = phType ?: "body"
+                                val phIdx = parser.getAttributeValue(null, "idx")
+                                curPlaceholderType = when {
+                                    phType != null -> phType.lowercase()
+                                    phIdx == "0" -> "title"
+                                    phIdx == "1" -> "body"
+                                    else -> "body"
+                                }
                             }
 
                             tagName.endsWith("off", ignoreCase = true) -> {
@@ -562,12 +671,14 @@ class PptxParser {
                                 val hex = parser.getAttributeValue(null, "val")
                                 val color = parseHexColor(hex)
                                 if (color != null) {
-                                    if (inBg) {
-                                        slideBgColor = color
-                                    } else if (inShape && curFillColor == null) {
-                                        curFillColor = color
-                                    } else if (curRunColor == null) {
-                                        curRunColor = color
+                                    when {
+                                        inLn -> curBorderColor = color
+                                        inRPr -> curRunColor = color
+                                        inDefRPr -> paraDefColor = color
+                                        inSpPr -> if (curFillColor == null) curFillColor = color
+                                        inBg -> slideBgColor = color
+                                        inTxBody -> if (curRunColor == null) curRunColor = color
+                                        else -> if (inShape && curFillColor == null) curFillColor = color
                                     }
                                 }
                             }
@@ -576,12 +687,14 @@ class PptxParser {
                                 val scheme = parser.getAttributeValue(null, "val") ?: ""
                                 val color = parseSchemeColor(scheme)
                                 if (color != null) {
-                                    if (inBg) {
-                                        slideBgColor = color
-                                    } else if (inShape && curFillColor == null) {
-                                        curFillColor = color
-                                    } else if (curRunColor == null) {
-                                        curRunColor = color
+                                    when {
+                                        inLn -> curBorderColor = color
+                                        inRPr -> curRunColor = color
+                                        inDefRPr -> paraDefColor = color
+                                        inSpPr -> if (curFillColor == null) curFillColor = color
+                                        inBg -> slideBgColor = color
+                                        inTxBody -> if (curRunColor == null) curRunColor = color
+                                        else -> if (inShape && curFillColor == null) curFillColor = color
                                     }
                                 }
                             }
@@ -600,9 +713,21 @@ class PptxParser {
                             tagName.endsWith("p", ignoreCase = true) -> {
                                 curRuns.clear()
                                 curParaAlign = TextAlign.Start
+                                inPPr = false
+                                inDefRPr = false
+                                paraDefSize = null
+                                paraDefBold = false
+                                paraDefItalic = false
+                                paraDefUnderline = false
+                                paraDefStrike = false
+                                paraDefFont = null
+                                paraDefColor = null
+                                curBulletChar = null
+                                curIndentLvl = 0
                             }
 
                             tagName.endsWith("pPr", ignoreCase = true) -> {
+                                inPPr = true
                                 val algn = parser.getAttributeValue(null, "algn")
                                 curParaAlign = when (algn) {
                                     "ctr" -> TextAlign.Center
@@ -610,14 +735,53 @@ class PptxParser {
                                     "just" -> TextAlign.Justify
                                     else -> TextAlign.Start
                                 }
+                                val lvl = parser.getAttributeValue(null, "lvl")?.toIntOrNull()
+                                if (lvl != null) curIndentLvl = lvl
                             }
 
-                            tagName.endsWith("r", ignoreCase = true) -> {
+                            tagName.endsWith("buChar", ignoreCase = true) -> {
+                                curBulletChar = parser.getAttributeValue(null, "char") ?: "•"
+                            }
+
+                            tagName.endsWith("buAutoNum", ignoreCase = true) -> {
+                                curBulletChar = "1."
+                            }
+
+                            tagName.endsWith("buNone", ignoreCase = true) -> {
+                                curBulletChar = null
+                            }
+
+                            tagName.endsWith("defRPr", ignoreCase = true) -> {
+                                inDefRPr = true
+                                val sz = parser.getAttributeValue(null, "sz")?.toFloatOrNull()
+                                if (sz != null) {
+                                    paraDefSize = (sz / 100f).coerceIn(8f, 72f)
+                                }
+                                if (parser.getAttributeValue(null, "b") == "1") paraDefBold = true
+                                if (parser.getAttributeValue(null, "i") == "1") paraDefItalic = true
+                                val u = parser.getAttributeValue(null, "u")
+                                if (u != null && u != "none") paraDefUnderline = true
+                                val strike = parser.getAttributeValue(null, "strike")
+                                if (strike != null && strike != "noStrike") paraDefStrike = true
+                            }
+
+                            tagName.endsWith("r", ignoreCase = true) || tagName.endsWith("fld", ignoreCase = true) -> {
                                 currentRunText.clear()
-                                curRunSize = 14f
-                                curRunBold = false
-                                curRunItalic = false
-                                curRunColor = null
+                                // Inherit paragraph defaults or placeholder defaults
+                                val baseSize = paraDefSize ?: when (curPlaceholderType?.lowercase()) {
+                                    "title", "ctrtitle" -> 28f
+                                    "subtitle" -> 20f
+                                    "body", "obj" -> 14f
+                                    "dt", "ftr", "sldnum" -> 10f
+                                    else -> 14f
+                                }
+                                curRunSize = baseSize
+                                curRunBold = paraDefBold || (curPlaceholderType?.lowercase() in listOf("title", "ctrtitle"))
+                                curRunItalic = paraDefItalic
+                                curRunUnderline = paraDefUnderline
+                                curRunStrike = paraDefStrike
+                                curRunFont = paraDefFont ?: if (curPlaceholderType?.lowercase() in listOf("title", "ctrtitle")) majorFont else minorFont
+                                curRunColor = paraDefColor
                             }
 
                             tagName.endsWith("rPr", ignoreCase = true) -> {
@@ -625,8 +789,28 @@ class PptxParser {
                                 if (sz != null) {
                                     curRunSize = (sz / 100f).coerceIn(8f, 72f)
                                 }
-                                curRunBold = parser.getAttributeValue(null, "b") == "1"
-                                curRunItalic = parser.getAttributeValue(null, "i") == "1"
+                                val b = parser.getAttributeValue(null, "b")
+                                if (b != null) curRunBold = b == "1"
+                                val i = parser.getAttributeValue(null, "i")
+                                if (i != null) curRunItalic = i == "1"
+                                val u = parser.getAttributeValue(null, "u")
+                                if (u != null) curRunUnderline = u != "none"
+                                val strike = parser.getAttributeValue(null, "strike")
+                                if (strike != null) curRunStrike = strike != "noStrike"
+                            }
+
+                            tagName.endsWith("latin", ignoreCase = true) -> {
+                                val tf = parser.getAttributeValue(null, "typeface")
+                                val resolved = when {
+                                    tf?.startsWith("+mj") == true -> majorFont
+                                    tf?.startsWith("+mn") == true -> minorFont
+                                    else -> tf
+                                }
+                                if (inDefRPr) {
+                                    paraDefFont = resolved
+                                } else {
+                                    curRunFont = resolved
+                                }
                             }
 
                             tagName.endsWith("br", ignoreCase = true) -> {
@@ -654,7 +838,31 @@ class PptxParser {
                                 inBg = false
                             }
 
-                            tagName.endsWith("r", ignoreCase = true) -> {
+                            tagName.endsWith("spPr", ignoreCase = true) -> {
+                                inSpPr = false
+                            }
+
+                            tagName.endsWith("ln", ignoreCase = true) -> {
+                                inLn = false
+                            }
+
+                            tagName.endsWith("txBody", ignoreCase = true) -> {
+                                inTxBody = false
+                            }
+
+                            tagName.endsWith("rPr", ignoreCase = true) -> {
+                                inRPr = false
+                            }
+
+                            tagName.endsWith("pPr", ignoreCase = true) -> {
+                                inPPr = false
+                            }
+
+                            tagName.endsWith("defRPr", ignoreCase = true) -> {
+                                inDefRPr = false
+                            }
+
+                            tagName.endsWith("r", ignoreCase = true) || tagName.endsWith("fld", ignoreCase = true) -> {
                                 val text = currentRunText.toString()
                                 if (text.isNotEmpty()) {
                                     curRuns.add(
@@ -663,6 +871,9 @@ class PptxParser {
                                             fontSizeSp = curRunSize,
                                             isBold = curRunBold,
                                             isItalic = curRunItalic,
+                                            isUnderline = curRunUnderline,
+                                            isStrikeThrough = curRunStrike,
+                                            fontFamily = curRunFont,
                                             color = curRunColor
                                         )
                                     )
@@ -671,9 +882,13 @@ class PptxParser {
 
                             tagName.endsWith("p", ignoreCase = true) -> {
                                 if (curRuns.isNotEmpty()) {
+                                    val isBullet = curBulletChar != null || curIndentLvl > 0 || (curPlaceholderType?.lowercase() in listOf("body", "obj"))
                                     val para = SlideParagraph(
                                         runs = curRuns.toList(),
-                                        alignment = curParaAlign
+                                        alignment = curParaAlign,
+                                        isBullet = isBullet,
+                                        bulletChar = curBulletChar,
+                                        indentLevel = curIndentLvl
                                     )
                                     curParagraphs.add(para)
                                     val plain = para.plainText.trim()
@@ -713,6 +928,11 @@ class PptxParser {
 
                             tagName.endsWith("sp", ignoreCase = true) && !tagName.endsWith("grpSp", ignoreCase = true) -> {
                                 inShape = false
+                                inSpPr = false
+                                inLn = false
+                                inTxBody = false
+                                inRPr = false
+                                inDefRPr = false
                                 if (curParagraphs.isNotEmpty() || curFillColor != null || curBorderColor != null || curShapePreset != null) {
                                     val bounds = calculateBounds(curOffX, curOffY, curExtX, curExtY, slideWidth, slideHeight, curPlaceholderType, shapeCounter++)
                                     val type = if (curFillColor != null || curBorderColor != null || curShapePreset != null) {
@@ -817,7 +1037,6 @@ class PptxParser {
             "ftr" -> SlideBounds(left = 0.35f, top = 0.92f, width = 0.30f, height = 0.05f)
             "sldnum" -> SlideBounds(left = 0.80f, top = 0.92f, width = 0.14f, height = 0.05f)
             else -> {
-                // Stagger non-positioned shapes vertically
                 val topOffset = (0.08f + (shapeIndex * 0.20f)).coerceIn(0.08f, 0.72f)
                 SlideBounds(left = 0.06f, top = topOffset, width = 0.88f, height = 0.18f)
             }
@@ -845,7 +1064,7 @@ class PptxParser {
                         bounds = SlideBounds(0.06f, 0.08f, 0.88f, 0.20f),
                         paragraphs = listOf(
                             SlideParagraph(
-                                runs = listOf(SlideTextRun(text = t, fontSizeSp = 22f, isBold = true))
+                                runs = listOf(SlideTextRun(text = t, fontSizeSp = 24f, isBold = true))
                             )
                         )
                     )
@@ -954,7 +1173,7 @@ class PptxParser {
                             bounds = SlideBounds(0.06f, 0.08f, 0.88f, 0.20f),
                             paragraphs = listOf(
                                 SlideParagraph(
-                                    runs = listOf(SlideTextRun(text = t, fontSizeSp = 20f, isBold = true))
+                                    runs = listOf(SlideTextRun(text = t, fontSizeSp = 22f, isBold = true))
                                 )
                             )
                         )

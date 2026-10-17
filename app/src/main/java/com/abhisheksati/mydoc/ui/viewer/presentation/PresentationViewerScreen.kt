@@ -88,9 +88,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -861,6 +863,30 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPresetShape(
 }
 
 /**
+ * Maps PowerPoint / font face names to Jetpack Compose FontFamilies.
+ */
+private fun mapFontFamily(name: String?): FontFamily {
+    if (name.isNullOrBlank()) return FontFamily.Default
+    val lower = name.lowercase().trim()
+    return when {
+        lower.contains("times") || lower.contains("georgia") || lower.contains("garamond") ||
+        lower.contains("palatino") || lower.contains("serif") || lower.contains("cambria") ||
+        lower.contains("baskerville") || lower.contains("didot") || lower.contains("minion") ||
+        lower.contains("bookman") || lower.contains("century") -> FontFamily.Serif
+
+        lower.contains("courier") || lower.contains("consolas") || lower.contains("mono") ||
+        lower.contains("menlo") || lower.contains("inconsolata") || lower.contains("source code") ||
+        lower.contains("fira code") || lower.contains("jetbrains") -> FontFamily.Monospace
+
+        lower.contains("comic") || lower.contains("script") || lower.contains("handwriting") ||
+        lower.contains("chalkboard") || lower.contains("brush") || lower.contains("lucida handwriting") ||
+        lower.contains("kalam") || lower.contains("caveat") -> FontFamily.Cursive
+
+        else -> FontFamily.SansSerif
+    }
+}
+
+/**
  * Text composable that highlights matched search keywords in yellow.
  */
 @Composable
@@ -870,6 +896,8 @@ private fun HighlightableText(
     fontSize: androidx.compose.ui.unit.TextUnit,
     fontWeight: FontWeight = FontWeight.Normal,
     fontStyle: FontStyle = FontStyle.Normal,
+    fontFamily: FontFamily = FontFamily.Default,
+    textDecoration: TextDecoration = TextDecoration.None,
     color: Color,
     textAlign: TextAlign = TextAlign.Start,
     modifier: Modifier = Modifier
@@ -889,7 +917,16 @@ private fun HighlightableText(
                 if (matchIdx > searchStart) {
                     append(text.substring(searchStart, matchIdx))
                 }
-                withStyle(SpanStyle(background = Color(0x99FFEB3B), color = Color(0xFF1E293B))) {
+                withStyle(
+                    SpanStyle(
+                        background = Color(0x99FFEB3B),
+                        color = Color(0xFF1E293B),
+                        fontWeight = fontWeight,
+                        fontStyle = fontStyle,
+                        fontFamily = fontFamily,
+                        textDecoration = textDecoration
+                    )
+                ) {
                     append(text.substring(matchIdx, matchIdx + query.length))
                 }
                 searchStart = matchIdx + query.length
@@ -900,6 +937,8 @@ private fun HighlightableText(
             fontSize = fontSize,
             fontWeight = fontWeight,
             fontStyle = fontStyle,
+            fontFamily = fontFamily,
+            textDecoration = textDecoration,
             textAlign = textAlign,
             modifier = modifier
         )
@@ -909,6 +948,8 @@ private fun HighlightableText(
             fontSize = fontSize,
             fontWeight = fontWeight,
             fontStyle = fontStyle,
+            fontFamily = fontFamily,
+            textDecoration = textDecoration,
             color = color,
             textAlign = textAlign,
             modifier = modifier
@@ -930,158 +971,222 @@ private fun VisualSlideCard(
     val isBgDark = slideBg.isColorDark()
     val baseContentColor = if (isBgDark) Color(0xFFF1F5F9) else Color(0xFF1E293B)
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(slide.aspectRatio)
-            .background(slideBg, RoundedCornerShape(8.dp))
-            .border(1.dp, Color(0x33888888), RoundedCornerShape(8.dp))
-            .clip(RoundedCornerShape(8.dp))
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
     ) {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val totalWidth = maxWidth
-            val totalHeight = maxHeight
+        val containerAspect = maxWidth / maxHeight
+        val slideAspect = if (slide.aspectRatio > 0.1f) slide.aspectRatio else (16f / 9f)
+        val cardModifier = if (containerAspect > slideAspect) {
+            Modifier
+                .fillMaxHeight()
+                .aspectRatio(slideAspect)
+        } else {
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(slideAspect)
+        }
 
-            for (element in slide.visualElements) {
-                val elementWidth = (totalWidth * element.bounds.width).coerceAtLeast(1.dp)
-                val elementHeight = (totalHeight * element.bounds.height).coerceAtLeast(1.dp)
-                val offsetX = totalWidth * element.bounds.left
-                val offsetY = totalHeight * element.bounds.top
+        Box(
+            modifier = cardModifier
+                .background(slideBg, RoundedCornerShape(8.dp))
+                .border(1.dp, Color(0x33888888), RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(8.dp))
+        ) {
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                val totalWidth = maxWidth
+                val totalHeight = maxHeight
+                val scaleFactor = (totalWidth.value / 640f).coerceIn(0.45f, 2.5f)
 
-                Box(
-                    modifier = Modifier
-                        .offset(x = offsetX, y = offsetY)
-                        .size(width = elementWidth, height = elementHeight)
-                        .clipToBounds()
-                ) {
-                    when (element.type) {
-                        VisualElementType.IMAGE -> {
-                            val bytes = element.imageBytes
-                            if (bytes != null && bytes.isNotEmpty()) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(LocalContext.current)
-                                        .data(bytes)
-                                        .crossfade(true)
-                                        .build(),
-                                    contentDescription = "Slide Image",
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                        }
+                for (element in slide.visualElements) {
+                    val elementWidth = (totalWidth * element.bounds.width).coerceAtLeast(1.dp)
+                    val elementHeight = (totalHeight * element.bounds.height).coerceAtLeast(1.dp)
+                    val offsetX = totalWidth * element.bounds.left
+                    val offsetY = totalHeight * element.bounds.top
 
-                        VisualElementType.SHAPE, VisualElementType.TEXT_BOX -> {
-                            val preset = element.shapePreset
-                            val isVectorPreset = preset != null && (
-                                preset.contains("Arrow", ignoreCase = true) ||
-                                preset.contains("triangle", ignoreCase = true) ||
-                                preset.contains("diamond", ignoreCase = true) ||
-                                preset.contains("star", ignoreCase = true)
-                            )
-
-                            if (preset != null && isVectorPreset) {
-                                Canvas(modifier = Modifier.fillMaxSize()) {
-                                    val bg = element.backgroundColor ?: Color(0x22888888)
-                                    val border = element.borderColor ?: Color(0x44888888)
-                                    drawPresetShape(preset, bg, border)
+                    Box(
+                        modifier = Modifier
+                            .offset(x = offsetX, y = offsetY)
+                            .size(width = elementWidth, height = elementHeight)
+                            .clipToBounds()
+                    ) {
+                        when (element.type) {
+                            VisualElementType.IMAGE -> {
+                                val bytes = element.imageBytes
+                                if (bytes != null && bytes.isNotEmpty()) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(LocalContext.current)
+                                            .data(bytes)
+                                            .crossfade(true)
+                                            .build(),
+                                        contentDescription = "Slide Image",
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
                                 }
                             }
 
-                            val shapeModifier = Modifier
-                                .fillMaxSize()
-                                .then(
-                                    if (!isVectorPreset && element.backgroundColor != null) {
-                                        Modifier.background(
-                                            color = element.backgroundColor,
-                                            shape = if (element.isRounded) RoundedCornerShape(8.dp) else if (element.isEllipse) CircleShape else RectangleShape
-                                        )
-                                    } else Modifier
+                            VisualElementType.SHAPE, VisualElementType.TEXT_BOX -> {
+                                val preset = element.shapePreset
+                                val isVectorPreset = preset != null && (
+                                    preset.contains("Arrow", ignoreCase = true) ||
+                                    preset.contains("triangle", ignoreCase = true) ||
+                                    preset.contains("diamond", ignoreCase = true) ||
+                                    preset.contains("star", ignoreCase = true)
                                 )
-                                .then(
-                                    if (!isVectorPreset && element.borderColor != null) {
-                                        Modifier.border(
-                                            width = 1.dp,
-                                            color = element.borderColor,
-                                            shape = if (element.isRounded) RoundedCornerShape(8.dp) else if (element.isEllipse) CircleShape else RectangleShape
-                                        )
-                                    } else Modifier
-                                )
-                                .padding(4.dp)
 
-                            Box(
-                                modifier = shapeModifier,
-                                contentAlignment = Alignment.CenterStart
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .verticalScroll(rememberScrollState())
+                                if (preset != null && isVectorPreset) {
+                                    Canvas(modifier = Modifier.fillMaxSize()) {
+                                        val bg = element.backgroundColor ?: Color(0x22888888)
+                                        val border = element.borderColor ?: Color(0x44888888)
+                                        drawPresetShape(preset, bg, border)
+                                    }
+                                }
+
+                                val shapeModifier = Modifier
+                                    .fillMaxSize()
+                                    .then(
+                                        if (!isVectorPreset && element.backgroundColor != null && element.backgroundColor != Color.Transparent) {
+                                            Modifier.background(
+                                                color = element.backgroundColor,
+                                                shape = if (element.isRounded) RoundedCornerShape(8.dp) else if (element.isEllipse) CircleShape else RectangleShape
+                                            )
+                                        } else Modifier
+                                    )
+                                    .then(
+                                        if (!isVectorPreset && element.borderColor != null) {
+                                            Modifier.border(
+                                                width = (element.borderWidthDp.takeIf { it > 0f } ?: 1f).dp,
+                                                color = element.borderColor,
+                                                shape = if (element.isRounded) RoundedCornerShape(8.dp) else if (element.isEllipse) CircleShape else RectangleShape
+                                            )
+                                        } else Modifier
+                                    )
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+
+                                Box(
+                                    modifier = shapeModifier,
+                                    contentAlignment = Alignment.CenterStart
                                 ) {
-                                    for (para in element.paragraphs) {
-                                        val annotated = buildAnnotatedString {
-                                            for (run in para.runs) {
-                                                val rawColor = run.color ?: baseContentColor
-                                                val runColor = if (isBgDark && rawColor.isColorDark()) {
-                                                    Color(0xFFF1F5F9)
-                                                } else if (!isBgDark && !rawColor.isColorDark() && rawColor != Color.Transparent) {
-                                                    Color(0xFF1E293B)
-                                                } else {
-                                                    rawColor
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .verticalScroll(rememberScrollState())
+                                    ) {
+                                        for ((pIdx, para) in element.paragraphs.withIndex()) {
+                                            val indentSpaces = "   ".repeat(para.indentLevel.coerceIn(0, 5))
+                                            val bulletStr = when {
+                                                para.isBullet || para.bulletChar != null -> {
+                                                    val symbol = para.bulletChar ?: "•"
+                                                    "$indentSpaces$symbol "
                                                 }
-                                                val isMatch = highlightQuery.length >= 2 && run.text.contains(highlightQuery, ignoreCase = true)
-                                                val scaledSp = (run.fontSizeSp * (totalWidth.value / 640f)).coerceIn(8.5f, 26f).sp
+                                                para.indentLevel > 0 -> indentSpaces
+                                                else -> ""
+                                            }
 
-                                                withStyle(
-                                                    SpanStyle(
-                                                        color = runColor,
-                                                        fontSize = scaledSp,
-                                                        fontWeight = if (run.isBold) FontWeight.Bold else FontWeight.Normal,
-                                                        fontStyle = if (run.isItalic) FontStyle.Italic else FontStyle.Normal,
-                                                        background = if (isMatch) Color(0x66FFEB3B) else Color.Transparent
-                                                    )
-                                                ) {
-                                                    append(run.text)
+                                            val firstRun = para.runs.firstOrNull()
+                                            val rawBulletColor = firstRun?.color ?: baseContentColor
+                                            val bulletColor = if (isBgDark && rawBulletColor.isColorDark()) {
+                                                Color(0xFFF1F5F9)
+                                            } else if (!isBgDark && !rawBulletColor.isColorDark() && rawBulletColor != Color.Transparent) {
+                                                Color(0xFF1E293B)
+                                            } else {
+                                                rawBulletColor
+                                            }
+                                            val bulletSize = ((firstRun?.fontSizeSp ?: 14f) * scaleFactor).coerceIn(7f, 42f).sp
+
+                                            val annotated = buildAnnotatedString {
+                                                if (bulletStr.isNotEmpty()) {
+                                                    withStyle(
+                                                        SpanStyle(
+                                                            color = bulletColor,
+                                                            fontSize = bulletSize,
+                                                            fontWeight = FontWeight.Bold,
+                                                            fontFamily = mapFontFamily(firstRun?.fontFamily)
+                                                        )
+                                                    ) {
+                                                        append(bulletStr)
+                                                    }
+                                                }
+
+                                                for (run in para.runs) {
+                                                    val rawColor = run.color ?: baseContentColor
+                                                    val runColor = if (isBgDark && rawColor.isColorDark()) {
+                                                        Color(0xFFF1F5F9)
+                                                    } else if (!isBgDark && !rawColor.isColorDark() && rawColor != Color.Transparent) {
+                                                        Color(0xFF1E293B)
+                                                    } else {
+                                                        rawColor
+                                                    }
+                                                    val isMatch = highlightQuery.length >= 2 && run.text.contains(highlightQuery, ignoreCase = true)
+                                                    val scaledSp = (run.fontSizeSp * scaleFactor).coerceIn(7f, 42f).sp
+
+                                                    val textDec = when {
+                                                        run.isUnderline && run.isStrikeThrough -> TextDecoration.combine(listOf(TextDecoration.Underline, TextDecoration.LineThrough))
+                                                        run.isUnderline -> TextDecoration.Underline
+                                                        run.isStrikeThrough -> TextDecoration.LineThrough
+                                                        else -> TextDecoration.None
+                                                    }
+
+                                                    withStyle(
+                                                        SpanStyle(
+                                                            color = runColor,
+                                                            fontSize = scaledSp,
+                                                            fontWeight = if (run.isBold) FontWeight.Bold else FontWeight.Normal,
+                                                            fontStyle = if (run.isItalic) FontStyle.Italic else FontStyle.Normal,
+                                                            fontFamily = mapFontFamily(run.fontFamily),
+                                                            textDecoration = textDec,
+                                                            background = if (isMatch) Color(0x66FFEB3B) else Color.Transparent
+                                                        )
+                                                    ) {
+                                                        append(run.text)
+                                                    }
                                                 }
                                             }
-                                        }
-                                        if (annotated.isNotEmpty()) {
-                                            Text(
-                                                text = annotated,
-                                                textAlign = para.alignment,
-                                                modifier = Modifier.fillMaxWidth()
-                                            )
+
+                                            if (annotated.isNotEmpty()) {
+                                                val baseSp = ((firstRun?.fontSizeSp ?: 14f) * scaleFactor).coerceIn(7f, 42f)
+                                                Text(
+                                                    text = annotated,
+                                                    textAlign = para.alignment,
+                                                    lineHeight = (baseSp * 1.25f).sp,
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(bottom = if (pIdx < element.paragraphs.size - 1) 3.dp else 0.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
 
-                        VisualElementType.TABLE -> {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color(0x11000000), RoundedCornerShape(4.dp))
-                                    .border(1.dp, Color(0x33888888), RoundedCornerShape(4.dp))
-                                    .padding(4.dp)
-                            ) {
-                                for (row in element.tableRows) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        for (cellText in row) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .weight(1f)
-                                                    .border(0.5.dp, Color(0x22888888))
-                                                    .padding(2.dp)
-                                            ) {
-                                                HighlightableText(
-                                                    text = cellText,
-                                                    query = highlightQuery,
-                                                    fontSize = 10.sp,
-                                                    color = defaultTextColor
-                                                )
+                            VisualElementType.TABLE -> {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color(0x11000000), RoundedCornerShape(4.dp))
+                                        .border(1.dp, Color(0x33888888), RoundedCornerShape(4.dp))
+                                        .padding(4.dp)
+                                ) {
+                                    for (row in element.tableRows) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            for (cellText in row) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .border(0.5.dp, Color(0x22888888))
+                                                        .padding(2.dp)
+                                                ) {
+                                                    HighlightableText(
+                                                        text = cellText,
+                                                        query = highlightQuery,
+                                                        fontSize = (10f * scaleFactor).coerceIn(7f, 16f).sp,
+                                                        color = defaultTextColor
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -1105,60 +1210,75 @@ private fun OutlineSlideCard(
     textColor: Color,
     highlightQuery: String = ""
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(slide.aspectRatio)
-            .background(cardBgColor, RoundedCornerShape(8.dp))
-            .border(1.dp, Color(0x33888888), RoundedCornerShape(8.dp))
-            .padding(AppSpacing.paddingLarge)
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+        val containerAspect = maxWidth / maxHeight
+        val slideAspect = if (slide.aspectRatio > 0.1f) slide.aspectRatio else (16f / 9f)
+        val cardModifier = if (containerAspect > slideAspect) {
+            Modifier
+                .fillMaxHeight()
+                .aspectRatio(slideAspect)
+        } else {
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(slideAspect)
+        }
+
+        Box(
+            modifier = cardModifier
+                .background(cardBgColor, RoundedCornerShape(8.dp))
+                .border(1.dp, Color(0x33888888), RoundedCornerShape(8.dp))
+                .padding(AppSpacing.paddingLarge)
         ) {
-            HighlightableText(
-                text = slide.title,
-                query = highlightQuery,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = textColor,
-                modifier = Modifier.padding(bottom = AppSpacing.paddingMedium)
-            )
-
-            val allPoints = if (slide.content.isNotEmpty()) {
-                slide.content
-            } else {
-                slide.visualElements
-                    .flatMap { it.paragraphs }
-                    .map { it.plainText.trim() }
-                    .filter { it.isNotBlank() && it != slide.title }
-            }
-
-            if (allPoints.isEmpty()) {
-                Text(
-                    text = "No additional bullet points on this slide.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = textColor.copy(alpha = 0.5f),
-                    fontStyle = FontStyle.Italic,
-                    modifier = Modifier.padding(top = AppSpacing.paddingSmall)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                HighlightableText(
+                    text = slide.title,
+                    query = highlightQuery,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textColor,
+                    modifier = Modifier.padding(bottom = AppSpacing.paddingMedium)
                 )
-            } else {
-                for (item in allPoints) {
-                    Row(modifier = Modifier.padding(vertical = 2.dp)) {
-                        Text(
-                            text = "• ",
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontSize = 15.sp
-                        )
-                        HighlightableText(
-                            text = item,
-                            query = highlightQuery,
-                            fontSize = 15.sp,
-                            color = textColor
-                        )
+
+                val allPoints = if (slide.content.isNotEmpty()) {
+                    slide.content
+                } else {
+                    slide.visualElements
+                        .flatMap { it.paragraphs }
+                        .map { it.plainText.trim() }
+                        .filter { it.isNotBlank() && it != slide.title }
+                }
+
+                if (allPoints.isEmpty()) {
+                    Text(
+                        text = "No additional bullet points on this slide.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = textColor.copy(alpha = 0.5f),
+                        fontStyle = FontStyle.Italic,
+                        modifier = Modifier.padding(top = AppSpacing.paddingSmall)
+                    )
+                } else {
+                    for (item in allPoints) {
+                        Row(modifier = Modifier.padding(vertical = 2.dp)) {
+                            Text(
+                                text = "• ",
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontSize = 15.sp
+                            )
+                            HighlightableText(
+                                text = item,
+                                query = highlightQuery,
+                                fontSize = 15.sp,
+                                color = textColor
+                            )
+                        }
                     }
                 }
             }
