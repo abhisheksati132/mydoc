@@ -119,12 +119,23 @@ class PptxParser {
     }
 
     private fun emptyPresentation(): PptxPresentation {
+        val title = "Empty Presentation"
+        val lines = listOf("No slides found in this file.")
+        val visual = VisualElement(
+            type = VisualElementType.TEXT_BOX,
+            bounds = SlideBounds(0.08f, 0.35f, 0.84f, 0.30f),
+            paragraphs = listOf(
+                SlideParagraph(runs = listOf(SlideTextRun(text = title, fontSizeSp = 22f, isBold = true))),
+                SlideParagraph(runs = listOf(SlideTextRun(text = lines.first(), fontSizeSp = 15f)))
+            )
+        )
         return PptxPresentation(
             slides = listOf(
                 PptxSlide(
                     slideNumber = 1,
-                    title = "Empty Presentation",
-                    content = listOf("No slides found in this file."),
+                    title = title,
+                    content = lines,
+                    visualElements = listOf(visual),
                     aspectRatio = 16f / 9f
                 )
             ),
@@ -995,6 +1006,7 @@ class PptxParser {
 
                             isTag(tagName, "p") -> {
                                 curRuns.clear()
+                                currentRunText.clear()
                                 curParaAlign = TextAlign.Start
                                 inPPr = false
                                 inDefRPr = false
@@ -1007,6 +1019,19 @@ class PptxParser {
                                 paraDefColor = null
                                 curBulletChar = null
                                 curIndentLvl = 0
+                                curRunSize = when (curPlaceholderType) {
+                                    "title", "ctrtitle" -> 28f
+                                    "subtitle" -> 20f
+                                    "body", "obj" -> 15f
+                                    "dt", "ftr", "sldnum" -> 10f
+                                    else -> 14f
+                                }
+                                curRunBold = curPlaceholderType in listOf("title", "ctrtitle")
+                                curRunItalic = false
+                                curRunUnderline = false
+                                curRunStrike = false
+                                curRunFont = if (curPlaceholderType in listOf("title", "ctrtitle")) theme.majorFont else theme.minorFont
+                                curRunColor = null
                             }
 
                             isTag(tagName, "pPr") -> {
@@ -1145,10 +1170,26 @@ class PptxParser {
                                             color = curRunColor
                                         )
                                     )
+                                    currentRunText.clear()
                                 }
                             }
 
                             isTag(tagName, "p") -> {
+                                if (currentRunText.isNotEmpty()) {
+                                    curRuns.add(
+                                        SlideTextRun(
+                                            text = currentRunText.toString(),
+                                            fontSizeSp = curRunSize,
+                                            isBold = curRunBold,
+                                            isItalic = curRunItalic,
+                                            isUnderline = curRunUnderline,
+                                            isStrikeThrough = curRunStrike,
+                                            fontFamily = curRunFont,
+                                            color = curRunColor
+                                        )
+                                    )
+                                    currentRunText.clear()
+                                }
                                 if (curRuns.isNotEmpty()) {
                                     val isBullet = curBulletChar != null || curIndentLvl > 0 || (curPlaceholderType in listOf("body", "obj"))
                                     val para = SlideParagraph(
@@ -1303,11 +1344,43 @@ class PptxParser {
         val title = plainTextParagraphs.firstOrNull() ?: "Slide $slideNum"
         val content = if (plainTextParagraphs.size > 1) plainTextParagraphs.drop(1) else emptyList()
 
+        val finalVisualElements = if (visualElements.isEmpty() && plainTextParagraphs.isNotEmpty()) {
+            val autoVisuals = mutableListOf<VisualElement>()
+            autoVisuals.add(
+                VisualElement(
+                    type = VisualElementType.TEXT_BOX,
+                    bounds = SlideBounds(0.06f, 0.08f, 0.88f, 0.18f),
+                    paragraphs = listOf(
+                        SlideParagraph(
+                            runs = listOf(SlideTextRun(text = title, fontSizeSp = 24f, isBold = true))
+                        )
+                    )
+                )
+            )
+            if (content.isNotEmpty()) {
+                autoVisuals.add(
+                    VisualElement(
+                        type = VisualElementType.TEXT_BOX,
+                        bounds = SlideBounds(0.06f, 0.28f, 0.88f, 0.64f),
+                        paragraphs = content.map { line ->
+                            SlideParagraph(
+                                runs = listOf(SlideTextRun(text = line, fontSizeSp = 15f)),
+                                isBullet = true
+                            )
+                        }
+                    )
+                )
+            }
+            autoVisuals
+        } else {
+            visualElements
+        }
+
         return PptxSlide(
             slideNumber = slideNum,
             title = title,
             content = content,
-            visualElements = visualElements,
+            visualElements = finalVisualElements,
             backgroundColor = slideBgColor,
             aspectRatio = aspectRatio,
             notes = notes
@@ -1409,10 +1482,12 @@ class PptxParser {
     ): SlideBounds {
         val w = if (slideWidth > 0) slideWidth.toFloat() else 9144000f
         val h = if (slideHeight > 0) slideHeight.toFloat() else 5143500f
-        val left = (offX.toFloat() / w).coerceIn(0f, 1f)
-        val top = (offY.toFloat() / h).coerceIn(0f, 1f)
-        val width = (extX.toFloat() / w).coerceIn(0.01f, 1f - left)
-        val height = (extY.toFloat() / h).coerceIn(0.01f, 1f - top)
+        val left = (offX.toFloat() / w).coerceIn(0f, 0.99f)
+        val top = (offY.toFloat() / h).coerceIn(0f, 0.99f)
+        val maxW = (1f - left).coerceAtLeast(0.01f)
+        val maxH = (1f - top).coerceAtLeast(0.01f)
+        val width = (extX.toFloat() / w).coerceIn(0.001f, maxW)
+        val height = (extY.toFloat() / h).coerceIn(0.001f, maxH)
         return SlideBounds(left = left, top = top, width = width, height = height)
     }
 
@@ -1742,25 +1817,77 @@ class PptxParser {
 
     private fun extractReadableStrings(bytes: ByteArray): List<String> {
         val strings = mutableListOf<String>()
-        val sb = StringBuilder()
+        val seen = mutableSetOf<String>()
+
+        fun isMetadataOrGarbage(s: String): Boolean {
+            if (s.length < 3 || !s.any { it.isLetter() }) return true
+            val lower = s.lowercase()
+            return lower.contains("root entry") ||
+                lower.contains("current user") ||
+                lower.contains("powerpoint document") ||
+                lower.contains("summaryinformation") ||
+                lower.contains("compobj") ||
+                lower.startsWith("<?xml") ||
+                lower.startsWith("[content_") ||
+                lower.contains("schemas.openxmlformats") ||
+                lower.contains("vnd.openxmlformats") ||
+                lower.contains("microsoft") ||
+                lower.contains("font name")
+        }
+
+        fun addCandidate(text: String) {
+            val lines = text.split("\r\n", "\r", "\n")
+            for (rawLine in lines) {
+                val trimmed = rawLine.trim()
+                if (!isMetadataOrGarbage(trimmed) && seen.add(trimmed.lowercase())) {
+                    strings.add(trimmed)
+                }
+            }
+        }
+
+        // 1. Scan for UTF-16LE character sequences (predominant in binary .ppt files)
+        var i = 0
+        val sbUtf16 = StringBuilder()
+        while (i < bytes.size - 1) {
+            val b0 = bytes[i].toInt() and 0xFF
+            val b1 = bytes[i + 1].toInt() and 0xFF
+            val ch = (b1 shl 8) or b0
+            if (b1 == 0 && (b0 in 32..126 || b0 == 10 || b0 == 13)) {
+                sbUtf16.append(b0.toChar())
+                i += 2
+            } else if (ch in 0x00A0..0x024F || ch in 0x0400..0x04FF || ch in 0x0600..0x06FF || ch in 0x0900..0x097F) {
+                sbUtf16.append(ch.toChar())
+                i += 2
+            } else {
+                if (sbUtf16.length >= 3) {
+                    addCandidate(sbUtf16.toString())
+                }
+                sbUtf16.clear()
+                i += 2
+            }
+        }
+        if (sbUtf16.length >= 3) {
+            addCandidate(sbUtf16.toString())
+        }
+
+        // 2. Scan for 1-byte ASCII / Latin-1 sequences
+        val sbAscii = StringBuilder()
         for (b in bytes) {
             val c = b.toInt().toChar()
             if (c in ' '..'~' || c == '\n') {
-                sb.append(c)
+                sbAscii.append(c)
             } else {
-                if (sb.length >= 4) {
-                    val candidate = sb.toString().trim()
-                    if (candidate.length >= 4 && candidate.any { it.isLetter() } &&
-                        !candidate.startsWith("<?xml") && !candidate.startsWith("[Content_") &&
-                        !candidate.contains("Root Entry") && !candidate.contains("Current User")
-                    ) {
-                        strings.add(candidate)
-                    }
+                if (sbAscii.length >= 4) {
+                    addCandidate(sbAscii.toString())
                 }
-                sb.clear()
+                sbAscii.clear()
             }
         }
-        return strings.take(60)
+        if (sbAscii.length >= 4) {
+            addCandidate(sbAscii.toString())
+        }
+
+        return strings.take(80)
     }
 
     /**

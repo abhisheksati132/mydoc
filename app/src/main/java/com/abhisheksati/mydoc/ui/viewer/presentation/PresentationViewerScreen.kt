@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -828,6 +829,38 @@ fun PresentationViewerScreen(
                             contentDescription = "Exit Slideshow",
                             tint = Color.White
                         )
+                }
+            } else {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(AppSpacing.paddingLarge)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Description,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = secondaryTextColor
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "No slides found in this presentation",
+                        color = textColor,
+                        style = MaterialTheme.typography.titleMedium,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "The presentation could not be rendered directly. Tap below to open with an external presentation app.",
+                        color = secondaryTextColor,
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(onClick = { openPresentationInOfficeApp(context, document) }) {
+                        Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Open with PowerPoint / Google Slides")
                     }
                 }
             }
@@ -885,6 +918,7 @@ fun PresentationViewerScreen(
             }
         }
     }
+}
 }
 
 /**
@@ -1189,109 +1223,143 @@ private fun VisualSlideCard(
                 val referenceHeight = 540f
                 val scaleFactor = (totalHeight.value / referenceHeight).coerceIn(0.55f, 2.5f)
 
-                for (element in slide.visualElements) {
-                    val elementWidth = (totalWidth * element.bounds.width).coerceAtLeast(1.dp)
-                    val elementHeight = (totalHeight * element.bounds.height).coerceAtLeast(1.dp)
-                    val offsetX = totalWidth * element.bounds.left
-                    val offsetY = totalHeight * element.bounds.top
-
-                    Box(
+                if (slide.visualElements.isEmpty()) {
+                    Column(
                         modifier = Modifier
-                            .offset(x = offsetX, y = offsetY)
-                            .size(width = elementWidth, height = elementHeight)
-                            .clipToBounds()
+                            .fillMaxSize()
+                            .padding(AppSpacing.paddingLarge),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        when (element.type) {
-                            VisualElementType.IMAGE -> {
-                                val bytes = element.imageBytes
-                                if (bytes != null && bytes.isNotEmpty()) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(LocalContext.current)
-                                            .data(bytes)
-                                            .crossfade(true)
-                                            .build(),
-                                        contentDescription = "Slide Image",
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                }
-                            }
+                        if (slide.title.isNotEmpty()) {
+                            Text(
+                                text = slide.title,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = defaultTextColor,
+                                textAlign = TextAlign.Center,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                        for (line in slide.content) {
+                            Text(
+                                text = line,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = defaultTextColor,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
+                } else {
+                    for (element in slide.visualElements) {
+                        val elementWidth = (totalWidth * element.bounds.width).coerceAtLeast(1.dp)
+                        val elementHeight = (totalHeight * element.bounds.height).coerceAtLeast(1.dp)
+                        val offsetX = totalWidth * element.bounds.left
+                        val offsetY = totalHeight * element.bounds.top
+                        val isText = element.type == VisualElementType.TEXT_BOX || (element.type == VisualElementType.SHAPE && element.paragraphs.isNotEmpty())
 
-                            VisualElementType.SHAPE, VisualElementType.TEXT_BOX -> {
-                                val preset = element.shapePreset
-                                val isVectorPreset = preset != null && (
-                                    preset.contains("Arrow", ignoreCase = true) ||
-                                    preset.contains("triangle", ignoreCase = true) ||
-                                    preset.contains("diamond", ignoreCase = true) ||
-                                    preset.contains("star", ignoreCase = true) ||
-                                    preset.contains("chevron", ignoreCase = true) ||
-                                    preset.contains("pentagon", ignoreCase = true) ||
-                                    preset.contains("hexagon", ignoreCase = true) ||
-                                    preset.contains("callout", ignoreCase = true) ||
-                                    preset.contains("line", ignoreCase = true) ||
-                                    preset.contains("connector", ignoreCase = true)
+                        Box(
+                            modifier = Modifier
+                                .offset(x = offsetX, y = offsetY)
+                                .then(
+                                    if (isText) {
+                                        Modifier.width(elementWidth).heightIn(min = elementHeight)
+                                    } else {
+                                        Modifier.size(width = elementWidth, height = elementHeight).clipToBounds()
+                                    }
                                 )
-
-                                val containerBg = if (element.backgroundColor != null && element.backgroundColor != Color.Transparent) {
-                                    element.backgroundColor!!
-                                } else {
-                                    slideBg
-                                }
-
-                                if (preset != null && isVectorPreset) {
-                                    Canvas(modifier = Modifier.fillMaxSize()) {
-                                        val bg = element.backgroundColor ?: Color(0x22888888)
-                                        val border = element.borderColor ?: Color(0x44888888)
-                                        drawPresetShape(preset, bg, border)
+                        ) {
+                            when (element.type) {
+                                VisualElementType.IMAGE -> {
+                                    val bytes = element.imageBytes
+                                    if (bytes != null && bytes.isNotEmpty()) {
+                                        AsyncImage(
+                                            model = ImageRequest.Builder(LocalContext.current)
+                                                .data(bytes)
+                                                .crossfade(true)
+                                                .build(),
+                                            contentDescription = "Slide Image",
+                                            contentScale = ContentScale.Fit,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
                                     }
                                 }
 
-                                val shapeModifier = Modifier
-                                    .fillMaxSize()
-                                    .then(
-                                        if (!isVectorPreset && element.backgroundColor != null && element.backgroundColor != Color.Transparent) {
-                                            Modifier.background(
-                                                color = element.backgroundColor,
-                                                shape = if (element.isRounded) RoundedCornerShape(8.dp) else if (element.isEllipse) CircleShape else RectangleShape
-                                            )
-                                        } else Modifier
+                                VisualElementType.SHAPE, VisualElementType.TEXT_BOX -> {
+                                    val preset = element.shapePreset
+                                    val isVectorPreset = preset != null && (
+                                        preset.contains("Arrow", ignoreCase = true) ||
+                                        preset.contains("triangle", ignoreCase = true) ||
+                                        preset.contains("diamond", ignoreCase = true) ||
+                                        preset.contains("star", ignoreCase = true) ||
+                                        preset.contains("chevron", ignoreCase = true) ||
+                                        preset.contains("pentagon", ignoreCase = true) ||
+                                        preset.contains("hexagon", ignoreCase = true) ||
+                                        preset.contains("callout", ignoreCase = true) ||
+                                        preset.contains("line", ignoreCase = true) ||
+                                        preset.contains("connector", ignoreCase = true)
                                     )
-                                    .then(
-                                        if (!isVectorPreset && element.borderColor != null) {
-                                            Modifier.border(
-                                                width = (element.borderWidthDp.takeIf { it > 0f } ?: 1f).dp,
-                                                color = element.borderColor,
-                                                shape = if (element.isRounded) RoundedCornerShape(8.dp) else if (element.isEllipse) CircleShape else RectangleShape
-                                            )
-                                        } else Modifier
-                                    )
-                                    .padding(horizontal = 4.dp, vertical = 2.dp)
 
-                                val paraCount = element.paragraphs.size
-                                val autoFitScale = if (paraCount >= 4 && element.bounds.height < 0.35f) 0.85f else 1.0f
-                                val elementScale = scaleFactor * autoFitScale
-                                val isSingleTitle = paraCount == 1 && element.bounds.height < 0.22f
+                                    val containerBg = if (element.backgroundColor != null && element.backgroundColor != Color.Transparent) {
+                                        element.backgroundColor!!
+                                    } else {
+                                        slideBg
+                                    }
 
-                                Box(
-                                    modifier = shapeModifier,
-                                    contentAlignment = if (isSingleTitle) Alignment.Center else Alignment.TopStart
-                                ) {
-                                    Column(
-                                        modifier = Modifier.fillMaxSize(),
-                                        verticalArrangement = if (isSingleTitle) Arrangement.Center else Arrangement.Top
+                                    if (preset != null && isVectorPreset) {
+                                        Canvas(modifier = Modifier.fillMaxSize()) {
+                                            val bg = element.backgroundColor ?: Color(0x22888888)
+                                            val border = element.borderColor ?: Color(0x44888888)
+                                            drawPresetShape(preset, bg, border)
+                                        }
+                                    }
+
+                                    val shapeModifier = (if (isText) Modifier.fillMaxWidth().heightIn(min = elementHeight) else Modifier.fillMaxSize())
+                                        .then(
+                                            if (!isVectorPreset && element.backgroundColor != null && element.backgroundColor != Color.Transparent) {
+                                                Modifier.background(
+                                                    color = element.backgroundColor,
+                                                    shape = if (element.isRounded) RoundedCornerShape(8.dp) else if (element.isEllipse) CircleShape else RectangleShape
+                                                )
+                                            } else Modifier
+                                        )
+                                        .then(
+                                            if (!isVectorPreset && element.borderColor != null) {
+                                                Modifier.border(
+                                                    width = (element.borderWidthDp.takeIf { it > 0f } ?: 1f).dp,
+                                                    color = element.borderColor,
+                                                    shape = if (element.isRounded) RoundedCornerShape(8.dp) else if (element.isEllipse) CircleShape else RectangleShape
+                                                )
+                                            } else Modifier
+                                        )
+                                        .padding(horizontal = 4.dp, vertical = 2.dp)
+
+                                    val paraCount = element.paragraphs.size
+                                    val autoFitScale = if (paraCount >= 4 && element.bounds.height < 0.35f) 0.85f else 1.0f
+                                    val elementScale = scaleFactor * autoFitScale
+                                    val isSingleTitle = paraCount == 1 && element.bounds.height < 0.22f
+
+                                    Box(
+                                        modifier = shapeModifier,
+                                        contentAlignment = if (isSingleTitle) Alignment.Center else Alignment.TopStart
                                     ) {
-                                        for ((pIdx, para) in element.paragraphs.withIndex()) {
-                                            val indentSpaces = "   ".repeat(para.indentLevel.coerceIn(0, 5))
-                                            val bulletStr = when {
-                                                para.isBullet || para.bulletChar != null -> {
-                                                    val symbol = para.bulletChar ?: "•"
-                                                    "$indentSpaces$symbol "
+                                        Column(
+                                            modifier = if (isText) Modifier.fillMaxWidth() else Modifier.fillMaxSize(),
+                                            verticalArrangement = if (isSingleTitle) Arrangement.Center else Arrangement.Top
+                                        ) {
+                                            for ((pIdx, para) in element.paragraphs.withIndex()) {
+                                                val indentSpaces = "   ".repeat(para.indentLevel.coerceIn(0, 5))
+                                                val bulletStr = when {
+                                                    para.isBullet || para.bulletChar != null -> {
+                                                        val symbol = para.bulletChar ?: "•"
+                                                        "$indentSpaces$symbol "
+                                                    }
+                                                    para.indentLevel > 0 -> indentSpaces
+                                                    else -> ""
                                                 }
-                                                para.indentLevel > 0 -> indentSpaces
-                                                else -> ""
-                                            }
 
-                                            val firstRun = para.runs.firstOrNull()
+                                                val firstRun = para.runs.firstOrNull()
                                             val bulletColor = ensureTextLegibility(firstRun?.color, containerBg)
                                             val bulletSize = ((firstRun?.fontSizeSp ?: 14f) * elementScale).coerceIn(8f, 44f).sp
 
@@ -1391,6 +1459,7 @@ private fun VisualSlideCard(
             }
         }
     }
+}
 }
 
 /**

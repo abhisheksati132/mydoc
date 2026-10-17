@@ -51,6 +51,31 @@ class PptxParserTest {
         assertTrue(firstSlide.title.isNotEmpty())
     }
 
+    @Test
+    fun `parse binary ppt bytes extracts UTF-16LE text correctly`() = runBlocking {
+        val bb = ByteBuffer.allocate(512).order(ByteOrder.LITTLE_ENDIAN)
+        // OLE2 signature
+        bb.put(byteArrayOf(0xD0.toByte(), 0xCF.toByte(), 0x11.toByte(), 0xE0.toByte(), 0xA1.toByte(), 0xB1.toByte(), 0x1A.toByte(), 0xE1.toByte()))
+        bb.position(64)
+        val utf16Text = "Quarterly Business Review\r\nRevenue Growth: 25%\r\nOperating Margins: 18%".toByteArray(Charsets.UTF_16LE)
+        bb.put(utf16Text)
+
+        val pres = parser.parse(ByteArrayInputStream(bb.array()))
+        assertTrue(pres.slides.isNotEmpty())
+        val slide = pres.slides[0]
+        assertTrue(slide.title.contains("Quarterly Business Review", ignoreCase = true) ||
+            slide.content.any { it.contains("Revenue", ignoreCase = true) })
+    }
+
+    @Test
+    fun `empty presentation has visual element and non-empty content`() = runBlocking {
+        val pres = parser.parse(ByteArrayInputStream(ByteArray(0)))
+        assertEquals(1, pres.slides.size)
+        val slide = pres.slides[0]
+        assertTrue(slide.visualElements.isNotEmpty())
+        assertEquals("Empty Presentation", slide.title)
+    }
+
     private fun createSyntheticPptxZip(): ByteArray {
         val baos = ByteArrayOutputStream()
         val zos = ZipOutputStream(baos)

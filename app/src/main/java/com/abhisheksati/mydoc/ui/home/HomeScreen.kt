@@ -69,6 +69,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -106,6 +107,11 @@ import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import kotlinx.coroutines.launch
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import com.abhisheksati.mydoc.domain.model.HomeTab
+
 val SUPPORTED_MIME_TYPES = arrayOf(
     "application/pdf",
     "application/x-pdf",
@@ -121,13 +127,6 @@ val SUPPORTED_MIME_TYPES = arrayOf(
     "application/octet-stream",
     "*/*"
 )
-
-enum class HomeTab {
-    FILES,
-    DOCUMENTS,
-    MEDIA,
-    TOOLS
-}
 
 @Composable
 fun HomeScreen(
@@ -152,7 +151,34 @@ fun HomeScreen(
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp
 
-    var currentTab by remember { mutableStateOf(HomeTab.FILES) }
+    val currentTab by viewModel.currentTab.collectAsState()
+    val pagerState = rememberPagerState(
+        initialPage = viewModel.currentTab.value.ordinal,
+        pageCount = { HomeTab.entries.size }
+    )
+
+    // Synchronize pager swipe to viewModel
+    LaunchedEffect(pagerState.currentPage) {
+        val tab = HomeTab.entries.getOrNull(pagerState.currentPage) ?: HomeTab.FILES
+        if (tab != viewModel.currentTab.value) {
+            viewModel.selectTab(tab)
+        }
+    }
+
+    // Synchronize viewModel tab changes to pager
+    LaunchedEffect(currentTab) {
+        if (pagerState.currentPage != currentTab.ordinal) {
+            pagerState.animateScrollToPage(currentTab.ordinal)
+        }
+    }
+
+    // Intercept back presses: return to FILES tab if on another tab
+    BackHandler(enabled = currentTab != HomeTab.FILES) {
+        scope.launch {
+            pagerState.animateScrollToPage(HomeTab.FILES.ordinal)
+        }
+    }
+
     var showCameraScanner by remember { mutableStateOf(false) }
     var showSignaturePad by remember { mutableStateOf(false) }
     var isSortMenuOpen by remember { mutableStateOf(false) }
@@ -206,289 +232,8 @@ fun HomeScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = {
-            if (currentTab == HomeTab.DOCUMENTS) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(colors.background)
-                        .statusBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                // Google Drive / Files style Pill Search Bar
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(26.dp),
-                    color = colors.surface,
-                    tonalElevation = 2.dp,
-                    shadowElevation = 1.dp
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Search,
-                            contentDescription = "Search",
-                            tint = colors.textSecondary,
-                            modifier = Modifier.size(22.dp)
-                        )
-
-                        Spacer(modifier = Modifier.width(10.dp))
-
-                        BasicTextField(
-                            value = uiState.searchQuery,
-                            onValueChange = viewModel::onSearchQueryChanged,
-                            modifier = Modifier.weight(1f),
-                            textStyle = typography.body.copy(color = colors.textPrimary),
-                            singleLine = true,
-                            decorationBox = { innerTextField ->
-                                if (uiState.searchQuery.isEmpty()) {
-                                    Text(
-                                        text = "Search documents...",
-                                        style = typography.body,
-                                        color = colors.textSecondary
-                                    )
-                                }
-                                innerTextField()
-                            }
-                        )
-
-                        if (uiState.searchQuery.isNotEmpty()) {
-                            IconButton(
-                                onClick = { viewModel.onSearchQueryChanged("") },
-                                modifier = Modifier.size(36.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Close,
-                                    contentDescription = "Clear search",
-                                    tint = colors.textSecondary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-
-                        // Theme toggle (Sun / Moon)
-                        IconButton(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onToggleTheme()
-                            },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (isDarkTheme) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
-                                contentDescription = if (isDarkTheme) "Light mode" else "Dark mode",
-                                tint = colors.textSecondary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        // Sort Menu
-                        Box {
-                            IconButton(
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    isSortMenuOpen = true
-                                },
-                                modifier = Modifier.size(36.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.Sort,
-                                    contentDescription = "Sort documents",
-                                    tint = colors.textSecondary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = isSortMenuOpen,
-                                onDismissRequest = { isSortMenuOpen = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Last opened", style = typography.body) },
-                                    trailingIcon = {
-                                        if (uiState.sortOrder == DocumentSortOrder.LAST_OPENED) {
-                                            Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
-                                        }
-                                    },
-                                    onClick = {
-                                        viewModel.setSortOrder(DocumentSortOrder.LAST_OPENED)
-                                        isSortMenuOpen = false
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Name (A to Z)", style = typography.body) },
-                                    trailingIcon = {
-                                        if (uiState.sortOrder == DocumentSortOrder.NAME_ASC) {
-                                            Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
-                                        }
-                                    },
-                                    onClick = {
-                                        viewModel.setSortOrder(DocumentSortOrder.NAME_ASC)
-                                        isSortMenuOpen = false
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Name (Z to A)", style = typography.body) },
-                                    trailingIcon = {
-                                        if (uiState.sortOrder == DocumentSortOrder.NAME_DESC) {
-                                            Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
-                                        }
-                                    },
-                                    onClick = {
-                                        viewModel.setSortOrder(DocumentSortOrder.NAME_DESC)
-                                        isSortMenuOpen = false
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Size (largest first)", style = typography.body) },
-                                    trailingIcon = {
-                                        if (uiState.sortOrder == DocumentSortOrder.SIZE_DESC) {
-                                            Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
-                                        }
-                                    },
-                                    onClick = {
-                                        viewModel.setSortOrder(DocumentSortOrder.SIZE_DESC)
-                                        isSortMenuOpen = false
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Size (smallest first)", style = typography.body) },
-                                    trailingIcon = {
-                                        if (uiState.sortOrder == DocumentSortOrder.SIZE_ASC) {
-                                            Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent)
-                                        }
-                                    },
-                                    onClick = {
-                                        viewModel.setSortOrder(DocumentSortOrder.SIZE_ASC)
-                                        isSortMenuOpen = false
-                                    }
-                                )
-                            }
-                        }
-
-                        // More options menu (Scan folder, Settings, Clear recents)
-                        Box {
-                            IconButton(
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    isMoreMenuOpen = true
-                                },
-                                modifier = Modifier.size(36.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.MoreVert,
-                                    contentDescription = "More options",
-                                    tint = colors.textSecondary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = isMoreMenuOpen,
-                                onDismissRequest = { isMoreMenuOpen = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Scan folder", style = typography.body) },
-                                    leadingIcon = {
-                                        Icon(Icons.Outlined.FolderOpen, contentDescription = null, tint = colors.textSecondary)
-                                    },
-                                    onClick = {
-                                        isMoreMenuOpen = false
-                                        openFolderLauncher.launch(null)
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Settings", style = typography.body) },
-                                    leadingIcon = {
-                                        Icon(Icons.Outlined.Settings, contentDescription = null, tint = colors.textSecondary)
-                                    },
-                                    onClick = {
-                                        isMoreMenuOpen = false
-                                        onSettingsClick()
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Clear recents", style = typography.body) },
-                                    leadingIcon = {
-                                        Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.error)
-                                    },
-                                    onClick = {
-                                        isMoreMenuOpen = false
-                                        showClearRecentsDialog = true
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Category Filter Chips (visible on Documents tab)
-                if (currentTab == HomeTab.DOCUMENTS) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        AppFilterChip(
-                            label = "All",
-                            isSelected = uiState.selectedCategory == DocumentCategory.ALL,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                viewModel.selectCategory(DocumentCategory.ALL)
-                            }
-                        )
-                        AppFilterChip(
-                            label = "PDF",
-                            isSelected = uiState.selectedCategory == DocumentCategory.PDF,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                viewModel.selectCategory(DocumentCategory.PDF)
-                            }
-                        )
-                        AppFilterChip(
-                            label = "Word",
-                            isSelected = uiState.selectedCategory == DocumentCategory.WORD,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                viewModel.selectCategory(DocumentCategory.WORD)
-                            }
-                        )
-                        AppFilterChip(
-                            label = "Excel",
-                            isSelected = uiState.selectedCategory == DocumentCategory.EXCEL,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                viewModel.selectCategory(DocumentCategory.EXCEL)
-                            }
-                        )
-                        AppFilterChip(
-                            label = "PPT",
-                            isSelected = uiState.selectedCategory == DocumentCategory.PPT,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                viewModel.selectCategory(DocumentCategory.PPT)
-                            }
-                        )
-                        AppFilterChip(
-                            label = "Text",
-                            isSelected = uiState.selectedCategory == DocumentCategory.TEXT,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                viewModel.selectCategory(DocumentCategory.TEXT)
-                            }
-                        )
-                    }
-                }
-            }
-        }
-    },
-    bottomBar = {
+        topBar = {},
+        bottomBar = {
             NavigationBar(
                 containerColor = colors.surface,
                 tonalElevation = 3.dp,
@@ -498,7 +243,8 @@ fun HomeScreen(
                     selected = currentTab == HomeTab.FILES,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        currentTab = HomeTab.FILES
+                        viewModel.selectTab(HomeTab.FILES)
+                        scope.launch { pagerState.animateScrollToPage(HomeTab.FILES.ordinal) }
                     },
                     icon = {
                         Icon(
@@ -520,7 +266,8 @@ fun HomeScreen(
                     selected = currentTab == HomeTab.DOCUMENTS,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        currentTab = HomeTab.DOCUMENTS
+                        viewModel.selectTab(HomeTab.DOCUMENTS)
+                        scope.launch { pagerState.animateScrollToPage(HomeTab.DOCUMENTS.ordinal) }
                     },
                     icon = {
                         Icon(
@@ -542,7 +289,8 @@ fun HomeScreen(
                     selected = currentTab == HomeTab.MEDIA,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        currentTab = HomeTab.MEDIA
+                        viewModel.selectTab(HomeTab.MEDIA)
+                        scope.launch { pagerState.animateScrollToPage(HomeTab.MEDIA.ordinal) }
                     },
                     icon = {
                         Icon(
@@ -564,7 +312,8 @@ fun HomeScreen(
                     selected = currentTab == HomeTab.TOOLS,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        currentTab = HomeTab.TOOLS
+                        viewModel.selectTab(HomeTab.TOOLS)
+                        scope.launch { pagerState.animateScrollToPage(HomeTab.TOOLS.ordinal) }
                     },
                     icon = {
                         BadgedBox(
@@ -618,145 +367,69 @@ fun HomeScreen(
             }
         },
         containerColor = colors.background
-) { innerPadding ->
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding)
-    ) {
-        if (currentTab == HomeTab.FILES) {
-            if (fileManagerViewModel != null && onOpenFile != null) {
-                FileManagerScreen(
-                    viewModel = fileManagerViewModel,
-                    onOpenFile = onOpenFile,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-        } else if (currentTab == HomeTab.TOOLS) {
-            ToolsScreen(
-                viewModel = toolsViewModel,
-                onToolClick = { tool ->
-                    if (tool == PdfTool.SCAN_TO_PDF) {
-                        showCameraScanner = true
-                    } else {
-                        toolsViewModel.selectTool(tool)
+    ) { innerPadding ->
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) { page ->
+            when (HomeTab.entries[page]) {
+                HomeTab.FILES -> {
+                    if (fileManagerViewModel != null && onOpenFile != null) {
+                        FileManagerScreen(
+                            viewModel = fileManagerViewModel,
+                            onOpenFile = onOpenFile,
+                            onSettingsClick = onSettingsClick,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
-                },
-                modifier = Modifier.fillMaxSize()
-            )
-        } else if (currentTab == HomeTab.MEDIA) {
-            if (mediaViewModel != null) {
-                com.abhisheksati.mydoc.ui.media.MediaTabContent(
-                    viewModel = mediaViewModel,
-                    onOpenMedia = { item, list ->
-                        onOpenMedia?.invoke(item, list)
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-        } else if (uiState.documents.isEmpty()) {
-                if (uiState.isSearching) {
-                    AppEmptyState(
-                        title = "No documents matched your search.",
-                        message = "Try another search term or clear the filter."
-                    )
-                } else {
-                    AppEmptyState(
-                        title = "No documents found.",
-                        message = "Open a file or scan a folder to begin.",
-                        actionLabel = "Open document",
-                        onAction = { openDocumentLauncher.launch(SUPPORTED_MIME_TYPES) }
+                }
+                HomeTab.DOCUMENTS -> {
+                    DocumentsTabContent(
+                        uiState = uiState,
+                        viewModel = viewModel,
+                        isDarkTheme = isDarkTheme,
+                        onToggleTheme = onToggleTheme,
+                        onSettingsClick = onSettingsClick,
+                        onDocumentClick = onDocumentClick,
+                        onShareDocument = onShareDocument,
+                        openFolderLauncher = openFolderLauncher,
+                        openDocumentLauncher = openDocumentLauncher,
+                        onShowClearRecentsDialog = { showClearRecentsDialog = true },
+                        onSelectDocForDetails = { selectedDocForDetails = it },
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 88.dp)
-                ) {
-                    if (uiState.isSearching) {
-                        item {
-                            AppSectionHeader(title = "SEARCH RESULTS")
-                        }
-                        items(
-                            items = uiState.documents,
-                            key = { "search_${it.uri}" }
-                        ) { document ->
-                            AppFileRow(
-                                document = document,
-                                onClick = { onDocumentClick(document) },
-                                onToggleFavorite = { viewModel.toggleFavorite(document) },
-                                onRemoveFromRecents = { viewModel.removeFromRecents(document) },
-                                onShare = { onShareDocument(document) },
-                                onShowDetails = { selectedDocForDetails = document }
-                            )
-                        }
-                    } else {
-                        // 1. "Continue reading" row at very top showing last opened file and progress
-                        val continueDoc = uiState.continueReadingDoc
-                        if (continueDoc != null && uiState.selectedCategory == DocumentCategory.ALL) {
-                            item {
-                                AppSectionHeader(title = "CONTINUE READING")
-                            }
-                            item(key = "continue_${continueDoc.uri}") {
-                                AppFileRow(
-                                    document = continueDoc,
-                                    showContinueReading = true,
-                                    onClick = { onDocumentClick(continueDoc) },
-                                    onToggleFavorite = { viewModel.toggleFavorite(continueDoc) },
-                                    onRemoveFromRecents = { viewModel.removeFromRecents(continueDoc) },
-                                    onShare = { onShareDocument(continueDoc) },
-                                    onShowDetails = { selectedDocForDetails = continueDoc }
-                                )
-                            }
-                        }
-
-                        // 2. Main Documents List
-                        val headerTitle = when (uiState.selectedCategory) {
-                            DocumentCategory.ALL -> "RECENTS"
-                            DocumentCategory.FAVORITES -> "FAVORITES"
-                            DocumentCategory.PDF -> "PDF DOCUMENTS"
-                            DocumentCategory.WORD -> "WORD DOCUMENTS"
-                            DocumentCategory.EXCEL -> "EXCEL SPREADSHEETS"
-                            DocumentCategory.PPT -> "POWERPOINT PRESENTATIONS"
-                            DocumentCategory.TEXT -> "TEXT DOCUMENTS"
-                        }
-                        item {
-                            AppSectionHeader(title = headerTitle)
-                        }
-                        items(
-                            items = uiState.documents,
-                            key = { "doc_${it.uri}" }
-                        ) { document ->
-                            AppFileRow(
-                                document = document,
-                                onClick = { onDocumentClick(document) },
-                                onToggleFavorite = { viewModel.toggleFavorite(document) },
-                                onRemoveFromRecents = { viewModel.removeFromRecents(document) },
-                                onShare = { onShareDocument(document) },
-                                onShowDetails = { selectedDocForDetails = document }
-                            )
-                        }
-
-                        // 3. Favorites Section (if on ALL and has favorites)
-                        if (uiState.selectedCategory == DocumentCategory.ALL && uiState.favorites.isNotEmpty()) {
-                            item {
-                                AppSectionHeader(title = "FAVORITES")
-                            }
-                            items(
-                                items = uiState.favorites,
-                                key = { "fav_${it.uri}" }
-                            ) { document ->
-                                AppFileRow(
-                                    document = document,
-                                    onClick = { onDocumentClick(document) },
-                                    onToggleFavorite = { viewModel.toggleFavorite(document) },
-                                    onRemoveFromRecents = { viewModel.removeFromRecents(document) },
-                                    onShare = { onShareDocument(document) },
-                                    onShowDetails = { selectedDocForDetails = document }
-                                )
-                            }
-                        }
+                HomeTab.MEDIA -> {
+                    if (mediaViewModel != null) {
+                        com.abhisheksati.mydoc.ui.media.MediaTabContent(
+                            viewModel = mediaViewModel,
+                            onOpenMedia = { item, list ->
+                                onOpenMedia?.invoke(item, list)
+                            },
+                            onSettingsClick = onSettingsClick,
+                            onToggleTheme = onToggleTheme,
+                            isDarkTheme = isDarkTheme,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
+                }
+                HomeTab.TOOLS -> {
+                    ToolsScreen(
+                        viewModel = toolsViewModel,
+                        onToolClick = { tool ->
+                            if (tool == PdfTool.SCAN_TO_PDF) {
+                                showCameraScanner = true
+                            } else {
+                                toolsViewModel.selectTool(tool)
+                            }
+                        },
+                        onSettingsClick = onSettingsClick,
+                        onToggleTheme = onToggleTheme,
+                        isDarkTheme = isDarkTheme,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
         }

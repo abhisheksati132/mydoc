@@ -44,13 +44,18 @@ public final class LibreOfficeKit {
 
 class NativeLibLoader {
     private static boolean loaded = false;
+    private static boolean loadAttempted = false;
 
     protected static synchronized boolean isLoaded() {
+        if (!loadAttempted) {
+            load();
+        }
         return loaded;
     }
 
     protected static synchronized boolean load() {
         if (loaded) return true;
+        loadAttempted = true;
         try {
             System.loadLibrary("nspr4");
             System.loadLibrary("plds4");

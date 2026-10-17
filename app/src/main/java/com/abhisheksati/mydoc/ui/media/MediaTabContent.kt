@@ -53,10 +53,19 @@ import com.abhisheksati.mydoc.domain.model.MediaFilter
 import com.abhisheksati.mydoc.domain.model.MediaItem
 import com.abhisheksati.mydoc.viewmodel.MediaViewModel
 
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.unit.sp
+
 @Composable
 fun MediaTabContent(
     viewModel: MediaViewModel,
     onOpenMedia: (MediaItem, List<MediaItem>) -> Unit,
+    onSettingsClick: (() -> Unit)? = null,
+    onToggleTheme: (() -> Unit)? = null,
+    isDarkTheme: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -98,6 +107,42 @@ fun MediaTabContent(
             .fillMaxSize()
             .background(colors.background)
     ) {
+        // Top Header Bar with Title, Theme Toggle, and Settings
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(colors.surface)
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = "Media",
+                style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 20.sp),
+                color = colors.textPrimary
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (onToggleTheme != null) {
+                    IconButton(onClick = onToggleTheme) {
+                        Icon(
+                            imageVector = if (isDarkTheme) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
+                            contentDescription = "Toggle theme",
+                            tint = colors.textSecondary
+                        )
+                    }
+                }
+                if (onSettingsClick != null) {
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            imageVector = Icons.Outlined.Settings,
+                            contentDescription = "Settings",
+                            tint = colors.textSecondary
+                        )
+                    }
+                }
+            }
+        }
+
         if (!uiState.hasPermission) {
             Box(
                 modifier = Modifier

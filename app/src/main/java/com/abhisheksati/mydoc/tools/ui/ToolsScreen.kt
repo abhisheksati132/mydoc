@@ -16,9 +16,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,10 +49,15 @@ import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.tools.model.ToolGroup
 import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
 
+import androidx.compose.foundation.layout.Arrangement
+
 @Composable
 fun ToolsScreen(
     viewModel: ToolsViewModel,
     onToolClick: (PdfTool) -> Unit,
+    onSettingsClick: (() -> Unit)? = null,
+    onToggleTheme: (() -> Unit)? = null,
+    isDarkTheme: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
@@ -77,6 +89,42 @@ fun ToolsScreen(
             .fillMaxSize()
             .background(colors.background)
     ) {
+        // Top Header Bar with Title, Theme Toggle, and Settings
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(colors.surface)
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = "PDF Tools",
+                style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 20.sp),
+                color = colors.textPrimary
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (onToggleTheme != null) {
+                    IconButton(onClick = onToggleTheme) {
+                        Icon(
+                            imageVector = if (isDarkTheme) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
+                            contentDescription = "Toggle theme",
+                            tint = colors.textSecondary
+                        )
+                    }
+                }
+                if (onSettingsClick != null) {
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            imageVector = Icons.Outlined.Settings,
+                            contentDescription = "Settings",
+                            tint = colors.textSecondary
+                        )
+                    }
+                }
+            }
+        }
+
         // Plain list grouped by section headers
         LazyColumn(
             modifier = Modifier

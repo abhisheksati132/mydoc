@@ -8,10 +8,12 @@ import com.abhisheksati.mydoc.data.local.DocumentSortOrder
 import com.abhisheksati.mydoc.data.local.SettingsRepository
 import com.abhisheksati.mydoc.domain.model.DocumentCategory
 import com.abhisheksati.mydoc.domain.model.DocumentFile
+import com.abhisheksati.mydoc.domain.model.HomeTab
 import com.abhisheksati.mydoc.domain.repository.DocumentRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -32,6 +34,9 @@ class HomeViewModel(
     private val repository: DocumentRepository,
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
+
+    private val _currentTab = MutableStateFlow(HomeTab.FILES)
+    val currentTab: StateFlow<HomeTab> = _currentTab.asStateFlow()
 
     private val _selectedCategory = MutableStateFlow(DocumentCategory.ALL)
     private val _searchQuery = MutableStateFlow("")
@@ -86,6 +91,10 @@ class HomeViewModel(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = HomeUiState(isLoading = false)
     )
+
+    fun selectTab(tab: HomeTab) {
+        _currentTab.value = tab
+    }
 
     fun selectCategory(category: DocumentCategory) {
         _selectedCategory.value = category
