@@ -102,6 +102,7 @@ val SUPPORTED_MIME_TYPES = arrayOf(
 
 enum class HomeTab {
     DOCUMENTS,
+    MEDIA,
     TOOLS
 }
 
@@ -109,9 +110,11 @@ enum class HomeTab {
 fun HomeScreen(
     viewModel: HomeViewModel,
     toolsViewModel: ToolsViewModel,
+    mediaViewModel: com.abhisheksati.mydoc.viewmodel.MediaViewModel? = null,
     isDarkTheme: Boolean = false,
     onToggleTheme: () -> Unit = {},
     onDocumentClick: (DocumentFile) -> Unit,
+    onOpenMedia: ((com.abhisheksati.mydoc.domain.model.MediaItem, List<com.abhisheksati.mydoc.domain.model.MediaItem>) -> Unit)? = null,
     onSettingsClick: () -> Unit,
     onShareDocument: (DocumentFile) -> Unit,
     modifier: Modifier = Modifier
@@ -365,6 +368,14 @@ fun HomeScreen(
                     }
                 )
                 AppFilterChip(
+                    label = "Media",
+                    isSelected = currentTab == HomeTab.MEDIA,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        currentTab = HomeTab.MEDIA
+                    }
+                )
+                AppFilterChip(
                     label = "Tools",
                     isSelected = currentTab == HomeTab.TOOLS,
                     onClick = {
@@ -515,6 +526,16 @@ fun HomeScreen(
                 },
                 modifier = Modifier.fillMaxSize()
             )
+        } else if (currentTab == HomeTab.MEDIA) {
+            if (mediaViewModel != null) {
+                com.abhisheksati.mydoc.ui.media.MediaTabContent(
+                    viewModel = mediaViewModel,
+                    onOpenMedia = { item, list ->
+                        onOpenMedia?.invoke(item, list)
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         } else if (uiState.documents.isEmpty()) {
                 if (uiState.isSearching) {
                     AppEmptyState(

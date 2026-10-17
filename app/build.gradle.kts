@@ -92,6 +92,18 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
 
+    // Phase 8: Media3 ExoPlayer for offline video/audio playback
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.ui)
+    implementation(libs.androidx.media3.session)
+
+    // Phase 8: Coil for image loading, caching & GIF/WebP support
+    implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
+
+    // Phase 8: ExifInterface for offline EXIF orientation and metadata
+    implementation(libs.androidx.exifinterface)
+
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.graphics)

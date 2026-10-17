@@ -15,9 +15,10 @@ import com.abhisheksati.mydoc.data.local.entity.ViewStateEntity
     entities = [
         RecentDocumentEntity::class,
         FavoriteDocumentEntity::class,
-        ViewStateEntity::class
+        ViewStateEntity::class,
+        com.abhisheksati.mydoc.data.local.entity.MediaPlaybackEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -25,6 +26,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun recentDao(): RecentDao
     abstract fun favoriteDao(): FavoriteDao
     abstract fun viewStateDao(): ViewStateDao
+    abstract fun mediaPlaybackDao(): com.abhisheksati.mydoc.data.local.dao.MediaPlaybackDao
 
     companion object {
         @Volatile
@@ -36,7 +38,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "mydoc.db"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
                 INSTANCE = instance
                 instance
             }

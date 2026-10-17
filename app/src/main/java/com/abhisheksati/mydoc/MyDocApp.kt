@@ -5,12 +5,23 @@ import com.abhisheksati.mydoc.data.local.AppDatabase
 import com.abhisheksati.mydoc.data.repository.DocumentRepositoryImpl
 import com.abhisheksati.mydoc.domain.repository.DocumentRepository
 
-class MyDocApp : Application() {
+import coil.ImageLoader
+import coil.ImageLoaderFactory
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
+import android.os.Build
+import com.abhisheksati.mydoc.data.repository.MediaRepositoryImpl
+import com.abhisheksati.mydoc.domain.repository.MediaRepository
+
+class MyDocApp : Application(), ImageLoaderFactory {
 
     lateinit var database: AppDatabase
         private set
 
     lateinit var documentRepository: DocumentRepository
+        private set
+
+    lateinit var mediaRepository: MediaRepository
         private set
 
     lateinit var settingsRepository: com.abhisheksati.mydoc.data.local.SettingsRepository
@@ -23,6 +34,21 @@ class MyDocApp : Application() {
         } catch (_: Throwable) {}
         database = AppDatabase.getInstance(this)
         documentRepository = DocumentRepositoryImpl(this, database)
+        mediaRepository = MediaRepositoryImpl(this, database)
         settingsRepository = com.abhisheksati.mydoc.data.local.SettingsRepository(this)
+    }
+
+    override fun newImageLoader(): ImageLoader {
+        return ImageLoader.Builder(this)
+            .components {
+                if (Build.VERSION.SDK_INT >= 28) {
+                    add(ImageDecoderDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
+            }
+            .crossfade(true)
+            .respectCacheHeaders(false)
+            .build()
     }
 }

@@ -37,9 +37,13 @@ import com.abhisheksati.mydoc.tools.ui.ToolRunnerSheet
 import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
 import com.abhisheksati.mydoc.ui.home.HomeScreen
 import com.abhisheksati.mydoc.ui.settings.SettingsScreen
+import com.abhisheksati.mydoc.domain.model.MediaItem
+import com.abhisheksati.mydoc.ui.media.PhotoViewerScreen
+import com.abhisheksati.mydoc.ui.media.VideoPlayerScreen
 import com.abhisheksati.mydoc.ui.viewer.DocumentViewerScreen
 import com.abhisheksati.mydoc.update.UpdateManager
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
+import com.abhisheksati.mydoc.viewmodel.MediaViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
@@ -58,8 +62,15 @@ class MainActivity : ComponentActivity() {
         ToolsViewModel.Factory(application)
     }
 
+    private val mediaViewModel: MediaViewModel by viewModels {
+        val app = application as MyDocApp
+        MediaViewModel.Factory(app.mediaRepository)
+    }
+
     private lateinit var updateManager: UpdateManager
     private var currentDocument by mutableStateOf<DocumentFile?>(null)
+    private var activeMediaItem by mutableStateOf<MediaItem?>(null)
+    private var activeMediaList by mutableStateOf<List<MediaItem>>(emptyList())
     private var isSettingsOpen by mutableStateOf(false)
     private var isDesignSystemPreviewOpen by mutableStateOf(false)
     private var isAppUnlocked by mutableStateOf(true)
@@ -131,7 +142,12 @@ class MainActivity : ComponentActivity() {
                     toolsViewModel.closeTool()
                 }
 
-                BackHandler(enabled = !isDesignSystemPreviewOpen && !isSettingsOpen && selectedTool == null && currentDocument != null) {
+                BackHandler(enabled = !isDesignSystemPreviewOpen && !isSettingsOpen && selectedTool == null && activeMediaItem != null) {
+                    activeMediaItem = null
+                    activeMediaList = emptyList()
+                }
+
+                BackHandler(enabled = !isDesignSystemPreviewOpen && !isSettingsOpen && selectedTool == null && activeMediaItem == null && currentDocument != null) {
                     currentDocument = null
                 }
 
@@ -151,6 +167,29 @@ class MainActivity : ComponentActivity() {
                             onBackClick = { isSettingsOpen = false },
                             onDesignSystemPreviewClick = { isDesignSystemPreviewOpen = true }
                         )
+                    } else if (activeMediaItem != null) {
+                        val media = activeMediaItem!!
+                        if (media.isVideo) {
+                            VideoPlayerScreen(
+                                item = media,
+                                mediaRepository = app.mediaRepository,
+                                onBackClick = {
+                                    activeMediaItem = null
+                                    activeMediaList = emptyList()
+                                }
+                            )
+                        } else {
+                            val initialIdx = activeMediaList.indexOfFirst { it.uri == media.uri }.coerceAtLeast(0)
+                            PhotoViewerScreen(
+                                items = if (activeMediaList.isNotEmpty()) activeMediaList else listOf(media),
+                                initialIndex = initialIdx,
+                                mediaRepository = app.mediaRepository,
+                                onBackClick = {
+                                    activeMediaItem = null
+                                    activeMediaList = emptyList()
+                                }
+                            )
+                        }
                     } else {
                         val activeDoc = currentDocument
                         if (activeDoc != null) {
@@ -188,12 +227,17 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(
                                 viewModel = homeViewModel,
                                 toolsViewModel = toolsViewModel,
+                                mediaViewModel = mediaViewModel,
                                 isDarkTheme = isDark,
                                 onToggleTheme = {
                                     val nextTheme = if (isDark) AppThemeMode.LIGHT else AppThemeMode.AMOLED_DARK
                                     app.settingsRepository.setThemeMode(nextTheme)
                                 },
                                 onDocumentClick = { doc -> currentDocument = doc },
+                                onOpenMedia = { item, list ->
+                                    activeMediaItem = item
+                                    activeMediaList = list
+                                },
                                 onSettingsClick = { isSettingsOpen = true },
                                 onShareDocument = { doc -> shareDocument(doc) }
                             )
@@ -264,6 +308,28 @@ class MainActivity : ComponentActivity() {
         if (uri != null) {
             lifecycleScope.launch {
                 val app = application as MyDocApp
+                val mimeType = contentResolver.getType(uri) ?: intent.type ?: ""
+                val path = uri.path?.lowercase() ?: ""
+                val isImage = mimeType.startsWith("image/") ||
+                        path.endsWith(".jpg") || path.endsWith(".jpeg") ||
+                        path.endsWith(".png") || path.endsWith(".webp") ||
+                        path.endsWith(".gif") || path.endsWith(".bmp") ||
+                        path.endsWith(".heic") || path.endsWith(".avif")
+                val isVideo = mimeType.startsWith("video/") || mimeType.startsWith("audio/") ||
+                        path.endsWith(".mp4") || path.endsWith(".mkv") ||
+                        path.endsWith(".webm") || path.endsWith(".3gp") ||
+                        path.endsWith(".mov") || path.endsWith(".mp3") ||
+                        path.endsWith(".wav") || path.endsWith(".aac")
+
+                if (isImage || isVideo) {
+                    val mediaItem = app.mediaRepository.getMediaItem(uri)
+                    if (mediaItem != null) {
+                        activeMediaItem = mediaItem
+                        activeMediaList = listOf(mediaItem)
+                        return@launch
+                    }
+                }
+
                 val result = app.documentRepository.registerOpenedDocument(uri)
                 result.onSuccess { doc ->
                     currentDocument = doc
