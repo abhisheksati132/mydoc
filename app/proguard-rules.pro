@@ -14,5 +14,10 @@
 -keep class com.artifex.mupdf.fitz.** { *; }
 -keepclassmembers class com.artifex.mupdf.fitz.** { *; }
 
+# LibreOfficeKit JNI native bindings
+-keep class org.libreoffice.kit.** { *; }
+-keepclassmembers class org.libreoffice.kit.** { *; }
+
 # Domain models
 -keep class com.abhisheksati.mydoc.domain.model.** { *; }
+
