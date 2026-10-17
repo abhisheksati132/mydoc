@@ -20,13 +20,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -240,6 +245,17 @@ fun PdfViewerScreen(
                 )
             }
         } else if (state.pageCount > 0) {
+            val statusBarsTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+            val navBarsBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            val topContentPadding = statusBarsTop + 56.dp + AppSpacing.paddingSmall
+            val bottomContentPadding = navBarsBottom + 56.dp + AppSpacing.paddingSmall
+            val contentPaddingValues = PaddingValues(
+                top = topContentPadding,
+                bottom = bottomContentPadding,
+                start = AppSpacing.paddingSmall,
+                end = AppSpacing.paddingSmall
+            )
+
             // Main viewport with double-tap zoom, pinch-pan, and tap-zones
             Box(
                 modifier = Modifier
@@ -305,6 +321,7 @@ fun PdfViewerScreen(
                     val pairCount = (state.pageCount + 1) / 2
                     LazyColumn(
                         state = lazyListState,
+                        contentPadding = contentPaddingValues,
                         modifier = Modifier.fillMaxSize()
                     ) {
                         items(pairCount) { pairIndex ->
@@ -341,6 +358,7 @@ fun PdfViewerScreen(
                 } else if (state.isContinuousScroll) {
                     LazyColumn(
                         state = lazyListState,
+                        contentPadding = contentPaddingValues,
                         modifier = Modifier.fillMaxSize()
                     ) {
                         items(state.pageCount) { pageIndex ->
@@ -356,6 +374,7 @@ fun PdfViewerScreen(
                 } else {
                     HorizontalPager(
                         state = pagerState,
+                        contentPadding = contentPaddingValues,
                         modifier = Modifier.fillMaxSize()
                     ) { pageIndex ->
                         Box(
@@ -387,7 +406,9 @@ fun PdfViewerScreen(
                         }
                     }
                 },
-                modifier = Modifier.align(Alignment.CenterEnd)
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(top = topContentPadding, bottom = bottomContentPadding)
             )
         } else {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
