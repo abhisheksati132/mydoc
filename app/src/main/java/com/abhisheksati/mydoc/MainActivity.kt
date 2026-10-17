@@ -14,6 +14,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -30,6 +31,9 @@ import com.abhisheksati.mydoc.security.AppLockScreen
 import com.abhisheksati.mydoc.security.BiometricLockHelper
 import com.abhisheksati.mydoc.designsystem.preview.DesignSystemPreviewScreen
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
+import com.abhisheksati.mydoc.tools.model.PdfTool
+import com.abhisheksati.mydoc.tools.ui.ToolRunnerSheet
+import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
 import com.abhisheksati.mydoc.ui.home.HomeScreen
 import com.abhisheksati.mydoc.ui.settings.SettingsScreen
 import com.abhisheksati.mydoc.ui.viewer.DocumentViewerScreen
@@ -47,6 +51,10 @@ class MainActivity : ComponentActivity() {
     private val homeViewModel: HomeViewModel by viewModels {
         val app = application as MyDocApp
         HomeViewModel.Factory(app.documentRepository, app.settingsRepository)
+    }
+
+    private val toolsViewModel: ToolsViewModel by viewModels {
+        ToolsViewModel.Factory(application)
     }
 
     private lateinit var updateManager: UpdateManager
@@ -126,14 +134,38 @@ class MainActivity : ComponentActivity() {
                     } else {
                         val activeDoc = currentDocument
                         if (activeDoc != null) {
-                            DocumentViewerScreen(
-                                document = activeDoc,
-                                onBackClick = { currentDocument = null },
-                                onShareClick = { shareDocument(activeDoc) }
-                            )
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                DocumentViewerScreen(
+                                    document = activeDoc,
+                                    onBackClick = { currentDocument = null },
+                                    onShareClick = { shareDocument(activeDoc) },
+                                    onToolsClick = {
+                                        toolsViewModel.selectTool(PdfTool.COMPRESS, preselectedUri = Uri.parse(activeDoc.uri))
+                                    }
+                                )
+
+                                val selectedTool by toolsViewModel.selectedTool.collectAsState()
+                                if (selectedTool != null) {
+                                    ToolRunnerSheet(
+                                        viewModel = toolsViewModel,
+                                        onOpenResultFile = { file, _ ->
+                                            val uri = Uri.fromFile(file)
+                                            lifecycleScope.launch {
+                                                val app = application as MyDocApp
+                                                val res = app.documentRepository.registerOpenedDocument(uri)
+                                                res.onSuccess { doc ->
+                                                    toolsViewModel.closeTool()
+                                                    currentDocument = doc
+                                                }
+                                            }
+                                        }
+                                    )
+                                }
+                            }
                         } else {
                             HomeScreen(
                                 viewModel = homeViewModel,
+                                toolsViewModel = toolsViewModel,
                                 onDocumentClick = { doc -> currentDocument = doc },
                                 onSettingsClick = { isSettingsOpen = true },
                                 onShareDocument = { doc -> shareDocument(doc) }

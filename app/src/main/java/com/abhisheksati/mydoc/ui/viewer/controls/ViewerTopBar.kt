@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,6 +46,7 @@ fun ViewerTopBar(
     onBackClick: () -> Unit,
     onShareClick: () -> Unit,
     onToggleBookmark: () -> Unit,
+    onToolsClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
@@ -123,6 +125,23 @@ fun ViewerTopBar(
                         contentDescription = "Share document",
                         tint = colors.textSecondary
                     )
+                }
+
+                // PDF Tools button
+                if (onToolsClick != null) {
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onToolsClick()
+                        },
+                        modifier = Modifier.size(AppSpacing.minTouchTarget)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Build,
+                            contentDescription = "PDF Tools",
+                            tint = colors.textSecondary
+                        )
+                    }
                 }
             }
 

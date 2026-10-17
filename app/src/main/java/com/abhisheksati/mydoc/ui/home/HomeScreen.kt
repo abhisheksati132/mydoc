@@ -72,6 +72,12 @@ import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.DocumentCategory
 import com.abhisheksati.mydoc.domain.model.DocumentFile
+import com.abhisheksati.mydoc.tools.model.PdfTool
+import com.abhisheksati.mydoc.tools.ui.ToolRunnerSheet
+import com.abhisheksati.mydoc.tools.ui.ToolsScreen
+import com.abhisheksati.mydoc.tools.ui.components.CameraScanSheet
+import com.abhisheksati.mydoc.tools.ui.components.SignPdfSheet
+import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import kotlinx.coroutines.launch
 
@@ -87,9 +93,15 @@ val SUPPORTED_MIME_TYPES = arrayOf(
     "text/csv"
 )
 
+enum class HomeTab {
+    DOCUMENTS,
+    TOOLS
+}
+
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
+    toolsViewModel: ToolsViewModel,
     onDocumentClick: (DocumentFile) -> Unit,
     onSettingsClick: () -> Unit,
     onShareDocument: (DocumentFile) -> Unit,
@@ -103,6 +115,9 @@ fun HomeScreen(
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp
 
+    var currentTab by remember { mutableStateOf(HomeTab.DOCUMENTS) }
+    var showCameraScanner by remember { mutableStateOf(false) }
+    var showSignaturePad by remember { mutableStateOf(false) }
     var isSortMenuOpen by remember { mutableStateOf(false) }
     var isMoreMenuOpen by remember { mutableStateOf(false) }
     var showClearRecentsDialog by remember { mutableStateOf(false) }
@@ -149,10 +164,15 @@ fun HomeScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            AppToolbar(
-                title = stringResource(R.string.app_name),
-                actions = {
-                    // Sort order dropdown
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.surface)
+            ) {
+                AppToolbar(
+                    title = stringResource(R.string.app_name),
+                    actions = {
+                        // Sort order dropdown
                     Box {
                         IconButton(
                             onClick = {
@@ -297,8 +317,36 @@ fun HomeScreen(
                     }
                 }
             )
-        },
-        bottomBar = {
+
+            // Top Tab Switcher (Documents | Tools)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = AppSpacing.paddingLarge, vertical = AppSpacing.paddingSmall),
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
+            ) {
+                AppFilterChip(
+                    label = "Documents",
+                    isSelected = currentTab == HomeTab.DOCUMENTS,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        currentTab = HomeTab.DOCUMENTS
+                    }
+                )
+                AppFilterChip(
+                    label = "Tools",
+                    isSelected = currentTab == HomeTab.TOOLS,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        currentTab = HomeTab.TOOLS
+                    }
+                )
+            }
+            AppDivider()
+        }
+    },
+    bottomBar = {
+        if (currentTab == HomeTab.DOCUMENTS) {
             // Lower-half one-hand reach control surface
             Column(
                 modifier = Modifier
@@ -415,15 +463,28 @@ fun HomeScreen(
                     }
                 }
             }
-        },
-        containerColor = colors.background
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            if (uiState.documents.isEmpty()) {
+        }
+    },
+    containerColor = colors.background
+) { innerPadding ->
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+    ) {
+        if (currentTab == HomeTab.TOOLS) {
+            ToolsScreen(
+                viewModel = toolsViewModel,
+                onToolClick = { tool ->
+                    if (tool == PdfTool.SCAN_TO_PDF) {
+                        showCameraScanner = true
+                    } else {
+                        toolsViewModel.selectTool(tool)
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        } else if (uiState.documents.isEmpty()) {
                 if (uiState.isSearching) {
                     AppEmptyState(
                         title = "No documents matched your search.",
@@ -560,4 +621,48 @@ fun HomeScreen(
         },
         onDismiss = { showClearRecentsDialog = false }
     )
+
+    // PDF Tool Runner Sheet
+    val selectedTool by toolsViewModel.selectedTool.collectAsState()
+    if (selectedTool != null) {
+        ToolRunnerSheet(
+            viewModel = toolsViewModel,
+            onOpenResultFile = { file, _ ->
+                val uri = Uri.fromFile(file)
+                scope.launch {
+                    val appInst = context.applicationContext as? MyDocApp
+                    if (appInst != null) {
+                        val res = appInst.documentRepository.registerOpenedDocument(uri)
+                        res.onSuccess { doc ->
+                            toolsViewModel.closeTool()
+                            onDocumentClick(doc)
+                        }
+                    }
+                }
+            }
+        )
+    }
+
+    // Camera Document Scanner
+    if (showCameraScanner) {
+        CameraScanSheet(
+            onDismiss = { showCameraScanner = false },
+            onScannedUris = { uris ->
+                showCameraScanner = false
+                toolsViewModel.setInputUris(uris)
+                toolsViewModel.selectTool(PdfTool.SCAN_TO_PDF)
+            }
+        )
+    }
+
+    // Signature Pad
+    if (showSignaturePad) {
+        SignPdfSheet(
+            onDismiss = { showSignaturePad = false },
+            onSignatureSaved = {
+                showSignaturePad = false
+                Toast.makeText(context, "Signature encrypted and saved.", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
 }

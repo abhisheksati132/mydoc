@@ -82,6 +82,7 @@ fun PdfViewerScreen(
     viewModel: ViewerViewModel,
     onBackClick: () -> Unit,
     onShareClick: () -> Unit,
+    onToolsClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -381,6 +382,7 @@ fun PdfViewerScreen(
                 bookmarks = app?.settingsRepository?.getBookmarks(document.uri) ?: emptySet()
                 Toast.makeText(context, if (added) "Bookmarked page ${state.currentPage + 1}" else "Bookmark removed", Toast.LENGTH_SHORT).show()
             },
+            onToolsClick = onToolsClick,
             modifier = Modifier.align(Alignment.TopCenter)
         )
 
