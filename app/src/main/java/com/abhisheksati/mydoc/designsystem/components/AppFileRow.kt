@@ -35,7 +35,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
-import com.abhisheksati.mydoc.designsystem.tokens.DocumentTypeGradients
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 
 /**
@@ -94,11 +93,23 @@ fun AppFileRow(
                 .padding(horizontal = AppSpacing.medium, vertical = AppSpacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Apple-style vibrant squircle badge
-            DocumentTypeBadge(
-                extension = typeBadge,
-                size = 40.dp
-            )
+            // Neutral outlined badge
+            Box(
+                modifier = Modifier
+                    .border(
+                        width = AppSpacing.dividerThickness,
+                        color = colors.divider,
+                        shape = RoundedCornerShape(AppSpacing.chipCornerRadius)
+                    )
+                    .padding(horizontal = 6.dp, vertical = 3.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = typeBadge,
+                    style = typography.caption,
+                    color = colors.textSecondary
+                )
+            }
 
             Spacer(modifier = Modifier.width(AppSpacing.medium))
 
@@ -130,14 +141,13 @@ fun AppFileRow(
 
                 // Optional continue reading progress indicator
                 if (progressFraction != null && progressFraction > 0f) {
-                    val badgeAccent = DocumentTypeGradients.getAccentColorForExtension(typeBadge)
                     Spacer(modifier = Modifier.height(AppSpacing.xSmall))
                     LinearProgressIndicator(
                         progress = { progressFraction.coerceIn(0f, 1f) },
                         modifier = Modifier
                             .fillMaxWidth(0.6f)
                             .height(2.dp),
-                        color = badgeAccent,
+                        color = colors.accent,
                         trackColor = colors.surfaceVariant
                     )
                 }
