@@ -30,6 +30,9 @@ class MyDocApp : Application(), ImageLoaderFactory {
     lateinit var storageRepository: com.abhisheksati.mydoc.domain.repository.StorageRepository
         private set
 
+    lateinit var wifiServerManager: com.abhisheksati.mydoc.network.WifiServerManager
+        private set
+
     override fun onCreate() {
         super.onCreate()
         try {
@@ -38,8 +41,9 @@ class MyDocApp : Application(), ImageLoaderFactory {
         database = AppDatabase.getInstance(this)
         documentRepository = DocumentRepositoryImpl(this, database)
         mediaRepository = MediaRepositoryImpl(this, database)
-        storageRepository = com.abhisheksati.mydoc.data.repository.StorageRepositoryImpl(this)
+        storageRepository = com.abhisheksati.mydoc.data.repository.StorageRepositoryImpl(this, database.trashDao())
         settingsRepository = com.abhisheksati.mydoc.data.local.SettingsRepository(this)
+        wifiServerManager = com.abhisheksati.mydoc.network.WifiServerManager(this)
     }
 
     override fun newImageLoader(): ImageLoader {

@@ -22,5 +22,10 @@ interface StorageRepository {
     suspend fun unzip(zipFile: File, destinationDir: File, onProgress: (extractedFiles: Int) -> Unit = {}): Result<File>
     suspend fun queryCategory(category: FileCategory): List<StorageItem>
     suspend fun searchFiles(rootDirectory: File, query: String, recursive: Boolean = false): List<StorageItem>
+    fun getTrashItems(): kotlinx.coroutines.flow.Flow<List<com.abhisheksati.mydoc.domain.model.TrashItem>>
+    suspend fun moveToTrash(files: List<File>): Result<List<com.abhisheksati.mydoc.domain.model.TrashItem>>
+    suspend fun restoreFromTrash(items: List<com.abhisheksati.mydoc.domain.model.TrashItem>): Result<Int>
+    suspend fun deletePermanently(items: List<com.abhisheksati.mydoc.domain.model.TrashItem>): Result<Int>
+    suspend fun emptyTrash(): Result<Int>
 }
 

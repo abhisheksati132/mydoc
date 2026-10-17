@@ -48,6 +48,7 @@ import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.outlined.DataUsage
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.DriveFileRenameOutline
@@ -56,8 +57,13 @@ import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.automirrored.outlined.NoteAdd
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.Search
@@ -66,6 +72,9 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.WarningAmber
+import androidx.compose.material.icons.outlined.Wifi
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -82,6 +91,10 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -131,6 +144,7 @@ fun FileManagerScreen(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     var hasPermission by remember { mutableStateOf(StoragePermissionHelper.hasStoragePermission(context)) }
 
@@ -167,6 +181,12 @@ fun FileManagerScreen(
     var showExtractConfirmDialogForFile by remember { mutableStateOf<File?>(null) }
     var singleItemCompressTarget by remember { mutableStateOf<File?>(null) }
     var isSearchActive by remember { mutableStateOf(false) }
+    var showWifiSharingSheet by remember { mutableStateOf(false) }
+    var showStorageCleanerSheet by remember { mutableStateOf(false) }
+    var showAppManagerSheet by remember { mutableStateOf(false) }
+    var showVaultSheet by remember { mutableStateOf(false) }
+    val pinnedFoldersManager = remember { com.abhisheksati.mydoc.data.local.PinnedFoldersManager(context) }
+    val pinnedFolders by pinnedFoldersManager.pinnedFolders.collectAsState()
 
 
     // User message toasts
@@ -177,9 +197,27 @@ fun FileManagerScreen(
         }
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Undo Trash snackbar
+    LaunchedEffect(uiState.lastTrashedItems) {
+        if (uiState.lastTrashedItems.isNotEmpty()) {
+            val result = snackbarHostState.showSnackbar(
+                message = "Moved ${uiState.lastTrashedItems.size} items to Recycle Bin",
+                actionLabel = "UNDO",
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.undoLastTrash()
+            }
+        }
+    }
+
     // Intercept back presses
-    BackHandler(enabled = uiState.isSelectionMode || isSearchActive || uiState.canGoBack || uiState.activeCategory != null) {
-        if (uiState.isSelectionMode) {
+    BackHandler(enabled = uiState.isTrashOpen || uiState.isSelectionMode || isSearchActive || uiState.canGoBack || uiState.activeCategory != null) {
+        if (uiState.isTrashOpen) {
+            viewModel.closeTrash()
+        } else if (uiState.isSelectionMode) {
             viewModel.clearSelection()
         } else if (isSearchActive) {
             isSearchActive = false
@@ -192,6 +230,7 @@ fun FileManagerScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = colors.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (uiState.isSelectionMode) {
                 // Multi-selection Top Bar
@@ -308,6 +347,32 @@ fun FileManagerScreen(
                                     tint = colors.textPrimary
                                 )
                             }
+                            IconButton(onClick = { viewModel.openTrash() }) {
+                                BadgedBox(
+                                    badge = {
+                                        if (uiState.trashItems.isNotEmpty()) {
+                                            Badge { Text(uiState.trashItems.size.toString()) }
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.DeleteSweep,
+                                        contentDescription = "Recycle Bin",
+                                        tint = colors.textPrimary
+                                    )
+                                }
+                            }
+                            val myDocApp = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
+                            val isWifiActive = myDocApp?.wifiServerManager?.isRunning?.collectAsState()?.value ?: false
+                            if (isWifiActive) {
+                                IconButton(onClick = { showWifiSharingSheet = true }) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Wifi,
+                                        contentDescription = "PC Wi-Fi Transfer Active",
+                                        tint = Color(0xFF4CAF50)
+                                    )
+                                }
+                            }
                             Box {
                                 IconButton(onClick = { showOverflowMenu = true }) {
                                     Icon(Icons.Outlined.MoreVert, contentDescription = "More", tint = colors.textPrimary)
@@ -317,6 +382,46 @@ fun FileManagerScreen(
                                     onDismissRequest = { showOverflowMenu = false },
                                     modifier = Modifier.background(colors.surface)
                                 ) {
+                                    DropdownMenuItem(
+                                        text = { Text("PC Wi-Fi Transfer", color = colors.textPrimary) },
+                                        leadingIcon = { Icon(Icons.Outlined.Wifi, contentDescription = null, tint = colors.accent) },
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            showWifiSharingSheet = true
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Recycle Bin (${uiState.trashItems.size})", color = colors.textPrimary) },
+                                        leadingIcon = { Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.accent) },
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            viewModel.openTrash()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Storage Cleaner", color = colors.textPrimary) },
+                                        leadingIcon = { Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.accent) },
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            showStorageCleanerSheet = true
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("App Manager & APKs", color = colors.textPrimary) },
+                                        leadingIcon = { Icon(Icons.Outlined.Android, contentDescription = null, tint = colors.accent) },
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            showAppManagerSheet = true
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Safe Vault (Encrypted)", color = colors.textPrimary) },
+                                        leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.accent) },
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            showVaultSheet = true
+                                        }
+                                    )
                                     DropdownMenuItem(
                                         text = { Text("New Folder", color = colors.textPrimary) },
                                         leadingIcon = { Icon(Icons.Outlined.CreateNewFolder, contentDescription = null, tint = colors.accent) },
@@ -491,6 +596,13 @@ fun FileManagerScreen(
                         onVolumeClick = { volume ->
                             viewModel.loadDirectory(volume.file)
                         }
+                    )
+                }
+
+                if (uiState.activeCategory == null && pinnedFolders.isNotEmpty() && isAtVolumeRoot) {
+                    PinnedFoldersStrip(
+                        folders = pinnedFolders,
+                        onFolderClick = { viewModel.loadDirectory(it) }
                     )
                 }
 
@@ -717,8 +829,18 @@ fun FileManagerScreen(
             onDismiss = { showDeleteConfirmDialog = false },
             onConfirm = {
                 showDeleteConfirmDialog = false
-                viewModel.deleteSelected()
+                viewModel.moveToTrashSelected()
             }
+        )
+    }
+
+    if (uiState.isTrashOpen) {
+        TrashBinSheet(
+            trashItems = uiState.trashItems,
+            onRestore = { viewModel.restoreTrashItems(it) },
+            onDeletePermanently = { viewModel.permanentlyDeleteTrashItems(it) },
+            onEmptyTrash = { viewModel.emptyTrash() },
+            onClose = { viewModel.closeTrash() }
         )
     }
 
@@ -763,6 +885,52 @@ fun FileManagerScreen(
                 showExtractConfirmDialogForFile = null
                 viewModel.extractArchive(file)
             }
+        )
+    }
+
+    if (showWifiSharingSheet) {
+        val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
+        if (app != null) {
+            com.abhisheksati.mydoc.ui.network.WifiSharingSheet(
+                wifiServerManager = app.wifiServerManager,
+                rootDirectory = uiState.currentDirectory,
+                onDismiss = { showWifiSharingSheet = false }
+            )
+        }
+    }
+
+    if (showStorageCleanerSheet) {
+        com.abhisheksati.mydoc.ui.cleaner.StorageCleanerSheet(
+            rootDir = android.os.Environment.getExternalStorageDirectory(),
+            onDismiss = {
+                showStorageCleanerSheet = false
+                viewModel.loadDirectory(uiState.currentDirectory, addToHistory = false)
+                viewModel.refreshVolumes()
+            },
+            onFileClick = { file ->
+                showStorageCleanerSheet = false
+                onOpenFile(file)
+            }
+        )
+    }
+
+    if (showAppManagerSheet) {
+        com.abhisheksati.mydoc.ui.appmanager.AppManagerSheet(
+            onDismiss = {
+                showAppManagerSheet = false
+                viewModel.refreshVolumes()
+            }
+        )
+    }
+
+    if (showVaultSheet) {
+        com.abhisheksati.mydoc.ui.vault.VaultSheet(
+            onDismiss = {
+                showVaultSheet = false
+                viewModel.loadDirectory(uiState.currentDirectory, addToHistory = false)
+                viewModel.refreshVolumes()
+            },
+            onOpenFile = onOpenFile
         )
     }
 
@@ -856,14 +1024,46 @@ fun FileManagerScreen(
                 )
 
                 ItemActionOption(
-                    title = "Delete",
+                    title = "Move to Recycle Bin",
                     icon = Icons.Outlined.Delete,
                     tint = colors.error,
                     onClick = {
                         singleItemActionTarget = null
-                        viewModel.deleteSingle(item.file)
+                        viewModel.moveToTrashSingle(item.file)
                     }
                 )
+
+                if (!item.isDirectory) {
+                    ItemActionOption(
+                        title = "Move to Safe Vault (Encrypt)",
+                        icon = Icons.Outlined.Lock,
+                        tint = colors.accent,
+                        onClick = {
+                            singleItemActionTarget = null
+                            coroutineScope.launch {
+                                val vaultMgr = com.abhisheksati.mydoc.security.vault.VaultManager(context)
+                                val res = vaultMgr.encryptAndMoveToVault(item.file)
+                                res.onSuccess {
+                                    Toast.makeText(context, "Encrypted and moved to Safe Vault", Toast.LENGTH_SHORT).show()
+                                    viewModel.loadDirectory(uiState.currentDirectory, addToHistory = false)
+                                }.onFailure { err ->
+                                    Toast.makeText(context, "Vault error: ${err.message}", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    )
+                } else {
+                    val isPinned = pinnedFoldersManager.isPinned(item.file)
+                    ItemActionOption(
+                        title = if (isPinned) "Unpin from Quick Access" else "Pin to Quick Access",
+                        icon = if (isPinned) Icons.Filled.Bookmark else Icons.Outlined.Bookmark,
+                        tint = colors.accent,
+                        onClick = {
+                            singleItemActionTarget = null
+                            pinnedFoldersManager.togglePin(item.file)
+                        }
+                    )
+                }
 
                 val isZip = item.name.endsWith(".zip", ignoreCase = true) || item.name.endsWith(".jar", ignoreCase = true)
                 if (isZip) {
@@ -1143,4 +1343,77 @@ fun FileManagerCategoryChips(
         }
     }
 }
+
+@Composable
+fun PinnedFoldersStrip(
+    folders: List<File>,
+    onFolderClick: (File) -> Unit
+) {
+    val colors = LocalAppColors.current
+    val typography = LocalAppTypography.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(bottom = 6.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Bookmark,
+                contentDescription = null,
+                tint = colors.accent,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "Pinned Folders",
+                style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 12.sp),
+                color = colors.textSecondary
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            for (folder in folders) {
+                Surface(
+                    color = colors.surface,
+                    shape = RoundedCornerShape(10.dp),
+                    tonalElevation = 1.dp,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.divider),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onFolderClick(folder) }
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Folder,
+                            contentDescription = null,
+                            tint = colors.accent,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = folder.name,
+                            style = typography.body.copy(fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
+                            color = colors.textPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 

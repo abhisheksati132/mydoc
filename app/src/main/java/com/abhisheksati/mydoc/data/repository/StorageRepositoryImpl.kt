@@ -26,8 +26,16 @@ import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
 
+import com.abhisheksati.mydoc.data.local.dao.TrashDao
+import com.abhisheksati.mydoc.data.local.entity.TrashEntity
+import com.abhisheksati.mydoc.domain.model.TrashItem
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+
 class StorageRepositoryImpl(
-    private val context: Context
+    private val context: Context,
+    private val trashDao: TrashDao? = null
 ) : StorageRepository {
 
     override fun getStorageVolumes(): List<StorageVolume> {
@@ -633,6 +641,141 @@ class StorageRepositoryImpl(
             } catch (_: Exception) {}
         }
         results
+    }
+
+    private fun getTrashDir(): File {
+        val baseDir = context.getExternalFilesDir(null) ?: context.filesDir
+        val trash = File(baseDir, ".trash")
+        if (!trash.exists()) trash.mkdirs()
+        return trash
+    }
+
+    override fun getTrashItems(): Flow<List<TrashItem>> {
+        return trashDao?.getAllTrashItems()?.map { list ->
+            list.map { it.toDomain() }
+        } ?: flowOf(emptyList())
+    }
+
+    override suspend fun moveToTrash(files: List<File>): Result<List<TrashItem>> = withContext(Dispatchers.IO) {
+        try {
+            val trashDir = getTrashDir()
+            val trashed = mutableListOf<TrashItem>()
+            val now = System.currentTimeMillis()
+
+            for (file in files) {
+                if (!file.exists()) continue
+                val trashFileName = "${now}_${file.name}"
+                val destTrashFile = File(trashDir, trashFileName)
+
+                val moved = file.renameTo(destTrashFile) || run {
+                    if (file.isDirectory) {
+                        file.copyRecursively(destTrashFile, overwrite = true)
+                        file.deleteRecursively()
+                    } else {
+                        file.copyTo(destTrashFile, overwrite = true)
+                        file.delete()
+                    }
+                    destTrashFile.exists()
+                }
+
+                if (moved) {
+                    val entity = TrashEntity(
+                        originalPath = file.absolutePath,
+                        trashPath = destTrashFile.absolutePath,
+                        displayName = file.name,
+                        sizeBytes = if (destTrashFile.isDirectory) 0L else destTrashFile.length(),
+                        deletedTimestamp = now,
+                        isDirectory = destTrashFile.isDirectory
+                    )
+                    val id = trashDao?.insert(entity) ?: 0L
+                    trashed.add(entity.copy(id = id).toDomain())
+                }
+            }
+
+            // Purge items older than 30 days
+            val thirtyDaysAgo = now - 30L * 24 * 60 * 60 * 1000
+            trashDao?.purgeOlderThan(thirtyDaysAgo)
+
+            Result.success(trashed)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun restoreFromTrash(items: List<TrashItem>): Result<Int> = withContext(Dispatchers.IO) {
+        try {
+            var restoredCount = 0
+            for (item in items) {
+                val trashFile = item.trashFile
+                if (!trashFile.exists()) {
+                    trashDao?.deleteByIds(listOf(item.id))
+                    continue
+                }
+
+                val originalParent = item.originalFile.parentFile ?: continue
+                if (!originalParent.exists()) originalParent.mkdirs()
+
+                val destFile = getNonConflictingFile(originalParent, item.displayName)
+                val restored = trashFile.renameTo(destFile) || run {
+                    if (trashFile.isDirectory) {
+                        trashFile.copyRecursively(destFile, overwrite = true)
+                        trashFile.deleteRecursively()
+                    } else {
+                        trashFile.copyTo(destFile, overwrite = true)
+                        trashFile.delete()
+                    }
+                    destFile.exists()
+                }
+
+                if (restored) {
+                    trashDao?.deleteByIds(listOf(item.id))
+                    restoredCount++
+                }
+            }
+            Result.success(restoredCount)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun deletePermanently(items: List<TrashItem>): Result<Int> = withContext(Dispatchers.IO) {
+        try {
+            var deletedCount = 0
+            for (item in items) {
+                val trashFile = item.trashFile
+                if (trashFile.exists()) {
+                    val deleted = if (trashFile.isDirectory) {
+                        trashFile.deleteRecursively()
+                    } else {
+                        trashFile.delete()
+                    }
+                    if (deleted) deletedCount++
+                }
+                trashDao?.deleteByIds(listOf(item.id))
+            }
+            Result.success(deletedCount)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun emptyTrash(): Result<Int> = withContext(Dispatchers.IO) {
+        try {
+            val trashDir = getTrashDir()
+            val files = trashDir.listFiles() ?: emptyArray()
+            var count = 0
+            for (f in files) {
+                if (f.isDirectory) {
+                    if (f.deleteRecursively()) count++
+                } else {
+                    if (f.delete()) count++
+                }
+            }
+            trashDao?.clearAll()
+            Result.success(count)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }
 

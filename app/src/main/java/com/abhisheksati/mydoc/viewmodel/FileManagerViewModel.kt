@@ -41,7 +41,10 @@ data class FileManagerUiState(
     val userMessage: String? = null,
     val canGoBack: Boolean = false,
     val selectedProperties: FolderProperties? = null,
-    val calculatedChecksum: String? = null
+    val calculatedChecksum: String? = null,
+    val trashItems: List<com.abhisheksati.mydoc.domain.model.TrashItem> = emptyList(),
+    val isTrashOpen: Boolean = false,
+    val lastTrashedItems: List<com.abhisheksati.mydoc.domain.model.TrashItem> = emptyList()
 )
 
 
@@ -64,6 +67,11 @@ class FileManagerViewModel(
     init {
         refreshVolumes()
         loadDirectory(initialDir, addToHistory = false)
+        viewModelScope.launch {
+            storageRepository.getTrashItems().collect { list ->
+                _uiState.update { it.copy(trashItems = list) }
+            }
+        }
     }
 
     fun refreshVolumes() {
@@ -337,6 +345,144 @@ class FileManagerViewModel(
                 _uiState.update { it.copy(userMessage = "Delete failed: ${err.message}") }
             }
         }
+    }
+
+    fun moveToTrashSelected() {
+        val files = _uiState.value.selectedFiles.toList()
+        if (files.isEmpty()) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(activeOperation = "Moving to Trash...", isLoading = true) }
+            val result = storageRepository.moveToTrash(files)
+            result.onSuccess { trashed ->
+                _uiState.update {
+                    it.copy(
+                        selectedFiles = emptySet(),
+                        isSelectionMode = false,
+                        activeOperation = null,
+                        isLoading = false,
+                        lastTrashedItems = trashed,
+                        userMessage = "Moved ${trashed.size} items to Recycle Bin"
+                    )
+                }
+                loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+                refreshVolumes()
+            }.onFailure { err ->
+                _uiState.update {
+                    it.copy(
+                        activeOperation = null,
+                        isLoading = false,
+                        userMessage = "Failed to move to Trash: ${err.message}"
+                    )
+                }
+            }
+        }
+    }
+
+    fun moveToTrashSingle(file: File) {
+        viewModelScope.launch {
+            val result = storageRepository.moveToTrash(listOf(file))
+            result.onSuccess { trashed ->
+                _uiState.update {
+                    it.copy(
+                        lastTrashedItems = trashed,
+                        userMessage = "Moved '${file.name}' to Recycle Bin"
+                    )
+                }
+                loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+                refreshVolumes()
+            }.onFailure { err ->
+                _uiState.update { it.copy(userMessage = "Failed to move to Trash: ${err.message}") }
+            }
+        }
+    }
+
+    fun undoLastTrash() {
+        val items = _uiState.value.lastTrashedItems
+        if (items.isEmpty()) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(activeOperation = "Restoring...", isLoading = true) }
+            val result = storageRepository.restoreFromTrash(items)
+            result.onSuccess { count ->
+                _uiState.update {
+                    it.copy(
+                        activeOperation = null,
+                        isLoading = false,
+                        lastTrashedItems = emptyList(),
+                        userMessage = "Restored $count items"
+                    )
+                }
+                loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+                refreshVolumes()
+            }.onFailure { err ->
+                _uiState.update {
+                    it.copy(
+                        activeOperation = null,
+                        isLoading = false,
+                        userMessage = "Restore failed: ${err.message}"
+                    )
+                }
+            }
+        }
+    }
+
+    fun restoreTrashItems(items: List<com.abhisheksati.mydoc.domain.model.TrashItem>) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(activeOperation = "Restoring...", isLoading = true) }
+            val result = storageRepository.restoreFromTrash(items)
+            result.onSuccess { count ->
+                _uiState.update {
+                    it.copy(
+                        activeOperation = null,
+                        isLoading = false,
+                        userMessage = "Restored $count items"
+                    )
+                }
+                loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+                refreshVolumes()
+            }.onFailure { err ->
+                _uiState.update {
+                    it.copy(
+                        activeOperation = null,
+                        isLoading = false,
+                        userMessage = "Restore failed: ${err.message}"
+                    )
+                }
+            }
+        }
+    }
+
+    fun permanentlyDeleteTrashItems(items: List<com.abhisheksati.mydoc.domain.model.TrashItem>) {
+        viewModelScope.launch {
+            val result = storageRepository.deletePermanently(items)
+            result.onSuccess { count ->
+                _uiState.update { it.copy(userMessage = "Permanently deleted $count items") }
+                refreshVolumes()
+            }.onFailure { err ->
+                _uiState.update { it.copy(userMessage = "Delete failed: ${err.message}") }
+            }
+        }
+    }
+
+    fun emptyTrash() {
+        viewModelScope.launch {
+            val result = storageRepository.emptyTrash()
+            result.onSuccess {
+                _uiState.update { it.copy(userMessage = "Recycle Bin emptied") }
+                refreshVolumes()
+            }.onFailure { err ->
+                _uiState.update { it.copy(userMessage = "Failed to empty Recycle Bin: ${err.message}") }
+            }
+        }
+    }
+
+    fun openTrash() {
+        _uiState.update { it.copy(isTrashOpen = true) }
+    }
+
+    fun closeTrash() {
+        _uiState.update { it.copy(isTrashOpen = false) }
     }
 
     fun selectCategory(category: FileCategory?) {

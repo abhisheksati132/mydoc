@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.outlined.Brightness4
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.MoreVert
@@ -88,6 +89,13 @@ fun TextViewerScreen(
     var isMenuOpen by remember { mutableStateOf(false) }
     var fontScale by remember { mutableFloatStateOf(1.0f) }
     var showLineNumbers by remember { mutableStateOf(true) }
+    var isTtsVisible by remember { mutableStateOf(false) }
+    val ttsManager = remember { com.abhisheksati.mydoc.tools.tts.DocumentTtsManager(context) }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            ttsManager.shutdown()
+        }
+    }
 
     LaunchedEffect(document.uri) {
         isLoading = true
@@ -217,6 +225,13 @@ fun TextViewerScreen(
                                 imageVector = Icons.Outlined.Brightness4,
                                 contentDescription = "Toggle Reading Mode",
                                 tint = if (readingMode != ReadingMode.NORMAL) MaterialTheme.colorScheme.primary else secondaryTextColor
+                            )
+                        }
+                        IconButton(onClick = { isTtsVisible = !isTtsVisible }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                contentDescription = "Read Aloud",
+                                tint = if (isTtsVisible) MaterialTheme.colorScheme.primary else secondaryTextColor
                             )
                         }
                         IconButton(onClick = onShareClick) {
@@ -406,6 +421,14 @@ fun TextViewerScreen(
                     }
                 }
             }
+
+            com.abhisheksati.mydoc.ui.tts.DocumentTtsBar(
+                ttsManager = ttsManager,
+                documentText = remember(lines) { lines.joinToString("\n") },
+                isVisible = isTtsVisible,
+                onClose = { isTtsVisible = false },
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 }

@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.outlined.Brightness4
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.MoreVert
@@ -93,6 +94,13 @@ fun WordViewerScreen(
     var searchQuery by remember { mutableStateOf("") }
     var isMenuOpen by remember { mutableStateOf(false) }
     var fontScale by remember { mutableFloatStateOf(1.0f) }
+    var isTtsVisible by remember { mutableStateOf(false) }
+    val ttsManager = remember { com.abhisheksati.mydoc.tools.tts.DocumentTtsManager(context) }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            ttsManager.shutdown()
+        }
+    }
 
     LaunchedEffect(document.uri) {
         isLoading = true
@@ -172,6 +180,13 @@ fun WordViewerScreen(
                                 imageVector = Icons.Outlined.Brightness4,
                                 contentDescription = "Toggle Reading Mode",
                                 tint = if (readingMode != ReadingMode.NORMAL) MaterialTheme.colorScheme.primary else secondaryTextColor
+                            )
+                        }
+                        IconButton(onClick = { isTtsVisible = !isTtsVisible }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                contentDescription = "Read Aloud",
+                                tint = if (isTtsVisible) MaterialTheme.colorScheme.primary else secondaryTextColor
                             )
                         }
                         IconButton(onClick = onShareClick) {
@@ -472,6 +487,25 @@ fun WordViewerScreen(
                     }
                 }
             }
+
+            val documentText = remember(docxData) {
+                docxData?.blocks?.mapNotNull { block ->
+                    when (block) {
+                        is DocxBlock.Paragraph -> block.runs.joinToString("") { it.text }
+                        is DocxBlock.Table -> block.rows.joinToString("\n") { row -> row.joinToString(" | ") }
+                        is DocxBlock.Heading -> block.text
+                        is DocxBlock.Bullet -> block.runs.joinToString("") { it.text }
+                    }
+                }?.joinToString("\n\n") ?: ""
+            }
+
+            com.abhisheksati.mydoc.ui.tts.DocumentTtsBar(
+                ttsManager = ttsManager,
+                documentText = documentText,
+                isVisible = isTtsVisible,
+                onClose = { isTtsVisible = false },
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 }

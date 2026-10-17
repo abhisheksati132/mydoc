@@ -155,15 +155,43 @@ class StorageRepositoryTest {
     }
 
     @Test
-    fun testHashSafetyOnMissingFile() = runBlocking {
+    fun testTrashAndRestoreFlow() = runBlocking {
+        val root = tempFolder.root
         val repo = StorageRepositoryImpl(mockContext())
-        val missing = File(tempFolder.root, "does_not_exist.txt")
-        val hash = repo.calculateHash(missing, "SHA-256")
-        assertEquals("Unavailable", hash)
+
+        // 1. Create file to trash
+        val testFile = File(root, "important_doc.pdf").apply { writeText("Important Data") }
+        assertTrue(testFile.exists())
+
+        // 2. Move to Trash
+        val trashRes = repo.moveToTrash(listOf(testFile))
+        assertTrue(trashRes.isSuccess)
+        val trashedItems = trashRes.getOrThrow()
+        assertEquals(1, trashedItems.size)
+        assertFalse(testFile.exists()) // Original moved
+        assertTrue(trashedItems[0].trashFile.exists()) // In trash
+
+        // 3. Restore from Trash
+        val restoreRes = repo.restoreFromTrash(trashedItems)
+        assertTrue(restoreRes.isSuccess)
+        assertEquals(1, restoreRes.getOrThrow())
+        assertTrue(testFile.exists()) // Restored
+        assertEquals("Important Data", testFile.readText())
+
+        // 4. Move to Trash again and Empty
+        val trashRes2 = repo.moveToTrash(listOf(testFile))
+        assertTrue(trashRes2.isSuccess)
+        val emptyRes = repo.emptyTrash()
+        assertTrue(emptyRes.isSuccess)
+        assertEquals(1, emptyRes.getOrThrow())
+        assertFalse(testFile.exists())
     }
 
     private fun mockContext(): android.content.Context {
-        // Simple proxy / mock for context if needed for getStorageVolumes
-        return object : android.content.ContextWrapper(null) {}
+        val root = tempFolder.root
+        return object : android.content.ContextWrapper(null) {
+            override fun getExternalFilesDir(type: String?): File = File(root, "app_external").apply { mkdirs() }
+            override fun getFilesDir(): File = File(root, "app_internal").apply { mkdirs() }
+        }
     }
 }

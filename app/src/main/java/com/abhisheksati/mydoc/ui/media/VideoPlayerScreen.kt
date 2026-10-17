@@ -130,6 +130,29 @@ fun VideoPlayerScreen(
     // Orientation lock state: 0 = Sensor, 1 = Landscape, 2 = Portrait
     var orientationMode by remember { mutableIntStateOf(0) }
 
+    // Subtitle state & auto-detection of companion .srt
+    var subtitleUri by remember {
+        mutableStateOf<Uri?>(
+            try {
+                val filePath = item.uri.path
+                if (filePath != null) {
+                    val file = java.io.File(filePath)
+                    val srt = java.io.File(file.parentFile, "${file.nameWithoutExtension}.srt")
+                    if (srt.exists()) Uri.fromFile(srt) else null
+                } else null
+            } catch (_: Exception) { null }
+        )
+    }
+
+    val subtitleLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            subtitleUri = uri
+            Toast.makeText(context, "Loaded Subtitle: ${uri.lastPathSegment}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     // Setup ExoPlayer instance
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
@@ -140,13 +163,31 @@ fun VideoPlayerScreen(
         }
     }
 
-    // Restore saved playback position
-    LaunchedEffect(item.uri) {
+    // Restore saved playback position and apply subtitle if present
+    LaunchedEffect(item.uri, subtitleUri) {
         val savedPos = mediaRepository.getPlaybackPosition(item.uri.toString())
-        if (savedPos > 0) {
-            exoPlayer.seekTo(savedPos)
+        val isCurrentlyPlaying = exoPlayer.isPlaying
+        val targetPos = if (exoPlayer.currentPosition > 0L) exoPlayer.currentPosition else savedPos
+
+        val builder = ExoMediaItem.Builder().setUri(item.uri)
+        if (subtitleUri != null) {
+            val isVtt = subtitleUri.toString().endsWith(".vtt", ignoreCase = true)
+            val subConfig = ExoMediaItem.SubtitleConfiguration.Builder(subtitleUri!!)
+                .setMimeType(if (isVtt) androidx.media3.common.MimeTypes.TEXT_VTT else androidx.media3.common.MimeTypes.APPLICATION_SUBRIP)
+                .setLanguage("en")
+                .setSelectionFlags(androidx.media3.common.C.SELECTION_FLAG_DEFAULT)
+                .build()
+            builder.setSubtitleConfigurations(listOf(subConfig))
+        }
+
+        exoPlayer.setMediaItem(builder.build())
+        if (targetPos > 0) {
+            exoPlayer.seekTo(targetPos)
         }
         exoPlayer.prepare()
+        if (isCurrentlyPlaying) {
+            exoPlayer.play()
+        }
     }
 
     // Player event listener
@@ -528,6 +569,41 @@ fun VideoPlayerScreen(
                                     style = typography.caption.copy(fontWeight = FontWeight.Bold),
                                     color = Color(0xFFEDEDED)
                                 )
+                            }
+
+                            // Subtitle (CC) Button
+                            Box {
+                                var isSubtitleMenuOpen by remember { mutableStateOf(false) }
+                                IconButton(onClick = { isSubtitleMenuOpen = true }) {
+                                    Text(
+                                        text = "CC",
+                                        style = typography.caption.copy(fontWeight = FontWeight.Bold),
+                                        color = if (subtitleUri != null) Color(0xFF8AB4F8) else Color(0xFFEDEDED)
+                                    )
+                                }
+
+                                DropdownMenu(
+                                    expanded = isSubtitleMenuOpen,
+                                    onDismissRequest = { isSubtitleMenuOpen = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Load Subtitle (.srt / .vtt)") },
+                                        onClick = {
+                                            isSubtitleMenuOpen = false
+                                            subtitleLauncher.launch("*/*")
+                                        }
+                                    )
+                                    if (subtitleUri != null) {
+                                        DropdownMenuItem(
+                                            text = { Text("Turn Off Subtitles") },
+                                            onClick = {
+                                                isSubtitleMenuOpen = false
+                                                subtitleUri = null
+                                                Toast.makeText(context, "Subtitles turned off", Toast.LENGTH_SHORT).show()
+                                            }
+                                        )
+                                    }
+                                }
                             }
 
                             // Speed Selector button
