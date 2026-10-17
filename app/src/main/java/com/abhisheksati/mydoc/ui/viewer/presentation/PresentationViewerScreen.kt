@@ -79,6 +79,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -665,7 +666,13 @@ fun PresentationViewerScreen(
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        if (isVisualMode && slide.visualElements.isNotEmpty()) {
+                        val hasMeaningfulVisuals = slide.visualElements.any {
+                            it.type == VisualElementType.IMAGE ||
+                            it.tableRows.isNotEmpty() ||
+                            it.paragraphs.any { p -> p.runs.any { r -> r.text.isNotBlank() } }
+                        }
+
+                        if (isVisualMode && hasMeaningfulVisuals) {
                             // Rich visual slide rendering
                             VisualSlideCard(
                                 slide = slide,
@@ -940,6 +947,7 @@ private fun VisualSlideCard(
                     modifier = Modifier
                         .offset(x = offsetX, y = offsetY)
                         .size(width = elementWidth, height = elementHeight)
+                        .clipToBounds()
                 ) {
                     when (element.type) {
                         VisualElementType.IMAGE -> {
@@ -999,28 +1007,37 @@ private fun VisualSlideCard(
                                 modifier = shapeModifier,
                                 contentAlignment = Alignment.CenterStart
                             ) {
-                                Column(modifier = Modifier.fillMaxSize()) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .verticalScroll(rememberScrollState())
+                                ) {
                                     for (para in element.paragraphs) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = when (para.alignment) {
-                                                TextAlign.Center -> Arrangement.Center
-                                                TextAlign.End -> Arrangement.End
-                                                else -> Arrangement.Start
-                                            }
-                                        ) {
+                                        val annotated = buildAnnotatedString {
                                             for (run in para.runs) {
                                                 val runColor = run.color ?: defaultTextColor
-                                                HighlightableText(
-                                                    text = run.text,
-                                                    query = highlightQuery,
-                                                    fontSize = (run.fontSizeSp * 0.85f).coerceIn(9f, 32f).sp,
-                                                    fontWeight = if (run.isBold) FontWeight.Bold else FontWeight.Normal,
-                                                    fontStyle = if (run.isItalic) FontStyle.Italic else FontStyle.Normal,
-                                                    color = runColor,
-                                                    textAlign = para.alignment
-                                                )
+                                                val isMatch = highlightQuery.length >= 2 && run.text.contains(highlightQuery, ignoreCase = true)
+                                                val scaledSp = (run.fontSizeSp * (totalWidth.value / 640f)).coerceIn(8.5f, 26f).sp
+
+                                                withStyle(
+                                                    SpanStyle(
+                                                        color = runColor,
+                                                        fontSize = scaledSp,
+                                                        fontWeight = if (run.isBold) FontWeight.Bold else FontWeight.Normal,
+                                                        fontStyle = if (run.isItalic) FontStyle.Italic else FontStyle.Normal,
+                                                        background = if (isMatch) Color(0x66FFEB3B) else Color.Transparent
+                                                    )
+                                                ) {
+                                                    append(run.text)
+                                                }
                                             }
+                                        }
+                                        if (annotated.isNotEmpty()) {
+                                            Text(
+                                                text = annotated,
+                                                textAlign = para.alignment,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
                                         }
                                     }
                                 }
@@ -1098,20 +1115,39 @@ private fun OutlineSlideCard(
                 modifier = Modifier.padding(bottom = AppSpacing.paddingMedium)
             )
 
-            for (item in slide.content) {
-                Row(modifier = Modifier.padding(vertical = 2.dp)) {
-                    Text(
-                        text = "• ",
-                        fontWeight = FontWeight.Bold,
-                        color = textColor,
-                        fontSize = 15.sp
-                    )
-                    HighlightableText(
-                        text = item,
-                        query = highlightQuery,
-                        fontSize = 15.sp,
-                        color = textColor
-                    )
+            val allPoints = if (slide.content.isNotEmpty()) {
+                slide.content
+            } else {
+                slide.visualElements
+                    .flatMap { it.paragraphs }
+                    .map { it.plainText.trim() }
+                    .filter { it.isNotBlank() && it != slide.title }
+            }
+
+            if (allPoints.isEmpty()) {
+                Text(
+                    text = "No additional bullet points on this slide.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = textColor.copy(alpha = 0.5f),
+                    fontStyle = FontStyle.Italic,
+                    modifier = Modifier.padding(top = AppSpacing.paddingSmall)
+                )
+            } else {
+                for (item in allPoints) {
+                    Row(modifier = Modifier.padding(vertical = 2.dp)) {
+                        Text(
+                            text = "• ",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 15.sp
+                        )
+                        HighlightableText(
+                            text = item,
+                            query = highlightQuery,
+                            fontSize = 15.sp,
+                            color = textColor
+                        )
+                    }
                 }
             }
         }

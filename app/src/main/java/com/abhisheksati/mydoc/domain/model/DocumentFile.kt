@@ -27,7 +27,7 @@ data class DocumentFile(
             "pdf" -> "PDF"
             "docx", "doc" -> "WORD"
             "xlsx", "xls" -> "EXCEL"
-            "pptx", "ppt" -> "PPT"
+            "pptx", "ppt", "ppsx", "pps", "potx", "pot" -> "PPT"
             "txt" -> "TXT"
             "csv" -> "CSV"
             else -> extension.uppercase(Locale.ROOT).take(5).ifEmpty { "DOC" }
@@ -38,7 +38,7 @@ data class DocumentFile(
             "pdf" -> DocumentCategory.PDF
             "docx", "doc" -> DocumentCategory.WORD
             "xlsx", "xls", "csv" -> DocumentCategory.EXCEL
-            "pptx", "ppt" -> DocumentCategory.PPT
+            "pptx", "ppt", "ppsx", "pps", "potx", "pot" -> DocumentCategory.PPT
             "txt", "log", "md", "json", "xml" -> DocumentCategory.TEXT
             else -> DocumentCategory.ALL
         }
