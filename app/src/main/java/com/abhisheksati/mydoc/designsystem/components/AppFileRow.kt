@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 
 /**
@@ -93,25 +94,13 @@ fun AppFileRow(
                 .padding(horizontal = AppSpacing.medium, vertical = AppSpacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Neutral outlined badge
-            Box(
-                modifier = Modifier
-                    .border(
-                        width = AppSpacing.dividerThickness,
-                        color = colors.divider,
-                        shape = RoundedCornerShape(AppSpacing.chipCornerRadius)
-                    )
-                    .padding(horizontal = 6.dp, vertical = 3.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = typeBadge,
-                    style = typography.caption,
-                    color = colors.textSecondary
-                )
-            }
+            // Recognizable Google-style format-colored badge
+            DocumentFormatBadge(
+                extension = typeBadge,
+                size = 40.dp
+            )
 
-            Spacer(modifier = Modifier.width(AppSpacing.medium))
+            Spacer(modifier = Modifier.width(14.dp))
 
             // File Name & Metadata
             Column(modifier = Modifier.weight(1f)) {
@@ -145,9 +134,9 @@ fun AppFileRow(
                     LinearProgressIndicator(
                         progress = { progressFraction.coerceIn(0f, 1f) },
                         modifier = Modifier
-                            .fillMaxWidth(0.6f)
-                            .height(2.dp),
-                        color = colors.accent,
+                            .fillMaxWidth(0.5f)
+                            .height(3.dp),
+                        color = DocumentFormatColors.getTint(typeBadge),
                         trackColor = colors.surfaceVariant
                     )
                 }

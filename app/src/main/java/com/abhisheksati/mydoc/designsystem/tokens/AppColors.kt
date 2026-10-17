@@ -48,3 +48,70 @@ val LightAppColors = AppColors(
 )
 
 val LocalAppColors = staticCompositionLocalOf { DarkAppColors }
+
+/**
+ * Recognizable Google-standard format colors (PDF red, Word blue, Excel green, PPT amber).
+ * Provides soft container backgrounds and high-contrast foreground tints for both Light and Dark modes.
+ */
+object DocumentFormatColors {
+    val pdfTint = Color(0xFFEA4335)
+    val pdfContainerLight = Color(0xFFFCE8E6)
+    val pdfContainerDark = Color(0xFF381E1E)
+
+    val wordTint = Color(0xFF1A73E8)
+    val wordContainerLight = Color(0xFFE8F0FE)
+    val wordContainerDark = Color(0xFF1B2A4A)
+
+    val excelTint = Color(0xFF188038)
+    val excelContainerLight = Color(0xFFE6F4EA)
+    val excelContainerDark = Color(0xFF1B3824)
+
+    val pptTint = Color(0xFFF29900)
+    val pptContainerLight = Color(0xFFFEF7E0)
+    val pptContainerDark = Color(0xFF3A301A)
+
+    val textTint = Color(0xFF5F6368)
+    val textContainerLight = Color(0xFFF1F3F4)
+    val textContainerDark = Color(0xFF2C2D30)
+
+    val mediaTint = Color(0xFFE91E63)
+    val mediaContainerLight = Color(0xFFFCE4EC)
+    val mediaContainerDark = Color(0xFF3B1E29)
+
+    fun getTint(extension: String): Color {
+        return when (extension.lowercase()) {
+            "pdf" -> pdfTint
+            "docx", "doc" -> wordTint
+            "xlsx", "xls", "csv" -> excelTint
+            "pptx", "ppt", "ppsx", "pps", "potx", "pot" -> pptTint
+            "txt", "md", "log", "json", "xml" -> textTint
+            "jpg", "jpeg", "png", "webp", "gif", "mp4", "mp3" -> mediaTint
+            else -> textTint
+        }
+    }
+
+    fun getContainer(extension: String, isDark: Boolean): Color {
+        val ext = extension.lowercase()
+        return if (isDark) {
+            when (ext) {
+                "pdf" -> pdfContainerDark
+                "docx", "doc" -> wordContainerDark
+                "xlsx", "xls", "csv" -> excelContainerDark
+                "pptx", "ppt", "ppsx", "pps", "potx", "pot" -> pptContainerDark
+                "txt", "md", "log", "json", "xml" -> textContainerDark
+                "jpg", "jpeg", "png", "webp", "gif", "mp4", "mp3" -> mediaContainerDark
+                else -> textContainerDark
+            }
+        } else {
+            when (ext) {
+                "pdf" -> pdfContainerLight
+                "docx", "doc" -> wordContainerLight
+                "xlsx", "xls", "csv" -> excelContainerLight
+                "pptx", "ppt", "ppsx", "pps", "potx", "pot" -> pptContainerLight
+                "txt", "md", "log", "json", "xml" -> textContainerLight
+                "jpg", "jpeg", "png", "webp", "gif", "mp4", "mp3" -> mediaContainerLight
+                else -> textContainerLight
+            }
+        }
+    }
+}

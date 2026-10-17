@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +26,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
@@ -32,6 +35,7 @@ import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.tools.model.PdfTool
@@ -142,6 +146,18 @@ private fun ToolListRow(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
+    val isDark = colors.background == DarkAppColors.background
+
+    val (groupTint, groupContainer) = when (tool.group) {
+        ToolGroup.ORGANIZE -> Color(0xFF1A73E8) to if (isDark) Color(0xFF1B2A4A) else Color(0xFFE8F0FE)
+        ToolGroup.OPTIMIZE -> Color(0xFF188038) to if (isDark) Color(0xFF1B3824) else Color(0xFFE6F4EA)
+        ToolGroup.CONVERT_TO -> Color(0xFF9334E6) to if (isDark) Color(0xFF2D1E4A) else Color(0xFFF3E8FD)
+        ToolGroup.CONVERT_FROM -> Color(0xFF3F51B5) to if (isDark) Color(0xFF1E2448) else Color(0xFFE8EAF6)
+        ToolGroup.EDIT -> Color(0xFFF29900) to if (isDark) Color(0xFF3A301A) else Color(0xFFFEF7E0)
+        ToolGroup.SECURITY -> Color(0xFFEA4335) to if (isDark) Color(0xFF381E1E) else Color(0xFFFCE8E6)
+        ToolGroup.SCAN -> Color(0xFF00897B) to if (isDark) Color(0xFF1A3834) else Color(0xFFE0F2F1)
+        ToolGroup.AUTOMATION -> Color(0xFF0284C7) to if (isDark) Color(0xFF162E4A) else Color(0xFFE0F2FE)
+    }
 
     Row(
         modifier = modifier
@@ -151,20 +167,23 @@ private fun ToolListRow(
             .padding(horizontal = AppSpacing.paddingLarge),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Minimal outline icon (neutral stroke, no colored blobs)
+        // Soft-tinted squircle icon (Google Files style)
         Box(
-            modifier = Modifier.size(AppSpacing.minTouchTarget),
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(groupContainer),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = tool.icon,
                 contentDescription = null,
-                tint = colors.textSecondary,
-                modifier = Modifier.size(24.dp)
+                tint = groupTint,
+                modifier = Modifier.size(22.dp)
             )
         }
 
-        Spacer(modifier = Modifier.width(AppSpacing.paddingMedium))
+        Spacer(modifier = Modifier.width(14.dp))
 
         // Title and calm single-sentence description
         Column(modifier = Modifier.weight(1f)) {
