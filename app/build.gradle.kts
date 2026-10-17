@@ -118,6 +118,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     testImplementation(libs.junit)
+    testImplementation("net.sf.kxml:kxml2:2.3.0")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.compose.bom))

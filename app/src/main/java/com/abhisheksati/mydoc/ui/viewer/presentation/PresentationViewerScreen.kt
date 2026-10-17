@@ -804,6 +804,19 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPresetShape(
             path.lineTo(w, h * 0.75f)
             path.close()
         }
+        preset.contains("leftRightArrow", ignoreCase = true) -> {
+            path.moveTo(w * 0.3f, 0f)
+            path.lineTo(0f, h * 0.5f)
+            path.lineTo(w * 0.3f, h)
+            path.lineTo(w * 0.3f, h * 0.7f)
+            path.lineTo(w * 0.7f, h * 0.7f)
+            path.lineTo(w * 0.7f, h)
+            path.lineTo(w, h * 0.5f)
+            path.lineTo(w * 0.7f, 0f)
+            path.lineTo(w * 0.7f, h * 0.3f)
+            path.lineTo(w * 0.3f, h * 0.3f)
+            path.close()
+        }
         preset.contains("upArrow", ignoreCase = true) -> {
             path.moveTo(w * 0.5f, 0f)
             path.lineTo(w, h * 0.4f)
@@ -824,6 +837,32 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPresetShape(
             path.lineTo(w * 0.25f, h * 0.6f)
             path.close()
         }
+        preset.contains("chevron", ignoreCase = true) -> {
+            path.moveTo(0f, 0f)
+            path.lineTo(w * 0.75f, 0f)
+            path.lineTo(w, h * 0.5f)
+            path.lineTo(w * 0.75f, h)
+            path.lineTo(0f, h)
+            path.lineTo(w * 0.25f, h * 0.5f)
+            path.close()
+        }
+        preset.contains("pentagon", ignoreCase = true) -> {
+            path.moveTo(0f, 0f)
+            path.lineTo(w * 0.8f, 0f)
+            path.lineTo(w, h * 0.5f)
+            path.lineTo(w * 0.8f, h)
+            path.lineTo(0f, h)
+            path.close()
+        }
+        preset.contains("hexagon", ignoreCase = true) -> {
+            path.moveTo(w * 0.25f, 0f)
+            path.lineTo(w * 0.75f, 0f)
+            path.lineTo(w, h * 0.5f)
+            path.lineTo(w * 0.75f, h)
+            path.lineTo(w * 0.25f, h)
+            path.lineTo(0f, h * 0.5f)
+            path.close()
+        }
         preset.contains("triangle", ignoreCase = true) -> {
             path.moveTo(w * 0.5f, 0f)
             path.lineTo(w, h)
@@ -835,6 +874,16 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPresetShape(
             path.lineTo(w, h * 0.5f)
             path.lineTo(w * 0.5f, h)
             path.lineTo(0f, h * 0.5f)
+            path.close()
+        }
+        preset.contains("callout", ignoreCase = true) -> {
+            path.moveTo(0f, 0f)
+            path.lineTo(w, 0f)
+            path.lineTo(w, h * 0.75f)
+            path.lineTo(w * 0.45f, h * 0.75f)
+            path.lineTo(w * 0.25f, h)
+            path.lineTo(w * 0.30f, h * 0.75f)
+            path.lineTo(0f, h * 0.75f)
             path.close()
         }
         preset.contains("star", ignoreCase = true) -> {
@@ -851,15 +900,40 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPresetShape(
             }
             path.close()
         }
+        preset.contains("line", ignoreCase = true) || preset.contains("connector", ignoreCase = true) -> {
+            path.moveTo(0f, h * 0.5f)
+            path.lineTo(w, h * 0.5f)
+            drawPath(path, color = if (border != Color.Transparent) border else bg, style = Stroke(width = 2.dp.toPx()))
+            return
+        }
         else -> return
     }
 
     drawPath(path, color = bg)
-    drawPath(
-        path,
-        color = border,
-        style = Stroke(width = 1.5.dp.toPx())
-    )
+    if (border != Color.Transparent) {
+        drawPath(
+            path,
+            color = border,
+            style = Stroke(width = 1.5.dp.toPx())
+        )
+    }
+}
+
+/**
+ * Ensures text has high contrast and readability against its immediate background.
+ */
+private fun ensureTextLegibility(rawColor: Color?, containerBg: Color): Color {
+    val isContainerDark = containerBg.isColorDark()
+    if (rawColor == null || rawColor == Color.Transparent) {
+        return if (isContainerDark) Color(0xFFF8FAFC) else Color(0xFF0F172A)
+    }
+    val bgLum = (0.299f * containerBg.red + 0.587f * containerBg.green + 0.114f * containerBg.blue)
+    val textLum = (0.299f * rawColor.red + 0.587f * rawColor.green + 0.114f * rawColor.blue)
+    val contrastRatio = (maxOf(bgLum, textLum) + 0.05f) / (minOf(bgLum, textLum) + 0.05f)
+    if (contrastRatio < 2.5f) {
+        return if (isContainerDark) Color(0xFFF8FAFC) else Color(0xFF0F172A)
+    }
+    return rawColor
 }
 
 /**
@@ -996,7 +1070,8 @@ private fun VisualSlideCard(
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                 val totalWidth = maxWidth
                 val totalHeight = maxHeight
-                val scaleFactor = (totalWidth.value / 640f).coerceIn(0.45f, 2.5f)
+                val referenceHeight = 540f
+                val scaleFactor = (totalHeight.value / referenceHeight).coerceIn(0.55f, 2.5f)
 
                 for (element in slide.visualElements) {
                     val elementWidth = (totalWidth * element.bounds.width).coerceAtLeast(1.dp)
@@ -1032,8 +1107,20 @@ private fun VisualSlideCard(
                                     preset.contains("Arrow", ignoreCase = true) ||
                                     preset.contains("triangle", ignoreCase = true) ||
                                     preset.contains("diamond", ignoreCase = true) ||
-                                    preset.contains("star", ignoreCase = true)
+                                    preset.contains("star", ignoreCase = true) ||
+                                    preset.contains("chevron", ignoreCase = true) ||
+                                    preset.contains("pentagon", ignoreCase = true) ||
+                                    preset.contains("hexagon", ignoreCase = true) ||
+                                    preset.contains("callout", ignoreCase = true) ||
+                                    preset.contains("line", ignoreCase = true) ||
+                                    preset.contains("connector", ignoreCase = true)
                                 )
+
+                                val containerBg = if (element.backgroundColor != null && element.backgroundColor != Color.Transparent) {
+                                    element.backgroundColor!!
+                                } else {
+                                    slideBg
+                                }
 
                                 if (preset != null && isVectorPreset) {
                                     Canvas(modifier = Modifier.fillMaxSize()) {
@@ -1064,14 +1151,18 @@ private fun VisualSlideCard(
                                     )
                                     .padding(horizontal = 4.dp, vertical = 2.dp)
 
+                                val paraCount = element.paragraphs.size
+                                val autoFitScale = if (paraCount >= 4 && element.bounds.height < 0.35f) 0.85f else 1.0f
+                                val elementScale = scaleFactor * autoFitScale
+                                val isSingleTitle = paraCount == 1 && element.bounds.height < 0.22f
+
                                 Box(
                                     modifier = shapeModifier,
-                                    contentAlignment = Alignment.CenterStart
+                                    contentAlignment = if (isSingleTitle) Alignment.Center else Alignment.TopStart
                                 ) {
                                     Column(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .verticalScroll(rememberScrollState())
+                                        modifier = Modifier.fillMaxSize(),
+                                        verticalArrangement = if (isSingleTitle) Arrangement.Center else Arrangement.Top
                                     ) {
                                         for ((pIdx, para) in element.paragraphs.withIndex()) {
                                             val indentSpaces = "   ".repeat(para.indentLevel.coerceIn(0, 5))
@@ -1085,15 +1176,8 @@ private fun VisualSlideCard(
                                             }
 
                                             val firstRun = para.runs.firstOrNull()
-                                            val rawBulletColor = firstRun?.color ?: baseContentColor
-                                            val bulletColor = if (isBgDark && rawBulletColor.isColorDark()) {
-                                                Color(0xFFF1F5F9)
-                                            } else if (!isBgDark && !rawBulletColor.isColorDark() && rawBulletColor != Color.Transparent) {
-                                                Color(0xFF1E293B)
-                                            } else {
-                                                rawBulletColor
-                                            }
-                                            val bulletSize = ((firstRun?.fontSizeSp ?: 14f) * scaleFactor).coerceIn(7f, 42f).sp
+                                            val bulletColor = ensureTextLegibility(firstRun?.color, containerBg)
+                                            val bulletSize = ((firstRun?.fontSizeSp ?: 14f) * elementScale).coerceIn(8f, 44f).sp
 
                                             val annotated = buildAnnotatedString {
                                                 if (bulletStr.isNotEmpty()) {
@@ -1110,16 +1194,9 @@ private fun VisualSlideCard(
                                                 }
 
                                                 for (run in para.runs) {
-                                                    val rawColor = run.color ?: baseContentColor
-                                                    val runColor = if (isBgDark && rawColor.isColorDark()) {
-                                                        Color(0xFFF1F5F9)
-                                                    } else if (!isBgDark && !rawColor.isColorDark() && rawColor != Color.Transparent) {
-                                                        Color(0xFF1E293B)
-                                                    } else {
-                                                        rawColor
-                                                    }
+                                                    val runColor = ensureTextLegibility(run.color, containerBg)
                                                     val isMatch = highlightQuery.length >= 2 && run.text.contains(highlightQuery, ignoreCase = true)
-                                                    val scaledSp = (run.fontSizeSp * scaleFactor).coerceIn(7f, 42f).sp
+                                                    val scaledSp = (run.fontSizeSp * elementScale).coerceIn(8f, 44f).sp
 
                                                     val textDec = when {
                                                         run.isUnderline && run.isStrikeThrough -> TextDecoration.combine(listOf(TextDecoration.Underline, TextDecoration.LineThrough))
@@ -1145,7 +1222,7 @@ private fun VisualSlideCard(
                                             }
 
                                             if (annotated.isNotEmpty()) {
-                                                val baseSp = ((firstRun?.fontSizeSp ?: 14f) * scaleFactor).coerceIn(7f, 42f)
+                                                val baseSp = ((firstRun?.fontSizeSp ?: 14f) * elementScale).coerceIn(8f, 44f)
                                                 Text(
                                                     text = annotated,
                                                     textAlign = para.alignment,
@@ -1184,7 +1261,7 @@ private fun VisualSlideCard(
                                                         text = cellText,
                                                         query = highlightQuery,
                                                         fontSize = (10f * scaleFactor).coerceIn(7f, 16f).sp,
-                                                        color = defaultTextColor
+                                                        color = ensureTextLegibility(defaultTextColor, slideBg)
                                                     )
                                                 }
                                             }

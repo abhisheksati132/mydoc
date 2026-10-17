@@ -1,14 +1,15 @@
 package com.abhisheksati.mydoc.rendering.engine.presentation
 
-import android.util.Xml
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.xmlpull.v1.XmlPullParser
+import org.xmlpull.v1.XmlPullParserFactory
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.InputStream
+import java.util.ArrayDeque
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
@@ -81,13 +82,13 @@ data class PptxPresentation(
 )
 
 /**
- * Resilient multi-format presentation engine.
+ * Enterprise presentation engine.
  * Supports:
- * 1. Modern OOXML PowerPoint presentations (.pptx) via safe random-access ZipFile in cacheDir or in-memory map,
- *    layout placeholder mapping, slide backgrounds, slide relationships, speaker notes, vector shapes,
- *    theme fonts (majorFont/minorFont), default paragraph run properties (<a:defRPr>), underline/strike, and bullet formatting.
- * 2. Legacy binary PowerPoint presentations (.ppt, PowerPoint 97-2003 OLE2) via binary record parsing
- *    (RT_Slide, RT_TextCharsAtom, RT_TextBytesAtom).
+ * 1. Modern OpenXML PowerPoint (.pptx) with exact tag parsing (isTag), slideLayout and slideMaster
+ *    placeholder inheritance, nested group transforms (<p:grpSp>), DrawingML theme palettes (<a:clrScheme>)
+ *    and color modifiers (lumMod, lumOff, tint, shade), speaker notes, vector shapes, and embedded media.
+ * 2. Legacy binary PowerPoint (PowerPoint 97-2003 OLE2 .ppt) via a native Compound File Binary Format
+ *    (CFBF) structured storage stream extractor and PowerPoint Document record parser.
  */
 class PptxParser {
 
@@ -97,27 +98,23 @@ class PptxParser {
             return@withContext emptyPresentation()
         }
 
-        // Check file magic bytes
         val isZip = bytes.size >= 4 && bytes[0] == 0x50.toByte() && bytes[1] == 0x4B.toByte() // PK..
         val isOle2 = bytes.size >= 8 &&
             bytes[0] == 0xD0.toByte() && bytes[1] == 0xCF.toByte() &&
             bytes[2] == 0x11.toByte() && bytes[3] == 0xE0.toByte() // D0 CF 11 E0
 
         if (isOle2) {
-            // Legacy binary .ppt format
             return@withContext parseBinaryPpt(bytes)
         }
 
         if (isZip) {
-            // Modern .pptx format
             val pres = parsePptxZip(bytes, cacheDir)
             if (pres.slides.isNotEmpty()) {
                 return@withContext pres
             }
-            return@withContext emptyPresentation()
         }
 
-        // Fallback: If not zip and not ole2, attempt binary PPT parsing
+        // Fallback: If not recognized or zip failed, attempt binary PPT extraction
         parseBinaryPpt(bytes)
     }
 
@@ -135,9 +132,10 @@ class PptxParser {
         )
     }
 
-    /**
-     * Modern .pptx parser using cacheDir temp file or in-memory ZipInputStream.
-     */
+    /* =========================================================================
+     * SECTION 1: MODERN OPENXML (.pptx) PARSER
+     * ========================================================================= */
+
     private fun parsePptxZip(bytes: ByteArray, cacheDir: File?): PptxPresentation {
         if (cacheDir != null && cacheDir.exists()) {
             try {
@@ -168,7 +166,6 @@ class PptxParser {
             } catch (_: Exception) {}
         }
 
-        // In-memory fallback
         return parseZipInMemory(bytes)
     }
 
@@ -192,6 +189,43 @@ class PptxParser {
         return parseFromEntryMap(entryMap)
     }
 
+    private data class GroupTransform(
+        val offX: Long,
+        val offY: Long,
+        val extX: Long,
+        val extY: Long,
+        val chOffX: Long,
+        val chOffY: Long,
+        val chExtX: Long,
+        val chExtY: Long
+    )
+
+    private data class PlaceholderLayout(
+        val bounds: SlideBounds?,
+        val fillColor: Color?,
+        val borderColor: Color?,
+        val borderWidthDp: Float?,
+        val preset: String?,
+        val defFont: String?,
+        val defSizeSp: Float?,
+        val defBold: Boolean?,
+        val defItalic: Boolean?,
+        val defColor: Color?,
+        val defAlign: TextAlign?
+    )
+
+    private data class SlideLayoutInfo(
+        val placeholders: Map<String, PlaceholderLayout>, // key: "type:idx" or "type" or "idx"
+        val backgroundFill: Color?,
+        val backgroundShapes: List<VisualElement>
+    )
+
+    private data class ThemeInfo(
+        val colorScheme: Map<String, Color>,
+        val majorFont: String,
+        val minorFont: String
+    )
+
     private fun parseFromEntryMap(entryMap: Map<String, ByteArray>): PptxPresentation {
         val mediaMap = mutableMapOf<String, ByteArray>()
         val relsMap = mutableMapOf<String, MutableMap<String, String>>()
@@ -211,16 +245,10 @@ class PptxParser {
             orderedSlideRelIds.addAll(slideRels)
         }
 
-        // 2. Parse theme fonts (majorFont for titles, minorFont for body)
-        var majorFont = "Arial"
-        var minorFont = "Calibri"
+        // 2. Parse Theme (Color Scheme + Major/Minor Fonts)
         val themeBytes = entryMap["ppt/theme/theme1.xml"]
             ?: entryMap.entries.firstOrNull { it.key.contains("theme/theme", ignoreCase = true) }?.value
-        if (themeBytes != null) {
-            val (maj, min) = parseThemeFonts(themeBytes)
-            if (!maj.isNullOrBlank()) majorFont = maj
-            if (!min.isNullOrBlank()) minorFont = min
-        }
+        val theme = if (themeBytes != null) parseThemeXml(themeBytes) else defaultTheme()
 
         // 3. Parse presentation relationships (maps rId -> slide path)
         val presRelsBytes = entryMap["ppt/_rels/presentation.xml.rels"]
@@ -239,7 +267,7 @@ class PptxParser {
             }
         }
 
-        // 5. Extract slide relationships (slide*.xml.rels)
+        // 5. Extract all package relationships
         for ((name, data) in entryMap) {
             if (name.contains("_rels/") && name.endsWith(".rels", ignoreCase = true)) {
                 val map = parseRelationshipsXml(data)
@@ -249,7 +277,18 @@ class PptxParser {
             }
         }
 
-        // 6. Extract Speaker Notes (notesSlide*.xml)
+        // 6. Pre-parse slideLayouts to inherit exact coordinates and placeholder styling
+        val layoutCache = mutableMapOf<String, SlideLayoutInfo>()
+        for ((name, data) in entryMap) {
+            if (name.contains("ppt/slidelayouts/slidelayout", ignoreCase = true) && name.endsWith(".xml", ignoreCase = true)) {
+                val layoutInfo = parseSlideLayoutXml(data, slideWidth, slideHeight, theme)
+                layoutCache[name] = layoutInfo
+                layoutCache[name.removePrefix("ppt/")] = layoutInfo
+                layoutCache[name.substringAfterLast('/')] = layoutInfo
+            }
+        }
+
+        // 7. Extract Speaker Notes (notesSlide*.xml)
         for ((name, data) in entryMap) {
             if (name.contains("notesslide", ignoreCase = true) && name.endsWith(".xml", ignoreCase = true)) {
                 val noteText = parseNotesXml(data)
@@ -261,7 +300,7 @@ class PptxParser {
             }
         }
 
-        // 7. Determine slide entries in true presentation order
+        // 8. Determine slide entries in true presentation order
         val slideKeys = mutableListOf<String>()
         if (orderedSlideRelIds.isNotEmpty()) {
             for (relId in orderedSlideRelIds) {
@@ -269,7 +308,7 @@ class PptxParser {
                 if (target != null) {
                     val targetNorm = target.trimStart('/').let {
                         if (it.startsWith("slides/")) "ppt/$it"
-                        else if (!it.startsWith("ppt/")) "ppt/slides/$it"
+                        else if (!it.startsWith("ppt/")) "ppt/$it"
                         else it
                     }
                     val foundKey = if (entryMap.containsKey(targetNorm)) targetNorm
@@ -297,7 +336,7 @@ class PptxParser {
 
         val presAspectRatio = if (slideHeight > 0) slideWidth.toFloat() / slideHeight.toFloat() else 16f / 9f
 
-        // 8. Parse each slide XML into rich visual elements
+        // 9. Parse each slide XML into rich visual elements
         val slidesList = mutableListOf<PptxSlide>()
         for ((index, key) in slideKeys.withIndex()) {
             val slideNum = index + 1
@@ -309,6 +348,15 @@ class PptxParser {
                 ?: relsMap["slide$slideNum.xml"]
                 ?: emptyMap()
 
+            // Resolve slide layout reference
+            val layoutTarget = slideRels.values.find { it.contains("slideLayout", ignoreCase = true) }
+            val slideLayout = if (layoutTarget != null) {
+                layoutCache[layoutTarget]
+                    ?: layoutCache[layoutTarget.removePrefix("ppt/")]
+                    ?: layoutCache[layoutTarget.substringAfterLast('/')]
+            } else null
+
+            // Resolve speaker notes reference
             val noteTarget = slideRels.values.find { it.contains("notesSlide", ignoreCase = true) }
             val slideNotes = (if (noteTarget != null) {
                 notesMap[noteTarget] ?: notesMap[noteTarget.substringAfterLast('/')]
@@ -325,8 +373,8 @@ class PptxParser {
                 aspectRatio = presAspectRatio,
                 mediaMap = mediaMap,
                 relsMap = slideRels,
-                majorFont = majorFont,
-                minorFont = minorFont,
+                theme = theme,
+                layoutInfo = slideLayout,
                 notes = slideNotes
             )
             slidesList.add(slide)
@@ -339,38 +387,256 @@ class PptxParser {
         }
     }
 
-    private fun parseThemeFonts(xmlBytes: ByteArray): Pair<String?, String?> {
-        var major: String? = null
-        var minor: String? = null
+    private fun defaultTheme(): ThemeInfo {
+        val colors = mapOf(
+            "dk1" to Color(0xFF0F172A),
+            "lt1" to Color(0xFFFFFFFF),
+            "dk2" to Color(0xFF334155),
+            "lt2" to Color(0xFFF8FAFC),
+            "accent1" to Color(0xFF2563EB),
+            "accent2" to Color(0xFFDC2626),
+            "accent3" to Color(0xFF16A34A),
+            "accent4" to Color(0xFFD97706),
+            "accent5" to Color(0xFF7C3AED),
+            "accent6" to Color(0xFF0D9488),
+            "hlink" to Color(0xFF1D4ED8),
+            "folHlink" to Color(0xFF6D28D9)
+        )
+        return ThemeInfo(colors, majorFont = "Arial", minorFont = "Calibri")
+    }
+
+    private fun parseThemeXml(xmlBytes: ByteArray): ThemeInfo {
+        val colors = mutableMapOf<String, Color>()
+        var majorFont = "Arial"
+        var minorFont = "Calibri"
+
         try {
-            val parser = Xml.newPullParser().apply {
-                setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
-                setInput(ByteArrayInputStream(xmlBytes), "UTF-8")
-            }
+            val parser = createPullParser(ByteArrayInputStream(xmlBytes))
             var eventType = parser.eventType
-            var inMajor = false
-            var inMinor = false
+            var inClrScheme = false
+            var currentClrTag = ""
+            var inMajorFont = false
+            var inMinorFont = false
+
             while (eventType != XmlPullParser.END_DOCUMENT) {
-                if (eventType == XmlPullParser.START_TAG) {
-                    val tag = parser.name ?: ""
-                    when {
-                        tag.endsWith("majorFont", ignoreCase = true) -> inMajor = true
-                        tag.endsWith("minorFont", ignoreCase = true) -> inMinor = true
-                        tag.endsWith("latin", ignoreCase = true) -> {
-                            val tf = parser.getAttributeValue(null, "typeface")
-                            if (inMajor && major == null) major = tf
-                            if (inMinor && minor == null) minor = tf
+                val tag = parser.name ?: ""
+                when (eventType) {
+                    XmlPullParser.START_TAG -> {
+                        when {
+                            isTag(tag, "clrScheme") -> inClrScheme = true
+                            inClrScheme && (tag in listOf("dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink", "folHlink")) -> {
+                                currentClrTag = tag
+                            }
+                            inClrScheme && currentClrTag.isNotEmpty() && isTag(tag, "srgbClr") -> {
+                                val hex = parser.getAttributeValue(null, "val")
+                                parseHexColor(hex)?.let { colors[currentClrTag] = it }
+                            }
+                            inClrScheme && currentClrTag.isNotEmpty() && isTag(tag, "sysClr") -> {
+                                val hex = parser.getAttributeValue(null, "lastClr")
+                                parseHexColor(hex)?.let { colors[currentClrTag] = it }
+                            }
+                            isTag(tag, "majorFont") -> inMajorFont = true
+                            isTag(tag, "minorFont") -> inMinorFont = true
+                            (inMajorFont || inMinorFont) && isTag(tag, "latin") -> {
+                                val typeface = parser.getAttributeValue(null, "typeface")
+                                if (!typeface.isNullOrBlank()) {
+                                    if (inMajorFont) majorFont = typeface
+                                    if (inMinorFont) minorFont = typeface
+                                }
+                            }
                         }
                     }
-                } else if (eventType == XmlPullParser.END_TAG) {
-                    val tag = parser.name ?: ""
-                    if (tag.endsWith("majorFont", ignoreCase = true)) inMajor = false
-                    if (tag.endsWith("minorFont", ignoreCase = true)) inMinor = false
+                    XmlPullParser.END_TAG -> {
+                        when {
+                            isTag(tag, "clrScheme") -> inClrScheme = false
+                            tag == currentClrTag -> currentClrTag = ""
+                            isTag(tag, "majorFont") -> inMajorFont = false
+                            isTag(tag, "minorFont") -> inMinorFont = false
+                        }
+                    }
                 }
                 eventType = parser.next()
             }
-        } catch (_: Exception) {}
-        return Pair(major, minor)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // Fallback standard colors if missing in theme
+        val defaults = defaultTheme().colorScheme
+        for ((k, v) in defaults) {
+            if (!colors.containsKey(k)) colors[k] = v
+        }
+
+        return ThemeInfo(colors, majorFont, minorFont)
+    }
+
+    private fun parseSlideLayoutXml(
+        xmlBytes: ByteArray,
+        slideWidth: Long,
+        slideHeight: Long,
+        theme: ThemeInfo
+    ): SlideLayoutInfo {
+        val placeholders = mutableMapOf<String, PlaceholderLayout>()
+        var backgroundFill: Color? = null
+        val backgroundShapes = mutableListOf<VisualElement>()
+
+        try {
+            val parser = createPullParser(ByteArrayInputStream(xmlBytes))
+            var eventType = parser.eventType
+            var inShape = false
+            var inSpPr = false
+            var inLn = false
+            var inTxBody = false
+            var inDefRPr = false
+            var inBg = false
+
+            var curPhType: String? = null
+            var curPhIdx: String? = null
+            var curOffX = 0L; var curOffY = 0L; var curExtX = 0L; var curExtY = 0L
+            var curFillColor: Color? = null
+            var curBorderColor: Color? = null
+            var curBorderWidth = 0f
+            var curPreset: String? = null
+            var curDefFont: String? = null
+            var curDefSizeSp: Float? = null
+            var curDefBold: Boolean? = null
+            var curDefItalic: Boolean? = null
+            var curDefColor: Color? = null
+            var curDefAlign: TextAlign? = null
+
+            while (eventType != XmlPullParser.END_DOCUMENT) {
+                val tag = parser.name ?: ""
+                when (eventType) {
+                    XmlPullParser.START_TAG -> {
+                        when {
+                            isTag(tag, "bg") || isTag(tag, "bgPr") -> inBg = true
+                            isTag(tag, "sp") -> {
+                                inShape = true
+                                curPhType = null; curPhIdx = null
+                                curOffX = 0L; curOffY = 0L; curExtX = 0L; curExtY = 0L
+                                curFillColor = null; curBorderColor = null; curBorderWidth = 0f
+                                curPreset = null; curDefFont = null; curDefSizeSp = null
+                                curDefBold = null; curDefItalic = null; curDefColor = null; curDefAlign = null
+                            }
+                            isTag(tag, "spPr") -> inSpPr = true
+                            isTag(tag, "ln") -> {
+                                inLn = true
+                                val w = parser.getAttributeValue(null, "w")?.toFloatOrNull()
+                                if (w != null) curBorderWidth = (w / 12700f).coerceIn(0.5f, 10f)
+                            }
+                            isTag(tag, "txBody") -> inTxBody = true
+                            isTag(tag, "defRPr") -> {
+                                inDefRPr = true
+                                val sz = parser.getAttributeValue(null, "sz")?.toFloatOrNull()
+                                if (sz != null) curDefSizeSp = (sz / 100f).coerceIn(8f, 72f)
+                                if (parser.getAttributeValue(null, "b") == "1") curDefBold = true
+                                if (parser.getAttributeValue(null, "i") == "1") curDefItalic = true
+                            }
+                            isTag(tag, "pPr") -> {
+                                val algn = parser.getAttributeValue(null, "algn")
+                                curDefAlign = when (algn) {
+                                    "ctr" -> TextAlign.Center
+                                    "r" -> TextAlign.End
+                                    "just" -> TextAlign.Justify
+                                    else -> TextAlign.Start
+                                }
+                            }
+                            isTag(tag, "ph") -> {
+                                curPhType = parser.getAttributeValue(null, "type")?.lowercase()
+                                curPhIdx = parser.getAttributeValue(null, "idx")
+                            }
+                            isTag(tag, "off") -> {
+                                curOffX = parser.getAttributeValue(null, "x")?.toLongOrNull() ?: 0L
+                                curOffY = parser.getAttributeValue(null, "y")?.toLongOrNull() ?: 0L
+                            }
+                            isTag(tag, "ext") -> {
+                                val cx = parser.getAttributeValue(null, "cx")?.toLongOrNull() ?: 0L
+                                val cy = parser.getAttributeValue(null, "cy")?.toLongOrNull() ?: 0L
+                                if (cx > 0L && cy > 0L) {
+                                    curExtX = cx; curExtY = cy
+                                }
+                            }
+                            isTag(tag, "prstGeom") -> {
+                                curPreset = parser.getAttributeValue(null, "prst")
+                            }
+                            isTag(tag, "srgbClr") -> {
+                                val hex = parser.getAttributeValue(null, "val")
+                                parseHexColor(hex)?.let { c ->
+                                    when {
+                                        inLn -> curBorderColor = c
+                                        inDefRPr -> curDefColor = c
+                                        inBg -> backgroundFill = c
+                                        inSpPr -> if (curFillColor == null) curFillColor = c
+                                    }
+                                }
+                            }
+                            isTag(tag, "schemeClr") -> {
+                                val scheme = parser.getAttributeValue(null, "val") ?: ""
+                                resolveDrawingSchemeColor(scheme, theme.colorScheme)?.let { c ->
+                                    when {
+                                        inLn -> curBorderColor = c
+                                        inDefRPr -> curDefColor = c
+                                        inBg -> backgroundFill = c
+                                        inSpPr -> if (curFillColor == null) curFillColor = c
+                                    }
+                                }
+                            }
+                            isTag(tag, "latin") -> {
+                                val tf = parser.getAttributeValue(null, "typeface")
+                                val resolved = when {
+                                    tf?.startsWith("+mj") == true -> theme.majorFont
+                                    tf?.startsWith("+mn") == true -> theme.minorFont
+                                    else -> tf
+                                }
+                                if (inDefRPr) curDefFont = resolved
+                            }
+                        }
+                    }
+                    XmlPullParser.END_TAG -> {
+                        when {
+                            isTag(tag, "bg") || isTag(tag, "bgPr") -> inBg = false
+                            isTag(tag, "spPr") -> inSpPr = false
+                            isTag(tag, "ln") -> inLn = false
+                            isTag(tag, "txBody") -> inTxBody = false
+                            isTag(tag, "defRPr") -> inDefRPr = false
+                            isTag(tag, "sp") -> {
+                                inShape = false
+                                val bounds = if (curExtX > 0L && curExtY > 0L) {
+                                    calculateRawBounds(curOffX, curOffY, curExtX, curExtY, slideWidth, slideHeight)
+                                } else null
+
+                                val layout = PlaceholderLayout(
+                                    bounds = bounds,
+                                    fillColor = curFillColor,
+                                    borderColor = curBorderColor,
+                                    borderWidthDp = curBorderWidth,
+                                    preset = curPreset,
+                                    defFont = curDefFont,
+                                    defSizeSp = curDefSizeSp,
+                                    defBold = curDefBold,
+                                    defItalic = curDefItalic,
+                                    defColor = curDefColor,
+                                    defAlign = curDefAlign
+                                )
+
+                                if (curPhType != null) {
+                                    placeholders[curPhType!!] = layout
+                                    if (curPhIdx != null) placeholders["${curPhType!!}:$curPhIdx"] = layout
+                                }
+                                if (curPhIdx != null) {
+                                    placeholders[curPhIdx!!] = layout
+                                }
+                            }
+                        }
+                    }
+                }
+                eventType = parser.next()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        return SlideLayoutInfo(placeholders, backgroundFill, backgroundShapes)
     }
 
     private fun parsePresentationInfo(xmlBytes: ByteArray): Pair<Pair<Long, Long>, List<String>> {
@@ -379,24 +645,21 @@ class PptxParser {
         val relIds = mutableListOf<String>()
 
         try {
-            val parser = Xml.newPullParser().apply {
-                setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
-                setInput(ByteArrayInputStream(xmlBytes), "UTF-8")
-            }
+            val parser = createPullParser(ByteArrayInputStream(xmlBytes))
             var eventType = parser.eventType
-
             while (eventType != XmlPullParser.END_DOCUMENT) {
                 if (eventType == XmlPullParser.START_TAG) {
-                    val name = parser.name ?: ""
-                    if (name.endsWith("sldSz", ignoreCase = true)) {
+                    val tag = parser.name ?: ""
+                    if (isTag(tag, "sldSz")) {
                         val cx = parser.getAttributeValue(null, "cx")?.toLongOrNull()
                         val cy = parser.getAttributeValue(null, "cy")?.toLongOrNull()
                         if (cx != null && cx > 0L) w = cx
                         if (cy != null && cy > 0L) h = cy
-                    } else if (name.endsWith("sldId", ignoreCase = true)) {
-                        var rId: String? = null
-                        for (i in 0 until parser.attributeCount) {
-                            if (parser.getAttributeName(i).contains("id", ignoreCase = true)) {
+                    } else if (isTag(tag, "sldId")) {
+                        var rId = parser.getAttributeValue(null, "r:id")
+                            ?: parser.getAttributeValue(null, "id")
+                        if (rId == null) {
+                            for (i in 0 until parser.attributeCount) {
                                 val v = parser.getAttributeValue(i)
                                 if (v.startsWith("rId", ignoreCase = true)) {
                                     rId = v
@@ -409,7 +672,9 @@ class PptxParser {
                 }
                 eventType = parser.next()
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
 
         return Pair(Pair(w, h), relIds)
     }
@@ -417,23 +682,20 @@ class PptxParser {
     private fun parseRelationshipsXml(xmlBytes: ByteArray): MutableMap<String, String> {
         val rels = mutableMapOf<String, String>()
         try {
-            val parser = Xml.newPullParser().apply {
-                setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
-                setInput(ByteArrayInputStream(xmlBytes), "UTF-8")
-            }
+            val parser = createPullParser(ByteArrayInputStream(xmlBytes))
             var eventType = parser.eventType
 
             while (eventType != XmlPullParser.END_DOCUMENT) {
-                if (eventType == XmlPullParser.START_TAG && parser.name?.endsWith("Relationship", ignoreCase = true) == true) {
+                if (eventType == XmlPullParser.START_TAG && isTag(parser.name ?: "", "Relationship")) {
                     val id = parser.getAttributeValue(null, "Id")
                     val target = parser.getAttributeValue(null, "Target")
                     if (id != null && target != null) {
                         val cleanTarget = if (target.startsWith("../")) {
                             "ppt/" + target.removePrefix("../")
-                        } else if (!target.startsWith("ppt/")) {
-                            "ppt/slides/$target"
-                        } else {
+                        } else if (target.startsWith("ppt/")) {
                             target
+                        } else {
+                            "ppt/$target"
                         }
                         rels[id] = cleanTarget
                     }
@@ -446,20 +708,15 @@ class PptxParser {
 
     private fun parseNotesXml(xmlBytes: ByteArray): String {
         return try {
-            val parser = Xml.newPullParser().apply {
-                setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
-                setInput(ByteArrayInputStream(xmlBytes), "UTF-8")
-            }
+            val parser = createPullParser(ByteArrayInputStream(xmlBytes))
             var eventType = parser.eventType
             val sb = StringBuilder()
             var currentTag = ""
             while (eventType != XmlPullParser.END_DOCUMENT) {
                 when (eventType) {
-                    XmlPullParser.START_TAG -> {
-                        currentTag = parser.name ?: ""
-                    }
+                    XmlPullParser.START_TAG -> currentTag = parser.name ?: ""
                     XmlPullParser.TEXT -> {
-                        if (currentTag.equals("a:t", ignoreCase = true) || currentTag.equals("t", ignoreCase = true)) {
+                        if (isTag(currentTag, "t")) {
                             val text = parser.text?.trim()
                             if (!text.isNullOrEmpty() && !text.all { it.isDigit() }) {
                                 if (sb.isNotEmpty()) sb.append(" ")
@@ -484,19 +741,19 @@ class PptxParser {
         aspectRatio: Float,
         mediaMap: Map<String, ByteArray>,
         relsMap: Map<String, String>,
-        majorFont: String,
-        minorFont: String,
+        theme: ThemeInfo,
+        layoutInfo: SlideLayoutInfo?,
         notes: String? = null
     ): PptxSlide {
         val visualElements = mutableListOf<VisualElement>()
         val plainTextParagraphs = mutableListOf<String>()
-        var slideBgColor: Color? = null
+        var slideBgColor: Color? = layoutInfo?.backgroundFill
+
+        // Group transform stack for nested <p:grpSp>
+        val groupTransformStack = ArrayDeque<GroupTransform>()
 
         try {
-            val parser = Xml.newPullParser().apply {
-                setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
-                setInput(stream, "UTF-8")
-            }
+            val parser = createPullParser(stream)
 
             var currentTag = ""
             var inShape = false
@@ -512,10 +769,7 @@ class PptxParser {
             var inRPr = false
             var shapeCounter = 0
 
-            var curOffX = 0L
-            var curOffY = 0L
-            var curExtX = 0L
-            var curExtY = 0L
+            var curOffX = 0L; var curOffY = 0L; var curExtX = 0L; var curExtY = 0L
             var curFillColor: Color? = null
             var curBorderColor: Color? = null
             var curBorderWidth = 0f
@@ -523,7 +777,14 @@ class PptxParser {
             var curIsEllipse = false
             var curShapePreset: String? = null
             var curPlaceholderType: String? = null
+            var curPlaceholderIdx: String? = null
             var curBlipEmbed: String? = null
+
+            // Color transform attributes
+            var curLumMod = 1.0f
+            var curLumOff = 0.0f
+            var curTint = 0.0f
+            var curShade = 0.0f
 
             // Paragraph styling defaults
             var paraDefSize: Float? = null
@@ -562,30 +823,30 @@ class PptxParser {
                         currentTag = tagName
 
                         when {
-                            tagName.endsWith("bg", ignoreCase = true) || tagName.endsWith("bgPr", ignoreCase = true) -> {
-                                inBg = true
+                            isTag(tagName, "bg") || isTag(tagName, "bgPr") -> inBg = true
+
+                            // Group Shape start
+                            isTag(tagName, "grpSp") -> {
+                                groupTransformStack.push(
+                                    GroupTransform(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)
+                                )
                             }
 
-                            tagName.endsWith("sp", ignoreCase = true) && !tagName.endsWith("grpSp", ignoreCase = true) -> {
+                            isTag(tagName, "sp") -> {
                                 inShape = true
-                                inSpPr = false
-                                inLn = false
-                                inTxBody = false
-                                inRPr = false
-                                inDefRPr = false
+                                inSpPr = false; inLn = false; inTxBody = false; inRPr = false; inDefRPr = false
                                 curOffX = 0L; curOffY = 0L; curExtX = 0L; curExtY = 0L
                                 curFillColor = null; curBorderColor = null; curBorderWidth = 0f
                                 curIsRounded = false; curIsEllipse = false
                                 curShapePreset = null
                                 curPlaceholderType = null
+                                curPlaceholderIdx = null
                                 curParagraphs.clear()
                             }
 
-                            tagName.endsWith("spPr", ignoreCase = true) -> {
-                                inSpPr = true
-                            }
+                            isTag(tagName, "spPr") -> inSpPr = true
 
-                            tagName.endsWith("ln", ignoreCase = true) -> {
+                            isTag(tagName, "ln") -> {
                                 inLn = true
                                 val w = parser.getAttributeValue(null, "w")?.toFloatOrNull()
                                 if (w != null) {
@@ -593,71 +854,75 @@ class PptxParser {
                                 }
                             }
 
-                            tagName.endsWith("txBody", ignoreCase = true) -> {
-                                inTxBody = true
+                            isTag(tagName, "txBody") -> inTxBody = true
+
+                            isTag(tagName, "noFill") -> {
+                                if (inLn) curBorderColor = null
+                                else if (inSpPr) curFillColor = Color.Transparent
                             }
 
-                            tagName.endsWith("noFill", ignoreCase = true) -> {
-                                if (inLn) {
-                                    curBorderColor = null
-                                } else if (inSpPr) {
-                                    curFillColor = Color.Transparent
-                                }
-                            }
-
-                            tagName.endsWith("pic", ignoreCase = true) -> {
+                            isTag(tagName, "pic") -> {
                                 inPic = true
                                 curOffX = 0L; curOffY = 0L; curExtX = 0L; curExtY = 0L
                                 curBlipEmbed = null
                             }
 
-                            tagName.endsWith("graphicFrame", ignoreCase = true) -> {
+                            isTag(tagName, "graphicFrame") -> {
                                 inGraphicFrame = true
                                 curOffX = 0L; curOffY = 0L; curExtX = 0L; curExtY = 0L
                                 curTableRows.clear()
                             }
 
-                            tagName.endsWith("tbl", ignoreCase = true) -> {
+                            isTag(tagName, "tbl") -> {
                                 inTable = true
                                 curTableRows.clear()
                             }
 
-                            tagName.endsWith("tr", ignoreCase = true) -> {
-                                curTableRow = mutableListOf()
-                            }
+                            isTag(tagName, "tr") -> curTableRow = mutableListOf()
 
-                            tagName.endsWith("tc", ignoreCase = true) -> {
-                                curCellText.clear()
-                            }
+                            isTag(tagName, "tc") -> curCellText.clear()
 
-                            tagName.endsWith("ph", ignoreCase = true) -> {
+                            isTag(tagName, "ph") -> {
                                 val phType = parser.getAttributeValue(null, "type")
                                 val phIdx = parser.getAttributeValue(null, "idx")
-                                curPlaceholderType = when {
-                                    phType != null -> phType.lowercase()
-                                    phIdx == "0" -> "title"
-                                    phIdx == "1" -> "body"
-                                    else -> "body"
-                                }
+                                curPlaceholderType = phType?.lowercase()
+                                curPlaceholderIdx = phIdx
                             }
 
-                            tagName.endsWith("off", ignoreCase = true) -> {
+                            // Coordinate transforms for shapes & groups
+                            isTag(tagName, "off") -> {
                                 val x = parser.getAttributeValue(null, "x")?.toLongOrNull() ?: 0L
                                 val y = parser.getAttributeValue(null, "y")?.toLongOrNull() ?: 0L
-                                curOffX = x
-                                curOffY = y
+                                curOffX = x; curOffY = y
                             }
 
-                            tagName.endsWith("ext", ignoreCase = true) -> {
+                            isTag(tagName, "ext") -> {
                                 val cx = parser.getAttributeValue(null, "cx")?.toLongOrNull() ?: 0L
                                 val cy = parser.getAttributeValue(null, "cy")?.toLongOrNull() ?: 0L
                                 if (cx > 0L && cy > 0L) {
-                                    curExtX = cx
-                                    curExtY = cy
+                                    curExtX = cx; curExtY = cy
                                 }
                             }
 
-                            tagName.endsWith("prstGeom", ignoreCase = true) -> {
+                            isTag(tagName, "chOff") -> {
+                                if (!groupTransformStack.isEmpty()) {
+                                    val top = groupTransformStack.pop()
+                                    val cx = parser.getAttributeValue(null, "x")?.toLongOrNull() ?: 0L
+                                    val cy = parser.getAttributeValue(null, "y")?.toLongOrNull() ?: 0L
+                                    groupTransformStack.push(top.copy(chOffX = cx, chOffY = cy))
+                                }
+                            }
+
+                            isTag(tagName, "chExt") -> {
+                                if (!groupTransformStack.isEmpty()) {
+                                    val top = groupTransformStack.pop()
+                                    val cx = parser.getAttributeValue(null, "cx")?.toLongOrNull() ?: 0L
+                                    val cy = parser.getAttributeValue(null, "cy")?.toLongOrNull() ?: 0L
+                                    groupTransformStack.push(top.copy(chExtX = cx, chExtY = cy))
+                                }
+                            }
+
+                            isTag(tagName, "prstGeom") -> {
                                 val prst = parser.getAttributeValue(null, "prst") ?: ""
                                 curShapePreset = prst
                                 if (prst.contains("round", ignoreCase = true)) {
@@ -667,9 +932,24 @@ class PptxParser {
                                 }
                             }
 
-                            tagName.endsWith("srgbClr", ignoreCase = true) -> {
+                            // Color modifiers
+                            isTag(tagName, "lumMod") -> {
+                                curLumMod = (parser.getAttributeValue(null, "val")?.toFloatOrNull() ?: 100000f) / 100000f
+                            }
+                            isTag(tagName, "lumOff") -> {
+                                curLumOff = (parser.getAttributeValue(null, "val")?.toFloatOrNull() ?: 0f) / 100000f
+                            }
+                            isTag(tagName, "tint") -> {
+                                curTint = (parser.getAttributeValue(null, "val")?.toFloatOrNull() ?: 0f) / 100000f
+                            }
+                            isTag(tagName, "shade") -> {
+                                curShade = (parser.getAttributeValue(null, "val")?.toFloatOrNull() ?: 0f) / 100000f
+                            }
+
+                            isTag(tagName, "srgbClr") -> {
                                 val hex = parser.getAttributeValue(null, "val")
-                                val color = parseHexColor(hex)
+                                val baseColor = parseHexColor(hex)
+                                val color = baseColor?.let { applyColorTransforms(it, curLumMod, curLumOff, curTint, curShade) }
                                 if (color != null) {
                                     when {
                                         inLn -> curBorderColor = color
@@ -681,11 +961,13 @@ class PptxParser {
                                         else -> if (inShape && curFillColor == null) curFillColor = color
                                     }
                                 }
+                                curLumMod = 1f; curLumOff = 0f; curTint = 0f; curShade = 0f
                             }
 
-                            tagName.endsWith("schemeClr", ignoreCase = true) -> {
+                            isTag(tagName, "schemeClr") -> {
                                 val scheme = parser.getAttributeValue(null, "val") ?: ""
-                                val color = parseSchemeColor(scheme)
+                                val baseColor = resolveDrawingSchemeColor(scheme, theme.colorScheme)
+                                val color = baseColor?.let { applyColorTransforms(it, curLumMod, curLumOff, curTint, curShade) }
                                 if (color != null) {
                                     when {
                                         inLn -> curBorderColor = color
@@ -697,9 +979,10 @@ class PptxParser {
                                         else -> if (inShape && curFillColor == null) curFillColor = color
                                     }
                                 }
+                                curLumMod = 1f; curLumOff = 0f; curTint = 0f; curShade = 0f
                             }
 
-                            tagName.endsWith("blip", ignoreCase = true) -> {
+                            isTag(tagName, "blip") -> {
                                 var embed: String? = null
                                 for (i in 0 until parser.attributeCount) {
                                     if (parser.getAttributeName(i).contains("embed", ignoreCase = true)) {
@@ -710,7 +993,7 @@ class PptxParser {
                                 if (embed != null) curBlipEmbed = embed
                             }
 
-                            tagName.endsWith("p", ignoreCase = true) -> {
+                            isTag(tagName, "p") -> {
                                 curRuns.clear()
                                 curParaAlign = TextAlign.Start
                                 inPPr = false
@@ -726,7 +1009,7 @@ class PptxParser {
                                 curIndentLvl = 0
                             }
 
-                            tagName.endsWith("pPr", ignoreCase = true) -> {
+                            isTag(tagName, "pPr") -> {
                                 inPPr = true
                                 val algn = parser.getAttributeValue(null, "algn")
                                 curParaAlign = when (algn) {
@@ -739,19 +1022,19 @@ class PptxParser {
                                 if (lvl != null) curIndentLvl = lvl
                             }
 
-                            tagName.endsWith("buChar", ignoreCase = true) -> {
+                            isTag(tagName, "buChar") -> {
                                 curBulletChar = parser.getAttributeValue(null, "char") ?: "•"
                             }
 
-                            tagName.endsWith("buAutoNum", ignoreCase = true) -> {
+                            isTag(tagName, "buAutoNum") -> {
                                 curBulletChar = "1."
                             }
 
-                            tagName.endsWith("buNone", ignoreCase = true) -> {
+                            isTag(tagName, "buNone") -> {
                                 curBulletChar = null
                             }
 
-                            tagName.endsWith("defRPr", ignoreCase = true) -> {
+                            isTag(tagName, "defRPr") -> {
                                 inDefRPr = true
                                 val sz = parser.getAttributeValue(null, "sz")?.toFloatOrNull()
                                 if (sz != null) {
@@ -765,26 +1048,26 @@ class PptxParser {
                                 if (strike != null && strike != "noStrike") paraDefStrike = true
                             }
 
-                            tagName.endsWith("r", ignoreCase = true) || tagName.endsWith("fld", ignoreCase = true) -> {
+                            isTag(tagName, "r") || isTag(tagName, "fld") -> {
                                 currentRunText.clear()
-                                // Inherit paragraph defaults or placeholder defaults
-                                val baseSize = paraDefSize ?: when (curPlaceholderType?.lowercase()) {
+                                val baseSize = paraDefSize ?: when (curPlaceholderType) {
                                     "title", "ctrtitle" -> 28f
                                     "subtitle" -> 20f
-                                    "body", "obj" -> 14f
+                                    "body", "obj" -> 15f
                                     "dt", "ftr", "sldnum" -> 10f
                                     else -> 14f
                                 }
                                 curRunSize = baseSize
-                                curRunBold = paraDefBold || (curPlaceholderType?.lowercase() in listOf("title", "ctrtitle"))
+                                curRunBold = paraDefBold || (curPlaceholderType in listOf("title", "ctrtitle"))
                                 curRunItalic = paraDefItalic
                                 curRunUnderline = paraDefUnderline
                                 curRunStrike = paraDefStrike
-                                curRunFont = paraDefFont ?: if (curPlaceholderType?.lowercase() in listOf("title", "ctrtitle")) majorFont else minorFont
+                                curRunFont = paraDefFont ?: if (curPlaceholderType in listOf("title", "ctrtitle")) theme.majorFont else theme.minorFont
                                 curRunColor = paraDefColor
                             }
 
-                            tagName.endsWith("rPr", ignoreCase = true) -> {
+                            isTag(tagName, "rPr") -> {
+                                inRPr = true
                                 val sz = parser.getAttributeValue(null, "sz")?.toFloatOrNull()
                                 if (sz != null) {
                                     curRunSize = (sz / 100f).coerceIn(8f, 72f)
@@ -799,11 +1082,11 @@ class PptxParser {
                                 if (strike != null) curRunStrike = strike != "noStrike"
                             }
 
-                            tagName.endsWith("latin", ignoreCase = true) -> {
+                            isTag(tagName, "latin") -> {
                                 val tf = parser.getAttributeValue(null, "typeface")
                                 val resolved = when {
-                                    tf?.startsWith("+mj") == true -> majorFont
-                                    tf?.startsWith("+mn") == true -> minorFont
+                                    tf?.startsWith("+mj") == true -> theme.majorFont
+                                    tf?.startsWith("+mn") == true -> theme.minorFont
                                     else -> tf
                                 }
                                 if (inDefRPr) {
@@ -813,14 +1096,14 @@ class PptxParser {
                                 }
                             }
 
-                            tagName.endsWith("br", ignoreCase = true) -> {
+                            isTag(tagName, "br") -> {
                                 currentRunText.append("\n")
                             }
                         }
                     }
 
                     XmlPullParser.TEXT -> {
-                        if (currentTag.endsWith(":t", ignoreCase = true) || currentTag.equals("t", ignoreCase = true)) {
+                        if (isTag(currentTag, "t")) {
                             val text = parser.text ?: ""
                             if (text.isNotEmpty()) {
                                 currentRunText.append(text)
@@ -834,35 +1117,20 @@ class PptxParser {
 
                     XmlPullParser.END_TAG -> {
                         when {
-                            tagName.endsWith("bg", ignoreCase = true) || tagName.endsWith("bgPr", ignoreCase = true) -> {
-                                inBg = false
+                            isTag(tagName, "bg") || isTag(tagName, "bgPr") -> inBg = false
+                            isTag(tagName, "spPr") -> inSpPr = false
+                            isTag(tagName, "ln") -> inLn = false
+                            isTag(tagName, "txBody") -> inTxBody = false
+                            isTag(tagName, "rPr") -> inRPr = false
+                            isTag(tagName, "pPr") -> inPPr = false
+                            isTag(tagName, "defRPr") -> inDefRPr = false
+
+                            // Group Shape end
+                            isTag(tagName, "grpSp") -> {
+                                if (!groupTransformStack.isEmpty()) groupTransformStack.pop()
                             }
 
-                            tagName.endsWith("spPr", ignoreCase = true) -> {
-                                inSpPr = false
-                            }
-
-                            tagName.endsWith("ln", ignoreCase = true) -> {
-                                inLn = false
-                            }
-
-                            tagName.endsWith("txBody", ignoreCase = true) -> {
-                                inTxBody = false
-                            }
-
-                            tagName.endsWith("rPr", ignoreCase = true) -> {
-                                inRPr = false
-                            }
-
-                            tagName.endsWith("pPr", ignoreCase = true) -> {
-                                inPPr = false
-                            }
-
-                            tagName.endsWith("defRPr", ignoreCase = true) -> {
-                                inDefRPr = false
-                            }
-
-                            tagName.endsWith("r", ignoreCase = true) || tagName.endsWith("fld", ignoreCase = true) -> {
+                            isTag(tagName, "r") || isTag(tagName, "fld") -> {
                                 val text = currentRunText.toString()
                                 if (text.isNotEmpty()) {
                                     curRuns.add(
@@ -880,9 +1148,9 @@ class PptxParser {
                                 }
                             }
 
-                            tagName.endsWith("p", ignoreCase = true) -> {
+                            isTag(tagName, "p") -> {
                                 if (curRuns.isNotEmpty()) {
-                                    val isBullet = curBulletChar != null || curIndentLvl > 0 || (curPlaceholderType?.lowercase() in listOf("body", "obj"))
+                                    val isBullet = curBulletChar != null || curIndentLvl > 0 || (curPlaceholderType in listOf("body", "obj"))
                                     val para = SlideParagraph(
                                         runs = curRuns.toList(),
                                         alignment = curParaAlign,
@@ -898,20 +1166,25 @@ class PptxParser {
                                 }
                             }
 
-                            tagName.endsWith("tc", ignoreCase = true) -> {
+                            isTag(tagName, "tc") -> {
                                 curTableRow.add(curCellText.toString().trim())
                             }
 
-                            tagName.endsWith("tr", ignoreCase = true) -> {
+                            isTag(tagName, "tr") -> {
                                 if (curTableRow.isNotEmpty()) {
                                     curTableRows.add(curTableRow.toList().toMutableList())
                                 }
                             }
 
-                            tagName.endsWith("tbl", ignoreCase = true) -> {
+                            isTag(tagName, "tbl") -> {
                                 inTable = false
                                 if (curTableRows.isNotEmpty()) {
-                                    val bounds = calculateBounds(curOffX, curOffY, curExtX, curExtY, slideWidth, slideHeight, curPlaceholderType, shapeCounter++)
+                                    val bounds = resolveElementBounds(
+                                        curOffX, curOffY, curExtX, curExtY,
+                                        slideWidth, slideHeight,
+                                        curPlaceholderType, curPlaceholderIdx,
+                                        layoutInfo, groupTransformStack, shapeCounter++
+                                    )
                                     visualElements.add(
                                         VisualElement(
                                             type = VisualElementType.TABLE,
@@ -922,20 +1195,30 @@ class PptxParser {
                                 }
                             }
 
-                            tagName.endsWith("graphicFrame", ignoreCase = true) -> {
+                            isTag(tagName, "graphicFrame") -> {
                                 inGraphicFrame = false
                             }
 
-                            tagName.endsWith("sp", ignoreCase = true) && !tagName.endsWith("grpSp", ignoreCase = true) -> {
+                            isTag(tagName, "sp") -> {
                                 inShape = false
-                                inSpPr = false
-                                inLn = false
-                                inTxBody = false
-                                inRPr = false
-                                inDefRPr = false
+                                inSpPr = false; inLn = false; inTxBody = false; inRPr = false; inDefRPr = false
+
                                 if (curParagraphs.isNotEmpty() || curFillColor != null || curBorderColor != null || curShapePreset != null) {
-                                    val bounds = calculateBounds(curOffX, curOffY, curExtX, curExtY, slideWidth, slideHeight, curPlaceholderType, shapeCounter++)
-                                    val type = if (curFillColor != null || curBorderColor != null || curShapePreset != null) {
+                                    val bounds = resolveElementBounds(
+                                        curOffX, curOffY, curExtX, curExtY,
+                                        slideWidth, slideHeight,
+                                        curPlaceholderType, curPlaceholderIdx,
+                                        layoutInfo, groupTransformStack, shapeCounter++
+                                    )
+
+                                    // Inherit layout styling if slide shape did not specify explicit colors
+                                    val layoutPh = findPlaceholder(layoutInfo, curPlaceholderType, curPlaceholderIdx)
+                                    val effectiveFill = curFillColor ?: layoutPh?.fillColor
+                                    val effectiveBorder = curBorderColor ?: layoutPh?.borderColor
+                                    val effectiveBorderWidth = if (curBorderWidth > 0f) curBorderWidth else (layoutPh?.borderWidthDp ?: 0f)
+                                    val effectivePreset = curShapePreset ?: layoutPh?.preset
+
+                                    val type = if (effectiveFill != null || effectiveBorder != null || effectivePreset != null) {
                                         VisualElementType.SHAPE
                                     } else {
                                         VisualElementType.TEXT_BOX
@@ -945,19 +1228,19 @@ class PptxParser {
                                         VisualElement(
                                             type = type,
                                             bounds = bounds,
-                                            backgroundColor = curFillColor,
-                                            borderColor = curBorderColor,
-                                            borderWidthDp = curBorderWidth,
-                                            isRounded = curIsRounded,
-                                            isEllipse = curIsEllipse,
-                                            shapePreset = curShapePreset,
+                                            backgroundColor = effectiveFill,
+                                            borderColor = effectiveBorder,
+                                            borderWidthDp = effectiveBorderWidth,
+                                            isRounded = curIsRounded || effectivePreset?.contains("round", ignoreCase = true) == true,
+                                            isEllipse = curIsEllipse || effectivePreset == "ellipse" || effectivePreset == "circle",
+                                            shapePreset = effectivePreset,
                                             paragraphs = curParagraphs.toList()
                                         )
                                     )
                                 }
                             }
 
-                            tagName.endsWith("pic", ignoreCase = true) -> {
+                            isTag(tagName, "pic") -> {
                                 inPic = false
                                 val embedId = curBlipEmbed
                                 if (embedId != null) {
@@ -969,7 +1252,12 @@ class PptxParser {
                                     } else null
 
                                     if (imageBytes != null && imageBytes.isNotEmpty()) {
-                                        val bounds = calculateBounds(curOffX, curOffY, curExtX, curExtY, slideWidth, slideHeight, curPlaceholderType, shapeCounter++)
+                                        val bounds = resolveElementBounds(
+                                            curOffX, curOffY, curExtX, curExtY,
+                                            slideWidth, slideHeight,
+                                            curPlaceholderType, curPlaceholderIdx,
+                                            layoutInfo, groupTransformStack, shapeCounter++
+                                        )
                                         visualElements.add(
                                             VisualElement(
                                                 type = VisualElementType.IMAGE,
@@ -986,7 +1274,9 @@ class PptxParser {
 
                 eventType = parser.next()
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
 
         val title = plainTextParagraphs.firstOrNull() ?: "Slide $slideNum"
         val content = if (plainTextParagraphs.size > 1) plainTextParagraphs.drop(1) else emptyList()
@@ -1002,245 +1292,106 @@ class PptxParser {
         )
     }
 
-    /**
-     * Computes bounds for a visual element.
-     * If the slide omitted xfrm (standard for placeholders in PowerPoint), assigns
-     * standard layout coordinates so shapes and text do not stack on top of each other at (0, 0).
-     */
-    private fun calculateBounds(
+    private fun findPlaceholder(
+        layoutInfo: SlideLayoutInfo?,
+        type: String?,
+        idx: String?
+    ): PlaceholderLayout? {
+        if (layoutInfo == null) return null
+        if (type != null && idx != null) {
+            layoutInfo.placeholders["$type:$idx"]?.let { return it }
+        }
+        if (type != null) {
+            layoutInfo.placeholders[type]?.let { return it }
+        }
+        if (idx != null) {
+            layoutInfo.placeholders[idx]?.let { return it }
+        }
+        return null
+    }
+
+    private fun resolveElementBounds(
         offX: Long,
         offY: Long,
         extX: Long,
         extY: Long,
         slideWidth: Long,
         slideHeight: Long,
-        placeholderType: String?,
+        phType: String?,
+        phIdx: String?,
+        layoutInfo: SlideLayoutInfo?,
+        groupTransformStack: ArrayDeque<GroupTransform>,
         shapeIndex: Int
     ): SlideBounds {
-        val w = if (slideWidth > 0) slideWidth.toFloat() else 9144000f
-        val h = if (slideHeight > 0) slideHeight.toFloat() else 5143500f
-
+        // 1. If explicit coordinates are present on the shape:
         if (extX > 0L && extY > 0L) {
-            val left = (offX.toFloat() / w).coerceIn(0f, 1f)
-            val top = (offY.toFloat() / h).coerceIn(0f, 1f)
-            val width = (extX.toFloat() / w).coerceIn(0.01f, 1f - left)
-            val height = (extY.toFloat() / h).coerceIn(0.01f, 1f - top)
-            return SlideBounds(left = left, top = top, width = width, height = height)
+            var curX = offX
+            var curY = offY
+            var curW = extX
+            var curH = extY
+
+            // Apply group transforms from top of stack downward
+            for (t in groupTransformStack) {
+                if (t.chExtX > 0L && t.chExtY > 0L) {
+                    val scaleX = t.extX.toDouble() / t.chExtX.toDouble()
+                    val scaleY = t.extY.toDouble() / t.chExtY.toDouble()
+                    curX = t.offX + ((curX - t.chOffX) * scaleX).toLong()
+                    curY = t.offY + ((curY - t.chOffY) * scaleY).toLong()
+                    curW = (curW * scaleX).toLong()
+                    curH = (curH * scaleY).toLong()
+                }
+            }
+
+            return calculateRawBounds(curX, curY, curW, curH, slideWidth, slideHeight)
         }
 
-        // Layout fallback for placeholder shapes missing explicit xfrm
-        return when (placeholderType?.lowercase()) {
+        // 2. Check layout placeholder inheritance (resolves comparison 2-column slides, titles, subtitles)
+        val inheritedPh = findPlaceholder(layoutInfo, phType, phIdx)
+        if (inheritedPh?.bounds != null) {
+            return inheritedPh.bounds
+        }
+
+        // 3. Fallback coordinates based on semantic placeholder role
+        return when (phType) {
             "title", "ctrtitle" -> SlideBounds(left = 0.06f, top = 0.08f, width = 0.88f, height = 0.18f)
             "subtitle" -> SlideBounds(left = 0.08f, top = 0.28f, width = 0.84f, height = 0.18f)
-            "body", "obj" -> SlideBounds(left = 0.06f, top = 0.30f, width = 0.88f, height = 0.60f)
+            "body", "obj" -> {
+                if (phIdx == "2" || phIdx == "3") {
+                    // Right column on a two-content slide
+                    SlideBounds(left = 0.52f, top = 0.30f, width = 0.42f, height = 0.60f)
+                } else if (phIdx == "1") {
+                    // Left column on a two-content slide
+                    SlideBounds(left = 0.06f, top = 0.30f, width = 0.42f, height = 0.60f)
+                } else {
+                    SlideBounds(left = 0.06f, top = 0.30f, width = 0.88f, height = 0.60f)
+                }
+            }
             "dt" -> SlideBounds(left = 0.06f, top = 0.92f, width = 0.25f, height = 0.05f)
             "ftr" -> SlideBounds(left = 0.35f, top = 0.92f, width = 0.30f, height = 0.05f)
             "sldnum" -> SlideBounds(left = 0.80f, top = 0.92f, width = 0.14f, height = 0.05f)
             else -> {
-                val topOffset = (0.08f + (shapeIndex * 0.20f)).coerceIn(0.08f, 0.72f)
-                SlideBounds(left = 0.06f, top = topOffset, width = 0.88f, height = 0.18f)
+                // Arrange unpositioned shapes in a safe vertical cascade without stacking
+                val topOffset = (0.08f + (shapeIndex * 0.18f)).coerceIn(0.08f, 0.74f)
+                SlideBounds(left = 0.06f, top = topOffset, width = 0.88f, height = 0.16f)
             }
         }
     }
 
-    /**
-     * Resilient parser for legacy PowerPoint 97-2003 binary files (.ppt).
-     * Scans PowerPoint Document atom records (RT_Slide = 0x03EE, RT_TextCharsAtom = 0x0F9E,
-     * RT_TextBytesAtom = 0x0F9F).
-     */
-    private fun parseBinaryPpt(bytes: ByteArray): PptxPresentation {
-        val slides = mutableListOf<PptxSlide>()
-        var currentTitle = ""
-        val currentContent = mutableListOf<String>()
-        var slideCounter = 1
-
-        fun flushSlide() {
-            if (currentTitle.isNotBlank() || currentContent.isNotEmpty()) {
-                val t = if (currentTitle.isNotBlank()) currentTitle else "Slide $slideCounter"
-                val visuals = mutableListOf<VisualElement>()
-                visuals.add(
-                    VisualElement(
-                        type = VisualElementType.TEXT_BOX,
-                        bounds = SlideBounds(0.06f, 0.08f, 0.88f, 0.20f),
-                        paragraphs = listOf(
-                            SlideParagraph(
-                                runs = listOf(SlideTextRun(text = t, fontSizeSp = 24f, isBold = true))
-                            )
-                        )
-                    )
-                )
-                if (currentContent.isNotEmpty()) {
-                    visuals.add(
-                        VisualElement(
-                            type = VisualElementType.TEXT_BOX,
-                            bounds = SlideBounds(0.06f, 0.32f, 0.88f, 0.58f),
-                            paragraphs = currentContent.map { line ->
-                                SlideParagraph(
-                                    runs = listOf(SlideTextRun(text = line, fontSizeSp = 15f)),
-                                    isBullet = true
-                                )
-                            }
-                        )
-                    )
-                }
-
-                slides.add(
-                    PptxSlide(
-                        slideNumber = slideCounter++,
-                        title = t,
-                        content = currentContent.toList(),
-                        visualElements = visuals,
-                        aspectRatio = 4f / 3f
-                    )
-                )
-                currentTitle = ""
-                currentContent.clear()
-            }
-        }
-
-        var i = 0
-        val total = bytes.size
-
-        while (i <= total - 8) {
-            val recType = (bytes[i + 2].toInt() and 0xFF) or ((bytes[i + 3].toInt() and 0xFF) shl 8)
-            val recLen = (bytes[i + 4].toLong() and 0xFF) or
-                ((bytes[i + 5].toLong() and 0xFF) shl 8) or
-                ((bytes[i + 6].toLong() and 0xFF) shl 16) or
-                ((bytes[i + 7].toLong() and 0xFF) shl 24)
-
-            if (recLen < 0 || recLen > 500_000 || i + 8 + recLen > total) {
-                i += 2
-                continue
-            }
-
-            when (recType) {
-                0x03EE -> { // RT_Slide
-                    flushSlide()
-                }
-
-                0x0F9F -> { // RT_TextBytesAtom (Latin-1 / ASCII)
-                    if (recLen > 0) {
-                        val text = String(bytes, i + 8, recLen.toInt(), Charsets.ISO_8859_1).trim()
-                        if (text.isNotBlank() && text.any { it.isLetter() }) {
-                            val lines = text.split("\r\n", "\r", "\n").map { it.trim() }.filter { it.isNotEmpty() }
-                            for (line in lines) {
-                                if (currentTitle.isEmpty()) {
-                                    currentTitle = line
-                                } else {
-                                    currentContent.add(line)
-                                }
-                            }
-                        }
-                    }
-                    i += 8 + recLen.toInt()
-                    continue
-                }
-
-                0x0F9E -> { // RT_TextCharsAtom (UTF-16LE)
-                    if (recLen >= 2) {
-                        val text = String(bytes, i + 8, recLen.toInt(), Charsets.UTF_16LE).trim()
-                        if (text.isNotBlank() && text.any { it.isLetter() }) {
-                            val lines = text.split("\r\n", "\r", "\n").map { it.trim() }.filter { it.isNotEmpty() }
-                            for (line in lines) {
-                                if (currentTitle.isEmpty()) {
-                                    currentTitle = line
-                                } else {
-                                    currentContent.add(line)
-                                }
-                            }
-                        }
-                    }
-                    i += 8 + recLen.toInt()
-                    continue
-                }
-            }
-            i += 1
-        }
-        flushSlide()
-
-        // Fallback: If binary record traversal returned no slides, extract printable text strings
-        if (slides.isEmpty()) {
-            val extractedStrings = extractReadableStrings(bytes)
-            if (extractedStrings.isNotEmpty()) {
-                val chunks = extractedStrings.chunked(6)
-                for ((idx, chunk) in chunks.withIndex()) {
-                    val t = chunk.first()
-                    val c = if (chunk.size > 1) chunk.drop(1) else emptyList()
-                    val visuals = mutableListOf<VisualElement>()
-                    visuals.add(
-                        VisualElement(
-                            type = VisualElementType.TEXT_BOX,
-                            bounds = SlideBounds(0.06f, 0.08f, 0.88f, 0.20f),
-                            paragraphs = listOf(
-                                SlideParagraph(
-                                    runs = listOf(SlideTextRun(text = t, fontSizeSp = 22f, isBold = true))
-                                )
-                            )
-                        )
-                    )
-                    if (c.isNotEmpty()) {
-                        visuals.add(
-                            VisualElement(
-                                type = VisualElementType.TEXT_BOX,
-                                bounds = SlideBounds(0.06f, 0.32f, 0.88f, 0.58f),
-                                paragraphs = c.map { line ->
-                                    SlideParagraph(
-                                        runs = listOf(SlideTextRun(text = line, fontSizeSp = 15f)),
-                                        isBullet = true
-                                    )
-                                }
-                            )
-                        )
-                    }
-
-                    slides.add(
-                        PptxSlide(
-                            slideNumber = idx + 1,
-                            title = t,
-                            content = c,
-                            visualElements = visuals,
-                            aspectRatio = 4f / 3f
-                        )
-                    )
-                }
-            }
-        }
-
-        return if (slides.isNotEmpty()) {
-            PptxPresentation(slides = slides, aspectRatio = 4f / 3f)
-        } else {
-            PptxPresentation(
-                slides = listOf(
-                    PptxSlide(
-                        slideNumber = 1,
-                        title = "PowerPoint Presentation",
-                        content = listOf("Legacy binary presentation opened in read-only mode."),
-                        aspectRatio = 4f / 3f
-                    )
-                ),
-                aspectRatio = 4f / 3f
-            )
-        }
-    }
-
-    private fun extractReadableStrings(bytes: ByteArray): List<String> {
-        val strings = mutableListOf<String>()
-        val sb = StringBuilder()
-        for (b in bytes) {
-            val c = b.toInt().toChar()
-            if (c in ' '..'~' || c == '\n') {
-                sb.append(c)
-            } else {
-                if (sb.length >= 4) {
-                    val candidate = sb.toString().trim()
-                    if (candidate.length >= 4 && candidate.any { it.isLetter() } && !candidate.startsWith("<?xml") && !candidate.startsWith("[Content_")) {
-                        strings.add(candidate)
-                    }
-                }
-                sb.clear()
-            }
-        }
-        return strings.take(60)
+    private fun calculateRawBounds(
+        offX: Long,
+        offY: Long,
+        extX: Long,
+        extY: Long,
+        slideWidth: Long,
+        slideHeight: Long
+    ): SlideBounds {
+        val w = if (slideWidth > 0) slideWidth.toFloat() else 9144000f
+        val h = if (slideHeight > 0) slideHeight.toFloat() else 5143500f
+        val left = (offX.toFloat() / w).coerceIn(0f, 1f)
+        val top = (offY.toFloat() / h).coerceIn(0f, 1f)
+        val width = (extX.toFloat() / w).coerceIn(0.01f, 1f - left)
+        val height = (extY.toFloat() / h).coerceIn(0.01f, 1f - top)
+        return SlideBounds(left = left, top = top, width = width, height = height)
     }
 
     private fun parseHexColor(hex: String?): Color? {
@@ -1259,19 +1410,472 @@ class PptxParser {
         }
     }
 
-    private fun parseSchemeColor(scheme: String): Color? {
-        return when (scheme.lowercase()) {
-            "accent1" -> Color(0xFF2563EB)
-            "accent2" -> Color(0xFFDC2626)
-            "accent3" -> Color(0xFF16A34A)
-            "accent4" -> Color(0xFFD97706)
-            "accent5" -> Color(0xFF7C3AED)
-            "accent6" -> Color(0xFF0D9488)
-            "dk1", "tx1" -> Color(0xFF1E293B)
-            "lt1", "bg1" -> Color(0xFFFFFFFF)
-            "dk2", "tx2" -> Color(0xFF475569)
-            "lt2", "bg2" -> Color(0xFFF1F5F9)
-            else -> null
+    private fun resolveDrawingSchemeColor(scheme: String, themeColors: Map<String, Color>): Color? {
+        val key = scheme.lowercase().trim()
+        val mappedKey = when (key) {
+            "tx1" -> "dk1"
+            "tx2" -> "dk2"
+            "bg1" -> "lt1"
+            "bg2" -> "lt2"
+            else -> key
+        }
+        return themeColors[mappedKey] ?: themeColors[key]
+    }
+
+    private fun applyColorTransforms(
+        baseColor: Color,
+        lumMod: Float,
+        lumOff: Float,
+        tint: Float,
+        shade: Float
+    ): Color {
+        var r = baseColor.red
+        var g = baseColor.green
+        var b = baseColor.blue
+
+        if (tint > 0f) {
+            r += (1f - r) * tint
+            g += (1f - g) * tint
+            b += (1f - b) * tint
+        }
+
+        if (shade > 0f) {
+            r *= (1f - shade)
+            g *= (1f - shade)
+            b *= (1f - shade)
+        }
+
+        if (lumMod != 1.0f || lumOff != 0.0f) {
+            r = (r * lumMod + lumOff).coerceIn(0f, 1f)
+            g = (g * lumMod + lumOff).coerceIn(0f, 1f)
+            b = (b * lumMod + lumOff).coerceIn(0f, 1f)
+        }
+
+        return Color(red = r.coerceIn(0f, 1f), green = g.coerceIn(0f, 1f), blue = b.coerceIn(0f, 1f), alpha = baseColor.alpha)
+    }
+
+    /* =========================================================================
+     * SECTION 2: LEGACY BINARY POWERPOINT (.ppt / OLE2) PARSER
+     * ========================================================================= */
+
+    /**
+     * Pure Kotlin Compound File Binary Format (CFBF / OLE2) stream extractor and
+     * PowerPoint Document record parser for legacy .ppt files.
+     */
+    private fun parseBinaryPpt(bytes: ByteArray): PptxPresentation {
+        try {
+            val ole2 = Ole2File(bytes)
+            val pptDocStream = ole2.getStream("PowerPoint Document")
+            val picturesStream = ole2.getStream("Pictures")
+
+            if (pptDocStream != null && pptDocStream.isNotEmpty()) {
+                val pres = parsePptDocStream(pptDocStream, picturesStream)
+                if (pres.slides.isNotEmpty()) return pres
+            }
+        } catch (_: Exception) {}
+
+        // Fallback: Resilient raw atom scanner over bytes
+        return parseBinaryPptFallback(bytes)
+    }
+
+    /**
+     * Parses the assembled PowerPoint Document stream directly.
+     */
+    private fun parsePptDocStream(docBytes: ByteArray, picturesBytes: ByteArray?): PptxPresentation {
+        val slides = mutableListOf<PptxSlide>()
+        var slideCounter = 1
+
+        // Extract embedded pictures from Pictures stream (JPEG & PNG signatures)
+        val extractedPictures = mutableListOf<ByteArray>()
+        if (picturesBytes != null && picturesBytes.size > 32) {
+            extractPicturesFromStream(picturesBytes, extractedPictures)
+        }
+
+        var i = 0
+        val total = docBytes.size
+        var currentTitle = ""
+        val currentContent = mutableListOf<String>()
+
+        fun flushSlide() {
+            if (currentTitle.isNotBlank() || currentContent.isNotEmpty()) {
+                val t = if (currentTitle.isNotBlank()) currentTitle else "Slide $slideCounter"
+                val visuals = mutableListOf<VisualElement>()
+
+                // Title shape
+                visuals.add(
+                    VisualElement(
+                        type = VisualElementType.TEXT_BOX,
+                        bounds = SlideBounds(0.06f, 0.08f, 0.88f, 0.18f),
+                        paragraphs = listOf(
+                            SlideParagraph(
+                                runs = listOf(SlideTextRun(text = t, fontSizeSp = 24f, isBold = true))
+                            )
+                        )
+                    )
+                )
+
+                // Body content / bullet points
+                if (currentContent.isNotEmpty()) {
+                    visuals.add(
+                        VisualElement(
+                            type = VisualElementType.TEXT_BOX,
+                            bounds = SlideBounds(0.06f, 0.28f, 0.88f, 0.62f),
+                            paragraphs = currentContent.map { line ->
+                                SlideParagraph(
+                                    runs = listOf(SlideTextRun(text = line, fontSizeSp = 15f)),
+                                    isBullet = true
+                                )
+                            }
+                        )
+                    )
+                }
+
+                // Associate extracted picture if available
+                val picIndex = slideCounter - 1
+                if (picIndex < extractedPictures.size) {
+                    val picBytes = extractedPictures[picIndex]
+                    visuals.add(
+                        VisualElement(
+                            type = VisualElementType.IMAGE,
+                            bounds = SlideBounds(0.55f, 0.32f, 0.38f, 0.50f),
+                            imageBytes = picBytes
+                        )
+                    )
+                }
+
+                slides.add(
+                    PptxSlide(
+                        slideNumber = slideCounter++,
+                        title = t,
+                        content = currentContent.toList(),
+                        visualElements = visuals,
+                        aspectRatio = 4f / 3f
+                    )
+                )
+                currentTitle = ""
+                currentContent.clear()
+            }
+        }
+
+        while (i <= total - 8) {
+            val recType = (docBytes[i + 2].toInt() and 0xFF) or ((docBytes[i + 3].toInt() and 0xFF) shl 8)
+            val recLen = (docBytes[i + 4].toLong() and 0xFF) or
+                ((docBytes[i + 5].toLong() and 0xFF) shl 8) or
+                ((docBytes[i + 6].toLong() and 0xFF) shl 16) or
+                ((docBytes[i + 7].toLong() and 0xFF) shl 24)
+
+            if (recLen < 0 || recLen > 2_000_000 || i + 8 + recLen > total) {
+                i += 2
+                continue
+            }
+
+            when (recType) {
+                0x03EE, 0x03F3 -> { // RT_Slide container or RT_SlidePersistAtom
+                    flushSlide()
+                }
+
+                0x0F9F -> { // RT_TextBytesAtom (Latin-1 / ANSI)
+                    if (recLen > 0) {
+                        val text = String(docBytes, i + 8, recLen.toInt(), Charsets.ISO_8859_1).trim()
+                        if (text.isNotBlank() && text.any { it.isLetter() }) {
+                            val lines = text.split("\r\n", "\r", "\n").map { it.trim() }.filter { it.isNotEmpty() }
+                            for (line in lines) {
+                                if (currentTitle.isEmpty()) {
+                                    currentTitle = line
+                                } else {
+                                    currentContent.add(line)
+                                }
+                            }
+                        }
+                    }
+                    i += 8 + recLen.toInt()
+                    continue
+                }
+
+                0x0F9E -> { // RT_TextCharsAtom (UTF-16LE)
+                    if (recLen >= 2) {
+                        val text = String(docBytes, i + 8, recLen.toInt(), Charsets.UTF_16LE).trim()
+                        if (text.isNotBlank() && text.any { it.isLetter() }) {
+                            val lines = text.split("\r\n", "\r", "\n").map { it.trim() }.filter { it.isNotEmpty() }
+                            for (line in lines) {
+                                if (currentTitle.isEmpty()) {
+                                    currentTitle = line
+                                } else {
+                                    currentContent.add(line)
+                                }
+                            }
+                        }
+                    }
+                    i += 8 + recLen.toInt()
+                    continue
+                }
+            }
+
+            i += 1
+        }
+        flushSlide()
+
+        return if (slides.isNotEmpty()) {
+            PptxPresentation(slides = slides, aspectRatio = 4f / 3f)
+        } else {
+            parseBinaryPptFallback(docBytes)
+        }
+    }
+
+    private fun extractPicturesFromStream(bytes: ByteArray, output: MutableList<ByteArray>) {
+        var idx = 0
+        val len = bytes.size
+        while (idx < len - 4) {
+            // Check JPEG SOI (FF D8 FF)
+            if (bytes[idx] == 0xFF.toByte() && bytes[idx + 1] == 0xD8.toByte() && bytes[idx + 2] == 0xFF.toByte()) {
+                var end = idx + 3
+                while (end < len - 1) {
+                    if (bytes[end] == 0xFF.toByte() && bytes[end + 1] == 0xD9.toByte()) { // EOI
+                        val img = bytes.copyOfRange(idx, end + 2)
+                        if (img.size in 1024..5_000_000) {
+                            output.add(img)
+                        }
+                        idx = end + 2
+                        break
+                    }
+                    end++
+                }
+            }
+            // Check PNG magic (89 50 4E 47)
+            else if (bytes[idx] == 0x89.toByte() && bytes[idx + 1] == 0x50.toByte() && bytes[idx + 2] == 0x4E.toByte() && bytes[idx + 3] == 0x47.toByte()) {
+                var end = idx + 4
+                while (end < len - 8) {
+                    // Search for IEND chunk (49 45 4E 44)
+                    if (bytes[end] == 0x49.toByte() && bytes[end + 1] == 0x45.toByte() && bytes[end + 2] == 0x4E.toByte() && bytes[end + 3] == 0x44.toByte()) {
+                        val img = bytes.copyOfRange(idx, end + 8)
+                        if (img.size in 1024..5_000_000) {
+                            output.add(img)
+                        }
+                        idx = end + 8
+                        break
+                    }
+                    end++
+                }
+            }
+            idx++
+        }
+    }
+
+    private fun parseBinaryPptFallback(bytes: ByteArray): PptxPresentation {
+        val extracted = extractReadableStrings(bytes)
+        if (extracted.isEmpty()) {
+            return emptyPresentation()
+        }
+
+        val slides = mutableListOf<PptxSlide>()
+        val chunks = extracted.chunked(6)
+        for ((idx, chunk) in chunks.withIndex()) {
+            val t = chunk.first()
+            val c = if (chunk.size > 1) chunk.drop(1) else emptyList()
+            val visuals = mutableListOf<VisualElement>()
+
+            visuals.add(
+                VisualElement(
+                    type = VisualElementType.TEXT_BOX,
+                    bounds = SlideBounds(0.06f, 0.08f, 0.88f, 0.18f),
+                    paragraphs = listOf(
+                        SlideParagraph(
+                            runs = listOf(SlideTextRun(text = t, fontSizeSp = 22f, isBold = true))
+                        )
+                    )
+                )
+            )
+
+            if (c.isNotEmpty()) {
+                visuals.add(
+                    VisualElement(
+                        type = VisualElementType.TEXT_BOX,
+                        bounds = SlideBounds(0.06f, 0.30f, 0.88f, 0.60f),
+                        paragraphs = c.map { line ->
+                            SlideParagraph(
+                                runs = listOf(SlideTextRun(text = line, fontSizeSp = 15f)),
+                                isBullet = true
+                            )
+                        }
+                    )
+                )
+            }
+
+            slides.add(
+                PptxSlide(
+                    slideNumber = idx + 1,
+                    title = t,
+                    content = c,
+                    visualElements = visuals,
+                    aspectRatio = 4f / 3f
+                )
+            )
+        }
+
+        return PptxPresentation(slides = slides, aspectRatio = 4f / 3f)
+    }
+
+    private fun extractReadableStrings(bytes: ByteArray): List<String> {
+        val strings = mutableListOf<String>()
+        val sb = StringBuilder()
+        for (b in bytes) {
+            val c = b.toInt().toChar()
+            if (c in ' '..'~' || c == '\n') {
+                sb.append(c)
+            } else {
+                if (sb.length >= 4) {
+                    val candidate = sb.toString().trim()
+                    if (candidate.length >= 4 && candidate.any { it.isLetter() } &&
+                        !candidate.startsWith("<?xml") && !candidate.startsWith("[Content_") &&
+                        !candidate.contains("Root Entry") && !candidate.contains("Current User")
+                    ) {
+                        strings.add(candidate)
+                    }
+                }
+                sb.clear()
+            }
+        }
+        return strings.take(60)
+    }
+
+    /**
+     * Pure Kotlin Compound File Binary Format (CFBF / OLE2) parser.
+     */
+    private class Ole2File(private val data: ByteArray) {
+        val sectorSize: Int
+        private val fat: IntArray
+        private val dirEntries = mutableListOf<DirEntry>()
+
+        data class DirEntry(
+            val name: String,
+            val type: Int,
+            val startSector: Int,
+            val size: Long
+        )
+
+        init {
+            require(data.size >= 512) { "File too small for OLE2" }
+            val sectorShift = getShortLE(data, 30).toInt()
+            sectorSize = 1 shl (if (sectorShift in 9..12) sectorShift else 9)
+
+            val numFatSectors = getIntLE(data, 44)
+            val firstDirSector = getIntLE(data, 48)
+
+            // Read first 109 DIFAT entries
+            val fatSectorLocations = mutableListOf<Int>()
+            for (i in 0 until 109) {
+                val off = 76 + (i * 4)
+                if (off + 4 <= 512) {
+                    val sec = getIntLE(data, off)
+                    if (sec >= 0) fatSectorLocations.add(sec)
+                }
+            }
+
+            // Assemble FAT table
+            val fatIntCount = numFatSectors * (sectorSize / 4)
+            fat = IntArray(maxOf(fatIntCount, 1024))
+            var fatIndex = 0
+            for (fatSec in fatSectorLocations) {
+                val secOffset = (fatSec + 1) * sectorSize
+                if (secOffset + sectorSize <= data.size) {
+                    for (j in 0 until (sectorSize / 4)) {
+                        if (fatIndex < fat.size) {
+                            fat[fatIndex++] = getIntLE(data, secOffset + (j * 4))
+                        }
+                    }
+                }
+            }
+
+            // Read Directory Entries
+            val dirBytes = readSectorChain(firstDirSector, 100_000L)
+            var dirOffset = 0
+            while (dirOffset + 128 <= dirBytes.size) {
+                val nameLen = getShortLE(dirBytes, dirOffset + 64).toInt()
+                val type = dirBytes[dirOffset + 66].toInt() and 0xFF
+                val startSec = getIntLE(dirBytes, dirOffset + 116)
+                val streamSize = getLongLE(dirBytes, dirOffset + 120)
+
+                val name = if (nameLen > 2) {
+                    String(dirBytes, dirOffset, minOf(nameLen - 2, 64), Charsets.UTF_16LE).trim()
+                } else ""
+
+                if (name.isNotEmpty()) {
+                    dirEntries.add(DirEntry(name, type, startSec, streamSize))
+                }
+                dirOffset += 128
+            }
+        }
+
+        fun getStream(name: String): ByteArray? {
+            val entry = dirEntries.find { it.name.equals(name, ignoreCase = true) } ?: return null
+            if (entry.startSector < 0 || entry.size <= 0) return null
+            return readSectorChain(entry.startSector, entry.size)
+        }
+
+        private fun readSectorChain(startSector: Int, maxSize: Long): ByteArray {
+            val out = java.io.ByteArrayOutputStream()
+            var curSector = startSector
+            var remaining = maxSize
+
+            while (curSector >= 0 && curSector < fat.size && remaining > 0) {
+                val offset = (curSector + 1) * sectorSize
+                if (offset >= data.size) break
+                val toRead = minOf(sectorSize.toLong(), remaining).toInt()
+                if (offset + toRead <= data.size) {
+                    out.write(data, offset, toRead)
+                    remaining -= toRead
+                } else break
+
+                val next = fat[curSector]
+                if (next < 0 || next == curSector) break
+                curSector = next
+            }
+            return out.toByteArray()
+        }
+
+        companion object {
+            fun getShortLE(b: ByteArray, offset: Int): Short {
+                if (offset + 1 >= b.size) return 0
+                return ((b[offset].toInt() and 0xFF) or ((b[offset + 1].toInt() and 0xFF) shl 8)).toShort()
+            }
+
+            fun getIntLE(b: ByteArray, offset: Int): Int {
+                if (offset + 3 >= b.size) return 0
+                return (b[offset].toInt() and 0xFF) or
+                    ((b[offset + 1].toInt() and 0xFF) shl 8) or
+                    ((b[offset + 2].toInt() and 0xFF) shl 16) or
+                    ((b[offset + 3].toInt() and 0xFF) shl 24)
+            }
+
+            fun getLongLE(b: ByteArray, offset: Int): Long {
+                if (offset + 7 >= b.size) return 0L
+                val low = getIntLE(b, offset).toLong() and 0xFFFFFFFFL
+                val high = getIntLE(b, offset + 4).toLong() and 0xFFFFFFFFL
+                return low or (high shl 32)
+            }
+        }
+    }
+
+    companion object {
+        fun isTag(tagName: String, name: String): Boolean {
+            val colonIdx = tagName.indexOf(':')
+            val local = if (colonIdx >= 0) tagName.substring(colonIdx + 1) else tagName
+            return local.equals(name, ignoreCase = true)
+        }
+
+        fun createPullParser(inputStream: InputStream): XmlPullParser {
+            return try {
+                android.util.Xml.newPullParser().apply {
+                    setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
+                    setInput(inputStream, "UTF-8")
+                }
+            } catch (_: Throwable) {
+                XmlPullParserFactory.newInstance().apply {
+                    isNamespaceAware = false
+                }.newPullParser().apply {
+                    setInput(inputStream, "UTF-8")
+                }
+            }
         }
     }
 }
