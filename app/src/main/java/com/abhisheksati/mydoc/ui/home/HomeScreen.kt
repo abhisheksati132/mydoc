@@ -6,9 +6,14 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,17 +27,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Sort
+import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.FileOpen
 import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Settings
@@ -70,7 +82,11 @@ import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
 import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
 import com.abhisheksati.mydoc.designsystem.components.AppToolbar
+import com.abhisheksati.mydoc.designsystem.components.ContinueReadingCard
+import com.abhisheksati.mydoc.designsystem.components.DocumentGridCard
+import com.abhisheksati.mydoc.designsystem.components.FloatingGlassDock
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentTypeGradients
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.DocumentCategory
@@ -128,6 +144,7 @@ fun HomeScreen(
     val app = context.applicationContext as? MyDocApp
 
     var currentTab by remember { mutableStateOf(HomeTab.DOCUMENTS) }
+    var isGridView by remember { mutableStateOf(false) }
     var showCameraScanner by remember { mutableStateOf(false) }
     var showSignaturePad by remember { mutableStateOf(false) }
     var isSortMenuOpen by remember { mutableStateOf(false) }
@@ -204,6 +221,23 @@ fun HomeScreen(
                                 contentDescription = if (isDarkTheme) "Switch to light mode" else "Switch to dark mode",
                                 tint = colors.textPrimary
                             )
+                        }
+
+                        // Grid vs List view toggle (visible on Documents tab)
+                        if (currentTab == HomeTab.DOCUMENTS) {
+                            IconButton(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    isGridView = !isGridView
+                                },
+                                modifier = Modifier.size(AppSpacing.minTouchTarget)
+                            ) {
+                                Icon(
+                                    imageVector = if (isGridView) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
+                                    contentDescription = if (isGridView) "Switch to list view" else "Switch to grid view",
+                                    tint = colors.textSecondary
+                                )
+                            }
                         }
 
                         // Sort order dropdown
@@ -351,67 +385,75 @@ fun HomeScreen(
                     }
                 }
             )
-
-            // Top Tab Switcher (Documents | Tools)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = AppSpacing.paddingLarge, vertical = AppSpacing.paddingSmall),
-                horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
-            ) {
-                AppFilterChip(
-                    label = "Documents",
-                    isSelected = currentTab == HomeTab.DOCUMENTS,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        currentTab = HomeTab.DOCUMENTS
-                    }
-                )
-                AppFilterChip(
-                    label = "Media",
-                    isSelected = currentTab == HomeTab.MEDIA,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        currentTab = HomeTab.MEDIA
-                    }
-                )
-                AppFilterChip(
-                    label = "Tools",
-                    isSelected = currentTab == HomeTab.TOOLS,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        currentTab = HomeTab.TOOLS
-                    }
-                )
-            }
             AppDivider()
         }
     },
     bottomBar = {
-        if (currentTab == HomeTab.DOCUMENTS) {
-            // Lower-half one-hand reach control surface
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(colors.surface)
-                    .navigationBarsPadding()
-            ) {
-                AppDivider()
-
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+        ) {
+            if (currentTab == HomeTab.DOCUMENTS) {
+                // One-hand reach search & filter surface with frosted glass background
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = AppSpacing.paddingLarge, vertical = AppSpacing.paddingSmall)
+                        .padding(horizontal = AppSpacing.paddingLarge, vertical = 4.dp)
                 ) {
-                    // Search Field (lower half reach)
-                    AppSearchField(
-                        query = uiState.searchQuery,
-                        onQueryChanged = viewModel::onSearchQueryChanged,
-                        placeholder = "Search documents...",
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        AppSearchField(
+                            query = uiState.searchQuery,
+                            onQueryChanged = viewModel::onSearchQueryChanged,
+                            placeholder = "Search documents...",
+                            modifier = Modifier.weight(1f)
+                        )
 
-                    Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                        // Apple-style Frosted Glass "+ Open" button
+                        Box(
+                            modifier = Modifier
+                                .height(AppSpacing.minTouchTarget)
+                                .clip(RoundedCornerShape(AppSpacing.pillCornerRadius))
+                                .background(
+                                    brush = Brush.horizontalGradient(
+                                        listOf(colors.accent, colors.accent.copy(alpha = 0.85f))
+                                    )
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = Color.White.copy(alpha = 0.35f),
+                                    shape = RoundedCornerShape(AppSpacing.pillCornerRadius)
+                                )
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    openDocumentLauncher.launch(SUPPORTED_MIME_TYPES)
+                                }
+                                .padding(horizontal = 14.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Outlined.FileOpen,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Open",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     // Horizontal Category Filter Chips
                     Row(
@@ -469,42 +511,16 @@ fun HomeScreen(
                             }
                         )
                     }
-
-                    Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
-
-                    // Primary Action Button (Open Document, >=48dp touch target)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(AppSpacing.minTouchTarget)
-                            .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
-                            .background(colors.accent)
-                            .clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                openDocumentLauncher.launch(SUPPORTED_MIME_TYPES)
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.FileOpen,
-                                contentDescription = null,
-                                tint = colors.background,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(AppSpacing.paddingSmall))
-                            Text(
-                                text = stringResource(R.string.open_document),
-                                style = typography.body,
-                                color = colors.background
-                            )
-                        }
-                    }
                 }
             }
+
+            // Floating Glass Dock (Primary Navigation)
+            FloatingGlassDock(
+                currentTab = currentTab,
+                onTabSelected = { tab ->
+                    currentTab = tab
+                }
+            )
         }
     },
     containerColor = colors.background
@@ -551,8 +567,96 @@ fun HomeScreen(
                     )
                 }
             } else {
+            if (isGridView) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (uiState.isSearching) {
+                        item(span = { GridItemSpan(2) }) {
+                            AppSectionHeader(title = "SEARCH RESULTS")
+                        }
+                        items(
+                            items = uiState.documents,
+                            key = { "grid_search_${it.uri}" }
+                        ) { document ->
+                            DocumentGridCard(
+                                document = document,
+                                isFavorite = document.isFavorite || uiState.favorites.any { fav -> fav.uri == document.uri },
+                                onToggleFavorite = { viewModel.toggleFavorite(document) },
+                                onClick = { onDocumentClick(document) },
+                                onLongClick = { selectedDocForDetails = document }
+                            )
+                        }
+                    } else {
+                        // 1. Hero Continue Reading Card (spans 2 columns)
+                        val continueDoc = uiState.continueReadingDoc
+                        if (continueDoc != null && uiState.selectedCategory == DocumentCategory.ALL) {
+                            item(span = { GridItemSpan(2) }) {
+                                AppSectionHeader(title = "CONTINUE READING")
+                            }
+                            item(span = { GridItemSpan(2) }, key = "grid_continue_${continueDoc.uri}") {
+                                ContinueReadingCard(
+                                    document = continueDoc,
+                                    onClick = { onDocumentClick(continueDoc) },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+
+                        // 2. Section Header & Documents Grid
+                        val headerTitle = when (uiState.selectedCategory) {
+                            DocumentCategory.ALL -> "RECENTS"
+                            DocumentCategory.FAVORITES -> "FAVORITES"
+                            DocumentCategory.PDF -> "PDF DOCUMENTS"
+                            DocumentCategory.WORD -> "WORD DOCUMENTS"
+                            DocumentCategory.EXCEL -> "EXCEL SPREADSHEETS"
+                            DocumentCategory.PPT -> "POWERPOINT PRESENTATIONS"
+                            DocumentCategory.TEXT -> "TEXT DOCUMENTS"
+                        }
+                        item(span = { GridItemSpan(2) }) {
+                            AppSectionHeader(title = headerTitle)
+                        }
+                        items(
+                            items = uiState.documents,
+                            key = { "grid_doc_${it.uri}" }
+                        ) { document ->
+                            DocumentGridCard(
+                                document = document,
+                                isFavorite = document.isFavorite || uiState.favorites.any { fav -> fav.uri == document.uri },
+                                onToggleFavorite = { viewModel.toggleFavorite(document) },
+                                onClick = { onDocumentClick(document) },
+                                onLongClick = { selectedDocForDetails = document }
+                            )
+                        }
+
+                        // 3. Favorites Section (if viewing All and has favorites)
+                        if (uiState.selectedCategory == DocumentCategory.ALL && uiState.favorites.isNotEmpty()) {
+                            item(span = { GridItemSpan(2) }) {
+                                AppSectionHeader(title = "FAVORITES")
+                            }
+                            items(
+                                items = uiState.favorites,
+                                key = { "grid_fav_${it.uri}" }
+                            ) { document ->
+                                DocumentGridCard(
+                                    document = document,
+                                    isFavorite = true,
+                                    onToggleFavorite = { viewModel.toggleFavorite(document) },
+                                    onClick = { onDocumentClick(document) },
+                                    onLongClick = { selectedDocForDetails = document }
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
                 ) {
                     if (uiState.isSearching) {
                         item {
@@ -570,52 +674,54 @@ fun HomeScreen(
                                 onShare = { onShareDocument(document) },
                                 onShowDetails = { selectedDocForDetails = document }
                             )
-                            AppDivider()
                         }
                     } else {
-                        // 1. "Continue reading" row at very top showing last opened file and progress
+                        // 1. Hero Continue Reading Card
                         val continueDoc = uiState.continueReadingDoc
-                        if (continueDoc != null) {
+                        if (continueDoc != null && uiState.selectedCategory == DocumentCategory.ALL) {
                             item {
                                 AppSectionHeader(title = "CONTINUE READING")
                             }
                             item(key = "continue_${continueDoc.uri}") {
-                                AppFileRow(
+                                ContinueReadingCard(
                                     document = continueDoc,
-                                    showContinueReading = true,
                                     onClick = { onDocumentClick(continueDoc) },
-                                    onToggleFavorite = { viewModel.toggleFavorite(continueDoc) },
-                                    onRemoveFromRecents = { viewModel.removeFromRecents(continueDoc) },
-                                    onShare = { onShareDocument(continueDoc) },
-                                    onShowDetails = { selectedDocForDetails = continueDoc }
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = AppSpacing.paddingLarge, vertical = 4.dp)
                                 )
-                                AppDivider()
                             }
                         }
 
-                        // 2. Recents plain list
-                        if (uiState.recents.isNotEmpty()) {
-                            item {
-                                AppSectionHeader(title = "RECENTS")
-                            }
-                            items(
-                                items = uiState.recents,
-                                key = { "recent_${it.uri}" }
-                            ) { document ->
-                                AppFileRow(
-                                    document = document,
-                                    onClick = { onDocumentClick(document) },
-                                    onToggleFavorite = { viewModel.toggleFavorite(document) },
-                                    onRemoveFromRecents = { viewModel.removeFromRecents(document) },
-                                    onShare = { onShareDocument(document) },
-                                    onShowDetails = { selectedDocForDetails = document }
-                                )
-                                AppDivider()
-                            }
+                        // 2. Section Header & Documents List
+                        val headerTitle = when (uiState.selectedCategory) {
+                            DocumentCategory.ALL -> "RECENTS"
+                            DocumentCategory.FAVORITES -> "FAVORITES"
+                            DocumentCategory.PDF -> "PDF DOCUMENTS"
+                            DocumentCategory.WORD -> "WORD DOCUMENTS"
+                            DocumentCategory.EXCEL -> "EXCEL SPREADSHEETS"
+                            DocumentCategory.PPT -> "POWERPOINT PRESENTATIONS"
+                            DocumentCategory.TEXT -> "TEXT DOCUMENTS"
+                        }
+                        item {
+                            AppSectionHeader(title = headerTitle)
+                        }
+                        items(
+                            items = uiState.documents,
+                            key = { "doc_${it.uri}" }
+                        ) { document ->
+                            AppFileRow(
+                                document = document,
+                                onClick = { onDocumentClick(document) },
+                                onToggleFavorite = { viewModel.toggleFavorite(document) },
+                                onRemoveFromRecents = { viewModel.removeFromRecents(document) },
+                                onShare = { onShareDocument(document) },
+                                onShowDetails = { selectedDocForDetails = document }
+                            )
                         }
 
-                        // 3. Favorites plain list
-                        if (uiState.favorites.isNotEmpty()) {
+                        // 3. Favorites Section (if viewing All and has favorites)
+                        if (uiState.selectedCategory == DocumentCategory.ALL && uiState.favorites.isNotEmpty()) {
                             item {
                                 AppSectionHeader(title = "FAVORITES")
                             }
@@ -631,7 +737,6 @@ fun HomeScreen(
                                     onShare = { onShareDocument(document) },
                                     onShowDetails = { selectedDocForDetails = document }
                                 )
-                                AppDivider()
                             }
                         }
                     }
@@ -639,6 +744,7 @@ fun HomeScreen(
             }
         }
     }
+}
 
     // Document Details Dialog
     if (selectedDocForDetails != null) {
