@@ -709,13 +709,23 @@ private fun SuccessVerificationSection(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(text = "File size", style = typography.body, color = colors.textSecondary)
+                val diffBytes = result.outputSizeBytes - result.inputSizeBytes
+                val pct = if (result.inputSizeBytes > 0) {
+                    kotlin.math.round((diffBytes.toDouble() / result.inputSizeBytes) * 100.0).toInt()
+                } else 0
+                val deltaChip = when {
+                    pct < 0 -> " ($pct%)"
+                    pct > 0 -> " (+$pct%)"
+                    else -> ""
+                }
                 Text(
-                    text = "${formatByteSize(result.inputSizeBytes)} → ${formatByteSize(result.outputSizeBytes)}",
+                    text = "${formatByteSize(result.inputSizeBytes)} → ${formatByteSize(result.outputSizeBytes)}$deltaChip",
                     style = typography.body,
-                    color = colors.textPrimary
+                    color = if (pct < 0) colors.accent else colors.textPrimary
                 )
             }
 

@@ -314,6 +314,38 @@ fun WordViewerScreen(
                     }
                 }
                 val lazyListState = androidx.compose.foundation.lazy.rememberLazyListState()
+                val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
+
+                // Smart Resume: Restore last read position on open
+                androidx.compose.runtime.LaunchedEffect(filteredBlocks.size) {
+                    if (filteredBlocks.isNotEmpty()) {
+                        withContext(Dispatchers.IO) {
+                            val saved = app?.documentRepository?.getViewState(document.uri)
+                            val targetIndex = saved?.lastPage?.coerceIn(0, filteredBlocks.size - 1) ?: 0
+                            if (targetIndex > 0) {
+                                withContext(Dispatchers.Main) {
+                                    lazyListState.scrollToItem(targetIndex)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Smart Resume: Persist reading progress on scroll
+                androidx.compose.runtime.LaunchedEffect(lazyListState.firstVisibleItemIndex, filteredBlocks.size) {
+                    if (filteredBlocks.isNotEmpty()) {
+                        withContext(Dispatchers.IO) {
+                            app?.documentRepository?.updatePageProgress(document.uri, lazyListState.firstVisibleItemIndex, filteredBlocks.size)
+                            app?.documentRepository?.saveViewState(
+                                com.abhisheksati.mydoc.domain.model.ViewState(
+                                    uri = document.uri,
+                                    lastPage = lazyListState.firstVisibleItemIndex,
+                                    readingMode = readingMode
+                                )
+                            )
+                        }
+                    }
+                }
 
                 androidx.compose.runtime.LaunchedEffect(filteredBlocks.size) {
                     if (filteredBlocks.isNotEmpty()) {

@@ -127,6 +127,38 @@ fun TextViewerScreen(
     }
 
     val listState = rememberLazyListState()
+    val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
+
+    // Smart Resume: Restore last read position on open
+    LaunchedEffect(lines.size) {
+        if (lines.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                val saved = app?.documentRepository?.getViewState(document.uri)
+                val targetIndex = saved?.lastPage?.coerceIn(0, lines.size - 1) ?: 0
+                if (targetIndex > 0) {
+                    withContext(Dispatchers.Main) {
+                        listState.scrollToItem(targetIndex)
+                    }
+                }
+            }
+        }
+    }
+
+    // Smart Resume: Persist reading progress on scroll
+    LaunchedEffect(listState.firstVisibleItemIndex, lines.size) {
+        if (lines.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                app?.documentRepository?.updatePageProgress(document.uri, listState.firstVisibleItemIndex, lines.size)
+                app?.documentRepository?.saveViewState(
+                    com.abhisheksati.mydoc.domain.model.ViewState(
+                        uri = document.uri,
+                        lastPage = listState.firstVisibleItemIndex,
+                        readingMode = readingMode
+                    )
+                )
+            }
+        }
+    }
 
     // Volume key line scrolling
     LaunchedEffect(lines.size) {

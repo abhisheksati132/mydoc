@@ -54,6 +54,7 @@ data class VisualElement(
     val borderWidthDp: Float = 0f,
     val isRounded: Boolean = false,
     val isEllipse: Boolean = false,
+    val shapePreset: String? = null,
     val paragraphs: List<SlideParagraph> = emptyList(),
     val tableRows: List<List<String>> = emptyList()
 )
@@ -64,7 +65,8 @@ data class PptxSlide(
     val content: List<String>,
     val visualElements: List<VisualElement> = emptyList(),
     val backgroundColor: Color? = null,
-    val aspectRatio: Float = 16f / 9f
+    val aspectRatio: Float = 16f / 9f,
+    val notes: String? = null
 )
 
 data class PptxPresentation(
@@ -79,6 +81,7 @@ class PptxParser {
         val mediaMap = mutableMapOf<String, ByteArray>()
         val relsMap = mutableMapOf<Int, MutableMap<String, String>>()
         val slideXmlMap = mutableMapOf<Int, ByteArray>()
+        val notesMap = mutableMapOf<String, String>()
         var slideWidth = 9144000L
         var slideHeight = 5143500L
 
@@ -124,6 +127,17 @@ class PptxParser {
                     val slideBytes = zip.readBytes()
                     slideXmlMap[slideNum] = slideBytes
                 }
+
+                // Speaker Notes XML
+                name.startsWith("ppt/notesSlides/notesSlide") && name.endsWith(".xml") -> {
+                    val notesBytes = zip.readBytes()
+                    val noteText = parseNotesXml(notesBytes)
+                    if (noteText.isNotEmpty()) {
+                        notesMap[name] = noteText
+                        notesMap[name.removePrefix("ppt/")] = noteText
+                        notesMap["../notesSlides/" + name.substringAfterLast('/')] = noteText
+                    }
+                }
             }
 
             zip.closeEntry()
@@ -136,6 +150,10 @@ class PptxParser {
         val slidesMap = mutableMapOf<Int, PptxSlide>()
         for ((slideNum, slideBytes) in slideXmlMap) {
             val slideRels = relsMap[slideNum] ?: emptyMap()
+            val noteTarget = slideRels.values.find { it.contains("notesSlide") }
+            val slideNotes = (if (noteTarget != null) notesMap[noteTarget] else null)
+                ?: notesMap["ppt/notesSlides/notesSlide$slideNum.xml"]
+                ?: notesMap["notesSlides/notesSlide$slideNum.xml"]
             val slide = parseSlideXml(
                 stream = ByteArrayInputStream(slideBytes),
                 slideNum = slideNum,
@@ -143,7 +161,8 @@ class PptxParser {
                 slideHeight = slideHeight,
                 aspectRatio = presAspectRatio,
                 mediaMap = mediaMap,
-                relsMap = slideRels
+                relsMap = slideRels,
+                notes = slideNotes
             )
             slidesMap[slideNum] = slide
         }
@@ -226,6 +245,38 @@ class PptxParser {
         return rels
     }
 
+    private fun parseNotesXml(xmlBytes: ByteArray): String {
+        return try {
+            val parser = Xml.newPullParser().apply {
+                setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
+                setInput(ByteArrayInputStream(xmlBytes), "UTF-8")
+            }
+            var eventType = parser.eventType
+            val sb = StringBuilder()
+            var currentTag = ""
+            while (eventType != XmlPullParser.END_DOCUMENT) {
+                when (eventType) {
+                    XmlPullParser.START_TAG -> {
+                        currentTag = parser.name ?: ""
+                    }
+                    XmlPullParser.TEXT -> {
+                        if (currentTag == "a:t" || currentTag == "t") {
+                            val text = parser.text?.trim()
+                            if (!text.isNullOrEmpty() && !text.all { it.isDigit() }) {
+                                if (sb.isNotEmpty()) sb.append(" ")
+                                sb.append(text)
+                            }
+                        }
+                    }
+                }
+                eventType = parser.next()
+            }
+            sb.toString().trim()
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
     private fun parseSlideXml(
         stream: InputStream,
         slideNum: Int,
@@ -233,7 +284,8 @@ class PptxParser {
         slideHeight: Long,
         aspectRatio: Float,
         mediaMap: Map<String, ByteArray>,
-        relsMap: Map<String, String>
+        relsMap: Map<String, String>,
+        notes: String? = null
     ): PptxSlide {
         val parser = Xml.newPullParser().apply {
             setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
@@ -260,6 +312,7 @@ class PptxParser {
         var curBorderWidth = 0f
         var curIsRounded = false
         var curIsEllipse = false
+        var curShapePreset: String? = null
         var curBlipEmbed: String? = null
 
         val curParagraphs = mutableListOf<SlideParagraph>()
@@ -290,6 +343,7 @@ class PptxParser {
                             curOffX = 0L; curOffY = 0L; curExtX = 0L; curExtY = 0L
                             curFillColor = null; curBorderColor = null; curBorderWidth = 0f
                             curIsRounded = false; curIsEllipse = false
+                            curShapePreset = null
                             curParagraphs.clear()
                         }
 
@@ -336,6 +390,7 @@ class PptxParser {
 
                         "a:prstGeom", "prstGeom" -> {
                             val prst = parser.getAttributeValue(null, "prst") ?: ""
+                            curShapePreset = prst
                             if (prst.contains("round", ignoreCase = true)) {
                                 curIsRounded = true
                             } else if (prst == "ellipse" || prst == "circle") {
@@ -490,13 +545,13 @@ class PptxParser {
                         "p:sp", "sp" -> {
                             inShape = false
                             val bounds = calculateBounds(curOffX, curOffY, curExtX, curExtY, slideWidth, slideHeight)
-                            val type = if (curFillColor != null || curBorderColor != null) {
+                            val type = if (curFillColor != null || curBorderColor != null || curShapePreset != null) {
                                 VisualElementType.SHAPE
                             } else {
                                 VisualElementType.TEXT_BOX
                             }
 
-                            if (curParagraphs.isNotEmpty() || curFillColor != null || curBorderColor != null) {
+                            if (curParagraphs.isNotEmpty() || curFillColor != null || curBorderColor != null || curShapePreset != null) {
                                 visualElements.add(
                                     VisualElement(
                                         type = type,
@@ -506,6 +561,7 @@ class PptxParser {
                                         borderWidthDp = curBorderWidth,
                                         isRounded = curIsRounded,
                                         isEllipse = curIsEllipse,
+                                        shapePreset = curShapePreset,
                                         paragraphs = curParagraphs.toList()
                                     )
                                 )
@@ -552,7 +608,8 @@ class PptxParser {
             content = content,
             visualElements = visualElements,
             backgroundColor = slideBgColor,
-            aspectRatio = aspectRatio
+            aspectRatio = aspectRatio,
+            notes = notes
         )
     }
 

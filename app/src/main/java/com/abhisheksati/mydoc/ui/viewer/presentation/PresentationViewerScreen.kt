@@ -32,6 +32,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -42,9 +46,14 @@ import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Slideshow
 import androidx.compose.material.icons.outlined.Brightness4
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Print
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.ViewCarousel
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -52,6 +61,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -61,6 +71,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -93,8 +104,15 @@ import com.abhisheksati.mydoc.rendering.engine.presentation.PptxPresentation
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxSlide
 import com.abhisheksati.mydoc.rendering.engine.presentation.VisualElement
 import com.abhisheksati.mydoc.rendering.engine.presentation.VisualElementType
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.ui.viewer.controls.PageJumpDialog
 import com.abhisheksati.mydoc.ui.viewer.controls.PrintHelper
+import com.abhisheksati.mydoc.ui.viewer.controls.SearchOverlay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -110,6 +128,8 @@ fun PresentationViewerScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val app = context.applicationContext as? MyDocApp
+
     var presentationData by remember { mutableStateOf<PptxPresentation?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -118,6 +138,14 @@ fun PresentationViewerScreen(
     var isVisualMode by remember { mutableStateOf(true) }
     var isMenuOpen by remember { mutableStateOf(false) }
     var isJumpDialogOpen by remember { mutableStateOf(false) }
+
+    var isSearchOpen by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    var currentMatchIndex by remember { mutableIntStateOf(0) }
+
+    var isThumbnailStripOpen by remember { mutableStateOf(false) }
+    var isSlideshowMode by remember { mutableStateOf(false) }
+    var isNotesSheetOpen by remember { mutableStateOf(false) }
 
     var zoomScale by remember { mutableFloatStateOf(1f) }
     var panOffset by remember { mutableStateOf(Offset.Zero) }
@@ -143,6 +171,37 @@ fun PresentationViewerScreen(
     val slides = presentationData?.slides ?: emptyList()
     val pagerState = rememberPagerState(pageCount = { slides.size })
 
+    // Smart Resume: Restore last viewed slide on open
+    LaunchedEffect(slides.size) {
+        if (slides.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                val savedState = app?.documentRepository?.getViewState(document.uri)
+                val targetSlide = savedState?.lastPage?.coerceIn(0, slides.size - 1) ?: 0
+                if (targetSlide > 0) {
+                    withContext(Dispatchers.Main) {
+                        pagerState.scrollToPage(targetSlide)
+                    }
+                }
+            }
+        }
+    }
+
+    // Smart Resume: Persist slide progress on change
+    LaunchedEffect(pagerState.currentPage, slides.size) {
+        if (slides.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                app?.documentRepository?.updatePageProgress(document.uri, pagerState.currentPage, slides.size)
+                app?.documentRepository?.saveViewState(
+                    com.abhisheksati.mydoc.domain.model.ViewState(
+                        uri = document.uri,
+                        lastPage = pagerState.currentPage,
+                        readingMode = readingMode
+                    )
+                )
+            }
+        }
+    }
+
     // Reset zoom when swiping slides
     LaunchedEffect(pagerState.currentPage) {
         zoomScale = 1f
@@ -162,6 +221,35 @@ fun PresentationViewerScreen(
                     pagerState.animateScrollToPage(target)
                 }
             }
+        }
+    }
+
+    // In-slide keyword search match indices
+    val searchMatches = remember(searchQuery, slides) {
+        if (searchQuery.length < 2) emptyList<Int>()
+        else {
+            val list = mutableListOf<Int>()
+            slides.forEachIndexed { idx, slide ->
+                val inTitle = slide.title.contains(searchQuery, ignoreCase = true)
+                val inContent = slide.content.any { it.contains(searchQuery, ignoreCase = true) }
+                val inVisual = slide.visualElements.any { el ->
+                    el.paragraphs.any { p -> p.plainText.contains(searchQuery, ignoreCase = true) } ||
+                    el.tableRows.any { row -> row.any { cell -> cell.contains(searchQuery, ignoreCase = true) } }
+                }
+                if (inTitle || inContent || inVisual) {
+                    list.add(idx)
+                }
+            }
+            list
+        }
+    }
+
+    BackHandler(enabled = isSlideshowMode || isSearchOpen) {
+        if (isSearchOpen) {
+            isSearchOpen = false
+            searchQuery = ""
+        } else if (isSlideshowMode) {
+            isSlideshowMode = false
         }
     }
 
@@ -192,134 +280,243 @@ fun PresentationViewerScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            Column(
-                modifier = Modifier.background(bgColor)
-            ) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = document.displayName,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = textColor,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+            if (!isSlideshowMode) {
+                Column(
+                    modifier = Modifier.background(bgColor)
+                ) {
+                    if (isSearchOpen) {
+                        SearchOverlay(
+                            visible = true,
+                            query = searchQuery,
+                            matchCount = searchMatches.size,
+                            currentMatchIndex = currentMatchIndex,
+                            onQueryChanged = {
+                                searchQuery = it
+                                currentMatchIndex = 0
+                            },
+                            onNextMatch = {
+                                if (searchMatches.isNotEmpty()) {
+                                    currentMatchIndex = (currentMatchIndex + 1) % searchMatches.size
+                                    scope.launch { pagerState.animateScrollToPage(searchMatches[currentMatchIndex]) }
+                                }
+                            },
+                            onPreviousMatch = {
+                                if (searchMatches.isNotEmpty()) {
+                                    currentMatchIndex = (currentMatchIndex - 1 + searchMatches.size) % searchMatches.size
+                                    scope.launch { pagerState.animateScrollToPage(searchMatches[currentMatchIndex]) }
+                                }
+                            },
+                            onCloseSearch = {
+                                isSearchOpen = false
+                                searchQuery = ""
+                            }
                         )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onBackClick) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                contentDescription = "Back",
-                                tint = textColor
-                            )
-                        }
-                    },
-                    actions = {
-                        // Toggle between Visual Slides and Outline View
-                        IconButton(
-                            onClick = {
-                                isVisualMode = !isVisualMode
-                                val modeName = if (isVisualMode) "Visual Slide View" else "Outline Text View"
-                                Toast.makeText(context, modeName, Toast.LENGTH_SHORT).show()
-                            }
-                        ) {
-                            Icon(
-                                imageVector = if (isVisualMode) Icons.Default.Slideshow else Icons.AutoMirrored.Filled.Article,
-                                contentDescription = "Toggle Visual / Outline",
-                                tint = if (isVisualMode) MaterialTheme.colorScheme.primary else secondaryTextColor
-                            )
-                        }
-
-                        // Toggle Reading Mode
-                        IconButton(onClick = {
-                            readingMode = when (readingMode) {
-                                ReadingMode.NORMAL -> ReadingMode.INVERTED_DARK
-                                ReadingMode.INVERTED_DARK -> ReadingMode.SEPIA
-                                ReadingMode.SEPIA -> ReadingMode.NORMAL
-                            }
-                        }) {
-                            Icon(
-                                imageVector = Icons.Outlined.Brightness4,
-                                contentDescription = "Toggle Reading Mode",
-                                tint = if (readingMode != ReadingMode.NORMAL) MaterialTheme.colorScheme.primary else secondaryTextColor
-                            )
-                        }
-
-                        // Share
-                        IconButton(onClick = onShareClick) {
-                            Icon(
-                                imageVector = Icons.Outlined.Share,
-                                contentDescription = "Share",
-                                tint = secondaryTextColor
-                            )
-                        }
-
-                        // More options
-                        Box {
-                            IconButton(onClick = { isMenuOpen = true }) {
-                                Icon(
-                                    imageVector = Icons.Outlined.MoreVert,
-                                    contentDescription = "Options",
-                                    tint = secondaryTextColor
+                    } else {
+                        TopAppBar(
+                            title = {
+                                Text(
+                                    text = document.displayName,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = textColor,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
-                            }
-                            DropdownMenu(
-                                expanded = isMenuOpen,
-                                onDismissRequest = { isMenuOpen = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Open with another app") },
-                                    leadingIcon = {
-                                        Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
-                                    },
+                            },
+                            navigationIcon = {
+                                IconButton(onClick = onBackClick) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                                        contentDescription = "Back",
+                                        tint = textColor
+                                    )
+                                }
+                            },
+                            actions = {
+                                // In-Slide Keyword Search
+                                IconButton(onClick = { isSearchOpen = true }) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Search,
+                                        contentDescription = "Search Slides",
+                                        tint = secondaryTextColor
+                                    )
+                                }
+
+                                // Fullscreen Slideshow / Presenter Mode
+                                IconButton(onClick = { isSlideshowMode = true }) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.PlayArrow,
+                                        contentDescription = "Start Slideshow",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+
+                                // Toggle between Visual Slides and Outline View
+                                IconButton(
                                     onClick = {
-                                        isMenuOpen = false
-                                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                                            setDataAndType(Uri.parse(document.uri), document.mimeType)
-                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                        }
-                                        try {
-                                            context.startActivity(Intent.createChooser(intent, "Open with"))
-                                        } catch (_: Exception) {
-                                            Toast.makeText(context, "No app available", Toast.LENGTH_SHORT).show()
-                                        }
+                                        isVisualMode = !isVisualMode
+                                        val modeName = if (isVisualMode) "Visual Slide View" else "Outline Text View"
+                                        Toast.makeText(context, modeName, Toast.LENGTH_SHORT).show()
                                     }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Print") },
-                                    leadingIcon = {
-                                        Icon(Icons.Outlined.Print, contentDescription = null)
-                                    },
-                                    onClick = {
-                                        isMenuOpen = false
-                                        PrintHelper.printDocument(context, document)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isVisualMode) Icons.Default.Slideshow else Icons.AutoMirrored.Filled.Article,
+                                        contentDescription = "Toggle Visual / Outline",
+                                        tint = if (isVisualMode) MaterialTheme.colorScheme.primary else secondaryTextColor
+                                    )
+                                }
+
+                                // Toggle Reading Mode
+                                IconButton(onClick = {
+                                    readingMode = when (readingMode) {
+                                        ReadingMode.NORMAL -> ReadingMode.INVERTED_DARK
+                                        ReadingMode.INVERTED_DARK -> ReadingMode.SEPIA
+                                        ReadingMode.SEPIA -> ReadingMode.NORMAL
                                     }
-                                )
-                            }
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = bgColor)
-                )
-                AppDivider()
+                                }) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Brightness4,
+                                        contentDescription = "Toggle Reading Mode",
+                                        tint = if (readingMode != ReadingMode.NORMAL) MaterialTheme.colorScheme.primary else secondaryTextColor
+                                    )
+                                }
+
+                                // Share
+                                IconButton(onClick = onShareClick) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Share,
+                                        contentDescription = "Share",
+                                        tint = secondaryTextColor
+                                    )
+                                }
+
+                                // More options
+                                Box {
+                                    IconButton(onClick = { isMenuOpen = true }) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.MoreVert,
+                                            contentDescription = "Options",
+                                            tint = secondaryTextColor
+                                        )
+                                    }
+                                    DropdownMenu(
+                                        expanded = isMenuOpen,
+                                        onDismissRequest = { isMenuOpen = false }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("Open with another app") },
+                                            leadingIcon = {
+                                                Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
+                                            },
+                                            onClick = {
+                                                isMenuOpen = false
+                                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                                    setDataAndType(Uri.parse(document.uri), document.mimeType)
+                                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                }
+                                                try {
+                                                    context.startActivity(Intent.createChooser(intent, "Open with"))
+                                                } catch (_: Exception) {
+                                                    Toast.makeText(context, "No app available", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Print") },
+                                            leadingIcon = {
+                                                Icon(Icons.Outlined.Print, contentDescription = null)
+                                            },
+                                            onClick = {
+                                                isMenuOpen = false
+                                                PrintHelper.printDocument(context, document)
+                                            }
+                                        )
+                                    }
+                                }
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(containerColor = bgColor)
+                        )
+                    }
+                    AppDivider()
+                }
             }
         },
         bottomBar = {
-            if (slides.isNotEmpty()) {
+            if (slides.isNotEmpty() && !isSlideshowMode) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(bgColor)
                         .navigationBarsPadding()
                 ) {
+                    // Slide Thumbnail Carousel (when open)
+                    AnimatedVisibility(visible = isThumbnailStripOpen) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(bgColor)
+                        ) {
+                            LazyRow(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = AppSpacing.paddingSmall),
+                                contentPadding = PaddingValues(horizontal = AppSpacing.paddingMedium),
+                                horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
+                            ) {
+                                items(slides.size) { index ->
+                                    val isSelected = index == pagerState.currentPage
+                                    val slide = slides[index]
+                                    Box(
+                                        modifier = Modifier
+                                            .width(96.dp)
+                                            .height(58.dp)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(cardBgColor)
+                                            .border(
+                                                width = if (isSelected) 2.dp else 1.dp,
+                                                color = if (isSelected) MaterialTheme.colorScheme.primary else Color(0x33888888),
+                                                shape = RoundedCornerShape(6.dp)
+                                            )
+                                            .clickable {
+                                                scope.launch { pagerState.animateScrollToPage(index) }
+                                            }
+                                            .padding(4.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            Text(
+                                                text = "${index + 1}",
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isSelected) MaterialTheme.colorScheme.primary else textColor
+                                            )
+                                            Text(
+                                                text = slide.title,
+                                                fontSize = 9.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                color = secondaryTextColor
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            AppDivider()
+                        }
+                    }
+
                     AppDivider()
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp)
-                            .padding(horizontal = AppSpacing.paddingLarge),
+                            .padding(horizontal = AppSpacing.paddingMedium),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
+                        // Previous slide
                         IconButton(
                             onClick = {
                                 scope.launch {
@@ -337,6 +534,16 @@ fun PresentationViewerScreen(
                             )
                         }
 
+                        // Thumbnail carousel toggle button
+                        IconButton(onClick = { isThumbnailStripOpen = !isThumbnailStripOpen }) {
+                            Icon(
+                                imageVector = Icons.Outlined.ViewCarousel,
+                                contentDescription = "Toggle Thumbnails",
+                                tint = if (isThumbnailStripOpen) MaterialTheme.colorScheme.primary else secondaryTextColor
+                            )
+                        }
+
+                        // Slide counter & page jump
                         Text(
                             text = "Slide ${pagerState.currentPage + 1} of ${slides.size}",
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
@@ -346,6 +553,21 @@ fun PresentationViewerScreen(
                                 .padding(AppSpacing.paddingSmall)
                         )
 
+                        // Speaker Notes button
+                        val currentSlide = slides.getOrNull(pagerState.currentPage)
+                        val hasNotes = !currentSlide?.notes.isNullOrBlank()
+                        IconButton(
+                            onClick = { isNotesSheetOpen = true },
+                            enabled = hasNotes
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Description,
+                                contentDescription = "Speaker Notes",
+                                tint = if (hasNotes) MaterialTheme.colorScheme.primary else secondaryTextColor.copy(alpha = 0.25f)
+                            )
+                        }
+
+                        // Next slide
                         IconButton(
                             onClick = {
                                 scope.launch {
@@ -371,7 +593,7 @@ fun PresentationViewerScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(if (isSlideshowMode) PaddingValues(0.dp) else innerPadding)
                 .background(bgColor),
             contentAlignment = Alignment.Center
         ) {
@@ -394,9 +616,23 @@ fun PresentationViewerScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(AppSpacing.paddingMedium)
-                            .pointerInput(Unit) {
+                            .padding(if (isSlideshowMode) 0.dp else AppSpacing.paddingMedium)
+                            .pointerInput(isSlideshowMode) {
                                 detectTapGestures(
+                                    onTap = { offset ->
+                                        if (isSlideshowMode) {
+                                            val w = size.width
+                                            if (offset.x < w * 0.25f) {
+                                                if (pagerState.currentPage > 0) {
+                                                    scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
+                                                }
+                                            } else {
+                                                if (pagerState.currentPage < slides.size - 1) {
+                                                    scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                                                }
+                                            }
+                                        }
+                                    },
                                     onDoubleTap = {
                                         zoomScale = if (zoomScale > 1.2f) 1f else 2.5f
                                         panOffset = Offset.Zero
@@ -434,16 +670,36 @@ fun PresentationViewerScreen(
                             VisualSlideCard(
                                 slide = slide,
                                 cardBgColor = cardBgColor,
-                                defaultTextColor = textColor
+                                defaultTextColor = textColor,
+                                highlightQuery = if (isSearchOpen) searchQuery else ""
                             )
                         } else {
                             // Outline / clean text bullet points view
                             OutlineSlideCard(
                                 slide = slide,
                                 cardBgColor = cardBgColor,
-                                textColor = textColor
+                                textColor = textColor,
+                                highlightQuery = if (isSearchOpen) searchQuery else ""
                             )
                         }
+                    }
+                }
+
+                // In Slideshow mode: Minimal floating exit button
+                if (isSlideshowMode) {
+                    IconButton(
+                        onClick = { isSlideshowMode = false },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .statusBarsPadding()
+                            .padding(AppSpacing.paddingMedium)
+                            .background(Color(0x88000000), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Close,
+                            contentDescription = "Exit Slideshow",
+                            tint = Color.White
+                        )
                     }
                 }
             }
@@ -457,7 +713,196 @@ fun PresentationViewerScreen(
                 },
                 onDismiss = { isJumpDialogOpen = false }
             )
+
+            // Speaker Notes Bottom Sheet
+            if (isNotesSheetOpen) {
+                val curNotes = slides.getOrNull(pagerState.currentPage)?.notes ?: "No speaker notes for this slide."
+                ModalBottomSheet(
+                    onDismissRequest = { isNotesSheetOpen = false },
+                    containerColor = cardBgColor
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(AppSpacing.paddingLarge)
+                            .navigationBarsPadding()
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Speaker Notes — Slide ${pagerState.currentPage + 1}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = textColor
+                            )
+                            IconButton(onClick = { isNotesSheetOpen = false }) {
+                                Icon(Icons.Outlined.Close, contentDescription = "Close", tint = textColor)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
+                        Text(
+                            text = curNotes,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = textColor,
+                            lineHeight = 24.sp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState())
+                        )
+                    }
+                }
+            }
         }
+    }
+}
+
+/**
+ * Helper to draw Microsoft preset vector shapes using Canvas & Path.
+ */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPresetShape(
+    preset: String,
+    bg: Color,
+    border: Color
+) {
+    val path = Path()
+    val w = size.width
+    val h = size.height
+
+    when {
+        preset.contains("rightArrow", ignoreCase = true) -> {
+            path.moveTo(0f, h * 0.25f)
+            path.lineTo(w * 0.6f, h * 0.25f)
+            path.lineTo(w * 0.6f, 0f)
+            path.lineTo(w, h * 0.5f)
+            path.lineTo(w * 0.6f, h)
+            path.lineTo(w * 0.6f, h * 0.75f)
+            path.lineTo(0f, h * 0.75f)
+            path.close()
+        }
+        preset.contains("leftArrow", ignoreCase = true) -> {
+            path.moveTo(w, h * 0.25f)
+            path.lineTo(w * 0.4f, h * 0.25f)
+            path.lineTo(w * 0.4f, 0f)
+            path.lineTo(0f, h * 0.5f)
+            path.lineTo(w * 0.4f, h)
+            path.lineTo(w * 0.4f, h * 0.75f)
+            path.lineTo(w, h * 0.75f)
+            path.close()
+        }
+        preset.contains("upArrow", ignoreCase = true) -> {
+            path.moveTo(w * 0.5f, 0f)
+            path.lineTo(w, h * 0.4f)
+            path.lineTo(w * 0.75f, h * 0.4f)
+            path.lineTo(w * 0.75f, h)
+            path.lineTo(w * 0.25f, h)
+            path.lineTo(w * 0.25f, h * 0.4f)
+            path.lineTo(0f, h * 0.4f)
+            path.close()
+        }
+        preset.contains("downArrow", ignoreCase = true) -> {
+            path.moveTo(w * 0.25f, 0f)
+            path.lineTo(w * 0.75f, 0f)
+            path.lineTo(w * 0.75f, h * 0.6f)
+            path.lineTo(w, h * 0.6f)
+            path.lineTo(w * 0.5f, h)
+            path.lineTo(0f, h * 0.6f)
+            path.lineTo(w * 0.25f, h * 0.6f)
+            path.close()
+        }
+        preset.contains("triangle", ignoreCase = true) -> {
+            path.moveTo(w * 0.5f, 0f)
+            path.lineTo(w, h)
+            path.lineTo(0f, h)
+            path.close()
+        }
+        preset.contains("diamond", ignoreCase = true) -> {
+            path.moveTo(w * 0.5f, 0f)
+            path.lineTo(w, h * 0.5f)
+            path.lineTo(w * 0.5f, h)
+            path.lineTo(0f, h * 0.5f)
+            path.close()
+        }
+        preset.contains("star", ignoreCase = true) -> {
+            val cx = w / 2f
+            val cy = h / 2f
+            val rOuter = minOf(w, h) / 2f
+            val rInner = rOuter * 0.4f
+            for (i in 0 until 10) {
+                val angle = (i * Math.PI / 5.0 - Math.PI / 2.0).toFloat()
+                val r = if (i % 2 == 0) rOuter else rInner
+                val x = cx + r * kotlin.math.cos(angle)
+                val y = cy + r * kotlin.math.sin(angle)
+                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            }
+            path.close()
+        }
+        else -> return
+    }
+
+    drawPath(path, color = bg)
+    drawPath(
+        path,
+        color = border,
+        style = Stroke(width = 1.5.dp.toPx())
+    )
+}
+
+/**
+ * Text composable that highlights matched search keywords in yellow.
+ */
+@Composable
+private fun HighlightableText(
+    text: String,
+    query: String,
+    fontSize: androidx.compose.ui.unit.TextUnit,
+    fontWeight: FontWeight = FontWeight.Normal,
+    fontStyle: FontStyle = FontStyle.Normal,
+    color: Color,
+    textAlign: TextAlign = TextAlign.Start,
+    modifier: Modifier = Modifier
+) {
+    if (query.isNotBlank() && query.length >= 2 && text.contains(query, ignoreCase = true)) {
+        val annotated = buildAnnotatedString {
+            var searchStart = 0
+            val lowerText = text.lowercase()
+            val lowerQuery = query.lowercase()
+
+            while (searchStart < text.length) {
+                val matchIdx = lowerText.indexOf(lowerQuery, searchStart)
+                if (matchIdx == -1) {
+                    append(text.substring(searchStart))
+                    break
+                }
+                if (matchIdx > searchStart) {
+                    append(text.substring(searchStart, matchIdx))
+                }
+                withStyle(SpanStyle(background = Color(0x99FFEB3B), color = Color(0xFF1E293B))) {
+                    append(text.substring(matchIdx, matchIdx + query.length))
+                }
+                searchStart = matchIdx + query.length
+            }
+        }
+        Text(
+            text = annotated,
+            fontSize = fontSize,
+            fontWeight = fontWeight,
+            fontStyle = fontStyle,
+            textAlign = textAlign,
+            modifier = modifier
+        )
+    } else {
+        Text(
+            text = text,
+            fontSize = fontSize,
+            fontWeight = fontWeight,
+            fontStyle = fontStyle,
+            color = color,
+            textAlign = textAlign,
+            modifier = modifier
+        )
     }
 }
 
@@ -468,7 +913,8 @@ fun PresentationViewerScreen(
 private fun VisualSlideCard(
     slide: PptxSlide,
     cardBgColor: Color,
-    defaultTextColor: Color
+    defaultTextColor: Color,
+    highlightQuery: String = ""
 ) {
     val slideBg = slide.backgroundColor ?: cardBgColor
 
@@ -512,10 +958,26 @@ private fun VisualSlideCard(
                         }
 
                         VisualElementType.SHAPE, VisualElementType.TEXT_BOX -> {
+                            val preset = element.shapePreset
+                            val isVectorPreset = preset != null && (
+                                preset.contains("Arrow", ignoreCase = true) ||
+                                preset.contains("triangle", ignoreCase = true) ||
+                                preset.contains("diamond", ignoreCase = true) ||
+                                preset.contains("star", ignoreCase = true)
+                            )
+
+                            if (preset != null && isVectorPreset) {
+                                Canvas(modifier = Modifier.fillMaxSize()) {
+                                    val bg = element.backgroundColor ?: Color(0x22888888)
+                                    val border = element.borderColor ?: Color(0x44888888)
+                                    drawPresetShape(preset, bg, border)
+                                }
+                            }
+
                             val shapeModifier = Modifier
                                 .fillMaxSize()
                                 .then(
-                                    if (element.backgroundColor != null) {
+                                    if (!isVectorPreset && element.backgroundColor != null) {
                                         Modifier.background(
                                             color = element.backgroundColor,
                                             shape = if (element.isRounded) RoundedCornerShape(8.dp) else if (element.isEllipse) CircleShape else RectangleShape
@@ -523,7 +985,7 @@ private fun VisualSlideCard(
                                     } else Modifier
                                 )
                                 .then(
-                                    if (element.borderColor != null) {
+                                    if (!isVectorPreset && element.borderColor != null) {
                                         Modifier.border(
                                             width = 1.dp,
                                             color = element.borderColor,
@@ -549,8 +1011,9 @@ private fun VisualSlideCard(
                                         ) {
                                             for (run in para.runs) {
                                                 val runColor = run.color ?: defaultTextColor
-                                                Text(
+                                                HighlightableText(
                                                     text = run.text,
+                                                    query = highlightQuery,
                                                     fontSize = (run.fontSizeSp * 0.85f).coerceIn(9f, 32f).sp,
                                                     fontWeight = if (run.isBold) FontWeight.Bold else FontWeight.Normal,
                                                     fontStyle = if (run.isItalic) FontStyle.Italic else FontStyle.Normal,
@@ -584,12 +1047,11 @@ private fun VisualSlideCard(
                                                     .border(0.5.dp, Color(0x22888888))
                                                     .padding(2.dp)
                                             ) {
-                                                Text(
+                                                HighlightableText(
                                                     text = cellText,
+                                                    query = highlightQuery,
                                                     fontSize = 10.sp,
-                                                    color = defaultTextColor,
-                                                    maxLines = 2,
-                                                    overflow = TextOverflow.Ellipsis
+                                                    color = defaultTextColor
                                                 )
                                             }
                                         }
@@ -605,13 +1067,14 @@ private fun VisualSlideCard(
 }
 
 /**
- * Outline mode: Clean bullet-point summary of slide text.
+ * Outline mode: Clean bullet-point summary of slide text with keyword highlighting.
  */
 @Composable
 private fun OutlineSlideCard(
     slide: PptxSlide,
     cardBgColor: Color,
-    textColor: Color
+    textColor: Color,
+    highlightQuery: String = ""
 ) {
     Box(
         modifier = Modifier
@@ -626,8 +1089,9 @@ private fun OutlineSlideCard(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            Text(
+            HighlightableText(
                 text = slide.title,
+                query = highlightQuery,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = textColor,
@@ -642,11 +1106,11 @@ private fun OutlineSlideCard(
                         color = textColor,
                         fontSize = 15.sp
                     )
-                    Text(
+                    HighlightableText(
                         text = item,
+                        query = highlightQuery,
                         fontSize = 15.sp,
-                        color = textColor,
-                        lineHeight = 22.sp
+                        color = textColor
                     )
                 }
             }

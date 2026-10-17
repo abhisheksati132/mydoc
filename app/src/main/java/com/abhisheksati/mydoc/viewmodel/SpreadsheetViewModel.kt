@@ -49,10 +49,14 @@ class SpreadsheetViewModel(
                     ?: throw IllegalStateException("Could not open input stream")
 
                 val model = inputStream.use { parser.parse(it, documentFile.extension) }
+                val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
+                val savedState = app?.documentRepository?.getViewState(documentFile.uri)
+                val initialSheet = savedState?.lastPage?.coerceIn(0, maxOf(0, model.sheets.size - 1)) ?: 0
+
                 _uiState.update {
                     it.copy(
                         model = model,
-                        selectedSheetIndex = 0,
+                        selectedSheetIndex = initialSheet,
                         isLoading = false
                     )
                 }
@@ -70,6 +74,16 @@ class SpreadsheetViewModel(
     fun selectSheet(index: Int) {
         if (index in _uiState.value.model.sheets.indices) {
             _uiState.update { it.copy(selectedSheetIndex = index, selectedCell = null) }
+            viewModelScope.launch {
+                val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
+                app?.documentRepository?.updatePageProgress(documentFile.uri, index, _uiState.value.model.sheets.size)
+                app?.documentRepository?.saveViewState(
+                    com.abhisheksati.mydoc.domain.model.ViewState(
+                        uri = documentFile.uri,
+                        lastPage = index
+                    )
+                )
+            }
         }
     }
 
