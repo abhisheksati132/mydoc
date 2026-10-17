@@ -54,8 +54,11 @@ import androidx.compose.material.icons.outlined.Print
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.ViewCarousel
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
+import androidx.core.content.FileProvider
+import java.io.File
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -119,6 +122,60 @@ import com.abhisheksati.mydoc.ui.viewer.controls.SearchOverlay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+fun openPresentationInOfficeApp(context: Context, document: DocumentFile) {
+    try {
+        val uri = Uri.parse(document.uri)
+        val ext = document.extension.lowercase()
+        val mimeType = when (ext) {
+            "pptx" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            "ppt" -> "application/vnd.ms-powerpoint"
+            else -> document.mimeType ?: "application/vnd.ms-powerpoint"
+        }
+
+        val sharedDir = File(context.cacheDir, "shared_presentations").apply { mkdirs() }
+        val targetFile = File(sharedDir, document.displayName)
+
+        if (!targetFile.exists() || targetFile.length() == 0L) {
+            val stream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri, document.displayName)
+            stream?.use { input ->
+                targetFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+        }
+
+        val shareUri = if (targetFile.exists() && targetFile.length() > 0L) {
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                targetFile
+            )
+        } else {
+            uri
+        }
+
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(shareUri, mimeType)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        context.startActivity(Intent.createChooser(intent, "Open presentation in"))
+    } catch (_: Exception) {
+        try {
+            val playStoreIntent = Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.docs.editors.slides")
+            ).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(playStoreIntent)
+        } catch (_: Exception) {
+            Toast.makeText(context, "Install Google Slides or Microsoft PowerPoint to view full graphics", Toast.LENGTH_LONG).show()
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -395,6 +452,15 @@ fun PresentationViewerScreen(
                                     )
                                 }
 
+                                // Open in PowerPoint / Google Slides for full desktop graphics
+                                IconButton(onClick = { openPresentationInOfficeApp(context, document) }) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
+                                        contentDescription = "Open in PowerPoint or Google Slides",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+
                                 // More options
                                 Box {
                                     IconButton(onClick = { isMenuOpen = true }) {
@@ -409,21 +475,13 @@ fun PresentationViewerScreen(
                                         onDismissRequest = { isMenuOpen = false }
                                     ) {
                                         DropdownMenuItem(
-                                            text = { Text("Open with another app") },
+                                            text = { Text("Open in PowerPoint / Google Slides") },
                                             leadingIcon = {
                                                 Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
                                             },
                                             onClick = {
                                                 isMenuOpen = false
-                                                val intent = Intent(Intent.ACTION_VIEW).apply {
-                                                    setDataAndType(Uri.parse(document.uri), document.mimeType)
-                                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                }
-                                                try {
-                                                    context.startActivity(Intent.createChooser(intent, "Open with"))
-                                                } catch (_: Exception) {
-                                                    Toast.makeText(context, "No app available", Toast.LENGTH_SHORT).show()
-                                                }
+                                                openPresentationInOfficeApp(context, document)
                                             }
                                         )
                                         DropdownMenuItem(
@@ -606,12 +664,24 @@ fun PresentationViewerScreen(
             if (isLoading) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             } else if (errorMessage != null) {
-                Text(
-                    text = errorMessage ?: "Error reading presentation",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyLarge,
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
                     modifier = Modifier.padding(AppSpacing.paddingLarge)
-                )
+                ) {
+                    Text(
+                        text = errorMessage ?: "Error reading presentation",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { openPresentationInOfficeApp(context, document) }) {
+                        Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Open with PowerPoint / Google Slides")
+                    }
+                }
             } else if (slides.isNotEmpty()) {
                 HorizontalPager(
                     state = pagerState,

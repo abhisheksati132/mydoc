@@ -1203,7 +1203,7 @@ class PptxParser {
                                 inShape = false
                                 inSpPr = false; inLn = false; inTxBody = false; inRPr = false; inDefRPr = false
 
-                                if (curParagraphs.isNotEmpty() || curFillColor != null || curBorderColor != null || curShapePreset != null) {
+                                if (curParagraphs.isNotEmpty() || curFillColor != null || curBorderColor != null || curShapePreset != null || curBlipEmbed != null) {
                                     val bounds = resolveElementBounds(
                                         curOffX, curOffY, curExtX, curExtY,
                                         slideWidth, slideHeight,
@@ -1211,32 +1211,54 @@ class PptxParser {
                                         layoutInfo, groupTransformStack, shapeCounter++
                                     )
 
-                                    // Inherit layout styling if slide shape did not specify explicit colors
-                                    val layoutPh = findPlaceholder(layoutInfo, curPlaceholderType, curPlaceholderIdx)
-                                    val effectiveFill = curFillColor ?: layoutPh?.fillColor
-                                    val effectiveBorder = curBorderColor ?: layoutPh?.borderColor
-                                    val effectiveBorderWidth = if (curBorderWidth > 0f) curBorderWidth else (layoutPh?.borderWidthDp ?: 0f)
-                                    val effectivePreset = curShapePreset ?: layoutPh?.preset
+                                    val embedId = curBlipEmbed
+                                    val shapeImageBytes = if (embedId != null) {
+                                        val targetPath = relsMap[embedId]
+                                        if (targetPath != null) {
+                                            mediaMap[targetPath]
+                                                ?: mediaMap[targetPath.substringAfterLast('/')]
+                                                ?: mediaMap["ppt/" + targetPath.removePrefix("../")]
+                                        } else null
+                                    } else null
 
-                                    val type = if (effectiveFill != null || effectiveBorder != null || effectivePreset != null) {
-                                        VisualElementType.SHAPE
-                                    } else {
-                                        VisualElementType.TEXT_BOX
+                                    if (shapeImageBytes != null && shapeImageBytes.isNotEmpty()) {
+                                        visualElements.add(
+                                            VisualElement(
+                                                type = VisualElementType.IMAGE,
+                                                bounds = bounds,
+                                                imageBytes = shapeImageBytes
+                                            )
+                                        )
                                     }
 
-                                    visualElements.add(
-                                        VisualElement(
-                                            type = type,
-                                            bounds = bounds,
-                                            backgroundColor = effectiveFill,
-                                            borderColor = effectiveBorder,
-                                            borderWidthDp = effectiveBorderWidth,
-                                            isRounded = curIsRounded || effectivePreset?.contains("round", ignoreCase = true) == true,
-                                            isEllipse = curIsEllipse || effectivePreset == "ellipse" || effectivePreset == "circle",
-                                            shapePreset = effectivePreset,
-                                            paragraphs = curParagraphs.toList()
+                                    if (curParagraphs.isNotEmpty() || (curFillColor != null && shapeImageBytes == null) || curBorderColor != null || (curShapePreset != null && shapeImageBytes == null)) {
+                                        // Inherit layout styling if slide shape did not specify explicit colors
+                                        val layoutPh = findPlaceholder(layoutInfo, curPlaceholderType, curPlaceholderIdx)
+                                        val effectiveFill = curFillColor ?: layoutPh?.fillColor
+                                        val effectiveBorder = curBorderColor ?: layoutPh?.borderColor
+                                        val effectiveBorderWidth = if (curBorderWidth > 0f) curBorderWidth else (layoutPh?.borderWidthDp ?: 0f)
+                                        val effectivePreset = curShapePreset ?: layoutPh?.preset
+
+                                        val type = if (effectiveFill != null || effectiveBorder != null || effectivePreset != null) {
+                                            VisualElementType.SHAPE
+                                        } else {
+                                            VisualElementType.TEXT_BOX
+                                        }
+
+                                        visualElements.add(
+                                            VisualElement(
+                                                type = type,
+                                                bounds = bounds,
+                                                backgroundColor = if (shapeImageBytes != null) null else effectiveFill,
+                                                borderColor = effectiveBorder,
+                                                borderWidthDp = effectiveBorderWidth,
+                                                isRounded = curIsRounded || effectivePreset?.contains("round", ignoreCase = true) == true,
+                                                isEllipse = curIsEllipse || effectivePreset == "ellipse" || effectivePreset == "circle",
+                                                shapePreset = effectivePreset,
+                                                paragraphs = curParagraphs.toList()
+                                            )
                                         )
-                                    )
+                                    }
                                 }
                             }
 
@@ -1514,12 +1536,17 @@ class PptxParser {
                     )
                 )
 
+                // Associate extracted picture if available
+                val picIndex = slideCounter - 1
+                val hasPic = picIndex < extractedPictures.size
+                val bodyWidth = if (hasPic) 0.46f else 0.88f
+
                 // Body content / bullet points
                 if (currentContent.isNotEmpty()) {
                     visuals.add(
                         VisualElement(
                             type = VisualElementType.TEXT_BOX,
-                            bounds = SlideBounds(0.06f, 0.28f, 0.88f, 0.62f),
+                            bounds = SlideBounds(0.06f, 0.28f, bodyWidth, 0.64f),
                             paragraphs = currentContent.map { line ->
                                 SlideParagraph(
                                     runs = listOf(SlideTextRun(text = line, fontSizeSp = 15f)),
@@ -1530,14 +1557,12 @@ class PptxParser {
                     )
                 }
 
-                // Associate extracted picture if available
-                val picIndex = slideCounter - 1
-                if (picIndex < extractedPictures.size) {
+                if (hasPic) {
                     val picBytes = extractedPictures[picIndex]
                     visuals.add(
                         VisualElement(
                             type = VisualElementType.IMAGE,
-                            bounds = SlideBounds(0.55f, 0.32f, 0.38f, 0.50f),
+                            bounds = SlideBounds(0.54f, 0.28f, 0.40f, 0.60f),
                             imageBytes = picBytes
                         )
                     )
