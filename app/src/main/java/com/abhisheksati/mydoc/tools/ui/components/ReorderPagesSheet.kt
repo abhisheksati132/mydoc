@@ -78,7 +78,9 @@ fun ReorderPagesSheet(
         withContext(Dispatchers.IO) {
             try {
                 val tempFile = File.createTempFile("reorder_preview_", ".pdf", context.cacheDir)
-                context.contentResolver.openInputStream(pdfUri)?.use { input ->
+                val stream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, pdfUri)
+                    ?: context.contentResolver.openInputStream(pdfUri)
+                stream?.use { input ->
                     FileOutputStream(tempFile).use { output -> input.copyTo(output) }
                 }
 

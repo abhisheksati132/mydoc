@@ -60,12 +60,20 @@ class ViewerViewModel(
         loadDocument()
     }
 
-    fun updateDocumentUri(newUri: Uri) {
+    fun updateDocumentUri(newUri: Uri, onUpdated: ((DocumentFile) -> Unit)? = null) {
         viewModelScope.launch {
-            val res = repository.registerOpenedDocument(newUri)
+            val res = repository.replaceDocument(activeDocumentFile.uri, newUri)
             res.onSuccess { newDoc ->
                 activeDocumentFile = newDoc
+                onUpdated?.invoke(newDoc)
                 loadDocument()
+            }.onFailure {
+                val regRes = repository.registerOpenedDocument(newUri)
+                regRes.onSuccess { newDoc ->
+                    activeDocumentFile = newDoc
+                    onUpdated?.invoke(newDoc)
+                    loadDocument()
+                }
             }
         }
     }
@@ -82,40 +90,30 @@ class ViewerViewModel(
                     val uri = Uri.parse(activeDocumentFile.uri)
                     val cacheFile = java.io.File(context.cacheDir, "temp_view_${System.currentTimeMillis()}.pdf")
 
-                    var streamOpened = false
-                    try {
-                        context.contentResolver.openInputStream(uri)?.use { input ->
-                            cacheFile.outputStream().use { output ->
-                                input.copyTo(output)
-                            }
-                            streamOpened = true
+                    val resolveResult = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.resolveToCacheFile(
+                        context = context,
+                        uri = uri,
+                        displayName = activeDocumentFile.displayName,
+                        targetCacheFile = cacheFile
+                    )
+
+                    if (resolveResult.isFailure) {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                isPermissionExpired = true,
+                                errorMessage = "Access permission has expired or file could not be found. Tap below to select it."
+                            )
                         }
-                    } catch (secEx: SecurityException) {
-                        // Check if an offline internal copy was cached in saved_docs
-                        val savedDocsDir = java.io.File(context.filesDir, "saved_docs")
-                        val docKey = uri.toString().hashCode().toString(16)
-                        val cached = savedDocsDir.listFiles()?.firstOrNull { it.name.startsWith(docKey) }
-                        if (cached != null && cached.exists() && cached.length() > 0L) {
-                            cached.inputStream().use { input ->
-                                cacheFile.outputStream().use { output ->
-                                    input.copyTo(output)
-                                }
-                            }
-                            streamOpened = true
-                        } else {
-                            _uiState.update {
-                                it.copy(
-                                    isLoading = false,
-                                    isPermissionExpired = true,
-                                    errorMessage = "Storage permission has expired for this file."
-                                )
-                            }
-                            return@withContext
-                        }
+                        return@withContext
                     }
 
-                    if (!streamOpened) {
-                        throw IllegalStateException("Could not read document contents.")
+                    val resolved = resolveResult.getOrThrow()
+                    if (resolved.newResolvedUri != null && resolved.newResolvedUri.toString() != activeDocumentFile.uri) {
+                        // Background update the URI in Room so subsequent launches resolve immediately
+                        launch {
+                            repository.replaceDocument(activeDocumentFile.uri, resolved.newResolvedUri)
+                        }
                     }
 
                     var activeRenderer: DocumentRenderer? = null
@@ -151,7 +149,8 @@ class ViewerViewModel(
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
-                                errorMessage = "Unable to display document pages. The file may be empty, encrypted, or corrupted."
+                                isPermissionExpired = true,
+                                errorMessage = "Unable to display document pages. Please select the file again."
                             )
                         }
                         return@withContext

@@ -100,7 +100,7 @@ fun PresentationViewerScreen(
         withContext(Dispatchers.IO) {
             try {
                 val uri = Uri.parse(document.uri)
-                val inputStream = context.contentResolver.openInputStream(uri)
+                val inputStream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri, document.displayName)
                     ?: throw IllegalStateException("Could not open input stream")
                 val parsed = inputStream.use { PptxParser().parse(it) }
                 presentationData = parsed

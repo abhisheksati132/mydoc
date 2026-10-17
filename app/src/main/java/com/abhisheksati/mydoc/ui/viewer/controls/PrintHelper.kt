@@ -55,7 +55,7 @@ object PrintHelper {
 
                     try {
                         val uri = Uri.parse(document.uri)
-                        context.contentResolver.openInputStream(uri)?.use { input ->
+                        com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri, document.displayName)?.use { input ->
                             FileOutputStream(destination.fileDescriptor).use { output ->
                                 input.copyTo(output)
                             }

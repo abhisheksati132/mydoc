@@ -159,6 +159,9 @@ class MainActivity : ComponentActivity() {
                                     document = activeDoc,
                                     onBackClick = { currentDocument = null },
                                     onShareClick = { shareDocument(activeDoc) },
+                                    onDocumentUpdated = { newDoc ->
+                                        currentDocument = newDoc
+                                    },
                                     onToolsClick = {
                                         toolsViewModel.selectTool(PdfTool.COMPRESS, preselectedUri = Uri.parse(activeDoc.uri))
                                     }

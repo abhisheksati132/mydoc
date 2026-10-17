@@ -21,16 +21,19 @@ class AndroidPdfRenderer(
     private val tileCache: TileBitmapCache = TileBitmapCache()
 ) : DocumentRenderer {
 
+    private val lock = Any()
     private var pfd: ParcelFileDescriptor? = null
     private var pdfRenderer: PdfRenderer? = null
 
     init {
-        try {
-            pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
-            pfd?.let {
-                pdfRenderer = PdfRenderer(it)
+        synchronized(lock) {
+            try {
+                pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+                pfd?.let {
+                    pdfRenderer = PdfRenderer(it)
+                }
+            } catch (_: Exception) {
             }
-        } catch (_: Exception) {
         }
     }
 
@@ -40,54 +43,58 @@ class AndroidPdfRenderer(
     override fun authenticatePassword(password: String): Boolean = false
 
     override val pageCount: Int
-        get() = pdfRenderer?.pageCount ?: 0
+        get() = synchronized(lock) { pdfRenderer?.pageCount ?: 0 }
 
     override fun getPageSize(pageIndex: Int): Pair<Float, Float> {
-        val renderer = pdfRenderer ?: return Pair(595f, 842f)
-        if (pageIndex < 0 || pageIndex >= pageCount) return Pair(595f, 842f)
-        return try {
-            val page = renderer.openPage(pageIndex)
-            val w = page.width.toFloat()
-            val h = page.height.toFloat()
-            page.close()
-            Pair(w, h)
-        } catch (_: Exception) {
-            Pair(595f, 842f)
+        return synchronized(lock) {
+            val renderer = pdfRenderer ?: return@synchronized Pair(595f, 842f)
+            if (pageIndex < 0 || pageIndex >= (pdfRenderer?.pageCount ?: 0)) return@synchronized Pair(595f, 842f)
+            try {
+                val page = renderer.openPage(pageIndex)
+                val w = page.width.toFloat()
+                val h = page.height.toFloat()
+                page.close()
+                Pair(w, h)
+            } catch (_: Exception) {
+                Pair(595f, 842f)
+            }
         }
     }
 
     override fun renderPage(pageIndex: Int, scale: Float, mode: ReadingMode): Bitmap? {
-        val renderer = pdfRenderer ?: return null
-        if (pageIndex < 0 || pageIndex >= pageCount) return null
-
         val cached = tileCache.get(pageIndex, scale, mode)
         if (cached != null && !cached.isRecycled) return cached
 
-        return try {
-            val page = renderer.openPage(pageIndex)
-            val origWidth = page.width
-            val origHeight = page.height
+        return synchronized(lock) {
+            val renderer = pdfRenderer ?: return@synchronized null
+            if (pageIndex < 0 || pageIndex >= (pdfRenderer?.pageCount ?: 0)) return@synchronized null
 
-            val scaledWidth = (origWidth * scale).toInt().coerceAtLeast(1)
-            val scaledHeight = (origHeight * scale).toInt().coerceAtLeast(1)
+            try {
+                val page = renderer.openPage(pageIndex)
+                val origWidth = page.width
+                val origHeight = page.height
 
-            val baseBitmap = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(baseBitmap)
-            canvas.drawColor(Color.WHITE)
+                val scaledWidth = (origWidth * scale).toInt().coerceAtLeast(1)
+                val scaledHeight = (origHeight * scale).toInt().coerceAtLeast(1)
 
-            page.render(baseBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-            page.close()
+                val baseBitmap = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(baseBitmap)
+                canvas.drawColor(Color.WHITE)
 
-            val finalBitmap = when (mode) {
-                ReadingMode.INVERTED_DARK -> invertBitmapColors(baseBitmap)
-                ReadingMode.SEPIA -> applySepiaFilter(baseBitmap)
-                ReadingMode.NORMAL -> baseBitmap
+                page.render(baseBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                page.close()
+
+                val finalBitmap = when (mode) {
+                    ReadingMode.INVERTED_DARK -> invertBitmapColors(baseBitmap)
+                    ReadingMode.SEPIA -> applySepiaFilter(baseBitmap)
+                    ReadingMode.NORMAL -> baseBitmap
+                }
+
+                tileCache.put(pageIndex, scale, mode, finalBitmap)
+                finalBitmap
+            } catch (_: Exception) {
+                null
             }
-
-            tileCache.put(pageIndex, scale, mode, finalBitmap)
-            finalBitmap
-        } catch (_: Exception) {
-            null
         }
     }
 
@@ -96,17 +103,19 @@ class AndroidPdfRenderer(
     override fun getOutline(): List<OutlineItem> = emptyList()
 
     override fun close() {
-        tileCache.clear()
-        try {
-            pdfRenderer?.close()
-        } catch (_: Exception) {
+        synchronized(lock) {
+            tileCache.clear()
+            try {
+                pdfRenderer?.close()
+            } catch (_: Exception) {
+            }
+            try {
+                pfd?.close()
+            } catch (_: Exception) {
+            }
+            pdfRenderer = null
+            pfd = null
         }
-        try {
-            pfd?.close()
-        } catch (_: Exception) {
-        }
-        pdfRenderer = null
-        pfd = null
     }
 
     companion object {

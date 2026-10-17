@@ -93,7 +93,7 @@ class DocumentRepositoryImpl(
                 val safeName = metadata.displayName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
                 val localFile = java.io.File(savedDocsDir, "${docKey}_$safeName")
                 if (!localFile.exists() || localFile.length() == 0L) {
-                    contentResolver.openInputStream(uri)?.use { input ->
+                    com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri, metadata.displayName)?.use { input ->
                         localFile.outputStream().use { output ->
                             input.copyTo(output)
                         }
@@ -123,6 +123,62 @@ class DocumentRepositoryImpl(
                 pageCount = recentEntity.pageCount,
                 lastPage = recentEntity.lastPage,
                 isFavorite = isFav
+            )
+        }
+    }
+
+    override suspend fun replaceDocument(oldUri: String, newUri: Uri): Result<DocumentFile> = withContext(Dispatchers.IO) {
+        runCatching {
+            val oldRecent = recentDao.getRecentByUri(oldUri)
+            val oldFavorite = favoriteDao.isFavorite(oldUri)
+            val oldViewState = viewStateDao.getViewState(oldUri)
+
+            val newDocRes = registerOpenedDocument(newUri)
+            val newDoc = newDocRes.getOrThrow()
+
+            // Preserve reading progress from old document if new document has none
+            val targetPage = if (newDoc.lastPage > 0) newDoc.lastPage else (oldRecent?.lastPage ?: 0)
+            val targetPageCount = if (newDoc.pageCount > 0) newDoc.pageCount else (oldRecent?.pageCount ?: 0)
+            if (targetPage > 0 || targetPageCount > 0) {
+                recentDao.updatePageProgress(
+                    uri = newDoc.uri,
+                    lastPage = targetPage,
+                    pageCount = targetPageCount,
+                    timestamp = System.currentTimeMillis()
+                )
+            }
+
+            // Preserve favorite status
+            if (oldFavorite && !favoriteDao.isFavorite(newDoc.uri)) {
+                favoriteDao.insertFavorite(
+                    FavoriteDocumentEntity(
+                        uri = newDoc.uri,
+                        displayName = newDoc.displayName,
+                        sizeBytes = newDoc.sizeBytes,
+                        mimeType = newDoc.mimeType,
+                        addedTimestamp = System.currentTimeMillis()
+                    )
+                )
+            }
+
+            // Preserve view state
+            if (oldViewState != null) {
+                viewStateDao.saveViewState(
+                    oldViewState.copy(uri = newDoc.uri, updatedTimestamp = System.currentTimeMillis())
+                )
+            }
+
+            // Remove stale broken URI
+            if (oldUri != newDoc.uri) {
+                recentDao.deleteRecent(oldUri)
+                favoriteDao.deleteFavorite(oldUri)
+                viewStateDao.deleteViewState(oldUri)
+            }
+
+            newDoc.copy(
+                lastPage = targetPage,
+                pageCount = targetPageCount,
+                isFavorite = oldFavorite || newDoc.isFavorite
             )
         }
     }

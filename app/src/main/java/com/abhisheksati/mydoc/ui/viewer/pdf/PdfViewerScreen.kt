@@ -88,6 +88,7 @@ fun PdfViewerScreen(
     onBackClick: () -> Unit,
     onShareClick: () -> Unit,
     onToolsClick: (() -> Unit)? = null,
+    onDocumentUpdated: ((DocumentFile) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -112,7 +113,9 @@ fun PdfViewerScreen(
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
             } catch (_: Exception) {}
-            viewModel.updateDocumentUri(newUri)
+            viewModel.updateDocumentUri(newUri) { updatedDoc ->
+                onDocumentUpdated?.invoke(updatedDoc)
+            }
         }
     }
 
@@ -228,19 +231,11 @@ fun PdfViewerScreen(
                 contentAlignment = Alignment.Center
             ) {
                 AppEmptyState(
-                    title = if (state.isPermissionExpired) "Permission expired" else "Document could not be displayed",
-                    message = if (state.isPermissionExpired) {
-                        "Access permission has expired for this file. Please select it again to open."
-                    } else {
-                        state.errorMessage ?: "The file may be corrupted or inaccessible."
-                    },
-                    actionLabel = if (state.isPermissionExpired) "Select file" else "Go back",
+                    title = if (state.isPermissionExpired) "Document inaccessible" else "Document could not be displayed",
+                    message = state.errorMessage ?: "The file could not be read from storage. Please select it to restore access.",
+                    actionLabel = "Select file",
                     onAction = {
-                        if (state.isPermissionExpired) {
-                            reopenLauncher.launch(arrayOf("application/pdf", "*/*"))
-                        } else {
-                            onBackClick()
-                        }
+                        reopenLauncher.launch(arrayOf("application/pdf", "*/*"))
                     }
                 )
             }

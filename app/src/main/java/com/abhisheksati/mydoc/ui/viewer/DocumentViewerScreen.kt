@@ -22,6 +22,7 @@ fun DocumentViewerScreen(
     onBackClick: () -> Unit,
     onShareClick: () -> Unit,
     onToolsClick: (() -> Unit)? = null,
+    onDocumentUpdated: ((DocumentFile) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -82,6 +83,7 @@ fun DocumentViewerScreen(
                 onBackClick = onBackClick,
                 onShareClick = onShareClick,
                 onToolsClick = onToolsClick,
+                onDocumentUpdated = onDocumentUpdated,
                 modifier = modifier.fillMaxSize()
             )
         }

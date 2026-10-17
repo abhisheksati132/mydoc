@@ -45,7 +45,7 @@ class SpreadsheetViewModel(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
                 val uri = Uri.parse(documentFile.uri)
-                val inputStream = context.contentResolver.openInputStream(uri)
+                val inputStream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri, documentFile.displayName)
                     ?: throw IllegalStateException("Could not open input stream")
 
                 val model = inputStream.use { parser.parse(it, documentFile.extension) }

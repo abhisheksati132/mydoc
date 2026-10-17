@@ -1364,11 +1364,14 @@ class PdfToolsEngine(private val context: Context) {
 
     private fun copyUriToTemp(uri: Uri): File {
         val temp = File.createTempFile("mydoc_tool_in_", ".tmp", context.cacheDir)
-        context.contentResolver.openInputStream(uri)?.use { input ->
+        val stream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri)
+            ?: context.contentResolver.openInputStream(uri)
+            ?: throw IllegalArgumentException("Cannot read URI $uri")
+        stream.use { input ->
             FileOutputStream(temp).use { output ->
                 input.copyTo(output)
             }
-        } ?: throw IllegalArgumentException("Cannot read URI $uri")
+        }
         return temp
     }
 

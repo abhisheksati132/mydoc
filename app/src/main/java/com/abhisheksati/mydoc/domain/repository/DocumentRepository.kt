@@ -15,4 +15,5 @@ interface DocumentRepository {
     suspend fun getViewState(uri: String): ViewState?
     suspend fun saveViewState(viewState: ViewState)
     suspend fun clearAllRecents()
+    suspend fun replaceDocument(oldUri: String, newUri: Uri): Result<DocumentFile>
 }

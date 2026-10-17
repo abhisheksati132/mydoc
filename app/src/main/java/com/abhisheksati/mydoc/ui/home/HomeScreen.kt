@@ -86,6 +86,7 @@ import kotlinx.coroutines.launch
 
 val SUPPORTED_MIME_TYPES = arrayOf(
     "application/pdf",
+    "application/x-pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -93,7 +94,10 @@ val SUPPORTED_MIME_TYPES = arrayOf(
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     "application/vnd.ms-powerpoint",
     "text/plain",
-    "text/csv"
+    "text/csv",
+    "text/comma-separated-values",
+    "application/octet-stream",
+    "*/*"
 )
 
 enum class HomeTab {
