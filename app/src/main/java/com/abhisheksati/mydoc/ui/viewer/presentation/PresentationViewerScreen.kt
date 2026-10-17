@@ -105,6 +105,7 @@ import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
+import com.abhisheksati.mydoc.rendering.engine.presentation.LibreOfficePresentationRenderer
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxParser
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxPresentation
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxSlide
@@ -216,6 +217,51 @@ fun PresentationViewerScreen(
         withContext(Dispatchers.IO) {
             try {
                 val uri = Uri.parse(document.uri)
+
+                // 1. If LibreOffice native engine is available, use it for 100% desktop fidelity rendering
+                if (LibreOfficePresentationRenderer.isEngineAvailable() && context is android.app.Activity) {
+                    val initOk = LibreOfficePresentationRenderer.init(context)
+                    if (initOk) {
+                        val sharedDir = File(context.cacheDir, "shared_presentations").apply { mkdirs() }
+                        val localFile = File(sharedDir, document.displayName)
+                        if (!localFile.exists() || localFile.length() == 0L) {
+                            val inStream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri, document.displayName)
+                            inStream?.use { input -> localFile.outputStream().use { out -> input.copyTo(out) } }
+                        }
+                        if (localFile.exists() && localFile.length() > 0L) {
+                            val loRenderer = LibreOfficePresentationRenderer()
+                            if (loRenderer.load(localFile.absolutePath)) {
+                                val count = loRenderer.getSlideCount()
+                                if (count > 0) {
+                                    val loSlides = (0 until count).map { idx ->
+                                        val bmp = loRenderer.renderSlide(idx, 1600, 900)
+                                        val byteOut = java.io.ByteArrayOutputStream()
+                                        bmp?.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, byteOut)
+                                        val imgBytes = byteOut.toByteArray()
+                                        PptxSlide(
+                                            slideNumber = idx + 1,
+                                            title = "Slide ${idx + 1}",
+                                            content = emptyList(),
+                                            visualElements = listOf(
+                                                VisualElement(
+                                                    type = VisualElementType.IMAGE,
+                                                    bounds = com.abhisheksati.mydoc.rendering.engine.presentation.SlideBounds(0f, 0f, 1f, 1f),
+                                                    imageBytes = imgBytes
+                                                )
+                                            ),
+                                            aspectRatio = 16f / 9f
+                                        )
+                                    }
+                                    presentationData = PptxPresentation(loSlides)
+                                    isLoading = false
+                                    return@withContext
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2. Standard fast parser fallback
                 val inputStream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri, document.displayName)
                     ?: throw IllegalStateException("Could not open presentation stream")
                 val parsed = inputStream.use { PptxParser().parse(it, context.cacheDir) }
