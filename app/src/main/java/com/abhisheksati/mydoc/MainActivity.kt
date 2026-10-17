@@ -42,8 +42,12 @@ import com.abhisheksati.mydoc.ui.media.PhotoViewerScreen
 import com.abhisheksati.mydoc.ui.media.VideoPlayerScreen
 import com.abhisheksati.mydoc.ui.viewer.DocumentViewerScreen
 import com.abhisheksati.mydoc.update.UpdateManager
+import com.abhisheksati.mydoc.viewmodel.FileManagerViewModel
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import com.abhisheksati.mydoc.viewmodel.MediaViewModel
+import androidx.core.content.FileProvider
+import java.io.File
+import java.util.Locale
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
@@ -65,6 +69,11 @@ class MainActivity : ComponentActivity() {
     private val mediaViewModel: MediaViewModel by viewModels {
         val app = application as MyDocApp
         MediaViewModel.Factory(app.mediaRepository)
+    }
+
+    private val fileManagerViewModel: FileManagerViewModel by viewModels {
+        val app = application as MyDocApp
+        FileManagerViewModel.Factory(app.storageRepository)
     }
 
     private lateinit var updateManager: UpdateManager
@@ -228,12 +237,14 @@ class MainActivity : ComponentActivity() {
                                 viewModel = homeViewModel,
                                 toolsViewModel = toolsViewModel,
                                 mediaViewModel = mediaViewModel,
+                                fileManagerViewModel = fileManagerViewModel,
                                 isDarkTheme = isDark,
                                 onToggleTheme = {
                                     val nextTheme = if (isDark) AppThemeMode.LIGHT else AppThemeMode.AMOLED_DARK
                                     app.settingsRepository.setThemeMode(nextTheme)
                                 },
                                 onDocumentClick = { doc -> currentDocument = doc },
+                                onOpenFile = { file -> handleOpenFile(file) },
                                 onOpenMedia = { item, list ->
                                     activeMediaItem = item
                                     activeMediaList = list
@@ -341,6 +352,85 @@ class MainActivity : ComponentActivity() {
                     ).show()
                 }
             }
+        }
+    }
+
+    private fun handleOpenFile(file: File) {
+        val name = file.name.lowercase(Locale.ROOT)
+        val app = application as MyDocApp
+
+        // 1. Media (Images, Videos, and Audio)
+        val isImage = name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") ||
+                name.endsWith(".webp") || name.endsWith(".gif") || name.endsWith(".bmp") || name.endsWith(".heic")
+        val isVideo = name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".webm") ||
+                name.endsWith(".avi") || name.endsWith(".mov") || name.endsWith(".3gp")
+        val isAudio = name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".aac") ||
+                name.endsWith(".flac") || name.endsWith(".m4a") || name.endsWith(".ogg") || name.endsWith(".wma")
+
+        if (isImage || isVideo || isAudio) {
+            val uri = Uri.fromFile(file)
+            val mediaItem = MediaItem(
+                id = file.hashCode().toLong(),
+                uri = uri,
+                displayName = file.name,
+                sizeBytes = file.length(),
+                mimeType = if (isImage) "image/*" else if (isAudio) "audio/*" else "video/*",
+                dateAddedSec = file.lastModified() / 1000L,
+                isVideo = isVideo || isAudio
+            )
+            activeMediaItem = mediaItem
+            activeMediaList = listOf(mediaItem)
+            return
+        }
+
+        // 2. APK Files -> Install via PackageInstaller
+        if (name.endsWith(".apk")) {
+            try {
+                val apkUri = FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(apkUri, "application/vnd.android.package-archive")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(intent)
+            } catch (e: Exception) {
+                Toast.makeText(this, "Unable to install APK: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
+
+        // 3. Document or Code/Text
+        val isDocument = name.endsWith(".pdf") || name.endsWith(".docx") || name.endsWith(".doc") ||
+                name.endsWith(".xlsx") || name.endsWith(".xls") || name.endsWith(".csv") ||
+                name.endsWith(".pptx") || name.endsWith(".ppt") || name.endsWith(".txt") ||
+                name.endsWith(".md") || name.endsWith(".json") || name.endsWith(".xml") ||
+                name.endsWith(".log") || name.endsWith(".kt") || name.endsWith(".java") ||
+                name.endsWith(".py") || name.endsWith(".html") || name.endsWith(".css") ||
+                name.endsWith(".js") || name.endsWith(".c") || name.endsWith(".cpp")
+
+        if (isDocument) {
+            val uri = Uri.fromFile(file)
+            lifecycleScope.launch {
+                val res = app.documentRepository.registerOpenedDocument(uri)
+                res.onSuccess { doc ->
+                    currentDocument = doc
+                }.onFailure { err ->
+                    Toast.makeText(this@MainActivity, "Could not open: ${err.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+            return
+        }
+
+        // 4. Fallback: Generic Android open chooser
+        try {
+            val uri = FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "*/*")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(intent, "Open with"))
+        } catch (e: Exception) {
+            Toast.makeText(this, "No app available to open this file", Toast.LENGTH_SHORT).show()
         }
     }
 

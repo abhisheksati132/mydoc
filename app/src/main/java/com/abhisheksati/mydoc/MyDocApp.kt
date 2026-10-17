@@ -27,6 +27,9 @@ class MyDocApp : Application(), ImageLoaderFactory {
     lateinit var settingsRepository: com.abhisheksati.mydoc.data.local.SettingsRepository
         private set
 
+    lateinit var storageRepository: com.abhisheksati.mydoc.domain.repository.StorageRepository
+        private set
+
     override fun onCreate() {
         super.onCreate()
         try {
@@ -35,6 +38,7 @@ class MyDocApp : Application(), ImageLoaderFactory {
         database = AppDatabase.getInstance(this)
         documentRepository = DocumentRepositoryImpl(this, database)
         mediaRepository = MediaRepositoryImpl(this, database)
+        storageRepository = com.abhisheksati.mydoc.data.repository.StorageRepositoryImpl(this)
         settingsRepository = com.abhisheksati.mydoc.data.local.SettingsRepository(this)
     }
 

@@ -33,6 +33,7 @@ import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.PermMedia
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Check
@@ -40,12 +41,16 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.FileOpen
+import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PermMedia
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
+import com.abhisheksati.mydoc.ui.filemanager.FileManagerScreen
+import com.abhisheksati.mydoc.viewmodel.FileManagerViewModel
+import java.io.File
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
@@ -122,6 +127,7 @@ val SUPPORTED_MIME_TYPES = arrayOf(
 )
 
 enum class HomeTab {
+    FILES,
     DOCUMENTS,
     MEDIA,
     TOOLS
@@ -132,9 +138,11 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     toolsViewModel: ToolsViewModel,
     mediaViewModel: com.abhisheksati.mydoc.viewmodel.MediaViewModel? = null,
+    fileManagerViewModel: FileManagerViewModel? = null,
     isDarkTheme: Boolean = false,
     onToggleTheme: () -> Unit = {},
     onDocumentClick: (DocumentFile) -> Unit,
+    onOpenFile: ((File) -> Unit)? = null,
     onOpenMedia: ((com.abhisheksati.mydoc.domain.model.MediaItem, List<com.abhisheksati.mydoc.domain.model.MediaItem>) -> Unit)? = null,
     onSettingsClick: () -> Unit,
     onShareDocument: (DocumentFile) -> Unit,
@@ -148,7 +156,7 @@ fun HomeScreen(
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp
 
-    var currentTab by remember { mutableStateOf(HomeTab.DOCUMENTS) }
+    var currentTab by remember { mutableStateOf(HomeTab.FILES) }
     var showCameraScanner by remember { mutableStateOf(false) }
     var showSignaturePad by remember { mutableStateOf(false) }
     var isSortMenuOpen by remember { mutableStateOf(false) }
@@ -203,13 +211,14 @@ fun HomeScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(colors.background)
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
+            if (currentTab == HomeTab.DOCUMENTS) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(colors.background)
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
                 // Google Drive / Files style Pill Search Bar
                 Surface(
                     modifier = Modifier
@@ -481,13 +490,36 @@ fun HomeScreen(
                     }
                 }
             }
-        },
-        bottomBar = {
+        }
+    },
+    bottomBar = {
             NavigationBar(
                 containerColor = colors.surface,
                 tonalElevation = 3.dp,
                 modifier = Modifier.navigationBarsPadding()
             ) {
+                NavigationBarItem(
+                    selected = currentTab == HomeTab.FILES,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        currentTab = HomeTab.FILES
+                    },
+                    icon = {
+                        Icon(
+                            imageVector = if (currentTab == HomeTab.FILES) Icons.Filled.Folder else Icons.Outlined.Folder,
+                            contentDescription = "Files"
+                        )
+                    },
+                    label = { Text("Files", style = typography.caption) },
+                    colors = NavigationBarItemDefaults.colors(
+                        indicatorColor = colors.accent.copy(alpha = 0.16f),
+                        selectedIconColor = colors.accent,
+                        selectedTextColor = colors.accent,
+                        unselectedIconColor = colors.textSecondary,
+                        unselectedTextColor = colors.textSecondary
+                    )
+                )
+
                 NavigationBarItem(
                     selected = currentTab == HomeTab.DOCUMENTS,
                     onClick = {
@@ -596,7 +628,15 @@ fun HomeScreen(
             .fillMaxSize()
             .padding(innerPadding)
     ) {
-        if (currentTab == HomeTab.TOOLS) {
+        if (currentTab == HomeTab.FILES) {
+            if (fileManagerViewModel != null && onOpenFile != null) {
+                FileManagerScreen(
+                    viewModel = fileManagerViewModel,
+                    onOpenFile = onOpenFile,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        } else if (currentTab == HomeTab.TOOLS) {
             ToolsScreen(
                 viewModel = toolsViewModel,
                 onToolClick = { tool ->
