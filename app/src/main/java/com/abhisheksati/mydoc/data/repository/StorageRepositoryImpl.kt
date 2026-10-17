@@ -183,7 +183,9 @@ class StorageRepositoryImpl(
         try {
             val cleanName = newName.trim()
             if (cleanName.isEmpty()) return@withContext Result.failure(IllegalArgumentException("New name cannot be empty"))
-            val target = File(source.parentFile, cleanName)
+            val parent = source.parentFile
+                ?: return@withContext Result.failure(IllegalStateException("Cannot determine parent directory"))
+            val target = File(parent, cleanName)
             if (target.exists() && target.absolutePath != source.absolutePath) {
                 return@withContext Result.failure(IllegalStateException("A file with that name already exists"))
             }
@@ -358,6 +360,7 @@ class StorageRepositoryImpl(
         onProgress: (current: Int, total: Int) -> Unit
     ): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
+            if (sources.isEmpty()) throw IllegalArgumentException("No files selected for compression")
             val parentDir = destinationZip.parentFile ?: destinationZip
             val destFile = getNonConflictingFile(parentDir, destinationZip.name)
             destFile.parentFile?.mkdirs()
@@ -536,7 +539,8 @@ class StorageRepositoryImpl(
                     val sel = "${MediaStore.Files.FileColumns.SIZE} >= 52428800" // 50MB
                     Triple(sel, null, "${MediaStore.Files.FileColumns.SIZE} DESC")
                 }
-                FileCategory.DOWNLOADS -> Triple("", null, "")
+                // DOWNLOADS is handled above by short-circuit (directory listing), never reaches here
+                else -> return@withContext emptyList()
             }
 
             context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)?.use { cursor ->

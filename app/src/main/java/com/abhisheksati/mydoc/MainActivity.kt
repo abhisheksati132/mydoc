@@ -370,7 +370,7 @@ class MainActivity : ComponentActivity() {
         if (isImage || isVideo || isAudio) {
             val uri = Uri.fromFile(file)
             val mediaItem = MediaItem(
-                id = file.hashCode().toLong(),
+                id = file.absolutePath.hashCode().toLong(),
                 uri = uri,
                 displayName = file.name,
                 sizeBytes = file.length(),

@@ -58,13 +58,13 @@ import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.NoteAdd
+import androidx.compose.material.icons.automirrored.outlined.NoteAdd
+import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Videocam
-import androidx.compose.material.icons.outlined.ViewList
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -178,7 +178,7 @@ fun FileManagerScreen(
     }
 
     // Intercept back presses
-    BackHandler(enabled = uiState.isSelectionMode || isSearchActive || uiState.canGoBack) {
+    BackHandler(enabled = uiState.isSelectionMode || isSearchActive || uiState.canGoBack || uiState.activeCategory != null) {
         if (uiState.isSelectionMode) {
             viewModel.clearSelection()
         } else if (isSearchActive) {
@@ -303,7 +303,7 @@ fun FileManagerScreen(
                             }
                             IconButton(onClick = { viewModel.toggleViewMode() }) {
                                 Icon(
-                                    imageVector = if (uiState.isGridView) Icons.Outlined.ViewList else Icons.Outlined.GridView,
+                                    imageVector = if (uiState.isGridView) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
                                     contentDescription = "Toggle View",
                                     tint = colors.textPrimary
                                 )
@@ -327,7 +327,7 @@ fun FileManagerScreen(
                                     )
                                     DropdownMenuItem(
                                         text = { Text("New File", color = colors.textPrimary) },
-                                        leadingIcon = { Icon(Icons.Outlined.NoteAdd, contentDescription = null, tint = colors.accent) },
+                                        leadingIcon = { Icon(Icons.AutoMirrored.Outlined.NoteAdd, contentDescription = null, tint = colors.accent) },
                                         onClick = {
                                             showOverflowMenu = false
                                             showNewFileDialog = true
@@ -518,8 +518,12 @@ fun FileManagerScreen(
                             .weight(1f)
                     ) {
                         AppEmptyState(
-                            title = if (uiState.searchQuery.isNotEmpty()) "No matches found" else "This folder is empty",
-                            message = if (uiState.searchQuery.isNotEmpty()) "Try a different search term" else "Tap '+' to create a new folder or file"
+                            title = if (uiState.searchQuery.isNotEmpty()) "No matches found"
+                                    else if (uiState.activeCategory != null) "No files found"
+                                    else "This folder is empty",
+                            message = if (uiState.searchQuery.isNotEmpty()) "Try a different search term"
+                                      else if (uiState.activeCategory != null) "No ${uiState.activeCategory?.displayName?.lowercase()} files on this device"
+                                      else "Tap '+' to create a new folder or file"
                         )
                     }
                 } else {
