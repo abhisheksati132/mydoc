@@ -406,7 +406,11 @@ class MainActivity : ComponentActivity() {
                 name.endsWith(".md") || name.endsWith(".json") || name.endsWith(".xml") ||
                 name.endsWith(".log") || name.endsWith(".kt") || name.endsWith(".java") ||
                 name.endsWith(".py") || name.endsWith(".html") || name.endsWith(".css") ||
-                name.endsWith(".js") || name.endsWith(".c") || name.endsWith(".cpp")
+                name.endsWith(".js") || name.endsWith(".ts") || name.endsWith(".c") ||
+                name.endsWith(".cpp") || name.endsWith(".h") || name.endsWith(".sh") ||
+                name.endsWith(".sql") || name.endsWith(".yaml") || name.endsWith(".yml") ||
+                name.endsWith(".ini") || name.endsWith(".conf") || name.endsWith(".gradle") ||
+                name.endsWith(".properties") || name.endsWith(".bat")
 
         if (isDocument) {
             val uri = Uri.fromFile(file)

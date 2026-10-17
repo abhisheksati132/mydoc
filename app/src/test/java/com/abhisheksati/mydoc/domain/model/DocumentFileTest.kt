@@ -36,6 +36,22 @@ class DocumentFileTest {
         assertEquals("csv", file6.extension)
         assertEquals("CSV", file6.typeBadge)
         assertEquals(DocumentCategory.EXCEL, file6.category)
+
+        val file7 = createTestFile("script.py")
+        assertEquals("py", file7.extension)
+        assertEquals(DocumentCategory.TEXT, file7.category)
+
+        val file8 = createTestFile("main.kt")
+        assertEquals("kt", file8.extension)
+        assertEquals(DocumentCategory.TEXT, file8.category)
+
+        val file9 = createTestFile("config.json")
+        assertEquals("json", file9.extension)
+        assertEquals(DocumentCategory.TEXT, file9.category)
+
+        val file10 = createTestFile("README.md")
+        assertEquals("md", file10.extension)
+        assertEquals(DocumentCategory.TEXT, file10.category)
     }
 
     @Test

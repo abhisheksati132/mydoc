@@ -122,6 +122,45 @@ class StorageRepositoryTest {
         assertEquals("sample1.txt", searchHits[0].name)
     }
 
+    @Test
+    fun testInvalidFileNames() = runBlocking {
+        val root = tempFolder.root
+        val repo = StorageRepositoryImpl(mockContext())
+
+        // Names with illegal characters should fail
+        assertTrue(repo.createDirectory(root, "invalid/name").isFailure)
+        assertTrue(repo.createDirectory(root, "invalid:name").isFailure)
+        assertTrue(repo.createDirectory(root, "invalid*name").isFailure)
+        assertTrue(repo.createDirectory(root, "invalid?name").isFailure)
+        assertTrue(repo.createFile(root, "invalid\"name.txt").isFailure)
+        assertTrue(repo.createFile(root, "invalid<name.txt").isFailure)
+        assertTrue(repo.createFile(root, "invalid|name.txt").isFailure)
+        assertTrue(repo.createFile(root, "").isFailure)
+        assertTrue(repo.createFile(root, ".").isFailure)
+        assertTrue(repo.createFile(root, "..").isFailure)
+    }
+
+    @Test
+    fun testCyclicCopyPrevention() = runBlocking {
+        val root = tempFolder.root
+        val repo = StorageRepositoryImpl(mockContext())
+
+        val parentDir = repo.createDirectory(root, "ParentFolder").getOrThrow()
+        val subDir = repo.createDirectory(parentDir, "SubFolder").getOrThrow()
+
+        // Attempting to copy parent into its own child should be safely skipped without infinite recursion
+        val copyRes = repo.copy(listOf(parentDir), subDir)
+        assertTrue(copyRes.isSuccess)
+        assertEquals(0, copyRes.getOrThrow()) // Skipped to prevent cyclic loop
+    }
+
+    @Test
+    fun testHashSafetyOnMissingFile() = runBlocking {
+        val repo = StorageRepositoryImpl(mockContext())
+        val missing = File(tempFolder.root, "does_not_exist.txt")
+        val hash = repo.calculateHash(missing, "SHA-256")
+        assertEquals("Unavailable", hash)
+    }
 
     private fun mockContext(): android.content.Context {
         // Simple proxy / mock for context if needed for getStorageVolumes

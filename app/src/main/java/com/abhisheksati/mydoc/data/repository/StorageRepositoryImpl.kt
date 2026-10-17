@@ -54,7 +54,7 @@ class StorageRepositoryImpl(
 
         // 2. Secondary SD Card / USB OTG
         try {
-            val externalDirs = ContextCompat.getExternalFilesDirs(context, null)
+            val externalDirs = context.getExternalFilesDirs(null)
             for (dir in externalDirs) {
                 if (dir != null && !Environment.isExternalStorageEmulated(dir)) {
                     val root = getVolumeRoot(dir)
@@ -143,10 +143,17 @@ class StorageRepositoryImpl(
         }
     }
 
+    private fun isValidFileName(name: String): Boolean {
+        if (name.isEmpty() || name == "." || name == "..") return false
+        val illegalChars = charArrayOf('/', '\\', ':', '*', '?', '"', '<', '>', '|', '\u0000')
+        return !name.any { it in illegalChars }
+    }
+
     override suspend fun createDirectory(parent: File, name: String): Result<File> = withContext(Dispatchers.IO) {
         try {
             val cleanName = name.trim()
             if (cleanName.isEmpty()) return@withContext Result.failure(IllegalArgumentException("Name cannot be empty"))
+            if (!isValidFileName(cleanName)) return@withContext Result.failure(IllegalArgumentException("Name contains invalid characters"))
             val target = File(parent, cleanName)
             if (target.exists()) {
                 return@withContext Result.failure(IllegalStateException("A file or folder with this name already exists"))
@@ -165,6 +172,7 @@ class StorageRepositoryImpl(
         try {
             val cleanName = name.trim()
             if (cleanName.isEmpty()) return@withContext Result.failure(IllegalArgumentException("Name cannot be empty"))
+            if (!isValidFileName(cleanName)) return@withContext Result.failure(IllegalArgumentException("Name contains invalid characters"))
             val target = File(parent, cleanName)
             if (target.exists()) {
                 return@withContext Result.failure(IllegalStateException("File already exists"))
@@ -183,6 +191,7 @@ class StorageRepositoryImpl(
         try {
             val cleanName = newName.trim()
             if (cleanName.isEmpty()) return@withContext Result.failure(IllegalArgumentException("New name cannot be empty"))
+            if (!isValidFileName(cleanName)) return@withContext Result.failure(IllegalArgumentException("New name contains invalid characters"))
             val parent = source.parentFile
                 ?: return@withContext Result.failure(IllegalStateException("Cannot determine parent directory"))
             val target = File(parent, cleanName)
@@ -230,8 +239,15 @@ class StorageRepositoryImpl(
 
             var copied = 0
             val total = sources.size
+            val targetCanon = targetDir.canonicalPath
             for (src in sources) {
                 if (!src.exists()) continue
+                if (src.isDirectory) {
+                    val srcCanon = src.canonicalPath
+                    if (targetCanon == srcCanon || targetCanon.startsWith(srcCanon + File.separator)) {
+                        continue // Prevent cyclic copy into self/child
+                    }
+                }
                 val dest = getNonConflictingFile(targetDir, src.name)
                 if (src.isDirectory) {
                     src.copyRecursively(dest, overwrite = true)
@@ -259,8 +275,15 @@ class StorageRepositoryImpl(
 
             var moved = 0
             val total = sources.size
+            val targetCanon = targetDir.canonicalPath
             for (src in sources) {
                 if (!src.exists()) continue
+                if (src.isDirectory) {
+                    val srcCanon = src.canonicalPath
+                    if (targetCanon == srcCanon || targetCanon.startsWith(srcCanon + File.separator)) {
+                        continue // Prevent cyclic move into self/child
+                    }
+                }
                 val dest = getNonConflictingFile(targetDir, src.name)
 
                 // Try quick filesystem atomic rename first
@@ -334,6 +357,9 @@ class StorageRepositoryImpl(
 
     override suspend fun calculateHash(file: File, algorithm: String): String = withContext(Dispatchers.IO) {
         try {
+            if (!file.exists() || !file.canRead() || file.isDirectory) {
+                return@withContext "Unavailable"
+            }
             val digest = MessageDigest.getInstance(algorithm)
             val buffer = ByteArray(65536)
             FileInputStream(file).use { input ->
@@ -430,16 +456,17 @@ class StorageRepositoryImpl(
             if (!zipFile.exists() || !zipFile.isFile) throw IllegalArgumentException("Zip file does not exist")
             if (!destinationDir.exists()) destinationDir.mkdirs()
 
-            val canonicalDest = destinationDir.canonicalPath
+            val canonicalDest = destinationDir.canonicalFile.canonicalPath
             var extractedCount = 0
             val buffer = ByteArray(32 * 1024)
 
             ZipInputStream(BufferedInputStream(FileInputStream(zipFile), 32 * 1024)).use { zis ->
                 var entry = zis.nextEntry
                 while (entry != null) {
-                    val outFile = File(destinationDir, entry.name)
+                    val normalizedName = entry.name.replace('\\', '/')
+                    val outFile = File(destinationDir, normalizedName)
                     // Zip Slip vulnerability check
-                    val canonicalOut = outFile.canonicalPath
+                    val canonicalOut = outFile.canonicalFile.canonicalPath
                     if (!canonicalOut.startsWith(canonicalDest + File.separator) && canonicalOut != canonicalDest) {
                         throw SecurityException("Zip entry is outside destination: ${entry.name}")
                     }
@@ -494,6 +521,12 @@ class StorageRepositoryImpl(
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.ppt' OR " +
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.pptx' OR " +
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.txt' OR " +
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.csv' OR " +
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.md' OR " +
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.rtf' OR " +
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.odt' OR " +
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.ods' OR " +
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.odp' OR " +
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.epub'"
                     Triple(sel, null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC")
                 }
@@ -503,6 +536,8 @@ class StorageRepositoryImpl(
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.jpeg' OR " +
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.png' OR " +
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.webp' OR " +
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.svg' OR " +
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.bmp' OR " +
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.gif'"
                     Triple(sel, null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC")
                 }
@@ -510,6 +545,8 @@ class StorageRepositoryImpl(
                     val sel = "${MediaStore.Files.FileColumns.MEDIA_TYPE} = ${MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO} OR " +
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.mp4' OR " +
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.mkv' OR " +
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.mov' OR " +
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.avi' OR " +
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.webm'"
                     Triple(sel, null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC")
                 }
@@ -518,7 +555,11 @@ class StorageRepositoryImpl(
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.mp3' OR " +
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.wav' OR " +
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.m4a' OR " +
-                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.flac'"
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.flac' OR " +
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.ogg' OR " +
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.aac' OR " +
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.opus' OR " +
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.wma'"
                     Triple(sel, null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC")
                 }
                 FileCategory.APKS -> {
@@ -532,7 +573,10 @@ class StorageRepositoryImpl(
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.rar' OR " +
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.7z' OR " +
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.tar' OR " +
-                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.gz'"
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.gz' OR " +
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.bz2' OR " +
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.xz' OR " +
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.jar'"
                     Triple(sel, null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC")
                 }
                 FileCategory.LARGE_FILES -> {
@@ -546,7 +590,7 @@ class StorageRepositoryImpl(
             context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
                 val dataIndex = cursor.getColumnIndex(MediaStore.Files.FileColumns.DATA)
                 var count = 0
-                while (cursor.moveToNext() && count < 300) {
+                while (cursor.moveToNext() && count < 1000) {
                     val path = if (dataIndex >= 0) cursor.getString(dataIndex) else null
                     if (path != null) {
                         val f = File(path)

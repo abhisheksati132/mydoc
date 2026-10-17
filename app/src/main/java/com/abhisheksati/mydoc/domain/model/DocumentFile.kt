@@ -39,7 +39,9 @@ data class DocumentFile(
             "docx", "doc" -> DocumentCategory.WORD
             "xlsx", "xls", "csv" -> DocumentCategory.EXCEL
             "pptx", "ppt", "ppsx", "pps", "potx", "pot" -> DocumentCategory.PPT
-            "txt", "log", "md", "json", "xml" -> DocumentCategory.TEXT
+            "txt", "log", "md", "json", "xml", "yaml", "yml", "ini", "conf", "sh",
+            "sql", "kt", "java", "py", "html", "css", "js", "ts", "c", "cpp", "h",
+            "gradle", "properties", "bat" -> DocumentCategory.TEXT
             else -> DocumentCategory.ALL
         }
 

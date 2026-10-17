@@ -426,10 +426,12 @@ fun FileManagerScreen(
                         ) {
                             uiState.breadcrumbTrail.forEachIndexed { index, crumb ->
                                 val isLast = index == uiState.breadcrumbTrail.size - 1
-                                val crumbName = if (index == 0) {
-                                    "Internal Storage"
-                                } else {
-                                    crumb.name
+                                val volumeForCrumb = uiState.storageVolumes.firstOrNull { it.path == crumb.absolutePath }
+                                val crumbName = when {
+                                    volumeForCrumb != null -> volumeForCrumb.title
+                                    crumb.absolutePath == "/storage/emulated/0" -> "Internal Storage"
+                                    index == 0 -> "Storage"
+                                    else -> crumb.name
                                 }
 
                                 Text(
@@ -480,8 +482,10 @@ fun FileManagerScreen(
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
 
-                // Storage Volume Meter (only when at root of storage and not in a category)
-                if (uiState.activeCategory == null && (uiState.currentDirectory.parentFile == null || uiState.currentDirectory.absolutePath == "/storage/emulated/0")) {
+                // Storage Volume Meter (only when at root of storage volume and not in a category)
+                val isAtVolumeRoot = uiState.storageVolumes.any { it.path == uiState.currentDirectory.absolutePath } ||
+                        uiState.currentDirectory.absolutePath == "/storage/emulated/0"
+                if (uiState.activeCategory == null && isAtVolumeRoot) {
                     StorageVolumeSummary(
                         volumes = uiState.storageVolumes,
                         onVolumeClick = { volume ->
@@ -494,8 +498,7 @@ fun FileManagerScreen(
                 if (!hasPermission) {
                     StoragePermissionBanner(
                         onRequestPermission = {
-                            val intent = StoragePermissionHelper.createManageStorageIntent(context)
-                            context.startActivity(intent)
+                            StoragePermissionHelper.launchManageStorageSettings(context)
                         }
                     )
                 }
@@ -862,9 +865,10 @@ fun FileManagerScreen(
                     }
                 )
 
-                if (item.fileType == StorageFileType.ARCHIVE || item.name.endsWith(".zip", ignoreCase = true)) {
+                val isZip = item.name.endsWith(".zip", ignoreCase = true) || item.name.endsWith(".jar", ignoreCase = true)
+                if (isZip) {
                     ItemActionOption(
-                        title = "Extract Archive",
+                        title = "Extract ZIP Archive",
                         icon = Icons.Outlined.FolderZip,
                         tint = colors.accent,
                         onClick = {

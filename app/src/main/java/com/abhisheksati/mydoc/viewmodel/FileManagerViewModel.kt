@@ -72,7 +72,7 @@ class FileManagerViewModel(
     }
 
     fun loadDirectory(directory: File, addToHistory: Boolean = true) {
-        if (!directory.exists()) return
+        if (!directory.exists() || !directory.isDirectory) return
 
         if (addToHistory && directory.absolutePath != _uiState.value.currentDirectory.absolutePath) {
             backStack.push(_uiState.value.currentDirectory)
@@ -119,6 +119,10 @@ class FileManagerViewModel(
             val prev = backStack.pop()
             loadDirectory(prev, addToHistory = false)
             return true
+        }
+
+        if (isRootDirectory(_uiState.value.currentDirectory)) {
+            return false
         }
 
         val parent = _uiState.value.currentDirectory.parentFile
@@ -567,8 +571,8 @@ class FileManagerViewModel(
         var curr: File? = directory
         while (curr != null) {
             crumbs.add(0, curr)
-            // Stop at storage root
-            if (curr.absolutePath == "/storage/emulated/0" || curr.absolutePath == "/" || curr.parentFile == null) {
+            // Stop at storage root or any registered volume root
+            if (isRootDirectory(curr)) {
                 break
             }
             curr = curr.parentFile
@@ -576,7 +580,15 @@ class FileManagerViewModel(
         return crumbs
     }
 
+    private fun isRootDirectory(dir: File): Boolean {
+        return dir.absolutePath == "/storage/emulated/0" ||
+                dir.absolutePath == "/" ||
+                dir.parentFile == null ||
+                _uiState.value.storageVolumes.any { it.path == dir.absolutePath }
+    }
+
     private fun hasParent(dir: File): Boolean {
+        if (isRootDirectory(dir)) return false
         val parent = dir.parentFile ?: return false
         return parent.exists() && parent.canRead()
     }

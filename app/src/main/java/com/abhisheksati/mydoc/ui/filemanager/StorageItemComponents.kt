@@ -24,9 +24,9 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.PictureAsPdf
@@ -69,7 +69,7 @@ fun getFileTypeIcon(type: StorageFileType): Pair<ImageVector, Color> {
         StorageFileType.ARCHIVE -> Icons.Outlined.FolderZip to Color(0xFFFF5722)
         StorageFileType.APK -> Icons.Outlined.Android to Color(0xFF4CAF50)
         StorageFileType.CODE_TEXT -> Icons.Outlined.Code to Color(0xFF00ACC1)
-        StorageFileType.GENERIC -> Icons.Outlined.InsertDriveFile to Color(0xFF9E9E9E)
+        StorageFileType.GENERIC -> Icons.AutoMirrored.Outlined.InsertDriveFile to Color(0xFF9E9E9E)
     }
 }
 

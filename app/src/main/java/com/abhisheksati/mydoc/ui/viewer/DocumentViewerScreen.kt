@@ -62,7 +62,11 @@ fun DocumentViewerScreen(
             )
         }
 
-        ext == "txt" || ext == "log" || ext == "json" || ext == "xml" || ext == "md" -> {
+        document.category == DocumentCategory.TEXT || ext in setOf(
+            "txt", "log", "json", "xml", "md", "yaml", "yml", "ini", "conf", "sh",
+            "sql", "kt", "java", "py", "html", "css", "js", "ts", "c", "cpp", "h",
+            "gradle", "properties", "bat"
+        ) -> {
             TextViewerScreen(
                 document = document,
                 onBackClick = onBackClick,

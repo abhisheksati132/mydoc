@@ -8,7 +8,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -82,10 +81,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.MyDocApp
-import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.data.local.DocumentSortOrder
 import com.abhisheksati.mydoc.data.local.FolderScanner
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
@@ -95,7 +92,6 @@ import com.abhisheksati.mydoc.designsystem.components.AppFileRow
 import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
 import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
-import com.abhisheksati.mydoc.designsystem.components.AppToolbar
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography

@@ -116,11 +116,11 @@ fun VideoPlayerScreen(
     var totalDurationMs by remember { mutableLongStateOf(item.durationMs) }
     var areControlsVisible by remember { mutableStateOf(true) }
     var isLooping by remember { mutableStateOf(false) }
-    var isBackgroundAudioEnabled by remember { mutableStateOf(false) }
+    var isSeeking by remember { mutableStateOf(false) }
+    var seekPositionMs by remember { mutableLongStateOf(0L) }
     var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
     var resizeMode by remember { mutableIntStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var isMoreMenuOpen by remember { mutableStateOf(false) }
     var isSpeedMenuOpen by remember { mutableStateOf(false) }
 
     // Gesture status overlays (Brightness & Volume feedback)
@@ -182,9 +182,11 @@ fun VideoPlayerScreen(
     }
 
     // Periodic position updater and auto-save
-    LaunchedEffect(isPlaying) {
+    LaunchedEffect(isPlaying, isSeeking) {
         while (isPlaying) {
-            currentPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
+            if (!isSeeking) {
+                currentPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
+            }
             totalDurationMs = exoPlayer.duration.coerceAtLeast(0L)
             delay(500)
         }
@@ -462,7 +464,7 @@ fun VideoPlayerScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = formatTime(currentPositionMs),
+                                text = formatTime(if (isSeeking) seekPositionMs else currentPositionMs),
                                 style = typography.caption,
                                 color = Color(0xFFEDEDED)
                             )
@@ -474,11 +476,18 @@ fun VideoPlayerScreen(
                         }
 
                         Slider(
-                            value = if (totalDurationMs > 0) currentPositionMs.toFloat() / totalDurationMs else 0f,
+                            value = if (totalDurationMs > 0) {
+                                val pos = if (isSeeking) seekPositionMs else currentPositionMs
+                                (pos.toFloat() / totalDurationMs).coerceIn(0f, 1f)
+                            } else 0f,
                             onValueChange = { frac ->
-                                val target = (frac * totalDurationMs).toLong()
-                                currentPositionMs = target
-                                exoPlayer.seekTo(target)
+                                isSeeking = true
+                                seekPositionMs = (frac * totalDurationMs).toLong()
+                            },
+                            onValueChangeFinished = {
+                                currentPositionMs = seekPositionMs
+                                exoPlayer.seekTo(seekPositionMs)
+                                isSeeking = false
                             },
                             colors = SliderDefaults.colors(
                                 thumbColor = Color(0xFF8AB4F8),

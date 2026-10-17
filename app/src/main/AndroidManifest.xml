@@ -85,10 +85,12 @@
                 <data android:mimeType="application/vnd.openxmlformats-officedocument.presentationml.presentation" />
                 <data android:mimeType="application/vnd.ms-powerpoint" />
 
-                <!-- Text & CSV -->
+                <!-- Text, Code, JSON & CSV -->
+                <data android:mimeType="text/*" />
                 <data android:mimeType="text/plain" />
                 <data android:mimeType="text/csv" />
                 <data android:mimeType="text/comma-separated-values" />
+                <data android:mimeType="application/json" />
 
                 <!-- Phase 8: Images & Photos -->
                 <data android:mimeType="image/*" />
@@ -118,10 +120,12 @@
                 <data android:mimeType="application/vnd.openxmlformats-officedocument.presentationml.presentation" />
                 <data android:mimeType="application/vnd.ms-powerpoint" />
 
-                <!-- Text & CSV -->
+                <!-- Text, Code, JSON & CSV -->
+                <data android:mimeType="text/*" />
                 <data android:mimeType="text/plain" />
                 <data android:mimeType="text/csv" />
                 <data android:mimeType="text/comma-separated-values" />
+                <data android:mimeType="application/json" />
 
                 <!-- Phase 8: Images & Photos -->
                 <data android:mimeType="image/*" />
