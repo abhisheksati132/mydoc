@@ -450,4 +450,18 @@ class MainActivity : ComponentActivity() {
         }
         startActivity(Intent.createChooser(shareIntent, "Share ${document.displayName}"))
     }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (activeMediaItem?.isVideo == true) {
+                try {
+                    val params = android.app.PictureInPictureParams.Builder()
+                        .setAspectRatio(android.util.Rational(16, 9))
+                        .build()
+                    enterPictureInPictureMode(params)
+                } catch (_: Exception) {}
+            }
+        }
+    }
 }

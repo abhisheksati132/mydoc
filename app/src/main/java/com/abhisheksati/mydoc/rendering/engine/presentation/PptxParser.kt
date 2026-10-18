@@ -158,10 +158,17 @@ class PptxParser {
                     try {
                         val entryMap = mutableMapOf<String, ByteArray>()
                         val entries = zip.entries()
+                        var mediaCount = 0
                         while (entries.hasMoreElements()) {
                             val entry = entries.nextElement()
                             if (!entry.isDirectory) {
                                 val norm = entry.name.replace('\\', '/').trimStart('/').lowercase()
+                                if (norm.startsWith("ppt/media/")) {
+                                    if (mediaCount >= 40 || entry.size > 2_000_000L) {
+                                        continue
+                                    }
+                                    mediaCount++
+                                }
                                 val data = zip.getInputStream(entry).readBytes()
                                 entryMap[norm] = data
                             }
@@ -169,10 +176,10 @@ class PptxParser {
                         val pres = parseFromEntryMap(entryMap)
                         if (pres.slides.isNotEmpty()) return pres
                     } finally {
-                        zip.close()
+                        try { zip.close() } catch (_: Throwable) {}
                     }
                 } finally {
-                    tempFile.delete()
+                    try { tempFile.delete() } catch (_: Throwable) {}
                 }
             } catch (_: Throwable) {}
         }
@@ -185,10 +192,19 @@ class PptxParser {
         try {
             val zip = ZipInputStream(ByteArrayInputStream(bytes))
             var entry: ZipEntry? = zip.nextEntry
+            var mediaCount = 0
             while (entry != null) {
                 if (!entry.isDirectory) {
-                    val data = zip.readBytes()
                     val norm = entry.name.replace('\\', '/').trimStart('/').lowercase()
+                    if (norm.startsWith("ppt/media/")) {
+                        if (mediaCount >= 40) {
+                            zip.closeEntry()
+                            entry = zip.nextEntry
+                            continue
+                        }
+                        mediaCount++
+                    }
+                    val data = zip.readBytes()
                     entryMap[norm] = data
                 }
                 zip.closeEntry()
@@ -1803,6 +1819,7 @@ class PptxParser {
         var idx = 0
         val len = bytes.size
         while (idx < len - 4) {
+            if (output.size >= 30) break
             // Check JPEG SOI (FF D8 FF)
             if (bytes[idx] == 0xFF.toByte() && bytes[idx + 1] == 0xD8.toByte() && bytes[idx + 2] == 0xFF.toByte()) {
                 var end = idx + 3

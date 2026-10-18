@@ -62,10 +62,15 @@ jobs:
         run: |
           TAG="${{ steps.vars.outputs.tag }}"
           mkdir -p release-assets
-          cp app/build/outputs/apk/release/app-release.apk release-assets/mydoc-${TAG}.apk
+          cp app/build/outputs/apk/release/app-arm64-v8a-release.apk release-assets/mydoc-${TAG}-arm64-v8a.apk
+          cp app/build/outputs/apk/release/app-armeabi-v7a-release.apk release-assets/mydoc-${TAG}-armeabi-v7a.apk
+          cp app/build/outputs/apk/release/app-universal-release.apk release-assets/mydoc-${TAG}-universal.apk
+          cp app/build/outputs/apk/release/app-universal-release.apk release-assets/mydoc-${TAG}.apk
           cd release-assets
-          sha256sum mydoc-${TAG}.apk > mydoc-${TAG}.apk.sha256
-          cat mydoc-${TAG}.apk.sha256
+          for f in mydoc-*.apk; do
+            sha256sum "$f" > "${f}.sha256"
+          done
+          ls -lh
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2

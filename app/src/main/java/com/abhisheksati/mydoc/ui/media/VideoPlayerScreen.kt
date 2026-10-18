@@ -467,7 +467,8 @@ fun VideoPlayerScreen(
             }
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 if (activeEngine == PlayerEngine.EXOPLAYER) {
-                    errorMessage = "Playback error: ${error.localizedMessage ?: "Codec unsupported"}"
+                    Toast.makeText(context, "Switching to VLC engine for unsupported media...", Toast.LENGTH_SHORT).show()
+                    activeEngine = PlayerEngine.LIBVLC
                 }
             }
         }
@@ -477,6 +478,75 @@ fun VideoPlayerScreen(
             exoPlayer.removeListener(listener)
             exoPlayer.stop()
             exoPlayer.release()
+        }
+    }
+
+    // Audio Focus & Noisy (headphone disconnect) management
+    DisposableEffect(Unit) {
+        val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
+            when (focusChange) {
+                AudioManager.AUDIOFOCUS_LOSS,
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                    if (isPlaying) {
+                        if (activeEngine == PlayerEngine.LIBVLC) mediaPlayer.pause() else exoPlayer.pause()
+                        isPlaying = false
+                    }
+                }
+            }
+        }
+
+        val noisyReceiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(c: Context?, intent: Intent?) {
+                if (intent?.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
+                    if (isPlaying) {
+                        if (activeEngine == PlayerEngine.LIBVLC) mediaPlayer.pause() else exoPlayer.pause()
+                        isPlaying = false
+                        Toast.makeText(context, "Headphones disconnected - playback paused", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+
+        val intentFilter = android.content.IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(noisyReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(noisyReceiver, intentFilter)
+        }
+
+        val focusRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            android.media.AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                .setAudioAttributes(
+                    android.media.AudioAttributes.Builder()
+                        .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MOVIE)
+                        .build()
+                )
+                .setOnAudioFocusChangeListener(audioFocusChangeListener)
+                .build().also {
+                    audioManager.requestAudioFocus(it)
+                }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.requestAudioFocus(
+                audioFocusChangeListener,
+                AudioManager.STREAM_MUSIC,
+                AudioManager.AUDIOFOCUS_GAIN
+            )
+            null
+        }
+
+        onDispose {
+            try {
+                context.unregisterReceiver(noisyReceiver)
+            } catch (_: Exception) {}
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && focusRequest != null) {
+                audioManager.abandonAudioFocusRequest(focusRequest)
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.abandonAudioFocus(audioFocusChangeListener)
+            }
         }
     }
 

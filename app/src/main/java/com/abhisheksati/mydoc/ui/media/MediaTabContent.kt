@@ -5,6 +5,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -256,13 +257,13 @@ fun MediaTabContent(
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     contentPadding = PaddingValues(
-                        start = 2.dp,
-                        end = 2.dp,
-                        top = 2.dp,
-                        bottom = 80.dp
+                        start = AppSpacing.paddingSmall,
+                        end = AppSpacing.paddingSmall,
+                        top = AppSpacing.paddingSmall,
+                        bottom = 88.dp
                     ),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     displayedGroups.forEach { group ->
@@ -307,7 +308,9 @@ private fun MediaThumbnailItem(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .background(Color(0xFF1E1E20))
+            .clip(RoundedCornerShape(6.dp))
+            .background(Color(0xFF0D0D0D))
+            .border(width = 0.5.dp, color = Color(0xFF242424), shape = RoundedCornerShape(6.dp))
             .clickable(onClick = onClick)
     ) {
         if (item.isVideo) {

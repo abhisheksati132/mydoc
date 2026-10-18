@@ -51,26 +51,41 @@ class GitHubUpdateService(
         val publishedAt = root.optString("published_at", "")
 
         val assets = root.optJSONArray("assets") ?: return null
-        var apkUrl: String? = null
-        var apkSize: Long = 0
-        var checksumUrl: String? = null
+        val apkAssets = mutableListOf<Triple<String, String, Long>>()
+        val checksumMap = mutableMapOf<String, String>()
 
         for (i in 0 until assets.length()) {
             val asset = assets.getJSONObject(i)
             val name = asset.optString("name", "")
             val downloadUrl = asset.optString("browser_download_url", "")
+            val size = asset.optLong("size", 0)
 
             if (name.endsWith(".apk", ignoreCase = true)) {
-                apkUrl = downloadUrl
-                apkSize = asset.optLong("size", 0)
+                apkAssets.add(Triple(name, downloadUrl, size))
             } else if (name.endsWith(".sha256", ignoreCase = true) || name.endsWith(".sha256.txt", ignoreCase = true)) {
-                checksumUrl = downloadUrl
+                val baseApkName = name.removeSuffix(".sha256").removeSuffix(".txt")
+                checksumMap[baseApkName] = downloadUrl
             }
         }
 
-        if (apkUrl.isNullOrBlank()) {
+        if (apkAssets.isEmpty()) {
             return null
         }
+
+        val supportedAbis = android.os.Build.SUPPORTED_ABIS.toList()
+        var selectedApk = apkAssets.firstOrNull { apk ->
+            supportedAbis.any { abi -> apk.first.contains(abi, ignoreCase = true) }
+        }
+        if (selectedApk == null) {
+            selectedApk = apkAssets.firstOrNull { it.first.contains("universal", ignoreCase = true) }
+        }
+        if (selectedApk == null) {
+            selectedApk = apkAssets.first()
+        }
+
+        val apkUrl = selectedApk.second
+        val apkSize = selectedApk.third
+        val checksumUrl = checksumMap[selectedApk.first] ?: checksumMap.values.firstOrNull()
 
         return AppRelease(
             tagName = tagName,
