@@ -21,3 +21,7 @@
 # Domain models
 -keep class com.abhisheksati.mydoc.domain.model.** { *; }
 
+# LibVLC native bindings
+-keep class org.videolan.libvlc.** { *; }
+-keepclassmembers class org.videolan.libvlc.** { *; }
+
