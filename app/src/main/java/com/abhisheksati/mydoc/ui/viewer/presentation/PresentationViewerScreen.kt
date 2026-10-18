@@ -86,6 +86,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -218,58 +219,14 @@ fun PresentationViewerScreen(
         withContext(Dispatchers.IO) {
             try {
                 val uri = Uri.parse(document.uri)
-
-                // 1. If LibreOffice native engine is available, use it for 100% desktop fidelity rendering
-                if (LibreOfficePresentationRenderer.isEngineAvailable() && context is android.app.Activity) {
-                    val initOk = LibreOfficePresentationRenderer.init(context)
-                    if (initOk) {
-                        val sharedDir = File(context.cacheDir, "shared_presentations").apply { mkdirs() }
-                        val localFile = File(sharedDir, document.displayName)
-                        if (!localFile.exists() || localFile.length() == 0L) {
-                            val inStream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri, document.displayName)
-                            inStream?.use { input -> localFile.outputStream().use { out -> input.copyTo(out) } }
-                        }
-                        if (localFile.exists() && localFile.length() > 0L) {
-                            val loRenderer = LibreOfficePresentationRenderer()
-                            if (loRenderer.load(localFile.absolutePath)) {
-                                val count = loRenderer.getSlideCount()
-                                if (count > 0) {
-                                    val loSlides = (0 until count).map { idx ->
-                                        val bmp = loRenderer.renderSlide(idx, 1600, 900)
-                                        val byteOut = java.io.ByteArrayOutputStream()
-                                        bmp?.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, byteOut)
-                                        val imgBytes = byteOut.toByteArray()
-                                        PptxSlide(
-                                            slideNumber = idx + 1,
-                                            title = "Slide ${idx + 1}",
-                                            content = emptyList(),
-                                            visualElements = listOf(
-                                                VisualElement(
-                                                    type = VisualElementType.IMAGE,
-                                                    bounds = com.abhisheksati.mydoc.rendering.engine.presentation.SlideBounds(0f, 0f, 1f, 1f),
-                                                    imageBytes = imgBytes
-                                                )
-                                            ),
-                                            aspectRatio = 16f / 9f
-                                        )
-                                    }
-                                    presentationData = PptxPresentation(loSlides)
-                                    isLoading = false
-                                    return@withContext
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 2. Standard fast parser fallback
                 val inputStream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri, document.displayName)
                     ?: throw IllegalStateException("Could not open presentation stream")
                 val parsed = inputStream.use { PptxParser().parse(it, context.cacheDir) }
                 presentationData = parsed
                 isLoading = false
-            } catch (e: Exception) {
-                errorMessage = e.localizedMessage ?: "Failed to read presentation"
+            } catch (t: Throwable) {
+                android.util.Log.e("PresentationViewer", "Error loading presentation: ${document.displayName}", t)
+                errorMessage = t.localizedMessage ?: "Failed to read presentation"
                 isLoading = false
             }
         }
@@ -1105,11 +1062,12 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPresetShape(
  * Ensures text has high contrast and readability against its immediate background.
  */
 private fun ensureTextLegibility(rawColor: Color?, containerBg: Color): Color {
-    val isContainerDark = containerBg.isColorDark()
-    if (rawColor == null || rawColor == Color.Transparent) {
+    val safeBg = if (containerBg.isSpecified) containerBg else Color.White
+    val isContainerDark = safeBg.isColorDark()
+    if (rawColor == null || !rawColor.isSpecified || rawColor == Color.Transparent) {
         return if (isContainerDark) Color(0xFFF8FAFC) else Color(0xFF0F172A)
     }
-    val bgLum = (0.299f * containerBg.red + 0.587f * containerBg.green + 0.114f * containerBg.blue)
+    val bgLum = (0.299f * safeBg.red + 0.587f * safeBg.green + 0.114f * safeBg.blue)
     val textLum = (0.299f * rawColor.red + 0.587f * rawColor.green + 0.114f * rawColor.blue)
     val contrastRatio = (maxOf(bgLum, textLum) + 0.05f) / (minOf(bgLum, textLum) + 0.05f)
     if (contrastRatio < 2.5f) {
@@ -1173,6 +1131,7 @@ private fun HighlightableText(
                 if (matchIdx > searchStart) {
                     append(text.substring(searchStart, matchIdx))
                 }
+                val endIdx = minOf(matchIdx + query.length, text.length)
                 withStyle(
                     SpanStyle(
                         background = Color(0x99FFEB3B),
@@ -1183,9 +1142,9 @@ private fun HighlightableText(
                         textDecoration = textDecoration
                     )
                 ) {
-                    append(text.substring(matchIdx, matchIdx + query.length))
+                    append(text.substring(matchIdx, endIdx))
                 }
-                searchStart = matchIdx + query.length
+                searchStart = endIdx
             }
         }
         Text(
@@ -1231,8 +1190,10 @@ private fun VisualSlideCard(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        val containerAspect = maxWidth / maxHeight
-        val slideAspect = if (slide.aspectRatio > 0.1f) slide.aspectRatio else (16f / 9f)
+        val containerAspect = if (maxHeight.value > 0f && maxWidth.value.isFinite() && maxHeight.value.isFinite()) {
+            maxWidth / maxHeight
+        } else (16f / 9f)
+        val slideAspect = if (slide.aspectRatio.isFinite() && slide.aspectRatio > 0.1f) slide.aspectRatio else (16f / 9f)
         val cardModifier = if (containerAspect > slideAspect) {
             Modifier
                 .fillMaxHeight()
@@ -1253,7 +1214,8 @@ private fun VisualSlideCard(
                 val totalWidth = maxWidth
                 val totalHeight = maxHeight
                 val referenceHeight = 540f
-                val scaleFactor = (totalHeight.value / referenceHeight).coerceIn(0.55f, 2.5f)
+                val rawScale = if (totalHeight.value.isFinite() && totalHeight.value > 0f) totalHeight.value / referenceHeight else 1f
+                val scaleFactor = rawScale.coerceIn(0.55f, 2.5f)
 
                 if (slide.visualElements.isEmpty()) {
                     Column(
@@ -1285,10 +1247,15 @@ private fun VisualSlideCard(
                     }
                 } else {
                     for (element in slide.visualElements) {
-                        val elementWidth = (totalWidth * element.bounds.width).coerceAtLeast(1.dp)
-                        val elementHeight = (totalHeight * element.bounds.height).coerceAtLeast(1.dp)
-                        val offsetX = totalWidth * element.bounds.left
-                        val offsetY = totalHeight * element.bounds.top
+                        val bLeft = if (element.bounds.left.isFinite()) element.bounds.left.coerceIn(0f, 1f) else 0f
+                        val bTop = if (element.bounds.top.isFinite()) element.bounds.top.coerceIn(0f, 1f) else 0f
+                        val bWidth = if (element.bounds.width.isFinite()) element.bounds.width.coerceIn(0.001f, 1f) else 0.5f
+                        val bHeight = if (element.bounds.height.isFinite()) element.bounds.height.coerceIn(0.001f, 1f) else 0.5f
+
+                        val elementWidth = (totalWidth * bWidth).coerceAtLeast(1.dp)
+                        val elementHeight = (totalHeight * bHeight).coerceAtLeast(1.dp)
+                        val offsetX = totalWidth * bLeft
+                        val offsetY = totalHeight * bTop
                         val isText = element.type == VisualElementType.TEXT_BOX || (element.type == VisualElementType.SHAPE && element.paragraphs.isNotEmpty())
 
                         Box(
@@ -1508,8 +1475,10 @@ private fun OutlineSlideCard(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        val containerAspect = maxWidth / maxHeight
-        val slideAspect = if (slide.aspectRatio > 0.1f) slide.aspectRatio else (16f / 9f)
+        val containerAspect = if (maxHeight.value > 0f && maxWidth.value.isFinite() && maxHeight.value.isFinite()) {
+            maxWidth / maxHeight
+        } else (16f / 9f)
+        val slideAspect = if (slide.aspectRatio.isFinite() && slide.aspectRatio > 0.1f) slide.aspectRatio else (16f / 9f)
         val cardModifier = if (containerAspect > slideAspect) {
             Modifier
                 .fillMaxHeight()
@@ -1582,6 +1551,7 @@ private fun OutlineSlideCard(
 }
 
 private fun Color.isColorDark(): Boolean {
+    if (!this.isSpecified) return false
     val lum = 0.299f * red + 0.587f * green + 0.114f * blue
     return lum < 0.5f
 }

@@ -210,4 +210,17 @@ class PptxParserTest {
 
         return bb.array()
     }
+
+    @Test
+    fun `parse corrupted random bytes returns fallback presentation gracefully`() = runBlocking {
+        val randomCorruptBytes = ByteArray(1024) { (it * 37 % 255).toByte() }
+        val pres = parser.parse(ByteArrayInputStream(randomCorruptBytes))
+        assertNotNull(pres)
+        assertTrue(pres.slides.isNotEmpty())
+    }
+
+    @Test
+    fun `libre office engine availability is safely false to prevent native abort`() {
+        assertEquals(false, LibreOfficePresentationRenderer.isEngineAvailable())
+    }
 }

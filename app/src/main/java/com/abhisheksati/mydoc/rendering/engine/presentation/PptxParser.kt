@@ -1,6 +1,7 @@
 package com.abhisheksati.mydoc.rendering.engine.presentation
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.text.style.TextAlign
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -174,7 +175,7 @@ class PptxParser {
                 } finally {
                     tempFile.delete()
                 }
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
         }
 
         return parseZipInMemory(bytes)
@@ -195,7 +196,7 @@ class PptxParser {
                 zip.closeEntry()
                 entry = zip.nextEntry
             }
-        } catch (_: Exception) {}
+        } catch (_: Throwable) {}
 
         return parseFromEntryMap(entryMap)
     }
@@ -238,11 +239,12 @@ class PptxParser {
     )
 
     private fun parseFromEntryMap(entryMap: Map<String, ByteArray>): PptxPresentation {
-        val mediaMap = mutableMapOf<String, ByteArray>()
-        val relsMap = mutableMapOf<String, MutableMap<String, String>>()
-        val notesMap = mutableMapOf<String, String>()
-        var slideWidth = 9144000L
-        var slideHeight = 5143500L
+        return try {
+            val mediaMap = mutableMapOf<String, ByteArray>()
+            val relsMap = mutableMapOf<String, MutableMap<String, String>>()
+            val notesMap = mutableMapOf<String, String>()
+            var slideWidth = 9144000L
+            var slideHeight = 5143500L
 
         // 1. Parse presentation dimensions and slide ordering from ppt/presentation.xml
         val presXmlBytes = entryMap["ppt/presentation.xml"]
@@ -391,9 +393,12 @@ class PptxParser {
             slidesList.add(slide)
         }
 
-        return if (slidesList.isNotEmpty()) {
-            PptxPresentation(slides = slidesList, aspectRatio = presAspectRatio)
-        } else {
+            if (slidesList.isNotEmpty()) {
+                PptxPresentation(slides = slidesList, aspectRatio = presAspectRatio)
+            } else {
+                emptyPresentation()
+            }
+        } catch (_: Throwable) {
             emptyPresentation()
         }
     }
@@ -1526,6 +1531,7 @@ class PptxParser {
         tint: Float,
         shade: Float
     ): Color {
+        if (!baseColor.isSpecified) return baseColor
         var r = baseColor.red
         var g = baseColor.green
         var b = baseColor.blue
@@ -1569,10 +1575,14 @@ class PptxParser {
                 val pres = parsePptDocStream(pptDocStream, picturesStream)
                 if (pres.slides.isNotEmpty()) return pres
             }
-        } catch (_: Exception) {}
+        } catch (_: Throwable) {}
 
         // Fallback: Resilient raw atom scanner over bytes
-        return parseBinaryPptFallback(bytes)
+        return try {
+            parseBinaryPptFallback(bytes)
+        } catch (_: Throwable) {
+            emptyPresentation()
+        }
     }
 
     /**
@@ -1991,9 +2001,12 @@ class PptxParser {
         private fun readSectorChain(startSector: Int, maxSize: Long): ByteArray {
             val out = java.io.ByteArrayOutputStream()
             var curSector = startSector
-            var remaining = maxSize
+            val clampedMax = minOf(maxSize, 25_000_000L)
+            var remaining = clampedMax
+            val visited = HashSet<Int>()
 
             while (curSector >= 0 && curSector < fat.size && remaining > 0) {
+                if (!visited.add(curSector)) break // Cycle detected in FAT table
                 val offset = (curSector + 1) * sectorSize
                 if (offset >= data.size) break
                 val toRead = minOf(sectorSize.toLong(), remaining).toInt()

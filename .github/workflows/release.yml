@@ -53,28 +53,7 @@ jobs:
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-      - name: Download & Embed Official LibreOffice Engine
-        run: |
-          echo "Downloading official LibreOffice Android package from F-Droid repository..."
-          wget -q https://f-droid.org/repo/org.documentfoundation.libreoffice_131.apk -O libreoffice.apk
-          ls -lh libreoffice.apk
-
-          echo "Unpacking native arm64-v8a libraries..."
-          mkdir -p app/src/main/jniLibs/arm64-v8a
-          unzip -q -j libreoffice.apk 'lib/arm64-v8a/*.so' -d app/src/main/jniLibs/arm64-v8a/
-
-          echo "Unpacking LibreOffice runtime configuration assets..."
-          mkdir -p app/src/main/assets
-          unzip -q libreoffice.apk 'assets/program/*' 'assets/share/*' -d temp_assets/
-          cp -r temp_assets/assets/* app/src/main/assets/
-
-          echo "Cleaning up temporary files..."
-          rm -rf libreoffice.apk temp_assets
-
-          echo "Verifying unpacked native libraries:"
-          ls -lh app/src/main/jniLibs/arm64-v8a/
-
-      - name: Build Signed Release APK with Built-in LibreOffice Engine
+      - name: Build Signed Release APK
         run: ./gradlew assembleRelease --stacktrace
 
       - name: Prepare Release Assets
