@@ -393,7 +393,8 @@ fun DocumentsTabContent(
                                             duration = SnackbarDuration.Short
                                         )
                                     }
-                                }
+                                },
+                                modifier = Modifier.animateItem()
                             )
                         }
                     } else {
@@ -410,6 +411,7 @@ fun DocumentsTabContent(
                                     color = if (isOled) Color(0xFF0D0D10) else colors.surface,
                                     border = BorderStroke(1.dp, if (isOled) Color(0xFF222222) else colors.divider),
                                     modifier = Modifier
+                                        .animateItem()
                                         .fillMaxWidth()
                                         .padding(horizontal = 16.dp)
                                 ) {
@@ -462,7 +464,8 @@ fun DocumentsTabContent(
                                             duration = SnackbarDuration.Short
                                         )
                                     }
-                                }
+                                },
+                                modifier = Modifier.animateItem()
                             )
                         }
 
@@ -490,7 +493,8 @@ fun DocumentsTabContent(
                                                 duration = SnackbarDuration.Short
                                             )
                                         }
-                                    }
+                                    },
+                                    modifier = Modifier.animateItem()
                                 )
                             }
                         }
@@ -621,7 +625,8 @@ private fun SwipeableDocumentRow(
     onRemoveFromRecents: () -> Unit,
     onShare: () -> Unit,
     onShowDetails: () -> Unit,
-    onDeletedSnackbar: (String) -> Unit
+    onDeletedSnackbar: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
     val haptic = LocalHapticFeedback.current
@@ -647,6 +652,7 @@ private fun SwipeableDocumentRow(
 
     SwipeToDismissBox(
         state = dismissState,
+        modifier = modifier.fillMaxWidth(),
         enableDismissFromStartToEnd = true,
         enableDismissFromEndToStart = true,
         backgroundContent = {

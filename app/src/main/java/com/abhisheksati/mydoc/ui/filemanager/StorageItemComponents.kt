@@ -40,6 +40,19 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -94,12 +107,29 @@ fun StorageItemRow(
         Color.Transparent
     }
 
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val rowScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.985f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "storageRowScale"
+    )
+
     Surface(
         color = rowBackground,
         modifier = modifier
             .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = rowScale
+                scaleY = rowScale
+            }
             .clip(RoundedCornerShape(8.dp))
             .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null,
                 onClick = onClick,
                 onLongClick = onLongClick
             )
@@ -110,7 +140,11 @@ fun StorageItemRow(
             modifier = Modifier.fillMaxWidth()
         ) {
             // Icon or Checkbox
-            if (isSelectionMode) {
+            AnimatedVisibility(
+                visible = isSelectionMode,
+                enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
+                exit = scaleOut() + fadeOut()
+            ) {
                 IconButton(
                     onClick = onClick,
                     modifier = Modifier.size(36.dp)
@@ -121,8 +155,13 @@ fun StorageItemRow(
                         tint = if (isSelected) colors.accent else colors.textSecondary
                     )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-            } else {
+            }
+
+            AnimatedVisibility(
+                visible = !isSelectionMode,
+                enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
+                exit = scaleOut() + fadeOut()
+            ) {
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
@@ -137,8 +176,8 @@ fun StorageItemRow(
                         modifier = Modifier.size(24.dp)
                     )
                 }
-                Spacer(modifier = Modifier.width(14.dp))
             }
+            Spacer(modifier = Modifier.width(if (isSelectionMode) 8.dp else 14.dp))
 
             // Name & Subtext
             Column(
@@ -206,6 +245,17 @@ fun StorageItemGrid(
     val typography = LocalAppTypography.current
     val (icon, tint) = getFileTypeIcon(item.fileType)
 
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val gridScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "gridScale"
+    )
+
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
@@ -215,8 +265,14 @@ fun StorageItemGrid(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(0.92f)
+            .graphicsLayer {
+                scaleX = gridScale
+                scaleY = gridScale
+            }
             .clip(RoundedCornerShape(12.dp))
             .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null,
                 onClick = onClick,
                 onLongClick = onLongClick
             )
@@ -227,16 +283,20 @@ fun StorageItemGrid(
                 .padding(10.dp)
         ) {
             // Trailing Selection Badge or More Kebab
-            if (isSelectionMode) {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = isSelectionMode,
+                enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
+                exit = scaleOut() + fadeOut(),
+                modifier = Modifier.align(Alignment.TopEnd)
+            ) {
                 Icon(
                     imageVector = if (isSelected) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
                     contentDescription = "Selected",
                     tint = if (isSelected) colors.accent else colors.textSecondary,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(20.dp)
+                    modifier = Modifier.size(20.dp)
                 )
-            } else {
+            }
+            if (!isSelectionMode) {
                 IconButton(
                     onClick = onMoreClick,
                     modifier = Modifier

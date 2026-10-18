@@ -15,16 +15,23 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.ui.unit.IntOffset
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -199,12 +206,51 @@ class MainActivity : ComponentActivity() {
                     AnimatedContent(
                         targetState = activeScreen,
                         transitionSpec = {
-                            (fadeIn(animationSpec = tween(220, delayMillis = 30)) +
-                             scaleIn(initialScale = 0.97f, animationSpec = tween(220)))
-                            .togetherWith(
-                             fadeOut(animationSpec = tween(160)) +
-                             scaleOut(targetScale = 0.99f, animationSpec = tween(160))
-                            )
+                            val enterSpring = spring<Float>(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy)
+                            val exitSpring = spring<Float>(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy)
+                            val enterOffsetSpring = spring<IntOffset>(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy)
+                            val exitOffsetSpring = spring<IntOffset>(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy)
+
+                            when {
+                                targetState is ActiveScreen.Document || targetState is ActiveScreen.Photo || targetState is ActiveScreen.Video -> {
+                                    (slideInVertically(animationSpec = enterOffsetSpring) { it / 8 } +
+                                     scaleIn(initialScale = 0.94f, animationSpec = enterSpring) +
+                                     fadeIn(animationSpec = tween(220)))
+                                    .togetherWith(
+                                     fadeOut(animationSpec = tween(160)) +
+                                     scaleOut(targetScale = 0.96f, animationSpec = exitSpring)
+                                    )
+                                }
+                                initialState is ActiveScreen.Document || initialState is ActiveScreen.Photo || initialState is ActiveScreen.Video -> {
+                                    (fadeIn(animationSpec = tween(200)) +
+                                     scaleIn(initialScale = 0.96f, animationSpec = enterSpring))
+                                    .togetherWith(
+                                     slideOutVertically(animationSpec = exitOffsetSpring) { it / 8 } +
+                                     scaleOut(targetScale = 0.94f, animationSpec = exitSpring) +
+                                     fadeOut(animationSpec = tween(180))
+                                    )
+                                }
+                                targetState is ActiveScreen.Settings || targetState is ActiveScreen.DesignSystemPreview -> {
+                                    (slideInHorizontally(animationSpec = enterOffsetSpring) { it / 4 } +
+                                     fadeIn(animationSpec = tween(220)))
+                                    .togetherWith(
+                                     slideOutHorizontally(animationSpec = exitOffsetSpring) { -it / 6 } +
+                                     fadeOut(animationSpec = tween(180))
+                                    )
+                                }
+                                initialState is ActiveScreen.Settings || initialState is ActiveScreen.DesignSystemPreview -> {
+                                    (slideInHorizontally(animationSpec = enterOffsetSpring) { -it / 6 } +
+                                     fadeIn(animationSpec = tween(220)))
+                                    .togetherWith(
+                                     slideOutHorizontally(animationSpec = exitOffsetSpring) { it / 4 } +
+                                     fadeOut(animationSpec = tween(180))
+                                    )
+                                }
+                                else -> {
+                                    (fadeIn(animationSpec = tween(240)) + scaleIn(initialScale = 0.97f, animationSpec = enterSpring))
+                                    .togetherWith(fadeOut(animationSpec = tween(180)) + scaleOut(targetScale = 1.02f, animationSpec = exitSpring))
+                                }
+                            }
                         },
                         label = "screenTransition"
                     ) { screen ->

@@ -12,9 +12,19 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -317,115 +327,123 @@ fun MediaTabContent(
             .fillMaxSize()
             .background(colors.background)
     ) {
-        if (isSelectionMode) {
-            // Contextual multi-selection top bar
-            Surface(
-                color = colors.surface,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
+        AnimatedContent(
+            targetState = isSelectionMode,
+            transitionSpec = {
+                (fadeIn(animationSpec = tween(180)) + slideInVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { -it / 2 })
+                .togetherWith(fadeOut(animationSpec = tween(140)) + slideOutVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { -it / 2 })
+            },
+            label = "mediaTopBarMode"
+        ) { selectionActive ->
+            if (selectionActive) {
+                // Contextual multi-selection top bar
+                Surface(
+                    color = colors.surface,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp)
-                        .padding(horizontal = 8.dp)
+                        .statusBarsPadding()
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .padding(horizontal = 8.dp)
                     ) {
-                        IconButton(onClick = { selectedUris = emptySet() }) {
-                            Icon(
-                                imageVector = Icons.Outlined.Close,
-                                contentDescription = "Close selection",
-                                tint = colors.textPrimary
-                            )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            IconButton(onClick = { selectedUris = emptySet() }) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Close,
+                                    contentDescription = "Close selection",
+                                    tint = colors.textPrimary
+                                )
+                            }
+                            Column(modifier = Modifier.padding(start = 4.dp)) {
+                                Text(
+                                    text = "${selectedUris.size} selected",
+                                    style = typography.title.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold),
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    text = formattedSelectedSize,
+                                    style = typography.caption.copy(fontSize = 11.sp),
+                                    color = colors.textSecondary
+                                )
+                            }
                         }
-                        Column(modifier = Modifier.padding(start = 4.dp)) {
-                            Text(
-                                text = "${selectedUris.size} selected",
-                                style = typography.title.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold),
-                                color = colors.textPrimary
-                            )
-                            Text(
-                                text = formattedSelectedSize,
-                                style = typography.caption.copy(fontSize = 11.sp),
-                                color = colors.textSecondary
-                            )
-                        }
-                    }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        val allSelected = allVisibleItems.isNotEmpty() && selectedUris.size == allVisibleItems.size
-                        IconButton(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                selectedUris = if (allSelected) {
-                                    emptySet()
-                                } else {
-                                    allVisibleItems.map { it.uri }.toSet()
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            val allSelected = allVisibleItems.isNotEmpty() && selectedUris.size == allVisibleItems.size
+                            IconButton(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    selectedUris = if (allSelected) {
+                                        emptySet()
+                                    } else {
+                                        allVisibleItems.map { it.uri }.toSet()
+                                    }
                                 }
+                            ) {
+                                Icon(
+                                    imageVector = if (allSelected) Icons.Outlined.Deselect else Icons.Outlined.SelectAll,
+                                    contentDescription = if (allSelected) "Deselect All" else "Select All",
+                                    tint = colors.textPrimary
+                                )
                             }
-                        ) {
-                            Icon(
-                                imageVector = if (allSelected) Icons.Outlined.Deselect else Icons.Outlined.SelectAll,
-                                contentDescription = if (allSelected) "Deselect All" else "Select All",
-                                tint = colors.textPrimary
-                            )
-                        }
 
-                        IconButton(onClick = { showDetailsDialog = true }) {
-                            Icon(
-                                imageVector = Icons.Outlined.Info,
-                                contentDescription = "Selection Details",
-                                tint = colors.textPrimary
-                            )
-                        }
-
-                        IconButton(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                performShare(selectedItems)
+                            IconButton(onClick = { showDetailsDialog = true }) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Info,
+                                    contentDescription = "Selection Details",
+                                    tint = colors.textPrimary
+                                )
                             }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Share,
-                                contentDescription = "Share",
-                                tint = colors.textPrimary
-                            )
-                        }
 
-                        IconButton(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                showDeleteConfirmDialog = true
+                            IconButton(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    performShare(selectedItems)
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Share,
+                                    contentDescription = "Share",
+                                    tint = colors.textPrimary
+                                )
                             }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Delete,
-                                contentDescription = "Delete",
-                                tint = colors.error
-                            )
+
+                            IconButton(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    showDeleteConfirmDialog = true
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Delete,
+                                    contentDescription = "Delete",
+                                    tint = colors.error
+                                )
+                            }
                         }
                     }
                 }
-            }
-        } else {
-            AppTabHeader(
-                title = "Media",
-                onSearchClick = { isSearchActive = !isSearchActive },
-                isSearchActive = isSearchActive || searchQuery.isNotEmpty(),
-                searchContent = {
-                    AppSearchField(
-                        query = searchQuery,
-                        onQueryChanged = { searchQuery = it },
-                        placeholder = "Search photos & videos..."
-                    )
-                },
-                isDarkTheme = isDarkTheme,
+            } else {
+                AppTabHeader(
+                    title = "Media",
+                    onSearchClick = { isSearchActive = !isSearchActive },
+                    isSearchActive = isSearchActive || searchQuery.isNotEmpty(),
+                    searchContent = {
+                        AppSearchField(
+                            query = searchQuery,
+                            onQueryChanged = { searchQuery = it },
+                            placeholder = "Search photos & videos..."
+                        )
+                    },
+                    isDarkTheme = isDarkTheme,
                 onToggleTheme = onToggleTheme,
                 onSettingsClick = onSettingsClick,
                 moreMenuContent = { onDismiss ->
@@ -538,6 +556,7 @@ fun MediaTabContent(
                 } else null
             )
         }
+    }
 
         if (!uiState.hasPermission) {
             Box(
@@ -625,7 +644,8 @@ fun MediaTabContent(
                                     } else {
                                         selectedUris + item.uri
                                     }
-                                }
+                                },
+                                modifier = Modifier.animateItem()
                             )
                         }
                     }
@@ -642,7 +662,8 @@ private fun MediaThumbnailItem(
     isSelected: Boolean,
     isSelectionMode: Boolean,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val typography = LocalAppTypography.current
@@ -655,7 +676,7 @@ private fun MediaThumbnailItem(
     )
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1f)
             .scale(scale)
@@ -697,10 +718,14 @@ private fun MediaThumbnailItem(
         }
 
         // Selection bubble in top-right corner
-        if (isSelectionMode) {
+        AnimatedVisibility(
+            visible = isSelectionMode,
+            modifier = Modifier.align(Alignment.TopEnd),
+            enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
+            exit = scaleOut() + fadeOut()
+        ) {
             Box(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
                     .padding(6.dp)
                     .size(22.dp)
                     .clip(CircleShape)

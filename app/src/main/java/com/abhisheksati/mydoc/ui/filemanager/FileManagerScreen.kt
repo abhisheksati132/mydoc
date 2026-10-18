@@ -5,11 +5,22 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -241,8 +252,23 @@ fun FileManagerScreen(
         containerColor = colors.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            if (uiState.isSelectionMode) {
-                // Multi-selection Top Bar
+            AnimatedContent(
+                targetState = uiState.isSelectionMode,
+                transitionSpec = {
+                    (slideInVertically(
+                        initialOffsetY = { -it / 2 },
+                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                    ) + fadeIn(spring(stiffness = Spring.StiffnessMediumLow))).togetherWith(
+                        slideOutVertically(
+                            targetOffsetY = { -it / 2 },
+                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                        ) + fadeOut()
+                    )
+                },
+                label = "FileManagerTopBar"
+            ) { isSelection ->
+                if (isSelection) {
+                    // Multi-selection Top Bar
                 Surface(
                     color = colors.surface,
                     tonalElevation = 3.dp,
@@ -578,9 +604,14 @@ fun FileManagerScreen(
                     )
                 }
             }
+        }
         },
         floatingActionButton = {
-            if (!uiState.isSelectionMode && uiState.clipboardState == null) {
+            AnimatedVisibility(
+                visible = !uiState.isSelectionMode && uiState.clipboardState == null,
+                enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
+                exit = scaleOut(spring(stiffness = Spring.StiffnessMediumLow)) + fadeOut()
+            ) {
                 FloatingActionButton(
                     onClick = { showNewFolderDialog = true },
                     containerColor = colors.accent,
@@ -692,7 +723,8 @@ fun FileManagerScreen(
                                     },
                                     onMoreClick = {
                                         singleItemActionTarget = item
-                                    }
+                                    },
+                                    modifier = Modifier.animateItem()
                                 )
                             }
                         }
@@ -731,7 +763,8 @@ fun FileManagerScreen(
                                     },
                                     onMoreClick = {
                                         singleItemActionTarget = item
-                                    }
+                                    },
+                                    modifier = Modifier.animateItem()
                                 )
                             }
                         }
@@ -1315,13 +1348,38 @@ fun FileManagerCategoryChips(
     ) {
         for ((cat, icon, color) in categories) {
             val isSelected = activeCategory == cat
+            val chipBg by animateColorAsState(
+                targetValue = if (isSelected) color.copy(alpha = 0.2f) else colors.surface,
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                label = "chipBg"
+            )
+            val chipBorderColor by animateColorAsState(
+                targetValue = if (isSelected) color else colors.divider,
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                label = "chipBorder"
+            )
+            val interactionSource = remember { MutableInteractionSource() }
+            val isPressed by interactionSource.collectIsPressedAsState()
+            val chipScale by animateFloatAsState(
+                targetValue = if (isPressed) 0.94f else 1f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+                label = "chipScale"
+            )
+
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = if (isSelected) color.copy(alpha = 0.2f) else colors.surface,
-                border = if (isSelected) androidx.compose.foundation.BorderStroke(1.5.dp, color) else androidx.compose.foundation.BorderStroke(1.dp, colors.divider),
+                color = chipBg,
+                border = androidx.compose.foundation.BorderStroke(if (isSelected) 1.5.dp else 1.dp, chipBorderColor),
                 modifier = Modifier
+                    .graphicsLayer {
+                        scaleX = chipScale
+                        scaleY = chipScale
+                    }
                     .clip(RoundedCornerShape(16.dp))
-                    .clickable { onCategorySelected(cat) }
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null
+                    ) { onCategorySelected(cat) }
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
