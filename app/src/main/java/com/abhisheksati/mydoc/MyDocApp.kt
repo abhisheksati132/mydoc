@@ -54,6 +54,7 @@ class MyDocApp : Application(), ImageLoaderFactory {
                 } else {
                     add(GifDecoder.Factory())
                 }
+                add(coil.decode.VideoFrameDecoder.Factory())
             }
             .crossfade(true)
             .respectCacheHeaders(false)

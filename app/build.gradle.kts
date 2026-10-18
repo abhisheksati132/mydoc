@@ -103,6 +103,7 @@ dependencies {
     // Phase 8: Coil for image loading, caching & GIF/WebP support
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
+    implementation(libs.coil.video)
 
     // Phase 8: ExifInterface for offline EXIF orientation and metadata
     implementation(libs.androidx.exifinterface)

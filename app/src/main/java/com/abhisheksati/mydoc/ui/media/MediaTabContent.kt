@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.request.videoFrameMillis
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
@@ -309,9 +310,25 @@ private fun MediaThumbnailItem(
             .background(Color(0xFF1E1E20))
             .clickable(onClick = onClick)
     ) {
+        if (item.isVideo) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = null,
+                tint = Color(0x66FFFFFF),
+                modifier = Modifier
+                    .size(32.dp)
+                    .align(Alignment.Center)
+            )
+        }
+
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(item.uri)
+                .apply {
+                    if (item.isVideo) {
+                        videoFrameMillis(1000L)
+                    }
+                }
                 .crossfade(true)
                 .build(),
             contentDescription = item.displayName,
