@@ -397,22 +397,6 @@ fun DocumentsTabContent(
                             )
                         }
                     } else {
-                        // Quick Access Carousel (shown in "ALL" category view)
-                        if (uiState.selectedCategory == DocumentCategory.ALL) {
-                            if (uiState.recents.isNotEmpty()) {
-                                item(key = "quick_access_header") {
-                                    AppSectionHeader(title = "QUICK ACCESS")
-                                }
-                                item(key = "quick_access_carousel") {
-                                    DocumentsRecentsCarousel(
-                                        documents = uiState.recents,
-                                        onDocumentClick = onDocumentClick
-                                    )
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                }
-                            }
-                        }
-
                         // Continue reading row if applicable
                         val continueDoc = uiState.continueReadingDoc
                         if (continueDoc != null && uiState.selectedCategory == DocumentCategory.ALL) {

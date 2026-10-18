@@ -25,7 +25,8 @@ fun AppSearchField(
     query: String,
     onQueryChanged: (String) -> Unit,
     placeholder: String = "Search documents",
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(16.dp)
 ) {
     val colors = AppTheme.colors
     val typography = AppTheme.typography
@@ -39,7 +40,7 @@ fun AppSearchField(
             .border(
                 width = AppSpacing.dividerThickness,
                 color = colors.divider,
-                shape = RoundedCornerShape(AppSpacing.cornerRadius)
+                shape = shape
             ),
         placeholder = {
             Text(
@@ -73,7 +74,7 @@ fun AppSearchField(
         },
         textStyle = typography.body.copy(color = colors.textPrimary),
         singleLine = true,
-        shape = RoundedCornerShape(AppSpacing.cornerRadius),
+        shape = shape,
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = colors.surfaceVariant,
             unfocusedContainerColor = colors.surfaceVariant,

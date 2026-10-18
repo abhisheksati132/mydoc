@@ -76,9 +76,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.media.MediaMetadataRetriever
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.request.videoFrameMillis
+import coil.request.videoFrameOption
+import coil.request.videoFramePercent
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
@@ -672,7 +675,8 @@ private fun MediaThumbnailItem(
                 .data(item.uri)
                 .apply {
                     if (item.isVideo) {
-                        videoFrameMillis(1000L)
+                        videoFramePercent(0.1)
+                        videoFrameOption(MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
                     }
                 }
                 .crossfade(true)

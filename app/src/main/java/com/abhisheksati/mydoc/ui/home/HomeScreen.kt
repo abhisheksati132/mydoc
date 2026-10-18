@@ -26,9 +26,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.outlined.Sort
@@ -279,6 +281,7 @@ fun HomeScreen(
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             showCameraScanner = true
                         },
+                        shape = CircleShape,
                         containerColor = colors.surfaceVariant,
                         contentColor = colors.textPrimary,
                         elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
@@ -290,25 +293,22 @@ fun HomeScreen(
                         )
                     }
 
-                    ExtendedFloatingActionButton(
+                    FloatingActionButton(
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             openDocumentLauncher.launch(SUPPORTED_MIME_TYPES)
                         },
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Outlined.FileOpen,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
-                        text = {
-                            Text("Open", fontWeight = FontWeight.SemiBold)
-                        },
+                        shape = CircleShape,
                         containerColor = colors.accent,
                         contentColor = if (colors.background == DarkAppColors.background) Color(0xFF000000) else Color.White,
                         elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
-                    )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = "Open Document",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
         },
@@ -543,7 +543,6 @@ fun FloatingPillDock(
                 selected = currentTab == HomeTab.TOOLS,
                 icon = if (currentTab == HomeTab.TOOLS) Icons.Filled.Build else Icons.Outlined.Build,
                 label = "Tools",
-                badgeText = "30",
                 accentColor = colors.accent,
                 unselectedColor = colors.textSecondary,
                 onClick = {
