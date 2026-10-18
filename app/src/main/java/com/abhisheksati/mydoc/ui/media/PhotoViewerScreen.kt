@@ -141,6 +141,8 @@ fun PhotoViewerScreen(
         // Image Pager
         HorizontalPager(
             state = pagerState,
+            key = { items[it].uri.toString() },
+            beyondViewportPageCount = 1,
             modifier = Modifier.fillMaxSize()
         ) { page ->
             val item = items[page]

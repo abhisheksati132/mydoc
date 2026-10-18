@@ -13,6 +13,12 @@ import android.os.Build
 import com.abhisheksati.mydoc.data.repository.MediaRepositoryImpl
 import com.abhisheksati.mydoc.domain.repository.MediaRepository
 
+import coil.disk.DiskCache
+import coil.memory.MemoryCache
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
 class MyDocApp : Application(), ImageLoaderFactory {
 
     lateinit var database: AppDatabase
@@ -35,9 +41,11 @@ class MyDocApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
-        try {
-            com.artifex.mupdf.fitz.Context.init()
-        } catch (_: Throwable) {}
+        CoroutineScope(Dispatchers.Default).launch {
+            try {
+                com.artifex.mupdf.fitz.Context.init()
+            } catch (_: Throwable) {}
+        }
         database = AppDatabase.getInstance(this)
         documentRepository = DocumentRepositoryImpl(this, database)
         mediaRepository = MediaRepositoryImpl(this, database)
@@ -48,6 +56,18 @@ class MyDocApp : Application(), ImageLoaderFactory {
 
     override fun newImageLoader(): ImageLoader {
         return ImageLoader.Builder(this)
+            .memoryCache {
+                MemoryCache.Builder(this)
+                    .maxSizePercent(0.25)
+                    .strongReferencesEnabled(true)
+                    .build()
+            }
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(cacheDir.resolve("image_cache"))
+                    .maxSizePercent(0.05)
+                    .build()
+            }
             .components {
                 if (Build.VERSION.SDK_INT >= 28) {
                     add(ImageDecoderDecoder.Factory())
@@ -56,8 +76,11 @@ class MyDocApp : Application(), ImageLoaderFactory {
                 }
                 add(coil.decode.VideoFrameDecoder.Factory())
             }
+            .allowHardware(true)
+            .allowRgb565(true)
             .crossfade(true)
             .respectCacheHeaders(false)
+            .dispatcher(Dispatchers.IO)
             .build()
     }
 }

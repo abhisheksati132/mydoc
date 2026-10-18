@@ -316,6 +316,8 @@ fun HomeScreen(
     ) { innerPadding ->
         HorizontalPager(
             state = pagerState,
+            key = { HomeTab.entries[it].name },
+            beyondViewportPageCount = 1,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)

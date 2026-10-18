@@ -593,7 +593,8 @@ fun MediaTabContent(
 
                         items(
                             items = group.items,
-                            key = { it.uri.toString() }
+                            key = { it.uri.toString() },
+                            contentType = { "media_thumb" }
                         ) { item ->
                             val isItemSelected = selectedUris.contains(item.uri)
                             MediaThumbnailItem(

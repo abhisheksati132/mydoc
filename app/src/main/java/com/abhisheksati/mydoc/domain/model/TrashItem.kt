@@ -1,10 +1,12 @@
 package com.abhisheksati.mydoc.domain.model
 
+import androidx.compose.runtime.Immutable
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
 
+@Immutable
 data class TrashItem(
     val id: Long = 0,
     val originalPath: String,

@@ -445,7 +445,8 @@ fun DocumentsTabContent(
                         // Document Items with Micro-Gesture Swipes
                         items(
                             items = uiState.documents,
-                            key = { "doc_${it.uri}" }
+                            key = { "doc_${it.uri}" },
+                            contentType = { "doc_row" }
                         ) { document ->
                             SwipeableDocumentRow(
                                 document = document,
@@ -472,7 +473,8 @@ fun DocumentsTabContent(
                             }
                             items(
                                 items = uiState.favorites,
-                                key = { "fav_${it.uri}" }
+                                key = { "fav_${it.uri}" },
+                                contentType = { "doc_row" }
                             ) { document ->
                                 SwipeableDocumentRow(
                                     document = document,

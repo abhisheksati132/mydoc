@@ -666,7 +666,8 @@ fun FileManagerScreen(
                         ) {
                             items(
                                 items = uiState.filteredItems,
-                                key = { it.path }
+                                key = { it.path },
+                                contentType = { if (it.isDirectory) "dir_grid" else "file_grid" }
                             ) { item ->
                                 val isSelected = uiState.selectedFiles.contains(item.file)
                                 StorageItemGrid(
@@ -704,7 +705,8 @@ fun FileManagerScreen(
                         ) {
                             items(
                                 items = uiState.filteredItems,
-                                key = { it.path }
+                                key = { it.path },
+                                contentType = { if (it.isDirectory) "dir_row" else "file_row" }
                             ) { item ->
                                 val isSelected = uiState.selectedFiles.contains(item.file)
                                 StorageItemRow(

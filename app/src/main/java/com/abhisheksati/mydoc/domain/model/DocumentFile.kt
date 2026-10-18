@@ -1,9 +1,11 @@
 package com.abhisheksati.mydoc.domain.model
 
+import androidx.compose.runtime.Immutable
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
 
+@Immutable
 data class DocumentFile(
     val uri: String,
     val displayName: String,

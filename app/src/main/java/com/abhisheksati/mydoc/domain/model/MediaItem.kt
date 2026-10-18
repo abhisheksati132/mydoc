@@ -1,6 +1,7 @@
 package com.abhisheksati.mydoc.domain.model
 
 import android.net.Uri
+import androidx.compose.runtime.Immutable
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -11,6 +12,7 @@ enum class MediaFilter {
     VIDEOS
 }
 
+@Immutable
 data class MediaItem(
     val id: Long,
     val uri: Uri,
