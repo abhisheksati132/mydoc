@@ -180,9 +180,14 @@ fun HomeScreen(
     var showCameraScanner by remember { mutableStateOf(false) }
     var showSignaturePad by remember { mutableStateOf(false) }
     var isSortMenuOpen by remember { mutableStateOf(false) }
-    var isMoreMenuOpen by remember { mutableStateOf(false) }
     var showClearRecentsDialog by remember { mutableStateOf(false) }
     var selectedDocForDetails by remember { mutableStateOf<DocumentFile?>(null) }
+
+    // Navigate back to FILES tab when pressing Back on secondary tabs
+    BackHandler(enabled = currentTab != HomeTab.FILES && !showCameraScanner && !showSignaturePad && selectedDocForDetails == null && !showClearRecentsDialog && !(fileManagerUiState?.isTrashOpen == true)) {
+        viewModel.selectTab(HomeTab.FILES)
+        scope.launch { pagerState.animateScrollToPage(HomeTab.FILES.ordinal) }
+    }
 
     // SAF Document Picker launcher
     val openDocumentLauncher = rememberLauncherForActivityResult(
@@ -403,6 +408,7 @@ fun HomeScreen(
                             onSettingsClick = onSettingsClick,
                             onToggleTheme = onToggleTheme,
                             isDarkTheme = isDarkTheme,
+                            isActive = (currentTab == HomeTab.FILES),
                             modifier = Modifier.fillMaxSize()
                         )
                     }

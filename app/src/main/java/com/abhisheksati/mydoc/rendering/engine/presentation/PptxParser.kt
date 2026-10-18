@@ -161,10 +161,9 @@ class PptxParser {
                         while (entries.hasMoreElements()) {
                             val entry = entries.nextElement()
                             if (!entry.isDirectory) {
-                                val norm = entry.name.replace('\\', '/').trimStart('/')
+                                val norm = entry.name.replace('\\', '/').trimStart('/').lowercase()
                                 val data = zip.getInputStream(entry).readBytes()
                                 entryMap[norm] = data
-                                entryMap[norm.lowercase()] = data
                             }
                         }
                         val pres = parseFromEntryMap(entryMap)
@@ -189,9 +188,8 @@ class PptxParser {
             while (entry != null) {
                 if (!entry.isDirectory) {
                     val data = zip.readBytes()
-                    val norm = entry.name.replace('\\', '/').trimStart('/')
+                    val norm = entry.name.replace('\\', '/').trimStart('/').lowercase()
                     entryMap[norm] = data
-                    entryMap[norm.lowercase()] = data
                 }
                 zip.closeEntry()
                 entry = zip.nextEntry
@@ -199,6 +197,39 @@ class PptxParser {
         } catch (_: Throwable) {}
 
         return parseFromEntryMap(entryMap)
+    }
+
+    private fun optimizeImageBytes(raw: ByteArray): ByteArray {
+        if (raw.size < 400_000) return raw
+        return try {
+            val opts = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            android.graphics.BitmapFactory.decodeByteArray(raw, 0, raw.size, opts)
+            val maxDim = maxOf(opts.outWidth, opts.outHeight)
+            if (maxDim <= 1280) return raw
+            var sampleSize = 1
+            while (maxDim / sampleSize > 1280) {
+                sampleSize *= 2
+            }
+            val decodeOpts = android.graphics.BitmapFactory.Options().apply { inSampleSize = sampleSize }
+            val bmp = android.graphics.BitmapFactory.decodeByteArray(raw, 0, raw.size, decodeOpts) ?: return raw
+            val baos = java.io.ByteArrayOutputStream()
+            bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 82, baos)
+            bmp.recycle()
+            baos.toByteArray()
+        } catch (_: Throwable) {
+            raw
+        }
+    }
+
+    private fun isMasterTemplateNoise(text: String): Boolean {
+        val lower = text.trim().lowercase()
+        if (lower.isBlank()) return true
+        if (lower.startsWith("click to edit") || lower.startsWith("click to add")) return true
+        if (lower in setOf(
+            "second level", "third level", "fourth level", "fifth level", "first level",
+            "root entry", "slide master", "master slide", "<#>", "‹#›", "subtitle", "footer", "header"
+        )) return true
+        return false
     }
 
     private data class GroupTransform(
@@ -272,11 +303,12 @@ class PptxParser {
 
         // 4. Extract media files (pictures, photos, diagrams)
         for ((name, data) in entryMap) {
-            if (name.contains("ppt/media/", ignoreCase = true)) {
-                mediaMap[name] = data
+            if (name.contains("ppt/media/")) {
+                val optimized = optimizeImageBytes(data)
+                mediaMap[name] = optimized
                 val shortName = name.removePrefix("ppt/")
-                mediaMap[shortName] = data
-                mediaMap[name.substringAfterLast('/')] = data
+                mediaMap[shortName] = optimized
+                mediaMap[name.substringAfterLast('/')] = optimized
             }
         }
 
@@ -1196,18 +1228,21 @@ class PptxParser {
                                     currentRunText.clear()
                                 }
                                 if (curRuns.isNotEmpty()) {
-                                    val isBullet = curBulletChar != null || curIndentLvl > 0 || (curPlaceholderType in listOf("body", "obj"))
-                                    val para = SlideParagraph(
-                                        runs = curRuns.toList(),
-                                        alignment = curParaAlign,
-                                        isBullet = isBullet,
-                                        bulletChar = curBulletChar,
-                                        indentLevel = curIndentLvl
-                                    )
-                                    curParagraphs.add(para)
-                                    val plain = para.plainText.trim()
-                                    if (plain.isNotEmpty()) {
-                                        plainTextParagraphs.add(plain)
+                                    val runsWithoutNoise = curRuns.filter { !isMasterTemplateNoise(it.text) }
+                                    if (runsWithoutNoise.isNotEmpty()) {
+                                        val isBullet = curBulletChar != null || curIndentLvl > 0 || (curPlaceholderType in listOf("body", "obj"))
+                                        val para = SlideParagraph(
+                                            runs = runsWithoutNoise,
+                                            alignment = curParaAlign,
+                                            isBullet = isBullet,
+                                            bulletChar = curBulletChar,
+                                            indentLevel = curIndentLvl
+                                        )
+                                        curParagraphs.add(para)
+                                        val plain = para.plainText.trim()
+                                        if (plain.isNotEmpty() && !isMasterTemplateNoise(plain)) {
+                                            plainTextParagraphs.add(plain)
+                                        }
                                     }
                                 }
                             }
@@ -1277,7 +1312,23 @@ class PptxParser {
                                         )
                                     }
 
-                                    if (curParagraphs.isNotEmpty() || (curFillColor != null && shapeImageBytes == null) || curBorderColor != null || (curShapePreset != null && shapeImageBytes == null)) {
+                                    val cleanParagraphs = curParagraphs.filter { p ->
+                                        p.runs.any { r -> r.text.isNotBlank() && !isMasterTemplateNoise(r.text) }
+                                    }
+                                    val hasVisibleText = cleanParagraphs.isNotEmpty()
+                                    val hasVisibleFill = curFillColor != null && curFillColor != Color.Transparent
+                                    val hasVisibleBorder = curBorderColor != null && curBorderWidth > 0f
+                                    val hasVisiblePreset = curShapePreset != null && (
+                                        curShapePreset!!.contains("arrow", ignoreCase = true) ||
+                                        curShapePreset!!.contains("triangle", ignoreCase = true) ||
+                                        curShapePreset!!.contains("diamond", ignoreCase = true) ||
+                                        curShapePreset!!.contains("star", ignoreCase = true) ||
+                                        curShapePreset!!.contains("chevron", ignoreCase = true) ||
+                                        curShapePreset!!.contains("callout", ignoreCase = true) ||
+                                        curShapePreset!!.contains("line", ignoreCase = true)
+                                    )
+
+                                    if (hasVisibleText || hasVisibleFill || hasVisibleBorder || hasVisiblePreset) {
                                         // Inherit layout styling if slide shape did not specify explicit colors
                                         val layoutPh = findPlaceholder(layoutInfo, curPlaceholderType, curPlaceholderIdx)
                                         val effectiveFill = curFillColor ?: layoutPh?.fillColor
@@ -1301,7 +1352,7 @@ class PptxParser {
                                                 isRounded = curIsRounded || effectivePreset?.contains("round", ignoreCase = true) == true,
                                                 isEllipse = curIsEllipse || effectivePreset == "ellipse" || effectivePreset == "circle",
                                                 shapePreset = effectivePreset,
-                                                paragraphs = curParagraphs.toList()
+                                                paragraphs = cleanParagraphs
                                             )
                                         )
                                     }

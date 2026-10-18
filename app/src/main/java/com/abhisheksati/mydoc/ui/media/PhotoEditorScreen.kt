@@ -141,19 +141,32 @@ fun PhotoEditorScreen(
     var saturation by remember { mutableFloatStateOf(0f) }
     var warmth by remember { mutableFloatStateOf(0f) }
 
-    // Load bitmap efficiently in background
+    // Load bitmap efficiently and safely in background
     LaunchedEffect(item.uri) {
         isLoading = true
         withContext(Dispatchers.IO) {
             try {
+                // 1. Decode bounds only to compute safe inSampleSize for ultra-high-res photos
+                val boundsOpts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                 context.contentResolver.openInputStream(item.uri)?.use { stream ->
-                    // Decode bounds first to ensure safe memory scaling if photo is huge (> 4000px)
-                    val opts = BitmapFactory.Options().apply {
-                        inPreferredConfig = Bitmap.Config.ARGB_8888
-                    }
-                    val bmp = BitmapFactory.decodeStream(stream, null, opts)
-                    originalBitmap = bmp
+                    BitmapFactory.decodeStream(stream, null, boundsOpts)
                 }
+
+                val maxDim = maxOf(boundsOpts.outWidth, boundsOpts.outHeight)
+                var sampleSize = 1
+                while (maxDim / sampleSize > 3840) {
+                    sampleSize *= 2
+                }
+
+                // 2. Decode sampled bitmap into ARGB_8888
+                val decodeOpts = BitmapFactory.Options().apply {
+                    inSampleSize = sampleSize
+                    inPreferredConfig = Bitmap.Config.ARGB_8888
+                }
+                val bmp = context.contentResolver.openInputStream(item.uri)?.use { stream ->
+                    BitmapFactory.decodeStream(stream, null, decodeOpts)
+                }
+                originalBitmap = bmp
             } catch (_: Exception) {}
         }
         isLoading = false

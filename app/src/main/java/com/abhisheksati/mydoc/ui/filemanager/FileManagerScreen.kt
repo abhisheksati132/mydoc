@@ -145,6 +145,7 @@ fun FileManagerScreen(
     onSettingsClick: (() -> Unit)? = null,
     onToggleTheme: (() -> Unit)? = null,
     isDarkTheme: Boolean = false,
+    isActive: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -220,8 +221,8 @@ fun FileManagerScreen(
         }
     }
 
-    // Intercept back presses
-    BackHandler(enabled = uiState.isTrashOpen || uiState.isSelectionMode || isSearchActive || uiState.canGoBack || uiState.activeCategory != null) {
+    // Intercept back presses only when Files tab is active
+    BackHandler(enabled = isActive && (uiState.isTrashOpen || uiState.isSelectionMode || isSearchActive || uiState.canGoBack || uiState.activeCategory != null)) {
         if (uiState.isTrashOpen) {
             viewModel.closeTrash()
         } else if (uiState.isSelectionMode) {

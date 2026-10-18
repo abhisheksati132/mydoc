@@ -317,31 +317,31 @@ fun PresentationViewerScreen(
         }
     }
 
-    val uiTextColor = MaterialTheme.colorScheme.onSurface
-    val uiSecondaryTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val colors = com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors.current
+    val isAppDark = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
 
     val bgColor = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color(0xFF000000) // True AMOLED Black
         ReadingMode.SEPIA -> Color(0xFFF4ECD8)
-        ReadingMode.NORMAL -> MaterialTheme.colorScheme.background
+        ReadingMode.NORMAL -> if (isAppDark) Color(0xFF000000) else colors.background
     }
 
     val cardBgColor = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color(0xFF0A0A0C)
         ReadingMode.SEPIA -> Color(0xFFEADBBE)
-        ReadingMode.NORMAL -> Color.White
+        ReadingMode.NORMAL -> if (isAppDark) Color(0xFF0A0A0C) else Color.White
     }
 
     val textColor = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color(0xFFEDEDED)
         ReadingMode.SEPIA -> Color(0xFF3A3125)
-        ReadingMode.NORMAL -> uiTextColor
+        ReadingMode.NORMAL -> colors.textPrimary
     }
 
     val secondaryTextColor = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color(0xFFA0A0A5)
         ReadingMode.SEPIA -> Color(0xFF5A4E3A)
-        ReadingMode.NORMAL -> uiSecondaryTextColor
+        ReadingMode.NORMAL -> colors.textSecondary
     }
 
     Scaffold(

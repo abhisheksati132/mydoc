@@ -74,6 +74,10 @@ fun SpreadsheetViewerScreen(
     val horizontalScrollState = rememberScrollState()
     val verticalScrollState = rememberScrollState()
 
+    val colors = com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors.current
+    val isAppDark = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
+    val bgColor = if (isAppDark) androidx.compose.ui.graphics.Color(0xFF000000) else colors.background
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -82,7 +86,7 @@ fun SpreadsheetViewerScreen(
                     Text(
                         text = document.displayName,
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
+                        color = colors.textPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -92,7 +96,7 @@ fun SpreadsheetViewerScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onBackground
+                            tint = colors.textPrimary
                         )
                     }
                 },
@@ -101,19 +105,19 @@ fun SpreadsheetViewerScreen(
                         Icon(
                             imageVector = Icons.Outlined.Search,
                             contentDescription = "Search",
-                            tint = if (isSearchOpen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (isSearchOpen) colors.accent else colors.textSecondary
                         )
                     }
                     IconButton(onClick = onShareClick) {
                         Icon(
                             imageVector = Icons.Outlined.Share,
                             contentDescription = stringResource(R.string.share),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = colors.textSecondary
                         )
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = bgColor
                 )
             )
         },
@@ -123,7 +127,7 @@ fun SpreadsheetViewerScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surface)
+                        .background(colors.surface)
                         .navigationBarsPadding()
                 ) {
                     AppDivider()
@@ -142,8 +146,8 @@ fun SpreadsheetViewerScreen(
                                 shape = RoundedCornerShape(6.dp),
                                 modifier = Modifier.padding(end = Spacing.small),
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                    selectedContainerColor = colors.accent,
+                                    selectedLabelColor = if (isAppDark) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.White
                                 )
                             )
                         }
@@ -151,7 +155,7 @@ fun SpreadsheetViewerScreen(
                 }
             }
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = bgColor
     ) { innerPadding ->
         Column(
             modifier = Modifier

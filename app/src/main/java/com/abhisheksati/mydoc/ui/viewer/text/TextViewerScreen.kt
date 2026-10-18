@@ -116,22 +116,25 @@ fun TextViewerScreen(
         }
     }
 
+    val colors = com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors.current
+    val isAppDark = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
+
     val bgColor = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color.Black
         ReadingMode.SEPIA -> Color(0xFFF4ECD8)
-        ReadingMode.NORMAL -> MaterialTheme.colorScheme.background
+        ReadingMode.NORMAL -> if (isAppDark) Color(0xFF000000) else colors.background
     }
 
     val textColor = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color.White
         ReadingMode.SEPIA -> Color(0xFF3A3125)
-        ReadingMode.NORMAL -> MaterialTheme.colorScheme.onBackground
+        ReadingMode.NORMAL -> colors.textPrimary
     }
 
     val secondaryTextColor = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color(0xFFAAAAAA)
         ReadingMode.SEPIA -> Color(0xFF5A4E3A)
-        ReadingMode.NORMAL -> MaterialTheme.colorScheme.onSurfaceVariant
+        ReadingMode.NORMAL -> colors.textSecondary
     }
 
     val listState = rememberLazyListState()
