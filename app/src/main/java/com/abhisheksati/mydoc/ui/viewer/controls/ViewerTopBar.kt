@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -48,6 +49,7 @@ fun ViewerTopBar(
     onShareClick: () -> Unit,
     onToggleBookmark: () -> Unit,
     onToolsClick: (() -> Unit)? = null,
+    onOcrClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
@@ -127,6 +129,23 @@ fun ViewerTopBar(
                         contentDescription = "Share document",
                         tint = colors.textSecondary
                     )
+                }
+
+                // PDF OCR Text Extraction
+                if (onOcrClick != null) {
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onOcrClick()
+                        },
+                        modifier = Modifier.size(AppSpacing.minTouchTarget)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.TextFields,
+                            contentDescription = "Extract Text (OCR)",
+                            tint = colors.textSecondary
+                        )
+                    }
                 }
 
                 // PDF Tools button

@@ -107,6 +107,9 @@ fun PdfViewerScreen(
     var panOffset by remember { mutableStateOf(Offset.Zero) }
     var isPageJumpDialogOpen by remember { mutableStateOf(false) }
     var isReadingControlsOpen by remember { mutableStateOf(false) }
+    var ocrExtractedText by remember { mutableStateOf<String?>(null) }
+    var isOcrRunning by remember { mutableStateOf(false) }
+    val ocrEngine = remember { com.abhisheksati.mydoc.ocr.OcrEngine(context) }
 
     val reopenLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -211,9 +214,8 @@ fun PdfViewerScreen(
             }
     }
 
-    // Non-pure background colors (no pure #000000)
     val pageBgColor = when (state.readingMode) {
-        ReadingMode.INVERTED_DARK -> Color(0xFF121214)
+        ReadingMode.INVERTED_DARK -> Color(0xFF000000)
         ReadingMode.SEPIA -> Color(0xFFF4ECD8)
         ReadingMode.NORMAL -> colors.background
     }
@@ -434,6 +436,31 @@ fun PdfViewerScreen(
                 Toast.makeText(context, if (added) "Bookmarked page ${state.currentPage + 1}" else "Bookmark removed", Toast.LENGTH_SHORT).show()
             },
             onToolsClick = onToolsClick,
+            onOcrClick = {
+                if (!isOcrRunning) {
+                    isOcrRunning = true
+                    Toast.makeText(context, "Extracting text from page ${state.currentPage + 1}...", Toast.LENGTH_SHORT).show()
+                    coroutineScope.launch {
+                        try {
+                            val pageBmp = viewModel.renderPageBitmap(state.currentPage, 2.0f)
+                            if (pageBmp != null) {
+                                val text = ocrEngine.recognizeText(pageBmp)
+                                if (text.isBlank()) {
+                                    Toast.makeText(context, "No text detected on this page", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    ocrExtractedText = text
+                                }
+                            } else {
+                                Toast.makeText(context, "Unable to render page for OCR", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "OCR failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                        } finally {
+                            isOcrRunning = false
+                        }
+                    }
+                }
+            },
             modifier = Modifier.align(Alignment.TopCenter)
         )
 
@@ -554,6 +581,14 @@ fun PdfViewerScreen(
             onSubmit = viewModel::authenticatePassword,
             onCancel = onBackClick
         )
+
+        // OCR Result Modal Sheet
+        if (ocrExtractedText != null) {
+            com.abhisheksati.mydoc.ocr.OcrResultSheet(
+                text = ocrExtractedText!!,
+                onDismiss = { ocrExtractedText = null }
+            )
+        }
     }
 }
 

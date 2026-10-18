@@ -661,6 +661,22 @@ fun VideoPlayerScreen(
                                         }
                                     }
                                 )
+                                DropdownMenuItem(
+                                    text = { Text("Extract Audio (M4A)") },
+                                    onClick = {
+                                        isMoreMenuOpen = false
+                                        scope.launch {
+                                            Toast.makeText(context, "Extracting audio track...", Toast.LENGTH_SHORT).show()
+                                            val extractor = com.abhisheksati.mydoc.media.audio.AudioExtractor(context)
+                                            val result = extractor.extractAudioFromVideo(item.uri, item.displayName.substringBeforeLast('.'))
+                                            result.onSuccess { audioFile ->
+                                                Toast.makeText(context, "Audio saved: Music/${audioFile.name}", Toast.LENGTH_LONG).show()
+                                            }.onFailure { err ->
+                                                Toast.makeText(context, "Audio extraction failed: ${err.message}", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    }
+                                )
                             }
                         }
                     }

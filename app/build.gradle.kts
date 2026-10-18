@@ -107,6 +107,12 @@ dependencies {
     // Phase 8: ExifInterface for offline EXIF orientation and metadata
     implementation(libs.androidx.exifinterface)
 
+    // ML Kit On-Device Text Recognition (Offline OCR)
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+
+    // ZXing for Wi-Fi Transfer QR code generation
+    implementation("com.google.zxing:core:3.5.3")
+
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.graphics)

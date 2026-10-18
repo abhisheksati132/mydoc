@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -96,6 +97,9 @@ fun PhotoViewerScreen(
     var isSlideshowActive by remember { mutableStateOf(false) }
     var slideshowIntervalSec by remember { mutableIntStateOf(3) }
     var isEditorOpen by remember { mutableStateOf(false) }
+    var ocrExtractedText by remember { mutableStateOf<String?>(null) }
+    var isOcrRunning by remember { mutableStateOf(false) }
+    val ocrEngine = remember { com.abhisheksati.mydoc.ocr.OcrEngine(context) }
 
     // Intercept back key to exit slideshow first or close photo viewer
     BackHandler {
@@ -324,6 +328,34 @@ fun PhotoViewerScreen(
                         )
                     }
 
+                    // Extract Text (OCR)
+                    IconButton(onClick = {
+                        if (!isOcrRunning) {
+                            isOcrRunning = true
+                            Toast.makeText(context, "Scanning image for text...", Toast.LENGTH_SHORT).show()
+                            coroutineScope.launch {
+                                try {
+                                    val text = ocrEngine.recognizeText(currentItem.uri)
+                                    if (text.isBlank()) {
+                                        Toast.makeText(context, "No text detected in this image", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        ocrExtractedText = text
+                                    }
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "OCR failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                                } finally {
+                                    isOcrRunning = false
+                                }
+                            }
+                        }
+                    }) {
+                        Icon(
+                            imageVector = Icons.Outlined.TextFields,
+                            contentDescription = "Extract Text (OCR)",
+                            tint = if (isOcrRunning) Color(0xFFFF9800) else Color(0xFFEDEDED)
+                        )
+                    }
+
                     // Share
                     IconButton(
                         onClick = {
@@ -343,6 +375,14 @@ fun PhotoViewerScreen(
                     }
                 }
             }
+        }
+
+        // OCR Result Modal Bottom Sheet
+        if (ocrExtractedText != null) {
+            com.abhisheksati.mydoc.ocr.OcrResultSheet(
+                text = ocrExtractedText!!,
+                onDismiss = { ocrExtractedText = null }
+            )
         }
 
         // Photo Editor Modal

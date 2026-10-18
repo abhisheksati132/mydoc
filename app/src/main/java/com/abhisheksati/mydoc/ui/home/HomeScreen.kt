@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.PermMedia
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.FileOpen
@@ -56,6 +57,7 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -342,25 +344,46 @@ fun HomeScreen(
         },
         floatingActionButton = {
             if (currentTab == HomeTab.DOCUMENTS) {
-                ExtendedFloatingActionButton(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        openDocumentLauncher.launch(SUPPORTED_MIME_TYPES)
-                    },
-                    icon = {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    FloatingActionButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            showCameraScanner = true
+                        },
+                        containerColor = colors.surfaceVariant,
+                        contentColor = colors.textPrimary,
+                        elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
+                    ) {
                         Icon(
-                            imageVector = Icons.Outlined.FileOpen,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
+                            imageVector = Icons.Outlined.CameraAlt,
+                            contentDescription = "Scan Document",
+                            modifier = Modifier.size(22.dp)
                         )
-                    },
-                    text = {
-                        Text("Open", fontWeight = FontWeight.SemiBold)
-                    },
-                    containerColor = colors.accent,
-                    contentColor = if (colors.background == DarkAppColors.background) Color(0xFF000000) else Color.White,
-                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
-                )
+                    }
+
+                    ExtendedFloatingActionButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            openDocumentLauncher.launch(SUPPORTED_MIME_TYPES)
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.FileOpen,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        text = {
+                            Text("Open", fontWeight = FontWeight.SemiBold)
+                        },
+                        containerColor = colors.accent,
+                        contentColor = if (colors.background == DarkAppColors.background) Color(0xFF000000) else Color.White,
+                        elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
+                    )
+                }
             }
         },
         containerColor = colors.background

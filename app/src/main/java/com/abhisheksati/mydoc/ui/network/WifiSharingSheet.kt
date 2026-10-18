@@ -58,6 +58,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
@@ -234,6 +235,21 @@ fun WifiSharingSheet(
                     }
                 }
             } else if (isRunning && serverUrl != null) {
+                val currentUrl = serverUrl!!
+                val qrBitmap = remember(currentUrl) {
+                    try {
+                        val writer = com.google.zxing.qrcode.QRCodeWriter()
+                        val bitMatrix = writer.encode(currentUrl, com.google.zxing.BarcodeFormat.QR_CODE, 320, 320)
+                        val bmp = android.graphics.Bitmap.createBitmap(320, 320, android.graphics.Bitmap.Config.RGB_565)
+                        for (x in 0 until 320) {
+                            for (y in 0 until 320) {
+                                bmp.setPixel(x, y, if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+                            }
+                        }
+                        bmp
+                    } catch (_: Exception) { null }
+                }
+
                 // Active Server Card
                 Card(
                     colors = CardDefaults.cardColors(containerColor = colors.background),
@@ -246,8 +262,8 @@ fun WifiSharingSheet(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Type this address in your PC browser:",
-                            style = typography.caption,
+                            text = "TYPE THIS ADDRESS IN YOUR PC BROWSER:",
+                            style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp),
                             color = colors.textSecondary
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -258,7 +274,7 @@ fun WifiSharingSheet(
                                 .fillMaxWidth()
                                 .clickable {
                                     val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    cm.setPrimaryClip(ClipData.newPlainText("MyDoc URL", serverUrl))
+                                    cm.setPrimaryClip(ClipData.newPlainText("MyDoc URL", currentUrl))
                                     Toast.makeText(context, "URL copied to clipboard", Toast.LENGTH_SHORT).show()
                                 }
                                 .padding(horizontal = 12.dp, vertical = 10.dp)
@@ -268,7 +284,7 @@ fun WifiSharingSheet(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = serverUrl ?: "",
+                                    text = currentUrl,
                                     style = typography.body.copy(
                                         fontFamily = FontFamily.Monospace,
                                         fontWeight = FontWeight.Bold,
@@ -283,6 +299,35 @@ fun WifiSharingSheet(
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
+                        }
+
+                        if (qrBitmap != null) {
+                            Spacer(modifier = Modifier.height(14.dp))
+                            androidx.compose.foundation.Image(
+                                bitmap = qrBitmap.asImageBitmap(),
+                                contentDescription = "Scan to connect",
+                                modifier = Modifier
+                                    .size(130.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Scan QR with another phone or tablet",
+                                style = typography.caption.copy(fontSize = 11.sp),
+                                color = colors.textSecondary
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedButton(
+                            onClick = {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(currentUrl))
+                                context.startActivity(intent)
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
+                        ) {
+                            Text("Open in Browser (Test Locally)", fontSize = 12.sp)
                         }
                     }
                 }

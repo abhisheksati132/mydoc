@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.Badge
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -71,6 +72,11 @@ fun ToolsScreen(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val haptic = LocalHapticFeedback.current
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
+    var showWifiSharingSheet by remember { mutableStateOf(false) }
+    var showStorageCleanerSheet by remember { mutableStateOf(false) }
 
     var searchQuery by remember { mutableStateOf("") }
 
@@ -180,6 +186,111 @@ fun ToolsScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxSize()
             ) {
+                if (searchQuery.isBlank()) {
+                    item(key = "super_tools_header") {
+                        AppSectionHeader(
+                            title = "SUPER POWER TOOLS",
+                            modifier = Modifier.padding(top = AppSpacing.paddingSmall)
+                        )
+                    }
+
+                    item(key = "super_tool_wifi") {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    showWifiSharingSheet = true
+                                }
+                                .padding(horizontal = AppSpacing.paddingLarge, vertical = AppSpacing.paddingMedium),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFF1B2A4A)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Wifi,
+                                    contentDescription = null,
+                                    tint = Color(0xFF63B3ED),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "PC Wi-Fi Transfer",
+                                        style = typography.body.copy(fontWeight = FontWeight.SemiBold),
+                                        color = colors.textPrimary
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Badge(containerColor = colors.accent, contentColor = Color.Black) {
+                                        Text("FAST", fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                Text(
+                                    text = "Transfer files to/from PC without cables at Wi-Fi speeds",
+                                    style = typography.caption,
+                                    color = colors.textSecondary
+                                )
+                            }
+                        }
+                        AppDivider()
+                    }
+
+                    item(key = "super_tool_cleaner") {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    showStorageCleanerSheet = true
+                                }
+                                .padding(horizontal = AppSpacing.paddingLarge, vertical = AppSpacing.paddingMedium),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFF261010)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.DeleteSweep,
+                                    contentDescription = null,
+                                    tint = Color(0xFFEF5350),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "Storage Cleaner & Duplicates",
+                                        style = typography.body.copy(fontWeight = FontWeight.SemiBold),
+                                        color = colors.textPrimary
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Badge(containerColor = Color(0xFFEF5350), contentColor = Color.White) {
+                                        Text("CLEAN", fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                Text(
+                                    text = "Find duplicate files, large files & remove cache junk",
+                                    style = typography.caption,
+                                    color = colors.textSecondary
+                                )
+                            }
+                        }
+                        AppDivider()
+                    }
+                }
+
                 ToolGroup.entries.forEach { group ->
                     val toolsInGroup = groupedTools[group]
                     if (!toolsInGroup.isNullOrEmpty()) {
@@ -210,6 +321,21 @@ fun ToolsScreen(
                     Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
                 }
             }
+        }
+
+        if (showWifiSharingSheet && app != null) {
+            com.abhisheksati.mydoc.ui.network.WifiSharingSheet(
+                wifiServerManager = app.wifiServerManager,
+                rootDirectory = android.os.Environment.getExternalStorageDirectory(),
+                onDismiss = { showWifiSharingSheet = false }
+            )
+        }
+
+        if (showStorageCleanerSheet) {
+            com.abhisheksati.mydoc.ui.cleaner.StorageCleanerSheet(
+                rootDir = android.os.Environment.getExternalStorageDirectory(),
+                onDismiss = { showStorageCleanerSheet = false }
+            )
         }
     }
 }
