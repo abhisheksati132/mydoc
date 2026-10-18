@@ -4,9 +4,11 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,13 +21,22 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.PermMedia
+import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -70,6 +81,13 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.unit.sp
 
+private data class MediaNavCategory(
+    val filter: MediaFilter,
+    val icon: ImageVector,
+    val color: Color,
+    val label: String
+)
+
 @Composable
 fun MediaTabContent(
     viewModel: MediaViewModel,
@@ -85,6 +103,7 @@ fun MediaTabContent(
     val uiState by viewModel.uiState.collectAsState()
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
+    val haptic = LocalHapticFeedback.current
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -195,27 +214,54 @@ fun MediaTabContent(
             },
             bottomContent = if (uiState.hasPermission) {
                 {
+                    val mediaCategories = listOf(
+                        MediaNavCategory(MediaFilter.ALL, Icons.Outlined.PermMedia, colors.accent, "All"),
+                        MediaNavCategory(MediaFilter.PHOTOS, Icons.Outlined.Image, Color(0xFF4CAF50), "Photos"),
+                        MediaNavCategory(MediaFilter.VIDEOS, Icons.Outlined.Videocam, Color(0xFFE91E63), "Videos")
+                    )
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        AppFilterChip(
-                            selected = uiState.filter == MediaFilter.ALL,
-                            onClick = { viewModel.setFilter(MediaFilter.ALL) },
-                            label = "All"
-                        )
-                        AppFilterChip(
-                            selected = uiState.filter == MediaFilter.PHOTOS,
-                            onClick = { viewModel.setFilter(MediaFilter.PHOTOS) },
-                            label = "Photos"
-                        )
-                        AppFilterChip(
-                            selected = uiState.filter == MediaFilter.VIDEOS,
-                            onClick = { viewModel.setFilter(MediaFilter.VIDEOS) },
-                            label = "Videos"
-                        )
+                        for (item in mediaCategories) {
+                            val isSelected = uiState.filter == item.filter
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (isSelected) item.color.copy(alpha = 0.2f) else colors.surface,
+                                border = if (isSelected) BorderStroke(1.5.dp, item.color) else BorderStroke(1.dp, colors.divider),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .clickable {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        viewModel.setFilter(item.filter)
+                                    }
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = item.icon,
+                                        contentDescription = item.label,
+                                        tint = if (isSelected) item.color else item.color.copy(alpha = 0.85f),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = item.label,
+                                        style = typography.caption.copy(
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            fontSize = 12.sp
+                                        ),
+                                        color = if (isSelected) colors.textPrimary else colors.textSecondary
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             } else null

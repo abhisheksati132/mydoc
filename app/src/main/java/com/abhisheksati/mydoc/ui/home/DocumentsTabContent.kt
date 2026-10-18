@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,14 +25,20 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.AllInclusive
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Slideshow
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.outlined.TableChart
 import androidx.compose.material3.Badge
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -59,12 +64,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -72,7 +77,6 @@ import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.data.local.DocumentSortOrder
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppFileRow
-import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
 import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
 import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
@@ -86,7 +90,13 @@ import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.viewmodel.HomeUiState
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import kotlinx.coroutines.launch
-import java.util.Locale
+
+private data class DocumentNavCategory(
+    val category: DocumentCategory,
+    val icon: ImageVector,
+    val color: Color,
+    val label: String
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -214,62 +224,58 @@ fun DocumentsTabContent(
                         )
                     },
                     bottomContent = {
-                        // Category Filter Chips
+                        // Symmetrical rounded rect category pills matching Files page navigation
+                        val docCategories = listOf(
+                            DocumentNavCategory(DocumentCategory.ALL, Icons.Outlined.AllInclusive, colors.accent, "All"),
+                            DocumentNavCategory(DocumentCategory.PDF, Icons.Outlined.PictureAsPdf, DocumentFormatColors.pdfTint, "PDF"),
+                            DocumentNavCategory(DocumentCategory.WORD, Icons.Outlined.Description, DocumentFormatColors.wordTint, "Word"),
+                            DocumentNavCategory(DocumentCategory.EXCEL, Icons.Outlined.TableChart, DocumentFormatColors.excelTint, "Excel"),
+                            DocumentNavCategory(DocumentCategory.PPT, Icons.Outlined.Slideshow, DocumentFormatColors.pptTint, "PPT"),
+                            DocumentNavCategory(DocumentCategory.TEXT, Icons.AutoMirrored.Outlined.Article, DocumentFormatColors.textTint, "Text")
+                        )
+
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            AppFilterChip(
-                                label = "All",
-                                isSelected = uiState.selectedCategory == DocumentCategory.ALL,
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    viewModel.selectCategory(DocumentCategory.ALL)
+                            for (item in docCategories) {
+                                val isSelected = uiState.selectedCategory == item.category
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = if (isSelected) item.color.copy(alpha = 0.2f) else colors.surface,
+                                    border = if (isSelected) BorderStroke(1.5.dp, item.color) else BorderStroke(1.dp, colors.divider),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .clickable {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            viewModel.selectCategory(item.category)
+                                        }
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = item.icon,
+                                            contentDescription = item.label,
+                                            tint = if (isSelected) item.color else item.color.copy(alpha = 0.85f),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = item.label,
+                                            style = typography.caption.copy(
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                fontSize = 12.sp
+                                            ),
+                                            color = if (isSelected) colors.textPrimary else colors.textSecondary
+                                        )
+                                    }
                                 }
-                            )
-                            AppFilterChip(
-                                label = "PDF",
-                                isSelected = uiState.selectedCategory == DocumentCategory.PDF,
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    viewModel.selectCategory(DocumentCategory.PDF)
-                                }
-                            )
-                            AppFilterChip(
-                                label = "Word",
-                                isSelected = uiState.selectedCategory == DocumentCategory.WORD,
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    viewModel.selectCategory(DocumentCategory.WORD)
-                                }
-                            )
-                            AppFilterChip(
-                                label = "Excel",
-                                isSelected = uiState.selectedCategory == DocumentCategory.EXCEL,
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    viewModel.selectCategory(DocumentCategory.EXCEL)
-                                }
-                            )
-                            AppFilterChip(
-                                label = "PPT",
-                                isSelected = uiState.selectedCategory == DocumentCategory.PPT,
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    viewModel.selectCategory(DocumentCategory.PPT)
-                                }
-                            )
-                            AppFilterChip(
-                                label = "Text",
-                                isSelected = uiState.selectedCategory == DocumentCategory.TEXT,
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    viewModel.selectCategory(DocumentCategory.TEXT)
-                                }
-                            )
+                            }
                         }
                     }
                 )
@@ -391,17 +397,8 @@ fun DocumentsTabContent(
                             )
                         }
                     } else {
-                        // Quick Dashboard & Recents Carousel (shown in "ALL" category view)
+                        // Quick Access Carousel (shown in "ALL" category view)
                         if (uiState.selectedCategory == DocumentCategory.ALL) {
-                            item(key = "dashboard_overview") {
-                                DocumentsDashboardCard(
-                                    documents = uiState.recents,
-                                    selectedCategory = uiState.selectedCategory,
-                                    onCategoryClick = { viewModel.selectCategory(it) }
-                                )
-                            }
-
-                            // Horizontal Quick Access Carousel
                             if (uiState.recents.isNotEmpty()) {
                                 item(key = "quick_access_header") {
                                     AppSectionHeader(title = "QUICK ACCESS")
@@ -523,201 +520,6 @@ fun DocumentsTabContent(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 84.dp)
         )
-    }
-}
-
-/**
- * Minimalist Luxury / Nothing OS style documents dashboard card.
- * Provides storage usage breakdown and clickable category count pills.
- */
-@Composable
-private fun DocumentsDashboardCard(
-    documents: List<DocumentFile>,
-    selectedCategory: DocumentCategory,
-    onCategoryClick: (DocumentCategory) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
-    val haptic = LocalHapticFeedback.current
-    val isOled = colors.background == DarkAppColors.background
-
-    val totalDocs = documents.size
-    val pdfCount = remember(documents) { documents.count { it.category == DocumentCategory.PDF } }
-    val wordCount = remember(documents) { documents.count { it.category == DocumentCategory.WORD } }
-    val excelCount = remember(documents) { documents.count { it.category == DocumentCategory.EXCEL } }
-    val pptCount = remember(documents) { documents.count { it.category == DocumentCategory.PPT } }
-    val textCount = remember(documents) { documents.count { it.category == DocumentCategory.TEXT } }
-    val totalBytes = remember(documents) { documents.sumOf { it.sizeBytes } }
-
-    val formattedSize = remember(totalBytes) {
-        if (totalBytes <= 0) "0 B"
-        else {
-            val units = arrayOf("B", "KB", "MB", "GB")
-            val digitGroups = (Math.log10(totalBytes.toDouble()) / Math.log10(1024.0)).toInt().coerceIn(0, 3)
-            String.format(Locale.US, "%.1f %s", totalBytes / Math.pow(1024.0, digitGroups.toDouble()), units[digitGroups])
-        }
-    }
-
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = if (isOled) Color(0xFF0A0A0C) else colors.surface,
-        border = BorderStroke(1.dp, if (isOled) Color(0xFF222222) else colors.divider),
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "STORAGE & STATS",
-                    style = typography.caption.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    ),
-                    color = colors.textSecondary
-                )
-                Text(
-                    text = "$totalDocs Files  •  $formattedSize",
-                    style = typography.caption.copy(
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                    color = colors.accent
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Proportional Multi-Segment Storage Gauge
-            if (totalDocs > 0) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(if (isOled) Color(0xFF1A1A1E) else colors.surfaceVariant)
-                ) {
-                    if (pdfCount > 0) Box(modifier = Modifier.weight(pdfCount.toFloat()).fillMaxHeight().background(DocumentFormatColors.pdfTint))
-                    if (wordCount > 0) Box(modifier = Modifier.weight(wordCount.toFloat()).fillMaxHeight().background(DocumentFormatColors.wordTint))
-                    if (excelCount > 0) Box(modifier = Modifier.weight(excelCount.toFloat()).fillMaxHeight().background(DocumentFormatColors.excelTint))
-                    if (pptCount > 0) Box(modifier = Modifier.weight(pptCount.toFloat()).fillMaxHeight().background(DocumentFormatColors.pptTint))
-                    if (textCount > 0) Box(modifier = Modifier.weight(textCount.toFloat()).fillMaxHeight().background(DocumentFormatColors.textTint))
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Breakdown pills
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    if (pdfCount > 0) {
-                        DashboardStatPill(
-                            dotColor = DocumentFormatColors.pdfTint,
-                            label = "PDF",
-                            count = pdfCount,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onCategoryClick(DocumentCategory.PDF)
-                            }
-                        )
-                    }
-                    if (wordCount > 0) {
-                        DashboardStatPill(
-                            dotColor = DocumentFormatColors.wordTint,
-                            label = "Word",
-                            count = wordCount,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onCategoryClick(DocumentCategory.WORD)
-                            }
-                        )
-                    }
-                    if (excelCount > 0) {
-                        DashboardStatPill(
-                            dotColor = DocumentFormatColors.excelTint,
-                            label = "Excel",
-                            count = excelCount,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onCategoryClick(DocumentCategory.EXCEL)
-                            }
-                        )
-                    }
-                    if (pptCount > 0) {
-                        DashboardStatPill(
-                            dotColor = DocumentFormatColors.pptTint,
-                            label = "PPT",
-                            count = pptCount,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onCategoryClick(DocumentCategory.PPT)
-                            }
-                        )
-                    }
-                    if (textCount > 0) {
-                        DashboardStatPill(
-                            dotColor = DocumentFormatColors.textTint,
-                            label = "Text",
-                            count = textCount,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onCategoryClick(DocumentCategory.TEXT)
-                            }
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DashboardStatPill(
-    dotColor: Color,
-    label: String,
-    count: Int,
-    onClick: () -> Unit
-) {
-    val colors = LocalAppColors.current
-    val isOled = colors.background == DarkAppColors.background
-
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = if (isOled) Color(0xFF141418) else colors.surfaceVariant,
-        border = BorderStroke(1.dp, if (isOled) Color(0xFF242428) else colors.divider),
-        modifier = Modifier.clickable(onClick = onClick)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(7.dp)
-                    .clip(RoundedCornerShape(3.5.dp))
-                    .background(dotColor)
-            )
-            Text(
-                text = "$label $count",
-                style = TextStyle(
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
-                ),
-                color = colors.textPrimary
-            )
-        }
     }
 }
 
