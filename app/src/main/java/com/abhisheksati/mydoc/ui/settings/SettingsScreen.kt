@@ -4,11 +4,14 @@ import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,10 +28,26 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Article
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.DeveloperMode
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.automirrored.outlined.Launch
 import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material.icons.outlined.PermMedia
+import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.SystemUpdate
+import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.outlined.Vibration
+import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -36,13 +55,15 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -54,30 +75,28 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.data.local.AppThemeMode
 import com.abhisheksati.mydoc.data.local.FolderScanner
 import com.abhisheksati.mydoc.data.local.SettingsRepository
+import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
+import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
+import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
+import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.domain.model.HomeTab
 import com.abhisheksati.mydoc.domain.model.ReadingMode
-import com.abhisheksati.mydoc.ui.common.AppDivider
-import com.abhisheksati.mydoc.ui.theme.Spacing
 import com.abhisheksati.mydoc.update.UpdateManager
 import com.abhisheksati.mydoc.update.UpdateUiState
 import kotlinx.coroutines.launch
 import java.util.Locale
-
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Surface
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
-import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,8 +113,15 @@ fun SettingsScreen(
     val app = context.applicationContext as? MyDocApp
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
+    val haptic = LocalHapticFeedback.current
+    val isOled = colors.background == DarkAppColors.background
 
     val currentTheme by settingsRepository.themeMode.collectAsState()
+    val currentStartupTab by settingsRepository.defaultStartupTab.collectAsState()
+    val hapticFeedbackEnabled by settingsRepository.isHapticFeedbackEnabled.collectAsState()
+    val showHiddenFiles by settingsRepository.showHiddenFiles.collectAsState()
+    val autoResumeVideo by settingsRepository.autoResumeVideo.collectAsState()
+    val highQualityPdf by settingsRepository.highQualityPdf.collectAsState()
     val currentReadingMode by settingsRepository.defaultReadingMode.collectAsState()
     val keepScreenOn by settingsRepository.keepScreenOn.collectAsState()
     val volumeKeyTurning by settingsRepository.volumeKeyPageTurning.collectAsState()
@@ -103,6 +129,7 @@ fun SettingsScreen(
     val grantedFolderUri by settingsRepository.grantedFolderUri.collectAsState()
     val grantedFolderName by settingsRepository.grantedFolderName.collectAsState()
 
+    val diagnostics = remember { settingsRepository.getSystemDiagnostics() }
     var cacheSizeBytes by remember { mutableStateOf(settingsRepository.getCacheSizeBytes(context)) }
     var isScanningFolder by remember { mutableStateOf(false) }
 
@@ -172,10 +199,240 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 32.dp)
+                .padding(bottom = 36.dp)
         ) {
-            // APPEARANCE
-            AppSectionHeader(title = "APPEARANCE")
+            // HERO / TELEMETRY BANNER (Nothing OS Hardware Aesthetic)
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = if (isOled) Color(0xFF0A0A0C) else colors.surface,
+                border = BorderStroke(1.dp, if (isOled) Color(0xFF222222) else colors.divider)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(colors.accent.copy(alpha = 0.15f))
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Tune,
+                                    contentDescription = null,
+                                    tint = colors.accent,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "mydoc CORE",
+                                    style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp, letterSpacing = 0.5.sp),
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    text = "v${updateManager.currentVersionName}  •  Supercharged",
+                                    style = typography.caption.copy(fontSize = 11.sp, fontWeight = FontWeight.Medium),
+                                    color = colors.accent
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Live hardware telemetry pills
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        DiagnosticChip(
+                            label = "CPU ARCH",
+                            value = diagnostics.abiArchitecture,
+                            modifier = Modifier.weight(1f)
+                        )
+                        DiagnosticChip(
+                            label = "JVM HEAP",
+                            value = "${diagnostics.jvmHeapUsedMb} MB",
+                            modifier = Modifier.weight(1f)
+                        )
+                        DiagnosticChip(
+                            label = "STORAGE",
+                            value = "${diagnostics.availableStorageMb / 1024} GB",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // APPEARANCE & STARTUP
+            AppSectionHeader(title = "APPEARANCE & STARTUP")
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = colors.surface
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp)
+                ) {
+                    Text(
+                        text = "App Theme",
+                        style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
+                        color = colors.textSecondary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = currentTheme == AppThemeMode.AMOLED_DARK,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                settingsRepository.setThemeMode(AppThemeMode.AMOLED_DARK)
+                            },
+                            label = { Text("Dark", color = if (currentTheme == AppThemeMode.AMOLED_DARK) colors.accent else colors.textPrimary) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.DarkMode,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = if (currentTheme == AppThemeMode.AMOLED_DARK) colors.accent else colors.textSecondary
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = colors.accent.copy(alpha = 0.16f),
+                                containerColor = Color.Transparent
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                borderColor = if (currentTheme == AppThemeMode.AMOLED_DARK) colors.accent else colors.divider,
+                                selectedBorderColor = colors.accent,
+                                enabled = true,
+                                selected = currentTheme == AppThemeMode.AMOLED_DARK
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        FilterChip(
+                            selected = currentTheme == AppThemeMode.LIGHT,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                settingsRepository.setThemeMode(AppThemeMode.LIGHT)
+                            },
+                            label = { Text("Light", color = if (currentTheme == AppThemeMode.LIGHT) colors.accent else colors.textPrimary) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.LightMode,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = if (currentTheme == AppThemeMode.LIGHT) colors.accent else colors.textSecondary
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = colors.accent.copy(alpha = 0.16f),
+                                containerColor = Color.Transparent
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                borderColor = if (currentTheme == AppThemeMode.LIGHT) colors.accent else colors.divider,
+                                selectedBorderColor = colors.accent,
+                                enabled = true,
+                                selected = currentTheme == AppThemeMode.LIGHT
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        FilterChip(
+                            selected = currentTheme == AppThemeMode.SYSTEM,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                settingsRepository.setThemeMode(AppThemeMode.SYSTEM)
+                            },
+                            label = { Text("System", color = if (currentTheme == AppThemeMode.SYSTEM) colors.accent else colors.textPrimary) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = colors.accent.copy(alpha = 0.16f),
+                                containerColor = Color.Transparent
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                borderColor = if (currentTheme == AppThemeMode.SYSTEM) colors.accent else colors.divider,
+                                selectedBorderColor = colors.accent,
+                                enabled = true,
+                                selected = currentTheme == AppThemeMode.SYSTEM
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                    }
+
+                    HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 12.dp))
+
+                    Text(
+                        text = "Default Launch Tab",
+                        style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
+                        color = colors.textSecondary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val tabs = listOf(
+                            Triple(HomeTab.FILES, Icons.Outlined.Folder, "Files"),
+                            Triple(HomeTab.DOCUMENTS, Icons.AutoMirrored.Outlined.Article, "Documents"),
+                            Triple(HomeTab.MEDIA, Icons.Outlined.PermMedia, "Media")
+                        )
+                        for ((tab, icon, label) in tabs) {
+                            val isSelected = currentStartupTab == tab
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    settingsRepository.setDefaultStartupTab(tab)
+                                },
+                                label = { Text(label, color = if (isSelected) colors.accent else colors.textPrimary) },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = if (isSelected) colors.accent else colors.textSecondary
+                                    )
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = colors.accent.copy(alpha = 0.16f),
+                                    containerColor = Color.Transparent
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    borderColor = if (isSelected) colors.accent else colors.divider,
+                                    selectedBorderColor = colors.accent,
+                                    enabled = true,
+                                    selected = isSelected
+                                ),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // TOUCH & HAPTICS
+            AppSectionHeader(title = "TOUCH & HAPTICS")
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -187,79 +444,41 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    FilterChip(
-                        selected = currentTheme == AppThemeMode.AMOLED_DARK,
-                        onClick = { settingsRepository.setThemeMode(AppThemeMode.AMOLED_DARK) },
-                        label = { Text("Dark", color = if (currentTheme == AppThemeMode.AMOLED_DARK) colors.accent else colors.textPrimary) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.DarkMode,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = if (currentTheme == AppThemeMode.AMOLED_DARK) colors.accent else colors.textSecondary
-                            )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Tactile Vibration Haptics",
+                            style = typography.body,
+                            color = colors.textPrimary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Subtle vibration response for dock, hold-selection, and list actions",
+                            style = typography.caption,
+                            color = colors.textSecondary
+                        )
+                    }
+                    Switch(
+                        checked = hapticFeedbackEnabled,
+                        onCheckedChange = {
+                            if (it) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            settingsRepository.setHapticFeedbackEnabled(it)
                         },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = colors.accent.copy(alpha = 0.16f),
-                            containerColor = Color.Transparent
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            borderColor = if (currentTheme == AppThemeMode.AMOLED_DARK) colors.accent else colors.divider,
-                            selectedBorderColor = colors.accent,
-                            enabled = true,
-                            selected = currentTheme == AppThemeMode.AMOLED_DARK
-                        ),
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                    FilterChip(
-                        selected = currentTheme == AppThemeMode.LIGHT,
-                        onClick = { settingsRepository.setThemeMode(AppThemeMode.LIGHT) },
-                        label = { Text("Light", color = if (currentTheme == AppThemeMode.LIGHT) colors.accent else colors.textPrimary) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.LightMode,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = if (currentTheme == AppThemeMode.LIGHT) colors.accent else colors.textSecondary
-                            )
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = colors.accent.copy(alpha = 0.16f),
-                            containerColor = Color.Transparent
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            borderColor = if (currentTheme == AppThemeMode.LIGHT) colors.accent else colors.divider,
-                            selectedBorderColor = colors.accent,
-                            enabled = true,
-                            selected = currentTheme == AppThemeMode.LIGHT
-                        ),
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                    FilterChip(
-                        selected = currentTheme == AppThemeMode.SYSTEM,
-                        onClick = { settingsRepository.setThemeMode(AppThemeMode.SYSTEM) },
-                        label = { Text("System", color = if (currentTheme == AppThemeMode.SYSTEM) colors.accent else colors.textPrimary) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = colors.accent.copy(alpha = 0.16f),
-                            containerColor = Color.Transparent
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            borderColor = if (currentTheme == AppThemeMode.SYSTEM) colors.accent else colors.divider,
-                            selectedBorderColor = colors.accent,
-                            enabled = true,
-                            selected = currentTheme == AppThemeMode.SYSTEM
-                        ),
-                        shape = RoundedCornerShape(10.dp)
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = colors.accent,
+                            uncheckedBorderColor = colors.divider
+                        )
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // READER
-            AppSectionHeader(title = "READER")
+            // READER & PLAYBACK ENGINE
+            AppSectionHeader(title = "READER & PLAYBACK ENGINE")
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -274,7 +493,7 @@ fun SettingsScreen(
                 ) {
                     Text(
                         text = "Default reading mode",
-                        style = typography.caption,
+                        style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
                         color = colors.textSecondary,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
@@ -339,8 +558,70 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "High-Quality Vector PDF",
+                                style = typography.body,
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Supersample text and vector geometry for ultra-crisp reading",
+                                style = typography.caption,
+                                color = colors.textSecondary
+                            )
+                        }
+                        Switch(
+                            checked = highQualityPdf,
+                            onCheckedChange = { settingsRepository.setHighQualityPdf(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = colors.accent,
+                                uncheckedBorderColor = colors.divider
+                            )
+                        )
+                    }
+
+                    HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Auto-Resume Video Playback",
+                                style = typography.body,
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Remember and automatically offer to resume where you left off",
+                                style = typography.caption,
+                                color = colors.textSecondary
+                            )
+                        }
+                        Switch(
+                            checked = autoResumeVideo,
+                            onCheckedChange = { settingsRepository.setAutoResumeVideo(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = colors.accent,
+                                uncheckedBorderColor = colors.divider
+                            )
+                        )
+                    }
+
+                    HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         Text(
-                            text = "Keep screen awake",
+                            text = "Keep screen awake while reading",
                             style = typography.body,
                             color = colors.textPrimary
                         )
@@ -382,8 +663,8 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // SECURITY
-            AppSectionHeader(title = "SECURITY")
+            // PRIVACY & SECURITY
+            AppSectionHeader(title = "PRIVACY & SECURITY")
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -391,53 +672,88 @@ fun SettingsScreen(
                 shape = RoundedCornerShape(16.dp),
                 color = colors.surface
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(14.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Biometric app lock",
-                            style = typography.body,
-                            color = colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Require fingerprint or PIN to open",
-                            style = typography.caption,
-                            color = colors.textSecondary
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Biometric app lock",
+                                style = typography.body,
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Require fingerprint or device PIN to access mydoc",
+                                style = typography.caption,
+                                color = colors.textSecondary
+                            )
+                        }
+                        Switch(
+                            checked = biometricLockEnabled,
+                            onCheckedChange = { isChecked ->
+                                if (isChecked) {
+                                    val km = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+                                    if (km?.isDeviceSecure == false) {
+                                        Toast.makeText(context, "Set a screen lock in device settings first", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        settingsRepository.setBiometricLockEnabled(true)
+                                    }
+                                } else {
+                                    settingsRepository.setBiometricLockEnabled(false)
+                                }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = colors.accent,
+                                uncheckedBorderColor = colors.divider
+                            )
                         )
                     }
-                    Switch(
-                        checked = biometricLockEnabled,
-                        onCheckedChange = { isChecked ->
-                            if (isChecked) {
-                                val km = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
-                                if (km?.isDeviceSecure == false) {
-                                    Toast.makeText(context, "Set a screen lock in device settings first", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    settingsRepository.setBiometricLockEnabled(true)
-                                }
-                            } else {
-                                settingsRepository.setBiometricLockEnabled(false)
-                            }
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = colors.accent,
-                            uncheckedBorderColor = colors.divider
+
+                    HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Show hidden files & folders",
+                                style = typography.body,
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Display hidden dotfiles (.nomedia, .hidden) in file browser",
+                                style = typography.caption,
+                                color = colors.textSecondary
+                            )
+                        }
+                        Switch(
+                            checked = showHiddenFiles,
+                            onCheckedChange = { settingsRepository.setShowHiddenFiles(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = colors.accent,
+                                uncheckedBorderColor = colors.divider
+                            )
                         )
-                    )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // STORAGE
-            AppSectionHeader(title = "STORAGE")
+            // STORAGE & OPTIMIZER
+            AppSectionHeader(title = "STORAGE & OPTIMIZER")
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -472,7 +788,7 @@ fun SettingsScreen(
                             OutlinedButton(
                                 onClick = { openFolderLauncher.launch(null) },
                                 shape = RoundedCornerShape(10.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, colors.divider),
+                                border = BorderStroke(1.dp, colors.divider),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
                             ) {
                                 Text(if (grantedFolderName != null) "Change" else "Select")
@@ -490,7 +806,7 @@ fun SettingsScreen(
                                     },
                                     enabled = !isScanningFolder,
                                     shape = RoundedCornerShape(10.dp),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.divider),
+                                    border = BorderStroke(1.dp, colors.divider),
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent)
                                 ) {
                                     Text(if (isScanningFolder) "…" else "Rescan")
@@ -508,7 +824,7 @@ fun SettingsScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Render cache",
+                                text = "Render & thumbnail cache",
                                 style = typography.body,
                                 color = colors.textPrimary
                             )
@@ -526,17 +842,22 @@ fun SettingsScreen(
                                 color = colors.textSecondary
                             )
                         }
-                        OutlinedButton(
+                        Button(
                             onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 val freed = settingsRepository.clearCache(context)
                                 cacheSizeBytes = settingsRepository.getCacheSizeBytes(context)
-                                Toast.makeText(context, "Cache cleared", Toast.LENGTH_SHORT).show()
+                                val freedMb = freed / (1024.0 * 1024.0)
+                                val toastText = if (freedMb >= 0.1) String.format(Locale.US, "Optimized: freed %.1f MB", freedMb) else "Cache cleared"
+                                Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
                             },
                             shape = RoundedCornerShape(10.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, colors.divider),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colors.accent,
+                                contentColor = Color.Black
+                            )
                         ) {
-                            Text("Clear")
+                            Text("Deep Clean", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -544,8 +865,8 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // ABOUT
-            AppSectionHeader(title = "ABOUT")
+            // SYSTEM & HARDWARE DIAGNOSTICS ("ENGINE ROOM")
+            AppSectionHeader(title = "SYSTEM & DIAGNOSTICS")
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -558,61 +879,50 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .padding(14.dp)
                 ) {
-                    Text(
-                        text = "mydoc",
-                        style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp),
-                        color = colors.textPrimary
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Installed version: ${updateManager.currentVersionName}",
-                        style = typography.caption,
-                        color = colors.textSecondary
-                    )
+                    DiagnosticRow(label = "Device", value = diagnostics.deviceName)
+                    HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 8.dp))
+                    DiagnosticRow(label = "Android Version", value = "${diagnostics.androidVersion} (API ${diagnostics.apiLevel})")
+                    HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 8.dp))
+                    DiagnosticRow(label = "Processor ABI", value = diagnostics.abiArchitecture)
+                    HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 8.dp))
+                    DiagnosticRow(label = "Allocated JVM Heap", value = "${diagnostics.jvmHeapUsedMb} MB / ${diagnostics.jvmHeapMaxMb} MB")
+                    HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 8.dp))
+                    DiagnosticRow(label = "Free Internal Storage", value = "${diagnostics.availableStorageMb / 1024} GB free")
 
-                    if (isLegacyDebugInstalled) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .border(
-                                    width = 1.dp,
-                                    color = colors.divider,
-                                    shape = RoundedCornerShape(10.dp)
-                                )
-                                .background(
-                                    color = colors.background,
-                                    shape = RoundedCornerShape(10.dp)
-                                )
-                                .padding(12.dp)
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Old Duplicate App Detected",
-                                    style = typography.body.copy(fontWeight = FontWeight.SemiBold),
-                                    color = colors.textPrimary
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "An old preview build is installed. Tap below to remove it.",
-                                    style = typography.caption,
-                                    color = colors.textSecondary
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Button(
-                                    onClick = {
-                                        val uninstallIntent = Intent(Intent.ACTION_DELETE).apply {
-                                            data = Uri.parse("package:com.abhisheksati.mydoc.debug")
-                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        }
-                                        context.startActivity(uninstallIntent)
-                                    },
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = colors.accent)
-                                ) {
-                                    Text("Uninstall Duplicate")
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = Uri.fromParts("package", context.packageName, null)
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                 }
-                            }
+                                context.startActivity(intent)
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, colors.divider),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.AutoMirrored.Outlined.Launch, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("App Info", fontSize = 12.sp)
+                        }
+
+                        OutlinedButton(
+                            onClick = onDesignSystemPreviewClick,
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, colors.accent),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Outlined.DeveloperMode, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Design Lab", fontSize = 12.sp)
                         }
                     }
                 }
@@ -621,7 +931,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(10.dp))
 
             // UPDATES
-            AppSectionHeader(title = "UPDATES")
+            AppSectionHeader(title = "UPDATES & GITHUB")
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -682,7 +992,7 @@ fun SettingsScreen(
                                     OutlinedButton(
                                         onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
                                         shape = RoundedCornerShape(10.dp),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.divider),
+                                        border = BorderStroke(1.dp, colors.divider),
                                         colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
                                     ) {
                                         Text("Check again")
@@ -692,7 +1002,7 @@ fun SettingsScreen(
                                         OutlinedButton(
                                             onClick = { scope.launch { updateManager.downloadAndInstall(state.latestRelease) } },
                                             shape = RoundedCornerShape(10.dp),
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, colors.divider),
+                                            border = BorderStroke(1.dp, colors.divider),
                                             colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent)
                                         ) {
                                             Text("Reinstall APK")
@@ -813,7 +1123,7 @@ fun SettingsScreen(
                                 OutlinedButton(
                                     onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
                                     shape = RoundedCornerShape(10.dp),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.divider),
+                                    border = BorderStroke(1.dp, colors.divider),
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
                                 ) {
                                     Text("Retry")
@@ -824,7 +1134,149 @@ fun SettingsScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // ABOUT
+            AppSectionHeader(title = "ABOUT")
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = colors.surface
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp)
+                ) {
+                    Text(
+                        text = "mydoc",
+                        style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp),
+                        color = colors.textPrimary
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Installed version: ${updateManager.currentVersionName}  •  Apache 2.0  •  100% Offline & Private",
+                        style = typography.caption,
+                        color = colors.textSecondary
+                    )
+
+                    if (isLegacyDebugInstalled) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(
+                                    width = 1.dp,
+                                    color = colors.divider,
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                                .background(
+                                    color = colors.background,
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                                .padding(12.dp)
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Old Duplicate App Detected",
+                                    style = typography.body.copy(fontWeight = FontWeight.SemiBold),
+                                    color = colors.textPrimary
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "An old preview build is installed. Tap below to remove it.",
+                                    style = typography.caption,
+                                    color = colors.textSecondary
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Button(
+                                    onClick = {
+                                        val uninstallIntent = Intent(Intent.ACTION_DELETE).apply {
+                                            data = Uri.parse("package:com.abhisheksati.mydoc.debug")
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        context.startActivity(uninstallIntent)
+                                    },
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = colors.accent)
+                                ) {
+                                    Text("Uninstall Duplicate")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun DiagnosticChip(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    val colors = LocalAppColors.current
+    val typography = LocalAppTypography.current
+    val isOled = colors.background == DarkAppColors.background
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = if (isOled) Color(0xFF141418) else colors.surfaceVariant,
+        border = BorderStroke(1.dp, if (isOled) Color(0xFF242428) else colors.divider),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = label,
+                style = typography.caption.copy(
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                ),
+                color = colors.textSecondary
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = value,
+                style = typography.body.copy(
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = colors.textPrimary,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
+private fun DiagnosticRow(
+    label: String,
+    value: String
+) {
+    val colors = LocalAppColors.current
+    val typography = LocalAppTypography.current
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = typography.caption,
+            color = colors.textSecondary
+        )
+        Text(
+            text = value,
+            style = typography.body.copy(fontWeight = FontWeight.Medium, fontSize = 13.sp),
+            color = colors.textPrimary
+        )
     }
 }

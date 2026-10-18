@@ -1,13 +1,26 @@
 package com.abhisheksati.mydoc.ui.media
 
 import android.Manifest
+import android.app.Activity
+import android.app.RecoverableSecurityException
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.provider.MediaStore
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,18 +34,29 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Deselect
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.PermMedia
+import androidx.compose.material.icons.outlined.SelectAll
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -55,6 +79,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.request.videoFrameMillis
+import com.abhisheksati.mydoc.designsystem.components.AppDialog
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
@@ -136,6 +161,24 @@ fun MediaTabContent(
 
     var isSearchActive by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var selectedUris by remember { mutableStateOf(emptySet<Uri>()) }
+    val isSelectionMode = selectedUris.isNotEmpty()
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showDetailsDialog by remember { mutableStateOf(false) }
+
+    val deleteLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            viewModel.refresh()
+            selectedUris = emptySet()
+            Toast.makeText(context, "Items deleted", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    BackHandler(enabled = isSelectionMode) {
+        selectedUris = emptySet()
+    }
 
     val displayedGroups = remember(uiState.groups, searchQuery) {
         if (searchQuery.isBlank()) {
@@ -148,124 +191,350 @@ fun MediaTabContent(
         }
     }
 
+    val allVisibleItems = remember(displayedGroups) {
+        displayedGroups.flatMap { it.items }
+    }
+
+    val selectedItems = remember(selectedUris, uiState.items) {
+        uiState.items.filter { it.uri in selectedUris }
+    }
+
+    val totalSelectedSizeBytes = remember(selectedItems) {
+        selectedItems.sumOf { it.sizeBytes }
+    }
+
+    val formattedSelectedSize = remember(totalSelectedSizeBytes) {
+        if (totalSelectedSizeBytes <= 0) "0 B"
+        else {
+            val units = arrayOf("B", "KB", "MB", "GB")
+            val digitGroups = (Math.log10(totalSelectedSizeBytes.toDouble()) / Math.log10(1024.0)).toInt().coerceIn(0, 3)
+            String.format(java.util.Locale.US, "%.1f %s", totalSelectedSizeBytes / Math.pow(1024.0, digitGroups.toDouble()), units[digitGroups])
+        }
+    }
+
+    fun performDelete(itemsToDelete: List<MediaItem>) {
+        val uris = itemsToDelete.map { it.uri }
+        if (uris.isEmpty()) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            try {
+                val pendingIntent = MediaStore.createDeleteRequest(context.contentResolver, uris)
+                deleteLauncher.launch(IntentSenderRequest.Builder(pendingIntent.intentSender).build())
+            } catch (e: Exception) {
+                Toast.makeText(context, "Delete failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            var recoverable: RecoverableSecurityException? = null
+            var count = 0
+            for (item in itemsToDelete) {
+                try {
+                    val rows = context.contentResolver.delete(item.uri, null, null)
+                    if (rows > 0) count++
+                } catch (e: SecurityException) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && e is RecoverableSecurityException) {
+                        recoverable = e
+                        break
+                    }
+                } catch (_: Exception) {}
+            }
+            if (recoverable != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                deleteLauncher.launch(IntentSenderRequest.Builder(recoverable.userAction.actionIntent.intentSender).build())
+            } else {
+                viewModel.refresh()
+                selectedUris = emptySet()
+                if (count > 0) {
+                    Toast.makeText(context, "$count items deleted", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    fun performShare(itemsToShare: List<MediaItem>) {
+        if (itemsToShare.isEmpty()) return
+        val uris = ArrayList(itemsToShare.map { it.uri })
+        val intent = if (uris.size == 1) {
+            val single = itemsToShare.first()
+            Intent(Intent.ACTION_SEND).apply {
+                type = single.mimeType
+                putExtra(Intent.EXTRA_STREAM, single.uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        } else {
+            val allVideos = itemsToShare.all { it.isVideo }
+            val allImages = itemsToShare.all { !it.isVideo }
+            Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                type = if (allVideos) "video/*" else if (allImages) "image/*" else "*/*"
+                putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        }
+        context.startActivity(Intent.createChooser(intent, "Share media"))
+    }
+
+    if (showDeleteConfirmDialog) {
+        AppDialog(
+            isOpen = showDeleteConfirmDialog,
+            title = "Delete ${selectedItems.size} items?",
+            message = "These photos/videos will be permanently removed from your device storage.",
+            confirmLabel = "Delete",
+            dismissLabel = "Cancel",
+            isDestructive = true,
+            onConfirm = {
+                showDeleteConfirmDialog = false
+                performDelete(selectedItems)
+            },
+            onDismiss = { showDeleteConfirmDialog = false }
+        )
+    }
+
+    if (showDetailsDialog) {
+        val photoCount = selectedItems.count { !it.isVideo }
+        val videoCount = selectedItems.count { it.isVideo }
+        AppDialog(
+            isOpen = showDetailsDialog,
+            title = "Selection Details",
+            message = buildString {
+                append("Items: ${selectedItems.size} total")
+                if (photoCount > 0) append(" ($photoCount photos")
+                if (videoCount > 0) append(if (photoCount > 0) ", $videoCount videos)" else " ($videoCount videos)")
+                else if (photoCount > 0) append(")")
+                append("\nTotal Size: $formattedSelectedSize")
+                val dates = selectedItems.mapNotNull { if (it.formattedDate.isNotEmpty()) it.formattedDate else null }.distinct()
+                if (dates.isNotEmpty()) {
+                    append("\nDates: ${dates.first()}${if (dates.size > 1) " – ${dates.last()}" else ""}")
+                }
+            },
+            confirmLabel = "OK",
+            onConfirm = { showDetailsDialog = false },
+            onDismiss = { showDetailsDialog = false }
+        )
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(colors.background)
     ) {
-        AppTabHeader(
-            title = "Media",
-            onSearchClick = { isSearchActive = !isSearchActive },
-            isSearchActive = isSearchActive || searchQuery.isNotEmpty(),
-            searchContent = {
-                AppSearchField(
-                    query = searchQuery,
-                    onQueryChanged = { searchQuery = it },
-                    placeholder = "Search photos & videos..."
-                )
-            },
-            isDarkTheme = isDarkTheme,
-            onToggleTheme = onToggleTheme,
-            onSettingsClick = onSettingsClick,
-            moreMenuContent = { onDismiss ->
-                DropdownMenuItem(
-                    text = { Text("Refresh media", style = typography.body) },
-                    leadingIcon = { Icon(Icons.Outlined.Refresh, contentDescription = null, tint = colors.accent) },
-                    onClick = {
-                        onDismiss()
-                        viewModel.checkPermission(context)
-                    }
-                )
-                if (onOpenTrash != null) {
-                    DropdownMenuItem(
-                        text = {
-                            Row(
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Recycle Bin", style = typography.body)
-                                if (trashCount > 0) {
-                                    Badge { Text(trashCount.toString()) }
-                                }
-                            }
-                        },
-                        leadingIcon = {
-                            Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.accent)
-                        },
-                        onClick = {
-                            onDismiss()
-                            onOpenTrash()
-                        }
-                    )
-                }
-                if (onSettingsClick != null) {
-                    DropdownMenuItem(
-                        text = { Text("Settings", style = typography.body) },
-                        leadingIcon = {
-                            Icon(Icons.Outlined.Settings, contentDescription = null, tint = colors.textSecondary)
-                        },
-                        onClick = {
-                            onDismiss()
-                            onSettingsClick()
-                        }
-                    )
-                }
-            },
-            bottomContent = if (uiState.hasPermission) {
-                {
-                    val mediaCategories = listOf(
-                        MediaNavCategory(MediaFilter.ALL, Icons.Outlined.PermMedia, colors.accent, "All"),
-                        MediaNavCategory(MediaFilter.PHOTOS, Icons.Outlined.Image, Color(0xFF4CAF50), "Photos"),
-                        MediaNavCategory(MediaFilter.VIDEOS, Icons.Outlined.Videocam, Color(0xFFE91E63), "Videos")
-                    )
-
+        if (isSelectionMode) {
+            // Contextual multi-selection top bar
+            Surface(
+                color = colors.surface,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .padding(horizontal = 8.dp)
+                ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
                     ) {
-                        for (item in mediaCategories) {
-                            val isSelected = uiState.filter == item.filter
-                            Surface(
-                                shape = RoundedCornerShape(16.dp),
-                                color = if (isSelected) item.color.copy(alpha = 0.2f) else colors.surface,
-                                border = if (isSelected) BorderStroke(1.5.dp, item.color) else BorderStroke(1.dp, colors.divider),
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .clickable {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        viewModel.setFilter(item.filter)
-                                    }
-                            ) {
+                        IconButton(onClick = { selectedUris = emptySet() }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Close,
+                                contentDescription = "Close selection",
+                                tint = colors.textPrimary
+                            )
+                        }
+                        Column(modifier = Modifier.padding(start = 4.dp)) {
+                            Text(
+                                text = "${selectedUris.size} selected",
+                                style = typography.title.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold),
+                                color = colors.textPrimary
+                            )
+                            Text(
+                                text = formattedSelectedSize,
+                                style = typography.caption.copy(fontSize = 11.sp),
+                                color = colors.textSecondary
+                            )
+                        }
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val allSelected = allVisibleItems.isNotEmpty() && selectedUris.size == allVisibleItems.size
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                selectedUris = if (allSelected) {
+                                    emptySet()
+                                } else {
+                                    allVisibleItems.map { it.uri }.toSet()
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = if (allSelected) Icons.Outlined.Deselect else Icons.Outlined.SelectAll,
+                                contentDescription = if (allSelected) "Deselect All" else "Select All",
+                                tint = colors.textPrimary
+                            )
+                        }
+
+                        IconButton(onClick = { showDetailsDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Info,
+                                contentDescription = "Selection Details",
+                                tint = colors.textPrimary
+                            )
+                        }
+
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                performShare(selectedItems)
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Share,
+                                contentDescription = "Share",
+                                tint = colors.textPrimary
+                            )
+                        }
+
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                showDeleteConfirmDialog = true
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = "Delete",
+                                tint = colors.error
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            AppTabHeader(
+                title = "Media",
+                onSearchClick = { isSearchActive = !isSearchActive },
+                isSearchActive = isSearchActive || searchQuery.isNotEmpty(),
+                searchContent = {
+                    AppSearchField(
+                        query = searchQuery,
+                        onQueryChanged = { searchQuery = it },
+                        placeholder = "Search photos & videos..."
+                    )
+                },
+                isDarkTheme = isDarkTheme,
+                onToggleTheme = onToggleTheme,
+                onSettingsClick = onSettingsClick,
+                moreMenuContent = { onDismiss ->
+                    if (allVisibleItems.isNotEmpty()) {
+                        DropdownMenuItem(
+                            text = { Text("Select items", style = typography.body) },
+                            leadingIcon = { Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = colors.accent) },
+                            onClick = {
+                                onDismiss()
+                                selectedUris = setOf(allVisibleItems.first().uri)
+                            }
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = { Text("Refresh media", style = typography.body) },
+                        leadingIcon = { Icon(Icons.Outlined.Refresh, contentDescription = null, tint = colors.accent) },
+                        onClick = {
+                            onDismiss()
+                            viewModel.checkPermission(context)
+                        }
+                    )
+                    if (onOpenTrash != null) {
+                        DropdownMenuItem(
+                            text = {
                                 Row(
+                                    horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Icon(
-                                        imageVector = item.icon,
-                                        contentDescription = item.label,
-                                        tint = if (isSelected) item.color else item.color.copy(alpha = 0.85f),
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = item.label,
-                                        style = typography.caption.copy(
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                            fontSize = 12.sp
-                                        ),
-                                        color = if (isSelected) colors.textPrimary else colors.textSecondary
-                                    )
+                                    Text("Recycle Bin", style = typography.body)
+                                    if (trashCount > 0) {
+                                        Badge { Text(trashCount.toString()) }
+                                    }
+                                }
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.accent)
+                            },
+                            onClick = {
+                                onDismiss()
+                                onOpenTrash()
+                            }
+                        )
+                    }
+                    if (onSettingsClick != null) {
+                        DropdownMenuItem(
+                            text = { Text("Settings", style = typography.body) },
+                            leadingIcon = {
+                                Icon(Icons.Outlined.Settings, contentDescription = null, tint = colors.textSecondary)
+                            },
+                            onClick = {
+                                onDismiss()
+                                onSettingsClick()
+                            }
+                        )
+                    }
+                },
+                bottomContent = if (uiState.hasPermission) {
+                    {
+                        val mediaCategories = listOf(
+                            MediaNavCategory(MediaFilter.ALL, Icons.Outlined.PermMedia, colors.accent, "All"),
+                            MediaNavCategory(MediaFilter.PHOTOS, Icons.Outlined.Image, Color(0xFF4CAF50), "Photos"),
+                            MediaNavCategory(MediaFilter.VIDEOS, Icons.Outlined.Videocam, Color(0xFFE91E63), "Videos")
+                        )
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            for (item in mediaCategories) {
+                                val isSelected = uiState.filter == item.filter
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = if (isSelected) item.color.copy(alpha = 0.2f) else colors.surface,
+                                    border = if (isSelected) BorderStroke(1.5.dp, item.color) else BorderStroke(1.dp, colors.divider),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .clickable {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            viewModel.setFilter(item.filter)
+                                        }
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = item.icon,
+                                            contentDescription = item.label,
+                                            tint = if (isSelected) item.color else item.color.copy(alpha = 0.85f),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = item.label,
+                                            style = typography.caption.copy(
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                fontSize = 12.sp
+                                            ),
+                                            color = if (isSelected) colors.textPrimary else colors.textSecondary
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            } else null
-        )
+                } else null
+            )
+        }
 
         if (!uiState.hasPermission) {
             Box(
@@ -323,15 +592,35 @@ fun MediaTabContent(
                             items = group.items,
                             key = { it.uri.toString() }
                         ) { item ->
+                            val isItemSelected = selectedUris.contains(item.uri)
                             MediaThumbnailItem(
                                 item = item,
+                                isSelected = isItemSelected,
+                                isSelectionMode = isSelectionMode,
                                 onClick = {
-                                    val relevantList = if (item.isVideo) {
-                                        uiState.items.filter { it.isVideo }
+                                    if (isSelectionMode) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        selectedUris = if (isItemSelected) {
+                                            selectedUris - item.uri
+                                        } else {
+                                            selectedUris + item.uri
+                                        }
                                     } else {
-                                        uiState.items.filter { !it.isVideo }
+                                        val relevantList = if (item.isVideo) {
+                                            uiState.items.filter { it.isVideo }
+                                        } else {
+                                            uiState.items.filter { !it.isVideo }
+                                        }
+                                        onOpenMedia(item, relevantList)
                                     }
-                                    onOpenMedia(item, relevantList)
+                                },
+                                onLongClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    selectedUris = if (isItemSelected) {
+                                        selectedUris - item.uri
+                                    } else {
+                                        selectedUris + item.uri
+                                    }
                                 }
                             )
                         }
@@ -342,34 +631,42 @@ fun MediaTabContent(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MediaThumbnailItem(
     item: MediaItem,
-    onClick: () -> Unit
+    isSelected: Boolean,
+    isSelectionMode: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
     val context = LocalContext.current
     val typography = LocalAppTypography.current
+    val colors = LocalAppColors.current
+
+    val scale by animateFloatAsState(
+        targetValue = if (isSelected) 0.93f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "thumbScale"
+    )
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(6.dp))
+            .scale(scale)
+            .clip(RoundedCornerShape(8.dp))
             .background(Color(0xFF0D0D0D))
-            .border(width = 0.5.dp, color = Color(0xFF242424), shape = RoundedCornerShape(6.dp))
-            .clickable(onClick = onClick)
-    ) {
-        if (item.isVideo) {
-            Icon(
-                imageVector = Icons.Default.PlayArrow,
-                contentDescription = null,
-                tint = Color(0x66FFFFFF),
-                modifier = Modifier
-                    .size(32.dp)
-                    .align(Alignment.Center)
+            .border(
+                width = if (isSelected) 2.dp else 0.5.dp,
+                color = if (isSelected) colors.accent else Color(0xFF242424),
+                shape = RoundedCornerShape(8.dp)
             )
-        }
-
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
+    ) {
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(item.uri)
@@ -384,6 +681,54 @@ private fun MediaThumbnailItem(
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
+
+        // Tint overlay when selected
+        if (isSelected) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(colors.accent.copy(alpha = 0.28f))
+            )
+        }
+
+        // Selection bubble in top-right corner
+        if (isSelectionMode) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(if (isSelected) colors.accent else Color.Black.copy(alpha = 0.55f))
+                    .border(
+                        width = 1.5.dp,
+                        color = if (isSelected) colors.accent else Color.White.copy(alpha = 0.85f),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Selected",
+                        tint = Color.Black,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+        }
+
+        // Play icon in center if video and not in selection mode
+        if (item.isVideo && !isSelectionMode) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = null,
+                tint = Color(0x66FFFFFF),
+                modifier = Modifier
+                    .size(32.dp)
+                    .align(Alignment.Center)
+            )
+        }
 
         // Video duration pill on bottom-right
         if (item.isVideo && item.formattedDuration.isNotEmpty()) {
@@ -407,7 +752,7 @@ private fun MediaThumbnailItem(
                     Spacer(modifier = Modifier.size(2.dp))
                     Text(
                         text = item.formattedDuration,
-                        style = typography.caption.copy(fontWeight = FontWeight.Bold),
+                        style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
                         color = Color.White
                     )
                 }
