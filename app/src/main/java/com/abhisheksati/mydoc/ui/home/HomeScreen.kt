@@ -62,16 +62,30 @@ import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import androidx.compose.runtime.Composable
+
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -238,112 +252,19 @@ fun HomeScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {},
         bottomBar = {
-            NavigationBar(
-                containerColor = colors.surface,
-                tonalElevation = 0.dp,
-                modifier = Modifier.navigationBarsPadding()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
+                contentAlignment = Alignment.Center
             ) {
-                NavigationBarItem(
-                    selected = currentTab == HomeTab.FILES,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        viewModel.selectTab(HomeTab.FILES)
-                        scope.launch { pagerState.animateScrollToPage(HomeTab.FILES.ordinal) }
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = if (currentTab == HomeTab.FILES) Icons.Filled.Folder else Icons.Outlined.Folder,
-                            contentDescription = "Files"
-                        )
-                    },
-                    label = { Text("Files", style = typography.caption) },
-                    colors = NavigationBarItemDefaults.colors(
-                        indicatorColor = colors.accent.copy(alpha = 0.16f),
-                        selectedIconColor = colors.accent,
-                        selectedTextColor = colors.accent,
-                        unselectedIconColor = colors.textSecondary,
-                        unselectedTextColor = colors.textSecondary
-                    )
-                )
-
-                NavigationBarItem(
-                    selected = currentTab == HomeTab.DOCUMENTS,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        viewModel.selectTab(HomeTab.DOCUMENTS)
-                        scope.launch { pagerState.animateScrollToPage(HomeTab.DOCUMENTS.ordinal) }
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = if (currentTab == HomeTab.DOCUMENTS) Icons.AutoMirrored.Filled.Article else Icons.AutoMirrored.Outlined.Article,
-                            contentDescription = "Documents"
-                        )
-                    },
-                    label = { Text("Documents", style = typography.caption) },
-                    colors = NavigationBarItemDefaults.colors(
-                        indicatorColor = colors.accent.copy(alpha = 0.16f),
-                        selectedIconColor = colors.accent,
-                        selectedTextColor = colors.accent,
-                        unselectedIconColor = colors.textSecondary,
-                        unselectedTextColor = colors.textSecondary
-                    )
-                )
-
-                NavigationBarItem(
-                    selected = currentTab == HomeTab.MEDIA,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        viewModel.selectTab(HomeTab.MEDIA)
-                        scope.launch { pagerState.animateScrollToPage(HomeTab.MEDIA.ordinal) }
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = if (currentTab == HomeTab.MEDIA) Icons.Filled.PermMedia else Icons.Outlined.PermMedia,
-                            contentDescription = "Media"
-                        )
-                    },
-                    label = { Text("Media", style = typography.caption) },
-                    colors = NavigationBarItemDefaults.colors(
-                        indicatorColor = colors.accent.copy(alpha = 0.16f),
-                        selectedIconColor = colors.accent,
-                        selectedTextColor = colors.accent,
-                        unselectedIconColor = colors.textSecondary,
-                        unselectedTextColor = colors.textSecondary
-                    )
-                )
-
-                NavigationBarItem(
-                    selected = currentTab == HomeTab.TOOLS,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        viewModel.selectTab(HomeTab.TOOLS)
-                        scope.launch { pagerState.animateScrollToPage(HomeTab.TOOLS.ordinal) }
-                    },
-                    icon = {
-                        BadgedBox(
-                            badge = {
-                                Badge(
-                                    containerColor = colors.accent,
-                                    contentColor = colors.background
-                                ) {
-                                    Text("30", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        ) {
-                            Icon(
-                                imageVector = if (currentTab == HomeTab.TOOLS) Icons.Filled.Build else Icons.Outlined.Build,
-                                contentDescription = "Tools"
-                            )
-                        }
-                    },
-                    label = { Text("Tools", style = typography.caption) },
-                    colors = NavigationBarItemDefaults.colors(
-                        indicatorColor = colors.accent.copy(alpha = 0.16f),
-                        selectedIconColor = colors.accent,
-                        selectedTextColor = colors.accent,
-                        unselectedIconColor = colors.textSecondary,
-                        unselectedTextColor = colors.textSecondary
-                    )
+                FloatingPillDock(
+                    currentTab = currentTab,
+                    onTabSelected = { tab ->
+                        viewModel.selectTab(tab)
+                        scope.launch { pagerState.animateScrollToPage(tab.ordinal) }
+                    }
                 )
             }
         },
@@ -558,3 +479,165 @@ fun HomeScreen(
         )
     }
 }
+
+@Composable
+fun FloatingPillDock(
+    currentTab: HomeTab,
+    onTabSelected: (HomeTab) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = LocalAppColors.current
+    val haptic = LocalHapticFeedback.current
+    val isOled = colors.background == DarkAppColors.background
+
+    Surface(
+        shape = RoundedCornerShape(32.dp),
+        color = if (isOled) Color(0xF20A0A0C) else colors.surface.copy(alpha = 0.95f),
+        border = BorderStroke(1.dp, if (isOled) Color(0xFF222222) else colors.divider),
+        shadowElevation = 8.dp,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(58.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            FloatingDockItem(
+                selected = currentTab == HomeTab.FILES,
+                icon = if (currentTab == HomeTab.FILES) Icons.Filled.Folder else Icons.Outlined.Folder,
+                label = "Files",
+                accentColor = colors.accent,
+                unselectedColor = colors.textSecondary,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onTabSelected(HomeTab.FILES)
+                }
+            )
+            FloatingDockItem(
+                selected = currentTab == HomeTab.DOCUMENTS,
+                icon = if (currentTab == HomeTab.DOCUMENTS) Icons.AutoMirrored.Filled.Article else Icons.AutoMirrored.Outlined.Article,
+                label = "Docs",
+                accentColor = colors.accent,
+                unselectedColor = colors.textSecondary,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onTabSelected(HomeTab.DOCUMENTS)
+                }
+            )
+            FloatingDockItem(
+                selected = currentTab == HomeTab.MEDIA,
+                icon = if (currentTab == HomeTab.MEDIA) Icons.Filled.PermMedia else Icons.Outlined.PermMedia,
+                label = "Media",
+                accentColor = colors.accent,
+                unselectedColor = colors.textSecondary,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onTabSelected(HomeTab.MEDIA)
+                }
+            )
+            FloatingDockItem(
+                selected = currentTab == HomeTab.TOOLS,
+                icon = if (currentTab == HomeTab.TOOLS) Icons.Filled.Build else Icons.Outlined.Build,
+                label = "Tools",
+                badgeText = "30",
+                accentColor = colors.accent,
+                unselectedColor = colors.textSecondary,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onTabSelected(HomeTab.TOOLS)
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun FloatingDockItem(
+    selected: Boolean,
+    icon: ImageVector,
+    label: String,
+    accentColor: Color,
+    unselectedColor: Color,
+    onClick: () -> Unit,
+    badgeText: String? = null,
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val backgroundTarget = if (selected) accentColor.copy(alpha = 0.16f) else Color.Transparent
+    val backgroundColor by animateColorAsState(
+        targetValue = backgroundTarget,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "dockItemBackground"
+    )
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(24.dp))
+            .background(backgroundColor)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            )
+            .padding(horizontal = if (selected) 14.dp else 10.dp, vertical = 8.dp)
+            .animateContentSize(spring(stiffness = Spring.StiffnessMediumLow)),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            if (badgeText != null) {
+                BadgedBox(
+                    badge = {
+                        Badge(
+                            containerColor = accentColor,
+                            contentColor = Color(0xFF000000)
+                        ) {
+                            Text(badgeText, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = label,
+                        tint = if (selected) accentColor else unselectedColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            } else {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = if (selected) accentColor else unselectedColor,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            AnimatedVisibility(
+                visible = selected,
+                enter = fadeIn() + expandHorizontally(),
+                exit = fadeOut() + shrinkHorizontally()
+            ) {
+                Row {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = label,
+                        color = accentColor,
+                        style = TextStyle(
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 0.2.sp
+                        ),
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+    }
+}
+

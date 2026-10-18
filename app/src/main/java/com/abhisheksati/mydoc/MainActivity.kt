@@ -14,10 +14,18 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -53,6 +61,16 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+
+    private sealed interface ActiveScreen {
+        data object Lock : ActiveScreen
+        data object DesignSystemPreview : ActiveScreen
+        data object Settings : ActiveScreen
+        data class Video(val item: MediaItem) : ActiveScreen
+        data class Photo(val item: MediaItem, val list: List<MediaItem>) : ActiveScreen
+        data class Document(val document: DocumentFile) : ActiveScreen
+        data object Home : ActiveScreen
+    }
 
     companion object {
         val pageTurnEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
@@ -161,101 +179,130 @@ class MainActivity : ComponentActivity() {
                     currentDocument = null
                 }
 
+                val activeScreen: ActiveScreen = when {
+                    !isAppUnlocked && app.settingsRepository.isBiometricLockEnabled.value -> ActiveScreen.Lock
+                    isDesignSystemPreviewOpen -> ActiveScreen.DesignSystemPreview
+                    isSettingsOpen -> ActiveScreen.Settings
+                    activeMediaItem != null -> {
+                        val media = activeMediaItem!!
+                        if (media.isVideo) ActiveScreen.Video(media)
+                        else ActiveScreen.Photo(media, activeMediaList)
+                    }
+                    currentDocument != null -> ActiveScreen.Document(currentDocument!!)
+                    else -> ActiveScreen.Home
+                }
+
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = LocalAppColors.current.background
                 ) {
-                    if (!isAppUnlocked && app.settingsRepository.isBiometricLockEnabled.value) {
-                        AppLockScreen(
-                            onUnlockClick = { attemptUnlock() }
-                        )
-                    } else if (isDesignSystemPreviewOpen) {
-                        DesignSystemPreviewScreen(
-                            onBackClick = { isDesignSystemPreviewOpen = false }
-                        )
-                    } else if (isSettingsOpen) {
-                        SettingsScreen(
-                            updateManager = updateManager,
-                            settingsRepository = app.settingsRepository,
-                            onBackClick = { isSettingsOpen = false },
-                            onDesignSystemPreviewClick = { isDesignSystemPreviewOpen = true }
-                        )
-                    } else if (activeMediaItem != null) {
-                        val media = activeMediaItem!!
-                        if (media.isVideo) {
-                            VideoPlayerScreen(
-                                item = media,
-                                mediaRepository = app.mediaRepository,
-                                onBackClick = {
-                                    activeMediaItem = null
-                                    activeMediaList = emptyList()
-                                }
+                    AnimatedContent(
+                        targetState = activeScreen,
+                        transitionSpec = {
+                            (fadeIn(animationSpec = tween(220, delayMillis = 30)) +
+                             scaleIn(initialScale = 0.97f, animationSpec = tween(220)))
+                            .togetherWith(
+                             fadeOut(animationSpec = tween(160)) +
+                             scaleOut(targetScale = 0.99f, animationSpec = tween(160))
                             )
-                        } else {
-                            val initialIdx = activeMediaList.indexOfFirst { it.uri == media.uri }.coerceAtLeast(0)
-                            PhotoViewerScreen(
-                                items = if (activeMediaList.isNotEmpty()) activeMediaList else listOf(media),
-                                initialIndex = initialIdx,
-                                mediaRepository = app.mediaRepository,
-                                onBackClick = {
-                                    activeMediaItem = null
-                                    activeMediaList = emptyList()
-                                }
-                            )
-                        }
-                    } else {
-                        val activeDoc = currentDocument
-                        if (activeDoc != null) {
-                            Box(modifier = Modifier.fillMaxSize()) {
-                                DocumentViewerScreen(
-                                    document = activeDoc,
-                                    onBackClick = { currentDocument = null },
-                                    onShareClick = { shareDocument(activeDoc) },
-                                    onDocumentUpdated = { newDoc ->
-                                        currentDocument = newDoc
-                                    },
-                                    onToolsClick = {
-                                        toolsViewModel.selectTool(PdfTool.COMPRESS, preselectedUri = Uri.parse(activeDoc.uri))
+                        },
+                        label = "screenTransition"
+                    ) { screen ->
+                        when (screen) {
+                            ActiveScreen.Lock -> {
+                                AppLockScreen(
+                                    onUnlockClick = { attemptUnlock() }
+                                )
+                            }
+                            ActiveScreen.DesignSystemPreview -> {
+                                DesignSystemPreviewScreen(
+                                    onBackClick = { isDesignSystemPreviewOpen = false }
+                                )
+                            }
+                            ActiveScreen.Settings -> {
+                                SettingsScreen(
+                                    updateManager = updateManager,
+                                    settingsRepository = app.settingsRepository,
+                                    onBackClick = { isSettingsOpen = false },
+                                    onDesignSystemPreviewClick = { isDesignSystemPreviewOpen = true }
+                                )
+                            }
+                            is ActiveScreen.Video -> {
+                                VideoPlayerScreen(
+                                    item = screen.item,
+                                    mediaRepository = app.mediaRepository,
+                                    onBackClick = {
+                                        activeMediaItem = null
+                                        activeMediaList = emptyList()
                                     }
                                 )
-
-                                if (selectedTool != null) {
-                                    ToolRunnerSheet(
-                                        viewModel = toolsViewModel,
-                                        onOpenResultFile = { file, _ ->
-                                            val uri = Uri.fromFile(file)
-                                            lifecycleScope.launch {
-                                                val app = application as MyDocApp
-                                                val res = app.documentRepository.registerOpenedDocument(uri)
-                                                res.onSuccess { doc ->
-                                                    toolsViewModel.closeTool()
-                                                    currentDocument = doc
-                                                }
-                                            }
+                            }
+                            is ActiveScreen.Photo -> {
+                                val initialIdx = screen.list.indexOfFirst { it.uri == screen.item.uri }.coerceAtLeast(0)
+                                PhotoViewerScreen(
+                                    items = if (screen.list.isNotEmpty()) screen.list else listOf(screen.item),
+                                    initialIndex = initialIdx,
+                                    mediaRepository = app.mediaRepository,
+                                    onBackClick = {
+                                        activeMediaItem = null
+                                        activeMediaList = emptyList()
+                                    }
+                                )
+                            }
+                            is ActiveScreen.Document -> {
+                                val activeDoc = screen.document
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    DocumentViewerScreen(
+                                        document = activeDoc,
+                                        onBackClick = { currentDocument = null },
+                                        onShareClick = { shareDocument(activeDoc) },
+                                        onDocumentUpdated = { newDoc ->
+                                            currentDocument = newDoc
+                                        },
+                                        onToolsClick = {
+                                            toolsViewModel.selectTool(PdfTool.COMPRESS, preselectedUri = Uri.parse(activeDoc.uri))
                                         }
                                     )
+
+                                    if (selectedTool != null) {
+                                        ToolRunnerSheet(
+                                            viewModel = toolsViewModel,
+                                            onOpenResultFile = { file, _ ->
+                                                val uri = Uri.fromFile(file)
+                                                lifecycleScope.launch {
+                                                    val myApp = application as MyDocApp
+                                                    val res = myApp.documentRepository.registerOpenedDocument(uri)
+                                                    res.onSuccess { doc ->
+                                                        toolsViewModel.closeTool()
+                                                        currentDocument = doc
+                                                    }
+                                                }
+                                            }
+                                        )
+                                    }
                                 }
                             }
-                        } else {
-                            HomeScreen(
-                                viewModel = homeViewModel,
-                                toolsViewModel = toolsViewModel,
-                                mediaViewModel = mediaViewModel,
-                                fileManagerViewModel = fileManagerViewModel,
-                                isDarkTheme = isDark,
-                                onToggleTheme = {
-                                    val nextTheme = if (isDark) AppThemeMode.LIGHT else AppThemeMode.AMOLED_DARK
-                                    app.settingsRepository.setThemeMode(nextTheme)
-                                },
-                                onDocumentClick = { doc -> currentDocument = doc },
-                                onOpenFile = { file -> handleOpenFile(file) },
-                                onOpenMedia = { item, list ->
-                                    activeMediaItem = item
-                                    activeMediaList = list
-                                },
-                                onSettingsClick = { isSettingsOpen = true },
-                                onShareDocument = { doc -> shareDocument(doc) }
-                            )
+                            ActiveScreen.Home -> {
+                                HomeScreen(
+                                    viewModel = homeViewModel,
+                                    toolsViewModel = toolsViewModel,
+                                    mediaViewModel = mediaViewModel,
+                                    fileManagerViewModel = fileManagerViewModel,
+                                    isDarkTheme = isDark,
+                                    onToggleTheme = {
+                                        val nextTheme = if (isDark) AppThemeMode.LIGHT else AppThemeMode.AMOLED_DARK
+                                        app.settingsRepository.setThemeMode(nextTheme)
+                                    },
+                                    onDocumentClick = { doc -> currentDocument = doc },
+                                    onOpenFile = { file -> handleOpenFile(file) },
+                                    onOpenMedia = { item, list ->
+                                        activeMediaItem = item
+                                        activeMediaList = list
+                                    },
+                                    onSettingsClick = { isSettingsOpen = true },
+                                    onShareDocument = { doc -> shareDocument(doc) }
+                                )
+                            }
                         }
                     }
                 }

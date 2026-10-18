@@ -38,10 +38,21 @@ jobs:
       - name: Assemble Debug APK
         run: ./gradlew assembleDebug --stacktrace
 
+      - name: Prepare Debug Artifacts
+        run: |
+          mkdir -p app/build/outputs/apk/debug
+          if [ -f app/build/outputs/apk/debug/app-universal-debug.apk ]; then
+            cp app/build/outputs/apk/debug/app-universal-debug.apk app/build/outputs/apk/debug/app-debug.apk
+          elif [ -f app/build/outputs/apk/debug/app-arm64-v8a-debug.apk ]; then
+            cp app/build/outputs/apk/debug/app-arm64-v8a-debug.apk app/build/outputs/apk/debug/app-debug.apk
+          fi
+          ls -la app/build/outputs/apk/debug/
+
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: mydoc-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
+
