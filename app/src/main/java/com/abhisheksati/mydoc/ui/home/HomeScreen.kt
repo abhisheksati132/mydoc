@@ -233,7 +233,7 @@ fun HomeScreen(
         bottomBar = {
             NavigationBar(
                 containerColor = colors.surface,
-                tonalElevation = 3.dp,
+                tonalElevation = 0.dp,
                 modifier = Modifier.navigationBarsPadding()
             ) {
                 NavigationBarItem(
@@ -358,7 +358,7 @@ fun HomeScreen(
                         Text("Open", fontWeight = FontWeight.SemiBold)
                     },
                     containerColor = colors.accent,
-                    contentColor = if (colors.background == DarkAppColors.background) Color(0xFF0F0F10) else Color.White,
+                    contentColor = if (colors.background == DarkAppColors.background) Color(0xFF000000) else Color.White,
                     elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
                 )
             }

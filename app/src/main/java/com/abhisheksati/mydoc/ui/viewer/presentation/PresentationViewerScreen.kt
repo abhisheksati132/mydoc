@@ -321,13 +321,13 @@ fun PresentationViewerScreen(
     val uiSecondaryTextColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     val bgColor = when (readingMode) {
-        ReadingMode.INVERTED_DARK -> Color(0xFF0F0F10)
+        ReadingMode.INVERTED_DARK -> Color(0xFF000000) // True AMOLED Black
         ReadingMode.SEPIA -> Color(0xFFF4ECD8)
         ReadingMode.NORMAL -> MaterialTheme.colorScheme.background
     }
 
     val cardBgColor = when (readingMode) {
-        ReadingMode.INVERTED_DARK -> Color(0xFF1E1E22)
+        ReadingMode.INVERTED_DARK -> Color(0xFF0A0A0C)
         ReadingMode.SEPIA -> Color(0xFFEADBBE)
         ReadingMode.NORMAL -> Color.White
     }

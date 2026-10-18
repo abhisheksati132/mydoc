@@ -253,7 +253,7 @@ fun PhotoEditorScreen(
 
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = Color(0xFF0F0F10)
+            color = Color(0xFF000000)
         ) {
             Column(
                 modifier = Modifier
@@ -381,7 +381,7 @@ fun PhotoEditorScreen(
 
                 // Tool Options Tray
                 Surface(
-                    color = Color(0xFF161618),
+                    color = Color(0xFF0A0A0C),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)) {

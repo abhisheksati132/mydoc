@@ -330,8 +330,8 @@ fun VideoPlayerScreen(
         }
     }
 
-    val darkBackground = Color(0xFF0F0F10)
-    val overlayBackground = Color(0xD9161618)
+    val darkBackground = Color(0xFF000000)
+    val overlayBackground = Color(0xD9000000)
 
     Box(
         modifier = modifier

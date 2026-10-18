@@ -26,14 +26,14 @@ data class AppColors(
 )
 
 val DarkAppColors = AppColors(
-    background = Color(0xFF0F0F10),
-    surface = Color(0xFF18181A),
-    surfaceVariant = Color(0xFF222226),
-    divider = Color(0xFF2B2B30),
-    textPrimary = Color(0xFFF0F0F2),
-    textSecondary = Color(0xFFA0A0A6),
-    accent = Color(0xFF7FA4DE),
-    error = Color(0xFFE57373)
+    background = Color(0xFF000000), // Pure 100% AMOLED Deep Black (OLED pixels completely off)
+    surface = Color(0xFF0A0A0C),    // Deep pitch surface
+    surfaceVariant = Color(0xFF141416), // Subtle elevated container
+    divider = Color(0xFF1E1E22),    // Subtle hairline separation
+    textPrimary = Color(0xFFFFFFFF), // Crisp pure white for maximum contrast
+    textSecondary = Color(0xFFA0A0A6), // Muted secondary text
+    accent = Color(0xFF63B3ED),     // Modern vivid accent
+    error = Color(0xFFEF5350)
 )
 
 val LightAppColors = AppColors(
@@ -56,27 +56,27 @@ val LocalAppColors = staticCompositionLocalOf { DarkAppColors }
 object DocumentFormatColors {
     val pdfTint = Color(0xFFEA4335)
     val pdfContainerLight = Color(0xFFFCE8E6)
-    val pdfContainerDark = Color(0xFF381E1E)
+    val pdfContainerDark = Color(0xFF261010)
 
     val wordTint = Color(0xFF1A73E8)
     val wordContainerLight = Color(0xFFE8F0FE)
-    val wordContainerDark = Color(0xFF1B2A4A)
+    val wordContainerDark = Color(0xFF0F1B30)
 
     val excelTint = Color(0xFF188038)
     val excelContainerLight = Color(0xFFE6F4EA)
-    val excelContainerDark = Color(0xFF1B3824)
+    val excelContainerDark = Color(0xFF102616)
 
     val pptTint = Color(0xFFF29900)
     val pptContainerLight = Color(0xFFFEF7E0)
-    val pptContainerDark = Color(0xFF3A301A)
+    val pptContainerDark = Color(0xFF2B200D)
 
     val textTint = Color(0xFF5F6368)
     val textContainerLight = Color(0xFFF1F3F4)
-    val textContainerDark = Color(0xFF2C2D30)
+    val textContainerDark = Color(0xFF1A1A1E)
 
     val mediaTint = Color(0xFFE91E63)
     val mediaContainerLight = Color(0xFFFCE4EC)
-    val mediaContainerDark = Color(0xFF3B1E29)
+    val mediaContainerDark = Color(0xFF26101C)
 
     fun getTint(extension: String): Color {
         return when (extension.lowercase()) {

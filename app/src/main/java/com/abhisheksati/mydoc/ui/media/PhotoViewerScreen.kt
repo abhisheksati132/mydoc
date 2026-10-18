@@ -126,8 +126,8 @@ fun PhotoViewerScreen(
         value = mediaRepository.extractExif(currentItem.uri)
     }
 
-    val darkBackground = Color(0xFF0F0F10) // Soft near-black token style
-    val overlayBackground = Color(0xD9161618)
+    val darkBackground = Color(0xFF000000) // True AMOLED Black
+    val overlayBackground = Color(0xD9000000)
 
     Box(
         modifier = modifier

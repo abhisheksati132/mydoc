@@ -588,9 +588,9 @@ private fun PageItemView(
     }
 
     val itemBg = when (readingMode) {
-        ReadingMode.INVERTED_DARK -> Color(0xFF161618)
+        ReadingMode.INVERTED_DARK -> Color(0xFF000000) // True AMOLED Black
         ReadingMode.SEPIA -> Color(0xFFF4ECD8)
-        ReadingMode.NORMAL -> Color(0xFFFAFAFC) // Off-white, no pure white
+        ReadingMode.NORMAL -> Color(0xFFFAFAFC)
     }
 
     BoxWithConstraints(
