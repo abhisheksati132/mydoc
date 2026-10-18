@@ -67,6 +67,7 @@ fun AppFileRow(
     isFavorite: Boolean,
     progressFraction: Float? = null,
     progressText: String? = null,
+    showDivider: Boolean = true,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
     onToggleFavorite: () -> Unit,
@@ -206,13 +207,15 @@ fun AppFileRow(
         }
 
         // Standard hairline divider
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(AppSpacing.dividerThickness)
-                .padding(start = AppSpacing.medium)
-                .border(AppSpacing.dividerThickness, colors.divider)
-        )
+        if (showDivider) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(AppSpacing.dividerThickness)
+                    .padding(start = AppSpacing.medium)
+                    .border(AppSpacing.dividerThickness, colors.divider)
+            )
+        }
     }
 }
 
@@ -220,6 +223,7 @@ fun AppFileRow(
 fun AppFileRow(
     document: DocumentFile,
     showContinueReading: Boolean = false,
+    showDivider: Boolean = true,
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
     onShare: () -> Unit,
@@ -235,6 +239,7 @@ fun AppFileRow(
         isFavorite = document.isFavorite,
         progressFraction = if (showContinueReading && document.pageCount > 0) document.lastPage.toFloat() / document.pageCount else null,
         progressText = if (showContinueReading && document.pageCount > 0) "Page ${document.lastPage + 1} of ${document.pageCount}" else null,
+        showDivider = showDivider,
         onClick = onClick,
         onLongClick = onLongClick,
         onToggleFavorite = onToggleFavorite,

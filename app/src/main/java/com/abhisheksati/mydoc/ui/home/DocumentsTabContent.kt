@@ -347,15 +347,25 @@ fun DocumentsTabContent(
                             AppSectionHeader(title = "CONTINUE READING")
                         }
                         item(key = "continue_${continueDoc.uri}") {
-                            AppFileRow(
-                                document = continueDoc,
-                                showContinueReading = true,
-                                onClick = { onDocumentClick(continueDoc) },
-                                onToggleFavorite = { viewModel.toggleFavorite(continueDoc) },
-                                onRemoveFromRecents = { viewModel.removeFromRecents(continueDoc) },
-                                onShare = { onShareDocument(continueDoc) },
-                                onShowDetails = { onSelectDocForDetails(continueDoc) }
-                            )
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = colors.surface,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                            ) {
+                                AppFileRow(
+                                    document = continueDoc,
+                                    showContinueReading = true,
+                                    showDivider = false,
+                                    onClick = { onDocumentClick(continueDoc) },
+                                    onToggleFavorite = { viewModel.toggleFavorite(continueDoc) },
+                                    onRemoveFromRecents = { viewModel.removeFromRecents(continueDoc) },
+                                    onShare = { onShareDocument(continueDoc) },
+                                    onShowDetails = { onSelectDocForDetails(continueDoc) }
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
                         }
                     }
 

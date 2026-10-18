@@ -267,12 +267,7 @@ fun MediaTabContent(
                     displayedGroups.forEach { group ->
                         item(span = { GridItemSpan(3) }) {
                             AppSectionHeader(
-                                title = group.title,
-                                modifier = Modifier.padding(
-                                    start = AppSpacing.paddingLarge,
-                                    top = AppSpacing.paddingMedium,
-                                    bottom = AppSpacing.paddingSmall
-                                )
+                                title = group.title
                             )
                         }
 

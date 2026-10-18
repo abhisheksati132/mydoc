@@ -1159,12 +1159,12 @@ fun StorageVolumeSummary(
     ) {
         for (volume in volumes) {
             Card(
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = colors.surface),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(16.dp))
                     .clickable { onVolumeClick(volume) }
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
@@ -1218,7 +1218,7 @@ fun StoragePermissionBanner(
     val typography = LocalAppTypography.current
 
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = colors.accent.copy(alpha = 0.12f)),
         modifier = Modifier
             .fillMaxWidth()

@@ -25,8 +25,10 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.Badge
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.font.FontWeight
@@ -184,7 +186,8 @@ fun ToolsScreen(
         } else {
             // Plain list grouped by section headers
             LazyColumn(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 4.dp, bottom = 88.dp)
             ) {
                 if (searchQuery.isBlank()) {
                     item(key = "super_tools_header") {
@@ -194,100 +197,112 @@ fun ToolsScreen(
                         )
                     }
 
-                    item(key = "super_tool_wifi") {
-                        Row(
+                    item(key = "super_tools_card") {
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = colors.surface,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    showWifiSharingSheet = true
-                                }
-                                .padding(horizontal = AppSpacing.paddingLarge, vertical = AppSpacing.paddingMedium),
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(horizontal = 16.dp)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFF1B2A4A)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Wifi,
-                                    contentDescription = null,
-                                    tint = Color(0xFF63B3ED),
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "PC Wi-Fi Transfer",
-                                        style = typography.body.copy(fontWeight = FontWeight.SemiBold),
-                                        color = colors.textPrimary
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Badge(containerColor = colors.accent, contentColor = Color.Black) {
-                                        Text("FAST", fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            Column {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            showWifiSharingSheet = true
+                                        }
+                                        .padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(42.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(Color(0xFF1B2A4A)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Wifi,
+                                            contentDescription = null,
+                                            tint = Color(0xFF63B3ED),
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(14.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = "PC Wi-Fi Transfer",
+                                                style = typography.body.copy(fontWeight = FontWeight.SemiBold),
+                                                color = colors.textPrimary
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Badge(containerColor = colors.accent, contentColor = Color.Black) {
+                                                Text("FAST", fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                        Text(
+                                            text = "Transfer files to/from PC without cables at Wi-Fi speeds",
+                                            style = typography.caption,
+                                            color = colors.textSecondary
+                                        )
                                     }
                                 }
-                                Text(
-                                    text = "Transfer files to/from PC without cables at Wi-Fi speeds",
-                                    style = typography.caption,
-                                    color = colors.textSecondary
-                                )
-                            }
-                        }
-                        AppDivider()
-                    }
 
-                    item(key = "super_tool_cleaner") {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    showStorageCleanerSheet = true
-                                }
-                                .padding(horizontal = AppSpacing.paddingLarge, vertical = AppSpacing.paddingMedium),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFF261010)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.DeleteSweep,
-                                    contentDescription = null,
-                                    tint = Color(0xFFEF5350),
-                                    modifier = Modifier.size(24.dp)
+                                HorizontalDivider(
+                                    color = colors.divider,
+                                    modifier = Modifier.padding(start = 70.dp, end = 14.dp)
                                 )
-                            }
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "Storage Cleaner & Duplicates",
-                                        style = typography.body.copy(fontWeight = FontWeight.SemiBold),
-                                        color = colors.textPrimary
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Badge(containerColor = Color(0xFFEF5350), contentColor = Color.White) {
-                                        Text("CLEAN", fontSize = 9.sp, fontWeight = FontWeight.Bold)
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            showStorageCleanerSheet = true
+                                        }
+                                        .padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(42.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(Color(0xFF261010)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.DeleteSweep,
+                                            contentDescription = null,
+                                            tint = Color(0xFFEF5350),
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(14.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = "Storage Cleaner & Duplicates",
+                                                style = typography.body.copy(fontWeight = FontWeight.SemiBold),
+                                                color = colors.textPrimary
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Badge(containerColor = Color(0xFFEF5350), contentColor = Color.White) {
+                                                Text("CLEAN", fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                        Text(
+                                            text = "Find duplicate files, large files & remove cache junk",
+                                            style = typography.caption,
+                                            color = colors.textSecondary
+                                        )
                                     }
                                 }
-                                Text(
-                                    text = "Find duplicate files, large files & remove cache junk",
-                                    style = typography.caption,
-                                    color = colors.textSecondary
-                                )
                             }
                         }
-                        AppDivider()
+                        Spacer(modifier = Modifier.height(10.dp))
                     }
                 }
 
@@ -297,28 +312,39 @@ fun ToolsScreen(
                         item(key = "header_${group.name}") {
                             AppSectionHeader(
                                 title = group.title,
-                                modifier = Modifier.padding(top = AppSpacing.paddingSmall)
+                                modifier = Modifier.padding(top = 4.dp)
                             )
                         }
 
-                        items(
-                            items = toolsInGroup,
-                            key = { it.id }
-                        ) { tool ->
-                            ToolListRow(
-                                tool = tool,
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    onToolClick(tool)
+                        item(key = "card_${group.name}") {
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = colors.surface,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                            ) {
+                                Column {
+                                    toolsInGroup.forEachIndexed { index, tool ->
+                                        ToolListRow(
+                                            tool = tool,
+                                            onClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                onToolClick(tool)
+                                            }
+                                        )
+                                        if (index < toolsInGroup.size - 1) {
+                                            HorizontalDivider(
+                                                color = colors.divider,
+                                                modifier = Modifier.padding(start = 68.dp, end = 14.dp)
+                                            )
+                                        }
+                                    }
                                 }
-                            )
-                            AppDivider()
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
                         }
                     }
-                }
-
-                item {
-                    Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
                 }
             }
         }
@@ -364,9 +390,8 @@ private fun ToolListRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(64.dp)
             .clickable { onClick() }
-            .padding(horizontal = AppSpacing.paddingLarge),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Soft-tinted squircle icon (Google Files style)
@@ -391,7 +416,7 @@ private fun ToolListRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = tool.title,
-                style = typography.body,
+                style = typography.body.copy(fontWeight = FontWeight.Medium),
                 color = colors.textPrimary,
                 maxLines = 1
             )

@@ -32,6 +32,7 @@ import com.abhisheksati.mydoc.security.AppLockScreen
 import com.abhisheksati.mydoc.security.BiometricLockHelper
 import com.abhisheksati.mydoc.designsystem.preview.DesignSystemPreviewScreen
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
+import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.tools.ui.ToolRunnerSheet
 import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
@@ -160,7 +161,10 @@ class MainActivity : ComponentActivity() {
                     currentDocument = null
                 }
 
-                Surface(modifier = Modifier.fillMaxSize()) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = LocalAppColors.current.background
+                ) {
                     if (!isAppUnlocked && app.settingsRepository.isBiometricLockEnabled.value) {
                         AppLockScreen(
                             onUnlockClick = { attemptUnlock() }
