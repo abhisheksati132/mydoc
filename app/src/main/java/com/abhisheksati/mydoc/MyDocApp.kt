@@ -39,6 +39,9 @@ class MyDocApp : Application(), ImageLoaderFactory {
     lateinit var wifiServerManager: com.abhisheksati.mydoc.network.WifiServerManager
         private set
 
+    lateinit var libreOfficeEngineManager: com.abhisheksati.mydoc.rendering.engine.libreoffice.LibreOfficeEngineManager
+        private set
+
     override fun onCreate() {
         super.onCreate()
         CoroutineScope(Dispatchers.Default).launch {
@@ -52,6 +55,12 @@ class MyDocApp : Application(), ImageLoaderFactory {
         storageRepository = com.abhisheksati.mydoc.data.repository.StorageRepositoryImpl(this, database.trashDao())
         settingsRepository = com.abhisheksati.mydoc.data.local.SettingsRepository(this)
         wifiServerManager = com.abhisheksati.mydoc.network.WifiServerManager(this)
+        libreOfficeEngineManager = com.abhisheksati.mydoc.rendering.engine.libreoffice.LibreOfficeEngineManager.getInstance(this)
+        if (settingsRepository.isLibreOfficeEngineEnabled.value && libreOfficeEngineManager.isReady()) {
+            CoroutineScope(Dispatchers.IO).launch {
+                libreOfficeEngineManager.initNativeEngine()
+            }
+        }
     }
 
     override fun newImageLoader(): ImageLoader {

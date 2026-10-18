@@ -1,9 +1,11 @@
 package org.libreoffice.kit;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.res.AssetManager;
 import android.util.Log;
+import java.io.File;
 import java.nio.ByteBuffer;
 
 public final class LibreOfficeKit {
@@ -21,16 +23,36 @@ public final class LibreOfficeKit {
         return NativeLibLoader.isLoaded();
     }
 
+    public static synchronized boolean isInitialized() {
+        return isInitialized;
+    }
+
     public static synchronized boolean init(Activity activity) {
+        return init((Context) activity, null);
+    }
+
+    public static synchronized boolean init(Context context, File engineDir) {
         if (isInitialized) return true;
-        if (!NativeLibLoader.load()) return false;
+
+        boolean nativeLoaded = false;
+        if (engineDir != null && engineDir.exists()) {
+            File libDir = new File(engineDir, "lib");
+            if (!libDir.exists()) {
+                libDir = engineDir;
+            }
+            nativeLoaded = NativeLibLoader.loadFromDirectory(libDir);
+        }
+        if (!nativeLoaded) {
+            nativeLoaded = NativeLibLoader.load();
+        }
+        if (!nativeLoaded) return false;
 
         try {
-            assetManager = activity.getResources().getAssets();
-            ApplicationInfo appInfo = activity.getApplicationInfo();
-            String dataDir = appInfo.dataDir;
-            String cacheDir = activity.getApplication().getCacheDir().getAbsolutePath();
-            String apkFile = activity.getApplication().getPackageResourcePath();
+            assetManager = context.getResources().getAssets();
+            ApplicationInfo appInfo = context.getApplicationInfo();
+            String dataDir = (engineDir != null && engineDir.exists()) ? engineDir.getAbsolutePath() : appInfo.dataDir;
+            String cacheDir = context.getCacheDir().getAbsolutePath();
+            String apkFile = context.getPackageResourcePath();
 
             redirectStdio(true);
             isInitialized = initializeNative(dataDir, cacheDir, apkFile, assetManager);
@@ -40,9 +62,15 @@ public final class LibreOfficeKit {
             return false;
         }
     }
+
+    public static synchronized void reset() {
+        isInitialized = false;
+        NativeLibLoader.reset();
+    }
 }
 
 class NativeLibLoader {
+    private static final String TAG = "NativeLibLoader";
     private static boolean loaded = false;
     private static boolean loadAttempted = false;
 
@@ -51,6 +79,49 @@ class NativeLibLoader {
             load();
         }
         return loaded;
+    }
+
+    protected static synchronized void reset() {
+        loaded = false;
+        loadAttempted = false;
+    }
+
+    protected static synchronized boolean loadFromDirectory(File libDir) {
+        if (loaded) return true;
+        if (libDir == null || !libDir.exists() || !libDir.isDirectory()) {
+            return false;
+        }
+        loadAttempted = true;
+
+        String[] libs = new String[] {
+            "libnspr4.so", "libplds4.so", "libplc4.so", "libnssutil3.so",
+            "libfreebl3.so", "libsqlite3.so", "libsoftokn3.so", "libnss3.so",
+            "libnssckbi.so", "libnssdbm3.so", "libsmime3.so", "libssl3.so",
+            "libc++_shared.so", "liblo-native-code.so"
+        };
+
+        boolean loLoaded = false;
+        try {
+            for (String libName : libs) {
+                File libFile = new File(libDir, libName);
+                if (libFile.exists()) {
+                    try {
+                        System.load(libFile.getAbsolutePath());
+                        if (libName.contains("lo-native-code")) {
+                            loLoaded = true;
+                        }
+                    } catch (Throwable t) {
+                        Log.w(TAG, "Non-fatal error loading library " + libName + ": " + t.getMessage());
+                    }
+                }
+            }
+            loaded = loLoaded;
+            return loaded;
+        } catch (Throwable t) {
+            Log.e(TAG, "Failed to load libraries from directory " + libDir.getAbsolutePath(), t);
+            loaded = false;
+            return false;
+        }
     }
 
     protected static synchronized boolean load() {

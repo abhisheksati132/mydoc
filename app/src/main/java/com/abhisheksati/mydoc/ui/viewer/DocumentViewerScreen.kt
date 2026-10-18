@@ -2,6 +2,8 @@ package com.abhisheksati.mydoc.ui.viewer
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -29,7 +31,29 @@ fun DocumentViewerScreen(
     val app = context.applicationContext as MyDocApp
     val ext = document.extension.lowercase()
 
+    val isLibreOfficeEnabled by app.settingsRepository.isLibreOfficeEngineEnabled.collectAsState()
+    val isLibreOfficeReady = app.libreOfficeEngineManager.isReady()
+    val isOfficeDocument = document.category in setOf(DocumentCategory.WORD, DocumentCategory.PPT, DocumentCategory.EXCEL) ||
+            app.libreOfficeEngineManager.isSupportedFormat(ext)
+
     when {
+        isLibreOfficeEnabled && isLibreOfficeReady && isOfficeDocument -> {
+            // Render with LibreOffice Core Desktop Engine via unified document viewer
+            val viewerViewModel: ViewerViewModel = viewModel(
+                key = "lo_${document.uri}",
+                factory = ViewerViewModel.Factory(context, app.documentRepository, document)
+            )
+            PdfViewerScreen(
+                document = document,
+                viewModel = viewerViewModel,
+                onBackClick = onBackClick,
+                onShareClick = onShareClick,
+                onToolsClick = onToolsClick,
+                onDocumentUpdated = onDocumentUpdated,
+                modifier = modifier.fillMaxSize()
+            )
+        }
+
         document.category == DocumentCategory.EXCEL || ext == "csv" || ext == "tsv" -> {
             val spreadsheetViewModel: SpreadsheetViewModel = viewModel(
                 key = document.uri,

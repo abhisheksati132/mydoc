@@ -16,11 +16,11 @@ class LibreOfficePresentationRenderer {
 
     companion object {
         fun isEngineAvailable(): Boolean {
-            return false
+            return LibreOfficeKit.isAvailable()
         }
 
         fun init(activity: Activity): Boolean {
-            return false
+            return LibreOfficeKit.init(activity)
         }
     }
 

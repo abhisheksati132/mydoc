@@ -78,6 +78,14 @@ class SettingsRepository(context: Context) {
     private val _volumeKeyPageTurning = MutableStateFlow(prefs.getBoolean(KEY_VOLUME_KEY_TURNING, true))
     val volumeKeyPageTurning: StateFlow<Boolean> = _volumeKeyPageTurning.asStateFlow()
 
+    private val _isLibreOfficeEngineEnabled = MutableStateFlow(prefs.getBoolean(KEY_LIBREOFFICE_ENGINE_ENABLED, true))
+    val isLibreOfficeEngineEnabled: StateFlow<Boolean> = _isLibreOfficeEngineEnabled.asStateFlow()
+
+    fun setLibreOfficeEngineEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_LIBREOFFICE_ENGINE_ENABLED, enabled).apply()
+        _isLibreOfficeEngineEnabled.value = enabled
+    }
+
     fun setThemeMode(mode: AppThemeMode) {
         prefs.edit().putString(KEY_THEME_MODE, mode.name).apply()
         _themeMode.value = mode
@@ -248,5 +256,6 @@ class SettingsRepository(context: Context) {
         private const val KEY_GRANTED_FOLDER_NAME = "granted_folder_name"
         private const val KEY_BIOMETRIC_LOCK = "biometric_lock_enabled"
         private const val KEY_VOLUME_KEY_TURNING = "volume_key_turning"
+        private const val KEY_LIBREOFFICE_ENGINE_ENABLED = "libreoffice_engine_enabled"
     }
 }
