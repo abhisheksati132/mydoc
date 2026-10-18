@@ -71,7 +71,7 @@ fun AppTabHeader(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(colors.surface)
+            .background(colors.background)
             .statusBarsPadding()
     ) {
         // Top 56dp Action Row
@@ -208,7 +208,5 @@ fun AppTabHeader(
         if (bottomContent != null) {
             bottomContent()
         }
-
-        AppDivider()
     }
 }

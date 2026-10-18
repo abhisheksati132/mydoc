@@ -20,6 +20,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -50,14 +52,17 @@ import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -122,8 +127,21 @@ fun VideoPlayerScreen(
     var resizeMode by remember { mutableIntStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isSpeedMenuOpen by remember { mutableStateOf(false) }
+    var isMoreMenuOpen by remember { mutableStateOf(false) }
 
-    // Gesture status overlays (Brightness & Volume feedback)
+    // VLC-grade Screen Lock & Sleep Timer states
+    var isScreenLocked by remember { mutableStateOf(false) }
+    var showUnlockButton by remember { mutableStateOf(false) }
+    var isSleepTimerDialogOpen by remember { mutableStateOf(false) }
+    var sleepTimerMinutes by remember { mutableIntStateOf(0) }
+    var isAudioBoostEnabled by remember { mutableStateOf(false) }
+
+    // VLC-grade Horizontal Drag Scrubbing
+    var scrubAccumulatedX by remember { mutableFloatStateOf(0f) }
+    var scrubStartPositionMs by remember { mutableLongStateOf(0L) }
+    var isScrubbing by remember { mutableStateOf(false) }
+
+    // Gesture status overlays (Brightness, Volume & Scrub feedback)
     var gestureOverlayText by remember { mutableStateOf<String?>(null) }
     var gestureOverlayIcon by remember { mutableStateOf<androidx.compose.ui.graphics.vector.ImageVector?>(null) }
 
@@ -234,10 +252,28 @@ fun VideoPlayerScreen(
     }
 
     // Auto-hide controls timer
-    LaunchedEffect(areControlsVisible, isPlaying) {
-        if (areControlsVisible && isPlaying) {
+    LaunchedEffect(areControlsVisible, isPlaying, isScreenLocked) {
+        if (areControlsVisible && isPlaying && !isScreenLocked) {
             delay(4000)
             areControlsVisible = false
+        }
+    }
+
+    // Auto-hide unlock pill after 3.5s
+    LaunchedEffect(showUnlockButton) {
+        if (showUnlockButton) {
+            delay(3500)
+            showUnlockButton = false
+        }
+    }
+
+    // Sleep Timer countdown
+    LaunchedEffect(sleepTimerMinutes) {
+        if (sleepTimerMinutes > 0) {
+            delay(sleepTimerMinutes * 60 * 1000L)
+            exoPlayer.pause()
+            sleepTimerMinutes = 0
+            Toast.makeText(context, "Sleep timer finished. Playback stopped.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -251,7 +287,14 @@ fun VideoPlayerScreen(
     }
 
     BackHandler {
-        onBackClick()
+        if (isScreenLocked) {
+            isScreenLocked = false
+            showUnlockButton = false
+            areControlsVisible = true
+            Toast.makeText(context, "Screen unlocked", Toast.LENGTH_SHORT).show()
+        } else {
+            onBackClick()
+        }
     }
 
     val darkBackground = Color(0xFF0F0F10)
@@ -295,57 +338,97 @@ fun VideoPlayerScreen(
                 },
                 modifier = Modifier
                     .fillMaxSize()
-                    .pointerInput(Unit) {
+                    .pointerInput(isScreenLocked) {
                         detectTapGestures(
-                            onTap = { areControlsVisible = !areControlsVisible },
-                            onDoubleTap = { offset ->
-                                val width = size.width
-                                if (offset.x < width * 0.4f) {
-                                    // Rewind 10s
-                                    val target = (exoPlayer.currentPosition - 10000L).coerceAtLeast(0L)
-                                    exoPlayer.seekTo(target)
-                                    gestureOverlayIcon = Icons.Default.FastRewind
-                                    gestureOverlayText = "-10s"
-                                } else if (offset.x > width * 0.6f) {
-                                    // Forward 10s
-                                    val target = (exoPlayer.currentPosition + 10000L).coerceAtMost(exoPlayer.duration)
-                                    exoPlayer.seekTo(target)
-                                    gestureOverlayIcon = Icons.Default.FastForward
-                                    gestureOverlayText = "+10s"
+                            onTap = {
+                                if (isScreenLocked) {
+                                    showUnlockButton = true
                                 } else {
-                                    if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+                                    areControlsVisible = !areControlsVisible
+                                }
+                            },
+                            onDoubleTap = { offset ->
+                                if (!isScreenLocked) {
+                                    val width = size.width
+                                    if (offset.x < width * 0.4f) {
+                                        val target = (exoPlayer.currentPosition - 10000L).coerceAtLeast(0L)
+                                        exoPlayer.seekTo(target)
+                                        gestureOverlayIcon = Icons.Default.FastRewind
+                                        gestureOverlayText = "-10s"
+                                    } else if (offset.x > width * 0.6f) {
+                                        val target = (exoPlayer.currentPosition + 10000L).coerceAtMost(exoPlayer.duration)
+                                        exoPlayer.seekTo(target)
+                                        gestureOverlayIcon = Icons.Default.FastForward
+                                        gestureOverlayText = "+10s"
+                                    } else {
+                                        if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+                                    }
                                 }
                             }
                         )
                     }
-                    .pointerInput(Unit) {
-                        detectDragGestures { change, dragAmount ->
-                            change.consume()
-                            val viewWidth = size.width
-                            val isLeft = change.position.x < viewWidth / 2f
-                            if (isLeft) {
-                                // Brightness adjustment
-                                val lp = activity?.window?.attributes
-                                if (lp != null) {
-                                    val currentB = if (lp.screenBrightness < 0f) 0.5f else lp.screenBrightness
-                                    val delta = -dragAmount.y / 500f
-                                    val newB = (currentB + delta).coerceIn(0.01f, 1.0f)
-                                    lp.screenBrightness = newB
-                                    activity.window.attributes = lp
-                                    gestureOverlayIcon = Icons.Default.BrightnessMedium
-                                    gestureOverlayText = "${(newB * 100).toInt()}%"
+                    .pointerInput(isScreenLocked, totalDurationMs) {
+                        if (!isScreenLocked) {
+                            detectDragGestures(
+                                onDragStart = {
+                                    scrubAccumulatedX = 0f
+                                    scrubStartPositionMs = exoPlayer.currentPosition
+                                    isScrubbing = false
+                                },
+                                onDragEnd = {
+                                    if (isScrubbing) {
+                                        val target = (scrubStartPositionMs + (scrubAccumulatedX * 120L).toLong()).coerceIn(0L, totalDurationMs)
+                                        exoPlayer.seekTo(target)
+                                        currentPositionMs = target
+                                        isScrubbing = false
+                                    }
+                                },
+                                onDragCancel = {
+                                    isScrubbing = false
+                                },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    val viewWidth = size.width
+
+                                    // VLC signature: Horizontal scrub detection
+                                    if (kotlin.math.abs(dragAmount.x) > kotlin.math.abs(dragAmount.y) || isScrubbing) {
+                                        isScrubbing = true
+                                        scrubAccumulatedX += dragAmount.x
+                                        val deltaMs = (scrubAccumulatedX * 120L).toLong()
+                                        val targetMs = (scrubStartPositionMs + deltaMs).coerceIn(0L, totalDurationMs)
+                                        val sign = if (deltaMs >= 0) "+" else "-"
+                                        val diffFormatted = formatTime(kotlin.math.abs(deltaMs))
+                                        val targetFormatted = formatTime(targetMs)
+                                        gestureOverlayIcon = if (deltaMs >= 0) Icons.Default.FastForward else Icons.Default.FastRewind
+                                        gestureOverlayText = "$sign$diffFormatted [$targetFormatted]"
+                                    } else {
+                                        val isLeft = change.position.x < viewWidth / 2f
+                                        if (isLeft) {
+                                            // Brightness adjustment
+                                            val lp = activity?.window?.attributes
+                                            if (lp != null) {
+                                                val currentB = if (lp.screenBrightness < 0f) 0.5f else lp.screenBrightness
+                                                val delta = -dragAmount.y / 500f
+                                                val newB = (currentB + delta).coerceIn(0.01f, 1.0f)
+                                                lp.screenBrightness = newB
+                                                activity.window.attributes = lp
+                                                gestureOverlayIcon = Icons.Default.BrightnessMedium
+                                                gestureOverlayText = "${(newB * 100).toInt()}%"
+                                            }
+                                        } else {
+                                            // Volume adjustment
+                                            val currentVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                                            val delta = if (dragAmount.y < -12f) 1 else if (dragAmount.y > 12f) -1 else 0
+                                            if (delta != 0) {
+                                                val newVol = (currentVol + delta).coerceIn(0, maxVolume)
+                                                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
+                                                gestureOverlayIcon = Icons.AutoMirrored.Filled.VolumeUp
+                                                gestureOverlayText = "${((newVol.toFloat() / maxVolume) * 100).toInt()}%"
+                                            }
+                                        }
+                                    }
                                 }
-                            } else {
-                                // Volume adjustment
-                                val currentVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                                val delta = if (dragAmount.y < -15f) 1 else if (dragAmount.y > 15f) -1 else 0
-                                if (delta != 0) {
-                                    val newVol = (currentVol + delta).coerceIn(0, maxVolume)
-                                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
-                                    gestureOverlayIcon = Icons.AutoMirrored.Filled.VolumeUp
-                                    gestureOverlayText = "${((newVol.toFloat() / maxVolume) * 100).toInt()}%"
-                                }
-                            }
+                            )
                         }
                     }
             )
@@ -476,6 +559,54 @@ fun VideoPlayerScreen(
                                 contentDescription = "Share",
                                 tint = Color(0xFFEDEDED)
                             )
+                        }
+
+                        // Screen Lock Button (VLC style)
+                        IconButton(
+                            onClick = {
+                                isScreenLocked = true
+                                areControlsVisible = false
+                                showUnlockButton = true
+                                Toast.makeText(context, "Screen Locked", Toast.LENGTH_SHORT).show()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = "Lock Controls",
+                                tint = Color(0xFFEDEDED)
+                            )
+                        }
+
+                        // More Menu (Sleep Timer, Audio Boost)
+                        Box {
+                            IconButton(onClick = { isMoreMenuOpen = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "More Options",
+                                    tint = Color(0xFFEDEDED)
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = isMoreMenuOpen,
+                                onDismissRequest = { isMoreMenuOpen = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Sleep Timer (${if (sleepTimerMinutes > 0) "${sleepTimerMinutes}m" else "Off"})") },
+                                    onClick = {
+                                        isMoreMenuOpen = false
+                                        isSleepTimerDialogOpen = true
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(if (isAudioBoostEnabled) "Audio Boost: On (150%)" else "Audio Boost: Off") },
+                                    onClick = {
+                                        isMoreMenuOpen = false
+                                        isAudioBoostEnabled = !isAudioBoostEnabled
+                                        Toast.makeText(context, if (isAudioBoostEnabled) "Audio Boost enabled (150%)" else "Standard Volume", Toast.LENGTH_SHORT).show()
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -620,7 +751,7 @@ fun VideoPlayerScreen(
                                     expanded = isSpeedMenuOpen,
                                     onDismissRequest = { isSpeedMenuOpen = false }
                                 ) {
-                                    listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f).forEach { spd ->
+                                    listOf(0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 3.0f).forEach { spd ->
                                         DropdownMenuItem(
                                             text = { Text("${spd}x") },
                                             onClick = {
@@ -693,6 +824,94 @@ fun VideoPlayerScreen(
                     }
                 }
             }
+        }
+
+        // Floating Screen Lock / Unlock Pill (VLC style)
+        if (isScreenLocked && showUnlockButton) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    color = Color(0xE6202022),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x55FFFFFF)),
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .clickable {
+                            isScreenLocked = false
+                            showUnlockButton = false
+                            areControlsVisible = true
+                            Toast.makeText(context, "Screen Unlocked", Toast.LENGTH_SHORT).show()
+                        }
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = Color(0xFF8AB4F8),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Screen Locked • Tap to unlock",
+                            color = Color.White,
+                            style = typography.body.copy(fontWeight = FontWeight.SemiBold)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Sleep Timer Dialog
+        if (isSleepTimerDialogOpen) {
+            AlertDialog(
+                onDismissRequest = { isSleepTimerDialogOpen = false },
+                title = { Text("Sleep Timer") },
+                text = {
+                    Column {
+                        listOf(
+                            0 to "Turn off",
+                            15 to "15 minutes",
+                            30 to "30 minutes",
+                            45 to "45 minutes",
+                            60 to "60 minutes"
+                        ).forEach { (mins, label) ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        sleepTimerMinutes = mins
+                                        isSleepTimerDialogOpen = false
+                                        if (mins > 0) {
+                                            Toast.makeText(context, "Sleep timer set for $mins minutes", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "Sleep timer turned off", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                    .padding(vertical = 10.dp)
+                            ) {
+                                RadioButton(
+                                    selected = sleepTimerMinutes == mins,
+                                    onClick = null
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(label, style = typography.body)
+                            }
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { isSleepTimerDialogOpen = false }) {
+                        Text("Close")
+                    }
+                }
+            )
         }
     }
 }

@@ -39,6 +39,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -80,82 +86,101 @@ fun TrashBinSheet(
     val isSelectionMode = selectedIds.isNotEmpty()
     val selectedItems = trashItems.filter { it.id in selectedIds }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = if (isSelectionMode) "${selectedIds.size} Selected" else "Recycle Bin",
-                            style = typography.title.copy(fontSize = 18.sp),
-                            color = colors.textPrimary
-                        )
-                        if (!isSelectionMode) {
+    Dialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
+    ) {
+        BackHandler {
+            if (isSelectionMode) {
+                selectedIds = emptySet()
+            } else {
+                onClose()
+            }
+        }
+
+        Scaffold(
+            modifier = modifier.fillMaxSize(),
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            topBar = {
+                CenterAlignedTopAppBar(
+                    modifier = Modifier.statusBarsPadding(),
+                    title = {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "${trashItems.size} items • 30-day auto-purge",
-                                style = typography.caption.copy(fontSize = 12.sp),
-                                color = colors.textSecondary
+                                text = if (isSelectionMode) "${selectedIds.size} Selected" else "Recycle Bin",
+                                style = typography.title.copy(fontSize = 18.sp),
+                                color = colors.textPrimary
+                            )
+                            if (!isSelectionMode) {
+                                Text(
+                                    text = "${trashItems.size} items • 30-day auto-purge",
+                                    style = typography.caption.copy(fontSize = 12.sp),
+                                    color = colors.textSecondary
+                                )
+                            }
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onClose) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                                contentDescription = "Close",
+                                tint = colors.textPrimary
                             )
                         }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onClose) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "Close",
-                            tint = colors.textPrimary
-                        )
-                    }
-                },
-                actions = {
-                    if (trashItems.isNotEmpty()) {
-                        if (!isSelectionMode) {
-                            IconButton(onClick = { showEmptyConfirmDialog = true }) {
-                                Icon(
-                                    imageVector = Icons.Outlined.DeleteSweep,
-                                    contentDescription = "Empty Recycle Bin",
-                                    tint = Color(0xFFEF5350)
-                                )
-                            }
-                        } else {
-                            IconButton(
-                                onClick = {
-                                    if (selectedIds.size == trashItems.size) {
-                                        selectedIds = emptySet()
-                                    } else {
-                                        selectedIds = trashItems.map { it.id }.toSet()
-                                    }
+                    },
+                    actions = {
+                        if (trashItems.isNotEmpty()) {
+                            if (!isSelectionMode) {
+                                IconButton(onClick = { showEmptyConfirmDialog = true }) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.DeleteSweep,
+                                        contentDescription = "Empty Recycle Bin",
+                                        tint = Color(0xFFEF5350)
+                                    )
                                 }
-                            ) {
-                                Icon(
-                                    imageVector = if (selectedIds.size == trashItems.size) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
-                                    contentDescription = "Select All",
-                                    tint = colors.accent
-                                )
+                            } else {
+                                IconButton(
+                                    onClick = {
+                                        if (selectedIds.size == trashItems.size) {
+                                            selectedIds = emptySet()
+                                        } else {
+                                            selectedIds = trashItems.map { it.id }.toSet()
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = if (selectedIds.size == trashItems.size) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+                                        contentDescription = "Select All",
+                                        tint = colors.accent
+                                    )
+                                }
                             }
                         }
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = colors.background
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = colors.background
+                    )
                 )
-            )
-        },
-        bottomBar = {
-            if (isSelectionMode) {
-                Surface(
-                    color = colors.surface,
-                    tonalElevation = 8.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
+            },
+            bottomBar = {
+                if (isSelectionMode) {
+                    Surface(
+                        color = colors.surface,
+                        tonalElevation = 8.dp,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(AppSpacing.paddingMedium),
-                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingMedium)
+                            .navigationBarsPadding()
                     ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(AppSpacing.paddingMedium),
+                            horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingMedium)
+                        ) {
                         OutlinedButton(
                             onClick = { showDeleteConfirmDialog = true },
                             modifier = Modifier.weight(1f),
@@ -272,6 +297,7 @@ fun TrashBinSheet(
                 }
             }
         )
+    }
     }
 }
 

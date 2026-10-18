@@ -17,9 +17,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Badge
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -60,6 +64,8 @@ fun ToolsScreen(
     onSettingsClick: (() -> Unit)? = null,
     onToggleTheme: (() -> Unit)? = null,
     isDarkTheme: Boolean = false,
+    onOpenTrash: (() -> Unit)? = null,
+    trashCount: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
@@ -107,7 +113,54 @@ fun ToolsScreen(
             },
             isDarkTheme = isDarkTheme,
             onToggleTheme = onToggleTheme,
-            onSettingsClick = onSettingsClick
+            onSettingsClick = onSettingsClick,
+            moreMenuContent = { onDismiss ->
+                if (onOpenTrash != null) {
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Recycle Bin", style = typography.body)
+                                if (trashCount > 0) {
+                                    Badge { Text(trashCount.toString()) }
+                                }
+                            }
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.accent)
+                        },
+                        onClick = {
+                            onDismiss()
+                            onOpenTrash()
+                        }
+                    )
+                }
+                DropdownMenuItem(
+                    text = { Text("Scan Document to PDF", style = typography.body) },
+                    leadingIcon = {
+                        Icon(Icons.Outlined.CameraAlt, contentDescription = null, tint = colors.accent)
+                    },
+                    onClick = {
+                        onDismiss()
+                        onToolClick(PdfTool.SCAN_TO_PDF)
+                    }
+                )
+                if (onSettingsClick != null) {
+                    DropdownMenuItem(
+                        text = { Text("Settings", style = typography.body) },
+                        leadingIcon = {
+                            Icon(Icons.Outlined.Settings, contentDescription = null, tint = colors.textSecondary)
+                        },
+                        onClick = {
+                            onDismiss()
+                            onSettingsClick()
+                        }
+                    )
+                }
+            }
         )
 
         if (filteredTools.isEmpty()) {

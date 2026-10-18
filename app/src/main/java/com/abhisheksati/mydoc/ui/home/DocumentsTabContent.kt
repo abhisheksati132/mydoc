@@ -33,6 +33,7 @@ import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Badge
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -76,6 +77,8 @@ fun DocumentsTabContent(
     openDocumentLauncher: ActivityResultLauncher<Array<String>>,
     onShowClearRecentsDialog: () -> Unit,
     onSelectDocForDetails: (DocumentFile) -> Unit,
+    onOpenTrash: (() -> Unit)? = null,
+    trashCount: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
@@ -116,6 +119,29 @@ fun DocumentsTabContent(
                             isSortMenuOpen = true
                         }
                     )
+                    if (onOpenTrash != null) {
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Recycle Bin", style = typography.body)
+                                    if (trashCount > 0) {
+                                        Badge { Text(trashCount.toString()) }
+                                    }
+                                }
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.accent)
+                            },
+                            onClick = {
+                                onDismiss()
+                                onOpenTrash()
+                            }
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text("Scan folder", style = typography.body) },
                         leadingIcon = {

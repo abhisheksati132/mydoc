@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -144,6 +145,8 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val fileManagerUiState by fileManagerViewModel?.uiState?.collectAsState() ?: remember { mutableStateOf(null) }
+    val trashCount = fileManagerUiState?.trashItems?.size ?: 0
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val haptic = LocalHapticFeedback.current
@@ -225,6 +228,7 @@ fun HomeScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {},
         bottomBar = {
             NavigationBar(
@@ -393,6 +397,8 @@ fun HomeScreen(
                         openDocumentLauncher = openDocumentLauncher,
                         onShowClearRecentsDialog = { showClearRecentsDialog = true },
                         onSelectDocForDetails = { selectedDocForDetails = it },
+                        onOpenTrash = { fileManagerViewModel?.openTrash() },
+                        trashCount = trashCount,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -406,6 +412,8 @@ fun HomeScreen(
                             onSettingsClick = onSettingsClick,
                             onToggleTheme = onToggleTheme,
                             isDarkTheme = isDarkTheme,
+                            onOpenTrash = { fileManagerViewModel?.openTrash() },
+                            trashCount = trashCount,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -423,6 +431,8 @@ fun HomeScreen(
                         onSettingsClick = onSettingsClick,
                         onToggleTheme = onToggleTheme,
                         isDarkTheme = isDarkTheme,
+                        onOpenTrash = { fileManagerViewModel?.openTrash() },
+                        trashCount = trashCount,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -505,6 +515,17 @@ fun HomeScreen(
                 showSignaturePad = false
                 Toast.makeText(context, "Signature encrypted and saved.", Toast.LENGTH_SHORT).show()
             }
+        )
+    }
+
+    // Recycle Bin Full Screen Sheet
+    if (fileManagerViewModel != null && fileManagerUiState?.isTrashOpen == true) {
+        com.abhisheksati.mydoc.ui.filemanager.TrashBinSheet(
+            trashItems = fileManagerUiState!!.trashItems,
+            onRestore = { fileManagerViewModel.restoreTrashItems(it) },
+            onDeletePermanently = { fileManagerViewModel.permanentlyDeleteTrashItems(it) },
+            onEmptyTrash = { fileManagerViewModel.emptyTrash() },
+            onClose = { fileManagerViewModel.closeTrash() }
         )
     }
 }

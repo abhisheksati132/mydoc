@@ -59,8 +59,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 
 import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Badge
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.unit.sp
 
@@ -71,6 +75,8 @@ fun MediaTabContent(
     onSettingsClick: (() -> Unit)? = null,
     onToggleTheme: (() -> Unit)? = null,
     isDarkTheme: Boolean = false,
+    onOpenTrash: (() -> Unit)? = null,
+    trashCount: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -140,6 +146,51 @@ fun MediaTabContent(
             isDarkTheme = isDarkTheme,
             onToggleTheme = onToggleTheme,
             onSettingsClick = onSettingsClick,
+            moreMenuContent = { onDismiss ->
+                DropdownMenuItem(
+                    text = { Text("Refresh media", style = typography.body) },
+                    leadingIcon = { Icon(Icons.Outlined.Refresh, contentDescription = null, tint = colors.accent) },
+                    onClick = {
+                        onDismiss()
+                        viewModel.checkPermission(context)
+                    }
+                )
+                if (onOpenTrash != null) {
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Recycle Bin", style = typography.body)
+                                if (trashCount > 0) {
+                                    Badge { Text(trashCount.toString()) }
+                                }
+                            }
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.accent)
+                        },
+                        onClick = {
+                            onDismiss()
+                            onOpenTrash()
+                        }
+                    )
+                }
+                if (onSettingsClick != null) {
+                    DropdownMenuItem(
+                        text = { Text("Settings", style = typography.body) },
+                        leadingIcon = {
+                            Icon(Icons.Outlined.Settings, contentDescription = null, tint = colors.textSecondary)
+                        },
+                        onClick = {
+                            onDismiss()
+                            onSettingsClick()
+                        }
+                    )
+                }
+            },
             bottomContent = if (uiState.hasPermission) {
                 {
                     Row(

@@ -29,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.RotateRight
 import androidx.compose.material.icons.filled.AspectRatio
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
@@ -94,6 +95,7 @@ fun PhotoViewerScreen(
     var isMoreMenuOpen by remember { mutableStateOf(false) }
     var isSlideshowActive by remember { mutableStateOf(false) }
     var slideshowIntervalSec by remember { mutableIntStateOf(3) }
+    var isEditorOpen by remember { mutableStateOf(false) }
 
     // Intercept back key to exit slideshow first or close photo viewer
     BackHandler {
@@ -313,6 +315,15 @@ fun PhotoViewerScreen(
                         )
                     }
 
+                    // Edit
+                    IconButton(onClick = { isEditorOpen = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit photo",
+                            tint = Color(0xFFEDEDED)
+                        )
+                    }
+
                     // Share
                     IconButton(
                         onClick = {
@@ -332,6 +343,17 @@ fun PhotoViewerScreen(
                     }
                 }
             }
+        }
+
+        // Photo Editor Modal
+        if (isEditorOpen) {
+            PhotoEditorScreen(
+                item = currentItem,
+                onDismiss = { isEditorOpen = false },
+                onPhotoSaved = { savedFile ->
+                    isEditorOpen = false
+                }
+            )
         }
 
         // Info Bottom Sheet
