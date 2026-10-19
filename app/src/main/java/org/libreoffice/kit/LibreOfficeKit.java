@@ -48,14 +48,28 @@ public final class LibreOfficeKit {
         if (!nativeLoaded) return false;
 
         try {
-            assetManager = context.getResources().getAssets();
+            AssetManager targetAssetManager = null;
+            File engineApk = (engineDir != null) ? new File(engineDir, "libreoffice_core.apk") : null;
+            if (engineApk != null && engineApk.exists()) {
+                try {
+                    AssetManager am = AssetManager.class.getConstructor().newInstance();
+                    java.lang.reflect.Method addAssetPath = AssetManager.class.getMethod("addAssetPath", String.class);
+                    addAssetPath.invoke(am, engineApk.getAbsolutePath());
+                    targetAssetManager = am;
+                } catch (Throwable t) {
+                    Log.w(TAG, "Could not addAssetPath for APK: " + t.getMessage());
+                }
+            }
+            if (targetAssetManager == null) {
+                targetAssetManager = context.getResources().getAssets();
+            }
+            assetManager = targetAssetManager;
+
             ApplicationInfo appInfo = context.getApplicationInfo();
             String dataDir = (engineDir != null && engineDir.exists()) ? engineDir.getAbsolutePath() : appInfo.dataDir;
             String cacheDir = context.getCacheDir().getAbsolutePath();
-            File engineApk = (engineDir != null) ? new File(engineDir, "libreoffice_core.apk") : null;
             String apkFile = (engineApk != null && engineApk.exists()) ? engineApk.getAbsolutePath() : context.getPackageResourcePath();
 
-            redirectStdio(true);
             isInitialized = initializeNative(dataDir, cacheDir, apkFile, assetManager);
             return isInitialized;
         } catch (Throwable t) {

@@ -45,16 +45,13 @@ class MyDocApp : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
 
-        // Crash-Guard & Emergency Recovery: If the process terminated during native LibreOffice initialization,
-        // cleanly delete corrupt engine files and disable the toggle so the app recovers immediately without crash-looping.
+        // Crash-Guard & Emergency Recovery: If the process previously terminated during native init,
+        // clear the marker and disable the engine so the app starts cleanly without looping,
+        // while preserving downloaded files so the user never has to re-download.
         val initMarker = java.io.File(filesDir, "libreoffice_init.marker")
         val crashDetected = initMarker.exists()
         if (crashDetected) {
             initMarker.delete()
-            val engineDir = java.io.File(filesDir, "libreoffice_engine")
-            if (engineDir.exists()) {
-                engineDir.deleteRecursively()
-            }
         }
 
         CoroutineScope(Dispatchers.Default).launch {

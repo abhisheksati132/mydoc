@@ -2,8 +2,6 @@ package com.abhisheksati.mydoc.ui.viewer
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -31,30 +29,8 @@ fun DocumentViewerScreen(
     val app = context.applicationContext as MyDocApp
     val ext = document.extension.lowercase()
 
-    val isLibreOfficeEnabled by app.settingsRepository.isLibreOfficeEngineEnabled.collectAsState()
-    val isLibreOfficeReady = app.libreOfficeEngineManager.isReady()
-    val isOfficeDocument = document.category in setOf(DocumentCategory.WORD, DocumentCategory.PPT, DocumentCategory.EXCEL) ||
-            app.libreOfficeEngineManager.isSupportedFormat(ext)
-
     when {
-        isLibreOfficeEnabled && isLibreOfficeReady && isOfficeDocument -> {
-            // Render with LibreOffice Core Desktop Engine via unified document viewer
-            val viewerViewModel: ViewerViewModel = viewModel(
-                key = "lo_${document.uri}",
-                factory = ViewerViewModel.Factory(context, app.documentRepository, document)
-            )
-            PdfViewerScreen(
-                document = document,
-                viewModel = viewerViewModel,
-                onBackClick = onBackClick,
-                onShareClick = onShareClick,
-                onToolsClick = onToolsClick,
-                onDocumentUpdated = onDocumentUpdated,
-                modifier = modifier.fillMaxSize()
-            )
-        }
-
-        document.category == DocumentCategory.EXCEL || ext == "csv" || ext == "tsv" -> {
+        document.category == DocumentCategory.EXCEL || ext in setOf("xls", "xlsx", "xlsm", "xlsb", "csv", "tsv", "ods", "fods", "ots") -> {
             val spreadsheetViewModel: SpreadsheetViewModel = viewModel(
                 key = document.uri,
                 factory = SpreadsheetViewModel.Factory(context, document)
@@ -68,7 +44,7 @@ fun DocumentViewerScreen(
             )
         }
 
-        document.category == DocumentCategory.WORD || ext == "docx" || ext == "doc" -> {
+        document.category == DocumentCategory.WORD || ext in setOf("doc", "docx", "dot", "dotx", "rtf", "odt", "fodt", "ott", "wps", "wpd") -> {
             WordViewerScreen(
                 document = document,
                 onBackClick = onBackClick,
@@ -77,7 +53,7 @@ fun DocumentViewerScreen(
             )
         }
 
-        document.category == DocumentCategory.PPT || ext == "pptx" || ext == "ppt" -> {
+        document.category == DocumentCategory.PPT || ext in setOf("ppt", "pptx", "pot", "potx", "pps", "ppsx", "odp", "fodp", "otp") -> {
             PresentationViewerScreen(
                 document = document,
                 onBackClick = onBackClick,
