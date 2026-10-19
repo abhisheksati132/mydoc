@@ -80,21 +80,13 @@ fun AppEmptyState(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.widthIn(max = 340.dp)
         ) {
-            // Airy glowing icon container
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(68.dp)
-                    .clip(CircleShape)
-                    .background(colors.accent.copy(alpha = if (isOled) 0.14f else 0.10f))
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = colors.accent,
-                    modifier = Modifier.size(30.dp)
-                )
-            }
+            // Understated minimal line icon (Apple / Linear style)
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = colors.textSecondary.copy(alpha = 0.5f),
+                modifier = Modifier.size(48.dp)
+            )
 
             Spacer(modifier = Modifier.height(20.dp))
 

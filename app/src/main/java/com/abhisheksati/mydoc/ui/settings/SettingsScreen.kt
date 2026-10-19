@@ -218,66 +218,40 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 36.dp)
         ) {
-            // HERO / TELEMETRY BANNER (Nothing OS Hardware Aesthetic)
+            // App Info Header
             SettingsDoubleBezelCard {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(colors.accent.copy(alpha = 0.15f))
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Tune,
-                                contentDescription = null,
-                                tint = colors.accent,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "mydoc CORE",
-                                style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp, letterSpacing = 0.5.sp),
-                                color = colors.textPrimary
-                            )
-                            Text(
-                                text = "v${updateManager.currentVersionName}  •  Supercharged",
-                                style = typography.caption.copy(fontSize = 11.sp, fontWeight = FontWeight.Medium),
-                                color = colors.accent
-                            )
-                        }
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (isOled) Color(0xFF181A20) else colors.surfaceVariant)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Tune,
+                            contentDescription = null,
+                            tint = colors.textPrimary,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Live hardware telemetry pills
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    DiagnosticChip(
-                        label = "CPU ARCH",
-                        value = diagnostics.abiArchitecture,
-                        modifier = Modifier.weight(1f)
-                    )
-                    DiagnosticChip(
-                        label = "JVM HEAP",
-                        value = "${diagnostics.jvmHeapUsedMb} MB",
-                        modifier = Modifier.weight(1f)
-                    )
-                    DiagnosticChip(
-                        label = "STORAGE",
-                        value = "${diagnostics.availableStorageMb / 1024} GB",
-                        modifier = Modifier.weight(1f)
-                    )
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column {
+                        Text(
+                            text = "mydoc",
+                            style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 17.sp),
+                            color = colors.textPrimary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Version ${updateManager.currentVersionName}",
+                            style = typography.caption.copy(fontSize = 12.sp),
+                            color = colors.textSecondary
+                        )
+                    }
                 }
             }
 
@@ -652,56 +626,31 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .size(42.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(colors.accent.copy(alpha = 0.12f))
+                                .background(if (isOled) Color(0xFF181A20) else colors.surfaceVariant)
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.Article,
                                 contentDescription = null,
-                                tint = colors.accent,
+                                tint = colors.textPrimary,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "LibreOffice Engine",
-                                    style = typography.body.copy(fontWeight = FontWeight.Bold),
-                                    color = colors.textPrimary
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                val isReady = loEngineStatus is EngineStatus.Ready
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(999.dp))
-                                        .background(if (isReady) Color(0x2210B981) else Color(0x223B82F6))
-                                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(5.dp)
-                                            .clip(CircleShape)
-                                            .background(if (isReady) Color(0xFF10B981) else Color(0xFF3B82F6))
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = if (isReady) "READY" else "OPTIONAL",
-                                        fontSize = 8.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        letterSpacing = 0.5.sp,
-                                        color = if (isReady) Color(0xFF10B981) else Color(0xFF3B82F6)
-                                    )
-                                }
-                            }
+                            Text(
+                                text = "LibreOffice Engine",
+                                style = typography.body.copy(fontWeight = FontWeight.Bold),
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = when (loEngineStatus) {
-                                    is EngineStatus.Ready -> "Installed • Desktop fidelity office viewer"
+                                    is EngineStatus.Ready -> "Installed • High-fidelity office viewer"
                                     is EngineStatus.Downloading -> "Downloading engine assets..."
                                     is EngineStatus.Extracting -> "Installing native components..."
                                     else -> "Optional desktop rendering engine for PPT/DOC/XLS"
                                 },
-                                style = typography.caption.copy(fontSize = 11.sp),
+                                style = typography.caption.copy(fontSize = 12.sp),
                                 color = colors.textSecondary
                             )
                         }
@@ -1336,45 +1285,6 @@ fun SettingsScreen(
     }
 }
 
-@Composable
-private fun DiagnosticChip(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
-    val isOled = colors.background == DarkAppColors.background
-
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (isOled) Color(0xFF141418) else colors.surfaceVariant)
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-    ) {
-        Column {
-            Text(
-                text = label,
-                style = typography.caption.copy(
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.8.sp
-                ),
-                color = colors.accent
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = value,
-                style = typography.body.copy(
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                ),
-                color = colors.textPrimary,
-                maxLines = 1
-            )
-        }
-    }
-}
 
 @Composable
 private fun DiagnosticRow(

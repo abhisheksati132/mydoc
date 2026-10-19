@@ -560,58 +560,27 @@ fun PresentationViewerScreen(
                             actions = {
                                 // Engine Switcher Pill (if both LibreOffice and Native parsed)
                                 if (isLoAvailable && !isNativeEmpty) {
-                                    Box(
+                                    Surface(
+                                        shape = RoundedCornerShape(999.dp),
+                                        color = colors.surfaceVariant,
                                         modifier = Modifier
-                                            .clip(RoundedCornerShape(100.dp))
-                                            .background(
-                                                if (activeEngine == PresentationEngineMode.LIBREOFFICE)
-                                                    Color(0xFF10B981).copy(alpha = 0.12f)
-                                                else
-                                                    Color(0xFF3B82F6).copy(alpha = 0.12f)
-                                            )
-                                            .border(
-                                                width = 1.dp,
-                                                color = if (activeEngine == PresentationEngineMode.LIBREOFFICE)
-                                                    Color(0xFF10B981).copy(alpha = 0.35f)
-                                                else
-                                                    Color(0xFF3B82F6).copy(alpha = 0.35f),
-                                                shape = RoundedCornerShape(100.dp)
-                                            )
+                                            .clip(RoundedCornerShape(999.dp))
                                             .clickable {
                                                 activeEngine = if (activeEngine == PresentationEngineMode.LIBREOFFICE)
                                                     PresentationEngineMode.NATIVE
                                                 else
                                                     PresentationEngineMode.LIBREOFFICE
                                             }
-                                            .padding(horizontal = 10.dp, vertical = 5.dp)
                                     ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(7.dp)
-                                                    .clip(CircleShape)
-                                                    .background(
-                                                        if (activeEngine == PresentationEngineMode.LIBREOFFICE)
-                                                            Color(0xFF10B981)
-                                                        else
-                                                            Color(0xFF3B82F6)
-                                                    )
-                                            )
-                                            Text(
-                                                text = if (activeEngine == PresentationEngineMode.LIBREOFFICE) "LibreOffice HD" else "Native",
-                                                style = MaterialTheme.typography.labelSmall.copy(
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    fontSize = 11.sp
-                                                ),
-                                                color = if (activeEngine == PresentationEngineMode.LIBREOFFICE)
-                                                    Color(0xFF10B981)
-                                                else
-                                                    Color(0xFF3B82F6)
-                                            )
-                                        }
+                                        Text(
+                                            text = if (activeEngine == PresentationEngineMode.LIBREOFFICE) "LibreOffice" else "Native",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = 11.sp
+                                            ),
+                                            color = textColor,
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                        )
                                     }
                                 }
 

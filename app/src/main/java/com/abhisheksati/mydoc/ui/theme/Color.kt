@@ -10,7 +10,7 @@ val DarkDivider = Color(0xFF242424)
 val DarkTextPrimary = Color(0xFFFFFFFF)
 val DarkTextSecondary = Color(0xFFA0A0A0)
 val DarkTextTertiary = Color(0xFF606060)
-val DarkAccent = Color(0xFF63B3ED)
+val DarkAccent = Color(0xFF3B82F6)
 
 // Crisp White Light Mode Palette
 val LightBackground = Color(0xFFFFFFFF)
@@ -20,7 +20,7 @@ val LightDivider = Color(0xFFE2E2E2)
 val LightTextPrimary = Color(0xFF000000)
 val LightTextSecondary = Color(0xFF5A5A5A)
 val LightTextTertiary = Color(0xFF9E9E9E)
-val LightAccent = Color(0xFF2C5282)
+val LightAccent = Color(0xFF1A73E8)
 
 // Badge / Outline colors (neutral, NO colorful blobs)
 val BadgeBorderDark = Color(0xFF383838)

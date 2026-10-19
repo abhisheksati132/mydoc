@@ -1236,13 +1236,13 @@ fun StorageVolumeSummary(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
-                                    .background(colors.accent.copy(alpha = 0.12f)),
+                                    .background(if (isOled) Color(0xFF181A20) else colors.surfaceVariant),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.Storage,
                                     contentDescription = null,
-                                    tint = colors.accent,
+                                    tint = colors.textPrimary,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -1261,24 +1261,15 @@ fun StorageVolumeSummary(
                             }
                         }
 
-                        // Eyebrow percentage badge
                         val pct = (volume.usedRatio * 100).toInt().coerceIn(0, 100)
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(999.dp))
-                                .background(colors.accent.copy(alpha = 0.14f))
-                                .padding(horizontal = 9.dp, vertical = 3.dp)
-                        ) {
-                            Text(
-                                text = "$pct%",
-                                style = typography.caption.copy(
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 0.5.sp
-                                ),
-                                color = colors.accent
-                            )
-                        }
+                        Text(
+                            text = "$pct%",
+                            style = typography.caption.copy(
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            color = colors.textSecondary
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -1316,51 +1307,23 @@ fun StoragePermissionBanner(
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Eyebrow tag
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(colors.accent.copy(alpha = 0.14f))
-                        .padding(horizontal = 9.dp, vertical = 3.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(5.dp)
-                                .clip(CircleShape)
-                                .background(colors.accent)
-                        )
-                        Spacer(modifier = Modifier.width(5.dp))
-                        Text(
-                            text = "ACCESS NEEDED",
-                            style = typography.caption.copy(
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.1.sp
-                            ),
-                            color = colors.accent
-                        )
-                    }
-                }
-
                 Icon(
-                    imageVector = Icons.Outlined.WarningAmber,
+                    imageVector = Icons.Outlined.FolderOpen,
                     contentDescription = null,
                     tint = colors.accent,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Storage Access Required",
+                    style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
+                    color = colors.textPrimary
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = "Full Storage Access Recommended",
-                style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
-                color = colors.textPrimary
-            )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = "Grant All Files Access to browse and manage files across internal storage and SD cards without restrictions.",
                 style = typography.caption.copy(fontSize = 12.sp, lineHeight = 18.sp),

@@ -267,17 +267,11 @@ fun DocumentsTabContent(
                                         }
                                         .clip(RoundedCornerShape(999.dp))
                                         .background(
-                                            if (isSelected) item.color.copy(alpha = 0.16f)
-                                            else if (isOled) Color(0xFF14151B)
-                                            else colors.surfaceVariant.copy(alpha = 0.45f)
-                                        )
-                                        .border(
-                                            BorderStroke(
-                                                1.dp,
-                                                if (isSelected) item.color.copy(alpha = 0.45f)
-                                                else Color.Transparent
-                                            ),
-                                            RoundedCornerShape(999.dp)
+                                            if (isSelected) {
+                                                if (isOled) Color(0xFF20232C) else Color(0xFFE4E6EC)
+                                            } else {
+                                                if (isOled) Color(0xFF121318) else colors.surfaceVariant.copy(alpha = 0.5f)
+                                            }
                                         )
                                         .clickable(
                                             interactionSource = interactionSource,

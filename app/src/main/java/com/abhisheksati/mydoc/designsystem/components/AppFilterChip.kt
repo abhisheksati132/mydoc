@@ -37,15 +37,13 @@ fun AppFilterChip(
         contentAlignment = Alignment.Center
     ) {
         Surface(
-            shape = RoundedCornerShape(AppSpacing.chipCornerRadius),
+            shape = RoundedCornerShape(999.dp),
             color = if (selected) colors.surfaceVariant else Color.Transparent,
-            modifier = Modifier
-                .border(
-                    width = AppSpacing.dividerThickness,
-                    color = if (selected) colors.accent else colors.divider,
-                    shape = RoundedCornerShape(AppSpacing.chipCornerRadius)
-                )
-                .clickable(onClick = onClick)
+            border = androidx.compose.foundation.BorderStroke(
+                1.dp,
+                if (selected) colors.accent.copy(alpha = 0.4f) else colors.divider.copy(alpha = 0.6f)
+            ),
+            modifier = Modifier.clickable(onClick = onClick)
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),

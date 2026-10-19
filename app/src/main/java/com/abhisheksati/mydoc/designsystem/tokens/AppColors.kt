@@ -26,13 +26,13 @@ data class AppColors(
 )
 
 val DarkAppColors = AppColors(
-    background = Color(0xFF000000), // Pure 100% AMOLED Deep Black (OLED pixels completely off)
-    surface = Color(0xFF0A0A0C),    // Deep pitch surface
-    surfaceVariant = Color(0xFF141416), // Subtle elevated container
-    divider = Color(0xFF1E1E22),    // Subtle hairline separation
-    textPrimary = Color(0xFFFFFFFF), // Crisp pure white for maximum contrast
-    textSecondary = Color(0xFFA0A0A6), // Muted secondary text
-    accent = Color(0xFF63B3ED),     // Modern vivid accent
+    background = Color(0xFF000000), // Pure OLED background
+    surface = Color(0xFF111216),    // Deep refined zinc surface
+    surfaceVariant = Color(0xFF181A20), // Subtle container
+    divider = Color(0xFF22252C),    // Whisper hairline separation
+    textPrimary = Color(0xFFF4F4F6), // Off-white for comfortable contrast
+    textSecondary = Color(0xFF8E8E96), // Calm secondary text
+    accent = Color(0xFF3B82F6),     // Sophisticated, calm system blue (no neon)
     error = Color(0xFFEF5350)
 )
 
@@ -40,10 +40,10 @@ val LightAppColors = AppColors(
     background = Color(0xFFF9F9FB),
     surface = Color(0xFFFFFFFF),
     surfaceVariant = Color(0xFFEFEFF2),
-    divider = Color(0xFFE0E0E5),
+    divider = Color(0xFFE5E5EB),
     textPrimary = Color(0xFF111114),
-    textSecondary = Color(0xFF666670),
-    accent = Color(0xFF2B5BB8),
+    textSecondary = Color(0xFF6E6E78),
+    accent = Color(0xFF1A73E8),     // Clean, trustworthy system blue
     error = Color(0xFFD32F2F)
 )
 
