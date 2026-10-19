@@ -52,7 +52,8 @@ public final class LibreOfficeKit {
             ApplicationInfo appInfo = context.getApplicationInfo();
             String dataDir = (engineDir != null && engineDir.exists()) ? engineDir.getAbsolutePath() : appInfo.dataDir;
             String cacheDir = context.getCacheDir().getAbsolutePath();
-            String apkFile = context.getPackageResourcePath();
+            File engineApk = (engineDir != null) ? new File(engineDir, "libreoffice_core.apk") : null;
+            String apkFile = (engineApk != null && engineApk.exists()) ? engineApk.getAbsolutePath() : context.getPackageResourcePath();
 
             redirectStdio(true);
             isInitialized = initializeNative(dataDir, cacheDir, apkFile, assetManager);
@@ -93,6 +94,17 @@ class NativeLibLoader {
         }
         loadAttempted = true;
 
+        File searchDir = libDir;
+        if (android.os.Build.SUPPORTED_ABIS != null) {
+            for (String abi : android.os.Build.SUPPORTED_ABIS) {
+                File sub = new File(libDir, abi);
+                if (sub.exists() && new File(sub, "liblo-native-code.so").exists()) {
+                    searchDir = sub;
+                    break;
+                }
+            }
+        }
+
         String[] libs = new String[] {
             "libnspr4.so", "libplds4.so", "libplc4.so", "libnssutil3.so",
             "libfreebl3.so", "libsqlite3.so", "libsoftokn3.so", "libnss3.so",
@@ -103,7 +115,10 @@ class NativeLibLoader {
         boolean loLoaded = false;
         try {
             for (String libName : libs) {
-                File libFile = new File(libDir, libName);
+                File libFile = new File(searchDir, libName);
+                if (!libFile.exists()) {
+                    libFile = new File(libDir, libName);
+                }
                 if (libFile.exists()) {
                     try {
                         System.load(libFile.getAbsolutePath());

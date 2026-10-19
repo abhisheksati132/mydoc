@@ -58,8 +58,39 @@ class LibreOfficeEngineManager private constructor(private val context: Context)
 
     companion object {
         private const val TAG = "LibreOfficeEngineMgr"
-        private const val DEFAULT_VERSION = "7.6.4-core"
-        private const val GITHUB_REPO_URL = "https://github.com/abhisheksati132/mydoc/releases/download/v1.0.0-engine"
+        private const val DEFAULT_VERSION = "26.2.6.3"
+
+        // Official F-Droid packages by architecture
+        private val FDROID_ABI_URLS = mapOf(
+            "arm64-v8a" to "https://f-droid.org/repo/org.documentfoundation.libreoffice_131.apk",
+            "armeabi-v7a" to "https://f-droid.org/repo/org.documentfoundation.libreoffice_130.apk",
+            "x86_64" to "https://f-droid.org/repo/org.documentfoundation.libreoffice_129.apk",
+            "x86" to "https://f-droid.org/repo/org.documentfoundation.libreoffice_128.apk"
+        )
+
+        // Resilient global mirrors
+        private val MIRROR_ABI_URLS = mapOf(
+            "arm64-v8a" to listOf(
+                "https://f-droid.org/repo/org.documentfoundation.libreoffice_131.apk",
+                "https://mirror.cyberbits.eu/fdroid/repo/org.documentfoundation.libreoffice_131.apk",
+                "https://ftp.osuosl.org/pub/fdroid/repo/org.documentfoundation.libreoffice_131.apk"
+            ),
+            "armeabi-v7a" to listOf(
+                "https://f-droid.org/repo/org.documentfoundation.libreoffice_130.apk",
+                "https://mirror.cyberbits.eu/fdroid/repo/org.documentfoundation.libreoffice_130.apk",
+                "https://ftp.osuosl.org/pub/fdroid/repo/org.documentfoundation.libreoffice_130.apk"
+            ),
+            "x86_64" to listOf(
+                "https://f-droid.org/repo/org.documentfoundation.libreoffice_129.apk",
+                "https://mirror.cyberbits.eu/fdroid/repo/org.documentfoundation.libreoffice_129.apk",
+                "https://ftp.osuosl.org/pub/fdroid/repo/org.documentfoundation.libreoffice_129.apk"
+            ),
+            "x86" to listOf(
+                "https://f-droid.org/repo/org.documentfoundation.libreoffice_128.apk",
+                "https://mirror.cyberbits.eu/fdroid/repo/org.documentfoundation.libreoffice_128.apk",
+                "https://ftp.osuosl.org/pub/fdroid/repo/org.documentfoundation.libreoffice_128.apk"
+            )
+        )
 
         @Volatile
         private var INSTANCE: LibreOfficeEngineManager? = null
@@ -72,6 +103,10 @@ class LibreOfficeEngineManager private constructor(private val context: Context)
 
         fun getDevicePrimaryAbi(): String {
             return Build.SUPPORTED_ABIS.firstOrNull() ?: "arm64-v8a"
+        }
+
+        fun getSuggestedDownloadUrl(abi: String = getDevicePrimaryAbi()): String {
+            return FDROID_ABI_URLS[abi] ?: FDROID_ABI_URLS["arm64-v8a"]!!
         }
     }
 
@@ -118,8 +153,12 @@ class LibreOfficeEngineManager private constructor(private val context: Context)
         downloadJob?.cancel()
         downloadJob = scope.launch {
             val primaryAbi = getDevicePrimaryAbi()
-            val downloadUrl = customUrl ?: "$GITHUB_REPO_URL/libreoffice-engine-$primaryAbi.zip"
-            val tempZipFile = File(context.cacheDir, "libreoffice_engine_download.zip")
+            val candidateUrls = if (!customUrl.isNullOrBlank()) {
+                listOf(customUrl.trim())
+            } else {
+                MIRROR_ABI_URLS[primaryAbi] ?: listOf(getSuggestedDownloadUrl(primaryAbi))
+            }
+            val tempZipFile = File(context.cacheDir, "libreoffice_engine_download.apk")
 
             try {
                 _status.value = EngineStatus.Downloading(
@@ -129,8 +168,24 @@ class LibreOfficeEngineManager private constructor(private val context: Context)
                     speedBytesPerSec = 0L
                 )
 
-                // 1. Download stream
-                downloadFileWithProgress(downloadUrl, tempZipFile)
+                // 1. Download stream with mirror fallback
+                var downloadSuccess = false
+                var lastErr: Throwable? = null
+                for (url in candidateUrls) {
+                    try {
+                        Log.i(TAG, "Attempting engine download from: $url")
+                        downloadFileWithProgress(url, tempZipFile)
+                        downloadSuccess = true
+                        break
+                    } catch (t: Throwable) {
+                        lastErr = t
+                        Log.w(TAG, "Mirror download failed for $url: ${t.message}")
+                    }
+                }
+
+                if (!downloadSuccess) {
+                    throw lastErr ?: IllegalStateException("Unable to download from available mirrors")
+                }
 
                 // 2. Extract into target directory
                 _status.value = EngineStatus.Extracting
@@ -139,7 +194,7 @@ class LibreOfficeEngineManager private constructor(private val context: Context)
                 // 3. Mark version
                 versionFile.writeText(DEFAULT_VERSION)
 
-                // Clean up temp zip
+                // Clean up temp file
                 if (tempZipFile.exists()) tempZipFile.delete()
 
                 // 4. Initialize native engine
@@ -237,21 +292,43 @@ class LibreOfficeEngineManager private constructor(private val context: Context)
 
     private suspend fun downloadFileWithProgress(urlStr: String, destinationFile: File) {
         withContext(Dispatchers.IO) {
-            val url = URL(urlStr)
-            val connection = (url.openConnection() as HttpURLConnection).apply {
-                connectTimeout = 15000
-                readTimeout = 30000
-                instanceFollowRedirects = true
-                setRequestProperty("User-Agent", "MyDoc-LibreOfficeEngineDownloader/1.0")
+            var currentUrl = urlStr
+            var connection: HttpURLConnection? = null
+            var redirects = 0
+            val maxRedirects = 5
+
+            while (redirects < maxRedirects) {
+                val url = URL(currentUrl)
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 20000
+                    readTimeout = 45000
+                    instanceFollowRedirects = true
+                    setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) MyDoc-LibreOfficeEngine/1.0")
+                }
+
+                val responseCode = conn.responseCode
+                if (responseCode in setOf(HttpURLConnection.HTTP_MOVED_PERM, HttpURLConnection.HTTP_MOVED_TEMP, HttpURLConnection.HTTP_SEE_OTHER, 307, 308)) {
+                    val location = conn.getHeaderField("Location")
+                    conn.disconnect()
+                    if (!location.isNullOrBlank()) {
+                        currentUrl = if (location.startsWith("http")) location else URL(url, location).toString()
+                        redirects++
+                        continue
+                    }
+                }
+
+                if (responseCode !in 200..299) {
+                    conn.disconnect()
+                    throw IllegalStateException("Server returned HTTP $responseCode: ${conn.responseMessage}")
+                }
+
+                connection = conn
+                break
             }
 
-            val responseCode = connection.responseCode
-            if (responseCode !in 200..299) {
-                throw IllegalStateException("Server returned HTTP $responseCode: ${connection.responseMessage}")
-            }
-
-            val contentLength = connection.contentLengthLong
-            val inputStream = BufferedInputStream(connection.inputStream, 32768)
+            val finalConn = connection ?: throw IllegalStateException("Could not establish connection to $urlStr")
+            val contentLength = finalConn.contentLengthLong
+            val inputStream = BufferedInputStream(finalConn.inputStream, 32768)
             val outputStream = FileOutputStream(destinationFile)
 
             val buffer = ByteArray(32768)
@@ -270,7 +347,7 @@ class LibreOfficeEngineManager private constructor(private val context: Context)
 
                         val now = System.currentTimeMillis()
                         val diff = now - lastUpdateTimestamp
-                        if (diff >= 400) {
+                        if (diff >= 300) {
                             currentSpeed = (bytesReadSinceLastUpdate * 1000) / diff
                             lastUpdateTimestamp = now
                             bytesReadSinceLastUpdate = 0L
@@ -299,31 +376,61 @@ class LibreOfficeEngineManager private constructor(private val context: Context)
             targetDir.mkdirs()
         }
 
+        // Keep a copy of the core package as libreoffice_core.apk for asset resolution
+        val targetApk = File(targetDir, "libreoffice_core.apk")
+        try {
+            zipFile.copyTo(targetApk, overwrite = true)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to copy core package archive: ${e.message}")
+        }
+
         val targetCanonical = targetDir.canonicalPath
+        val libDir = File(targetDir, "lib")
+        if (!libDir.exists()) {
+            libDir.mkdirs()
+        }
+
         ZipInputStream(BufferedInputStream(zipFile.inputStream(), 32768)).use { zis ->
             var entry: ZipEntry? = zis.nextEntry
             val buffer = ByteArray(32768)
 
             while (entry != null) {
-                val newFile = File(targetDir, entry.name)
-                // Prevent Zip Slip vulnerability
-                if (!newFile.canonicalPath.startsWith(targetCanonical)) {
-                    throw SecurityException("Zip entry is outside of target directory: ${entry.name}")
-                }
+                val name = entry.name
+                val isLib = name.startsWith("lib/") && name.endsWith(".so")
+                val isAsset = name.startsWith("assets/") && !name.contains("dexopt")
 
-                if (entry.isDirectory) {
-                    newFile.mkdirs()
-                } else {
-                    newFile.parentFile?.mkdirs()
-                    FileOutputStream(newFile).use { fos ->
-                        var count: Int
-                        while (zis.read(buffer).also { count = it } != -1) {
-                            fos.write(buffer, 0, count)
-                        }
+                // Extract native libraries, registry assets, and configs
+                if (isLib || isAsset || name.endsWith(".so") || name.endsWith(".rdb") || name.endsWith(".rc")) {
+                    val newFile = File(targetDir, name)
+                    // Prevent Zip Slip vulnerability
+                    if (!newFile.canonicalPath.startsWith(targetCanonical)) {
+                        throw SecurityException("Zip entry is outside of target directory: $name")
                     }
-                    if (newFile.name.endsWith(".so")) {
-                        newFile.setReadable(true, false)
-                        newFile.setExecutable(true, false)
+
+                    if (entry.isDirectory) {
+                        newFile.mkdirs()
+                    } else {
+                        newFile.parentFile?.mkdirs()
+                        FileOutputStream(newFile).use { fos ->
+                            var count: Int
+                            while (zis.read(buffer).also { count = it } != -1) {
+                                fos.write(buffer, 0, count)
+                            }
+                        }
+                        if (newFile.name.endsWith(".so")) {
+                            newFile.setReadable(true, false)
+                            newFile.setExecutable(true, false)
+
+                            // Also place directly into lib/ for immediate linker discovery
+                            val directLib = File(libDir, newFile.name)
+                            if (directLib.canonicalPath != newFile.canonicalPath) {
+                                try {
+                                    newFile.copyTo(directLib, overwrite = true)
+                                    directLib.setReadable(true, false)
+                                    directLib.setExecutable(true, false)
+                                } catch (_: Exception) {}
+                            }
+                        }
                     }
                 }
                 zis.closeEntry()

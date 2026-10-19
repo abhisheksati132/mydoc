@@ -38,6 +38,7 @@ import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.automirrored.outlined.Launch
 import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.PermMedia
 import androidx.compose.material.icons.outlined.PictureAsPdf
@@ -50,6 +51,7 @@ import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Vibration
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -62,11 +64,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -140,6 +145,8 @@ fun SettingsScreen(
     val loEngineManager = remember { app?.libreOfficeEngineManager ?: LibreOfficeEngineManager.getInstance(context) }
     val loEngineStatus by loEngineManager.status.collectAsState()
     val isLibreOfficeEnabled by settingsRepository.isLibreOfficeEngineEnabled.collectAsState()
+    var showCustomUrlDialog by remember { mutableStateOf(false) }
+    var customUrlInput by remember { mutableStateOf("") }
 
     val importZipLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -834,13 +841,13 @@ fun SettingsScreen(
                                     modifier = Modifier.weight(1f)
                                 )
                                 DiagnosticChip(
-                                    label = "DOWNLOAD",
-                                    value = "~88 MB",
+                                    label = "SOURCE",
+                                    value = "F-Droid",
                                     modifier = Modifier.weight(1f)
                                 )
                                 DiagnosticChip(
-                                    label = "EXTRACTED",
-                                    value = "~120 MB",
+                                    label = "DOWNLOAD",
+                                    value = "~88 MB",
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -875,7 +882,7 @@ fun SettingsScreen(
 
                                 OutlinedButton(
                                     onClick = {
-                                        importZipLauncher.launch("application/zip")
+                                        importZipLauncher.launch("*/*")
                                     },
                                     shape = RoundedCornerShape(12.dp),
                                     border = BorderStroke(1.dp, colors.divider)
@@ -888,9 +895,36 @@ fun SettingsScreen(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = "Import ZIP",
+                                        text = "Import APK / ZIP",
                                         color = colors.textPrimary,
                                         fontSize = 12.sp
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                TextButton(
+                                    onClick = {
+                                        customUrlInput = LibreOfficeEngineManager.getSuggestedDownloadUrl()
+                                        showCustomUrlDialog = true
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Link,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = colors.accent
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Download from Custom URL",
+                                        style = typography.caption.copy(fontWeight = FontWeight.Medium),
+                                        color = colors.accent
                                     )
                                 }
                             }
@@ -1085,19 +1119,106 @@ fun SettingsScreen(
                                         colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
                                         shape = RoundedCornerShape(10.dp)
                                     ) {
-                                        Text("Retry Download", fontSize = 12.sp)
+                                        Text("Retry Mirrors", fontSize = 12.sp)
                                     }
                                     OutlinedButton(
-                                        onClick = { importZipLauncher.launch("application/zip") },
-                                        shape = RoundedCornerShape(10.dp)
+                                        onClick = { importZipLauncher.launch("*/*") },
+                                        shape = RoundedCornerShape(10.dp),
+                                        border = BorderStroke(1.dp, colors.divider)
                                     ) {
-                                        Text("Import ZIP", color = colors.textPrimary, fontSize = 12.sp)
+                                        Text("Import APK / ZIP", color = colors.textPrimary, fontSize = 12.sp)
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    TextButton(
+                                        onClick = {
+                                            customUrlInput = LibreOfficeEngineManager.getSuggestedDownloadUrl()
+                                            showCustomUrlDialog = true
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Link,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp),
+                                            tint = colors.accent
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Download from Custom URL",
+                                            style = typography.caption.copy(fontWeight = FontWeight.Medium),
+                                            color = colors.accent
+                                        )
                                     }
                                 }
                             }
                         }
                     }
                 }
+            }
+
+            if (showCustomUrlDialog) {
+                AlertDialog(
+                    onDismissRequest = { showCustomUrlDialog = false },
+                    title = {
+                        Text(
+                            text = "Custom Download URL",
+                            style = typography.title,
+                            color = colors.textPrimary
+                        )
+                    },
+                    text = {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = "Enter a direct URL to a LibreOffice Core APK or ZIP for your device architecture (${LibreOfficeEngineManager.getDevicePrimaryAbi()}):",
+                                style = typography.caption,
+                                color = colors.textSecondary
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            OutlinedTextField(
+                                value = customUrlInput,
+                                onValueChange = { customUrlInput = it },
+                                placeholder = { Text("https://...") },
+                                singleLine = false,
+                                maxLines = 3,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = colors.textPrimary,
+                                    unfocusedTextColor = colors.textPrimary,
+                                    focusedBorderColor = colors.accent,
+                                    unfocusedBorderColor = colors.divider
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                val url = customUrlInput.trim()
+                                if (url.isNotEmpty()) {
+                                    showCustomUrlDialog = false
+                                    loEngineManager.downloadAndInstall(url)
+                                }
+                            },
+                            enabled = customUrlInput.trim().isNotEmpty()
+                        ) {
+                            Text(
+                                text = "Download",
+                                color = if (customUrlInput.trim().isNotEmpty()) colors.accent else colors.textSecondary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showCustomUrlDialog = false }) {
+                            Text("Cancel", color = colors.textSecondary)
+                        }
+                    },
+                    containerColor = colors.surface
+                )
             }
 
             Spacer(modifier = Modifier.height(10.dp))
