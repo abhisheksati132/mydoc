@@ -652,11 +652,7 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .size(42.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(colors.accent.copy(alpha = 0.15f))
-                                .border(
-                                    BorderStroke(0.75.dp, colors.accent.copy(alpha = 0.35f)),
-                                    RoundedCornerShape(12.dp)
-                                )
+                                .background(colors.accent.copy(alpha = 0.12f))
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.Article,
@@ -680,11 +676,7 @@ fun SettingsScreen(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(999.dp))
                                         .background(if (isReady) Color(0x2210B981) else Color(0x223B82F6))
-                                        .border(
-                                            BorderStroke(0.6.dp, if (isReady) Color(0x4410B981) else Color(0x443B82F6)),
-                                            RoundedCornerShape(999.dp)
-                                        )
-                                        .padding(horizontal = 7.dp, vertical = 2.dp)
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
                                 ) {
                                     Box(
                                         modifier = Modifier
@@ -694,7 +686,7 @@ fun SettingsScreen(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = if (isReady) "HD READY" else "OPTIONAL",
+                                        text = if (isReady) "READY" else "OPTIONAL",
                                         fontSize = 8.sp,
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = 0.5.sp,
@@ -715,7 +707,7 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Simple button-in-button CTA
+                    // Clean simple CTA button
                     when (val st = loEngineStatus) {
                         is EngineStatus.Ready -> {
                             Row(
@@ -723,34 +715,22 @@ fun SettingsScreen(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(999.dp))
                                     .background(Color(0xFFEF5350).copy(alpha = 0.12f))
-                                    .border(
-                                        BorderStroke(0.75.dp, Color(0xFFEF5350).copy(alpha = 0.4f)),
-                                        RoundedCornerShape(999.dp)
-                                    )
                                     .clickable { showDeleteEngineDialog = true }
-                                    .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp)
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
                             ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Delete,
+                                    contentDescription = null,
+                                    tint = Color(0xFFEF5350),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = "Delete",
                                     color = Color(0xFFEF5350),
-                                    fontSize = 11.sp,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier
-                                        .size(26.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFEF5350).copy(alpha = 0.22f))
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Delete,
-                                        contentDescription = null,
-                                        tint = Color(0xFFEF5350),
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                }
                             }
                         }
                         is EngineStatus.Downloading -> {
@@ -777,29 +757,21 @@ fun SettingsScreen(
                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                         loEngineManager.downloadAndInstall()
                                     }
-                                    .padding(start = 14.dp, end = 5.dp, top = 5.dp, bottom = 5.dp)
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
                             ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.CloudDownload,
+                                    contentDescription = null,
+                                    tint = if (isOled) Color(0xFF000000) else Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = "Download",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isOled) Color(0xFF000000) else Color.White
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier
-                                        .size(26.dp)
-                                        .clip(CircleShape)
-                                        .background(if (isOled) Color(0x33000000) else Color(0x33FFFFFF))
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.CloudDownload,
-                                        contentDescription = null,
-                                        tint = if (isOled) Color(0xFF000000) else Color.White,
-                                        modifier = Modifier.size(15.dp)
-                                    )
-                                }
                             }
                         }
                     }
@@ -1378,14 +1350,7 @@ private fun DiagnosticChip(
         modifier = modifier
             .clip(RoundedCornerShape(14.dp))
             .background(if (isOled) Color(0xFF141418) else colors.surfaceVariant)
-            .border(
-                BorderStroke(
-                    0.75.dp,
-                    if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.6f)
-                ),
-                RoundedCornerShape(14.dp)
-            )
-            .padding(horizontal = 10.dp, vertical = 8.dp)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Column {
             Text(
@@ -1438,7 +1403,7 @@ private fun DiagnosticRow(
 }
 
 /**
- * Double-Bezel nested architecture card for all Settings sections (Taste Design System).
+ * Sleek, single-surface card for all Settings sections with generous breathing space.
  */
 @Composable
 private fun SettingsDoubleBezelCard(
@@ -1448,37 +1413,23 @@ private fun SettingsDoubleBezelCard(
     val colors = LocalAppColors.current
     val isOled = colors.background == DarkAppColors.background
 
-    Box(
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = if (isOled) Color(0xFF0F1015) else colors.surface,
+        border = BorderStroke(
+            1.dp,
+            if (isOled) Color.White.copy(alpha = 0.07f) else colors.divider.copy(alpha = 0.5f)
+        ),
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(22.dp))
-            .background(if (isOled) Color(0x18FFFFFF) else colors.surfaceVariant.copy(alpha = 0.45f))
-            .border(
-                BorderStroke(
-                    0.75.dp,
-                    if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)
-                ),
-                RoundedCornerShape(22.dp)
-            )
-            .padding(4.5.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
-        Surface(
-            shape = RoundedCornerShape(17.dp),
-            color = if (isOled) Color(0xFF090A0E) else colors.surface,
-            border = BorderStroke(
-                0.5.dp,
-                if (isOled) Color.White.copy(alpha = 0.04f) else Color.Transparent
-            ),
-            modifier = Modifier.fillMaxWidth()
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(14.dp)
-            ) {
-                content()
-            }
+            content()
         }
     }
 }

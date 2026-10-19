@@ -268,15 +268,14 @@ fun DocumentsTabContent(
                                         .clip(RoundedCornerShape(999.dp))
                                         .background(
                                             if (isSelected) item.color.copy(alpha = 0.16f)
-                                            else if (isOled) Color(0xFF141418)
-                                            else colors.surfaceVariant.copy(alpha = 0.5f)
+                                            else if (isOled) Color(0xFF14151B)
+                                            else colors.surfaceVariant.copy(alpha = 0.45f)
                                         )
                                         .border(
                                             BorderStroke(
-                                                0.8.dp,
-                                                if (isSelected) item.color.copy(alpha = 0.75f)
-                                                else if (isOled) Color.White.copy(alpha = 0.08f)
-                                                else colors.divider.copy(alpha = 0.6f)
+                                                1.dp,
+                                                if (isSelected) item.color.copy(alpha = 0.45f)
+                                                else Color.Transparent
                                             ),
                                             RoundedCornerShape(999.dp)
                                         )
@@ -440,42 +439,28 @@ fun DocumentsTabContent(
                             }
                             item(key = "continue_${continueDoc.uri}") {
                                 val isOled = colors.background == DarkAppColors.background
-                                Box(
+                                Surface(
+                                    shape = RoundedCornerShape(18.dp),
+                                    color = if (isOled) Color(0xFF0F1116) else colors.surface,
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (isOled) Color.White.copy(alpha = 0.07f) else colors.divider.copy(alpha = 0.5f)
+                                    ),
                                     modifier = Modifier
                                         .animateItem()
                                         .fillMaxWidth()
                                         .padding(horizontal = 16.dp)
-                                        .clip(RoundedCornerShape(22.dp))
-                                        .background(if (isOled) Color(0x18FFFFFF) else colors.surfaceVariant.copy(alpha = 0.45f))
-                                        .border(
-                                            BorderStroke(
-                                                0.75.dp,
-                                                if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)
-                                            ),
-                                            RoundedCornerShape(22.dp)
-                                        )
-                                        .padding(4.5.dp)
                                 ) {
-                                    Surface(
-                                        shape = RoundedCornerShape(17.dp),
-                                        color = if (isOled) Color(0xFF090A0E) else colors.surface,
-                                        border = BorderStroke(
-                                            0.5.dp,
-                                            if (isOled) Color.White.copy(alpha = 0.04f) else Color.Transparent
-                                        ),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        AppFileRow(
-                                            document = continueDoc,
-                                            showContinueReading = true,
-                                            showDivider = false,
-                                            onClick = { onDocumentClick(continueDoc) },
-                                            onToggleFavorite = { viewModel.toggleFavorite(continueDoc) },
-                                            onRemoveFromRecents = { viewModel.removeFromRecents(continueDoc) },
-                                            onShare = { onShareDocument(continueDoc) },
-                                            onShowDetails = { onSelectDocForDetails(continueDoc) }
-                                        )
-                                    }
+                                    AppFileRow(
+                                        document = continueDoc,
+                                        showContinueReading = true,
+                                        showDivider = false,
+                                        onClick = { onDocumentClick(continueDoc) },
+                                        onToggleFavorite = { viewModel.toggleFavorite(continueDoc) },
+                                        onRemoveFromRecents = { viewModel.removeFromRecents(continueDoc) },
+                                        onShare = { onShareDocument(continueDoc) },
+                                        onShowDetails = { onSelectDocForDetails(continueDoc) }
+                                    )
                                 }
                                 Spacer(modifier = Modifier.height(10.dp))
                             }

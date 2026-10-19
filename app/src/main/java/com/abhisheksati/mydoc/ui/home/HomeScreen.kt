@@ -502,87 +502,69 @@ fun FloatingPillDock(
     val haptic = LocalHapticFeedback.current
     val isOled = colors.background == DarkAppColors.background
 
-    // Outer Shell (Double-Bezel Architecture)
-    Box(
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = if (isOled) Color(0xF2101217) else colors.surface.copy(alpha = 0.96f),
+        border = BorderStroke(
+            1.dp,
+            if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)
+        ),
+        shadowElevation = 8.dp,
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(34.dp))
-            .background(
-                if (isOled) Color(0x1AFFFFFF) else colors.surfaceVariant.copy(alpha = 0.5f)
-            )
-            .border(
-                BorderStroke(
-                    0.8.dp,
-                    if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.6f)
-                ),
-                RoundedCornerShape(34.dp)
-            )
-            .padding(4.dp)
+            .height(58.dp)
     ) {
-        // Inner Core
-        Surface(
-            shape = RoundedCornerShape(30.dp),
-            color = if (isOled) Color(0xF2090A0E) else colors.surface.copy(alpha = 0.96f),
-            border = BorderStroke(
-                0.5.dp,
-                if (isOled) Color.White.copy(alpha = 0.05f) else Color.Transparent
-            ),
+        Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp)
+                .fillMaxSize()
+                .padding(horizontal = 10.dp, vertical = 5.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                FloatingDockItem(
-                    selected = currentTab == HomeTab.FILES,
-                    icon = if (currentTab == HomeTab.FILES) Icons.Filled.Folder else Icons.Outlined.Folder,
-                    label = "Files",
-                    accentColor = colors.accent,
-                    unselectedColor = colors.textSecondary,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onTabSelected(HomeTab.FILES)
-                    }
-                )
-                FloatingDockItem(
-                    selected = currentTab == HomeTab.DOCUMENTS,
-                    icon = if (currentTab == HomeTab.DOCUMENTS) Icons.AutoMirrored.Filled.Article else Icons.AutoMirrored.Outlined.Article,
-                    label = "Docs",
-                    accentColor = colors.accent,
-                    unselectedColor = colors.textSecondary,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onTabSelected(HomeTab.DOCUMENTS)
-                    }
-                )
-                FloatingDockItem(
-                    selected = currentTab == HomeTab.MEDIA,
-                    icon = if (currentTab == HomeTab.MEDIA) Icons.Filled.PermMedia else Icons.Outlined.PermMedia,
-                    label = "Media",
-                    accentColor = colors.accent,
-                    unselectedColor = colors.textSecondary,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onTabSelected(HomeTab.MEDIA)
-                    }
-                )
-                FloatingDockItem(
-                    selected = currentTab == HomeTab.TOOLS,
-                    icon = if (currentTab == HomeTab.TOOLS) Icons.Filled.Build else Icons.Outlined.Build,
-                    label = "Tools",
-                    accentColor = colors.accent,
-                    unselectedColor = colors.textSecondary,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onTabSelected(HomeTab.TOOLS)
-                    }
-                )
-            }
+            FloatingDockItem(
+                selected = currentTab == HomeTab.FILES,
+                icon = if (currentTab == HomeTab.FILES) Icons.Filled.Folder else Icons.Outlined.Folder,
+                label = "Files",
+                accentColor = colors.accent,
+                unselectedColor = colors.textSecondary,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onTabSelected(HomeTab.FILES)
+                }
+            )
+            FloatingDockItem(
+                selected = currentTab == HomeTab.DOCUMENTS,
+                icon = if (currentTab == HomeTab.DOCUMENTS) Icons.AutoMirrored.Filled.Article else Icons.AutoMirrored.Outlined.Article,
+                label = "Docs",
+                accentColor = colors.accent,
+                unselectedColor = colors.textSecondary,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onTabSelected(HomeTab.DOCUMENTS)
+                }
+            )
+            FloatingDockItem(
+                selected = currentTab == HomeTab.MEDIA,
+                icon = if (currentTab == HomeTab.MEDIA) Icons.Filled.PermMedia else Icons.Outlined.PermMedia,
+                label = "Media",
+                accentColor = colors.accent,
+                unselectedColor = colors.textSecondary,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onTabSelected(HomeTab.MEDIA)
+                }
+            )
+            FloatingDockItem(
+                selected = currentTab == HomeTab.TOOLS,
+                icon = if (currentTab == HomeTab.TOOLS) Icons.Filled.Build else Icons.Outlined.Build,
+                label = "Tools",
+                accentColor = colors.accent,
+                unselectedColor = colors.textSecondary,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onTabSelected(HomeTab.TOOLS)
+                }
+            )
         }
     }
 }
@@ -626,21 +608,14 @@ private fun FloatingDockItem(
                 scaleX = itemScale
                 scaleY = itemScale
             }
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(999.dp))
             .background(backgroundColor)
-            .border(
-                BorderStroke(
-                    0.6.dp,
-                    if (selected) accentColor.copy(alpha = 0.35f) else Color.Transparent
-                ),
-                RoundedCornerShape(22.dp)
-            )
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick
             )
-            .padding(horizontal = if (selected) 14.dp else 10.dp, vertical = 7.dp)
+            .padding(horizontal = if (selected) 15.dp else 11.dp, vertical = 7.dp)
             .animateContentSize(spring(stiffness = Spring.StiffnessMediumLow)),
         contentAlignment = Alignment.Center
     ) {
