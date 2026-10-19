@@ -118,6 +118,9 @@ dependencies {
     // ML Kit On-Device Text Recognition (Offline OCR)
     implementation("com.google.mlkit:text-recognition:16.0.1")
 
+    // ML Kit On-Device Document Scanner (Edge detection, perspective fix, multi-page)
+    implementation("com.google.android.gms:play-services-mlkit-document-scanner:16.0.0-beta1")
+
     // ZXing for Wi-Fi Transfer QR code generation
     implementation("com.google.zxing:core:3.5.3")
 

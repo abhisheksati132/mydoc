@@ -99,6 +99,23 @@ fun DocumentViewerScreen(
             )
         }
 
+        // Excel spreadsheets (.xlsx, .xls): route through vector PDF pipeline
+        document.category == DocumentCategory.EXCEL || ext in setOf("xlsx", "xls", "xlsm", "xltx", "xlt") -> {
+            val viewerViewModel: ViewerViewModel = viewModel(
+                key = document.uri,
+                factory = ViewerViewModel.Factory(context, app.documentRepository, document)
+            )
+            PdfViewerScreen(
+                document = document,
+                viewModel = viewerViewModel,
+                onBackClick = onBackClick,
+                onShareClick = onShareClick,
+                onToolsClick = onToolsClick,
+                onDocumentUpdated = onDocumentUpdated,
+                modifier = modifier.fillMaxSize()
+            )
+        }
+
         document.category == DocumentCategory.WORD || ext in setOf("doc", "dot", "rtf", "odt", "fodt", "ott", "wps", "wpd") -> {
             WordViewerScreen(
                 document = document,

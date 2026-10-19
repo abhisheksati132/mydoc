@@ -335,34 +335,25 @@ fun PhotoViewerScreen(
                         .fillMaxWidth()
                         .navigationBarsPadding()
                         .height(64.dp)
-                        .padding(horizontal = AppSpacing.paddingLarge),
-                    horizontalArrangement = Arrangement.SpaceAround,
+                        .padding(horizontal = AppSpacing.paddingMedium),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Rotate
-                    IconButton(onClick = { rotationAngle = (rotationAngle + 90f) % 360f }) {
+                    // Share
+                    IconButton(
+                        onClick = {
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = currentItem.mimeType
+                                putExtra(Intent.EXTRA_STREAM, currentItem.uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "Share image"))
+                        }
+                    ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.RotateRight,
-                            contentDescription = "Rotate",
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Share",
                             tint = Color(0xFFEDEDED)
-                        )
-                    }
-
-                    // Fit/Fill toggle
-                    IconButton(onClick = { isFillScale = !isFillScale }) {
-                        Icon(
-                            imageVector = Icons.Default.AspectRatio,
-                            contentDescription = if (isFillScale) "Fit to screen" else "Fill screen",
-                            tint = if (isFillScale) Color(0xFF8AB4F8) else Color(0xFFEDEDED)
-                        )
-                    }
-
-                    // Slideshow toggle
-                    IconButton(onClick = { isSlideshowActive = !isSlideshowActive }) {
-                        Icon(
-                            imageVector = if (isSlideshowActive) Icons.Default.Stop else Icons.Default.PlayArrow,
-                            contentDescription = if (isSlideshowActive) "Stop" else "Slideshow",
-                            tint = if (isSlideshowActive) Color(0xFF8AB4F8) else Color(0xFFEDEDED)
                         )
                     }
 
@@ -371,6 +362,15 @@ fun PhotoViewerScreen(
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = "Edit photo",
+                            tint = Color(0xFFEDEDED)
+                        )
+                    }
+
+                    // Rotate
+                    IconButton(onClick = { rotationAngle = (rotationAngle + 90f) % 360f }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.RotateRight,
+                            contentDescription = "Rotate",
                             tint = Color(0xFFEDEDED)
                         )
                     }
@@ -403,21 +403,12 @@ fun PhotoViewerScreen(
                         )
                     }
 
-                    // Share
-                    IconButton(
-                        onClick = {
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = currentItem.mimeType
-                                putExtra(Intent.EXTRA_STREAM, currentItem.uri)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            context.startActivity(Intent.createChooser(shareIntent, "Share image"))
-                        }
-                    ) {
+                    // Delete Photo (Prominent in bottom bar)
+                    IconButton(onClick = { showDeleteConfirmDialog = true }) {
                         Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Share",
-                            tint = Color(0xFFEDEDED)
+                            imageVector = Icons.Outlined.Delete,
+                            contentDescription = "Delete photo",
+                            tint = Color(0xFFFF5252)
                         )
                     }
                 }

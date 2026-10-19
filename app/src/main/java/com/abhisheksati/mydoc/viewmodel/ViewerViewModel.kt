@@ -104,6 +104,11 @@ class ViewerViewModel(
                             uri = uri,
                             displayName = activeDocumentFile.displayName
                         )
+                        "xlsx", "xls" -> com.abhisheksati.mydoc.rendering.engine.spreadsheet.XlsxConverter.convertXlsxToPdf(
+                            context = context,
+                            uri = uri,
+                            displayName = activeDocumentFile.displayName
+                        )
                         else -> null
                     }
 

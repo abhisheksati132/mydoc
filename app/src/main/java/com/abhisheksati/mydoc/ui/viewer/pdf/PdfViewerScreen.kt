@@ -403,10 +403,11 @@ fun PdfViewerScreen(
                 }
             }
 
-            // Draggable Fast Scrollbar on side showing page bubble
+            // Draggable Fast Scrollbar on side showing live thumbnail preview bubble
             FastScrollbar(
                 currentPage = state.currentPage,
                 pageCount = state.pageCount,
+                renderThumbnail = { p, s -> viewModel.renderPageBitmap(p, s) },
                 onPageSelected = { targetPage ->
                     viewModel.jumpToPage(targetPage)
                     coroutineScope.launch {

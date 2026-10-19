@@ -225,21 +225,18 @@ fun FileManagerScreen(
 
     // Undo Trash snackbar
     LaunchedEffect(uiState.lastTrashedItems) {
-        if (uiState.lastTrashedItems.isNotEmpty()) {
-            val count = uiState.lastTrashedItems.size
-            try {
-                val result = snackbarHostState.showSnackbar(
-                    message = if (count == 1) "Moved 1 item to Recycle Bin" else "Moved $count items to Recycle Bin",
-                    actionLabel = "UNDO",
-                    duration = SnackbarDuration.Short
-                )
-                if (result == SnackbarResult.ActionPerformed) {
-                    viewModel.undoLastTrash()
-                }
-            } finally {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
-                    viewModel.clearLastTrashedItems()
-                }
+        val trashedItems = uiState.lastTrashedItems
+        if (trashedItems.isNotEmpty()) {
+            val count = trashedItems.size
+            viewModel.clearLastTrashedItems()
+            snackbarHostState.currentSnackbarData?.dismiss()
+            val result = snackbarHostState.showSnackbar(
+                message = if (count == 1) "Moved 1 item to Recycle Bin" else "Moved $count items to Recycle Bin",
+                actionLabel = "UNDO",
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.undoLastTrash()
             }
         }
     }

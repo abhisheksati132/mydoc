@@ -37,17 +37,26 @@ import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import kotlinx.coroutines.delay
+import android.graphics.Bitmap
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import kotlin.math.roundToInt
 
 /**
  * Draggable fast scrollbar positioned on the right edge of the viewer.
- * Displays page bubble indicator with haptic tick during dragging.
+ * Displays floating thumbnail preview and page indicator with haptic tick during dragging.
  */
 @Composable
 fun FastScrollbar(
     currentPage: Int,
     pageCount: Int,
     onPageSelected: (Int) -> Unit,
+    renderThumbnail: (suspend (pageIndex: Int, scale: Float) -> Bitmap?)? = null,
     modifier: Modifier = Modifier
 ) {
     if (pageCount <= 1) return
@@ -60,6 +69,15 @@ fun FastScrollbar(
     var isDragging by remember { mutableStateOf(false) }
     var dragProgress by remember { mutableFloatStateOf(0f) }
     var lastHapticPage by remember { mutableIntStateOf(currentPage) }
+    var liveThumbnail by remember { mutableStateOf<Bitmap?>(null) }
+
+    LaunchedEffect(isDragging, lastHapticPage) {
+        if (isDragging && renderThumbnail != null) {
+            liveThumbnail = renderThumbnail(lastHapticPage, 0.45f)
+        } else if (!isDragging) {
+            liveThumbnail = null
+        }
+    }
 
     // Auto fade bubble after drag ends
     LaunchedEffect(isDragging) {
@@ -144,7 +162,7 @@ fun FastScrollbar(
                     .background(if (isDragging) colors.accent else colors.textSecondary.copy(alpha = 0.6f))
             )
 
-            // Floating page bubble during drag
+            // Floating page bubble with live thumbnail preview during drag
             AnimatedVisibility(
                 visible = isDragging,
                 enter = fadeIn(),
@@ -153,26 +171,39 @@ fun FastScrollbar(
                     .align(Alignment.TopEnd)
                     .offset {
                         IntOffset(
-                            x = -with(density) { 56.dp.roundToPx() },
-                            y = (thumbYOffsetPx - with(density) { 8.dp.roundToPx() }).roundToInt()
+                            x = -with(density) { (if (liveThumbnail != null) 92.dp else 60.dp).roundToPx() },
+                            y = (thumbYOffsetPx - with(density) { (if (liveThumbnail != null) 54.dp else 12.dp).roundToPx() }).roundToInt()
+                                .coerceIn(0, (availableHeightPx - with(density) { 120.dp.roundToPx() }).roundToInt().coerceAtLeast(0))
                         )
                     }
             ) {
-                Box(
+                Column(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
-                        .background(colors.surfaceVariant)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(colors.surface)
                         .border(
-                            width = AppSpacing.dividerThickness,
+                            width = 1.dp,
                             color = colors.divider,
-                            shape = RoundedCornerShape(AppSpacing.chipCornerRadius)
+                            shape = RoundedCornerShape(12.dp)
                         )
-                        .padding(horizontal = AppSpacing.paddingSmall, vertical = 4.dp),
-                    contentAlignment = Alignment.Center
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    if (liveThumbnail != null) {
+                        Image(
+                            bitmap = liveThumbnail!!.asImageBitmap(),
+                            contentDescription = "Page ${lastHapticPage + 1}",
+                            modifier = Modifier
+                                .size(width = 68.dp, height = 90.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .border(0.5.dp, colors.divider.copy(alpha = 0.5f), RoundedCornerShape(6.dp)),
+                            contentScale = ContentScale.Fit
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
                     Text(
-                        text = "${(currentProgress * (pageCount - 1)).roundToInt() + 1} / $pageCount",
-                        style = typography.label,
+                        text = "${lastHapticPage + 1} / $pageCount",
+                        style = typography.caption.copy(fontWeight = FontWeight.Bold),
                         color = colors.textPrimary
                     )
                 }

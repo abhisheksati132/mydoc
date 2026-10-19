@@ -29,9 +29,12 @@ import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FileOpen
+import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -91,6 +94,8 @@ fun ToolRunnerSheet(
     val typography = LocalAppTypography.current
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
+
+    var showVisualPageOrganizer by remember { mutableStateOf(false) }
 
     // SAF Document Pickers
     val singlePickerLauncher = rememberLauncherForActivityResult(
@@ -210,6 +215,8 @@ fun ToolRunnerSheet(
                     ToolOptionsSection(
                         tool = tool,
                         options = toolOptions,
+                        uris = inputUris,
+                        onOpenOrganizer = { showVisualPageOrganizer = true },
                         onOptionsChange = { transform -> viewModel.updateOptions(transform) }
                     )
 
@@ -328,6 +335,17 @@ fun ToolRunnerSheet(
             }
         }
     }
+
+    if (showVisualPageOrganizer && inputUris.isNotEmpty()) {
+        com.abhisheksati.mydoc.tools.ui.components.ReorderPagesSheet(
+            pdfUri = inputUris.first(),
+            onDismiss = { showVisualPageOrganizer = false },
+            onApplyOrder = { newOrder ->
+                showVisualPageOrganizer = false
+                viewModel.updateOptions { it.copy(reorderedPageIndices = newOrder) }
+            }
+        )
+    }
 }
 
 @Composable
@@ -437,6 +455,8 @@ private fun InputFilesSection(
 private fun ToolOptionsSection(
     tool: PdfTool,
     options: com.abhisheksati.mydoc.tools.model.ToolOptions,
+    uris: List<Uri>,
+    onOpenOrganizer: () -> Unit,
     onOptionsChange: ((com.abhisheksati.mydoc.tools.model.ToolOptions) -> com.abhisheksati.mydoc.tools.model.ToolOptions) -> Unit
 ) {
     val colors = LocalAppColors.current
@@ -607,6 +627,38 @@ private fun ToolOptionsSection(
                             onClick = { onOptionsChange { it.copy(pageSizeFormat = fmt) } }
                         )
                     }
+                }
+            }
+
+            PdfTool.REORDER_PAGES -> {
+                Text(text = "VISUAL PAGE ORGANIZER", style = typography.label, color = colors.textSecondary)
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                if (uris.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+                            .background(colors.accent)
+                            .clickable { onOpenOrganizer() }
+                            .padding(vertical = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.GridView, contentDescription = null, tint = Color.Black)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Open Visual Page Organizer", style = typography.body, color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    if (options.reorderedPageIndices.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Organized order: ${options.reorderedPageIndices.map { it + 1 }.joinToString(", ")}",
+                            style = typography.caption,
+                            color = colors.accent
+                        )
+                    }
+                } else {
+                    Text("Select a PDF document above to view and organize its pages.", style = typography.caption, color = colors.textSecondary)
                 }
             }
 

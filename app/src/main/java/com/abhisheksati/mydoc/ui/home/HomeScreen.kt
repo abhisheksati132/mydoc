@@ -203,6 +203,18 @@ fun HomeScreen(
     var showClearRecentsDialog by remember { mutableStateOf(false) }
     var selectedDocForDetails by remember { mutableStateOf<DocumentFile?>(null) }
 
+    val documentScanner = com.abhisheksati.mydoc.tools.scan.rememberDocumentScanner(
+        onPages = { uris ->
+            showCameraScanner = false
+            toolsViewModel.setInputUris(uris)
+            toolsViewModel.selectTool(PdfTool.SCAN_TO_PDF)
+        },
+        onError = {
+            // Fallback to built-in camera sheet if GMS scanner is unavailable
+            showCameraScanner = true
+        }
+    )
+
     // Navigate back to FILES tab when pressing Back on secondary tabs
     BackHandler(enabled = currentTab != HomeTab.FILES && !showCameraScanner && !showSignaturePad && selectedDocForDetails == null && !showClearRecentsDialog && !(fileManagerUiState?.isTrashOpen == true)) {
         viewModel.selectTab(HomeTab.FILES)
@@ -287,7 +299,7 @@ fun HomeScreen(
                     FloatingActionButton(
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            showCameraScanner = true
+                            documentScanner()
                         },
                         shape = CircleShape,
                         containerColor = colors.surfaceVariant,
@@ -390,7 +402,7 @@ fun HomeScreen(
                         viewModel = toolsViewModel,
                         onToolClick = { tool ->
                             if (tool == PdfTool.SCAN_TO_PDF) {
-                                showCameraScanner = true
+                                documentScanner()
                             } else {
                                 toolsViewModel.selectTool(tool)
                             }

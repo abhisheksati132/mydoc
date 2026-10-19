@@ -392,9 +392,11 @@ fun PhotoEditorScreen(
                 // Tool Options Tray
                 Surface(
                     color = Color(0xFF0A0A0C),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
                 ) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 12.dp)) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 8.dp)) {
                         // Dynamic Controls depending on active tool
                         when (activeTool) {
                             EditorTool.CROP -> {
