@@ -39,6 +39,8 @@ class MyDocApp : Application(), ImageLoaderFactory {
     lateinit var wifiServerManager: com.abhisheksati.mydoc.network.WifiServerManager
         private set
 
+    val applicationScope = CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.Default)
+
     override fun onCreate() {
         super.onCreate()
 
