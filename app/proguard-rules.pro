@@ -29,4 +29,10 @@
 -keep class android.print.OpenLayoutResultCallback { *; }
 -keep class android.print.OpenWriteResultCallback { *; }
 
+# PDFBox Android (vector PDF forms, watermarks, stamps & flattening)
+-keep class com.tom_roush.pdfbox.** { *; }
+-dontwarn com.gemalto.jp2.**
+-dontwarn org.bouncycastle.**
+-dontwarn java.awt.**
+
 
