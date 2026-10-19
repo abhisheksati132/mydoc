@@ -617,6 +617,7 @@ private fun PageItemView(
     val (origWidth, origHeight) = remember(pageIndex) { viewModel.getPageSize(pageIndex) }
     val aspectRatio = if (origHeight > 0) origWidth / origHeight else 0.707f
 
+    @Suppress("ProduceStateDoesNotAssignValue")
     val bitmap by produceState<Bitmap?>(initialValue = null, pageIndex, readingMode) {
         // Step 1: Render low-resolution preview immediately for instant feedback
         val lowRes = withContext(Dispatchers.Default) {
@@ -639,7 +640,7 @@ private fun PageItemView(
         ReadingMode.NORMAL -> Color(0xFFFAFAFC)
     }
 
-    BoxWithConstraints(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(aspectRatio)

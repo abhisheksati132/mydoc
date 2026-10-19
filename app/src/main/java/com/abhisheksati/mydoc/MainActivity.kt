@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -143,7 +144,8 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            val themeMode by app.settingsRepository.themeMode.collectAsState()
+            val themeMode by app.settingsRepository.themeMode.collectAsStateWithLifecycle()
+            val isBiometricLockEnabled by app.settingsRepository.isBiometricLockEnabled.collectAsStateWithLifecycle()
             val isDark = when (themeMode) {
                 AppThemeMode.AMOLED_DARK -> true
                 AppThemeMode.LIGHT -> false
@@ -169,14 +171,14 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-            LaunchedEffect(isAppUnlocked) {
-                if (!isAppUnlocked && app.settingsRepository.isBiometricLockEnabled.value) {
+            LaunchedEffect(isAppUnlocked, isBiometricLockEnabled) {
+                if (!isAppUnlocked && isBiometricLockEnabled) {
                     attemptUnlock()
                 }
             }
 
             AppDesignSystemTheme(darkTheme = isDark) {
-                val selectedTool by toolsViewModel.selectedTool.collectAsState()
+                val selectedTool by toolsViewModel.selectedTool.collectAsStateWithLifecycle()
 
                 // Intercept back presses smoothly so the app never exits abruptly
                 BackHandler(enabled = isDesignSystemPreviewOpen) {
@@ -202,7 +204,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 val activeScreen: ActiveScreen = when {
-                    !isAppUnlocked && app.settingsRepository.isBiometricLockEnabled.value -> ActiveScreen.Lock
+                    !isAppUnlocked && isBiometricLockEnabled -> ActiveScreen.Lock
                     isDesignSystemPreviewOpen -> ActiveScreen.DesignSystemPreview
                     isSettingsOpen -> ActiveScreen.Settings
                     activeMediaItem != null -> {

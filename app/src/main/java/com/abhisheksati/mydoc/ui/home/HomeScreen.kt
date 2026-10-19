@@ -93,6 +93,7 @@ import androidx.compose.runtime.Composable
 
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -175,16 +176,16 @@ fun HomeScreen(
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp
 
-    val currentTab by viewModel.currentTab.collectAsState()
+    val currentTab by viewModel.currentTab.collectAsStateWithLifecycle()
     val pagerState = rememberPagerState(
-        initialPage = viewModel.currentTab.value.ordinal,
+        initialPage = currentTab.ordinal,
         pageCount = { HomeTab.entries.size }
     )
 
     // Synchronize pager swipe to viewModel
     LaunchedEffect(pagerState.currentPage) {
         val tab = HomeTab.entries.getOrNull(pagerState.currentPage) ?: HomeTab.FILES
-        if (tab != viewModel.currentTab.value) {
+        if (tab != currentTab) {
             viewModel.selectTab(tab)
         }
     }

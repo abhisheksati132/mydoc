@@ -126,6 +126,7 @@ fun PhotoViewerScreen(
     }
 
     // Query EXIF on-demand for current photo
+    @Suppress("ProduceStateDoesNotAssignValue")
     val currentExif by produceState<ExifMetadata?>(initialValue = null, currentItem.uri) {
         value = mediaRepository.extractExif(currentItem.uri)
     }

@@ -82,6 +82,7 @@ fun ThumbnailStrip(
             ) {
                 items(pageCount) { pageIndex ->
                     val isSelected = pageIndex == currentPage
+                    @Suppress("ProduceStateDoesNotAssignValue")
                     val thumbnailBitmap by produceState<Bitmap?>(initialValue = null, pageIndex) {
                         value = withContext(Dispatchers.Default) {
                             renderThumbnail(pageIndex, 0.2f)
