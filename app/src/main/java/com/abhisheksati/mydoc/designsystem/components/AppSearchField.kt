@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.designsystem.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -18,7 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
+import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
+import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 
 @Composable
 fun AppSearchField(
@@ -26,20 +29,23 @@ fun AppSearchField(
     onQueryChanged: (String) -> Unit,
     placeholder: String = "Search documents",
     modifier: Modifier = Modifier,
-    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(16.dp)
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(24.dp)
 ) {
-    val colors = AppTheme.colors
-    val typography = AppTheme.typography
+    val colors = LocalAppColors.current
+    val typography = LocalAppTypography.current
+    val isOled = colors.background == DarkAppColors.background
 
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChanged,
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = AppSpacing.minTouchTarget)
+            .heightIn(min = 48.dp)
             .border(
-                width = AppSpacing.dividerThickness,
-                color = colors.divider,
+                BorderStroke(
+                    0.8.dp,
+                    if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)
+                ),
                 shape = shape
             ),
         placeholder = {
@@ -53,7 +59,7 @@ fun AppSearchField(
             Icon(
                 imageVector = Icons.Outlined.Search,
                 contentDescription = null,
-                tint = colors.textSecondary,
+                tint = if (query.isNotEmpty()) colors.accent else colors.textSecondary,
                 modifier = Modifier.size(20.dp)
             )
         },
@@ -61,7 +67,7 @@ fun AppSearchField(
             if (query.isNotEmpty()) {
                 IconButton(
                     onClick = { onQueryChanged("") },
-                    modifier = Modifier.size(AppSpacing.minTouchTarget)
+                    modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
@@ -76,8 +82,8 @@ fun AppSearchField(
         singleLine = true,
         shape = shape,
         colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = colors.surfaceVariant,
-            unfocusedContainerColor = colors.surfaceVariant,
+            focusedContainerColor = if (isOled) Color(0xFF141418) else colors.surfaceVariant.copy(alpha = 0.7f),
+            unfocusedContainerColor = if (isOled) Color(0xFF101014) else colors.surfaceVariant.copy(alpha = 0.5f),
             focusedBorderColor = colors.accent,
             unfocusedBorderColor = Color.Transparent,
             cursorColor = colors.accent

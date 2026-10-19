@@ -1,6 +1,8 @@
 package com.abhisheksati.mydoc.designsystem.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,7 +34,7 @@ fun DocumentFormatBadge(
     val isDark = colors.background == DarkAppColors.background
     val tint = DocumentFormatColors.getTint(extension)
     val containerColor = DocumentFormatColors.getContainer(extension, isDark)
-    val badgeShape = RoundedCornerShape(10.dp)
+    val badgeShape = RoundedCornerShape(12.dp)
 
     val label = when (extension.lowercase()) {
         "pdf" -> "PDF"
@@ -54,7 +56,14 @@ fun DocumentFormatBadge(
         modifier = modifier
             .size(size)
             .clip(badgeShape)
-            .background(containerColor),
+            .background(containerColor)
+            .border(
+                BorderStroke(
+                    0.75.dp,
+                    tint.copy(alpha = if (isDark) 0.35f else 0.25f)
+                ),
+                badgeShape
+            ),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -63,6 +72,7 @@ fun DocumentFormatBadge(
             fontSize = if (label.length > 3) 9.sp else 11.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = InterFontFamily,
+            letterSpacing = 0.5.sp,
             maxLines = 1
         )
     }

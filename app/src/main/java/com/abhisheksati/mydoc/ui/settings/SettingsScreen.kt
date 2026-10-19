@@ -15,6 +15,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -217,78 +219,65 @@ fun SettingsScreen(
                 .padding(bottom = 36.dp)
         ) {
             // HERO / TELEMETRY BANNER (Nothing OS Hardware Aesthetic)
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                shape = RoundedCornerShape(20.dp),
-                color = if (isOled) Color(0xFF0A0A0C) else colors.surface,
-                border = BorderStroke(1.dp, if (isOled) Color(0xFF222222) else colors.divider)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
+            SettingsDoubleBezelCard {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(colors.accent.copy(alpha = 0.15f))
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Tune,
-                                    contentDescription = null,
-                                    tint = colors.accent,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = "mydoc CORE",
-                                    style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp, letterSpacing = 0.5.sp),
-                                    color = colors.textPrimary
-                                )
-                                Text(
-                                    text = "v${updateManager.currentVersionName}  •  Supercharged",
-                                    style = typography.caption.copy(fontSize = 11.sp, fontWeight = FontWeight.Medium),
-                                    color = colors.accent
-                                )
-                            }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(colors.accent.copy(alpha = 0.15f))
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Tune,
+                                contentDescription = null,
+                                tint = colors.accent,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "mydoc CORE",
+                                style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp, letterSpacing = 0.5.sp),
+                                color = colors.textPrimary
+                            )
+                            Text(
+                                text = "v${updateManager.currentVersionName}  •  Supercharged",
+                                style = typography.caption.copy(fontSize = 11.sp, fontWeight = FontWeight.Medium),
+                                color = colors.accent
+                            )
                         }
                     }
+                }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                    // Live hardware telemetry pills
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        DiagnosticChip(
-                            label = "CPU ARCH",
-                            value = diagnostics.abiArchitecture,
-                            modifier = Modifier.weight(1f)
-                        )
-                        DiagnosticChip(
-                            label = "JVM HEAP",
-                            value = "${diagnostics.jvmHeapUsedMb} MB",
-                            modifier = Modifier.weight(1f)
-                        )
-                        DiagnosticChip(
-                            label = "STORAGE",
-                            value = "${diagnostics.availableStorageMb / 1024} GB",
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
+                // Live hardware telemetry pills
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    DiagnosticChip(
+                        label = "CPU ARCH",
+                        value = diagnostics.abiArchitecture,
+                        modifier = Modifier.weight(1f)
+                    )
+                    DiagnosticChip(
+                        label = "JVM HEAP",
+                        value = "${diagnostics.jvmHeapUsedMb} MB",
+                        modifier = Modifier.weight(1f)
+                    )
+                    DiagnosticChip(
+                        label = "STORAGE",
+                        value = "${diagnostics.availableStorageMb / 1024} GB",
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
 
@@ -296,18 +285,7 @@ fun SettingsScreen(
 
             // APPEARANCE & STARTUP
             AppSectionHeader(title = "APPEARANCE & STARTUP")
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = colors.surface
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp)
-                ) {
+            SettingsDoubleBezelCard {
                     Text(
                         text = "App Theme",
                         style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
@@ -441,24 +419,15 @@ fun SettingsScreen(
                             )
                         }
                     }
-                }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
             // TOUCH & HAPTICS
             AppSectionHeader(title = "TOUCH & HAPTICS")
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = colors.surface
-            ) {
+            SettingsDoubleBezelCard {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -494,18 +463,7 @@ fun SettingsScreen(
 
             // READER & PLAYBACK ENGINE
             AppSectionHeader(title = "READER & PLAYBACK ENGINE")
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = colors.surface
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp)
-                ) {
+            SettingsDoubleBezelCard {
                     Text(
                         text = "Default reading mode",
                         style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
@@ -673,143 +631,192 @@ fun SettingsScreen(
                             )
                         )
                     }
-                }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
             // ADVANCED OFFICE ENGINE (LIBREOFFICE CORE)
             AppSectionHeader(title = "OFFICE ENGINE (LIBREOFFICE)")
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = colors.surface,
-                border = BorderStroke(1.dp, if (isOled) Color(0xFF222222) else colors.divider)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp)
+            SettingsDoubleBezelCard {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(colors.accent.copy(alpha = 0.15f))
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.Article,
-                                    contentDescription = null,
-                                    tint = colors.accent,
-                                    modifier = Modifier.size(20.dp)
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(colors.accent.copy(alpha = 0.15f))
+                                .border(
+                                    BorderStroke(0.75.dp, colors.accent.copy(alpha = 0.35f)),
+                                    RoundedCornerShape(12.dp)
                                 )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Outlined.Article,
+                                contentDescription = null,
+                                tint = colors.accent,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     text = "LibreOffice Engine",
                                     style = typography.body.copy(fontWeight = FontWeight.Bold),
                                     color = colors.textPrimary
                                 )
-                                Text(
-                                    text = when (loEngineStatus) {
-                                        is EngineStatus.Ready -> "Installed"
-                                        is EngineStatus.Downloading -> "Downloading..."
-                                        is EngineStatus.Extracting -> "Installing..."
-                                        else -> "Desktop engine for office docs"
-                                    },
-                                    style = typography.caption.copy(fontSize = 11.sp),
-                                    color = colors.textSecondary
-                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                val isReady = loEngineStatus is EngineStatus.Ready
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(999.dp))
+                                        .background(if (isReady) Color(0x2210B981) else Color(0x223B82F6))
+                                        .border(
+                                            BorderStroke(0.6.dp, if (isReady) Color(0x4410B981) else Color(0x443B82F6)),
+                                            RoundedCornerShape(999.dp)
+                                        )
+                                        .padding(horizontal = 7.dp, vertical = 2.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(5.dp)
+                                            .clip(CircleShape)
+                                            .background(if (isReady) Color(0xFF10B981) else Color(0xFF3B82F6))
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = if (isReady) "HD READY" else "OPTIONAL",
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.5.sp,
+                                        color = if (isReady) Color(0xFF10B981) else Color(0xFF3B82F6)
+                                    )
+                                }
                             }
+                            Text(
+                                text = when (loEngineStatus) {
+                                    is EngineStatus.Ready -> "Installed • Desktop fidelity office viewer"
+                                    is EngineStatus.Downloading -> "Downloading engine assets..."
+                                    is EngineStatus.Extracting -> "Installing native components..."
+                                    else -> "Optional desktop rendering engine for PPT/DOC/XLS"
+                                },
+                                style = typography.caption.copy(fontSize = 11.sp),
+                                color = colors.textSecondary
+                            )
                         }
+                    }
 
-                        // Just download button if not there, and only delete button if there
-                        when (val st = loEngineStatus) {
-                            is EngineStatus.Ready -> {
-                                OutlinedButton(
-                                    onClick = { showDeleteEngineDialog = true },
-                                    shape = RoundedCornerShape(10.dp),
-                                    border = BorderStroke(1.dp, Color(0xFFEF5350).copy(alpha = 0.5f))
+                    // Simple button-in-button CTA
+                    when (val st = loEngineStatus) {
+                        is EngineStatus.Ready -> {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(999.dp))
+                                    .background(Color(0xFFEF5350).copy(alpha = 0.12f))
+                                    .border(
+                                        BorderStroke(0.75.dp, Color(0xFFEF5350).copy(alpha = 0.4f)),
+                                        RoundedCornerShape(999.dp)
+                                    )
+                                    .clickable { showDeleteEngineDialog = true }
+                                    .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp)
+                            ) {
+                                Text(
+                                    text = "Delete",
+                                    color = Color(0xFFEF5350),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .size(26.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFEF5350).copy(alpha = 0.22f))
                                 ) {
                                     Icon(
                                         imageVector = Icons.Outlined.Delete,
                                         contentDescription = null,
                                         tint = Color(0xFFEF5350),
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "Delete",
-                                        color = Color(0xFFEF5350),
-                                        fontSize = 12.sp
+                                        modifier = Modifier.size(14.dp)
                                     )
                                 }
                             }
-                            is EngineStatus.Downloading -> {
-                                Text(
-                                    text = "${st.progressPercent}%",
-                                    style = typography.caption.copy(fontWeight = FontWeight.Bold),
-                                    color = colors.accent
-                                )
-                            }
-                            is EngineStatus.Extracting -> {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    color = colors.accent,
-                                    strokeWidth = 2.dp
-                                )
-                            }
-                            else -> {
-                                Button(
-                                    onClick = {
+                        }
+                        is EngineStatus.Downloading -> {
+                            Text(
+                                text = "${st.progressPercent}%",
+                                style = typography.caption.copy(fontWeight = FontWeight.Bold),
+                                color = colors.accent
+                            )
+                        }
+                        is EngineStatus.Extracting -> {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = colors.accent,
+                                strokeWidth = 2.dp
+                            )
+                        }
+                        else -> {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(999.dp))
+                                    .background(colors.accent)
+                                    .clickable {
                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                         loEngineManager.downloadAndInstall()
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
-                                    shape = RoundedCornerShape(10.dp)
+                                    }
+                                    .padding(start = 14.dp, end = 5.dp, top = 5.dp, bottom = 5.dp)
+                            ) {
+                                Text(
+                                    text = "Download",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isOled) Color(0xFF000000) else Color.White
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .size(26.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isOled) Color(0x33000000) else Color(0x33FFFFFF))
                                 ) {
                                     Icon(
                                         imageVector = Icons.Outlined.CloudDownload,
                                         contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "Download",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp
+                                        tint = if (isOled) Color(0xFF000000) else Color.White,
+                                        modifier = Modifier.size(15.dp)
                                     )
                                 }
                             }
                         }
                     }
+                }
 
-                    if (loEngineStatus is EngineStatus.Downloading) {
-                        val dl = loEngineStatus as EngineStatus.Downloading
-                        Spacer(modifier = Modifier.height(10.dp))
-                        LinearProgressIndicator(
-                            progress = { dl.progressPercent / 100f },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(4.dp)
-                                .clip(RoundedCornerShape(2.dp)),
-                            color = colors.accent,
-                            trackColor = colors.accent.copy(alpha = 0.2f)
-                        )
-                    }
+                if (loEngineStatus is EngineStatus.Downloading) {
+                    val dl = loEngineStatus as EngineStatus.Downloading
+                    Spacer(modifier = Modifier.height(10.dp))
+                    LinearProgressIndicator(
+                        progress = { dl.progressPercent / 100f },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp)),
+                        color = colors.accent,
+                        trackColor = colors.accent.copy(alpha = 0.2f)
+                    )
                 }
             }
 
@@ -826,14 +833,14 @@ fun SettingsScreen(
                     title = {
                         Text(
                             text = "Delete LibreOffice Engine?",
-                            style = typography.title,
+                            style = typography.title.copy(fontWeight = FontWeight.Bold),
                             color = colors.textPrimary
                         )
                     },
                     text = {
                         Text(
                             text = "This will delete the downloaded engine files and free up storage. You can download it again anytime.",
-                            style = typography.caption,
+                            style = typography.caption.copy(lineHeight = 18.sp),
                             color = colors.textSecondary
                         )
                     },
@@ -868,18 +875,7 @@ fun SettingsScreen(
 
             // PRIVACY & SECURITY
             AppSectionHeader(title = "PRIVACY & SECURITY")
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = colors.surface
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp)
-                ) {
+            SettingsDoubleBezelCard {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -950,25 +946,13 @@ fun SettingsScreen(
                             )
                         )
                     }
-                }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
             // STORAGE & OPTIMIZER
             AppSectionHeader(title = "STORAGE & OPTIMIZER")
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = colors.surface
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp)
-                ) {
+            SettingsDoubleBezelCard {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -1063,70 +1047,57 @@ fun SettingsScreen(
                             Text("Deep Clean", fontWeight = FontWeight.Bold)
                         }
                     }
-                }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
             // SYSTEM & HARDWARE DIAGNOSTICS ("ENGINE ROOM")
             AppSectionHeader(title = "SYSTEM & DIAGNOSTICS")
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = colors.surface
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp)
+            SettingsDoubleBezelCard {
+                DiagnosticRow(label = "Device", value = diagnostics.deviceName)
+                HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 8.dp))
+                DiagnosticRow(label = "Android Version", value = "${diagnostics.androidVersion} (API ${diagnostics.apiLevel})")
+                HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 8.dp))
+                DiagnosticRow(label = "Processor ABI", value = diagnostics.abiArchitecture)
+                HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 8.dp))
+                DiagnosticRow(label = "Allocated JVM Heap", value = "${diagnostics.jvmHeapUsedMb} MB / ${diagnostics.jvmHeapMaxMb} MB")
+                HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 8.dp))
+                DiagnosticRow(label = "Free Internal Storage", value = "${diagnostics.availableStorageMb / 1024} GB free")
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    DiagnosticRow(label = "Device", value = diagnostics.deviceName)
-                    HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 8.dp))
-                    DiagnosticRow(label = "Android Version", value = "${diagnostics.androidVersion} (API ${diagnostics.apiLevel})")
-                    HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 8.dp))
-                    DiagnosticRow(label = "Processor ABI", value = diagnostics.abiArchitecture)
-                    HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 8.dp))
-                    DiagnosticRow(label = "Allocated JVM Heap", value = "${diagnostics.jvmHeapUsedMb} MB / ${diagnostics.jvmHeapMaxMb} MB")
-                    HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 8.dp))
-                    DiagnosticRow(label = "Free Internal Storage", value = "${diagnostics.availableStorageMb / 1024} GB free")
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    OutlinedButton(
+                        onClick = {
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                        },
+                        shape = RoundedCornerShape(999.dp),
+                        border = BorderStroke(0.8.dp, colors.divider),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary),
+                        modifier = Modifier.weight(1f)
                     ) {
-                        OutlinedButton(
-                            onClick = {
-                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                    data = Uri.fromParts("package", context.packageName, null)
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
-                                context.startActivity(intent)
-                            },
-                            shape = RoundedCornerShape(10.dp),
-                            border = BorderStroke(1.dp, colors.divider),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.AutoMirrored.Outlined.Launch, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("App Info", fontSize = 12.sp)
-                        }
+                        Icon(Icons.AutoMirrored.Outlined.Launch, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("App Info", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
 
-                        OutlinedButton(
-                            onClick = onDesignSystemPreviewClick,
-                            shape = RoundedCornerShape(10.dp),
-                            border = BorderStroke(1.dp, colors.accent),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Outlined.DeveloperMode, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Design Lab", fontSize = 12.sp)
-                        }
+                    OutlinedButton(
+                        onClick = onDesignSystemPreviewClick,
+                        shape = RoundedCornerShape(999.dp),
+                        border = BorderStroke(0.8.dp, colors.accent),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Outlined.DeveloperMode, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Design Lab", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -1135,202 +1106,190 @@ fun SettingsScreen(
 
             // UPDATES
             AppSectionHeader(title = "UPDATES & GITHUB")
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = colors.surface
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp)
-                ) {
-                    when (val state = updateState) {
-                        is UpdateUiState.Idle -> {
+            SettingsDoubleBezelCard {
+                when (val state = updateState) {
+                    is UpdateUiState.Idle -> {
+                        Button(
+                            onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
+                            shape = RoundedCornerShape(999.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colors.accent,
+                                contentColor = Color.Black
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Check for updates", fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    is UpdateUiState.Checking -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = colors.accent
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "Checking GitHub Releases…",
+                                style = typography.body,
+                                color = colors.textSecondary
+                            )
+                        }
+                    }
+
+                    is UpdateUiState.NoUpdate -> {
+                        Column {
+                            Text(
+                                text = "mydoc is up to date (v${state.currentVersion}).",
+                                style = typography.body,
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row {
+                                OutlinedButton(
+                                    onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
+                                    shape = RoundedCornerShape(999.dp),
+                                    border = BorderStroke(0.8.dp, colors.divider),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
+                                ) {
+                                    Text("Check again", fontWeight = FontWeight.Medium)
+                                }
+                                if (state.latestRelease != null) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    OutlinedButton(
+                                        onClick = { scope.launch { updateManager.downloadAndInstall(state.latestRelease) } },
+                                        shape = RoundedCornerShape(999.dp),
+                                        border = BorderStroke(0.8.dp, colors.divider),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent)
+                                    ) {
+                                        Text("Reinstall APK", fontWeight = FontWeight.Medium)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    is UpdateUiState.UpdateAvailable -> {
+                        val release = state.release
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Outlined.SystemUpdate,
+                                    contentDescription = null,
+                                    tint = colors.accent
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Version ${release.versionName} available",
+                                    style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp),
+                                    color = colors.textPrimary
+                                )
+                            }
+
+                            if (release.releaseNotes.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = release.releaseNotes,
+                                    style = typography.body,
+                                    color = colors.textSecondary
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
                             Button(
-                                onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
-                                shape = RoundedCornerShape(10.dp),
+                                onClick = { scope.launch { updateManager.downloadAndInstall(release) } },
+                                shape = RoundedCornerShape(999.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = colors.accent,
                                     contentColor = Color.Black
                                 )
                             ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Refresh,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Check for updates", fontWeight = FontWeight.SemiBold)
+                                val sizeText = if (release.apkSizeBytes > 0) {
+                                    val mb = release.apkSizeBytes / (1024.0 * 1024.0)
+                                    String.format(Locale.US, " (%.1f MB)", mb)
+                                } else ""
+                                Text("Download & Install$sizeText", fontWeight = FontWeight.Bold)
                             }
                         }
+                    }
 
-                        is UpdateUiState.Checking -> {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp,
+                    is UpdateUiState.Downloading -> {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = "Downloading update: ${state.progressPercent}%",
+                                style = typography.body,
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LinearProgressIndicator(
+                                progress = { if (state.totalBytes > 0) state.downloadedBytes.toFloat() / state.totalBytes else 0f },
+                                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                                color = colors.accent,
+                                trackColor = colors.divider
+                            )
+                        }
+                    }
+
+                    is UpdateUiState.ReadyToInstall -> {
+                        Column {
+                            Text(
+                                text = "Download complete for v${state.release.versionName}.",
+                                style = typography.body,
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            if (!updateManager.installerHelper.canInstallUnknownApps()) {
+                                Text(
+                                    text = "Permission required: Android requires you to allow mydoc to install update APKs.",
+                                    style = typography.caption,
                                     color = colors.accent
                                 )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(
-                                    text = "Checking GitHub Releases…",
-                                    style = typography.body,
-                                    color = colors.textSecondary
-                                )
-                            }
-                        }
-
-                        is UpdateUiState.NoUpdate -> {
-                            Column {
-                                Text(
-                                    text = "mydoc is up to date (v${state.currentVersion}).",
-                                    style = typography.body,
-                                    color = colors.textPrimary
-                                )
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Row {
-                                    OutlinedButton(
-                                        onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
-                                        shape = RoundedCornerShape(10.dp),
-                                        border = BorderStroke(1.dp, colors.divider),
-                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
-                                    ) {
-                                        Text("Check again")
-                                    }
-                                    if (state.latestRelease != null) {
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        OutlinedButton(
-                                            onClick = { scope.launch { updateManager.downloadAndInstall(state.latestRelease) } },
-                                            shape = RoundedCornerShape(10.dp),
-                                            border = BorderStroke(1.dp, colors.divider),
-                                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent)
-                                        ) {
-                                            Text("Reinstall APK")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        is UpdateUiState.UpdateAvailable -> {
-                            val release = state.release
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.SystemUpdate,
-                                        contentDescription = null,
-                                        tint = colors.accent
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "Version ${release.versionName} available",
-                                        style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp),
-                                        color = colors.textPrimary
-                                    )
-                                }
-
-                                if (release.releaseNotes.isNotBlank()) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = release.releaseNotes,
-                                        style = typography.body,
-                                        color = colors.textSecondary
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                Button(
-                                    onClick = { scope.launch { updateManager.downloadAndInstall(release) } },
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = colors.accent,
-                                        contentColor = Color.Black
-                                    )
-                                ) {
-                                    val sizeText = if (release.apkSizeBytes > 0) {
-                                        val mb = release.apkSizeBytes / (1024.0 * 1024.0)
-                                        String.format(Locale.US, " (%.1f MB)", mb)
-                                    } else ""
-                                    Text("Download & Install$sizeText", fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-
-                        is UpdateUiState.Downloading -> {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = "Downloading update: ${state.progressPercent}%",
-                                    style = typography.body,
-                                    color = colors.textPrimary
-                                )
                                 Spacer(modifier = Modifier.height(8.dp))
-                                LinearProgressIndicator(
-                                    progress = { if (state.totalBytes > 0) state.downloadedBytes.toFloat() / state.totalBytes else 0f },
-                                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                                    color = colors.accent,
-                                    trackColor = colors.divider
-                                )
-                            }
-                        }
-
-                        is UpdateUiState.ReadyToInstall -> {
-                            Column {
-                                Text(
-                                    text = "Download complete for v${state.release.versionName}.",
-                                    style = typography.body,
-                                    color = colors.textPrimary
-                                )
-                                Spacer(modifier = Modifier.height(10.dp))
-
-                                if (!updateManager.installerHelper.canInstallUnknownApps()) {
-                                    Text(
-                                        text = "Permission required: Android requires you to allow mydoc to install update APKs.",
-                                        style = typography.caption,
-                                        color = colors.accent
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Button(
-                                        onClick = {
-                                            val intent = updateManager.installerHelper.createManageUnknownAppSourcesIntent()
-                                            context.startActivity(intent)
-                                        },
-                                        shape = RoundedCornerShape(10.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = colors.accent, contentColor = Color.Black)
-                                    ) {
-                                        Text("Grant Permission in Settings")
-                                    }
-                                } else {
-                                    Button(
-                                        onClick = { updateManager.installerHelper.installApk(state.apkFile) },
-                                        shape = RoundedCornerShape(10.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = colors.accent, contentColor = Color.Black)
-                                    ) {
-                                        Text("Install Update", fontWeight = FontWeight.Bold)
-                                    }
-                                }
-                            }
-                        }
-
-                        is UpdateUiState.Error -> {
-                            Column {
-                                Text(
-                                    text = state.message,
-                                    style = typography.body,
-                                    color = colors.error
-                                )
-                                Spacer(modifier = Modifier.height(10.dp))
-                                OutlinedButton(
-                                    onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
-                                    shape = RoundedCornerShape(10.dp),
-                                    border = BorderStroke(1.dp, colors.divider),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
+                                Button(
+                                    onClick = {
+                                        val intent = updateManager.installerHelper.createManageUnknownAppSourcesIntent()
+                                        context.startActivity(intent)
+                                    },
+                                    shape = RoundedCornerShape(999.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = colors.accent, contentColor = Color.Black)
                                 ) {
-                                    Text("Retry")
+                                    Text("Grant Permission in Settings", fontWeight = FontWeight.Bold)
                                 }
+                            } else {
+                                Button(
+                                    onClick = { updateManager.installerHelper.installApk(state.apkFile) },
+                                    shape = RoundedCornerShape(999.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = colors.accent, contentColor = Color.Black)
+                                ) {
+                                    Text("Install Update", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+
+                    is UpdateUiState.Error -> {
+                        Column {
+                            Text(
+                                text = state.message,
+                                style = typography.body,
+                                color = colors.error
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            OutlinedButton(
+                                onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
+                                shape = RoundedCornerShape(999.dp),
+                                border = BorderStroke(0.8.dp, colors.divider),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
+                            ) {
+                                Text("Retry", fontWeight = FontWeight.Medium)
                             }
                         }
                     }
@@ -1341,72 +1300,61 @@ fun SettingsScreen(
 
             // ABOUT
             AppSectionHeader(title = "ABOUT")
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = colors.surface
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp)
-                ) {
-                    Text(
-                        text = "mydoc",
-                        style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp),
-                        color = colors.textPrimary
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Installed version: ${updateManager.currentVersionName}  •  Apache 2.0  •  100% Offline & Private",
-                        style = typography.caption,
-                        color = colors.textSecondary
-                    )
+            SettingsDoubleBezelCard {
+                Text(
+                    text = "mydoc",
+                    style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp),
+                    color = colors.textPrimary
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Installed version: ${updateManager.currentVersionName}  •  Apache 2.0  •  100% Offline & Private",
+                    style = typography.caption,
+                    color = colors.textSecondary
+                )
 
-                    if (isLegacyDebugInstalled) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .border(
-                                    width = 1.dp,
-                                    color = colors.divider,
-                                    shape = RoundedCornerShape(10.dp)
-                                )
-                                .background(
-                                    color = colors.background,
-                                    shape = RoundedCornerShape(10.dp)
-                                )
-                                .padding(12.dp)
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Old Duplicate App Detected",
-                                    style = typography.body.copy(fontWeight = FontWeight.SemiBold),
-                                    color = colors.textPrimary
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "An old preview build is installed. Tap below to remove it.",
-                                    style = typography.caption,
-                                    color = colors.textSecondary
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Button(
-                                    onClick = {
-                                        val uninstallIntent = Intent(Intent.ACTION_DELETE).apply {
-                                            data = Uri.parse("package:com.abhisheksati.mydoc.debug")
-                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        }
-                                        context.startActivity(uninstallIntent)
-                                    },
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = colors.accent)
-                                ) {
-                                    Text("Uninstall Duplicate")
-                                }
+                if (isLegacyDebugInstalled) {
+                    val isOled = colors.background == DarkAppColors.background
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (isOled) Color(0xFF141418) else colors.surfaceVariant)
+                            .border(
+                                BorderStroke(
+                                    0.75.dp,
+                                    if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.6f)
+                                ),
+                                RoundedCornerShape(14.dp)
+                            )
+                            .padding(12.dp)
+                    ) {
+                        Column {
+                            Text(
+                                text = "Old Duplicate App Detected",
+                                style = typography.body.copy(fontWeight = FontWeight.SemiBold),
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "An old preview build is installed. Tap below to remove it.",
+                                style = typography.caption,
+                                color = colors.textSecondary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(
+                                onClick = {
+                                    val uninstallIntent = Intent(Intent.ACTION_DELETE).apply {
+                                        data = Uri.parse("package:com.abhisheksati.mydoc.debug")
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(uninstallIntent)
+                                },
+                                shape = RoundedCornerShape(999.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = colors.accent)
+                            ) {
+                                Text("Uninstall Duplicate", fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -1426,30 +1374,35 @@ private fun DiagnosticChip(
     val typography = LocalAppTypography.current
     val isOled = colors.background == DarkAppColors.background
 
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = if (isOled) Color(0xFF141418) else colors.surfaceVariant,
-        border = BorderStroke(1.dp, if (isOled) Color(0xFF242428) else colors.divider),
+    Box(
         modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (isOled) Color(0xFF141418) else colors.surfaceVariant)
+            .border(
+                BorderStroke(
+                    0.75.dp,
+                    if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.6f)
+                ),
+                RoundedCornerShape(14.dp)
+            )
+            .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
-        ) {
+        Column {
             Text(
                 text = label,
                 style = typography.caption.copy(
-                    fontSize = 10.sp,
+                    fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp
+                    letterSpacing = 0.8.sp
                 ),
-                color = colors.textSecondary
+                color = colors.accent
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = value,
                 style = typography.body.copy(
                     fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.Bold
                 ),
                 color = colors.textPrimary,
                 maxLines = 1
@@ -1481,5 +1434,51 @@ private fun DiagnosticRow(
             style = typography.body.copy(fontWeight = FontWeight.Medium, fontSize = 13.sp),
             color = colors.textPrimary
         )
+    }
+}
+
+/**
+ * Double-Bezel nested architecture card for all Settings sections (Taste Design System).
+ */
+@Composable
+private fun SettingsDoubleBezelCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val colors = LocalAppColors.current
+    val isOled = colors.background == DarkAppColors.background
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(if (isOled) Color(0x18FFFFFF) else colors.surfaceVariant.copy(alpha = 0.45f))
+            .border(
+                BorderStroke(
+                    0.75.dp,
+                    if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)
+                ),
+                RoundedCornerShape(22.dp)
+            )
+            .padding(4.5.dp)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(17.dp),
+            color = if (isOled) Color(0xFF090A0E) else colors.surface,
+            border = BorderStroke(
+                0.5.dp,
+                if (isOled) Color.White.copy(alpha = 0.04f) else Color.Transparent
+            ),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp)
+            ) {
+                content()
+            }
+        }
     }
 }

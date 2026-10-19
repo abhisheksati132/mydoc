@@ -21,6 +21,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -138,6 +140,7 @@ import androidx.core.content.FileProvider
 import com.abhisheksati.mydoc.data.local.StoragePermissionHelper
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppSearchField
+import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.ClipboardOperation
@@ -1184,61 +1187,126 @@ fun StorageVolumeSummary(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
+    val isOled = colors.background == DarkAppColors.background
 
     if (volumes.isEmpty()) return
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
         for (volume in volumes) {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = colors.surface),
+            val interactionSource = remember { MutableInteractionSource() }
+            val isPressed by interactionSource.collectIsPressedAsState()
+            val scale by animateFloatAsState(
+                targetValue = if (isPressed) 0.98f else 1f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                label = "volume_card_scale"
+            )
+
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .clickable { onVolumeClick(volume) }
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                    }
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(if (isOled) Color(0x18FFFFFF) else colors.surfaceVariant.copy(alpha = 0.45f))
+                    .border(
+                        BorderStroke(
+                            0.75.dp,
+                            if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)
+                        ),
+                        RoundedCornerShape(22.dp)
+                    )
+                    .padding(4.5.dp)
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Outlined.Storage,
-                                contentDescription = null,
-                                tint = colors.accent,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = volume.title,
-                                style = typography.title.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
-                                color = colors.textPrimary
-                            )
+                Surface(
+                    shape = RoundedCornerShape(17.dp),
+                    color = if (isOled) Color(0xFF090A0E) else colors.surface,
+                    border = BorderStroke(
+                        0.5.dp,
+                        if (isOled) Color.White.copy(alpha = 0.04f) else Color.Transparent
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(17.dp))
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null
+                        ) { onVolumeClick(volume) }
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(colors.accent.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Storage,
+                                        contentDescription = null,
+                                        tint = colors.accent,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = volume.title,
+                                        style = typography.title.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold),
+                                        color = colors.textPrimary
+                                    )
+                                    Text(
+                                        text = "${volume.formattedUsed} used of ${volume.formattedTotal}",
+                                        style = typography.caption.copy(fontSize = 11.sp),
+                                        color = colors.textSecondary
+                                    )
+                                }
+                            }
+
+                            // Eyebrow percentage badge
+                            val pct = (volume.usedRatio * 100).toInt().coerceIn(0, 100)
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(999.dp))
+                                    .background(colors.accent.copy(alpha = 0.14f))
+                                    .border(BorderStroke(0.6.dp, colors.accent.copy(alpha = 0.35f)), RoundedCornerShape(999.dp))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = "$pct%",
+                                    style = typography.caption.copy(
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.5.sp
+                                    ),
+                                    color = colors.accent
+                                )
+                            }
                         }
-                        Text(
-                            text = "${volume.formattedUsed} / ${volume.formattedTotal}",
-                            style = typography.caption.copy(fontSize = 12.sp),
-                            color = colors.textSecondary
+
+                        Spacer(modifier = Modifier.height(12.dp))
+                        LinearProgressIndicator(
+                            progress = { volume.usedRatio },
+                            color = colors.accent,
+                            trackColor = if (isOled) Color(0xFF1E2026) else colors.divider,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp))
                         )
                     }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LinearProgressIndicator(
-                        progress = { volume.usedRatio },
-                        color = colors.accent,
-                        trackColor = colors.divider,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                    )
                 }
             }
         }
@@ -1251,42 +1319,118 @@ fun StoragePermissionBanner(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
+    val isOled = colors.background == DarkAppColors.background
 
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = colors.accent.copy(alpha = 0.12f)),
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(colors.accent.copy(alpha = 0.08f))
+            .border(
+                BorderStroke(0.8.dp, colors.accent.copy(alpha = 0.25f)),
+                RoundedCornerShape(22.dp)
+            )
+            .padding(4.5.dp)
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Outlined.WarningAmber,
-                    contentDescription = null,
-                    tint = colors.accent,
-                    modifier = Modifier.size(22.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
+        Surface(
+            shape = RoundedCornerShape(17.dp),
+            color = if (isOled) Color(0xFF101116) else colors.surface,
+            border = BorderStroke(
+                0.5.dp,
+                if (isOled) Color.White.copy(alpha = 0.04f) else Color.Transparent
+            ),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Eyebrow tag
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(colors.accent.copy(alpha = 0.16f))
+                            .border(BorderStroke(0.6.dp, colors.accent.copy(alpha = 0.35f)), RoundedCornerShape(999.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(5.dp)
+                                    .clip(CircleShape)
+                                    .background(colors.accent)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = "ACCESS NEEDED",
+                                style = typography.caption.copy(
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.1.sp
+                                ),
+                                color = colors.accent
+                            )
+                        }
+                    }
+
+                    Icon(
+                        imageVector = Icons.Outlined.WarningAmber,
+                        contentDescription = null,
+                        tint = colors.accent,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Full Storage Access Recommended",
                     style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 14.sp),
                     color = colors.textPrimary
                 )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Grant All Files Access to browse and manage files across internal storage and SD cards without restrictions.",
-                style = typography.caption.copy(fontSize = 12.sp),
-                color = colors.textSecondary
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            Button(
-                onClick = onRequestPermission,
-                colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text("Grant Storage Access", fontSize = 12.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Grant All Files Access to browse and manage files across internal storage and SD cards without restrictions.",
+                    style = typography.caption.copy(fontSize = 12.sp),
+                    color = colors.textSecondary
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Button-in-Button CTA
+                Button(
+                    onClick = onRequestPermission,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.accent,
+                        contentColor = Color.Black
+                    ),
+                    shape = RoundedCornerShape(999.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "Grant Storage Access",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(26.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Outlined.ChevronRight,
+                                contentDescription = null,
+                                tint = Color.Black,
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
     }

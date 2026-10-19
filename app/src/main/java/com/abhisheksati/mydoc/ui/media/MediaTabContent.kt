@@ -32,6 +32,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -100,6 +103,7 @@ import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
 import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.MediaFilter
@@ -509,35 +513,62 @@ fun MediaTabContent(
                             MediaNavCategory(MediaFilter.VIDEOS, Icons.Outlined.Videocam, Color(0xFFE91E63), "Videos")
                         )
 
+                        val isOled = colors.background == DarkAppColors.background
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                                .padding(horizontal = 16.dp, vertical = 6.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             for (item in mediaCategories) {
                                 val isSelected = uiState.filter == item.filter
-                                Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = if (isSelected) item.color.copy(alpha = 0.2f) else colors.surface,
-                                    border = if (isSelected) BorderStroke(1.5.dp, item.color) else BorderStroke(1.dp, colors.divider),
+                                val interactionSource = remember { MutableInteractionSource() }
+                                val isPressed by interactionSource.collectIsPressedAsState()
+                                val pillScale by animateFloatAsState(
+                                    targetValue = if (isPressed) 0.94f else 1f,
+                                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                                    label = "media_pill_scale"
+                                )
+
+                                Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .clickable {
+                                        .graphicsLayer {
+                                            scaleX = pillScale
+                                            scaleY = pillScale
+                                        }
+                                        .clip(RoundedCornerShape(999.dp))
+                                        .background(
+                                            if (isSelected) item.color.copy(alpha = 0.16f)
+                                            else if (isOled) Color(0xFF141418)
+                                            else colors.surfaceVariant.copy(alpha = 0.5f)
+                                        )
+                                        .border(
+                                            BorderStroke(
+                                                0.8.dp,
+                                                if (isSelected) item.color.copy(alpha = 0.75f)
+                                                else if (isOled) Color.White.copy(alpha = 0.08f)
+                                                else colors.divider.copy(alpha = 0.6f)
+                                            ),
+                                            RoundedCornerShape(999.dp)
+                                        )
+                                        .clickable(
+                                            interactionSource = interactionSource,
+                                            indication = null
+                                        ) {
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             viewModel.setFilter(item.filter)
                                         }
+                                        .padding(horizontal = 14.dp, vertical = 7.dp)
                                 ) {
                                     Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Icon(
                                             imageVector = item.icon,
                                             contentDescription = item.label,
-                                            tint = if (isSelected) item.color else item.color.copy(alpha = 0.85f),
-                                            modifier = Modifier.size(16.dp)
+                                            tint = if (isSelected) item.color else colors.textSecondary,
+                                            modifier = Modifier.size(15.dp)
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
@@ -546,7 +577,7 @@ fun MediaTabContent(
                                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                                 fontSize = 12.sp
                                             ),
-                                            color = if (isSelected) colors.textPrimary else colors.textSecondary
+                                            color = if (isSelected) (if (isOled) Color.White else colors.textPrimary) else colors.textSecondary
                                         )
                                     }
                                 }
@@ -669,9 +700,13 @@ private fun MediaThumbnailItem(
     val typography = LocalAppTypography.current
     val colors = LocalAppColors.current
 
+    val isOled = colors.background == DarkAppColors.background
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
     val scale by animateFloatAsState(
-        targetValue = if (isSelected) 0.93f else 1f,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        targetValue = if (isSelected) 0.93f else if (isPressed) 0.96f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioMediumBouncy),
         label = "thumbScale"
     )
 
@@ -679,15 +714,22 @@ private fun MediaThumbnailItem(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .scale(scale)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF0D0D0D))
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (isOled) Color(0xFF0D0D0F) else colors.surfaceVariant)
             .border(
-                width = if (isSelected) 2.dp else 0.5.dp,
-                color = if (isSelected) colors.accent else Color(0xFF242424),
-                shape = RoundedCornerShape(8.dp)
+                BorderStroke(
+                    if (isSelected) 2.dp else 0.75.dp,
+                    if (isSelected) colors.accent else if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)
+                ),
+                RoundedCornerShape(14.dp)
             )
             .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null,
                 onClick = onClick,
                 onLongClick = onLongClick
             )
