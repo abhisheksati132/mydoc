@@ -36,9 +36,11 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -224,13 +226,20 @@ fun FileManagerScreen(
     // Undo Trash snackbar
     LaunchedEffect(uiState.lastTrashedItems) {
         if (uiState.lastTrashedItems.isNotEmpty()) {
-            val result = snackbarHostState.showSnackbar(
-                message = "Moved ${uiState.lastTrashedItems.size} items to Recycle Bin",
-                actionLabel = "UNDO",
-                duration = SnackbarDuration.Short
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                viewModel.undoLastTrash()
+            val count = uiState.lastTrashedItems.size
+            try {
+                val result = snackbarHostState.showSnackbar(
+                    message = if (count == 1) "Moved 1 item to Recycle Bin" else "Moved $count items to Recycle Bin",
+                    actionLabel = "UNDO",
+                    duration = SnackbarDuration.Short
+                )
+                if (result == SnackbarResult.ActionPerformed) {
+                    viewModel.undoLastTrash()
+                }
+            } finally {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                    viewModel.clearLastTrashedItems()
+                }
             }
         }
     }
@@ -253,7 +262,22 @@ fun FileManagerScreen(
         modifier = modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = colors.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .navigationBarsPadding()
+                    .padding(bottom = 76.dp, start = 16.dp, end = 16.dp)
+            ) { data ->
+                androidx.compose.material3.Snackbar(
+                    snackbarData = data,
+                    containerColor = Color(0xFF1E1E1E),
+                    contentColor = Color.White,
+                    actionColor = colors.accent,
+                    shape = RoundedCornerShape(AppSpacing.chipCornerRadius)
+                )
+            }
+        },
         topBar = {
             AnimatedContent(
                 targetState = uiState.isSelectionMode,

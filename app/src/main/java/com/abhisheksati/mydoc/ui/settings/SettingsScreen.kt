@@ -949,45 +949,28 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Installed version: ${updateManager.currentVersionName}  •  Apache 2.0  •  100% Offline & Private",
+                    text = "Version ${updateManager.currentVersionName}",
                     style = typography.caption,
                     color = colors.textSecondary
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                OutlinedButton(
+                    onClick = {
+                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.fromParts("package", context.packageName, null)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                    },
+                    shape = RoundedCornerShape(999.dp),
+                    border = BorderStroke(0.8.dp, colors.divider),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    OutlinedButton(
-                        onClick = {
-                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                data = Uri.fromParts("package", context.packageName, null)
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            context.startActivity(intent)
-                        },
-                        shape = RoundedCornerShape(999.dp),
-                        border = BorderStroke(0.8.dp, colors.divider),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.AutoMirrored.Outlined.Launch, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("App Info", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    }
-
-                    OutlinedButton(
-                        onClick = onDesignSystemPreviewClick,
-                        shape = RoundedCornerShape(999.dp),
-                        border = BorderStroke(0.8.dp, colors.accent),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Outlined.DeveloperMode, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Design Lab", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    }
+                    Icon(Icons.AutoMirrored.Outlined.Launch, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("App Info", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
 
                 if (isLegacyDebugInstalled) {

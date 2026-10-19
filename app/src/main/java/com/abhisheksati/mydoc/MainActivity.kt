@@ -330,6 +330,12 @@ class MainActivity : ComponentActivity() {
                                     items = if (screen.list.isNotEmpty()) screen.list else listOf(screen.item),
                                     initialIndex = initialIdx,
                                     mediaRepository = app.mediaRepository,
+                                    onDeletePhoto = { deletedItem ->
+                                        activeMediaList = activeMediaList.filter { it.uri != deletedItem.uri }
+                                        if (activeMediaList.isEmpty()) {
+                                            activeMediaItem = null
+                                        }
+                                    },
                                     onBackClick = {
                                         requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                                         activeMediaItem = null

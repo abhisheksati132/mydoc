@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -47,6 +48,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -59,13 +61,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.MyDocApp
+import com.abhisheksati.mydoc.designsystem.components.AppDialog
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.ExifMetadata
 import com.abhisheksati.mydoc.domain.model.MediaItem
 import com.abhisheksati.mydoc.domain.repository.MediaRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 @Composable
 fun PhotoViewerScreen(
@@ -73,6 +80,7 @@ fun PhotoViewerScreen(
     initialIndex: Int,
     mediaRepository: MediaRepository,
     onBackClick: () -> Unit,
+    onDeletePhoto: ((MediaItem) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     if (items.isEmpty()) return
@@ -81,13 +89,23 @@ fun PhotoViewerScreen(
     val typography = LocalAppTypography.current
     val coroutineScope = rememberCoroutineScope()
 
-    val safeInitialIndex = initialIndex.coerceIn(0, items.size - 1)
+    val photoList = remember(items) { mutableStateListOf(*items.toTypedArray()) }
+    if (photoList.isEmpty()) {
+        onBackClick()
+        return
+    }
+
+    val safeInitialIndex = initialIndex.coerceIn(0, (photoList.size - 1).coerceAtLeast(0))
     val pagerState = rememberPagerState(
         initialPage = safeInitialIndex,
-        pageCount = { items.size }
+        pageCount = { photoList.size }
     )
 
-    val currentItem = items.getOrNull(pagerState.currentPage) ?: items[0]
+    val currentItem = photoList.getOrNull(pagerState.currentPage.coerceIn(0, (photoList.size - 1).coerceAtLeast(0))) ?: photoList.firstOrNull()
+    if (currentItem == null) {
+        onBackClick()
+        return
+    }
 
     var areControlsVisible by remember { mutableStateOf(true) }
     var isInfoSheetOpen by remember { mutableStateOf(false) }
@@ -97,6 +115,7 @@ fun PhotoViewerScreen(
     var isSlideshowActive by remember { mutableStateOf(false) }
     var slideshowIntervalSec by remember { mutableIntStateOf(3) }
     var isEditorOpen by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var ocrExtractedText by remember { mutableStateOf<String?>(null) }
     var isOcrRunning by remember { mutableStateOf(false) }
     val ocrEngine = remember { com.abhisheksati.mydoc.ocr.OcrEngine(context) }
@@ -116,11 +135,11 @@ fun PhotoViewerScreen(
     }
 
     // Slideshow auto-advance timer
-    LaunchedEffect(isSlideshowActive, pagerState.currentPage, slideshowIntervalSec) {
-        if (isSlideshowActive) {
+    LaunchedEffect(isSlideshowActive, pagerState.currentPage, slideshowIntervalSec, photoList.size) {
+        if (isSlideshowActive && photoList.isNotEmpty()) {
             areControlsVisible = false
             delay(slideshowIntervalSec * 1000L)
-            val next = (pagerState.currentPage + 1) % items.size
+            val next = (pagerState.currentPage + 1) % photoList.size
             pagerState.animateScrollToPage(next)
         }
     }
@@ -142,24 +161,26 @@ fun PhotoViewerScreen(
         // Image Pager
         HorizontalPager(
             state = pagerState,
-            key = { items[it].uri.toString() },
+            key = { photoList.getOrNull(it)?.uri?.toString() ?: it.toString() },
             beyondViewportPageCount = 1,
             modifier = Modifier.fillMaxSize()
         ) { page ->
-            val item = items[page]
-            ZoomableImage(
-                item = item,
-                isFillScale = isFillScale,
-                displayRotation = if (page == pagerState.currentPage) rotationAngle else 0f,
-                onTap = {
-                    if (isSlideshowActive) {
-                        isSlideshowActive = false
-                        areControlsVisible = true
-                    } else {
-                        areControlsVisible = !areControlsVisible
+            val item = photoList.getOrNull(page)
+            if (item != null) {
+                ZoomableImage(
+                    item = item,
+                    isFillScale = isFillScale,
+                    displayRotation = if (page == pagerState.currentPage) rotationAngle else 0f,
+                    onTap = {
+                        if (isSlideshowActive) {
+                            isSlideshowActive = false
+                            areControlsVisible = true
+                        } else {
+                            areControlsVisible = !areControlsVisible
+                        }
                     }
-                }
-            )
+                )
+            }
         }
 
         // Top Toolbar Overlay
@@ -201,9 +222,9 @@ fun PhotoViewerScreen(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        if (items.size > 1) {
+                        if (photoList.size > 1) {
                             Text(
-                                text = "${pagerState.currentPage + 1} of ${items.size}",
+                                text = "${pagerState.currentPage + 1} of ${photoList.size}",
                                 style = typography.caption,
                                 color = Color(0xFFA0A0A5)
                             )
@@ -215,6 +236,15 @@ fun PhotoViewerScreen(
                             imageVector = Icons.Default.Info,
                             contentDescription = "Info",
                             tint = Color(0xFFEDEDED)
+                        )
+                    }
+
+                    // Delete Photo Button
+                    IconButton(onClick = { showDeleteConfirmDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Delete,
+                            contentDescription = "Delete photo",
+                            tint = Color(0xFFFF5252)
                         )
                     }
 
@@ -231,6 +261,20 @@ fun PhotoViewerScreen(
                             expanded = isMoreMenuOpen,
                             onDismissRequest = { isMoreMenuOpen = false }
                         ) {
+                            DropdownMenuItem(
+                                text = { Text("Move to Recycle Bin", color = Color(0xFFFF5252)) },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Delete,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFF5252)
+                                    )
+                                },
+                                onClick = {
+                                    isMoreMenuOpen = false
+                                    showDeleteConfirmDialog = true
+                                }
+                            )
                             DropdownMenuItem(
                                 text = { Text(if (isSlideshowActive) "Stop slideshow" else "Slideshow (3s)") },
                                 onClick = {
@@ -406,5 +450,50 @@ fun PhotoViewerScreen(
             isOpen = isInfoSheetOpen,
             onDismiss = { isInfoSheetOpen = false }
         )
+
+        // Delete Confirmation Dialog
+        if (showDeleteConfirmDialog) {
+            AppDialog(
+                isOpen = showDeleteConfirmDialog,
+                title = "Move to Recycle Bin?",
+                message = "Are you sure you want to move \"${currentItem.displayName}\" to the Recycle Bin?",
+                confirmLabel = "Move to Bin",
+                isDestructive = true,
+                onConfirm = {
+                    showDeleteConfirmDialog = false
+                    val itemToDelete = currentItem
+                    coroutineScope.launch {
+                        val app = context.applicationContext as? MyDocApp
+                        val file = itemToDelete.filePath?.let { File(it).takeIf { f -> f.exists() } }
+                        val success = withContext(Dispatchers.IO) {
+                            if (file != null && app != null) {
+                                app.storageRepository.moveToTrash(listOf(file)).isSuccess
+                            } else {
+                                try {
+                                    context.contentResolver.delete(itemToDelete.uri, null, null) > 0
+                                } catch (e: Exception) {
+                                    false
+                                }
+                            }
+                        }
+                        if (success) {
+                            Toast.makeText(context, "Photo moved to Recycle Bin", Toast.LENGTH_SHORT).show()
+                            onDeletePhoto?.invoke(itemToDelete)
+                            val idx = photoList.indexOf(itemToDelete)
+                            if (idx >= 0) {
+                                photoList.removeAt(idx)
+                            }
+                            if (photoList.isEmpty()) {
+                                onBackClick()
+                            }
+                        } else {
+                            Toast.makeText(context, "Failed to move photo to Recycle Bin", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                },
+                dismissLabel = "Cancel",
+                onDismiss = { showDeleteConfirmDialog = false }
+            )
+        }
     }
 }

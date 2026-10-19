@@ -419,6 +419,10 @@ class FileManagerViewModel(
         }
     }
 
+    fun clearLastTrashedItems() {
+        _uiState.update { it.copy(lastTrashedItems = emptyList()) }
+    }
+
     fun undoLastTrash() {
         val items = _uiState.value.lastTrashedItems
         if (items.isEmpty()) return

@@ -117,7 +117,8 @@ enum class FilterPreset(val displayName: String) {
 fun PhotoEditorScreen(
     item: MediaItem,
     onDismiss: () -> Unit,
-    onPhotoSaved: (File) -> Unit
+    onPhotoSaved: (File) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
@@ -258,22 +259,18 @@ fun PhotoEditorScreen(
         ColorMatrix(cm.array)
     }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
-    ) {
-        BackHandler { onDismiss() }
+    BackHandler { onDismiss() }
 
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = Color(0xFF000000)
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = Color(0xFF000000)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .navigationBarsPadding()
-            ) {
                 // Top Header (Cancel, Reset, Save)
                 Row(
                     modifier = Modifier
@@ -397,7 +394,7 @@ fun PhotoEditorScreen(
                     color = Color(0xFF0A0A0C),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 12.dp)) {
                         // Dynamic Controls depending on active tool
                         when (activeTool) {
                             EditorTool.CROP -> {
@@ -574,24 +571,34 @@ fun PhotoEditorScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(52.dp)
+                                .height(56.dp)
                                 .padding(horizontal = 8.dp),
                             horizontalArrangement = Arrangement.SpaceAround,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             EditorTool.entries.forEach { tool ->
                                 val isSelected = activeTool == tool
-                                IconButton(onClick = { activeTool = tool }) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { activeTool = tool }
+                                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
                                         Icon(
                                             imageVector = tool.icon,
                                             contentDescription = tool.title,
                                             tint = if (isSelected) colors.accent else Color(0xFFA0A0A5),
                                             modifier = Modifier.size(22.dp)
                                         )
+                                        Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = tool.title,
-                                            fontSize = 10.sp,
+                                            fontSize = 11.sp,
                                             color = if (isSelected) colors.accent else Color(0xFFA0A0A5),
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                         )
@@ -603,7 +610,6 @@ fun PhotoEditorScreen(
                 }
             }
         }
-    }
 }
 
 private fun createContrastMatrix(contrast: Float): android.graphics.ColorMatrix {

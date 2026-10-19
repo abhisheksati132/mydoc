@@ -36,7 +36,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -56,7 +58,9 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material.icons.outlined.ViewCarousel
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.DisposableEffect
@@ -272,7 +276,16 @@ fun PresentationViewerScreen(
     val isNativeEmpty = rawSlides.isEmpty() || (rawSlides.size == 1 && rawSlides.first().title == "Empty Presentation")
     val effectiveSlideCount = if (!isNativeEmpty) rawSlides.size else 0
     val pagerState = rememberPagerState(pageCount = { effectiveSlideCount })
+    val lazyListState = rememberLazyListState()
+    var isContinuousVertical by remember { mutableStateOf(false) }
     val effectiveSlides: List<PptxSlide> = if (!isNativeEmpty) rawSlides else emptyList()
+
+    val currentSlideIndex by remember {
+        derivedStateOf {
+            if (isContinuousVertical) lazyListState.firstVisibleItemIndex.coerceIn(0, (effectiveSlideCount - 1).coerceAtLeast(0))
+            else pagerState.currentPage
+        }
+    }
 
     // Smart Resume: Restore last viewed slide on open
     LaunchedEffect(effectiveSlideCount) {
@@ -283,6 +296,7 @@ fun PresentationViewerScreen(
                 if (targetSlide > 0) {
                     withContext(Dispatchers.Main) {
                         pagerState.scrollToPage(targetSlide)
+                        lazyListState.scrollToItem(targetSlide)
                     }
                 }
             }
@@ -290,14 +304,14 @@ fun PresentationViewerScreen(
     }
 
     // Smart Resume: Persist slide progress on change
-    LaunchedEffect(pagerState.currentPage, effectiveSlideCount) {
+    LaunchedEffect(currentSlideIndex, effectiveSlideCount) {
         if (effectiveSlideCount > 0) {
             withContext(Dispatchers.IO) {
-                app?.documentRepository?.updatePageProgress(document.uri, pagerState.currentPage, effectiveSlideCount)
+                app?.documentRepository?.updatePageProgress(document.uri, currentSlideIndex, effectiveSlideCount)
                 app?.documentRepository?.saveViewState(
                     com.abhisheksati.mydoc.domain.model.ViewState(
                         uri = document.uri,
-                        lastPage = pagerState.currentPage,
+                        lastPage = currentSlideIndex,
                         readingMode = readingMode
                     )
                 )
@@ -306,22 +320,27 @@ fun PresentationViewerScreen(
     }
 
     // Reset zoom when swiping slides
-    LaunchedEffect(pagerState.currentPage) {
+    LaunchedEffect(currentSlideIndex) {
         zoomScale = 1f
         panOffset = Offset.Zero
     }
 
     // Volume key slide navigation
-    LaunchedEffect(effectiveSlideCount) {
+    LaunchedEffect(effectiveSlideCount, isContinuousVertical) {
         if (effectiveSlideCount > 0) {
             com.abhisheksati.mydoc.MainActivity.pageTurnEvents.collect { isNext ->
+                val current = if (isContinuousVertical) lazyListState.firstVisibleItemIndex else pagerState.currentPage
                 val target = if (isNext) {
-                    (pagerState.currentPage + 1).coerceAtMost(effectiveSlideCount - 1)
+                    (current + 1).coerceAtMost(effectiveSlideCount - 1)
                 } else {
-                    (pagerState.currentPage - 1).coerceAtLeast(0)
+                    (current - 1).coerceAtLeast(0)
                 }
-                if (target != pagerState.currentPage) {
-                    pagerState.animateScrollToPage(target)
+                if (target != current) {
+                    if (isContinuousVertical) {
+                        lazyListState.animateScrollToItem(target)
+                    } else {
+                        pagerState.animateScrollToPage(target)
+                    }
                 }
             }
         }
@@ -476,6 +495,25 @@ fun PresentationViewerScreen(
                                     )
                                 }
 
+                                // Continuous Vertical vs Horizontal toggle button
+                                IconButton(onClick = {
+                                    val newMode = !isContinuousVertical
+                                    isContinuousVertical = newMode
+                                    scope.launch {
+                                        if (newMode) {
+                                            lazyListState.scrollToItem(pagerState.currentPage)
+                                        } else {
+                                            pagerState.scrollToPage(lazyListState.firstVisibleItemIndex)
+                                        }
+                                    }
+                                }) {
+                                    Icon(
+                                        imageVector = if (isContinuousVertical) Icons.Outlined.ViewCarousel else Icons.Outlined.SwapVert,
+                                        contentDescription = if (isContinuousVertical) "Switch to Horizontal Paging" else "Switch to Continuous Vertical",
+                                        tint = if (isContinuousVertical) MaterialTheme.colorScheme.primary else secondaryTextColor
+                                    )
+                                }
+
                                 // Slideshow Mode
                                 IconButton(onClick = { isSlideshowMode = true }) {
                                     Icon(
@@ -498,6 +536,27 @@ fun PresentationViewerScreen(
                                         expanded = isMenuOpen,
                                         onDismissRequest = { isMenuOpen = false }
                                     ) {
+                                        DropdownMenuItem(
+                                            text = { Text(if (isContinuousVertical) "Switch to Horizontal Pager" else "Switch to Continuous Vertical") },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = if (isContinuousVertical) Icons.Outlined.ViewCarousel else Icons.Outlined.SwapVert,
+                                                    contentDescription = null
+                                                )
+                                            },
+                                            onClick = {
+                                                isMenuOpen = false
+                                                val newMode = !isContinuousVertical
+                                                isContinuousVertical = newMode
+                                                scope.launch {
+                                                    if (newMode) {
+                                                        lazyListState.scrollToItem(pagerState.currentPage)
+                                                    } else {
+                                                        pagerState.scrollToPage(lazyListState.firstVisibleItemIndex)
+                                                    }
+                                                }
+                                            }
+                                        )
                                         DropdownMenuItem(
                                             text = { Text(if (isVisualMode) "Switch to Outline View" else "Switch to Visual View") },
                                             leadingIcon = {
@@ -624,7 +683,7 @@ fun PresentationViewerScreen(
                                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
                             ) {
                                 items(effectiveSlideCount) { index ->
-                                    val isSelected = index == pagerState.currentPage
+                                    val isSelected = index == currentSlideIndex
                                     val slide = effectiveSlides.getOrNull(index)
                                     Box(
                                         modifier = Modifier
@@ -638,7 +697,13 @@ fun PresentationViewerScreen(
                                                 shape = RoundedCornerShape(10.dp)
                                             )
                                             .clickable {
-                                                scope.launch { pagerState.animateScrollToPage(index) }
+                                                scope.launch {
+                                                    if (isContinuousVertical) {
+                                                        lazyListState.animateScrollToItem(index)
+                                                    } else {
+                                                        pagerState.animateScrollToPage(index)
+                                                    }
+                                                }
                                             }
                                             .padding(4.dp),
                                         contentAlignment = Alignment.Center
@@ -680,17 +745,18 @@ fun PresentationViewerScreen(
                         IconButton(
                             onClick = {
                                 scope.launch {
-                                    if (pagerState.currentPage > 0) {
-                                        pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                                    if (currentSlideIndex > 0) {
+                                        if (isContinuousVertical) lazyListState.animateScrollToItem(currentSlideIndex - 1)
+                                        else pagerState.animateScrollToPage(currentSlideIndex - 1)
                                     }
                                 }
                             },
-                            enabled = pagerState.currentPage > 0
+                            enabled = currentSlideIndex > 0
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                                 contentDescription = "Previous Slide",
-                                tint = if (pagerState.currentPage > 0) textColor else secondaryTextColor.copy(alpha = 0.3f)
+                                tint = if (currentSlideIndex > 0) textColor else secondaryTextColor.copy(alpha = 0.3f)
                             )
                         }
 
@@ -712,13 +778,13 @@ fun PresentationViewerScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "Slide ${pagerState.currentPage + 1} of $effectiveSlideCount",
+                                text = "Slide ${currentSlideIndex + 1} of $effectiveSlideCount",
                                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                                 color = textColor
                             )
                         }
 
-                        val currentSlide = effectiveSlides.getOrNull(pagerState.currentPage)
+                        val currentSlide = effectiveSlides.getOrNull(currentSlideIndex)
                         val hasNotes = !currentSlide?.notes.isNullOrBlank()
                         IconButton(
                             onClick = { isNotesSheetOpen = true },
@@ -734,17 +800,18 @@ fun PresentationViewerScreen(
                         IconButton(
                             onClick = {
                                 scope.launch {
-                                    if (pagerState.currentPage < effectiveSlideCount - 1) {
-                                        pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                    if (currentSlideIndex < effectiveSlideCount - 1) {
+                                        if (isContinuousVertical) lazyListState.animateScrollToItem(currentSlideIndex + 1)
+                                        else pagerState.animateScrollToPage(currentSlideIndex + 1)
                                     }
                                 }
                             },
-                            enabled = pagerState.currentPage < effectiveSlideCount - 1
+                            enabled = currentSlideIndex < effectiveSlideCount - 1
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                                 contentDescription = "Next Slide",
-                                tint = if (pagerState.currentPage < effectiveSlideCount - 1) textColor else secondaryTextColor.copy(alpha = 0.3f)
+                                tint = if (currentSlideIndex < effectiveSlideCount - 1) textColor else secondaryTextColor.copy(alpha = 0.3f)
                             )
                         }
                     }
@@ -790,6 +857,48 @@ fun PresentationViewerScreen(
                         openPresentationInOfficeApp(context, document)
                     }
                 )
+            } else if (isContinuousVertical) {
+                LazyColumn(
+                    state = lazyListState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = AppSpacing.paddingSmall, vertical = AppSpacing.paddingSmall),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(effectiveSlideCount, key = { it }) { pageIndex ->
+                        val slide = effectiveSlides.getOrNull(pageIndex)
+                        if (slide != null) {
+                            val slideAspect = if (slide.aspectRatio.isFinite() && slide.aspectRatio > 0.1f) slide.aspectRatio else (16f / 9f)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(slideAspect),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                val hasMeaningfulVisuals = slide.visualElements.any {
+                                    it.type == VisualElementType.IMAGE ||
+                                    it.tableRows.isNotEmpty() ||
+                                    it.paragraphs.any { p -> p.runs.any { r -> r.text.isNotBlank() } }
+                                }
+
+                                if (isVisualMode && hasMeaningfulVisuals) {
+                                    VisualSlideCard(
+                                        slide = slide,
+                                        cardBgColor = cardBgColor,
+                                        defaultTextColor = textColor,
+                                        highlightQuery = if (isSearchOpen) searchQuery else ""
+                                    )
+                                } else {
+                                    OutlineSlideCard(
+                                        slide = slide,
+                                        cardBgColor = cardBgColor,
+                                        textColor = if (cardBgColor.isColorDark()) Color(0xFFEDEDED) else Color(0xFF1E293B),
+                                        highlightQuery = if (isSearchOpen) searchQuery else ""
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             } else {
                 HorizontalPager(
                     state = pagerState,
@@ -895,17 +1004,20 @@ fun PresentationViewerScreen(
 
             PageJumpDialog(
                 isOpen = isJumpDialogOpen,
-                currentPage = pagerState.currentPage,
+                currentPage = currentSlideIndex,
                 pageCount = effectiveSlideCount,
                 onJump = { page ->
-                    scope.launch { pagerState.scrollToPage(page) }
+                    scope.launch {
+                        if (isContinuousVertical) lazyListState.scrollToItem(page)
+                        else pagerState.scrollToPage(page)
+                    }
                 },
                 onDismiss = { isJumpDialogOpen = false }
             )
 
             // Speaker Notes Bottom Sheet
             if (isNotesSheetOpen) {
-                val curNotes = effectiveSlides.getOrNull(pagerState.currentPage)?.notes ?: "No speaker notes for this slide."
+                val curNotes = effectiveSlides.getOrNull(currentSlideIndex)?.notes ?: "No speaker notes for this slide."
                 ModalBottomSheet(
                     onDismissRequest = { isNotesSheetOpen = false },
                     containerColor = cardBgColor
@@ -922,7 +1034,7 @@ fun PresentationViewerScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Speaker Notes — Slide ${pagerState.currentPage + 1}",
+                                text = "Speaker Notes — Slide ${currentSlideIndex + 1}",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = textColor
