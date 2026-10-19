@@ -29,14 +29,22 @@ class AppManagerHelper(private val context: Context) {
 
     suspend fun getInstalledApps(includeSystemApps: Boolean = false): List<AppInfoItem> = withContext(Dispatchers.IO) {
         val pm = context.packageManager
-        val installed = try {
-            pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        val launcherIntent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        val resolveInfos = try {
+            pm.queryIntentActivities(launcherIntent, 0)
         } catch (_: Exception) {
             emptyList()
         }
 
+        val seenPackages = mutableSetOf<String>()
         val appList = mutableListOf<AppInfoItem>()
-        for (info in installed) {
+        for (resolveInfo in resolveInfos) {
+            val activityInfo = resolveInfo.activityInfo ?: continue
+            val info = activityInfo.applicationInfo ?: continue
+            if (!seenPackages.add(info.packageName)) continue
+
             val isSystem = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0
             if (!includeSystemApps && isSystem) {
                 continue

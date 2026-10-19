@@ -14,10 +14,14 @@ class ApkDownloader(private val context: Context) {
     suspend fun downloadApk(
         downloadUrl: String,
         targetFileName: String,
-        expectedSha256: String? = null,
+        expectedSha256: String,
         onProgress: (bytesDownloaded: Long, totalBytes: Long) -> Unit
     ): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
+            val cleanExpectedSha256 = expectedSha256.trim().lowercase()
+            if (cleanExpectedSha256.isBlank()) {
+                throw IllegalArgumentException("Expected SHA-256 checksum cannot be blank")
+            }
             val baseDir = context.externalCacheDir ?: context.cacheDir
             val updatesDir = File(baseDir, "updates").apply {
                 if (!exists()) mkdirs()
@@ -72,14 +76,11 @@ class ApkDownloader(private val context: Context) {
                 }
             }
 
-            // Verify SHA-256 checksum if provided
-            if (!expectedSha256.isNullOrBlank()) {
-                val computedHash = computeSha256(destinationFile)
-                val expectedClean = expectedSha256.trim().lowercase()
-                if (!computedHash.equals(expectedClean, ignoreCase = true)) {
-                    destinationFile.delete()
-                    throw IllegalStateException("Checksum mismatch! Expected $expectedClean, got $computedHash")
-                }
+            // Verify SHA-256 checksum (mandatory)
+            val computedHash = computeSha256(destinationFile)
+            if (!computedHash.equals(cleanExpectedSha256, ignoreCase = true)) {
+                destinationFile.delete()
+                throw IllegalStateException("Checksum mismatch! Expected $cleanExpectedSha256, got $computedHash")
             }
 
             destinationFile
@@ -96,23 +97,29 @@ class ApkDownloader(private val context: Context) {
             }
             if (connection.responseCode == HttpURLConnection.HTTP_OK) {
                 val text = connection.inputStream.bufferedReader().use { it.readText() }
-                // Checksum files usually look like "hash  filename.apk" or just "hash"
-                text.trim().split("\\s+".toRegex()).firstOrNull()
+                parseChecksumContent(text)
             } else null
         } catch (_: Exception) {
             null
         }
     }
 
-    private fun computeSha256(file: File): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        file.inputStream().use { stream ->
-            val buffer = ByteArray(8192)
-            var bytesRead: Int
-            while (stream.read(buffer).also { bytesRead = it } != -1) {
-                digest.update(buffer, 0, bytesRead)
-            }
+    companion object {
+        fun parseChecksumContent(rawText: String): String? {
+            // Checksum files usually look like "hash  filename.apk" or just "hash"
+            return rawText.trim().split("\\s+".toRegex()).firstOrNull()?.takeIf { it.isNotBlank() }
         }
-        return digest.digest().joinToString("") { "%02x".format(it) }
+
+        fun computeSha256(file: File): String {
+            val digest = MessageDigest.getInstance("SHA-256")
+            file.inputStream().use { stream ->
+                val buffer = ByteArray(8192)
+                var bytesRead: Int
+                while (stream.read(buffer).also { bytesRead = it } != -1) {
+                    digest.update(buffer, 0, bytesRead)
+                }
+            }
+            return digest.digest().joinToString("") { "%02x".format(it) }
+        }
     }
 }
