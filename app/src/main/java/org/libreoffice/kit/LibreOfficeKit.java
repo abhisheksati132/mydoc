@@ -20,7 +20,7 @@ public final class LibreOfficeKit {
     public static native void redirectStdio(boolean state);
 
     public static synchronized boolean isAvailable() {
-        return NativeLibLoader.isLoaded();
+        return isInitialized || NativeLibLoader.isLoaded();
     }
 
     public static synchronized boolean isInitialized() {
@@ -106,10 +106,11 @@ class NativeLibLoader {
         }
 
         String[] libs = new String[] {
+            "libc++_shared.so",
             "libnspr4.so", "libplds4.so", "libplc4.so", "libnssutil3.so",
             "libfreebl3.so", "libsqlite3.so", "libsoftokn3.so", "libnss3.so",
             "libnssckbi.so", "libnssdbm3.so", "libsmime3.so", "libssl3.so",
-            "libc++_shared.so", "liblo-native-code.so"
+            "liblo-native-code.so"
         };
 
         boolean loLoaded = false;
@@ -141,8 +142,8 @@ class NativeLibLoader {
 
     protected static synchronized boolean load() {
         if (loaded) return true;
-        loadAttempted = true;
         try {
+            System.loadLibrary("c++_shared");
             System.loadLibrary("nspr4");
             System.loadLibrary("plds4");
             System.loadLibrary("plc4");
@@ -155,7 +156,6 @@ class NativeLibLoader {
             System.loadLibrary("nssdbm3");
             System.loadLibrary("smime3");
             System.loadLibrary("ssl3");
-            System.loadLibrary("c++_shared");
             System.loadLibrary("lo-native-code");
             loaded = true;
             return true;

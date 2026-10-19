@@ -127,16 +127,19 @@ class ViewerViewModel(
 
                     if (isLibreOfficeEnabled && loEngineManager.isReady() && loEngineManager.isSupportedFormat(ext)) {
                         try {
-                            val loRenderer = com.abhisheksati.mydoc.rendering.engine.libreoffice.LibreOfficeDocumentRenderer(cacheFile.absolutePath)
-                            if (loRenderer.pageCount > 0) {
-                                val testBitmap = loRenderer.renderPage(0, 0.2f, ReadingMode.NORMAL)
-                                if (testBitmap != null) {
-                                    activeRenderer = loRenderer
+                            val initOk = loEngineManager.initNativeEngine()
+                            if (initOk) {
+                                val loRenderer = com.abhisheksati.mydoc.rendering.engine.libreoffice.LibreOfficeDocumentRenderer(cacheFile.absolutePath)
+                                if (loRenderer.pageCount > 0) {
+                                    val testBitmap = loRenderer.renderPage(0, 0.2f, ReadingMode.NORMAL)
+                                    if (testBitmap != null) {
+                                        activeRenderer = loRenderer
+                                    } else {
+                                        loRenderer.close()
+                                    }
                                 } else {
                                     loRenderer.close()
                                 }
-                            } else {
-                                loRenderer.close()
                             }
                         } catch (e: Throwable) {
                             android.util.Log.w("ViewerViewModel", "LibreOffice renderer failed, falling back: ${e.message}")

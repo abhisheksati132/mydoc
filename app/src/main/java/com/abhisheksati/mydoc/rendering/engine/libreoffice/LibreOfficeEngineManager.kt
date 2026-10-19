@@ -111,7 +111,15 @@ class LibreOfficeEngineManager private constructor(private val context: Context)
     }
 
     fun isReady(): Boolean {
-        return _status.value is EngineStatus.Ready && LibreOfficeKit.isAvailable()
+        return _status.value is EngineStatus.Ready && engineDir.exists() && versionFile.exists()
+    }
+
+    fun hasEngineFilesOnDisk(): Boolean {
+        return engineDir.exists() && (getFolderSize(engineDir) > 0L || versionFile.exists())
+    }
+
+    fun getDiskSpaceUsed(): Long {
+        return getFolderSize(engineDir)
     }
 
     fun checkInstalledState() {
@@ -119,8 +127,7 @@ class LibreOfficeEngineManager private constructor(private val context: Context)
             val version = runCatching { versionFile.readText().trim() }.getOrDefault(DEFAULT_VERSION)
             val size = getFolderSize(engineDir)
             if (size > 1024 * 1024) { // At least 1MB
-                // Try initializing if not already done
-                initNativeEngine()
+                // Only mark Ready on disk. DO NOT eagerly initialize native C++ on startup!
                 _status.value = EngineStatus.Ready(
                     version = version,
                     installSizeBytes = size,
@@ -133,11 +140,18 @@ class LibreOfficeEngineManager private constructor(private val context: Context)
     }
 
     fun initNativeEngine(): Boolean {
+        if (LibreOfficeKit.isInitialized()) return true
+        if (!engineDir.exists()) return false
+
+        val marker = File(context.filesDir, "libreoffice_init.marker")
         return try {
-            if (!engineDir.exists()) return false
-            LibreOfficeKit.init(context, engineDir)
+            marker.createNewFile()
+            val ok = LibreOfficeKit.init(context, engineDir)
+            if (marker.exists()) marker.delete()
+            ok
         } catch (t: Throwable) {
             Log.e(TAG, "Failed to initialize native LibreOfficeKit", t)
+            if (marker.exists()) marker.delete()
             false
         }
     }
@@ -197,9 +211,6 @@ class LibreOfficeEngineManager private constructor(private val context: Context)
                 // Clean up temp file
                 if (tempZipFile.exists()) tempZipFile.delete()
 
-                // 4. Initialize native engine
-                initNativeEngine()
-
                 val installedSize = getFolderSize(engineDir)
                 _status.value = EngineStatus.Ready(
                     version = DEFAULT_VERSION,
@@ -245,7 +256,6 @@ class LibreOfficeEngineManager private constructor(private val context: Context)
                 versionFile.writeText(DEFAULT_VERSION)
                 if (tempZip.exists()) tempZip.delete()
 
-                initNativeEngine()
                 val installedSize = getFolderSize(engineDir)
                 _status.value = EngineStatus.Ready(
                     version = DEFAULT_VERSION,
@@ -273,7 +283,7 @@ class LibreOfficeEngineManager private constructor(private val context: Context)
         checkInstalledState()
     }
 
-    fun uninstall() {
+    fun uninstall(onComplete: (() -> Unit)? = null) {
         downloadJob?.cancel()
         downloadJob = null
         scope.launch {
@@ -281,8 +291,18 @@ class LibreOfficeEngineManager private constructor(private val context: Context)
                 if (engineDir.exists()) {
                     deleteRecursively(engineDir)
                 }
+                val tempZip1 = File(context.cacheDir, "libreoffice_engine_download.zip")
+                if (tempZip1.exists()) tempZip1.delete()
+                val tempZip2 = File(context.cacheDir, "imported_lo_engine.zip")
+                if (tempZip2.exists()) tempZip2.delete()
+                val marker = File(context.filesDir, "libreoffice_init.marker")
+                if (marker.exists()) marker.delete()
+
                 LibreOfficeKit.reset()
                 _status.value = EngineStatus.NotInstalled
+                withContext(Dispatchers.Main) {
+                    onComplete?.invoke()
+                }
             } catch (t: Throwable) {
                 Log.e(TAG, "Failed to uninstall LibreOffice engine", t)
                 _status.value = EngineStatus.Error("Failed to delete files: ${t.localizedMessage}")
@@ -421,14 +441,18 @@ class LibreOfficeEngineManager private constructor(private val context: Context)
                             newFile.setReadable(true, false)
                             newFile.setExecutable(true, false)
 
-                            // Also place directly into lib/ for immediate linker discovery
-                            val directLib = File(libDir, newFile.name)
-                            if (directLib.canonicalPath != newFile.canonicalPath) {
-                                try {
-                                    newFile.copyTo(directLib, overwrite = true)
-                                    directLib.setReadable(true, false)
-                                    directLib.setExecutable(true, false)
-                                } catch (_: Exception) {}
+                            // Also place directly into lib/ for immediate linker discovery if primary ABI
+                            val primaryAbi = getDevicePrimaryAbi()
+                            val isPrimaryAbi = name.startsWith("lib/$primaryAbi/") || !name.contains("/")
+                            if (isPrimaryAbi) {
+                                val directLib = File(libDir, newFile.name)
+                                if (directLib.canonicalPath != newFile.canonicalPath) {
+                                    try {
+                                        newFile.copyTo(directLib, overwrite = true)
+                                        directLib.setReadable(true, false)
+                                        directLib.setExecutable(true, false)
+                                    } catch (_: Exception) {}
+                                }
                             }
                         }
                     }

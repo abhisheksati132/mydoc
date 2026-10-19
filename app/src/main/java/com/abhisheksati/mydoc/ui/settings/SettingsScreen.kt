@@ -15,6 +15,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -147,6 +148,7 @@ fun SettingsScreen(
     val isLibreOfficeEnabled by settingsRepository.isLibreOfficeEngineEnabled.collectAsState()
     var showCustomUrlDialog by remember { mutableStateOf(false) }
     var customUrlInput by remember { mutableStateOf("") }
+    var showDeleteEngineDialog by remember { mutableStateOf(false) }
 
     val importZipLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -831,6 +833,52 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.height(10.dp))
 
+                            if (loEngineManager.hasEngineFilesOnDisk()) {
+                                val leftoverMb = loEngineManager.getDiskSpaceUsed() / (1024 * 1024)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(Color(0xFFEF5350).copy(alpha = 0.12f))
+                                        .padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Leftover engine files ($leftoverMb MB)",
+                                            style = typography.caption.copy(fontWeight = FontWeight.Bold),
+                                            color = Color(0xFFEF5350)
+                                        )
+                                        Text(
+                                            text = "Incomplete or unlinked files found on disk.",
+                                            style = typography.caption.copy(fontSize = 11.sp),
+                                            color = colors.textSecondary
+                                        )
+                                    }
+                                    OutlinedButton(
+                                        onClick = { showDeleteEngineDialog = true },
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = BorderStroke(1.dp, Color(0xFFEF5350).copy(alpha = 0.5f)),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Delete,
+                                            contentDescription = null,
+                                            tint = Color(0xFFEF5350),
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "Delete",
+                                            color = Color(0xFFEF5350),
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(10.dp))
+                            }
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1062,9 +1110,7 @@ fun SettingsScreen(
 
                                 OutlinedButton(
                                     onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        loEngineManager.uninstall()
-                                        Toast.makeText(context, "LibreOffice Engine uninstalled", Toast.LENGTH_SHORT).show()
+                                        showDeleteEngineDialog = true
                                     },
                                     shape = RoundedCornerShape(10.dp),
                                     border = BorderStroke(1.dp, Color(0xFFEF5350).copy(alpha = 0.5f))
@@ -1077,7 +1123,7 @@ fun SettingsScreen(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = "Uninstall",
+                                        text = "Delete Engine",
                                         color = Color(0xFFEF5350),
                                         fontSize = 12.sp
                                     )
@@ -1094,132 +1140,203 @@ fun SettingsScreen(
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(Color(0xFFD32F2F).copy(alpha = 0.12f))
                                         .padding(10.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Info,
-                                        contentDescription = null,
-                                        tint = Color(0xFFEF5350),
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = st.message,
-                                        style = typography.caption,
-                                        color = Color(0xFFEF5350)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Button(
-                                        onClick = { loEngineManager.downloadAndInstall() },
-                                        modifier = Modifier.weight(1f),
-                                        colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
-                                        shape = RoundedCornerShape(10.dp)
-                                    ) {
-                                        Text("Retry Mirrors", fontSize = 12.sp)
-                                    }
-                                    OutlinedButton(
-                                        onClick = { importZipLauncher.launch("*/*") },
-                                        shape = RoundedCornerShape(10.dp),
-                                        border = BorderStroke(1.dp, colors.divider)
-                                    ) {
-                                        Text("Import APK / ZIP", color = colors.textPrimary, fontSize = 12.sp)
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    TextButton(
-                                        onClick = {
-                                            customUrlInput = LibreOfficeEngineManager.getSuggestedDownloadUrl()
-                                            showCustomUrlDialog = true
-                                        }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Link,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp),
-                                            tint = colors.accent
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = "Download from Custom URL",
-                                            style = typography.caption.copy(fontWeight = FontWeight.Medium),
-                                            color = colors.accent
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+                                 ) {
+                                     Icon(
+                                         imageVector = Icons.Outlined.Info,
+                                         contentDescription = null,
+                                         tint = Color(0xFFEF5350),
+                                         modifier = Modifier.size(20.dp)
+                                     )
+                                     Spacer(modifier = Modifier.width(8.dp))
+                                     Text(
+                                         text = st.message,
+                                         style = typography.caption,
+                                         color = Color(0xFFEF5350)
+                                     )
+                                 }
+                                 Spacer(modifier = Modifier.height(10.dp))
+                                 Row(
+                                     modifier = Modifier.fillMaxWidth(),
+                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                 ) {
+                                     Button(
+                                         onClick = { loEngineManager.downloadAndInstall() },
+                                         modifier = Modifier.weight(1f),
+                                         colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
+                                         shape = RoundedCornerShape(10.dp)
+                                     ) {
+                                         Text("Retry Mirrors", fontSize = 12.sp)
+                                     }
+                                     OutlinedButton(
+                                         onClick = { importZipLauncher.launch("*/*") },
+                                         shape = RoundedCornerShape(10.dp),
+                                         border = BorderStroke(1.dp, colors.divider)
+                                     ) {
+                                         Text("Import APK / ZIP", color = colors.textPrimary, fontSize = 12.sp)
+                                     }
+                                 }
+                                 Spacer(modifier = Modifier.height(8.dp))
+                                 OutlinedButton(
+                                     onClick = { showDeleteEngineDialog = true },
+                                     modifier = Modifier.fillMaxWidth(),
+                                     shape = RoundedCornerShape(10.dp),
+                                     border = BorderStroke(1.dp, Color(0xFFEF5350).copy(alpha = 0.5f))
+                                 ) {
+                                     Icon(
+                                         imageVector = Icons.Outlined.Delete,
+                                         contentDescription = null,
+                                         tint = Color(0xFFEF5350),
+                                         modifier = Modifier.size(16.dp)
+                                     )
+                                     Spacer(modifier = Modifier.width(6.dp))
+                                     Text(
+                                         text = "Delete / Remove Engine Files",
+                                         color = Color(0xFFEF5350),
+                                         fontSize = 12.sp
+                                     )
+                                 }
+                                 Spacer(modifier = Modifier.height(4.dp))
+                                 Row(
+                                     modifier = Modifier.fillMaxWidth(),
+                                     horizontalArrangement = Arrangement.Center
+                                 ) {
+                                     TextButton(
+                                         onClick = {
+                                             customUrlInput = LibreOfficeEngineManager.getSuggestedDownloadUrl()
+                                             showCustomUrlDialog = true
+                                         }
+                                     ) {
+                                         Icon(
+                                             imageVector = Icons.Outlined.Link,
+                                             contentDescription = null,
+                                             modifier = Modifier.size(16.dp),
+                                             tint = colors.accent
+                                         )
+                                         Spacer(modifier = Modifier.width(6.dp))
+                                         Text(
+                                             text = "Download from Custom URL",
+                                             style = typography.caption.copy(fontWeight = FontWeight.Medium),
+                                             color = colors.accent
+                                         )
+                                     }
+                                 }
+                             }
+                         }
+                     }
+                 }
+             }
 
-            if (showCustomUrlDialog) {
-                AlertDialog(
-                    onDismissRequest = { showCustomUrlDialog = false },
-                    title = {
-                        Text(
-                            text = "Custom Download URL",
-                            style = typography.title,
-                            color = colors.textPrimary
-                        )
-                    },
-                    text = {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                text = "Enter a direct URL to a LibreOffice Core APK or ZIP for your device architecture (${LibreOfficeEngineManager.getDevicePrimaryAbi()}):",
-                                style = typography.caption,
-                                color = colors.textSecondary
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            OutlinedTextField(
-                                value = customUrlInput,
-                                onValueChange = { customUrlInput = it },
-                                placeholder = { Text("https://...") },
-                                singleLine = false,
-                                maxLines = 3,
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedTextColor = colors.textPrimary,
-                                    unfocusedTextColor = colors.textPrimary,
-                                    focusedBorderColor = colors.accent,
-                                    unfocusedBorderColor = colors.divider
-                                ),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                val url = customUrlInput.trim()
-                                if (url.isNotEmpty()) {
-                                    showCustomUrlDialog = false
-                                    loEngineManager.downloadAndInstall(url)
-                                }
-                            },
-                            enabled = customUrlInput.trim().isNotEmpty()
-                        ) {
-                            Text(
-                                text = "Download",
-                                color = if (customUrlInput.trim().isNotEmpty()) colors.accent else colors.textSecondary,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showCustomUrlDialog = false }) {
-                            Text("Cancel", color = colors.textSecondary)
-                        }
-                    },
-                    containerColor = colors.surface
-                )
-            }
+             if (showCustomUrlDialog) {
+                 AlertDialog(
+                     onDismissRequest = { showCustomUrlDialog = false },
+                     title = {
+                         Text(
+                             text = "Custom Download URL",
+                             style = typography.title,
+                             color = colors.textPrimary
+                         )
+                     },
+                     text = {
+                         Column(modifier = Modifier.fillMaxWidth()) {
+                             Text(
+                                 text = "Enter a direct URL to a LibreOffice Core APK or ZIP for your device architecture (${LibreOfficeEngineManager.getDevicePrimaryAbi()}):",
+                                 style = typography.caption,
+                                 color = colors.textSecondary
+                             )
+                             Spacer(modifier = Modifier.height(12.dp))
+                             OutlinedTextField(
+                                 value = customUrlInput,
+                                 onValueChange = { customUrlInput = it },
+                                 placeholder = { Text("https://...") },
+                                 singleLine = false,
+                                 maxLines = 3,
+                                 colors = OutlinedTextFieldDefaults.colors(
+                                     focusedTextColor = colors.textPrimary,
+                                     unfocusedTextColor = colors.textPrimary,
+                                     focusedBorderColor = colors.accent,
+                                     unfocusedBorderColor = colors.divider
+                                 ),
+                                 modifier = Modifier.fillMaxWidth()
+                             )
+                         }
+                     },
+                     confirmButton = {
+                         TextButton(
+                             onClick = {
+                                 val url = customUrlInput.trim()
+                                 if (url.isNotEmpty()) {
+                                     showCustomUrlDialog = false
+                                     loEngineManager.downloadAndInstall(url)
+                                 }
+                             },
+                             enabled = customUrlInput.trim().isNotEmpty()
+                         ) {
+                             Text(
+                                 text = "Download",
+                                 color = if (customUrlInput.trim().isNotEmpty()) colors.accent else colors.textSecondary,
+                                 fontWeight = FontWeight.Bold
+                             )
+                         }
+                     },
+                     dismissButton = {
+                         TextButton(onClick = { showCustomUrlDialog = false }) {
+                             Text("Cancel", color = colors.textSecondary)
+                         }
+                     },
+                     containerColor = colors.surface
+                 )
+             }
+
+             if (showDeleteEngineDialog) {
+                 AlertDialog(
+                     onDismissRequest = { showDeleteEngineDialog = false },
+                     icon = {
+                         Icon(
+                             imageVector = Icons.Outlined.Delete,
+                             contentDescription = null,
+                             tint = Color(0xFFEF5350)
+                         )
+                     },
+                     title = {
+                         Text(
+                             text = "Remove LibreOffice Engine?",
+                             style = typography.title,
+                             color = colors.textPrimary
+                         )
+                     },
+                     text = {
+                         Text(
+                             text = "This will completely delete all downloaded LibreOffice binaries, libraries, and temporary files from your device. You can reinstall it anytime from Settings.",
+                             style = typography.caption,
+                             color = colors.textSecondary
+                         )
+                     },
+                     confirmButton = {
+                         TextButton(
+                             onClick = {
+                                 showDeleteEngineDialog = false
+                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                 loEngineManager.uninstall {
+                                     settingsRepository.setLibreOfficeEngineEnabled(false)
+                                 }
+                                 Toast.makeText(context, "LibreOffice Engine removed", Toast.LENGTH_SHORT).show()
+                             }
+                         ) {
+                             Text(
+                                 text = "Delete",
+                                 color = Color(0xFFEF5350),
+                                 fontWeight = FontWeight.Bold
+                             )
+                         }
+                     },
+                     dismissButton = {
+                         TextButton(onClick = { showDeleteEngineDialog = false }) {
+                             Text("Cancel", color = colors.textSecondary)
+                         }
+                     },
+                     containerColor = colors.surface
+                 )
+             }
 
             Spacer(modifier = Modifier.height(10.dp))
 

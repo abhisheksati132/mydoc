@@ -44,6 +44,19 @@ class MyDocApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Crash-Guard & Emergency Recovery: If the process terminated during native LibreOffice initialization,
+        // cleanly delete corrupt engine files and disable the toggle so the app recovers immediately without crash-looping.
+        val initMarker = java.io.File(filesDir, "libreoffice_init.marker")
+        val crashDetected = initMarker.exists()
+        if (crashDetected) {
+            initMarker.delete()
+            val engineDir = java.io.File(filesDir, "libreoffice_engine")
+            if (engineDir.exists()) {
+                engineDir.deleteRecursively()
+            }
+        }
+
         CoroutineScope(Dispatchers.Default).launch {
             try {
                 com.artifex.mupdf.fitz.Context.init()
@@ -54,13 +67,11 @@ class MyDocApp : Application(), ImageLoaderFactory {
         mediaRepository = MediaRepositoryImpl(this, database)
         storageRepository = com.abhisheksati.mydoc.data.repository.StorageRepositoryImpl(this, database.trashDao())
         settingsRepository = com.abhisheksati.mydoc.data.local.SettingsRepository(this)
+        if (crashDetected) {
+            settingsRepository.setLibreOfficeEngineEnabled(false)
+        }
         wifiServerManager = com.abhisheksati.mydoc.network.WifiServerManager(this)
         libreOfficeEngineManager = com.abhisheksati.mydoc.rendering.engine.libreoffice.LibreOfficeEngineManager.getInstance(this)
-        if (settingsRepository.isLibreOfficeEngineEnabled.value && libreOfficeEngineManager.isReady()) {
-            CoroutineScope(Dispatchers.IO).launch {
-                libreOfficeEngineManager.initNativeEngine()
-            }
-        }
     }
 
     override fun newImageLoader(): ImageLoader {
