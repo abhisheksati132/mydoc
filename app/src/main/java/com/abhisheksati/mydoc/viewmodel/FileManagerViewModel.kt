@@ -449,7 +449,7 @@ class FileManagerViewModel(
         }
     }
 
-    fun restoreTrashItems(items: List<com.abhisheksati.mydoc.domain.model.TrashItem>) {
+    fun restoreTrashItems(items: List<com.abhisheksati.mydoc.domain.model.TrashItem>, onComplete: (() -> Unit)? = null) {
         viewModelScope.launch {
             _uiState.update { it.copy(activeOperation = "Restoring...", isLoading = true) }
             val result = storageRepository.restoreFromTrash(items)
@@ -463,6 +463,7 @@ class FileManagerViewModel(
                 }
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
                 refreshVolumes()
+                onComplete?.invoke()
             }.onFailure { err ->
                 _uiState.update {
                     it.copy(
@@ -475,24 +476,26 @@ class FileManagerViewModel(
         }
     }
 
-    fun permanentlyDeleteTrashItems(items: List<com.abhisheksati.mydoc.domain.model.TrashItem>) {
+    fun permanentlyDeleteTrashItems(items: List<com.abhisheksati.mydoc.domain.model.TrashItem>, onComplete: (() -> Unit)? = null) {
         viewModelScope.launch {
             val result = storageRepository.deletePermanently(items)
             result.onSuccess { count ->
                 _uiState.update { it.copy(userMessage = "Permanently deleted $count items") }
                 refreshVolumes()
+                onComplete?.invoke()
             }.onFailure { err ->
                 _uiState.update { it.copy(userMessage = "Delete failed: ${err.message}") }
             }
         }
     }
 
-    fun emptyTrash() {
+    fun emptyTrash(onComplete: (() -> Unit)? = null) {
         viewModelScope.launch {
             val result = storageRepository.emptyTrash()
             result.onSuccess {
                 _uiState.update { it.copy(userMessage = "Recycle Bin emptied") }
                 refreshVolumes()
+                onComplete?.invoke()
             }.onFailure { err ->
                 _uiState.update { it.copy(userMessage = "Failed to empty Recycle Bin: ${err.message}") }
             }

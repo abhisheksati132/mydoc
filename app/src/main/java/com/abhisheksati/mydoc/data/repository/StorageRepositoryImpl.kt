@@ -30,9 +30,12 @@ import java.util.zip.ZipOutputStream
 import com.abhisheksati.mydoc.data.local.dao.TrashDao
 import com.abhisheksati.mydoc.data.local.entity.TrashEntity
 import com.abhisheksati.mydoc.domain.model.TrashItem
+import kotlin.coroutines.resume
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 
 class StorageRepositoryImpl(
     private val context: Context,
@@ -651,6 +654,18 @@ class StorageRepositoryImpl(
         return trash
     }
 
+    private suspend fun scanFileAwait(context: Context, path: String) {
+        withTimeoutOrNull(2000L) {
+            suspendCancellableCoroutine { continuation ->
+                MediaScannerConnection.scanFile(context, arrayOf(path), null) { _, _ ->
+                    if (continuation.isActive) {
+                        continuation.resume(Unit)
+                    }
+                }
+            }
+        }
+    }
+
     override fun getTrashItems(): Flow<List<TrashItem>> {
         return trashDao?.getAllTrashItems()?.map { list ->
             list.map { it.toDomain() }
@@ -680,7 +695,7 @@ class StorageRepositoryImpl(
                 }
 
                 if (moved) {
-                    try { MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), null, null) } catch (_: Throwable) {}
+                    try { scanFileAwait(context, file.absolutePath) } catch (_: Throwable) {}
                     val entity = TrashEntity(
                         originalPath = file.absolutePath,
                         trashPath = destTrashFile.absolutePath,
@@ -730,7 +745,7 @@ class StorageRepositoryImpl(
                 }
 
                 if (restored) {
-                    try { MediaScannerConnection.scanFile(context, arrayOf(destFile.absolutePath), null, null) } catch (_: Throwable) {}
+                    try { scanFileAwait(context, destFile.absolutePath) } catch (_: Throwable) {}
                     trashDao?.deleteByIds(listOf(item.id))
                     restoredCount++
                 }

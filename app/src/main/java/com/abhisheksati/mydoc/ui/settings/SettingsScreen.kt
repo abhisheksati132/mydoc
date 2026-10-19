@@ -211,44 +211,7 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 36.dp)
         ) {
-            // App Info Header
-            SettingsDoubleBezelCard {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(46.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(if (isOled) Color(0xFF181A20) else colors.surfaceVariant)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Tune,
-                            contentDescription = null,
-                            tint = colors.textPrimary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Column {
-                        Text(
-                            text = "mydoc",
-                            style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 17.sp),
-                            color = colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Preferences",
-                            style = typography.caption.copy(fontSize = 12.sp),
-                            color = colors.textSecondary
-                        )
-                    }
-                }
-            }
 
-            Spacer(modifier = Modifier.height(12.dp))
 
             // APPEARANCE & STARTUP
             AppSectionHeader(title = "APPEARANCE & STARTUP")

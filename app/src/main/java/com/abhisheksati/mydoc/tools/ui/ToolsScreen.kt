@@ -234,6 +234,26 @@ fun ToolsScreen(
                         onToolClick(PdfTool.SCAN_TO_PDF)
                     }
                 )
+                DropdownMenuItem(
+                    text = { Text("PC Wi-Fi Transfer", style = typography.body) },
+                    leadingIcon = {
+                        Icon(Icons.Outlined.Wifi, contentDescription = null, tint = colors.accent)
+                    },
+                    onClick = {
+                        onDismiss()
+                        showWifiSharingSheet = true
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Storage Cleaner", style = typography.body) },
+                    leadingIcon = {
+                        Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.accent)
+                    },
+                    onClick = {
+                        onDismiss()
+                        showStorageCleanerSheet = true
+                    }
+                )
                 if (onSettingsClick != null) {
                     DropdownMenuItem(
                         text = { Text("Settings", style = typography.body) },
@@ -267,95 +287,6 @@ fun ToolsScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 4.dp, bottom = 88.dp)
             ) {
-                if (searchQuery.isBlank() && selectedToolGroup == null) {
-                    item(key = "super_tools_header") {
-                        AppSectionHeader(
-                            title = "SUPER POWER TOOLS",
-                            modifier = Modifier.padding(top = AppSpacing.paddingSmall)
-                        )
-                    }
-
-                    item(key = "super_tools_card") {
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = colors.surface,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                        ) {
-                            Column {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            showWifiSharingSheet = true
-                                        }
-                                        .padding(14.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Wifi,
-                                        contentDescription = null,
-                                        tint = Color(0xFF63B3ED),
-                                        modifier = Modifier.size(28.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(14.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "PC Wi-Fi Transfer",
-                                            style = typography.body.copy(fontWeight = FontWeight.SemiBold),
-                                            color = colors.textPrimary
-                                        )
-                                        Text(
-                                            text = "Transfer files to/from PC without cables at Wi-Fi speeds",
-                                            style = typography.caption,
-                                            color = colors.textSecondary
-                                        )
-                                    }
-                                }
-
-                                HorizontalDivider(
-                                    color = colors.divider,
-                                    modifier = Modifier.padding(start = 56.dp, end = 14.dp)
-                                )
-
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            showStorageCleanerSheet = true
-                                        }
-                                        .padding(14.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.DeleteSweep,
-                                        contentDescription = null,
-                                        tint = Color(0xFFEF5350),
-                                        modifier = Modifier.size(28.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(14.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "Storage Cleaner & Duplicates",
-                                            style = typography.body.copy(fontWeight = FontWeight.SemiBold),
-                                            color = colors.textPrimary
-                                        )
-                                        Text(
-                                            text = "Find duplicate files, large files & remove cache junk",
-                                            style = typography.caption,
-                                            color = colors.textSecondary
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(10.dp))
-                    }
-                }
-
                 val groupsToDisplay = if (selectedToolGroup != null) {
                     listOf(selectedToolGroup!!)
                 } else {

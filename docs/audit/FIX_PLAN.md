@@ -95,10 +95,11 @@
 5. **DEAD-03:** Delete unrouted `DesignSystemPreviewScreen.kt` and clean up unused strings in `res/values/strings.xml`.
 
 ### Verification Checklist:
-- [ ] Inspect all 4 main tabs (Files, Documents, Media, Tools): navigation bars and top headers are visually consistent.
-- [ ] Verify Settings screen: version is displayed cleanly once.
-- [ ] Verify Tools screen: clean single-layer cards with no box-inside-box clutter.
-- [ ] Switch between Light and Dark themes: all screens respect design system color tokens without hardcoded hex overrides.
+- [x] Inspect all 4 main tabs (Files, Documents, Media, Tools): navigation bars and top headers are visually consistent.
+- [x] Verify Settings screen: version is displayed cleanly once (redundant top card removed).
+- [x] Verify Tools screen: clean single-layer cards with no box-inside-box clutter (SUPER POWER TOOLS removed, cleaner and transfer moved to menu).
+- [x] Fix Media Recycle Bin: await MediaScannerConnection indexing, remove redundant delete race conditions, and notify MediaViewModel upon restore.
+- [x] Switch between Light and Dark themes: all screens respect design system color tokens without hardcoded hex overrides.
 
 ### Rollback Strategy:
 - Design system migration can be checked out independently without breaking data or rendering layers.

@@ -135,7 +135,7 @@ fun MediaTabContent(
     isDarkTheme: Boolean = false,
     onOpenTrash: (() -> Unit)? = null,
     trashCount: Int = 0,
-    onMoveToTrash: ((List<java.io.File>) -> Unit)? = null,
+    onMoveToTrash: ((List<java.io.File>, () -> Unit) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -231,13 +231,9 @@ fun MediaTabContent(
             item.filePath?.let { java.io.File(it).takeIf { f -> f.exists() } }
         }
         if (onMoveToTrash != null && files.isNotEmpty()) {
-            onMoveToTrash(files)
-            for (item in itemsToDelete) {
-                try {
-                    context.contentResolver.delete(item.uri, null, null)
-                } catch (_: Exception) {}
+            onMoveToTrash(files) {
+                viewModel.refresh()
             }
-            viewModel.refresh()
             selectedUris = emptySet()
             Toast.makeText(context, "${files.size} items moved to Recycle Bin", Toast.LENGTH_SHORT).show()
             return
@@ -303,9 +299,9 @@ fun MediaTabContent(
     if (showDeleteConfirmDialog) {
         AppDialog(
             isOpen = showDeleteConfirmDialog,
-            title = "Delete ${selectedItems.size} items?",
-            message = "These photos/videos will be permanently removed from your device storage.",
-            confirmLabel = "Delete",
+            title = "Move ${selectedItems.size} items to Recycle Bin?",
+            message = "You can restore them from the Recycle Bin within 30 days.",
+            confirmLabel = "Move to Bin",
             dismissLabel = "Cancel",
             isDestructive = true,
             onConfirm = {

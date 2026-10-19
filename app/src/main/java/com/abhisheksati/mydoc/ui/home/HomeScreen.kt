@@ -358,8 +358,6 @@ fun HomeScreen(
                         onShowClearRecentsDialog = { showClearRecentsDialog = true },
                         onSelectDocForDetails = { selectedDocForDetails = it },
                         onOpenTrash = {
-                            viewModel.selectTab(HomeTab.FILES)
-                            scope.launch { pagerState.scrollToPage(HomeTab.FILES.ordinal) }
                             fileManagerViewModel?.openTrash()
                         },
                         trashCount = trashCount,
@@ -377,13 +375,11 @@ fun HomeScreen(
                             onToggleTheme = onToggleTheme,
                             isDarkTheme = isDarkTheme,
                             onOpenTrash = {
-                                viewModel.selectTab(HomeTab.FILES)
-                                scope.launch { pagerState.scrollToPage(HomeTab.FILES.ordinal) }
                                 fileManagerViewModel?.openTrash()
                             },
                             trashCount = trashCount,
-                            onMoveToTrash = { files ->
-                                fileManagerViewModel?.moveToTrashFiles(files)
+                            onMoveToTrash = { files, onComplete ->
+                                fileManagerViewModel?.moveToTrashFiles(files, onComplete)
                             },
                             modifier = Modifier.fillMaxSize()
                         )
@@ -403,8 +399,6 @@ fun HomeScreen(
                         onToggleTheme = onToggleTheme,
                         isDarkTheme = isDarkTheme,
                         onOpenTrash = {
-                            viewModel.selectTab(HomeTab.FILES)
-                            scope.launch { pagerState.scrollToPage(HomeTab.FILES.ordinal) }
                             fileManagerViewModel?.openTrash()
                         },
                         trashCount = trashCount,
@@ -497,10 +491,25 @@ fun HomeScreen(
     if (fileManagerViewModel != null && fileManagerUiState?.isTrashOpen == true) {
         com.abhisheksati.mydoc.ui.filemanager.TrashBinSheet(
             trashItems = fileManagerUiState!!.trashItems,
-            onRestore = { fileManagerViewModel.restoreTrashItems(it) },
-            onDeletePermanently = { fileManagerViewModel.permanentlyDeleteTrashItems(it) },
-            onEmptyTrash = { fileManagerViewModel.emptyTrash() },
-            onClose = { fileManagerViewModel.closeTrash() }
+            onRestore = {
+                fileManagerViewModel.restoreTrashItems(it) {
+                    mediaViewModel?.refresh()
+                }
+            },
+            onDeletePermanently = {
+                fileManagerViewModel.permanentlyDeleteTrashItems(it) {
+                    mediaViewModel?.refresh()
+                }
+            },
+            onEmptyTrash = {
+                fileManagerViewModel.emptyTrash {
+                    mediaViewModel?.refresh()
+                }
+            },
+            onClose = {
+                fileManagerViewModel.closeTrash()
+                mediaViewModel?.refresh()
+            }
         )
     }
 }
