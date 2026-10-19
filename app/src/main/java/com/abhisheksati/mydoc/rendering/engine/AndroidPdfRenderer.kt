@@ -85,8 +85,20 @@ class AndroidPdfRenderer(
                 page.close()
 
                 val finalBitmap = when (mode) {
-                    ReadingMode.INVERTED_DARK -> invertBitmapColors(baseBitmap)
-                    ReadingMode.SEPIA -> applySepiaFilter(baseBitmap)
+                    ReadingMode.INVERTED_DARK -> {
+                        val converted = invertBitmapColors(baseBitmap)
+                        if (converted !== baseBitmap && !baseBitmap.isRecycled) {
+                            baseBitmap.recycle()
+                        }
+                        converted
+                    }
+                    ReadingMode.SEPIA -> {
+                        val converted = applySepiaFilter(baseBitmap)
+                        if (converted !== baseBitmap && !baseBitmap.isRecycled) {
+                            baseBitmap.recycle()
+                        }
+                        converted
+                    }
                     ReadingMode.NORMAL -> baseBitmap
                 }
 
@@ -104,7 +116,7 @@ class AndroidPdfRenderer(
 
     override fun close() {
         synchronized(lock) {
-            tileCache.clear()
+            tileCache.recycleAll()
             try {
                 pdfRenderer?.close()
             } catch (_: Exception) {

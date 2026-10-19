@@ -20,7 +20,7 @@ import com.abhisheksati.mydoc.data.local.entity.ViewStateEntity
         com.abhisheksati.mydoc.data.local.entity.TrashEntity::class
     ],
     version = 3,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
 

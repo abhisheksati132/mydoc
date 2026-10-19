@@ -121,8 +121,20 @@ class MuPdfRenderer(
                 page.destroy()
 
                 val finalBitmap = when (mode) {
-                    ReadingMode.INVERTED_DARK -> AndroidPdfRenderer.invertBitmapColors(baseBitmap)
-                    ReadingMode.SEPIA -> AndroidPdfRenderer.applySepiaFilter(baseBitmap)
+                    ReadingMode.INVERTED_DARK -> {
+                        val converted = AndroidPdfRenderer.invertBitmapColors(baseBitmap)
+                        if (converted !== baseBitmap && !baseBitmap.isRecycled) {
+                            baseBitmap.recycle()
+                        }
+                        converted
+                    }
+                    ReadingMode.SEPIA -> {
+                        val converted = AndroidPdfRenderer.applySepiaFilter(baseBitmap)
+                        if (converted !== baseBitmap && !baseBitmap.isRecycled) {
+                            baseBitmap.recycle()
+                        }
+                        converted
+                    }
                     ReadingMode.NORMAL -> baseBitmap
                 }
 
@@ -201,7 +213,7 @@ class MuPdfRenderer(
 
     override fun close() {
         synchronized(lock) {
-            tileCache.clear()
+            tileCache.recycleAll()
             try {
                 document?.destroy()
             } catch (_: Exception) {

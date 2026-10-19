@@ -141,3 +141,7 @@ dependencies {
     androidTestImplementation(platform(libs.compose.bom))
     debugImplementation(libs.compose.ui.tooling)
 }
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}

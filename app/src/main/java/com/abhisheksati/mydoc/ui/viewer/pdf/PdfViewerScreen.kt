@@ -18,7 +18,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -318,6 +317,10 @@ fun PdfViewerScreen(
                         translationY = panOffset.y
                     }
             ) {
+                val searchMatchesByPage = remember(state.searchMatches) {
+                    state.searchMatches.groupBy { it.pageIndex }
+                }
+
                 if (state.isDualPageView) {
                     // Two-page spread for tablets and landscape
                     val pairCount = (state.pageCount + 1) / 2
@@ -326,7 +329,7 @@ fun PdfViewerScreen(
                         contentPadding = contentPaddingValues,
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        items(pairCount) { pairIndex ->
+                        items(pairCount, key = { it }) { pairIndex ->
                             val leftPage = pairIndex * 2
                             val rightPage = leftPage + 1
                             Row(
@@ -340,7 +343,7 @@ fun PdfViewerScreen(
                                         pageIndex = leftPage,
                                         viewModel = viewModel,
                                         readingMode = state.readingMode,
-                                        searchMatches = state.searchMatches.filter { it.pageIndex == leftPage }
+                                        searchMatches = searchMatchesByPage[leftPage] ?: emptyList()
                                     )
                                 }
                                 Box(modifier = Modifier.weight(1f)) {
@@ -349,7 +352,7 @@ fun PdfViewerScreen(
                                             pageIndex = rightPage,
                                             viewModel = viewModel,
                                             readingMode = state.readingMode,
-                                            searchMatches = state.searchMatches.filter { it.pageIndex == rightPage }
+                                            searchMatches = searchMatchesByPage[rightPage] ?: emptyList()
                                         )
                                     }
                                 }
@@ -363,12 +366,12 @@ fun PdfViewerScreen(
                         contentPadding = contentPaddingValues,
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        items(state.pageCount) { pageIndex ->
+                        items(state.pageCount, key = { it }) { pageIndex ->
                             PageItemView(
                                 pageIndex = pageIndex,
                                 viewModel = viewModel,
                                 readingMode = state.readingMode,
-                                searchMatches = state.searchMatches.filter { it.pageIndex == pageIndex }
+                                searchMatches = searchMatchesByPage[pageIndex] ?: emptyList()
                             )
                             Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                         }
@@ -376,6 +379,7 @@ fun PdfViewerScreen(
                 } else {
                     HorizontalPager(
                         state = pagerState,
+                        key = { it },
                         contentPadding = contentPaddingValues,
                         modifier = Modifier.fillMaxSize()
                     ) { pageIndex ->
@@ -387,7 +391,7 @@ fun PdfViewerScreen(
                                 pageIndex = pageIndex,
                                 viewModel = viewModel,
                                 readingMode = state.readingMode,
-                                searchMatches = state.searchMatches.filter { it.pageIndex == pageIndex }
+                                searchMatches = searchMatchesByPage[pageIndex] ?: emptyList()
                             )
                         }
                     }
