@@ -1,0 +1,134 @@
+# Actionable Fix Plan & Staged Implementation Roadmap
+
+**Application:** MyDoc (`com.abhisheksati.mydoc`)  
+**Methodology:** Small, isolated, independently testable batches. Each batch contains a defined scope, automated verification command, manual checklist, and rollback procedure.
+
+---
+
+## Batch 1: Critical Crashes & Lint Compiler Blockers
+
+**Objective:** Eliminate all 9 Android Lint compilation errors and runtime crash hazards (`SecurityException` and `WrongConstant`).
+
+### Tasks:
+1. **SEC-02:** Add `<uses-permission android:name="android.permission.USE_BIOMETRIC" />` to `app/src/main/AndroidManifest.xml` to prevent fatal crash on biometric authentication.
+2. **COR-01:** Correct bitmask translation in `AudioExtractor.kt:74` by properly converting `MediaExtractor.SAMPLE_FLAG_SYNC` to `MediaCodec.BUFFER_FLAG_KEY_FRAME`.
+3. **PERF-01:** Replace direct `.value` reads in `HomeScreen.kt:180` and `MainActivity.kt:205` with `collectAsStateWithLifecycle()`.
+4. **COMP-01:** Resolve `ProduceStateDoesNotAssignValue` in `PdfViewerScreen.kt:620`, `PhotoViewerScreen.kt:129`, and `ThumbnailStrip.kt:85`.
+
+### Verification Checklist:
+- [ ] Run `./gradlew lintDebug` — ensure zero fatal errors.
+- [ ] Run `./gradlew testDebugUnitTest` — all unit tests pass.
+- [ ] Build `./gradlew assembleDebug` successfully.
+- [ ] Test Biometric Unlock on physical device / emulator: prompt opens without `SecurityException`.
+- [ ] Extract audio from a test video: audio file plays without distortion or codec header crash.
+
+### Rollback Strategy:
+- `git checkout HEAD~1` on Batch 1 branch. Reverts XML permission and isolated Kotlin helper logic without affecting core data models.
+
+---
+
+## Batch 2: Privacy Hardening & Offline Architecture Integrity
+
+**Objective:** Enforce pure offline operation, eliminate dynamic code execution vulnerabilities, and restrict excessive permissions.
+
+### Tasks:
+1. **SEC-01 & COR-02:** Completely remove `LibreOfficeEngineManager.kt` (external APK downloader & runtime `.so` loader) and dead JNI stubs (`org.libreoffice.kit.*`, `LibreOfficeDocumentRenderer.kt`, `LibreOfficePresentationRenderer.kt`). Route all formats directly to native Kotlin XML parsers (`DocxParser`, `PptxParser`, `SpreadsheetParser`).
+2. **SEC-03:** Remove `QUERY_ALL_PACKAGES` permission from `AndroidManifest.xml`. If APK backup is retained in App Manager, declare explicit `<queries>` intent filters.
+3. **SEC-04:** Harden updater in `ApkDownloader.kt` and `PackageInstallerHelper.kt`:
+   - Enforce mandatory SHA-256 verification (abort if hash fails or is missing).
+   - Validate that downloaded APK package name matches `com.abhisheksati.mydoc` and matches installed signing certificate before launching installer.
+
+### Verification Checklist:
+- [ ] Grep codebase for external HTTP/HTTPS URLs — confirm the **only** remaining remote endpoint is `https://api.github.com`.
+- [ ] Open sample DOCX, PPTX, and XLSX files: verify native parsers render graphics and text without crashing.
+- [ ] Check manifest merge output (`app/build/outputs/logs/manifest-merger-debug-report.txt`) — ensure `QUERY_ALL_PACKAGES` is absent.
+- [ ] Test self-updater with an invalid checksum — confirm download is aborted and temporary file is purged.
+
+### Rollback Strategy:
+- Independent git revert of Batch 2 commits. Native XML parsers remain untouched.
+
+---
+
+## Batch 3: Video Player Lifecycle, Wake Lock & Resume Optimization
+
+**Objective:** Fix screen timeout during playback, eliminate landscape lock when returning from the Android Home screen, and make LibVLC the sole lightweight video engine.
+
+### Tasks:
+1. **LIF-03:** In `VideoPlayerScreen.kt`, keep `FLAG_KEEP_SCREEN_ON` active for the full lifetime of the player session rather than toggling on momentary play/pause flickers.
+2. **LIF-01:** In `MainActivity.kt`, fix state restoration:
+   - Reset `requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED` reliably upon activity stop/backgrounding.
+   - Prevent premature rendering of `HomeScreen` in landscape during async restoration.
+3. **COR-03:** Fix LibVLC resume seek race condition: ensure `mediaPlayer.time` seeking waits for `mediaPlayer.length > 0` and seekable state.
+4. **BLD-02:** Remove redundant `androidx.media3:media3-*` dependencies from `app/build.gradle.kts` and `libs.versions.toml`, saving ~6MB APK size.
+5. **UI-03:** Polish video player controls: improve icon touch targets and clean up player navigation bar.
+
+### Verification Checklist:
+- [ ] Start video playback and leave device untouched for 3 minutes: screen stays on throughout.
+- [ ] Press Home button while video is playing in landscape:
+  - Phone returns to Android home screen in natural orientation.
+  - Relaunch app from launcher: app resumes cleanly without locking Files tab into landscape.
+- [ ] Verify playback position resumes accurately from previous timestamp.
+- [ ] Check APK size (`app-debug.apk`): confirm reduction from removal of ExoPlayer binaries.
+
+### Rollback Strategy:
+- Revert Batch 3 branch. VLC player logic is strictly isolated in `ui/media/VideoPlayerScreen.kt`.
+
+---
+
+## Batch 4: Design System Consolidation & De-Cluttering
+
+**Objective:** Unify dual theming systems, eliminate duplicate components, and fulfill user design preferences (clean, minimal, no nested boxes).
+
+### Tasks:
+1. **ARCH-01 & DEAD-01:** Migrate all remaining usages of `com.abhisheksati.mydoc.ui.theme.*` to `com.abhisheksati.mydoc.designsystem.tokens.*`. Delete legacy `ui/theme` folder and duplicate `ui/common` folder.
+2. **DEAD-02:** Remove redundant top version display card in `SettingsScreen.kt`. Keep only the clean bottom About section.
+3. **UI-01:** In `ToolsScreen.kt`, remove nested "box-inside-box" containers and gradients; streamline action cards to single-surface minimal rows.
+4. **UI-02:** In `HomeScreen.kt`, standardize the bottom navigation bar across all tabs to match the clean Files tab styling.
+5. **DEAD-03:** Delete unrouted `DesignSystemPreviewScreen.kt` and clean up unused strings in `res/values/strings.xml`.
+
+### Verification Checklist:
+- [ ] Inspect all 4 main tabs (Files, Documents, Media, Tools): navigation bars and top headers are visually consistent.
+- [ ] Verify Settings screen: version is displayed cleanly once.
+- [ ] Verify Tools screen: clean single-layer cards with no box-inside-box clutter.
+- [ ] Switch between Light and Dark themes: all screens respect design system color tokens without hardcoded hex overrides.
+
+### Rollback Strategy:
+- Design system migration can be checked out independently without breaking data or rendering layers.
+
+---
+
+## Batch 5: Performance, Rendering & Storage Modernization
+
+**Objective:** Eliminate scroll jank, optimize bitmap recycling, and modernize storage queries for Android 10+ Scoped Storage.
+
+### Tasks:
+1. **PERF-02:** Replace `BoxWithConstraints` inside `PdfViewerScreen.kt` page items with standard `Box(Modifier.aspectRatio())`.
+2. **PERF-03:** Implement bitmap buffer reuse / recycling in `MuPdfRenderer.kt` and `TileBitmapCache.kt` to prevent Out-Of-Memory spikes during rapid scrolling of 500+ page documents.
+3. **DATA-01:** Update `MediaRepositoryImpl.kt` to migrate away from deprecated `MediaStore.Images.Media.DATA` file paths, utilizing `ContentResolver.openFileDescriptor` and content URIs for robust Android 11+ compatibility.
+4. **DATA-02:** Enable `exportSchema = true` in `AppDatabase.kt` and establish explicit Room migration baseline.
+
+### Verification Checklist:
+- [ ] Open a 500+ page test PDF: scroll rapidly from top to bottom. Monitor memory graph in Android Studio Profiler (verify stable heap without OOM).
+- [ ] Test photo and video loading on Android 13/14 device: media items load seamlessly via Scoped Storage content URIs.
+- [ ] Verify Room database compiles with schema export enabled.
+
+### Rollback Strategy:
+- Revert Batch 5 commits.
+
+---
+
+## Batch 6: Reliability Guardrails & Test Coverage
+
+**Objective:** Add robust automated test coverage for critical offline pipelines and verify total app integrity.
+
+### Tasks:
+1. **TST-01:** Add unit test suite for `VaultManager` verifying AES-GCM encryption, decryption, incorrect PIN rejection, and temp file cleanup.
+2. **TST-02:** Add unit test for `AudioExtractor` verifying flag translation for sync and partial frames.
+3. **TST-03:** Add unit test for `ApkDownloader` SHA-256 validation logic (matching hash vs mismatched hash).
+4. Run full suite: `./gradlew testDebugUnitTest`, `./gradlew lintDebug`, and `./gradlew assembleRelease`.
+
+### Verification Checklist:
+- [ ] All unit tests pass (`100% green`).
+- [ ] Android Lint reports **0 errors**.
+- [ ] Release APK compiles and builds cleanly.
+- [ ] Generate final comparison metrics (APK size, lines of code removed, test count).
