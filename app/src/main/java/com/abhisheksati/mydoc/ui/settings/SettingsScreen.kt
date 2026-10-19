@@ -29,6 +29,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Article
@@ -310,11 +311,14 @@ fun SettingsScreen(
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         val tabs = listOf(
                             Triple(HomeTab.FILES, Icons.Outlined.Folder, "Files"),
+                            Triple(HomeTab.STORAGE, Icons.Outlined.Storage, "Storage"),
                             Triple(HomeTab.DOCUMENTS, Icons.AutoMirrored.Outlined.Article, "Documents"),
                             Triple(HomeTab.MEDIA, Icons.Outlined.PermMedia, "Media")
                         )

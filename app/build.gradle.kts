@@ -99,6 +99,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
 
     implementation(libs.mupdf.fitz)
+    implementation(libs.pdfbox.android)
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)

@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.view.ViewGroup
 import android.widget.Toast
+import android.graphics.BitmapFactory
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,6 +33,15 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import com.abhisheksati.mydoc.tools.scan.cropper.FreeCornersCropperDialog
+import com.abhisheksati.mydoc.tools.scan.filters.ScanFilter
+import com.abhisheksati.mydoc.tools.scan.filters.ScanFilterEngine
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.FileOutputStream
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -157,6 +167,43 @@ fun CameraScanSheet(
         var isTorchOn by remember { mutableStateOf(false) }
         var selectedMode by remember { mutableStateOf(ScanAspectMode.DOCUMENT) }
         var isCapturing by remember { mutableStateOf(false) }
+
+        val scope = androidx.compose.runtime.rememberCoroutineScope()
+        var selectedScanFilter by remember { mutableStateOf(ScanFilter.AUTO) }
+        var editingPageForCrop by remember { mutableStateOf<Pair<Int, android.graphics.Bitmap>?>(null) }
+        var isApplyingFilterAndSaving by remember { mutableStateOf(false) }
+
+        // Perspective Free-Corners Cropper Dialog
+        if (editingPageForCrop != null) {
+            FreeCornersCropperDialog(
+                bitmap = editingPageForCrop!!.second,
+                onDismiss = { editingPageForCrop = null },
+                onCropped = { croppedBitmap ->
+                    val pageIdx = editingPageForCrop!!.first
+                    editingPageForCrop = null
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            val file = capturedFiles[pageIdx]
+                            FileOutputStream(file).use { out ->
+                                croppedBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 94, out)
+                                out.flush()
+                            }
+                            withContext(Dispatchers.Main) {
+                                val f = capturedFiles[pageIdx]
+                                capturedFiles.removeAt(pageIdx)
+                                capturedFiles.add(pageIdx, f)
+                                Toast.makeText(context, "Page ${pageIdx + 1} deskewed & cropped.", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(context, "Failed to save: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                },
+                accentColor = colors.accent
+            )
+        }
 
         // Gallery picker launcher
         val galleryLauncher = rememberLauncherForActivityResult(
@@ -491,6 +538,19 @@ fun CameraScanSheet(
                                     .clip(RoundedCornerShape(8.dp))
                                     .border(1.5.dp, colors.accent, RoundedCornerShape(8.dp))
                                     .background(Color(0xFF212121))
+                                    .clickable {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        scope.launch(Dispatchers.IO) {
+                                            try {
+                                                val bmp = BitmapFactory.decodeFile(file.absolutePath)
+                                                if (bmp != null) {
+                                                    withContext(Dispatchers.Main) {
+                                                        editingPageForCrop = idx to bmp
+                                                    }
+                                                }
+                                            } catch (_: Exception) {}
+                                        }
+                                    }
                             ) {
                                 AsyncImage(
                                     model = file,
@@ -533,6 +593,42 @@ fun CameraScanSheet(
                                         modifier = Modifier.size(12.dp)
                                     )
                                 }
+                            }
+                        }
+                    }
+                }
+
+                // Scan Filter Presets Strip
+                AnimatedVisibility(
+                    visible = capturedFiles.isNotEmpty(),
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 20.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        ScanFilter.entries.forEach { filter ->
+                            val isSelected = selectedScanFilter == filter
+                            Surface(
+                                color = if (isSelected) colors.accent else Color(0x6618181C),
+                                shape = RoundedCornerShape(16.dp),
+                                border = BorderStroke(1.dp, if (isSelected) colors.accent else Color(0x33FFFFFF)),
+                                modifier = Modifier.clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    selectedScanFilter = filter
+                                }
+                            ) {
+                                Text(
+                                    text = filter.label,
+                                    style = typography.caption.copy(fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium),
+                                    color = if (isSelected) Color.Black else Color.White,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                )
                             }
                         }
                     }
@@ -624,20 +720,57 @@ fun CameraScanSheet(
                             if (capturedFiles.isNotEmpty()) {
                                 IconButton(
                                     onClick = {
-                                        val uris = capturedFiles.map { Uri.fromFile(it) }
-                                        onScannedUris(uris)
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        if (selectedScanFilter == ScanFilter.ORIGINAL) {
+                                            val uris = capturedFiles.map { Uri.fromFile(it) }
+                                            onScannedUris(uris)
+                                        } else {
+                                            isApplyingFilterAndSaving = true
+                                            scope.launch(Dispatchers.IO) {
+                                                try {
+                                                    for (file in capturedFiles) {
+                                                        val bmp = BitmapFactory.decodeFile(file.absolutePath) ?: continue
+                                                        val filtered = ScanFilterEngine.applyFilter(bmp, selectedScanFilter)
+                                                        FileOutputStream(file).use { out ->
+                                                            filtered.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, out)
+                                                            out.flush()
+                                                        }
+                                                    }
+                                                    withContext(Dispatchers.Main) {
+                                                        isApplyingFilterAndSaving = false
+                                                        val uris = capturedFiles.map { Uri.fromFile(it) }
+                                                        onScannedUris(uris)
+                                                    }
+                                                } catch (_: Exception) {
+                                                    withContext(Dispatchers.Main) {
+                                                        isApplyingFilterAndSaving = false
+                                                        val uris = capturedFiles.map { Uri.fromFile(it) }
+                                                        onScannedUris(uris)
+                                                    }
+                                                }
+                                            }
+                                        }
                                     },
+                                    enabled = !isApplyingFilterAndSaving,
                                     modifier = Modifier
                                         .size(50.dp)
                                         .clip(CircleShape)
-                                        .background(colors.accent)
+                                        .background(if (isApplyingFilterAndSaving) Color.Gray else colors.accent)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Check,
-                                        contentDescription = "Done Scanning",
-                                        tint = Color.Black,
-                                        modifier = Modifier.size(26.dp)
-                                    )
+                                    if (isApplyingFilterAndSaving) {
+                                        androidx.compose.material3.CircularProgressIndicator(
+                                            color = Color.White,
+                                            strokeWidth = 2.dp,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Check,
+                                            contentDescription = "Done Scanning",
+                                            tint = Color.Black,
+                                            modifier = Modifier.size(26.dp)
+                                        )
+                                    }
                                 }
                             }
                         }

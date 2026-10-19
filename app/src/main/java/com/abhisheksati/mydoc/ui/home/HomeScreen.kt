@@ -37,7 +37,11 @@ import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.PermMedia
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.Storage
+import com.abhisheksati.mydoc.ui.storage.StorageScreen
+import com.abhisheksati.mydoc.ui.storage.StorageViewModel
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.CameraAlt
@@ -175,6 +179,13 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp
+
+    val storageViewModel: StorageViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = StorageViewModel.Factory(
+            context = context.applicationContext,
+            storageRepository = app?.storageRepository ?: (context.applicationContext as MyDocApp).storageRepository
+        )
+    )
 
     val currentTab by viewModel.currentTab.collectAsStateWithLifecycle()
     val pagerState = rememberPagerState(
@@ -352,9 +363,23 @@ fun HomeScreen(
                             onToggleTheme = onToggleTheme,
                             isDarkTheme = isDarkTheme,
                             isActive = (currentTab == HomeTab.FILES),
+                            onNavigateToStorage = {
+                                viewModel.selectTab(HomeTab.STORAGE)
+                            },
                             modifier = Modifier.fillMaxSize()
                         )
                     }
+                }
+                HomeTab.STORAGE -> {
+                    StorageScreen(
+                        viewModel = storageViewModel,
+                        onNavigateToCategory = { category ->
+                            viewModel.selectTab(HomeTab.FILES)
+                            fileManagerViewModel?.selectCategory(category)
+                        },
+                        onSettingsClick = onSettingsClick,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
                 HomeTab.DOCUMENTS -> {
                     DocumentsTabContent(
@@ -564,6 +589,17 @@ fun FloatingPillDock(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     onTabSelected(HomeTab.FILES)
+                }
+            )
+            FloatingDockItem(
+                selected = currentTab == HomeTab.STORAGE,
+                icon = if (currentTab == HomeTab.STORAGE) Icons.Filled.Storage else Icons.Outlined.Storage,
+                label = "Storage",
+                accentColor = colors.accent,
+                unselectedColor = colors.textSecondary,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onTabSelected(HomeTab.STORAGE)
                 }
             )
             FloatingDockItem(

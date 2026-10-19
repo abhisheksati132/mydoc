@@ -120,6 +120,7 @@ data class ToolOptions(
     val pageMargin: PageMargin = PageMargin.NONE,
     val exportDpi: Int = 150,
     val exportFormatJpg: Boolean = true,
+    val exportAsLongImage: Boolean = false,
 
     // Edit
     val pageNumberPosition: PageNumberPosition = PageNumberPosition.BOTTOM_CENTER,

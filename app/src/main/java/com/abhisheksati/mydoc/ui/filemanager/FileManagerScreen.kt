@@ -162,6 +162,7 @@ fun FileManagerScreen(
     onToggleTheme: (() -> Unit)? = null,
     isDarkTheme: Boolean = false,
     isActive: Boolean = true,
+    onNavigateToStorage: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -661,8 +662,13 @@ fun FileManagerScreen(
                     StorageVolumeSummary(
                         volumes = uiState.storageVolumes,
                         onVolumeClick = { volume ->
-                            viewModel.loadDirectory(volume.file)
-                        }
+                            if (onNavigateToStorage != null) {
+                                onNavigateToStorage()
+                            } else {
+                                viewModel.loadDirectory(volume.file)
+                            }
+                        },
+                        onStorageDetailsClick = onNavigateToStorage
                     )
                 }
 
@@ -1202,7 +1208,8 @@ private fun ItemActionOption(
 @Composable
 fun StorageVolumeSummary(
     volumes: List<com.abhisheksati.mydoc.domain.model.StorageVolume>,
-    onVolumeClick: (com.abhisheksati.mydoc.domain.model.StorageVolume) -> Unit
+    onVolumeClick: (com.abhisheksati.mydoc.domain.model.StorageVolume) -> Unit,
+    onStorageDetailsClick: (() -> Unit)? = null
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
@@ -1229,7 +1236,7 @@ fun StorageVolumeSummary(
                 color = if (isOled) Color(0xFF0F1116) else colors.surface,
                 border = BorderStroke(
                     1.dp,
-                    if (isOled) Color.White.copy(alpha = 0.07f) else colors.divider.copy(alpha = 0.5f)
+                    if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1242,7 +1249,13 @@ fun StorageVolumeSummary(
                     .clickable(
                         interactionSource = interactionSource,
                         indication = null
-                    ) { onVolumeClick(volume) }
+                    ) {
+                        if (onStorageDetailsClick != null) {
+                            onStorageDetailsClick()
+                        } else {
+                            onVolumeClick(volume)
+                        }
+                    }
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -1250,30 +1263,47 @@ fun StorageVolumeSummary(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(38.dp)
                                     .clip(CircleShape)
-                                    .background(if (isOled) Color(0xFF181A20) else colors.surfaceVariant),
+                                    .background(colors.accent.copy(alpha = 0.15f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.Storage,
                                     contentDescription = null,
-                                    tint = colors.textPrimary,
-                                    modifier = Modifier.size(18.dp)
+                                    tint = colors.accent,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
                             Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = volume.title,
+                                        style = typography.title.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold),
+                                        color = colors.textPrimary
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = colors.accent.copy(alpha = 0.12f)
+                                    ) {
+                                        Text(
+                                            text = "Analyzer",
+                                            style = typography.caption.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
+                                            color = colors.accent,
+                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                        )
+                                    }
+                                }
                                 Text(
-                                    text = volume.title,
-                                    style = typography.title.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold),
-                                    color = colors.textPrimary
-                                )
-                                Text(
-                                    text = "${volume.formattedUsed} used of ${volume.formattedTotal}",
+                                    text = "${volume.formattedUsed} of ${volume.formattedTotal} • ${volume.formattedFree} free",
                                     style = typography.caption.copy(fontSize = 11.sp),
                                     color = colors.textSecondary
                                 )
@@ -1281,14 +1311,25 @@ fun StorageVolumeSummary(
                         }
 
                         val pct = (volume.usedRatio * 100).toInt().coerceIn(0, 100)
-                        Text(
-                            text = "$pct%",
-                            style = typography.caption.copy(
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
-                            ),
-                            color = colors.textSecondary
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "$pct%",
+                                style = typography.title.copy(
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                ),
+                                color = colors.textPrimary
+                            )
+                            Icon(
+                                imageVector = Icons.Outlined.ChevronRight,
+                                contentDescription = "View Details",
+                                tint = colors.textSecondary.copy(alpha = 0.7f),
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))

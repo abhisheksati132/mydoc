@@ -27,7 +27,17 @@ object PptxConverter {
             return targetPdf
         }
 
-        val pdfDoc = PptxRenderer.render(bytes) ?: return null
+        // Apply orphan placeholder recovery to resolve cut-off titles and missing master styles
+        val processedBytes = runCatching {
+            val tempPptx = File(cacheDir, "temp_${System.currentTimeMillis()}.pptx")
+            tempPptx.writeBytes(bytes)
+            PptxPlaceholderFix.apply(tempPptx)
+            val fixed = tempPptx.readBytes()
+            tempPptx.delete()
+            fixed
+        }.getOrDefault(bytes)
+
+        val pdfDoc = PptxRenderer.render(processedBytes) ?: return null
         return try {
             FileOutputStream(targetPdf).use { out ->
                 pdfDoc.writeTo(out)

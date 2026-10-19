@@ -33,5 +33,7 @@ interface DocumentRenderer {
     ): Bitmap? = null
     fun search(query: String): List<SearchMatch>
     fun getOutline(): List<OutlineItem>
+    fun getPageText(pageIndex: Int): String = ""
+    fun getDocumentText(): String = ""
     fun close()
 }

@@ -3,6 +3,9 @@ package com.abhisheksati.mydoc.ui.viewer.pdf
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.widget.Toast
@@ -11,6 +14,18 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.TextFields
+import androidx.compose.material.icons.outlined.VolumeUp
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
+import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import androidx.compose.ui.text.font.FontWeight
+import com.abhisheksati.mydoc.designsystem.components.AppBottomSheet
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -80,11 +95,14 @@ import com.abhisheksati.mydoc.ui.viewer.controls.ThumbnailStrip
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerBottomBar
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerTopBar
 import com.abhisheksati.mydoc.viewmodel.ViewerViewModel
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.ExperimentalMaterial3Api
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PdfViewerScreen(
     document: DocumentFile,
@@ -99,6 +117,7 @@ fun PdfViewerScreen(
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp
     val colors = LocalAppColors.current
+    val typography = LocalAppTypography.current
     val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
     val state by viewModel.uiState.collectAsState()
@@ -110,6 +129,10 @@ fun PdfViewerScreen(
     var ocrExtractedText by remember { mutableStateOf<String?>(null) }
     var isOcrRunning by remember { mutableStateOf(false) }
     val ocrEngine = remember { com.abhisheksati.mydoc.ocr.OcrEngine(context) }
+    val ttsManager = remember { com.abhisheksati.mydoc.tools.tts.DocumentTtsManager(context) }
+    var isTtsVisible by remember { mutableStateOf(false) }
+    var currentTtsText by remember { mutableStateOf("") }
+    var selectedPageForActions by remember { mutableStateOf<Int?>(null) }
 
     val reopenLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -345,7 +368,8 @@ fun PdfViewerScreen(
                                         viewModel = viewModel,
                                         readingMode = state.readingMode,
                                         zoomScale = zoomScale,
-                                        searchMatches = searchMatchesByPage[leftPage] ?: emptyList()
+                                        searchMatches = searchMatchesByPage[leftPage] ?: emptyList(),
+                                        onLongPressPage = { selectedPageForActions = it }
                                     )
                                 }
                                 Box(modifier = Modifier.weight(1f)) {
@@ -355,7 +379,8 @@ fun PdfViewerScreen(
                                             viewModel = viewModel,
                                             readingMode = state.readingMode,
                                             zoomScale = zoomScale,
-                                            searchMatches = searchMatchesByPage[rightPage] ?: emptyList()
+                                            searchMatches = searchMatchesByPage[rightPage] ?: emptyList(),
+                                            onLongPressPage = { selectedPageForActions = it }
                                         )
                                     }
                                 }
@@ -375,7 +400,8 @@ fun PdfViewerScreen(
                                 viewModel = viewModel,
                                 readingMode = state.readingMode,
                                 zoomScale = zoomScale,
-                                searchMatches = searchMatchesByPage[pageIndex] ?: emptyList()
+                                searchMatches = searchMatchesByPage[pageIndex] ?: emptyList(),
+                                onLongPressPage = { selectedPageForActions = it }
                             )
                             Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                         }
@@ -396,7 +422,8 @@ fun PdfViewerScreen(
                                 viewModel = viewModel,
                                 readingMode = state.readingMode,
                                 zoomScale = zoomScale,
-                                searchMatches = searchMatchesByPage[pageIndex] ?: emptyList()
+                                searchMatches = searchMatchesByPage[pageIndex] ?: emptyList(),
+                                onLongPressPage = { selectedPageForActions = it }
                             )
                         }
                     }
@@ -467,6 +494,26 @@ fun PdfViewerScreen(
                             Toast.makeText(context, "OCR failed: ${e.message}", Toast.LENGTH_SHORT).show()
                         } finally {
                             isOcrRunning = false
+                        }
+                    }
+                }
+            },
+            onTtsClick = {
+                coroutineScope.launch {
+                    val pageText = viewModel.getPageText(state.currentPage)
+                    if (pageText.isNotBlank()) {
+                        currentTtsText = pageText
+                        isTtsVisible = true
+                    } else {
+                        val pageBmp = viewModel.renderPageBitmap(state.currentPage, 1.5f)
+                        if (pageBmp != null) {
+                            val ocr = ocrEngine.recognizeText(pageBmp)
+                            if (ocr.isNotBlank()) {
+                                currentTtsText = ocr
+                                isTtsVisible = true
+                            } else {
+                                Toast.makeText(context, "No text detected on this page to read", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
                 }
@@ -611,6 +658,155 @@ fun PdfViewerScreen(
                 onDismiss = { ocrExtractedText = null }
             )
         }
+
+        // Text-to-Speech (TTS) Read Aloud floating playback controller
+        com.abhisheksati.mydoc.ui.tts.DocumentTtsBar(
+            ttsManager = ttsManager,
+            documentText = currentTtsText,
+            isVisible = isTtsVisible,
+            onClose = { isTtsVisible = false },
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
+
+        // Page Contextual Action Sheet (Copy, Read, Share, OCR)
+        if (selectedPageForActions != null) {
+            val pageNum = selectedPageForActions!!
+            AppBottomSheet(
+                isOpen = true,
+                onDismiss = { selectedPageForActions = null }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(AppSpacing.paddingLarge)
+                ) {
+                    Text(
+                        text = "Page ${pageNum + 1} Actions",
+                        style = typography.title,
+                        color = colors.textPrimary
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 1. Copy Page Text
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                coroutineScope.launch {
+                                    val text = viewModel.getPageText(pageNum)
+                                    if (text.isNotBlank()) {
+                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        clipboard.setPrimaryClip(ClipData.newPlainText("Page ${pageNum + 1}", text))
+                                        Toast.makeText(context, "Page ${pageNum + 1} text copied to clipboard", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "No digital text on this page. Try OCR extract.", Toast.LENGTH_SHORT).show()
+                                    }
+                                    selectedPageForActions = null
+                                }
+                            }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Outlined.ContentCopy, contentDescription = null, tint = colors.accent)
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text("Copy Page Text", style = typography.body, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
+                            Text("Copy all digital text from this page to clipboard", style = typography.caption, color = colors.textSecondary)
+                        }
+                    }
+
+                    // 2. Read Page Aloud (TTS)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                coroutineScope.launch {
+                                    val text = viewModel.getPageText(pageNum)
+                                    if (text.isNotBlank()) {
+                                        currentTtsText = text
+                                        isTtsVisible = true
+                                    } else {
+                                        Toast.makeText(context, "No text on this page to read", Toast.LENGTH_SHORT).show()
+                                    }
+                                    selectedPageForActions = null
+                                }
+                            }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Outlined.VolumeUp, contentDescription = null, tint = colors.accent)
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text("Read Page Aloud (TTS)", style = typography.body, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
+                            Text("Listen to this page with offline speech synthesizer", style = typography.caption, color = colors.textSecondary)
+                        }
+                    }
+
+                    // 3. Share Page Text
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                coroutineScope.launch {
+                                    val text = viewModel.getPageText(pageNum)
+                                    if (text.isNotBlank()) {
+                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_TEXT, text)
+                                        }
+                                        context.startActivity(Intent.createChooser(shareIntent, "Share Page ${pageNum + 1} Text"))
+                                    } else {
+                                        Toast.makeText(context, "No text on this page to share", Toast.LENGTH_SHORT).show()
+                                    }
+                                    selectedPageForActions = null
+                                }
+                            }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Outlined.Share, contentDescription = null, tint = colors.accent)
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text("Share Page Text", style = typography.body, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
+                            Text("Share page text to WhatsApp, Messages, or Email", style = typography.caption, color = colors.textSecondary)
+                        }
+                    }
+
+                    // 4. OCR Extract Text
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                selectedPageForActions = null
+                                coroutineScope.launch {
+                                    val pageBmp = viewModel.renderPageBitmap(pageNum, 2.0f)
+                                    if (pageBmp != null) {
+                                        val ocr = ocrEngine.recognizeText(pageBmp)
+                                        if (ocr.isNotBlank()) {
+                                            ocrExtractedText = ocr
+                                        } else {
+                                            Toast.makeText(context, "No text found with OCR", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Outlined.TextFields, contentDescription = null, tint = colors.accent)
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text("Extract Text with OCR", style = typography.body, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
+                            Text("Recognize printed or handwritten text on images", style = typography.caption, color = colors.textSecondary)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -624,8 +820,10 @@ private fun PageItemView(
     viewModel: ViewerViewModel,
     readingMode: ReadingMode,
     zoomScale: Float = 1f,
-    searchMatches: List<com.abhisheksati.mydoc.rendering.engine.SearchMatch>
+    searchMatches: List<com.abhisheksati.mydoc.rendering.engine.SearchMatch>,
+    onLongPressPage: ((Int) -> Unit)? = null
 ) {
+    val haptic = LocalHapticFeedback.current
     val (origWidth, origHeight) = remember(pageIndex) { viewModel.getPageSize(pageIndex) }
     val aspectRatio = if (origHeight > 0) origWidth / origHeight else 0.707f
     val targetScale = remember(zoomScale) {
@@ -660,6 +858,14 @@ private fun PageItemView(
             .fillMaxWidth()
             .aspectRatio(aspectRatio)
             .background(itemBg)
+            .pointerInput(pageIndex) {
+                detectTapGestures(
+                    onLongPress = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onLongPressPage?.invoke(pageIndex)
+                    }
+                )
+            }
     ) {
         val bmp = bitmap
         if (bmp != null && !bmp.isRecycled) {

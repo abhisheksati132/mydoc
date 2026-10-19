@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.TextFields
+import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -55,6 +56,7 @@ fun ViewerTopBar(
     onToggleBookmark: () -> Unit,
     onToolsClick: (() -> Unit)? = null,
     onOcrClick: (() -> Unit)? = null,
+    onTtsClick: (() -> Unit)? = null,
     onSlideshowClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -155,6 +157,23 @@ fun ViewerTopBar(
                         Icon(
                             imageVector = Icons.Outlined.TextFields,
                             contentDescription = "Extract Text (OCR)",
+                            tint = colors.textSecondary
+                        )
+                    }
+                }
+
+                // Text-to-Speech (TTS) Read Aloud
+                if (onTtsClick != null) {
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onTtsClick()
+                        },
+                        modifier = Modifier.size(AppSpacing.minTouchTarget)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.VolumeUp,
+                            contentDescription = "Read Aloud (TTS)",
                             tint = colors.textSecondary
                         )
                     }

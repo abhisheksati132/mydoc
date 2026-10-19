@@ -275,6 +275,48 @@ class MuPdfRenderer(
         )
     }
 
+    override fun getPageText(pageIndex: Int): String = lock.withLock {
+        val doc = document ?: return@withLock ""
+        if (pageIndex < 0 || pageIndex >= (document?.countPages() ?: 0)) return@withLock ""
+        try {
+            val page = doc.loadPage(pageIndex)
+            val st = page.toStructuredText()
+            val sb = StringBuilder()
+            for (b in st.blocks) {
+                for (l in b.lines) {
+                    for (c in l.chars) sb.append(c.c.toChar())
+                    sb.append("\n")
+                }
+            }
+            st.destroy()
+            page.destroy()
+            sb.toString()
+        } catch (_: Throwable) {
+            ""
+        }
+    }
+
+    override fun getDocumentText(): String = lock.withLock {
+        val doc = document ?: return@withLock ""
+        val total = try { doc.countPages() } catch (_: Throwable) { 0 }
+        val sb = StringBuilder()
+        for (p in 0 until total) {
+            try {
+                val page = doc.loadPage(p)
+                val st = page.toStructuredText()
+                for (b in st.blocks) {
+                    for (l in b.lines) {
+                        for (c in l.chars) sb.append(c.c.toChar())
+                        sb.append("\n")
+                    }
+                }
+                st.destroy()
+                page.destroy()
+            } catch (_: Throwable) {}
+        }
+        sb.toString()
+    }
+
     override fun close() {
         lock.withLock {
             tileCache.recycleAll()

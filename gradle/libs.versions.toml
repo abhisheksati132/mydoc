@@ -15,9 +15,11 @@ espresso = "3.6.1"
 mupdf = "1.24.4"
 camerax = "1.4.1"
 coil = "2.7.0"
+pdfbox = "2.0.27.0"
 exifinterface = "1.3.7"
 
 [libraries]
+pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfbox" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 coil-gif = { group = "io.coil-kt", name = "coil-gif", version.ref = "coil" }
 coil-video = { group = "io.coil-kt", name = "coil-video", version.ref = "coil" }

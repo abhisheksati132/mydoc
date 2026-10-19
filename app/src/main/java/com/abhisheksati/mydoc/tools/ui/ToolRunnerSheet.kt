@@ -25,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
@@ -96,6 +97,7 @@ fun ToolRunnerSheet(
     val context = LocalContext.current
 
     var showVisualPageOrganizer by remember { mutableStateOf(false) }
+    var showFillFormSheet by remember { mutableStateOf(false) }
 
     // SAF Document Pickers
     val singlePickerLauncher = rememberLauncherForActivityResult(
@@ -217,6 +219,7 @@ fun ToolRunnerSheet(
                         options = toolOptions,
                         uris = inputUris,
                         onOpenOrganizer = { showVisualPageOrganizer = true },
+                        onOpenFormFiller = { showFillFormSheet = true },
                         onOptionsChange = { transform -> viewModel.updateOptions(transform) }
                     )
 
@@ -346,6 +349,22 @@ fun ToolRunnerSheet(
             }
         )
     }
+
+    if (showFillFormSheet && inputUris.isNotEmpty()) {
+        com.abhisheksati.mydoc.tools.ui.components.FillFormSheet(
+            sourceUri = inputUris.first(),
+            onDismiss = { showFillFormSheet = false },
+            onSaveValues = { values, flatten ->
+                showFillFormSheet = false
+                viewModel.updateOptions {
+                    it.copy(
+                        formFieldValues = values,
+                        flattenForm = flatten
+                    )
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -457,6 +476,7 @@ private fun ToolOptionsSection(
     options: com.abhisheksati.mydoc.tools.model.ToolOptions,
     uris: List<Uri>,
     onOpenOrganizer: () -> Unit,
+    onOpenFormFiller: () -> Unit = {},
     onOptionsChange: ((com.abhisheksati.mydoc.tools.model.ToolOptions) -> com.abhisheksati.mydoc.tools.model.ToolOptions) -> Unit
 ) {
     val colors = LocalAppColors.current
@@ -659,6 +679,68 @@ private fun ToolOptionsSection(
                     }
                 } else {
                     Text("Select a PDF document above to view and organize its pages.", style = typography.caption, color = colors.textSecondary)
+                }
+            }
+
+            PdfTool.FILL_FORM -> {
+                Text(text = "FORM FIELDS", style = typography.label, color = colors.textSecondary)
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                if (uris.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+                            .background(colors.accent)
+                            .clickable { onOpenFormFiller() }
+                            .padding(vertical = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Edit, contentDescription = null, tint = Color.Black)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Open Interactive Form Editor", style = typography.body, color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    if (options.formFieldValues.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "${options.formFieldValues.size} fields filled ${if (options.flattenForm) "(Will be flattened)" else "(Editable)"}",
+                            style = typography.caption,
+                            color = colors.accent
+                        )
+                    }
+                } else {
+                    Text("Select a PDF above to detect and fill form fields.", style = typography.caption, color = colors.textSecondary)
+                }
+            }
+
+            PdfTool.PDF_TO_IMAGES -> {
+                Text(text = "EXPORT FORMAT", style = typography.label, color = colors.textSecondary)
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)) {
+                    AppFilterChip(
+                        label = "ZIP of Images",
+                        isSelected = !options.exportAsLongImage,
+                        onClick = { onOptionsChange { it.copy(exportAsLongImage = false) } }
+                    )
+                    AppFilterChip(
+                        label = "Single Long Image (Vertical Stitch)",
+                        isSelected = options.exportAsLongImage,
+                        onClick = { onOptionsChange { it.copy(exportAsLongImage = true) } }
+                    )
+                }
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)) {
+                    AppFilterChip(
+                        label = "JPEG",
+                        isSelected = options.exportFormatJpg,
+                        onClick = { onOptionsChange { it.copy(exportFormatJpg = true) } }
+                    )
+                    AppFilterChip(
+                        label = "PNG",
+                        isSelected = !options.exportFormatJpg,
+                        onClick = { onOptionsChange { it.copy(exportFormatJpg = false) } }
+                    )
                 }
             }
 

@@ -434,6 +434,14 @@ class ViewerViewModel(
         }
     }
 
+    suspend fun getPageText(pageIndex: Int): String = withContext(Dispatchers.IO) {
+        renderer?.getPageText(pageIndex).orEmpty()
+    }
+
+    suspend fun getDocumentText(): String = withContext(Dispatchers.IO) {
+        renderer?.getDocumentText().orEmpty()
+    }
+
     override fun onCleared() {
         super.onCleared()
         prefetchJob?.cancel()

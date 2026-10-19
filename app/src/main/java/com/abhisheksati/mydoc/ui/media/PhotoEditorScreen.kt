@@ -12,6 +12,7 @@ import android.os.Environment
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import com.abhisheksati.mydoc.tools.scan.cropper.FreeCornersCropperDialog
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -105,6 +106,9 @@ enum class CropAspectRatio(val label: String, val ratio: Float?) {
 
 enum class FilterPreset(val displayName: String) {
     ORIGINAL("Normal"),
+    DOC_AUTO("Doc Auto"),
+    BW_THRESHOLD("B&W Scan"),
+    SHADOW_CLEAN("Shadow Free"),
     VIVID("Vivid"),
     MONO("B&W"),
     SEPIA("Sepia"),
@@ -128,6 +132,7 @@ fun PhotoEditorScreen(
     var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var isSaving by remember { mutableStateOf(false) }
+    var showPerspectiveCropper by remember { mutableStateOf(false) }
 
     // Editor adjustments
     var activeTool by remember { mutableStateOf(EditorTool.ADJUST) }
@@ -180,6 +185,35 @@ fun PhotoEditorScreen(
         // 1. Base preset filter
         when (selectedFilter) {
             FilterPreset.ORIGINAL -> {}
+            FilterPreset.DOC_AUTO -> {
+                val autoMatrix = android.graphics.ColorMatrix(floatArrayOf(
+                    1.22f, 0f, 0f, 0f, 8f,
+                    0f, 1.22f, 0f, 0f, 8f,
+                    0f, 0f, 1.22f, 0f, 8f,
+                    0f, 0f, 0f, 1f, 0f
+                ))
+                cm.postConcat(autoMatrix)
+            }
+            FilterPreset.BW_THRESHOLD -> {
+                val gray = android.graphics.ColorMatrix().apply { setSaturation(0f) }
+                val thresholdMatrix = android.graphics.ColorMatrix(floatArrayOf(
+                    2.4f, 0f, 0f, 0f, -200f,
+                    0f, 2.4f, 0f, 0f, -200f,
+                    0f, 0f, 2.4f, 0f, -200f,
+                    0f, 0f, 0f, 1f, 0f
+                ))
+                thresholdMatrix.preConcat(gray)
+                cm.postConcat(thresholdMatrix)
+            }
+            FilterPreset.SHADOW_CLEAN -> {
+                val bright = android.graphics.ColorMatrix(floatArrayOf(
+                    1.35f, 0f, 0f, 0f, 15f,
+                    0f, 1.35f, 0f, 0f, 15f,
+                    0f, 0f, 1.35f, 0f, 15f,
+                    0f, 0f, 0f, 1f, 0f
+                ))
+                cm.postConcat(bright)
+            }
             FilterPreset.VIVID -> {
                 val satMatrix = android.graphics.ColorMatrix().apply { setSaturation(1.4f) }
                 val contMatrix = createContrastMatrix(1.2f)
@@ -260,6 +294,20 @@ fun PhotoEditorScreen(
     }
 
     BackHandler { onDismiss() }
+
+    if (showPerspectiveCropper && originalBitmap != null) {
+        FreeCornersCropperDialog(
+            bitmap = originalBitmap!!,
+            onDismiss = { showPerspectiveCropper = false },
+            onCropped = { cropped ->
+                showPerspectiveCropper = false
+                originalBitmap = cropped
+                selectedCropRatio = CropAspectRatio.ORIGINAL
+                Toast.makeText(context, "Perspective corrected & deskewed.", Toast.LENGTH_SHORT).show()
+            },
+            accentColor = colors.accent
+        )
+    }
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -405,8 +453,36 @@ fun PhotoEditorScreen(
                                         .fillMaxWidth()
                                         .horizontalScroll(rememberScrollState())
                                         .padding(horizontal = 16.dp, vertical = 6.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    // 4-Corner Perspective Deskew
+                                    Surface(
+                                        color = colors.accent.copy(alpha = 0.2f),
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.accent),
+                                        modifier = Modifier.clickable { showPerspectiveCropper = true }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Crop,
+                                                contentDescription = "4-Corner Deskew",
+                                                tint = colors.accent,
+                                                modifier = Modifier.size(15.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "4-Corner Deskew",
+                                                color = colors.accent,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+
                                     CropAspectRatio.entries.forEach { ratio ->
                                         val isSelected = selectedCropRatio == ratio
                                         Surface(
@@ -540,6 +616,9 @@ fun PhotoEditorScreen(
                                                     .background(
                                                         when (filter) {
                                                             FilterPreset.ORIGINAL -> Color(0xFF555555)
+                                                            FilterPreset.DOC_AUTO -> Color(0xFF4CAF50)
+                                                            FilterPreset.BW_THRESHOLD -> Color(0xFF212121)
+                                                            FilterPreset.SHADOW_CLEAN -> Color(0xFF00ACC1)
                                                             FilterPreset.VIVID -> Color(0xFFFF5252)
                                                             FilterPreset.MONO -> Color(0xFF888888)
                                                             FilterPreset.SEPIA -> Color(0xFFBCAAA4)

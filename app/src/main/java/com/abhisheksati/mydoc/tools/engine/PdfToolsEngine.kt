@@ -26,6 +26,9 @@ import com.abhisheksati.mydoc.tools.model.ToolExecutionResult
 import com.abhisheksati.mydoc.tools.model.ToolOptions
 import com.abhisheksati.mydoc.tools.model.ToolProgress
 import com.abhisheksati.mydoc.tools.model.WorkflowPresetType
+import com.abhisheksati.mydoc.tools.pdf.form.PdfFormService
+import com.abhisheksati.mydoc.tools.pdf.pagenumber.PdfPageNumberer
+import com.abhisheksati.mydoc.tools.pdf.watermark.PdfWatermarker
 import com.abhisheksati.mydoc.tools.security.SignatureStorage
 import com.artifex.mupdf.fitz.ColorSpace
 import com.artifex.mupdf.fitz.Document
@@ -673,13 +676,50 @@ class PdfToolsEngine(private val context: Context) {
             ?: throw IllegalArgumentException("Cannot open document")
         try {
             val totalPages = srcDoc.countPages()
-            val zipFile = createTempOutputFile("rendered_images", "zip")
             val isJpg = options.exportFormatJpg
             val ext = if (isJpg) "jpg" else "png"
             val compressFormat = if (isJpg) Bitmap.CompressFormat.JPEG else Bitmap.CompressFormat.PNG
             val quality = if (isJpg) 85 else 100
             val scale = if (options.exportDpi >= 300) 3.0f else 1.5f
 
+            if (options.exportAsLongImage) {
+                val renderedBitmaps = mutableListOf<Bitmap>()
+                var totalHeight = 0
+                var maxWidth = 0
+                for (p in 0 until totalPages) {
+                    currentCoroutineContext().ensureActive()
+                    val page = srcDoc.loadPage(p)
+                    val pixmap = page.toPixmap(Matrix(scale, scale), ColorSpace.DeviceRGB, false)
+                    val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
+                    renderedBitmaps.add(bmp)
+                    maxWidth = maxOf(maxWidth, bmp.width)
+                    totalHeight += bmp.height
+                    pixmap.destroy()
+                    page.destroy()
+                    val pct = 10 + (((p + 1).toFloat() / totalPages) * 60).toInt()
+                    onProgress(ToolProgress(p + 1, totalPages, pct, "Rendering page ${p + 1} of $totalPages for stitch...", false))
+                }
+
+                val stitchedBitmap = Bitmap.createBitmap(maxWidth, totalHeight, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(stitchedBitmap)
+                canvas.drawColor(Color.WHITE)
+                var currentY = 0f
+                for (bmp in renderedBitmaps) {
+                    val left = (maxWidth - bmp.width) / 2f
+                    canvas.drawBitmap(bmp, left, currentY, null)
+                    currentY += bmp.height
+                    bmp.recycle()
+                }
+
+                val outFile = createTempOutputFile("stitched_long_image", ext)
+                FileOutputStream(outFile).use { fos ->
+                    stitchedBitmap.compress(compressFormat, quality, fos)
+                }
+                stitchedBitmap.recycle()
+                return outFile
+            }
+
+            val zipFile = createTempOutputFile("rendered_images", "zip")
             ZipOutputStream(BufferedOutputStream(FileOutputStream(zipFile))).use { zos ->
                 for (p in 0 until totalPages) {
                     currentCoroutineContext().ensureActive()
@@ -908,150 +948,50 @@ class PdfToolsEngine(private val context: Context) {
     }
 
     private suspend fun addPageNumbers(file: File, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File {
-        val srcDoc = Document.openDocument(file.absolutePath) as? PDFDocument
-            ?: throw IllegalArgumentException("Cannot open document")
-        try {
-            val totalPages = srcDoc.countPages()
-            val outDoc = AndroidPdfDocument()
-
-            val paint = Paint().apply {
-                color = Color.DKGRAY
-                textSize = 9f
-                typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
-                isAntiAlias = true
-            }
-
-            for (p in 0 until totalPages) {
-                currentCoroutineContext().ensureActive()
-                val page = srcDoc.loadPage(p)
-                val bounds = page.bounds
-                val w = (bounds.x1 - bounds.x0).toInt().coerceAtLeast(1)
-                val h = (bounds.y1 - bounds.y0).toInt().coerceAtLeast(1)
-
-                val pageInfo = AndroidPdfDocument.PageInfo.Builder(w, h, p + 1).create()
-                val aPage = outDoc.startPage(pageInfo)
-                val canvas = aPage.canvas
-
-                // Draw underlying page
-                val pixmap = page.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, false)
-                val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
-                canvas.drawBitmap(bmp, null, RectF(0f, 0f, w.toFloat(), h.toFloat()), null)
-                bmp.recycle()
-                pixmap.destroy()
-                page.destroy()
-
-                // Draw formatted page number
-                val currNum = options.pageNumberStart + p
-                val label = when (options.pageNumberFormat) {
-                    PageNumberFormat.PAGE_X_OF_Y -> "Page $currNum of $totalPages"
-                    PageNumberFormat.X_OF_Y -> "$currNum / $totalPages"
-                    PageNumberFormat.ONLY_X -> "$currNum"
-                }
-
-                val textW = paint.measureText(label)
-                val (x, y) = when (options.pageNumberPosition) {
-                    PageNumberPosition.BOTTOM_CENTER -> Pair((w - textW) / 2f, h - 28f)
-                    PageNumberPosition.BOTTOM_RIGHT -> Pair(w - textW - 36f, h - 28f)
-                    PageNumberPosition.BOTTOM_LEFT -> Pair(36f, h - 28f)
-                    PageNumberPosition.TOP_CENTER -> Pair((w - textW) / 2f, 36f)
-                    PageNumberPosition.TOP_RIGHT -> Pair(w - textW - 36f, 36f)
-                }
-                canvas.drawText(label, x, y, paint)
-
-                outDoc.finishPage(aPage)
-                val pct = 10 + (((p + 1).toFloat() / totalPages) * 80).toInt()
-                onProgress(ToolProgress(p + 1, totalPages, pct, "Numbering page ${p + 1}...", false))
-            }
-
-            val outFile = createTempOutputFile("numbered", "pdf")
-            FileOutputStream(outFile).use { outDoc.writeTo(it) }
-            outDoc.close()
-            return outFile
-        } finally {
-            srcDoc.destroy()
+        val outFile = createTempOutputFile("numbered", "pdf")
+        PdfPageNumberer.apply(
+            context = context,
+            sourceFile = file,
+            destinationFile = outFile,
+            position = options.pageNumberPosition,
+            format = options.pageNumberFormat,
+            startAt = options.pageNumberStart
+        ) { current, total ->
+            val pct = 10 + ((current.toFloat() / total) * 85).toInt()
+            onProgress(ToolProgress(current, total, pct, "Stamping page number on page $current of $total...", false))
         }
+        return outFile
     }
 
     private suspend fun addWatermark(file: File, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File {
-        val srcDoc = Document.openDocument(file.absolutePath) as? PDFDocument
-            ?: throw IllegalArgumentException("Cannot open document")
-        try {
-            val totalPages = srcDoc.countPages()
-            val outDoc = AndroidPdfDocument()
-
-            val alpha = (options.watermarkOpacity.coerceIn(0.05f, 0.95f) * 255).toInt()
-            val paint = Paint().apply {
-                color = Color.argb(alpha, 128, 128, 128)
-                textSize = 42f
-                typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-                isAntiAlias = true
-            }
-
-            for (p in 0 until totalPages) {
-                currentCoroutineContext().ensureActive()
-                val page = srcDoc.loadPage(p)
-                val b = page.bounds
-                val w = (b.x1 - b.x0).toInt().coerceAtLeast(1)
-                val h = (b.y1 - b.y0).toInt().coerceAtLeast(1)
-
-                val pageInfo = AndroidPdfDocument.PageInfo.Builder(w, h, p + 1).create()
-                val aPage = outDoc.startPage(pageInfo)
-                val canvas = aPage.canvas
-
-                // Draw base page
-                val pixmap = page.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, false)
-                val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
-                canvas.drawBitmap(bmp, null, RectF(0f, 0f, w.toFloat(), h.toFloat()), null)
-                bmp.recycle()
-                pixmap.destroy()
-                page.destroy()
-
-                // Draw rotated watermark
-                canvas.save()
-                canvas.rotate(options.watermarkRotation, w / 2f, h / 2f)
-                val textW = paint.measureText(options.watermarkText)
-                canvas.drawText(options.watermarkText, (w - textW) / 2f, h / 2f, paint)
-                canvas.restore()
-
-                outDoc.finishPage(aPage)
-                val pct = 10 + (((p + 1).toFloat() / totalPages) * 80).toInt()
-                onProgress(ToolProgress(p + 1, totalPages, pct, "Watermarking page ${p + 1}...", false))
-            }
-
-            val outFile = createTempOutputFile("watermarked", "pdf")
-            FileOutputStream(outFile).use { outDoc.writeTo(it) }
-            outDoc.close()
-            return outFile
-        } finally {
-            srcDoc.destroy()
+        val outFile = createTempOutputFile("watermarked", "pdf")
+        val isDiagonal = kotlin.math.abs(options.watermarkRotation) > 10f
+        PdfWatermarker.applyText(
+            context = context,
+            sourceFile = file,
+            destinationFile = outFile,
+            text = options.watermarkText,
+            opacity = options.watermarkOpacity,
+            diagonal = isDiagonal
+        ) { current, total ->
+            val pct = 10 + ((current.toFloat() / total) * 85).toInt()
+            onProgress(ToolProgress(current, total, pct, "Applying watermark to page $current of $total...", false))
         }
+        return outFile
     }
 
     private suspend fun fillFormFields(file: File, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File {
-        val srcDoc = Document.openDocument(file.absolutePath) as? PDFDocument
-            ?: throw IllegalArgumentException("Cannot open document")
-        try {
-            val totalPages = srcDoc.countPages()
-            for (p in 0 until totalPages) {
-                currentCoroutineContext().ensureActive()
-                val page = srcDoc.loadPage(p) as? PDFPage ?: continue
-                val widgets = page.widgets
-                for (w in widgets) {
-                    val key = w.contents ?: ""
-                    if (options.formFieldValues.containsKey(key)) {
-                        w.value = options.formFieldValues[key] ?: ""
-                        w.update()
-                    }
-                }
-                page.destroy()
-            }
-            onProgress(ToolProgress(1, 1, 90, "Saving filled form...", false))
-            val outFile = createTempOutputFile("filled", "pdf")
-            srcDoc.save(outFile.absolutePath, "compress")
-            return outFile
-        } finally {
-            srcDoc.destroy()
-        }
+        val outFile = createTempOutputFile("filled", "pdf")
+        onProgress(ToolProgress(10, 100, 30, "Applying form values...", false))
+        PdfFormService.fill(
+            context = context,
+            sourceFile = file,
+            destinationFile = outFile,
+            values = options.formFieldValues,
+            flatten = options.flattenForm
+        )
+        onProgress(ToolProgress(100, 100, 95, "Form saved successfully.", false))
+        return outFile
     }
 
     private suspend fun signPdf(file: File, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File {
