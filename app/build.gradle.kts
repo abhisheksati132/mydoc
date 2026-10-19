@@ -104,12 +104,7 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
 
-    // Phase 8: Media3 ExoPlayer for offline video/audio playback
-    implementation(libs.androidx.media3.exoplayer)
-    implementation(libs.androidx.media3.ui)
-    implementation(libs.androidx.media3.session)
-
-    // LibVLC official VideoLAN engine
+    // LibVLC official VideoLAN engine (Sole high-performance video player)
     implementation("org.videolan.android:libvlc-all:3.6.5")
 
     // Phase 8: Coil for image loading, caching & GIF/WebP support

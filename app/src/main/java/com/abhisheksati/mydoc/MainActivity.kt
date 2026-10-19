@@ -131,9 +131,26 @@ class MainActivity : ComponentActivity() {
 
         if (savedInstanceState != null) {
             val mediaUriStr = savedInstanceState.getString("saved_active_media_uri")
+            val mediaDisplayName = savedInstanceState.getString("saved_active_media_name") ?: "Video"
+            val mediaIsVideo = savedInstanceState.getBoolean("saved_active_media_is_video", true)
+            val mediaDuration = savedInstanceState.getLong("saved_active_media_duration", 0L)
             if (mediaUriStr != null) {
+                val uri = Uri.parse(mediaUriStr)
+                val restoredItem = MediaItem(
+                    id = uri.hashCode().toLong(),
+                    uri = uri,
+                    displayName = mediaDisplayName,
+                    sizeBytes = 0L,
+                    mimeType = if (mediaIsVideo) "video/*" else "image/*",
+                    dateAddedSec = System.currentTimeMillis() / 1000,
+                    durationMs = mediaDuration,
+                    isVideo = mediaIsVideo
+                )
+                activeMediaItem = restoredItem
+                activeMediaList = listOf(restoredItem)
+
+                // Refresh complete details from Room repository in background
                 lifecycleScope.launch {
-                    val uri = Uri.parse(mediaUriStr)
                     val mediaItem = app.mediaRepository.getMediaItem(uri)
                     if (mediaItem != null) {
                         activeMediaItem = mediaItem
@@ -585,8 +602,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        activeMediaItem?.uri?.let {
-            outState.putString("saved_active_media_uri", it.toString())
+        activeMediaItem?.let { item ->
+            outState.putString("saved_active_media_uri", item.uri.toString())
+            outState.putString("saved_active_media_name", item.displayName)
+            outState.putBoolean("saved_active_media_is_video", item.isVideo)
+            outState.putLong("saved_active_media_duration", item.durationMs)
         }
     }
 
@@ -596,6 +616,16 @@ class MainActivity : ComponentActivity() {
     ) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
         if (!isInPictureInPictureMode && activeMediaItem == null) {
+            requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Reset orientation when exiting to Home or switching apps so resuming app doesn't stay landscape locked
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode) {
+            // Keep PiP orientation
+        } else if (activeMediaItem == null) {
             requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }

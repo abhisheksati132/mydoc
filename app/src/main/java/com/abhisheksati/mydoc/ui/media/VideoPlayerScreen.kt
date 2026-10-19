@@ -314,13 +314,9 @@ fun VideoPlayerScreen(
     var abRepeatA by remember { mutableStateOf<Long?>(null) }
     var abRepeatB by remember { mutableStateOf<Long?>(null) }
 
-    // Keep screen awake throughout video playback (Fix 1)
-    DisposableEffect(activity, isPlaying) {
-        if (isPlaying) {
-            activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        } else {
-            activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
+    // Keep screen awake throughout entire video playback session (LIF-03)
+    DisposableEffect(activity) {
+        activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         onDispose {
             activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
@@ -403,13 +399,13 @@ fun VideoPlayerScreen(
             when (event.type) {
                 MediaPlayer.Event.Playing -> {
                     isPlaying = true
-                    if (!hasResumedPosition && pendingResumePosition > 0L) {
-                        mediaPlayer.time = pendingResumePosition
-                        currentPositionMs = pendingResumePosition
+                    val targetPos = pendingResumePosition
+                    if (!hasResumedPosition && targetPos > 0L) {
+                        mediaPlayer.time = targetPos
+                        currentPositionMs = targetPos
                         hasResumedPosition = true
-                        val res = pendingResumePosition
                         pendingResumePosition = -1L
-                        Toast.makeText(context, "Resumed from ${formatTime(res)}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Resumed from ${formatTime(targetPos)}", Toast.LENGTH_SHORT).show()
                     }
                 }
                 MediaPlayer.Event.Paused -> {
@@ -428,7 +424,14 @@ fun VideoPlayerScreen(
                     }
                 }
                 MediaPlayer.Event.TimeChanged -> {
-                    if (!isSeeking && !isScrubbing) {
+                    val targetPos = pendingResumePosition
+                    if (!hasResumedPosition && targetPos > 0L && event.timeChanged < targetPos) {
+                        mediaPlayer.time = targetPos
+                        currentPositionMs = targetPos
+                        hasResumedPosition = true
+                        pendingResumePosition = -1L
+                        Toast.makeText(context, "Resumed from ${formatTime(targetPos)}", Toast.LENGTH_SHORT).show()
+                    } else if (!isSeeking && !isScrubbing) {
                         currentPositionMs = event.timeChanged
                         val b = abRepeatB
                         val a = abRepeatA
@@ -440,13 +443,13 @@ fun VideoPlayerScreen(
                 MediaPlayer.Event.LengthChanged -> {
                     if (event.lengthChanged > 0L) {
                         totalDurationMs = event.lengthChanged
-                        if (!hasResumedPosition && pendingResumePosition > 0L) {
-                            mediaPlayer.time = pendingResumePosition
-                            currentPositionMs = pendingResumePosition
+                        val targetPos = pendingResumePosition
+                        if (!hasResumedPosition && targetPos > 0L && targetPos < event.lengthChanged) {
+                            mediaPlayer.time = targetPos
+                            currentPositionMs = targetPos
                             hasResumedPosition = true
-                            val res = pendingResumePosition
                             pendingResumePosition = -1L
-                            Toast.makeText(context, "Resumed from ${formatTime(res)}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Resumed from ${formatTime(targetPos)}", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -466,8 +469,9 @@ fun VideoPlayerScreen(
         onDispose {
             val pos = mediaPlayer.time
             val dur = mediaPlayer.length
-            // Independent IO scope so saving survives Composable disposal
-            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
+            val saveScope = app?.applicationScope ?: scope
+            saveScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                 try {
                     val saveTime = if (dur > 0L && pos >= dur - 3000L) 0L else pos
                     mediaRepository.savePlaybackPosition(item.uri.toString(), saveTime, dur)

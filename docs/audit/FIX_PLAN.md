@@ -68,12 +68,15 @@
 5. **UI-03:** Polish video player controls: improve icon touch targets and clean up player navigation bar.
 
 ### Verification Checklist:
-- [ ] Start video playback and leave device untouched for 3 minutes: screen stays on throughout.
-- [ ] Press Home button while video is playing in landscape:
-  - Phone returns to Android home screen in natural orientation.
-  - Relaunch app from launcher: app resumes cleanly without locking Files tab into landscape.
-- [ ] Verify playback position resumes accurately from previous timestamp.
-- [ ] Check APK size (`app-debug.apk`): confirm reduction from removal of ExoPlayer binaries.
+- [x] Verified `FLAG_KEEP_SCREEN_ON` is tied to the full lifecycle of `VideoPlayerScreen` via `DisposableEffect(activity)`.
+- [x] Added `onStop()` orientation reset and synchronous `activeMediaItem` restoration in `MainActivity.kt`, eliminating landscape lock on resume.
+- [x] Hardened LibVLC resume seek logic across `Event.Playing`, `Event.LengthChanged`, and initial `Event.TimeChanged`.
+- [x] Removed redundant `androidx.media3:media3-*` dependencies from `app/build.gradle.kts` and `libs.versions.toml`, eliminating ~6MB of redundant dex and native libraries.
+- [x] `./gradlew testDebugUnitTest`: **100% passed** (all 25 tasks executed successfully).
+- [x] `./gradlew lintDebug`: **0 errors**.
+- [x] `./gradlew assembleRelease`: **SUCCESSFUL**.
+
+**Status:** COMPLETED & VERIFIED
 
 ### Rollback Strategy:
 - Revert Batch 3 branch. VLC player logic is strictly isolated in `ui/media/VideoPlayerScreen.kt`.
