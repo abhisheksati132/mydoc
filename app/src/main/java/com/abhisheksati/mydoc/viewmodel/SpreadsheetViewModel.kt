@@ -9,12 +9,14 @@ import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SheetData
 import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SpreadsheetModel
 import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SpreadsheetParser
+import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+@Immutable
 data class SpreadsheetUiState(
     val model: SpreadsheetModel = SpreadsheetModel(),
     val selectedSheetIndex: Int = 0,

@@ -17,11 +17,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.ArrayDeque
 import java.util.Locale
 
+@Immutable
 data class FileManagerUiState(
     val currentDirectory: File,
     val storageVolumes: List<StorageVolume> = emptyList(),

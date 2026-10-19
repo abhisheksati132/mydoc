@@ -1,8 +1,10 @@
 package com.abhisheksati.mydoc.domain.model
 
+import androidx.compose.runtime.Immutable
 import java.io.File
 import java.util.Locale
 
+@Immutable
 data class StorageVolume(
     val title: String,
     val path: String,

@@ -17,14 +17,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
+@Immutable
 data class MediaGroup(
     val title: String,
     val items: List<MediaItem>
 )
 
+@Immutable
 data class MediaUiState(
     val filter: MediaFilter = MediaFilter.ALL,
     val items: List<MediaItem> = emptyList(),

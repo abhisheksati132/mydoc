@@ -726,8 +726,7 @@ fun FileManagerScreen(
                                     },
                                     onMoreClick = {
                                         singleItemActionTarget = item
-                                    },
-                                    modifier = Modifier.animateItem()
+                                    }
                                 )
                             }
                         }
@@ -766,8 +765,7 @@ fun FileManagerScreen(
                                     },
                                     onMoreClick = {
                                         singleItemActionTarget = item
-                                    },
-                                    modifier = Modifier.animateItem()
+                                    }
                                 )
                             }
                         }
@@ -1415,38 +1413,16 @@ fun FileManagerCategoryChips(
     ) {
         for ((cat, icon, color) in categories) {
             val isSelected = activeCategory == cat
-            val chipBg by animateColorAsState(
-                targetValue = if (isSelected) color.copy(alpha = 0.2f) else colors.surface,
-                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                label = "chipBg"
-            )
-            val chipBorderColor by animateColorAsState(
-                targetValue = if (isSelected) color else colors.divider,
-                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                label = "chipBorder"
-            )
-            val interactionSource = remember { MutableInteractionSource() }
-            val isPressed by interactionSource.collectIsPressedAsState()
-            val chipScale by animateFloatAsState(
-                targetValue = if (isPressed) 0.94f else 1f,
-                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
-                label = "chipScale"
-            )
+            val chipBg = if (isSelected) color.copy(alpha = 0.2f) else colors.surface
+            val chipBorderColor = if (isSelected) color else colors.divider
 
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = chipBg,
                 border = androidx.compose.foundation.BorderStroke(if (isSelected) 1.5.dp else 1.dp, chipBorderColor),
                 modifier = Modifier
-                    .graphicsLayer {
-                        scaleX = chipScale
-                        scaleY = chipScale
-                    }
                     .clip(RoundedCornerShape(16.dp))
-                    .clickable(
-                        interactionSource = interactionSource,
-                        indication = null
-                    ) { onCategorySelected(cat) }
+                    .clickable { onCategorySelected(cat) }
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

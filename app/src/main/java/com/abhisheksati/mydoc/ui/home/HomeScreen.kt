@@ -78,9 +78,6 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
@@ -580,9 +577,6 @@ private fun FloatingDockItem(
     badgeText: String? = null,
     modifier: Modifier = Modifier
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-
     val backgroundTarget = if (selected) accentColor.copy(alpha = 0.16f) else Color.Transparent
     val backgroundColor by animateColorAsState(
         targetValue = backgroundTarget,
@@ -590,33 +584,12 @@ private fun FloatingDockItem(
         label = "dockItemBackground"
     )
 
-    val itemScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.92f else 1.0f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-        label = "dockItemScale"
-    )
-
-    val iconScale by animateFloatAsState(
-        targetValue = if (selected) 1.15f else 1.0f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-        label = "dockIconScale"
-    )
-
     Box(
         modifier = modifier
-            .graphicsLayer {
-                scaleX = itemScale
-                scaleY = itemScale
-            }
             .clip(RoundedCornerShape(999.dp))
             .background(backgroundColor)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            )
-            .padding(horizontal = if (selected) 15.dp else 11.dp, vertical = 7.dp)
-            .animateContentSize(spring(stiffness = Spring.StiffnessMediumLow)),
+            .clickable(onClick = onClick)
+            .padding(horizontal = if (selected) 15.dp else 11.dp, vertical = 7.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -638,12 +611,7 @@ private fun FloatingDockItem(
                         imageVector = icon,
                         contentDescription = label,
                         tint = if (selected) accentColor else unselectedColor,
-                        modifier = Modifier
-                            .size(20.dp)
-                            .graphicsLayer {
-                                scaleX = iconScale
-                                scaleY = iconScale
-                            }
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             } else {
@@ -651,12 +619,7 @@ private fun FloatingDockItem(
                     imageVector = icon,
                     contentDescription = label,
                     tint = if (selected) accentColor else unselectedColor,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .graphicsLayer {
-                            scaleX = iconScale
-                            scaleY = iconScale
-                        }
+                    modifier = Modifier.size(20.dp)
                 )
             }
 

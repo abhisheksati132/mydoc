@@ -17,12 +17,14 @@ import com.abhisheksati.mydoc.rendering.engine.SearchMatch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@Immutable
 data class ViewerUiState(
     val pageCount: Int = 0,
     val currentPage: Int = 0,

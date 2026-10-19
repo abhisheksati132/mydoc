@@ -1,18 +1,12 @@
 package com.abhisheksati.mydoc.designsystem.components
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -86,20 +80,6 @@ fun AppFileRow(
     val colors = AppTheme.colors
     val typography = AppTheme.typography
 
-    val rowInteractionSource = remember { MutableInteractionSource() }
-    val isRowPressed by rowInteractionSource.collectIsPressedAsState()
-    val rowScale by animateFloatAsState(
-        targetValue = if (isRowPressed) 0.985f else 1.0f,
-        animationSpec = spring(stiffness = Spring.StiffnessMedium, dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "fileRowPressScale"
-    )
-
-    val starScale by animateFloatAsState(
-        targetValue = if (isFavorite) 1.22f else 1.0f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-        label = "starBounceScale"
-    )
-
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -108,13 +88,7 @@ fun AppFileRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .graphicsLayer {
-                    scaleX = rowScale
-                    scaleY = rowScale
-                }
                 .combinedClickable(
-                    interactionSource = rowInteractionSource,
-                    indication = null,
                     onClick = onClick,
                     onLongClick = onLongClick
                 )
@@ -178,12 +152,7 @@ fun AppFileRow(
                     imageVector = if (isFavorite) Icons.Outlined.Star else Icons.Outlined.StarBorder,
                     contentDescription = "Toggle favorite",
                     tint = if (isFavorite) colors.accent else colors.textSecondary,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .graphicsLayer {
-                            scaleX = starScale
-                            scaleY = starScale
-                        }
+                    modifier = Modifier.size(20.dp)
                 )
             }
 

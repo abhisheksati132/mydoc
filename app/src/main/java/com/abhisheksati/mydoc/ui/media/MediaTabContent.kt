@@ -15,7 +15,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -32,9 +31,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -523,20 +519,9 @@ fun MediaTabContent(
                         ) {
                             for (item in mediaCategories) {
                                 val isSelected = uiState.filter == item.filter
-                                val interactionSource = remember { MutableInteractionSource() }
-                                val isPressed by interactionSource.collectIsPressedAsState()
-                                val pillScale by animateFloatAsState(
-                                    targetValue = if (isPressed) 0.94f else 1f,
-                                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-                                    label = "media_pill_scale"
-                                )
 
                                 Box(
                                     modifier = Modifier
-                                        .graphicsLayer {
-                                            scaleX = pillScale
-                                            scaleY = pillScale
-                                        }
                                         .clip(RoundedCornerShape(999.dp))
                                         .background(
                                             if (isSelected) item.color.copy(alpha = 0.16f)
@@ -552,10 +537,7 @@ fun MediaTabContent(
                                             ),
                                             RoundedCornerShape(999.dp)
                                         )
-                                        .clickable(
-                                            interactionSource = interactionSource,
-                                            indication = null
-                                        ) {
+                                        .clickable {
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             viewModel.setFilter(item.filter)
                                         }
@@ -675,8 +657,7 @@ fun MediaTabContent(
                                     } else {
                                         selectedUris + item.uri
                                     }
-                                },
-                                modifier = Modifier.animateItem()
+                                }
                             )
                         }
                     }
@@ -699,25 +680,12 @@ private fun MediaThumbnailItem(
     val context = LocalContext.current
     val typography = LocalAppTypography.current
     val colors = LocalAppColors.current
-
     val isOled = colors.background == DarkAppColors.background
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-
-    val scale by animateFloatAsState(
-        targetValue = if (isSelected) 0.93f else if (isPressed) 0.96f else 1f,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "thumbScale"
-    )
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
             .clip(RoundedCornerShape(14.dp))
             .background(if (isOled) Color(0xFF0D0D0F) else colors.surfaceVariant)
             .border(
@@ -728,8 +696,6 @@ private fun MediaThumbnailItem(
                 RoundedCornerShape(14.dp)
             )
             .combinedClickable(
-                interactionSource = interactionSource,
-                indication = null,
                 onClick = onClick,
                 onLongClick = onLongClick
             )

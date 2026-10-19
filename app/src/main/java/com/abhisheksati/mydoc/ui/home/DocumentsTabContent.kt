@@ -251,20 +251,9 @@ fun DocumentsTabContent(
                         ) {
                             for (item in docCategories) {
                                 val isSelected = uiState.selectedCategory == item.category
-                                val interactionSource = remember { MutableInteractionSource() }
-                                val isPressed by interactionSource.collectIsPressedAsState()
-                                val pillScale by animateFloatAsState(
-                                    targetValue = if (isPressed) 0.94f else 1f,
-                                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-                                    label = "category_pill_scale"
-                                )
 
                                 Box(
                                     modifier = Modifier
-                                        .graphicsLayer {
-                                            scaleX = pillScale
-                                            scaleY = pillScale
-                                        }
                                         .clip(RoundedCornerShape(999.dp))
                                         .background(
                                             if (isSelected) {
@@ -273,10 +262,7 @@ fun DocumentsTabContent(
                                                 if (isOled) Color(0xFF121318) else colors.surfaceVariant.copy(alpha = 0.5f)
                                             }
                                         )
-                                        .clickable(
-                                            interactionSource = interactionSource,
-                                            indication = null
-                                        ) {
+                                        .clickable {
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             viewModel.selectCategory(item.category)
                                         }
@@ -404,7 +390,8 @@ fun DocumentsTabContent(
                         }
                         items(
                             items = uiState.documents,
-                            key = { "search_${it.uri}" }
+                            key = { "search_${it.uri}" },
+                            contentType = { "doc_row" }
                         ) { document ->
                             SwipeableDocumentRow(
                                 document = document,
@@ -420,8 +407,7 @@ fun DocumentsTabContent(
                                             duration = SnackbarDuration.Short
                                         )
                                     }
-                                },
-                                modifier = Modifier.animateItem()
+                                }
                             )
                         }
                     } else {
@@ -441,7 +427,6 @@ fun DocumentsTabContent(
                                         if (isOled) Color.White.copy(alpha = 0.07f) else colors.divider.copy(alpha = 0.5f)
                                     ),
                                     modifier = Modifier
-                                        .animateItem()
                                         .fillMaxWidth()
                                         .padding(horizontal = 16.dp)
                                 ) {
@@ -494,8 +479,7 @@ fun DocumentsTabContent(
                                             duration = SnackbarDuration.Short
                                         )
                                     }
-                                },
-                                modifier = Modifier.animateItem()
+                                }
                             )
                         }
 
@@ -523,8 +507,7 @@ fun DocumentsTabContent(
                                                 duration = SnackbarDuration.Short
                                             )
                                         }
-                                    },
-                                    modifier = Modifier.animateItem()
+                                    }
                                 )
                             }
                         }
