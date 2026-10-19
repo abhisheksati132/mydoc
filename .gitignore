@@ -12,3 +12,5 @@ captures/
 !app/keystore/debug.keystore
 *.jks
 release-keystore.properties
+context.md
+
