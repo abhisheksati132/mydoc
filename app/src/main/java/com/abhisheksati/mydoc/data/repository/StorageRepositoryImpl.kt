@@ -1,6 +1,7 @@
 package com.abhisheksati.mydoc.data.repository
 
 import android.content.Context
+import android.media.MediaScannerConnection
 import android.os.Environment
 import android.os.StatFs
 import android.provider.MediaStore
@@ -679,6 +680,7 @@ class StorageRepositoryImpl(
                 }
 
                 if (moved) {
+                    try { MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), null, null) } catch (_: Throwable) {}
                     val entity = TrashEntity(
                         originalPath = file.absolutePath,
                         trashPath = destTrashFile.absolutePath,
@@ -728,6 +730,7 @@ class StorageRepositoryImpl(
                 }
 
                 if (restored) {
+                    try { MediaScannerConnection.scanFile(context, arrayOf(destFile.absolutePath), null, null) } catch (_: Throwable) {}
                     trashDao?.deleteByIds(listOf(item.id))
                     restoredCount++
                 }

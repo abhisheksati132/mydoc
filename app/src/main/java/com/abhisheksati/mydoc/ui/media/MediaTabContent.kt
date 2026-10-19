@@ -135,6 +135,7 @@ fun MediaTabContent(
     isDarkTheme: Boolean = false,
     onOpenTrash: (() -> Unit)? = null,
     trashCount: Int = 0,
+    onMoveToTrash: ((List<java.io.File>) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -226,14 +227,30 @@ fun MediaTabContent(
     }
 
     fun performDelete(itemsToDelete: List<MediaItem>) {
+        val files = itemsToDelete.mapNotNull { item ->
+            item.filePath?.let { java.io.File(it).takeIf { f -> f.exists() } }
+        }
+        if (onMoveToTrash != null && files.isNotEmpty()) {
+            onMoveToTrash(files)
+            for (item in itemsToDelete) {
+                try {
+                    context.contentResolver.delete(item.uri, null, null)
+                } catch (_: Exception) {}
+            }
+            viewModel.refresh()
+            selectedUris = emptySet()
+            Toast.makeText(context, "${files.size} items moved to Recycle Bin", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val uris = itemsToDelete.map { it.uri }
         if (uris.isEmpty()) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             try {
-                val pendingIntent = MediaStore.createDeleteRequest(context.contentResolver, uris)
+                val pendingIntent = MediaStore.createTrashRequest(context.contentResolver, uris, true)
                 deleteLauncher.launch(IntentSenderRequest.Builder(pendingIntent.intentSender).build())
             } catch (e: Exception) {
-                Toast.makeText(context, "Delete failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Move to Recycle Bin failed: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         } else {
             var recoverable: RecoverableSecurityException? = null
@@ -509,57 +526,46 @@ fun MediaTabContent(
                             MediaNavCategory(MediaFilter.VIDEOS, Icons.Outlined.Videocam, Color(0xFFE91E63), "Videos")
                         )
 
-                        val isOled = colors.background == DarkAppColors.background
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             for (item in mediaCategories) {
                                 val isSelected = uiState.filter == item.filter
+                                val chipBg = if (isSelected) item.color.copy(alpha = 0.2f) else colors.surface
+                                val chipBorderColor = if (isSelected) item.color else colors.divider
 
-                                Box(
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = chipBg,
+                                    border = androidx.compose.foundation.BorderStroke(if (isSelected) 1.5.dp else 1.dp, chipBorderColor),
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(999.dp))
-                                        .background(
-                                            if (isSelected) item.color.copy(alpha = 0.16f)
-                                            else if (isOled) Color(0xFF141418)
-                                            else colors.surfaceVariant.copy(alpha = 0.5f)
-                                        )
-                                        .border(
-                                            BorderStroke(
-                                                0.8.dp,
-                                                if (isSelected) item.color.copy(alpha = 0.75f)
-                                                else if (isOled) Color.White.copy(alpha = 0.08f)
-                                                else colors.divider.copy(alpha = 0.6f)
-                                            ),
-                                            RoundedCornerShape(999.dp)
-                                        )
+                                        .clip(RoundedCornerShape(16.dp))
                                         .clickable {
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             viewModel.setFilter(item.filter)
                                         }
-                                        .padding(horizontal = 14.dp, vertical = 7.dp)
                                 ) {
                                     Row(
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                                     ) {
                                         Icon(
                                             imageVector = item.icon,
                                             contentDescription = item.label,
-                                            tint = if (isSelected) item.color else colors.textSecondary,
-                                            modifier = Modifier.size(15.dp)
+                                            tint = if (isSelected) item.color else item.color.copy(alpha = 0.85f),
+                                            modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
                                             text = item.label,
                                             style = typography.caption.copy(
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                fontSize = 12.sp
+                                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                                             ),
-                                            color = if (isSelected) (if (isOled) Color.White else colors.textPrimary) else colors.textSecondary
+                                            color = if (isSelected) colors.textPrimary else colors.textSecondary
                                         )
                                     }
                                 }

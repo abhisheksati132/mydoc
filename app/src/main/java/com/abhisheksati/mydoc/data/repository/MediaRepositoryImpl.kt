@@ -61,7 +61,8 @@ class MediaRepositoryImpl(
             MediaStore.Images.Media.HEIGHT,
             MediaStore.Images.Media.ORIENTATION,
             MediaStore.Images.Media.BUCKET_ID,
-            MediaStore.Images.Media.BUCKET_DISPLAY_NAME
+            MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
+            MediaStore.Images.Media.DATA
         )
 
         try {
@@ -83,6 +84,7 @@ class MediaRepositoryImpl(
                 val orientCol = cursor.getColumnIndex(MediaStore.Images.Media.ORIENTATION)
                 val bucketIdCol = cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_ID)
                 val bucketNameCol = cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
+                val dataCol = cursor.getColumnIndex(MediaStore.Images.Media.DATA)
 
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idCol)
@@ -97,6 +99,7 @@ class MediaRepositoryImpl(
                     val orient = if (orientCol != -1) cursor.getInt(orientCol) else 0
                     val bucketId = if (bucketIdCol != -1) cursor.getString(bucketIdCol) else null
                     val bucketName = if (bucketNameCol != -1) cursor.getString(bucketNameCol) else null
+                    val dataPath = if (dataCol != -1) cursor.getString(dataCol) else null
 
                     target.add(
                         MediaItem(
@@ -113,7 +116,8 @@ class MediaRepositoryImpl(
                             orientation = orient,
                             bucketId = bucketId,
                             bucketName = bucketName,
-                            isVideo = false
+                            isVideo = false,
+                            filePath = dataPath
                         )
                     )
                 }
@@ -133,7 +137,8 @@ class MediaRepositoryImpl(
             MediaStore.Video.Media.HEIGHT,
             MediaStore.Video.Media.DURATION,
             MediaStore.Video.Media.BUCKET_ID,
-            MediaStore.Video.Media.BUCKET_DISPLAY_NAME
+            MediaStore.Video.Media.BUCKET_DISPLAY_NAME,
+            MediaStore.Video.Media.DATA
         )
 
         try {
@@ -155,6 +160,7 @@ class MediaRepositoryImpl(
                 val durationCol = cursor.getColumnIndex(MediaStore.Video.Media.DURATION)
                 val bucketIdCol = cursor.getColumnIndex(MediaStore.Video.Media.BUCKET_ID)
                 val bucketNameCol = cursor.getColumnIndex(MediaStore.Video.Media.BUCKET_DISPLAY_NAME)
+                val dataCol = cursor.getColumnIndex(MediaStore.Video.Media.DATA)
 
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idCol)
@@ -169,6 +175,7 @@ class MediaRepositoryImpl(
                     val duration = if (durationCol != -1) cursor.getLong(durationCol) else 0L
                     val bucketId = if (bucketIdCol != -1) cursor.getString(bucketIdCol) else null
                     val bucketName = if (bucketNameCol != -1) cursor.getString(bucketNameCol) else null
+                    val dataPath = if (dataCol != -1) cursor.getString(dataCol) else null
 
                     target.add(
                         MediaItem(
@@ -185,7 +192,8 @@ class MediaRepositoryImpl(
                             orientation = 0,
                             bucketId = bucketId,
                             bucketName = bucketName,
-                            isVideo = true
+                            isVideo = true,
+                            filePath = dataPath
                         )
                     )
                 }
@@ -197,6 +205,7 @@ class MediaRepositoryImpl(
         var name = "Media"
         var size: Long = 0
         var mime = contentResolver.getType(uri) ?: "application/octet-stream"
+        var resolvedPath: String? = null
 
         if (uri.scheme == "content") {
             try {
@@ -206,6 +215,8 @@ class MediaRepositoryImpl(
                         if (nameIdx != -1) name = cursor.getString(nameIdx) ?: name
                         val sizeIdx = cursor.getColumnIndex(OpenableColumns.SIZE)
                         if (sizeIdx != -1 && !cursor.isNull(sizeIdx)) size = cursor.getLong(sizeIdx)
+                        val dataIdx = cursor.getColumnIndex(MediaStore.MediaColumns.DATA)
+                        if (dataIdx != -1) resolvedPath = cursor.getString(dataIdx)
                     }
                 }
             } catch (_: Exception) {}
@@ -213,6 +224,7 @@ class MediaRepositoryImpl(
             val file = File(uri.path ?: "")
             name = file.name
             size = file.length()
+            resolvedPath = file.absolutePath
         }
 
         val isVideo = mime.startsWith("video/") || mime.startsWith("audio/") ||
@@ -229,7 +241,8 @@ class MediaRepositoryImpl(
             sizeBytes = size,
             mimeType = mime,
             dateAddedSec = System.currentTimeMillis() / 1000,
-            isVideo = isVideo
+            isVideo = isVideo,
+            filePath = resolvedPath
         )
     }
 

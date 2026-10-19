@@ -241,50 +241,46 @@ fun DocumentsTabContent(
                             DocumentNavCategory(DocumentCategory.TEXT, Icons.AutoMirrored.Outlined.Article, DocumentFormatColors.textTint, "Text")
                         )
 
-                        val isOled = colors.background == DarkAppColors.background
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             for (item in docCategories) {
                                 val isSelected = uiState.selectedCategory == item.category
+                                val chipBg = if (isSelected) item.color.copy(alpha = 0.2f) else colors.surface
+                                val chipBorderColor = if (isSelected) item.color else colors.divider
 
-                                Box(
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = chipBg,
+                                    border = androidx.compose.foundation.BorderStroke(if (isSelected) 1.5.dp else 1.dp, chipBorderColor),
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(999.dp))
-                                        .background(
-                                            if (isSelected) {
-                                                if (isOled) Color(0xFF20232C) else Color(0xFFE4E6EC)
-                                            } else {
-                                                if (isOled) Color(0xFF121318) else colors.surfaceVariant.copy(alpha = 0.5f)
-                                            }
-                                        )
+                                        .clip(RoundedCornerShape(16.dp))
                                         .clickable {
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             viewModel.selectCategory(item.category)
                                         }
-                                        .padding(horizontal = 14.dp, vertical = 7.dp)
                                 ) {
                                     Row(
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                                     ) {
                                         Icon(
                                             imageVector = item.icon,
                                             contentDescription = item.label,
-                                            tint = if (isSelected) item.color else colors.textSecondary,
-                                            modifier = Modifier.size(15.dp)
+                                            tint = if (isSelected) item.color else item.color.copy(alpha = 0.85f),
+                                            modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
                                             text = item.label,
                                             style = typography.caption.copy(
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                fontSize = 12.sp
+                                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                                             ),
-                                            color = if (isSelected) (if (isOled) Color.White else colors.textPrimary) else colors.textSecondary
+                                            color = if (isSelected) colors.textPrimary else colors.textSecondary
                                         )
                                     }
                                 }

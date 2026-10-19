@@ -22,11 +22,6 @@ import android.view.TextureView
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.media3.common.MediaItem as ExoMediaItem
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
 import java.io.File
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -98,6 +93,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -128,11 +124,6 @@ enum class VlcAspectMode(val label: String, val buttonText: String, val ratioStr
     RATIO_21_9("21:9 cinema", "21:9", "21:9", 0f),
     CROP_FILL("Crop to fill", "CROP", null, 1.35f),
     ORIGINAL("Original 100%", "1:1", null, 1.0f)
-}
-
-enum class PlayerEngine {
-    LIBVLC,
-    EXOPLAYER
 }
 
 private data class VlcMediaResult(
@@ -298,7 +289,9 @@ fun VideoPlayerScreen(
         }
     }
 
-    var activeEngine by remember { mutableStateOf(PlayerEngine.LIBVLC) }
+    var pendingResumePosition by remember { mutableLongStateOf(-1L) }
+    var hasResumedPosition by remember { mutableStateOf(false) }
+
     var activePfd by remember { mutableStateOf<ParcelFileDescriptor?>(null) }
     var activeVlcMedia by remember { mutableStateOf<Media?>(null) }
     var vlcLayoutRef by remember { mutableStateOf<android.view.View?>(null) }
@@ -321,6 +314,18 @@ fun VideoPlayerScreen(
     var abRepeatA by remember { mutableStateOf<Long?>(null) }
     var abRepeatB by remember { mutableStateOf<Long?>(null) }
 
+    // Keep screen awake throughout video playback (Fix 1)
+    DisposableEffect(activity, isPlaying) {
+        if (isPlaying) {
+            activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose {
+            activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
     // Initialize LibVLC native engine with optimized performance flags
     val libVLC = remember {
         val options = arrayListOf(
@@ -339,100 +344,55 @@ fun VideoPlayerScreen(
         MediaPlayer(libVLC)
     }
 
-    // Initialize ExoPlayer as resilient fallback engine
-    val exoPlayer = remember {
-        ExoPlayer.Builder(context).build()
-    }
-
     // Load media item into LibVLC, restore saved position, and configure hardware decoding
     LaunchedEffect(item.uri, hwDecoderEnabled, retryAttempt) {
-        if (activeEngine == PlayerEngine.LIBVLC) {
+        try {
             val savedPos = mediaRepository.getPlaybackPosition(item.uri.toString())
-            try {
-                activeVlcMedia?.release()
-                activeVlcMedia = null
-                activePfd?.close()
-                activePfd = null
-
-                val result = createVlcMedia(context, libVLC, item.uri, enableHwDecoder = hwDecoderEnabled)
-                activePfd = result.pfd
-                activeVlcMedia = result.media
-                mediaPlayer.media = result.media
-
-                if (subtitleUri != null) {
-                    try {
-                        mediaPlayer.addSlave(0 /* Subtitle */, subtitleUri!!, true)
-                    } catch (_: Exception) {}
-                }
-
-                val targetPos = if (currentPositionMs > 0L) currentPositionMs else savedPos
-                if (targetPos > 0L) {
-                    mediaPlayer.time = targetPos
-                    currentPositionMs = targetPos
-                }
-                mediaPlayer.play()
-                isPlaying = true
-            } catch (e: Exception) {
-                android.util.Log.e("VideoPlayerScreen", "LibVLC open failed, falling back to ExoPlayer", e)
-                activeEngine = PlayerEngine.EXOPLAYER
+            if (savedPos > 2000L) {
+                pendingResumePosition = savedPos
             }
+            activeVlcMedia?.release()
+            activeVlcMedia = null
+            activePfd?.close()
+            activePfd = null
+
+            val result = createVlcMedia(context, libVLC, item.uri, enableHwDecoder = hwDecoderEnabled)
+            activePfd = result.pfd
+            activeVlcMedia = result.media
+            mediaPlayer.media = result.media
+
+            if (subtitleUri != null) {
+                try {
+                    mediaPlayer.addSlave(0 /* Subtitle */, subtitleUri!!, true)
+                } catch (_: Exception) {}
+            }
+
+            mediaPlayer.play()
+            isPlaying = true
+        } catch (e: Exception) {
+            android.util.Log.e("VideoPlayerScreen", "LibVLC open failed", e)
+            errorMessage = "Playback failed: ${e.message}"
         }
     }
 
     // Dynamic subtitle update
     LaunchedEffect(subtitleUri) {
         val uri = subtitleUri
-        if (uri != null && activeEngine == PlayerEngine.LIBVLC) {
+        if (uri != null) {
             try {
                 mediaPlayer.addSlave(0 /* Subtitle */, uri, true)
             } catch (_: Exception) {}
         }
     }
 
-    // Handle switching between VLC and ExoPlayer
-    LaunchedEffect(activeEngine) {
-        if (activeEngine == PlayerEngine.EXOPLAYER) {
-            try {
-                mediaPlayer.pause()
-                val exoItem = ExoMediaItem.fromUri(item.uri)
-                exoPlayer.setMediaItem(exoItem)
-                exoPlayer.prepare()
-                if (currentPositionMs > 0L) {
-                    exoPlayer.seekTo(currentPositionMs)
-                }
-                exoPlayer.play()
-                isPlaying = true
-            } catch (e: Exception) {
-                errorMessage = "Playback failed: ${e.message}"
-            }
-        } else if (activeEngine == PlayerEngine.LIBVLC) {
-            exoPlayer.pause()
-            if (currentPositionMs > 0L) {
-                mediaPlayer.time = currentPositionMs
-            }
-            mediaPlayer.play()
-            isPlaying = true
-        }
-    }
-
-    // Periodic time & duration sync for ExoPlayer with A-B loop support
-    LaunchedEffect(activeEngine, isPlaying, abRepeatA, abRepeatB) {
-        if (activeEngine == PlayerEngine.EXOPLAYER) {
-            while (isPlaying) {
-                if (!isSeeking && !isScrubbing) {
-                    val pos = exoPlayer.currentPosition.coerceAtLeast(0L)
-                    currentPositionMs = pos
-                    val dur = exoPlayer.duration
-                    if (dur > 0L) {
-                        totalDurationMs = dur
-                    }
-                    val b = abRepeatB
-                    val a = abRepeatA
-                    if (a != null && b != null && pos >= b) {
-                        exoPlayer.seekTo(a)
-                    }
-                }
-                delay(250)
+    // Periodic time auto-save while playing (every 3 seconds)
+    LaunchedEffect(isPlaying) {
+        while (isPlaying) {
+            delay(3000)
+            val pos = mediaPlayer.time
+            val dur = mediaPlayer.length
+            if (pos > 1000L && dur > 0L) {
+                mediaRepository.savePlaybackPosition(item.uri.toString(), pos, dur)
             }
         }
     }
@@ -442,27 +402,33 @@ fun VideoPlayerScreen(
         val listener = MediaPlayer.EventListener { event ->
             when (event.type) {
                 MediaPlayer.Event.Playing -> {
-                    if (activeEngine == PlayerEngine.LIBVLC) isPlaying = true
+                    isPlaying = true
+                    if (!hasResumedPosition && pendingResumePosition > 0L) {
+                        mediaPlayer.time = pendingResumePosition
+                        currentPositionMs = pendingResumePosition
+                        hasResumedPosition = true
+                        val res = pendingResumePosition
+                        pendingResumePosition = -1L
+                        Toast.makeText(context, "Resumed from ${formatTime(res)}", Toast.LENGTH_SHORT).show()
+                    }
                 }
                 MediaPlayer.Event.Paused -> {
-                    if (activeEngine == PlayerEngine.LIBVLC) isPlaying = false
+                    isPlaying = false
                 }
                 MediaPlayer.Event.Stopped -> {
-                    if (activeEngine == PlayerEngine.LIBVLC) isPlaying = false
+                    isPlaying = false
                 }
                 MediaPlayer.Event.EndReached -> {
-                    if (activeEngine == PlayerEngine.LIBVLC) {
-                        isPlaying = false
-                        if (isLooping) {
-                            scope.launch {
-                                mediaPlayer.time = 0L
-                                mediaPlayer.play()
-                            }
+                    isPlaying = false
+                    if (isLooping) {
+                        scope.launch {
+                            mediaPlayer.time = 0L
+                            mediaPlayer.play()
                         }
                     }
                 }
                 MediaPlayer.Event.TimeChanged -> {
-                    if (activeEngine == PlayerEngine.LIBVLC && !isSeeking && !isScrubbing) {
+                    if (!isSeeking && !isScrubbing) {
                         currentPositionMs = event.timeChanged
                         val b = abRepeatB
                         val a = abRepeatA
@@ -472,20 +438,25 @@ fun VideoPlayerScreen(
                     }
                 }
                 MediaPlayer.Event.LengthChanged -> {
-                    if (activeEngine == PlayerEngine.LIBVLC && event.lengthChanged > 0L) {
+                    if (event.lengthChanged > 0L) {
                         totalDurationMs = event.lengthChanged
+                        if (!hasResumedPosition && pendingResumePosition > 0L) {
+                            mediaPlayer.time = pendingResumePosition
+                            currentPositionMs = pendingResumePosition
+                            hasResumedPosition = true
+                            val res = pendingResumePosition
+                            pendingResumePosition = -1L
+                            Toast.makeText(context, "Resumed from ${formatTime(res)}", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
                 MediaPlayer.Event.EncounteredError -> {
-                    if (activeEngine == PlayerEngine.LIBVLC) {
-                        if (hwDecoderEnabled && retryAttempt == 0) {
-                            hwDecoderEnabled = false
-                            retryAttempt = 1
-                            Toast.makeText(context, "Retrying with software decoding...", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(context, "Switching to standard player engine...", Toast.LENGTH_SHORT).show()
-                            activeEngine = PlayerEngine.EXOPLAYER
-                        }
+                    if (hwDecoderEnabled && retryAttempt == 0) {
+                        hwDecoderEnabled = false
+                        retryAttempt = 1
+                        Toast.makeText(context, "Retrying with software decoding...", Toast.LENGTH_SHORT).show()
+                    } else {
+                        errorMessage = "VLC encountered an error playing this media."
                     }
                 }
             }
@@ -493,10 +464,14 @@ fun VideoPlayerScreen(
         mediaPlayer.setEventListener(listener)
 
         onDispose {
-            val pos = if (activeEngine == PlayerEngine.LIBVLC) mediaPlayer.time else exoPlayer.currentPosition
-            val dur = if (activeEngine == PlayerEngine.LIBVLC) mediaPlayer.length else exoPlayer.duration
-            scope.launch {
-                mediaRepository.savePlaybackPosition(item.uri.toString(), pos, dur)
+            val pos = mediaPlayer.time
+            val dur = mediaPlayer.length
+            // Independent IO scope so saving survives Composable disposal
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                try {
+                    val saveTime = if (dur > 0L && pos >= dur - 3000L) 0L else pos
+                    mediaRepository.savePlaybackPosition(item.uri.toString(), saveTime, dur)
+                } catch (_: Exception) {}
             }
             mediaPlayer.setEventListener(null)
             mediaPlayer.stop()
@@ -508,45 +483,8 @@ fun VideoPlayerScreen(
             activePfd = null
             mediaPlayer.release()
             libVLC.release()
+            activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        }
-    }
-
-    // ExoPlayer Listener & Lifecycle
-    DisposableEffect(exoPlayer) {
-        val listener = object : Player.Listener {
-            override fun onIsPlayingChanged(isPlayingExo: Boolean) {
-                if (activeEngine == PlayerEngine.EXOPLAYER) {
-                    isPlaying = isPlayingExo
-                }
-            }
-            override fun onPlaybackStateChanged(state: Int) {
-                if (activeEngine == PlayerEngine.EXOPLAYER) {
-                    if (state == Player.STATE_READY) {
-                        val dur = exoPlayer.duration
-                        if (dur > 0L) totalDurationMs = dur
-                    } else if (state == Player.STATE_ENDED) {
-                        isPlaying = false
-                        if (isLooping) {
-                            exoPlayer.seekTo(0L)
-                            exoPlayer.play()
-                        }
-                    }
-                }
-            }
-            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                if (activeEngine == PlayerEngine.EXOPLAYER) {
-                    Toast.makeText(context, "Switching to VLC engine for unsupported media...", Toast.LENGTH_SHORT).show()
-                    activeEngine = PlayerEngine.LIBVLC
-                }
-            }
-        }
-        exoPlayer.addListener(listener)
-
-        onDispose {
-            exoPlayer.removeListener(listener)
-            exoPlayer.stop()
-            exoPlayer.release()
         }
     }
 
@@ -557,7 +495,7 @@ fun VideoPlayerScreen(
                 AudioManager.AUDIOFOCUS_LOSS,
                 AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
                     if (isPlaying) {
-                        if (activeEngine == PlayerEngine.LIBVLC) mediaPlayer.pause() else exoPlayer.pause()
+                        mediaPlayer.pause()
                         isPlaying = false
                     }
                 }
@@ -568,7 +506,7 @@ fun VideoPlayerScreen(
             override fun onReceive(c: Context?, intent: Intent?) {
                 if (intent?.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
                     if (isPlaying) {
-                        if (activeEngine == PlayerEngine.LIBVLC) mediaPlayer.pause() else exoPlayer.pause()
+                        mediaPlayer.pause()
                         isPlaying = false
                         Toast.makeText(context, "Headphones disconnected - playback paused", Toast.LENGTH_SHORT).show()
                     }
@@ -640,7 +578,6 @@ fun VideoPlayerScreen(
         if (sleepTimerMinutes > 0) {
             delay(sleepTimerMinutes * 60 * 1000L)
             mediaPlayer.pause()
-            exoPlayer.pause()
             sleepTimerMinutes = 0
             Toast.makeText(context, "Sleep timer finished. Playback paused.", Toast.LENGTH_SHORT).show()
         }
@@ -663,7 +600,8 @@ fun VideoPlayerScreen(
             Toast.makeText(context, "Screen unlocked", Toast.LENGTH_SHORT).show()
         } else {
             mediaPlayer.stop()
-            exoPlayer.stop()
+            activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             onBackClick()
         }
     }
@@ -693,7 +631,7 @@ fun VideoPlayerScreen(
         } else {
             val gestureModifier = Modifier
                 .fillMaxSize()
-                .pointerInput(isScreenLocked, activeEngine) {
+                .pointerInput(isScreenLocked) {
                     detectTapGestures(
                         onTap = {
                             if (isScreenLocked) {
@@ -705,42 +643,38 @@ fun VideoPlayerScreen(
                         onDoubleTap = { offset ->
                             if (!isScreenLocked) {
                                 val width = size.width
-                                val current = if (activeEngine == PlayerEngine.LIBVLC) mediaPlayer.time else exoPlayer.currentPosition
+                                val current = mediaPlayer.time
                                 if (offset.x < width * 0.4f) {
                                     val target = (current - 10000L).coerceAtLeast(0L)
-                                    if (activeEngine == PlayerEngine.LIBVLC) mediaPlayer.time = target else exoPlayer.seekTo(target)
+                                    mediaPlayer.time = target
                                     currentPositionMs = target
                                     gestureOverlayIcon = Icons.Default.FastRewind
                                     gestureOverlayText = "-10s"
                                 } else if (offset.x > width * 0.6f) {
                                     val target = (current + 10000L).coerceAtMost(totalDurationMs)
-                                    if (activeEngine == PlayerEngine.LIBVLC) mediaPlayer.time = target else exoPlayer.seekTo(target)
+                                    mediaPlayer.time = target
                                     currentPositionMs = target
                                     gestureOverlayIcon = Icons.Default.FastForward
                                     gestureOverlayText = "+10s"
                                 } else {
-                                    if (activeEngine == PlayerEngine.LIBVLC) {
-                                        if (mediaPlayer.isPlaying) mediaPlayer.pause() else mediaPlayer.play()
-                                    } else {
-                                        if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
-                                    }
+                                    if (mediaPlayer.isPlaying) mediaPlayer.pause() else mediaPlayer.play()
                                 }
                             }
                         }
                     )
                 }
-                .pointerInput(isScreenLocked, totalDurationMs, isAudioBoostEnabled, activeEngine) {
+                .pointerInput(isScreenLocked, totalDurationMs, isAudioBoostEnabled) {
                     if (!isScreenLocked) {
                         detectDragGestures(
                             onDragStart = {
                                 scrubAccumulatedX = 0f
-                                scrubStartPositionMs = if (activeEngine == PlayerEngine.LIBVLC) mediaPlayer.time else exoPlayer.currentPosition
+                                scrubStartPositionMs = mediaPlayer.time
                                 isScrubbing = false
                             },
                             onDragEnd = {
                                 if (isScrubbing) {
                                     val target = (scrubStartPositionMs + (scrubAccumulatedX * 120L).toLong()).coerceIn(0L, totalDurationMs)
-                                    if (activeEngine == PlayerEngine.LIBVLC) mediaPlayer.time = target else exoPlayer.seekTo(target)
+                                    mediaPlayer.time = target
                                     currentPositionMs = target
                                     isScrubbing = false
                                 }
@@ -779,7 +713,7 @@ fun VideoPlayerScreen(
                                         }
                                     } else {
                                         // Volume adjustment: LibVLC audio boost or system volume
-                                        if (isAudioBoostEnabled && activeEngine == PlayerEngine.LIBVLC) {
+                                        if (isAudioBoostEnabled) {
                                             val currentVlcVol = mediaPlayer.volume
                                             val delta = if (dragAmount.y < -12f) 4 else if (dragAmount.y > 12f) -4 else 0
                                             if (delta != 0) {
@@ -805,48 +739,24 @@ fun VideoPlayerScreen(
                     }
                 }
 
-            if (activeEngine == PlayerEngine.LIBVLC) {
-                AndroidView(
-                    factory = { ctx ->
-                        VLCVideoLayout(ctx).apply {
-                            layoutParams = FrameLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT
-                            )
-                            mediaPlayer.attachViews(this, null, true, false)
-                            vlcLayoutRef = this
-                        }
-                    },
-                    update = { view ->
-                        vlcLayoutRef = view
-                    },
-                    modifier = gestureModifier
-                )
-            } else {
-                AndroidView(
-                    factory = { ctx ->
-                        PlayerView(ctx).apply {
-                            layoutParams = FrameLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT
-                            )
-                            useController = false
-                            player = exoPlayer
-                            vlcLayoutRef = this
-                        }
-                    },
-                    update = { view ->
-                        vlcLayoutRef = view
-                        view.resizeMode = when (currentAspectMode) {
-                            VlcAspectMode.FIT -> AspectRatioFrameLayout.RESIZE_MODE_FIT
-                            VlcAspectMode.RATIO_16_9, VlcAspectMode.RATIO_4_3, VlcAspectMode.RATIO_21_9 -> AspectRatioFrameLayout.RESIZE_MODE_FIT
-                            VlcAspectMode.CROP_FILL -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                            VlcAspectMode.ORIGINAL -> AspectRatioFrameLayout.RESIZE_MODE_FIT
-                        }
-                    },
-                    modifier = gestureModifier
-                )
-            }
+            AndroidView(
+                factory = { ctx ->
+                    VLCVideoLayout(ctx).apply {
+                        layoutParams = FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                        keepScreenOn = true
+                        mediaPlayer.attachViews(this, null, true, false)
+                        vlcLayoutRef = this
+                    }
+                },
+                update = { view ->
+                    view.keepScreenOn = isPlaying
+                    vlcLayoutRef = view
+                },
+                modifier = gestureModifier
+            )
 
             // Minimal Gestures Feedback Overlay Pill
             if (gestureOverlayText != null) {
@@ -917,9 +827,9 @@ fun VideoPlayerScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = if (activeEngine == PlayerEngine.LIBVLC) "LibVLC Engine" else "ExoPlayer Engine",
+                                text = "LibVLC Engine",
                                 style = typography.caption,
-                                color = if (activeEngine == PlayerEngine.LIBVLC) Color(0xFFFF9800) else Color(0xFF8AB4F8)
+                                color = Color(0xFFFF9800)
                             )
                         }
 
@@ -937,7 +847,7 @@ fun VideoPlayerScreen(
                             Icon(
                                 imageVector = Icons.Filled.Subtitles,
                                 contentDescription = "Subtitles",
-                                tint = if (subtitleUri != null || (activeEngine == PlayerEngine.LIBVLC && mediaPlayer.spuTrack != -1)) Color(0xFFFF9800) else Color(0xFFEDEDED)
+                                tint = if (subtitleUri != null || mediaPlayer.spuTrack != -1) Color(0xFFFF9800) else Color(0xFFEDEDED)
                             )
                         }
 
@@ -986,7 +896,7 @@ fun VideoPlayerScreen(
                             )
                         }
 
-                        // More Menu (PiP, Orientation, Sleep Timer, Audio Boost, Engine Switch, Extract Audio, Share)
+                        // More Menu (PiP, Orientation, Sleep Timer, Audio Boost, Extract Audio, Share)
                         Box {
                             IconButton(onClick = { isMoreMenuOpen = true }) {
                                 Icon(
@@ -1046,20 +956,6 @@ fun VideoPlayerScreen(
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = {
-                                        Text(if (activeEngine == PlayerEngine.LIBVLC) "Switch to ExoPlayer Engine" else "Switch to LibVLC Engine")
-                                    },
-                                    onClick = {
-                                        isMoreMenuOpen = false
-                                        activeEngine = if (activeEngine == PlayerEngine.LIBVLC) PlayerEngine.EXOPLAYER else PlayerEngine.LIBVLC
-                                        Toast.makeText(
-                                            context,
-                                            if (activeEngine == PlayerEngine.LIBVLC) "Switched to LibVLC Engine" else "Switched to ExoPlayer Engine",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                )
-                                DropdownMenuItem(
                                     text = { Text("Sleep Timer (${if (sleepTimerMinutes > 0) "${sleepTimerMinutes}m" else "Off"})") },
                                     onClick = {
                                         isMoreMenuOpen = false
@@ -1070,17 +966,13 @@ fun VideoPlayerScreen(
                                     text = { Text(if (isAudioBoostEnabled) "Audio Boost: On (Up to 200%)" else "Audio Boost: Off") },
                                     onClick = {
                                         isMoreMenuOpen = false
-                                        if (activeEngine != PlayerEngine.LIBVLC) {
-                                            Toast.makeText(context, "Audio Boost requires LibVLC engine", Toast.LENGTH_SHORT).show()
+                                        isAudioBoostEnabled = !isAudioBoostEnabled
+                                        if (isAudioBoostEnabled) {
+                                            mediaPlayer.volume = 150
+                                            Toast.makeText(context, "LibVLC Audio Boost enabled (150%)", Toast.LENGTH_SHORT).show()
                                         } else {
-                                            isAudioBoostEnabled = !isAudioBoostEnabled
-                                            if (isAudioBoostEnabled) {
-                                                mediaPlayer.volume = 150
-                                                Toast.makeText(context, "LibVLC Audio Boost enabled (150%)", Toast.LENGTH_SHORT).show()
-                                            } else {
-                                                mediaPlayer.volume = 100
-                                                Toast.makeText(context, "Standard Volume (100%)", Toast.LENGTH_SHORT).show()
-                                            }
+                                            mediaPlayer.volume = 100
+                                            Toast.makeText(context, "Standard Volume (100%)", Toast.LENGTH_SHORT).show()
                                         }
                                     }
                                 )
@@ -1118,9 +1010,94 @@ fun VideoPlayerScreen(
                 }
             }
 
-            // Bottom Controls Bar (Timeline, Play/Pause, Speed, Loop, Resize)
+            // Center Transport Controls (Rewind 10s, Large Play/Pause, Forward 10s)
             AnimatedVisibility(
-                visible = areControlsVisible,
+                visible = areControlsVisible && !isScreenLocked,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.Center)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(28.dp)
+                ) {
+                    // Rewind 10s
+                    Surface(
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        color = Color(0x66000000),
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .clickable {
+                                val target = (mediaPlayer.time - 10000L).coerceAtLeast(0L)
+                                mediaPlayer.time = target
+                                currentPositionMs = target
+                                gestureOverlayIcon = Icons.Default.FastRewind
+                                gestureOverlayText = "-10s"
+                            }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.FastRewind,
+                                contentDescription = "Rewind 10s",
+                                tint = Color.White,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+
+                    // Play / Pause (Large 68dp button)
+                    Surface(
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        color = Color(0xCC000000),
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFFF9800)),
+                        modifier = Modifier
+                            .size(68.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .clickable {
+                                if (mediaPlayer.isPlaying) mediaPlayer.pause() else mediaPlayer.play()
+                            }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                tint = Color(0xFFFF9800),
+                                modifier = Modifier.size(38.dp)
+                            )
+                        }
+                    }
+
+                    // Forward 10s
+                    Surface(
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        color = Color(0x66000000),
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .clickable {
+                                val target = (mediaPlayer.time + 10000L).coerceAtMost(totalDurationMs)
+                                mediaPlayer.time = target
+                                currentPositionMs = target
+                                gestureOverlayIcon = Icons.Default.FastForward
+                                gestureOverlayText = "+10s"
+                            }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.FastForward,
+                                contentDescription = "Forward 10s",
+                                tint = Color.White,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Bottom Controls Bar (Timeline, Time Labels, Bottom Navigation Actions)
+            AnimatedVisibility(
+                visible = areControlsVisible && !isScreenLocked,
                 enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
                 exit = fadeOut() + slideOutVertically(targetOffsetY = { it }),
                 modifier = Modifier.align(Alignment.BottomCenter)
@@ -1133,9 +1110,9 @@ fun VideoPlayerScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .navigationBarsPadding()
-                            .padding(horizontal = AppSpacing.paddingLarge, vertical = AppSpacing.paddingSmall)
+                            .padding(horizontal = 20.dp, vertical = 8.dp)
                     ) {
-                        // Time & Timeline slider
+                        // Time labels & Duration
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -1143,7 +1120,7 @@ fun VideoPlayerScreen(
                         ) {
                             Text(
                                 text = formatTime(if (isSeeking) seekPositionMs else currentPositionMs),
-                                style = typography.caption,
+                                style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
                                 color = Color(0xFFEDEDED)
                             )
                             Text(
@@ -1153,6 +1130,7 @@ fun VideoPlayerScreen(
                             )
                         }
 
+                        // Seek Slider
                         Slider(
                             value = if (totalDurationMs > 0) {
                                 val pos = if (isSeeking) seekPositionMs else currentPositionMs
@@ -1164,11 +1142,7 @@ fun VideoPlayerScreen(
                             },
                             onValueChangeFinished = {
                                 currentPositionMs = seekPositionMs
-                                if (activeEngine == PlayerEngine.LIBVLC) {
-                                    mediaPlayer.time = seekPositionMs
-                                } else {
-                                    exoPlayer.seekTo(seekPositionMs)
-                                }
+                                mediaPlayer.time = seekPositionMs
                                 isSeeking = false
                             },
                             colors = SliderDefaults.colors(
@@ -1179,45 +1153,59 @@ fun VideoPlayerScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        // Bottom Actions row
+                        // Bottom Actions row (Spacious, elegant, uncluttered)
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // VLC Aspect Ratio toggle (Fit, 16:9, 4:3, 21:9, Crop, 1:1)
-                            IconButton(
-                                onClick = {
-                                    aspectModeIndex = (aspectModeIndex + 1) % VlcAspectMode.entries.size
-                                    val nextMode = VlcAspectMode.entries[aspectModeIndex]
-                                    mediaPlayer.aspectRatio = nextMode.ratioStr
-                                    mediaPlayer.scale = nextMode.scale
-                                    Toast.makeText(context, nextMode.label, Toast.LENGTH_SHORT).show()
-                                }
+                            // Aspect Ratio
+                            Surface(
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                                color = Color(0x22FFFFFF),
+                                modifier = Modifier
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        aspectModeIndex = (aspectModeIndex + 1) % VlcAspectMode.entries.size
+                                        val nextMode = VlcAspectMode.entries[aspectModeIndex]
+                                        mediaPlayer.aspectRatio = nextMode.ratioStr
+                                        mediaPlayer.scale = nextMode.scale
+                                        Toast.makeText(context, nextMode.label, Toast.LENGTH_SHORT).show()
+                                    }
                             ) {
                                 Text(
                                     text = currentAspectMode.buttonText,
                                     style = typography.caption.copy(fontWeight = FontWeight.Bold),
-                                    color = Color(0xFFEDEDED)
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                                 )
                             }
 
-                            // Subtitle (CC) Button -> launches Subtitle Track Picker
+                            // Subtitle (CC) Button
                             IconButton(onClick = { isSubtitleTrackDialogOpen = true }) {
-                                Text(
-                                    text = "CC",
-                                    style = typography.caption.copy(fontWeight = FontWeight.Bold),
-                                    color = if (subtitleUri != null || (activeEngine == PlayerEngine.LIBVLC && mediaPlayer.spuTrack != -1)) Color(0xFFFF9800) else Color(0xFFEDEDED)
+                                Icon(
+                                    imageVector = Icons.Filled.Subtitles,
+                                    contentDescription = "Subtitles",
+                                    tint = if (subtitleUri != null || mediaPlayer.spuTrack != -1) Color(0xFFFF9800) else Color(0xFFEDEDED)
                                 )
                             }
 
                             // Speed Selector button
                             Box {
-                                IconButton(onClick = { isSpeedMenuOpen = true }) {
+                                Surface(
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                                    color = if (playbackSpeed != 1.0f) Color(0x33FF9800) else Color(0x22FFFFFF),
+                                    modifier = Modifier
+                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                                        .clickable { isSpeedMenuOpen = true }
+                                ) {
                                     Text(
                                         text = "${playbackSpeed}x",
                                         style = typography.caption.copy(fontWeight = FontWeight.Bold),
-                                        color = if (playbackSpeed != 1.0f) Color(0xFFFF9800) else Color(0xFFEDEDED)
+                                        color = if (playbackSpeed != 1.0f) Color(0xFFFF9800) else Color.White,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                                     )
                                 }
 
@@ -1231,18 +1219,14 @@ fun VideoPlayerScreen(
                                             onClick = {
                                                 isSpeedMenuOpen = false
                                                 playbackSpeed = spd
-                                                if (activeEngine == PlayerEngine.LIBVLC) {
-                                                    mediaPlayer.rate = spd
-                                                } else {
-                                                    exoPlayer.setPlaybackSpeed(spd)
-                                                }
+                                                mediaPlayer.rate = spd
                                             }
                                         )
                                     }
                                 }
                             }
 
-                            // VLC A-B Repeat Loop button
+                            // A-B Repeat Loop button
                             IconButton(
                                 onClick = {
                                     if (abRepeatA == null) {
@@ -1277,78 +1261,37 @@ fun VideoPlayerScreen(
                                 )
                             }
 
-                            // 10s Rewind
-                            IconButton(
-                                onClick = {
-                                    val current = if (activeEngine == PlayerEngine.LIBVLC) mediaPlayer.time else exoPlayer.currentPosition
-                                    val target = (current - 10000L).coerceAtLeast(0L)
-                                    if (activeEngine == PlayerEngine.LIBVLC) {
-                                        mediaPlayer.time = target
-                                    } else {
-                                        exoPlayer.seekTo(target)
-                                    }
-                                    currentPositionMs = target
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.FastRewind,
-                                    contentDescription = "Rewind 10s",
-                                    tint = Color(0xFFEDEDED)
-                                )
-                            }
-
-                            // Play / Pause
-                            IconButton(
-                                onClick = {
-                                    if (activeEngine == PlayerEngine.LIBVLC) {
-                                        if (mediaPlayer.isPlaying) mediaPlayer.pause() else mediaPlayer.play()
-                                    } else {
-                                        if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
-                                    }
-                                },
-                                modifier = Modifier.size(48.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                    contentDescription = if (isPlaying) "Pause" else "Play",
-                                    tint = Color(0xFFEDEDED),
-                                    modifier = Modifier.size(36.dp)
-                                )
-                            }
-
-                            // 10s Forward
-                            IconButton(
-                                onClick = {
-                                    val current = if (activeEngine == PlayerEngine.LIBVLC) mediaPlayer.time else exoPlayer.currentPosition
-                                    val target = (current + 10000L).coerceAtMost(totalDurationMs)
-                                    if (activeEngine == PlayerEngine.LIBVLC) {
-                                        mediaPlayer.time = target
-                                    } else {
-                                        exoPlayer.seekTo(target)
-                                    }
-                                    currentPositionMs = target
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.FastForward,
-                                    contentDescription = "Forward 10s",
-                                    tint = Color(0xFFEDEDED)
-                                )
-                            }
-
-                            // Loop toggle
-                            IconButton(
-                                onClick = {
-                                    isLooping = !isLooping
-                                    if (activeEngine == PlayerEngine.EXOPLAYER) {
-                                        exoPlayer.repeatMode = if (isLooping) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
-                                    }
-                                }
-                            ) {
+                            // Repeat / Loop Single Video
+                            IconButton(onClick = { isLooping = !isLooping }) {
                                 Icon(
                                     imageVector = Icons.Default.Repeat,
                                     contentDescription = "Loop",
                                     tint = if (isLooping) Color(0xFFFF9800) else Color(0xFFEDEDED)
+                                )
+                            }
+
+                            // Screen Orientation Toggle
+                            IconButton(
+                                onClick = {
+                                    orientationMode = (orientationMode + 1) % 3
+                                    val target = when (orientationMode) {
+                                        1 -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                                        2 -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                                        else -> ActivityInfo.SCREEN_ORIENTATION_SENSOR
+                                    }
+                                    activity?.requestedOrientation = target
+                                    val label = when (orientationMode) {
+                                        1 -> "Landscape"
+                                        2 -> "Portrait"
+                                        else -> "Auto-rotate"
+                                    }
+                                    Toast.makeText(context, label, Toast.LENGTH_SHORT).show()
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ScreenRotation,
+                                    contentDescription = "Rotate Screen",
+                                    tint = if (orientationMode != 0) Color(0xFFFF9800) else Color(0xFFEDEDED)
                                 )
                             }
                         }
@@ -1448,12 +1391,10 @@ fun VideoPlayerScreen(
         // VLC Audio Tracks Dialog
         if (isAudioTrackDialogOpen) {
             val audioTracks = remember(isAudioTrackDialogOpen) {
-                if (activeEngine == PlayerEngine.LIBVLC) {
-                    mediaPlayer.audioTracks ?: emptyArray()
-                } else emptyArray()
+                mediaPlayer.audioTracks ?: emptyArray()
             }
             var selectedTrackId by remember(isAudioTrackDialogOpen) {
-                mutableIntStateOf(if (activeEngine == PlayerEngine.LIBVLC) mediaPlayer.audioTrack else -1)
+                mutableIntStateOf(mediaPlayer.audioTrack)
             }
 
             AlertDialog(
@@ -1468,11 +1409,7 @@ fun VideoPlayerScreen(
                 text = {
                     if (audioTracks.isEmpty()) {
                         Text(
-                            text = if (activeEngine == PlayerEngine.LIBVLC) {
-                                "No alternate audio tracks found in this video."
-                            } else {
-                                "Audio track switching is powered by LibVLC engine. Switch to LibVLC from More menu."
-                            },
+                            text = "No alternate audio tracks found in this video.",
                             style = typography.body
                         )
                     } else {
@@ -1484,10 +1421,8 @@ fun VideoPlayerScreen(
                                         .fillMaxWidth()
                                         .clickable {
                                             selectedTrackId = track.id
-                                            if (activeEngine == PlayerEngine.LIBVLC) {
-                                                mediaPlayer.setAudioTrack(track.id)
-                                                Toast.makeText(context, "Audio: ${track.name}", Toast.LENGTH_SHORT).show()
-                                            }
+                                            mediaPlayer.setAudioTrack(track.id)
+                                            Toast.makeText(context, "Audio: ${track.name}", Toast.LENGTH_SHORT).show()
                                             isAudioTrackDialogOpen = false
                                         }
                                         .padding(vertical = 10.dp)
@@ -1519,12 +1454,10 @@ fun VideoPlayerScreen(
         // VLC Subtitle Tracks Dialog
         if (isSubtitleTrackDialogOpen) {
             val spuTracks = remember(isSubtitleTrackDialogOpen) {
-                if (activeEngine == PlayerEngine.LIBVLC) {
-                    mediaPlayer.spuTracks ?: emptyArray()
-                } else emptyArray()
+                mediaPlayer.spuTracks ?: emptyArray()
             }
             var selectedSpuId by remember(isSubtitleTrackDialogOpen) {
-                mutableIntStateOf(if (activeEngine == PlayerEngine.LIBVLC) mediaPlayer.spuTrack else -1)
+                mutableIntStateOf(mediaPlayer.spuTrack)
             }
 
             AlertDialog(
@@ -1569,10 +1502,8 @@ fun VideoPlayerScreen(
                                         .clickable {
                                             selectedSpuId = -1
                                             subtitleUri = null
-                                            if (activeEngine == PlayerEngine.LIBVLC) {
-                                                mediaPlayer.spuTrack = -1
-                                                Toast.makeText(context, "Subtitles turned off", Toast.LENGTH_SHORT).show()
-                                            }
+                                            mediaPlayer.spuTrack = -1
+                                            Toast.makeText(context, "Subtitles turned off", Toast.LENGTH_SHORT).show()
                                             isSubtitleTrackDialogOpen = false
                                         }
                                         .padding(vertical = 10.dp)
@@ -1593,10 +1524,8 @@ fun VideoPlayerScreen(
                                         .fillMaxWidth()
                                         .clickable {
                                             selectedSpuId = track.id
-                                            if (activeEngine == PlayerEngine.LIBVLC) {
-                                                mediaPlayer.setSpuTrack(track.id)
-                                                Toast.makeText(context, "Subtitle: ${track.name}", Toast.LENGTH_SHORT).show()
-                                            }
+                                            mediaPlayer.setSpuTrack(track.id)
+                                            Toast.makeText(context, "Subtitle: ${track.name}", Toast.LENGTH_SHORT).show()
                                             isSubtitleTrackDialogOpen = false
                                         }
                                         .padding(vertical = 10.dp)

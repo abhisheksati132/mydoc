@@ -58,7 +58,25 @@ import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.tools.model.ToolGroup
 import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.automirrored.outlined.CallSplit
+import androidx.compose.material.icons.outlined.AllInclusive
+import androidx.compose.material.icons.outlined.AutoMode
+import androidx.compose.material.icons.outlined.Compress
+import androidx.compose.material.icons.outlined.Difference
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.Transform
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.layout.Arrangement
+
+private data class ToolNavCategory(
+    val group: ToolGroup?,
+    val icon: ImageVector,
+    val color: Color,
+    val label: String
+)
 
 @Composable
 fun ToolsScreen(
@@ -101,6 +119,7 @@ fun ToolsScreen(
     }
 
     var isSearchActive by remember { mutableStateOf(searchQuery.isNotEmpty()) }
+    var selectedToolGroup by remember { mutableStateOf<ToolGroup?>(null) }
 
     Column(
         modifier = modifier
@@ -122,6 +141,65 @@ fun ToolsScreen(
             isDarkTheme = isDarkTheme,
             onToggleTheme = onToggleTheme,
             onSettingsClick = onSettingsClick,
+            bottomContent = {
+                val toolCategories = listOf(
+                    ToolNavCategory(null, Icons.Outlined.AllInclusive, colors.accent, "All"),
+                    ToolNavCategory(ToolGroup.ORGANIZE, Icons.AutoMirrored.Outlined.CallSplit, Color(0xFF1A73E8), "Organize"),
+                    ToolNavCategory(ToolGroup.OPTIMIZE, Icons.Outlined.Compress, Color(0xFF188038), "Optimize"),
+                    ToolNavCategory(ToolGroup.CONVERT_TO, Icons.Outlined.Transform, Color(0xFF9334E6), "Convert To"),
+                    ToolNavCategory(ToolGroup.CONVERT_FROM, Icons.Outlined.Difference, Color(0xFF3F51B5), "Convert From"),
+                    ToolNavCategory(ToolGroup.EDIT, Icons.Outlined.Edit, Color(0xFFF29900), "Edit"),
+                    ToolNavCategory(ToolGroup.SECURITY, Icons.Outlined.Security, Color(0xFFEA4335), "Security"),
+                    ToolNavCategory(ToolGroup.SCAN, Icons.Outlined.CameraAlt, Color(0xFF00897B), "Scan & OCR"),
+                    ToolNavCategory(ToolGroup.AUTOMATION, Icons.Outlined.AutoMode, Color(0xFF0284C7), "Automation")
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    for (item in toolCategories) {
+                        val isSelected = selectedToolGroup == item.group
+                        val chipBg = if (isSelected) item.color.copy(alpha = 0.2f) else colors.surface
+                        val chipBorderColor = if (isSelected) item.color else colors.divider
+
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = chipBg,
+                            border = androidx.compose.foundation.BorderStroke(if (isSelected) 1.5.dp else 1.dp, chipBorderColor),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    selectedToolGroup = item.group
+                                }
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = item.icon,
+                                    contentDescription = item.label,
+                                    tint = if (isSelected) item.color else item.color.copy(alpha = 0.85f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = item.label,
+                                    style = typography.caption.copy(
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                                    ),
+                                    color = if (isSelected) colors.textPrimary else colors.textSecondary
+                                )
+                            }
+                        }
+                    }
+                }
+            },
             moreMenuContent = { onDismiss ->
                 if (onOpenTrash != null) {
                     DropdownMenuItem(
@@ -189,7 +267,7 @@ fun ToolsScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 4.dp, bottom = 88.dp)
             ) {
-                if (searchQuery.isBlank()) {
+                if (searchQuery.isBlank() && selectedToolGroup == null) {
                     item(key = "super_tools_header") {
                         AppSectionHeader(
                             title = "SUPER POWER TOOLS",
@@ -216,33 +294,19 @@ fun ToolsScreen(
                                         .padding(14.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(42.dp)
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(Color(0xFF1B2A4A)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Wifi,
-                                            contentDescription = null,
-                                            tint = Color(0xFF63B3ED),
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    }
+                                    Icon(
+                                        imageVector = Icons.Outlined.Wifi,
+                                        contentDescription = null,
+                                        tint = Color(0xFF63B3ED),
+                                        modifier = Modifier.size(28.dp)
+                                    )
                                     Spacer(modifier = Modifier.width(14.dp))
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(
-                                                text = "PC Wi-Fi Transfer",
-                                                style = typography.body.copy(fontWeight = FontWeight.SemiBold),
-                                                color = colors.textPrimary
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Badge(containerColor = colors.accent, contentColor = Color.Black) {
-                                                Text("FAST", fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                                            }
-                                        }
+                                        Text(
+                                            text = "PC Wi-Fi Transfer",
+                                            style = typography.body.copy(fontWeight = FontWeight.SemiBold),
+                                            color = colors.textPrimary
+                                        )
                                         Text(
                                             text = "Transfer files to/from PC without cables at Wi-Fi speeds",
                                             style = typography.caption,
@@ -253,7 +317,7 @@ fun ToolsScreen(
 
                                 HorizontalDivider(
                                     color = colors.divider,
-                                    modifier = Modifier.padding(start = 70.dp, end = 14.dp)
+                                    modifier = Modifier.padding(start = 56.dp, end = 14.dp)
                                 )
 
                                 Row(
@@ -266,33 +330,19 @@ fun ToolsScreen(
                                         .padding(14.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(42.dp)
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(Color(0xFF261010)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.DeleteSweep,
-                                            contentDescription = null,
-                                            tint = Color(0xFFEF5350),
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    }
+                                    Icon(
+                                        imageVector = Icons.Outlined.DeleteSweep,
+                                        contentDescription = null,
+                                        tint = Color(0xFFEF5350),
+                                        modifier = Modifier.size(28.dp)
+                                    )
                                     Spacer(modifier = Modifier.width(14.dp))
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(
-                                                text = "Storage Cleaner & Duplicates",
-                                                style = typography.body.copy(fontWeight = FontWeight.SemiBold),
-                                                color = colors.textPrimary
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Badge(containerColor = Color(0xFFEF5350), contentColor = Color.White) {
-                                                Text("CLEAN", fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                                            }
-                                        }
+                                        Text(
+                                            text = "Storage Cleaner & Duplicates",
+                                            style = typography.body.copy(fontWeight = FontWeight.SemiBold),
+                                            color = colors.textPrimary
+                                        )
                                         Text(
                                             text = "Find duplicate files, large files & remove cache junk",
                                             style = typography.caption,
@@ -306,7 +356,13 @@ fun ToolsScreen(
                     }
                 }
 
-                ToolGroup.entries.forEach { group ->
+                val groupsToDisplay = if (selectedToolGroup != null) {
+                    listOf(selectedToolGroup!!)
+                } else {
+                    ToolGroup.entries
+                }
+
+                groupsToDisplay.forEach { group ->
                     val toolsInGroup = groupedTools[group]
                     if (!toolsInGroup.isNullOrEmpty()) {
                         item(key = "header_${group.name}") {

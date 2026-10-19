@@ -128,6 +128,20 @@ class MainActivity : ComponentActivity() {
 
         handleIncomingIntent(intent)
 
+        if (savedInstanceState != null) {
+            val mediaUriStr = savedInstanceState.getString("saved_active_media_uri")
+            if (mediaUriStr != null) {
+                lifecycleScope.launch {
+                    val uri = Uri.parse(mediaUriStr)
+                    val mediaItem = app.mediaRepository.getMediaItem(uri)
+                    if (mediaItem != null) {
+                        activeMediaItem = mediaItem
+                        activeMediaList = listOf(mediaItem)
+                    }
+                }
+            }
+        }
+
         setContent {
             val themeMode by app.settingsRepository.themeMode.collectAsState()
             val isDark = when (themeMode) {
@@ -178,6 +192,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 BackHandler(enabled = !isDesignSystemPreviewOpen && !isSettingsOpen && selectedTool == null && activeMediaItem != null) {
+                    requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                     activeMediaItem = null
                     activeMediaList = emptyList()
                 }
@@ -197,6 +212,12 @@ class MainActivity : ComponentActivity() {
                     }
                     currentDocument != null -> ActiveScreen.Document(currentDocument!!)
                     else -> ActiveScreen.Home
+                }
+
+                LaunchedEffect(activeScreen) {
+                    if (activeScreen is ActiveScreen.Home) {
+                        requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                    }
                 }
 
                 Surface(
@@ -278,6 +299,7 @@ class MainActivity : ComponentActivity() {
                                     item = screen.item,
                                     mediaRepository = app.mediaRepository,
                                     onBackClick = {
+                                        requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                                         activeMediaItem = null
                                         activeMediaList = emptyList()
                                     }
@@ -290,6 +312,7 @@ class MainActivity : ComponentActivity() {
                                     initialIndex = initialIdx,
                                     mediaRepository = app.mediaRepository,
                                     onBackClick = {
+                                        requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                                         activeMediaItem = null
                                         activeMediaList = emptyList()
                                     }
@@ -555,6 +578,23 @@ class MainActivity : ComponentActivity() {
                     enterPictureInPictureMode(params)
                 } catch (_: Exception) {}
             }
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        activeMediaItem?.uri?.let {
+            outState.putString("saved_active_media_uri", it.toString())
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: android.content.res.Configuration
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        if (!isInPictureInPictureMode && activeMediaItem == null) {
+            requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
 }

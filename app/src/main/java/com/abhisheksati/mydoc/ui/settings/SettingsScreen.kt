@@ -141,7 +141,6 @@ fun SettingsScreen(
     val grantedFolderUri by settingsRepository.grantedFolderUri.collectAsState()
     val grantedFolderName by settingsRepository.grantedFolderName.collectAsState()
 
-    val diagnostics = remember { settingsRepository.getSystemDiagnostics() }
     var cacheSizeBytes by remember { mutableStateOf(settingsRepository.getCacheSizeBytes(context)) }
     var isScanningFolder by remember { mutableStateOf(false) }
 
@@ -247,7 +246,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Version ${updateManager.currentVersionName}",
+                            text = "Preferences",
                             style = typography.caption.copy(fontSize = 12.sp),
                             color = colors.textSecondary
                         )
@@ -972,59 +971,6 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // SYSTEM & HARDWARE DIAGNOSTICS ("ENGINE ROOM")
-            AppSectionHeader(title = "SYSTEM & DIAGNOSTICS")
-            SettingsDoubleBezelCard {
-                DiagnosticRow(label = "Device", value = diagnostics.deviceName)
-                HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 8.dp))
-                DiagnosticRow(label = "Android Version", value = "${diagnostics.androidVersion} (API ${diagnostics.apiLevel})")
-                HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 8.dp))
-                DiagnosticRow(label = "Processor ABI", value = diagnostics.abiArchitecture)
-                HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 8.dp))
-                DiagnosticRow(label = "Allocated JVM Heap", value = "${diagnostics.jvmHeapUsedMb} MB / ${diagnostics.jvmHeapMaxMb} MB")
-                HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 8.dp))
-                DiagnosticRow(label = "Free Internal Storage", value = "${diagnostics.availableStorageMb / 1024} GB free")
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = {
-                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                data = Uri.fromParts("package", context.packageName, null)
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            context.startActivity(intent)
-                        },
-                        shape = RoundedCornerShape(999.dp),
-                        border = BorderStroke(0.8.dp, colors.divider),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.AutoMirrored.Outlined.Launch, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("App Info", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    }
-
-                    OutlinedButton(
-                        onClick = onDesignSystemPreviewClick,
-                        shape = RoundedCornerShape(999.dp),
-                        border = BorderStroke(0.8.dp, colors.accent),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Outlined.DeveloperMode, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Design Lab", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
             // UPDATES
             AppSectionHeader(title = "UPDATES & GITHUB")
             SettingsDoubleBezelCard {
@@ -1234,6 +1180,42 @@ fun SettingsScreen(
                     color = colors.textSecondary
                 )
 
+                Spacer(modifier = Modifier.height(14.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                        },
+                        shape = RoundedCornerShape(999.dp),
+                        border = BorderStroke(0.8.dp, colors.divider),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.AutoMirrored.Outlined.Launch, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("App Info", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
+
+                    OutlinedButton(
+                        onClick = onDesignSystemPreviewClick,
+                        shape = RoundedCornerShape(999.dp),
+                        border = BorderStroke(0.8.dp, colors.accent),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Outlined.DeveloperMode, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Design Lab", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+
                 if (isLegacyDebugInstalled) {
                     val isOled = colors.background == DarkAppColors.background
                     Spacer(modifier = Modifier.height(12.dp))
@@ -1282,33 +1264,6 @@ fun SettingsScreen(
                 }
             }
         }
-    }
-}
-
-
-@Composable
-private fun DiagnosticRow(
-    label: String,
-    value: String
-) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            style = typography.caption,
-            color = colors.textSecondary
-        )
-        Text(
-            text = value,
-            style = typography.body.copy(fontWeight = FontWeight.Medium, fontSize = 13.sp),
-            color = colors.textPrimary
-        )
     }
 }
 

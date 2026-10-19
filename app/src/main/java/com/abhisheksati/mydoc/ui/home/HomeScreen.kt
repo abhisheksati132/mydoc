@@ -356,7 +356,11 @@ fun HomeScreen(
                         openDocumentLauncher = openDocumentLauncher,
                         onShowClearRecentsDialog = { showClearRecentsDialog = true },
                         onSelectDocForDetails = { selectedDocForDetails = it },
-                        onOpenTrash = { fileManagerViewModel?.openTrash() },
+                        onOpenTrash = {
+                            viewModel.selectTab(HomeTab.FILES)
+                            scope.launch { pagerState.scrollToPage(HomeTab.FILES.ordinal) }
+                            fileManagerViewModel?.openTrash()
+                        },
                         trashCount = trashCount,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -371,8 +375,15 @@ fun HomeScreen(
                             onSettingsClick = onSettingsClick,
                             onToggleTheme = onToggleTheme,
                             isDarkTheme = isDarkTheme,
-                            onOpenTrash = { fileManagerViewModel?.openTrash() },
+                            onOpenTrash = {
+                                viewModel.selectTab(HomeTab.FILES)
+                                scope.launch { pagerState.scrollToPage(HomeTab.FILES.ordinal) }
+                                fileManagerViewModel?.openTrash()
+                            },
                             trashCount = trashCount,
+                            onMoveToTrash = { files ->
+                                fileManagerViewModel?.moveToTrashFiles(files)
+                            },
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -390,7 +401,11 @@ fun HomeScreen(
                         onSettingsClick = onSettingsClick,
                         onToggleTheme = onToggleTheme,
                         isDarkTheme = isDarkTheme,
-                        onOpenTrash = { fileManagerViewModel?.openTrash() },
+                        onOpenTrash = {
+                            viewModel.selectTab(HomeTab.FILES)
+                            scope.launch { pagerState.scrollToPage(HomeTab.FILES.ordinal) }
+                            fileManagerViewModel?.openTrash()
+                        },
                         trashCount = trashCount,
                         modifier = Modifier.fillMaxSize()
                     )

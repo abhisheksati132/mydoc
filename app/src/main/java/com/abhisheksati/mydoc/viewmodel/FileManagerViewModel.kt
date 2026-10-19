@@ -399,6 +399,26 @@ class FileManagerViewModel(
         }
     }
 
+    fun moveToTrashFiles(files: List<File>, onComplete: (() -> Unit)? = null) {
+        if (files.isEmpty()) return
+        viewModelScope.launch {
+            val result = storageRepository.moveToTrash(files)
+            result.onSuccess { trashed ->
+                _uiState.update {
+                    it.copy(
+                        lastTrashedItems = trashed,
+                        userMessage = "Moved ${files.size} items to Recycle Bin"
+                    )
+                }
+                loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+                refreshVolumes()
+                onComplete?.invoke()
+            }.onFailure { err ->
+                _uiState.update { it.copy(userMessage = "Failed to move to Recycle Bin: ${err.message}") }
+            }
+        }
+    }
+
     fun undoLastTrash() {
         val items = _uiState.value.lastTrashedItems
         if (items.isEmpty()) return

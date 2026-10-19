@@ -27,7 +27,8 @@ data class MediaItem(
     val orientation: Int = 0,
     val bucketId: String? = null,
     val bucketName: String? = null,
-    val isVideo: Boolean = false
+    val isVideo: Boolean = false,
+    val filePath: String? = null
 ) {
     val isGif: Boolean
         get() = mimeType.equals("image/gif", ignoreCase = true) || displayName.endsWith(".gif", ignoreCase = true)
