@@ -139,7 +139,7 @@
 4. Run full suite: `./gradlew testDebugUnitTest`, `./gradlew lintDebug`, and `./gradlew assembleRelease`.
 
 ### Verification Checklist:
-- [ ] All unit tests pass (`100% green`).
-- [ ] Android Lint reports **0 errors**.
-- [ ] Release APK compiles and builds cleanly.
-- [ ] Generate final comparison metrics (APK size, lines of code removed, test count).
+- [x] All unit tests pass (`100% green`).
+- [x] Android Lint reports **0 errors**.
+- [x] Release APK compiles and builds cleanly.
+- [x] Generate final comparison metrics (APK size, lines of code removed, test count).

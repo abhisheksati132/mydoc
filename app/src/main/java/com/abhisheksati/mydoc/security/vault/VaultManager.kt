@@ -26,7 +26,10 @@ data class VaultItem(
     val mimeType: String
 )
 
-class VaultManager(private val context: Context) {
+class VaultManager(
+    private val context: Context,
+    private val keyProvider: (() -> SecretKey)? = null
+) {
 
     companion object {
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
@@ -44,7 +47,10 @@ class VaultManager(private val context: Context) {
             return dir
         }
 
-    private fun getOrCreateMasterKey(): SecretKey {
+    internal fun getOrCreateMasterKey(): SecretKey {
+        if (keyProvider != null) {
+            return keyProvider.invoke()
+        }
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
         if (keyStore.containsAlias(KEY_ALIAS)) {
             val entry = keyStore.getEntry(KEY_ALIAS, null) as KeyStore.SecretKeyEntry
@@ -302,19 +308,23 @@ class VaultManager(private val context: Context) {
 
     private fun getMimeType(file: File): String {
         val ext = file.extension.lowercase()
-        return android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
-            ?: when (ext) {
-                "pdf" -> "application/pdf"
-                "docx", "doc" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                "xlsx", "xls" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                "pptx", "ppt" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                "png" -> "image/png"
-                "jpg", "jpeg" -> "image/jpeg"
-                "mp4" -> "video/mp4"
-                "mp3" -> "audio/mpeg"
-                "txt" -> "text/plain"
-                else -> "application/octet-stream"
-            }
+        val fromMap = try {
+            android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
+        } catch (_: Throwable) {
+            null
+        }
+        return fromMap ?: when (ext) {
+            "pdf" -> "application/pdf"
+            "docx", "doc" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            "xlsx", "xls" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            "pptx", "ppt" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            "png" -> "image/png"
+            "jpg", "jpeg" -> "image/jpeg"
+            "mp4" -> "video/mp4"
+            "mp3" -> "audio/mpeg"
+            "txt" -> "text/plain"
+            else -> "application/octet-stream"
+        }
     }
 
     private data class VaultHeader(
