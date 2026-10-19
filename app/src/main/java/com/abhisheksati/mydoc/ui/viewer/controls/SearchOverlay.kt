@@ -16,13 +16,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -30,8 +32,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.ui.theme.Spacing
+import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
+import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 
 @Composable
 fun SearchOverlay(
@@ -45,6 +52,9 @@ fun SearchOverlay(
     onCloseSearch: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalAppColors.current
+    val typography = LocalAppTypography.current
+
     AnimatedVisibility(
         visible = visible,
         enter = slideInVertically(
@@ -60,9 +70,9 @@ fun SearchOverlay(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.98f))
+                .background(colors.surface)
                 .statusBarsPadding()
-                .padding(horizontal = Spacing.medium, vertical = Spacing.small),
+                .padding(horizontal = AppSpacing.paddingMedium, vertical = AppSpacing.paddingSmall),
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
@@ -71,64 +81,79 @@ fun SearchOverlay(
                 placeholder = {
                     Text(
                         text = "Find in document…",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = typography.body,
+                        color = colors.textSecondary
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Search,
+                        contentDescription = null,
+                        tint = colors.textSecondary,
+                        modifier = Modifier.size(20.dp)
                     )
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(6.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { if (matchCount > 0) onNextMatch() }),
+                shape = RoundedCornerShape(AppSpacing.cornerRadius),
                 modifier = Modifier.weight(1f),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = Color.Transparent
+                    focusedContainerColor = colors.surface,
+                    unfocusedContainerColor = colors.surface,
+                    focusedBorderColor = colors.accent,
+                    unfocusedBorderColor = colors.divider
                 )
             )
 
-            Spacer(modifier = Modifier.width(Spacing.small))
+            Spacer(modifier = Modifier.width(AppSpacing.paddingSmall))
 
             if (matchCount > 0) {
                 Text(
                     text = "${currentMatchIndex + 1} of $matchCount",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+                    color = colors.accent
                 )
             } else if (query.isNotBlank()) {
                 Text(
                     text = "0 matches",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = typography.caption.copy(fontSize = 12.sp),
+                    color = colors.textSecondary
                 )
             }
 
             IconButton(
                 onClick = onPreviousMatch,
-                enabled = matchCount > 0
+                enabled = matchCount > 0,
+                modifier = Modifier.size(36.dp)
             ) {
                 Icon(
                     imageVector = Icons.Outlined.KeyboardArrowUp,
                     contentDescription = "Previous match",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = if (matchCount > 0) colors.textPrimary else colors.textSecondary.copy(alpha = 0.4f)
                 )
             }
 
             IconButton(
                 onClick = onNextMatch,
-                enabled = matchCount > 0
+                enabled = matchCount > 0,
+                modifier = Modifier.size(36.dp)
             ) {
                 Icon(
                     imageVector = Icons.Outlined.KeyboardArrowDown,
                     contentDescription = "Next match",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = if (matchCount > 0) colors.textPrimary else colors.textSecondary.copy(alpha = 0.4f)
                 )
             }
 
-            IconButton(onClick = onCloseSearch) {
+            IconButton(
+                onClick = onCloseSearch,
+                modifier = Modifier.size(36.dp)
+            ) {
                 Icon(
                     imageVector = Icons.Outlined.Close,
                     contentDescription = "Close search",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = colors.textSecondary
                 )
             }
         }

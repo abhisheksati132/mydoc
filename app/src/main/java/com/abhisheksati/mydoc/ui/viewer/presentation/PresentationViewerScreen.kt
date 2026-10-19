@@ -381,24 +381,28 @@ fun PresentationViewerScreen(
     val bgColor = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color(0xFF000000)
         ReadingMode.SEPIA -> Color(0xFFF4ECD8)
+        ReadingMode.EYE_COMFORT -> Color(0xFFF7F3E9)
         ReadingMode.NORMAL -> if (isAppDark) Color(0xFF000000) else colors.background
     }
 
     val cardBgColor = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color(0xFF0A0A0C)
         ReadingMode.SEPIA -> Color(0xFFEADBBE)
+        ReadingMode.EYE_COMFORT -> Color(0xFFECE4D0)
         ReadingMode.NORMAL -> if (isAppDark) Color(0xFF0A0A0C) else Color.White
     }
 
     val textColor = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color(0xFFEDEDED)
         ReadingMode.SEPIA -> Color(0xFF3A3125)
+        ReadingMode.EYE_COMFORT -> Color(0xFF2C261F)
         ReadingMode.NORMAL -> colors.textPrimary
     }
 
     val secondaryTextColor = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color(0xFFA0A0A5)
         ReadingMode.SEPIA -> Color(0xFF5A4E3A)
+        ReadingMode.EYE_COMFORT -> Color(0xFF5C5245)
         ReadingMode.NORMAL -> colors.textSecondary
     }
 
@@ -575,7 +579,8 @@ fun PresentationViewerScreen(
                                                 Text(when (readingMode) {
                                                     ReadingMode.NORMAL -> "Theme: Dark"
                                                     ReadingMode.INVERTED_DARK -> "Theme: Sepia"
-                                                    ReadingMode.SEPIA -> "Theme: Light"
+                                                    ReadingMode.SEPIA -> "Theme: Eye Comfort"
+                                                    ReadingMode.EYE_COMFORT -> "Theme: Light"
                                                 })
                                             },
                                             leadingIcon = {
@@ -586,7 +591,8 @@ fun PresentationViewerScreen(
                                                 readingMode = when (readingMode) {
                                                     ReadingMode.NORMAL -> ReadingMode.INVERTED_DARK
                                                     ReadingMode.INVERTED_DARK -> ReadingMode.SEPIA
-                                                    ReadingMode.SEPIA -> ReadingMode.NORMAL
+                                                    ReadingMode.SEPIA -> ReadingMode.EYE_COMFORT
+                                                    ReadingMode.EYE_COMFORT -> ReadingMode.NORMAL
                                                 }
                                             }
                                         )

@@ -102,6 +102,13 @@ class AndroidPdfRenderer(
                         }
                         converted
                     }
+                    ReadingMode.EYE_COMFORT -> {
+                        val converted = applyEyeComfortFilter(baseBitmap)
+                        if (converted !== baseBitmap && !baseBitmap.isRecycled) {
+                            baseBitmap.recycle()
+                        }
+                        converted
+                    }
                     ReadingMode.NORMAL -> baseBitmap
                 }
 
@@ -159,6 +166,13 @@ class AndroidPdfRenderer(
                 }
                 ReadingMode.SEPIA -> {
                     val converted = applySepiaFilter(baseBitmap)
+                    if (converted !== baseBitmap && !baseBitmap.isRecycled) {
+                        baseBitmap.recycle()
+                    }
+                    converted
+                }
+                ReadingMode.EYE_COMFORT -> {
+                    val converted = applyEyeComfortFilter(baseBitmap)
                     if (converted !== baseBitmap && !baseBitmap.isRecycled) {
                         baseBitmap.recycle()
                     }
@@ -227,6 +241,24 @@ class AndroidPdfRenderer(
             paint.colorFilter = ColorMatrixColorFilter(matrix)
             canvas.drawBitmap(src, 0f, 0f, paint)
             return sepia
+        }
+
+        fun applyEyeComfortFilter(src: Bitmap): Bitmap {
+            val width = src.width
+            val height = src.height
+            val filtered = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(filtered)
+            val paint = Paint()
+            // Gentle warm amber filter reducing blue spectrum while preserving text legibility
+            val matrix = ColorMatrix(floatArrayOf(
+                1.0f, 0.0f, 0.0f, 0f, 0f,
+                0.0f, 0.94f, 0.0f, 0f, 0f,
+                0.0f, 0.0f, 0.76f, 0f, 0f,
+                0.0f, 0.0f, 0.0f, 1.0f, 0f
+            ))
+            paint.colorFilter = ColorMatrixColorFilter(matrix)
+            canvas.drawBitmap(src, 0f, 0f, paint)
+            return filtered
         }
     }
 }

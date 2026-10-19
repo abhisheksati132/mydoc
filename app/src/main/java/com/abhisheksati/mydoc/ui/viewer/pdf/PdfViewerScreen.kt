@@ -87,6 +87,7 @@ import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.ui.viewer.controls.FastScrollbar
 import com.abhisheksati.mydoc.ui.viewer.controls.OutlineDrawer
+import com.abhisheksati.mydoc.ui.viewer.controls.PageGridSheet
 import com.abhisheksati.mydoc.ui.viewer.controls.PageJumpDialog
 import com.abhisheksati.mydoc.ui.viewer.controls.PasswordDialog
 import com.abhisheksati.mydoc.ui.viewer.controls.ReadingControlsBottomSheet
@@ -126,6 +127,7 @@ fun PdfViewerScreen(
     var panOffset by remember { mutableStateOf(Offset.Zero) }
     var isPageJumpDialogOpen by remember { mutableStateOf(false) }
     var isReadingControlsOpen by remember { mutableStateOf(false) }
+    var isThumbnailGridOpen by remember { mutableStateOf(false) }
     var ocrExtractedText by remember { mutableStateOf<String?>(null) }
     var isOcrRunning by remember { mutableStateOf(false) }
     val ocrEngine = remember { com.abhisheksati.mydoc.ocr.OcrEngine(context) }
@@ -237,9 +239,22 @@ fun PdfViewerScreen(
             }
     }
 
+    // Auto-scroll viewer when navigating through search matches
+    LaunchedEffect(state.currentMatchIndex) {
+        if (state.currentMatchIndex in state.searchMatches.indices) {
+            val targetPage = state.searchMatches[state.currentMatchIndex].pageIndex
+            if (state.isContinuousScroll) {
+                lazyListState.animateScrollToItem(targetPage)
+            } else {
+                pagerState.animateScrollToPage(targetPage)
+            }
+        }
+    }
+
     val pageBgColor = when (state.readingMode) {
         ReadingMode.INVERTED_DARK -> Color(0xFF000000)
         ReadingMode.SEPIA -> Color(0xFFF4ECD8)
+        ReadingMode.EYE_COMFORT -> Color(0xFFF7F3E9)
         ReadingMode.NORMAL -> colors.background
     }
 
@@ -344,6 +359,9 @@ fun PdfViewerScreen(
                 val searchMatchesByPage = remember(state.searchMatches) {
                     state.searchMatches.groupBy { it.pageIndex }
                 }
+                val activeMatch = remember(state.searchMatches, state.currentMatchIndex) {
+                    state.searchMatches.getOrNull(state.currentMatchIndex)
+                }
 
                 if (state.isDualPageView) {
                     // Two-page spread for tablets and landscape
@@ -369,6 +387,7 @@ fun PdfViewerScreen(
                                         readingMode = state.readingMode,
                                         zoomScale = zoomScale,
                                         searchMatches = searchMatchesByPage[leftPage] ?: emptyList(),
+                                        activeMatch = activeMatch,
                                         onLongPressPage = { selectedPageForActions = it }
                                     )
                                 }
@@ -380,6 +399,7 @@ fun PdfViewerScreen(
                                             readingMode = state.readingMode,
                                             zoomScale = zoomScale,
                                             searchMatches = searchMatchesByPage[rightPage] ?: emptyList(),
+                                            activeMatch = activeMatch,
                                             onLongPressPage = { selectedPageForActions = it }
                                         )
                                     }
@@ -401,6 +421,7 @@ fun PdfViewerScreen(
                                 readingMode = state.readingMode,
                                 zoomScale = zoomScale,
                                 searchMatches = searchMatchesByPage[pageIndex] ?: emptyList(),
+                                activeMatch = activeMatch,
                                 onLongPressPage = { selectedPageForActions = it }
                             )
                             Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
@@ -423,6 +444,7 @@ fun PdfViewerScreen(
                                 readingMode = state.readingMode,
                                 zoomScale = zoomScale,
                                 searchMatches = searchMatchesByPage[pageIndex] ?: emptyList(),
+                                activeMatch = activeMatch,
                                 onLongPressPage = { selectedPageForActions = it }
                             )
                         }
@@ -519,6 +541,9 @@ fun PdfViewerScreen(
                 }
             },
             onSlideshowClick = onSlideshowClick,
+            onSearchClick = viewModel::openSearch,
+            onThumbnailGridClick = { isThumbnailGridOpen = true },
+            onReadingModeClick = viewModel::toggleReadingMode,
             modifier = Modifier.align(Alignment.TopCenter)
         )
 
@@ -601,6 +626,26 @@ fun PdfViewerScreen(
                 app?.settingsRepository?.setKeepScreenOn(newKeep)
             },
             document = document
+        )
+
+        // 3-Column Page Thumbnail Grid Overview Sheet
+        PageGridSheet(
+            isOpen = isThumbnailGridOpen,
+            pageCount = state.pageCount,
+            currentPage = state.currentPage,
+            bookmarks = bookmarks,
+            onDismiss = { isThumbnailGridOpen = false },
+            onPageSelected = { targetPage ->
+                viewModel.jumpToPage(targetPage)
+                coroutineScope.launch {
+                    if (state.isContinuousScroll) {
+                        lazyListState.scrollToItem(targetPage)
+                    } else {
+                        pagerState.scrollToPage(targetPage)
+                    }
+                }
+            },
+            renderThumbnail = { p, s -> viewModel.renderPageBitmap(p, s) }
         )
 
         // Page Jump Dialog
@@ -821,6 +866,7 @@ private fun PageItemView(
     readingMode: ReadingMode,
     zoomScale: Float = 1f,
     searchMatches: List<com.abhisheksati.mydoc.rendering.engine.SearchMatch>,
+    activeMatch: com.abhisheksati.mydoc.rendering.engine.SearchMatch? = null,
     onLongPressPage: ((Int) -> Unit)? = null
 ) {
     val haptic = LocalHapticFeedback.current
@@ -850,6 +896,7 @@ private fun PageItemView(
     val itemBg = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color(0xFF000000) // True AMOLED Black
         ReadingMode.SEPIA -> Color(0xFFF4ECD8)
+        ReadingMode.EYE_COMFORT -> Color(0xFFF7F3E9)
         ReadingMode.NORMAL -> Color(0xFFFAFAFC)
     }
 
@@ -886,12 +933,29 @@ private fun PageItemView(
                         val top = match.bounds.top * scaleY
                         val right = match.bounds.right * scaleX
                         val bottom = match.bounds.bottom * scaleY
+                        val isCurrent = match == activeMatch
 
-                        drawRect(
-                            color = Color(0x66FFEB3B),
-                            topLeft = Offset(left, top),
-                            size = Size(right - left, bottom - top)
-                        )
+                        if (isCurrent) {
+                            // High-visibility glowing orange highlight for current active match
+                            drawRect(
+                                color = Color(0xCCFF9800),
+                                topLeft = Offset(left, top),
+                                size = Size(right - left, bottom - top)
+                            )
+                            drawRect(
+                                color = Color(0xFFFF5722),
+                                topLeft = Offset(left, top),
+                                size = Size(right - left, bottom - top),
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
+                            )
+                        } else {
+                            // Soft translucent yellow for passive matches
+                            drawRect(
+                                color = Color(0x66FFEB3B),
+                                topLeft = Offset(left, top),
+                                size = Size(right - left, bottom - top)
+                            )
+                        }
                     }
                 }
             }

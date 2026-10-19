@@ -200,7 +200,12 @@ class ViewerViewModel(
                         }
                     } else {
                         val totalPages = activeRenderer.pageCount
-                        val outline = activeRenderer.getOutline()
+                        val rawOutline = activeRenderer.getOutline()
+                        val outline = if (rawOutline.isNotEmpty()) {
+                            rawOutline
+                        } else {
+                            com.abhisheksati.mydoc.rendering.engine.spreadsheet.XlsxConverter.getSheetOutlines(cacheFile.absolutePath)
+                        }
                         val initialPage = savedState?.lastPage?.coerceIn(0, maxOf(0, totalPages - 1)) ?: 0
                         val defaultMode = (context.applicationContext as? com.abhisheksati.mydoc.MyDocApp)?.settingsRepository?.defaultReadingMode?.value ?: ReadingMode.NORMAL
                         val initialMode = savedState?.readingMode ?: defaultMode
@@ -323,7 +328,8 @@ class ViewerViewModel(
         val nextMode = when (_uiState.value.readingMode) {
             ReadingMode.NORMAL -> ReadingMode.INVERTED_DARK
             ReadingMode.INVERTED_DARK -> ReadingMode.SEPIA
-            ReadingMode.SEPIA -> ReadingMode.NORMAL
+            ReadingMode.SEPIA -> ReadingMode.EYE_COMFORT
+            ReadingMode.EYE_COMFORT -> ReadingMode.NORMAL
         }
         _uiState.update { it.copy(readingMode = nextMode) }
         persistViewState()

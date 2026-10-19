@@ -138,6 +138,13 @@ class MuPdfRenderer(
                         }
                         converted
                     }
+                    ReadingMode.EYE_COMFORT -> {
+                        val converted = AndroidPdfRenderer.applyEyeComfortFilter(baseBitmap)
+                        if (converted !== baseBitmap && !baseBitmap.isRecycled) {
+                            baseBitmap.recycle()
+                        }
+                        converted
+                    }
                     ReadingMode.NORMAL -> baseBitmap
                 }
 
@@ -196,6 +203,13 @@ class MuPdfRenderer(
                 }
                 ReadingMode.SEPIA -> {
                     val converted = AndroidPdfRenderer.applySepiaFilter(baseBitmap)
+                    if (converted !== baseBitmap && !baseBitmap.isRecycled) {
+                        baseBitmap.recycle()
+                    }
+                    converted
+                }
+                ReadingMode.EYE_COMFORT -> {
+                    val converted = AndroidPdfRenderer.applyEyeComfortFilter(baseBitmap)
                     if (converted !== baseBitmap && !baseBitmap.isRecycled) {
                         baseBitmap.recycle()
                     }

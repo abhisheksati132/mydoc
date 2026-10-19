@@ -25,9 +25,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.RotateRight
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -176,6 +179,7 @@ private fun FreeCornersCropperCanvas(
     onCropped: (Bitmap) -> Unit
 ) {
     val density = LocalDensity.current
+    val haptic = LocalHapticFeedback.current
     val handleTouchRadiusPx = with(density) { 36.dp.toPx() }
     val cornerCircleRadiusPx = with(density) { 11.dp.toPx() }
     val strokeWidthPx = with(density) { 2.2.dp.toPx() }
@@ -217,13 +221,22 @@ private fun FreeCornersCropperCanvas(
             scaleFactor = fitScale
 
             if (!isInitialized) {
-                // Initialize quad with a subtle 5% inset to make corner handles clearly visible
-                val insetX = displayW * 0.05f
-                val insetY = displayH * 0.05f
-                quadPoints[0] = Offset(left + insetX, top + insetY)
-                quadPoints[1] = Offset(left + displayW - insetX, top + insetY)
-                quadPoints[2] = Offset(left + displayW - insetX, top + displayH - insetY)
-                quadPoints[3] = Offset(left + insetX, top + displayH - insetY)
+                // Automatically detect document boundary edges
+                val autoQuad = DocumentEdgeDetector.detectDocumentQuad(bitmap)
+                if (autoQuad != null) {
+                    quadPoints[0] = Offset(left + autoQuad.topLeft.x * fitScale, top + autoQuad.topLeft.y * fitScale)
+                    quadPoints[1] = Offset(left + autoQuad.topRight.x * fitScale, top + autoQuad.topRight.y * fitScale)
+                    quadPoints[2] = Offset(left + autoQuad.bottomRight.x * fitScale, top + autoQuad.bottomRight.y * fitScale)
+                    quadPoints[3] = Offset(left + autoQuad.bottomLeft.x * fitScale, top + autoQuad.bottomLeft.y * fitScale)
+                } else {
+                    // Fallback: Initialize quad with a subtle 5% inset
+                    val insetX = displayW * 0.05f
+                    val insetY = displayH * 0.05f
+                    quadPoints[0] = Offset(left + insetX, top + insetY)
+                    quadPoints[1] = Offset(left + displayW - insetX, top + insetY)
+                    quadPoints[2] = Offset(left + displayW - insetX, top + displayH - insetY)
+                    quadPoints[3] = Offset(left + insetX, top + displayH - insetY)
+                }
                 isInitialized = true
             }
         }
@@ -487,26 +500,60 @@ private fun FreeCornersCropperCanvas(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Reset to full image bounds
-            IconButton(
-                onClick = {
-                    if (imageBounds.width > 0) {
-                        quadPoints[0] = Offset(imageBounds.left, imageBounds.top)
-                        quadPoints[1] = Offset(imageBounds.right, imageBounds.top)
-                        quadPoints[2] = Offset(imageBounds.right, imageBounds.bottom)
-                        quadPoints[3] = Offset(imageBounds.left, imageBounds.bottom)
-                    }
-                },
-                modifier = Modifier
-                    .size(46.dp)
-                    .clip(CircleShape)
-                    .background(Color(0x28FFFFFF))
-            ) {
-                Icon(
-                    imageVector = Icons.Default.RestartAlt,
-                    contentDescription = "Reset Corners",
-                    tint = Color.White
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Reset to full image bounds
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        if (imageBounds.width > 0) {
+                            quadPoints[0] = Offset(imageBounds.left, imageBounds.top)
+                            quadPoints[1] = Offset(imageBounds.right, imageBounds.top)
+                            quadPoints[2] = Offset(imageBounds.right, imageBounds.bottom)
+                            quadPoints[3] = Offset(imageBounds.left, imageBounds.bottom)
+                        }
+                    },
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(Color(0x28FFFFFF))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.RestartAlt,
+                        contentDescription = "Full Image Frame",
+                        tint = Color.White
+                    )
+                }
+
+                // Smart Document Edge Auto-Snap
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        val autoQuad = DocumentEdgeDetector.detectDocumentQuad(bitmap)
+                        if (autoQuad != null && scaleFactor > 0f) {
+                            quadPoints[0] = Offset(imageBounds.left + autoQuad.topLeft.x * scaleFactor, imageBounds.top + autoQuad.topLeft.y * scaleFactor)
+                            quadPoints[1] = Offset(imageBounds.left + autoQuad.topRight.x * scaleFactor, imageBounds.top + autoQuad.topRight.y * scaleFactor)
+                            quadPoints[2] = Offset(imageBounds.left + autoQuad.bottomRight.x * scaleFactor, imageBounds.top + autoQuad.bottomRight.y * scaleFactor)
+                            quadPoints[3] = Offset(imageBounds.left + autoQuad.bottomLeft.x * scaleFactor, imageBounds.top + autoQuad.bottomLeft.y * scaleFactor)
+                        } else if (imageBounds.width > 0) {
+                            val insetX = imageBounds.width * 0.05f
+                            val insetY = imageBounds.height * 0.05f
+                            quadPoints[0] = Offset(imageBounds.left + insetX, imageBounds.top + insetY)
+                            quadPoints[1] = Offset(imageBounds.right - insetX, imageBounds.top + insetY)
+                            quadPoints[2] = Offset(imageBounds.right - insetX, imageBounds.bottom - insetY)
+                            quadPoints[3] = Offset(imageBounds.left + insetX, imageBounds.bottom - insetY)
+                        }
+                    },
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(Color(0x28FFFFFF))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = "Smart Edge Auto-Detect",
+                        tint = Color(0xFF69F0AE)
+                    )
+                }
             }
 
             // Apply Deskew & Crop

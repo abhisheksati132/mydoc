@@ -94,9 +94,7 @@ fun ViewerBottomBar(
                 .background(colors.surface)
                 .navigationBarsPadding()
         ) {
-            if (sheetItems.size > 1 && onSheetSelect != null &&
-                sheetItems.any { it.title.startsWith("Sheet", ignoreCase = true) || it.title.startsWith("Slide", ignoreCase = true) }
-            ) {
+            if (sheetItems.size > 1 && onSheetSelect != null) {
                 LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -105,7 +103,8 @@ fun ViewerBottomBar(
                 ) {
                     items(sheetItems.size) { idx ->
                         val item = sheetItems[idx]
-                        val isSelected = idx == currentPage
+                        val nextItemPage = sheetItems.getOrNull(idx + 1)?.pageIndex ?: Int.MAX_VALUE
+                        val isSelected = currentPage >= item.pageIndex && currentPage < nextItemPage
                         FilterChip(
                             selected = isSelected,
                             onClick = {

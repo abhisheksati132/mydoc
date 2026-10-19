@@ -10,6 +10,11 @@ import java.io.FileOutputStream
 
 object XlsxConverter {
 
+    private val sheetOutlinesMap = java.util.concurrent.ConcurrentHashMap<String, List<com.abhisheksati.mydoc.rendering.engine.OutlineItem>>()
+
+    fun getSheetOutlines(pdfPath: String): List<com.abhisheksati.mydoc.rendering.engine.OutlineItem> =
+        sheetOutlinesMap[pdfPath] ?: emptyList()
+
     suspend fun convertXlsxToPdf(
         context: Context,
         uri: Uri,
@@ -47,13 +52,14 @@ object XlsxConverter {
             // Clean up temporary source file if created
             tempResolvedFile?.delete()
 
-            val pdfDocument = XlsxPdfRenderer.render(workbook) ?: return@withContext null
+            val renderResult = XlsxPdfRenderer.renderWithOutlines(workbook) ?: return@withContext null
+            sheetOutlinesMap[targetPdf.absolutePath] = renderResult.outlines
 
             FileOutputStream(targetPdf).use { out ->
-                pdfDocument.writeTo(out)
+                renderResult.doc.writeTo(out)
                 out.flush()
             }
-            pdfDocument.close()
+            renderResult.doc.close()
 
             if (targetPdf.exists() && targetPdf.length() > 0) {
                 targetPdf

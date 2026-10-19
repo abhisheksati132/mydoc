@@ -10,6 +10,11 @@ import android.graphics.pdf.PdfDocument
  * A4 pages: scaled down (to a floor) to fit its used width, then tiled into column bands if still
  * wider, and paginated by row height.
  */
+data class XlsxRenderResult(
+    val doc: PdfDocument,
+    val outlines: List<com.abhisheksati.mydoc.rendering.engine.OutlineItem>
+)
+
 object XlsxPdfRenderer {
     private const val PageW = 842
     private const val PageH = 595
@@ -17,7 +22,7 @@ object XlsxPdfRenderer {
     private const val MinScale = 0.5f
     private const val TitleH = 22f
 
-    fun render(wb: XlsxWorkbook): PdfDocument? {
+    fun renderWithOutlines(wb: XlsxWorkbook): XlsxRenderResult? {
         val sheets = wb.sheets.filter { !it.hidden && it.maxRow >= 0 }
         if (sheets.isEmpty()) return null
         val doc = PdfDocument()
@@ -25,8 +30,12 @@ object XlsxPdfRenderer {
         val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             textSize = 11f; color = 0xFF5E6068.toInt(); typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
         }
+        val outlines = mutableListOf<com.abhisheksati.mydoc.rendering.engine.OutlineItem>()
         var pageNo = 1
         for (sheet in sheets) {
+            val sheetStartPage = pageNo - 1
+            outlines.add(com.abhisheksati.mydoc.rendering.engine.OutlineItem(title = sheet.name, pageIndex = sheetStartPage, level = 0))
+
             val layout = SheetLayout(sheet, extraRows = 0, extraCols = 0)
             val usedCols = (sheet.maxCol + 1).coerceIn(1, layout.nCols)
             val usedRows = (sheet.maxRow + 1).coerceIn(1, layout.nRows)
@@ -73,6 +82,10 @@ object XlsxPdfRenderer {
                 }
             }
         }
-        return doc
+        return XlsxRenderResult(doc, outlines)
+    }
+
+    fun render(wb: XlsxWorkbook): PdfDocument? {
+        return renderWithOutlines(wb)?.doc
     }
 }

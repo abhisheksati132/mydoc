@@ -22,7 +22,10 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Slideshow
 import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.Brightness4
 import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material.icons.outlined.VolumeUp
@@ -58,6 +61,9 @@ fun ViewerTopBar(
     onOcrClick: (() -> Unit)? = null,
     onTtsClick: (() -> Unit)? = null,
     onSlideshowClick: (() -> Unit)? = null,
+    onSearchClick: (() -> Unit)? = null,
+    onThumbnailGridClick: (() -> Unit)? = null,
+    onReadingModeClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
@@ -143,6 +149,57 @@ fun ViewerTopBar(
                         contentDescription = "Share document",
                         tint = colors.textSecondary
                     )
+                }
+
+                // In-Viewer Full-Text Search
+                if (onSearchClick != null) {
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onSearchClick()
+                        },
+                        modifier = Modifier.size(AppSpacing.minTouchTarget)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Search,
+                            contentDescription = "Search text",
+                            tint = colors.textSecondary
+                        )
+                    }
+                }
+
+                // Page Overview Thumbnail Grid
+                if (onThumbnailGridClick != null) {
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onThumbnailGridClick()
+                        },
+                        modifier = Modifier.size(AppSpacing.minTouchTarget)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.GridView,
+                            contentDescription = "Thumbnail Grid Overview",
+                            tint = colors.textSecondary
+                        )
+                    }
+                }
+
+                // Quick Reading Theme Toggle
+                if (onReadingModeClick != null) {
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onReadingModeClick()
+                        },
+                        modifier = Modifier.size(AppSpacing.minTouchTarget)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Brightness4,
+                            contentDescription = "Change Reading Theme",
+                            tint = colors.textSecondary
+                        )
+                    }
                 }
 
                 // PDF OCR Text Extraction

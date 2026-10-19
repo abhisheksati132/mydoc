@@ -176,6 +176,15 @@ fun ReadingControlsBottomSheet(
                     modifier = Modifier.weight(1f)
                 )
                 ThemeOptionButton(
+                    label = "Comfort",
+                    isSelected = readingMode == ReadingMode.EYE_COMFORT,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onReadingModeChange(ReadingMode.EYE_COMFORT)
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+                ThemeOptionButton(
                     label = "Dark",
                     isSelected = readingMode == ReadingMode.INVERTED_DARK,
                     onClick = {

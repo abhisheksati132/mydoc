@@ -122,18 +122,21 @@ fun TextViewerScreen(
     val bgColor = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color.Black
         ReadingMode.SEPIA -> Color(0xFFF4ECD8)
+        ReadingMode.EYE_COMFORT -> Color(0xFFF7F3E9)
         ReadingMode.NORMAL -> if (isAppDark) Color(0xFF000000) else colors.background
     }
 
     val textColor = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color.White
         ReadingMode.SEPIA -> Color(0xFF3A3125)
+        ReadingMode.EYE_COMFORT -> Color(0xFF2C261F)
         ReadingMode.NORMAL -> colors.textPrimary
     }
 
     val secondaryTextColor = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color(0xFFAAAAAA)
         ReadingMode.SEPIA -> Color(0xFF5A4E3A)
+        ReadingMode.EYE_COMFORT -> Color(0xFF5C5245)
         ReadingMode.NORMAL -> colors.textSecondary
     }
 
@@ -221,7 +224,8 @@ fun TextViewerScreen(
                             readingMode = when (readingMode) {
                                 ReadingMode.NORMAL -> ReadingMode.INVERTED_DARK
                                 ReadingMode.INVERTED_DARK -> ReadingMode.SEPIA
-                                ReadingMode.SEPIA -> ReadingMode.NORMAL
+                                ReadingMode.SEPIA -> ReadingMode.EYE_COMFORT
+                                ReadingMode.EYE_COMFORT -> ReadingMode.NORMAL
                             }
                         }) {
                             Icon(
