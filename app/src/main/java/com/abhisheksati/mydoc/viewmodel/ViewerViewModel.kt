@@ -92,32 +92,49 @@ class ViewerViewModel(
                 try {
                     val uri = Uri.parse(activeDocumentFile.uri)
                     val ext = activeDocumentFile.extension.lowercase().ifEmpty { "pdf" }
-                    val cacheFile = java.io.File(context.cacheDir, "temp_view_${System.currentTimeMillis()}.$ext")
 
-                    val resolveResult = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.resolveToCacheFile(
-                        context = context,
-                        uri = uri,
-                        displayName = activeDocumentFile.displayName,
-                        targetCacheFile = cacheFile
-                    )
-
-                    if (resolveResult.isFailure) {
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                isPermissionExpired = true,
-                                errorMessage = "Access permission has expired or file could not be found. Tap below to select it."
-                            )
-                        }
-                        return@withContext
+                    val convertedPdfFile: java.io.File? = when (ext) {
+                        "pptx" -> com.abhisheksati.mydoc.rendering.engine.presentation.PptxConverter.convertPptxToPdf(
+                            context = context,
+                            uri = uri,
+                            displayName = activeDocumentFile.displayName
+                        )
+                        "docx" -> com.abhisheksati.mydoc.rendering.engine.word.DocxConverter.convertDocxToPdf(
+                            context = context,
+                            uri = uri,
+                            displayName = activeDocumentFile.displayName
+                        )
+                        else -> null
                     }
 
-                    val resolved = resolveResult.getOrThrow()
-                    if (resolved.newResolvedUri != null && resolved.newResolvedUri.toString() != activeDocumentFile.uri) {
-                        // Background update the URI in Room so subsequent launches resolve immediately
-                        launch {
-                            repository.replaceDocument(activeDocumentFile.uri, resolved.newResolvedUri)
+                    val cacheFile: java.io.File = convertedPdfFile ?: run {
+                        val temp = java.io.File(context.cacheDir, "temp_view_${System.currentTimeMillis()}.$ext")
+                        val resolveResult = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.resolveToCacheFile(
+                            context = context,
+                            uri = uri,
+                            displayName = activeDocumentFile.displayName,
+                            targetCacheFile = temp
+                        )
+
+                        if (resolveResult.isFailure) {
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    isPermissionExpired = true,
+                                    errorMessage = "Access permission has expired or file could not be found. Tap below to select it."
+                                )
+                            }
+                            return@withContext
                         }
+
+                        val resolved = resolveResult.getOrThrow()
+                        if (resolved.newResolvedUri != null && resolved.newResolvedUri.toString() != activeDocumentFile.uri) {
+                            // Background update the URI in Room so subsequent launches resolve immediately
+                            launch {
+                                repository.replaceDocument(activeDocumentFile.uri, resolved.newResolvedUri)
+                            }
+                        }
+                        temp
                     }
 
                     var activeRenderer: DocumentRenderer? = null
@@ -237,6 +254,24 @@ class ViewerViewModel(
     fun renderPageBitmap(pageIndex: Int, scale: Float): Bitmap? {
         val rend = renderer ?: return null
         return rend.renderPage(pageIndex, scale, _uiState.value.readingMode)
+    }
+
+    fun renderRegionBitmap(
+        pageIndex: Int,
+        region: android.graphics.RectF,
+        pageWidthPx: Float,
+        outWidth: Int,
+        outHeight: Int
+    ): Bitmap? {
+        val rend = renderer ?: return null
+        return rend.renderRegion(
+            pageIndex = pageIndex,
+            region = region,
+            pageWidthPx = pageWidthPx,
+            outWidth = outWidth,
+            outHeight = outHeight,
+            mode = _uiState.value.readingMode
+        )
     }
 
     fun getPageSize(pageIndex: Int): Pair<Float, Float> {

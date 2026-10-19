@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Slideshow
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Share
@@ -54,6 +55,7 @@ fun ViewerTopBar(
     onToggleBookmark: () -> Unit,
     onToolsClick: (() -> Unit)? = null,
     onOcrClick: (() -> Unit)? = null,
+    onSlideshowClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
@@ -153,6 +155,23 @@ fun ViewerTopBar(
                         Icon(
                             imageVector = Icons.Outlined.TextFields,
                             contentDescription = "Extract Text (OCR)",
+                            tint = colors.textSecondary
+                        )
+                    }
+                }
+
+                // Presentation Slideshow button (if applicable)
+                if (onSlideshowClick != null) {
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onSlideshowClick()
+                        },
+                        modifier = Modifier.size(AppSpacing.minTouchTarget)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Slideshow,
+                            contentDescription = "Start Slideshow",
                             tint = colors.textSecondary
                         )
                     }

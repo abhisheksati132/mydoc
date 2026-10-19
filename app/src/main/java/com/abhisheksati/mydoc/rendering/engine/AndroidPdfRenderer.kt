@@ -11,6 +11,8 @@ import android.os.ParcelFileDescriptor
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.rendering.cache.TileBitmapCache
 import java.io.File
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 /**
  * Standard Android OS built-in PDF Renderer.
@@ -21,18 +23,18 @@ class AndroidPdfRenderer(
     private val tileCache: TileBitmapCache = TileBitmapCache()
 ) : DocumentRenderer {
 
-    private val lock = Any()
+    private val lock = ReentrantLock()
     private var pfd: ParcelFileDescriptor? = null
     private var pdfRenderer: PdfRenderer? = null
 
     init {
-        synchronized(lock) {
+        lock.withLock {
             try {
                 pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
                 pfd?.let {
                     pdfRenderer = PdfRenderer(it)
                 }
-            } catch (_: Exception) {
+            } catch (_: Throwable) {
             }
         }
     }
@@ -43,19 +45,19 @@ class AndroidPdfRenderer(
     override fun authenticatePassword(password: String): Boolean = false
 
     override val pageCount: Int
-        get() = synchronized(lock) { pdfRenderer?.pageCount ?: 0 }
+        get() = lock.withLock { pdfRenderer?.pageCount ?: 0 }
 
     override fun getPageSize(pageIndex: Int): Pair<Float, Float> {
-        return synchronized(lock) {
-            val renderer = pdfRenderer ?: return@synchronized Pair(595f, 842f)
-            if (pageIndex < 0 || pageIndex >= (pdfRenderer?.pageCount ?: 0)) return@synchronized Pair(595f, 842f)
+        return lock.withLock {
+            val renderer = pdfRenderer ?: return@withLock Pair(595f, 842f)
+            if (pageIndex < 0 || pageIndex >= (pdfRenderer?.pageCount ?: 0)) return@withLock Pair(595f, 842f)
             try {
                 val page = renderer.openPage(pageIndex)
                 val w = page.width.toFloat()
                 val h = page.height.toFloat()
                 page.close()
                 Pair(w, h)
-            } catch (_: Exception) {
+            } catch (_: Throwable) {
                 Pair(595f, 842f)
             }
         }
@@ -65,10 +67,11 @@ class AndroidPdfRenderer(
         val cached = tileCache.get(pageIndex, scale, mode)
         if (cached != null && !cached.isRecycled) return cached
 
-        return synchronized(lock) {
-            val renderer = pdfRenderer ?: return@synchronized null
-            if (pageIndex < 0 || pageIndex >= (pdfRenderer?.pageCount ?: 0)) return@synchronized null
+        return lock.withLock {
+            val renderer = pdfRenderer ?: return@withLock null
+            if (pageIndex < 0 || pageIndex >= (pdfRenderer?.pageCount ?: 0)) return@withLock null
 
+            var baseBitmap: Bitmap? = null
             try {
                 val page = renderer.openPage(pageIndex)
                 val origWidth = page.width
@@ -77,7 +80,7 @@ class AndroidPdfRenderer(
                 val scaledWidth = (origWidth * scale).toInt().coerceAtLeast(1)
                 val scaledHeight = (origHeight * scale).toInt().coerceAtLeast(1)
 
-                val baseBitmap = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888)
+                baseBitmap = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(baseBitmap)
                 canvas.drawColor(Color.WHITE)
 
@@ -104,9 +107,69 @@ class AndroidPdfRenderer(
 
                 tileCache.put(pageIndex, scale, mode, finalBitmap)
                 finalBitmap
-            } catch (_: Exception) {
+            } catch (_: Throwable) {
+                baseBitmap?.recycle()
                 null
             }
+        }
+    }
+
+    override fun renderRegion(
+        pageIndex: Int,
+        region: android.graphics.RectF,
+        pageWidthPx: Float,
+        outWidth: Int,
+        outHeight: Int,
+        mode: ReadingMode
+    ): Bitmap? = lock.withLock {
+        val renderer = pdfRenderer ?: return@withLock null
+        if (pageIndex < 0 || pageIndex >= (pdfRenderer?.pageCount ?: 0) || outWidth <= 0 || outHeight <= 0) return@withLock null
+
+        val page = try {
+            renderer.openPage(pageIndex)
+        } catch (_: Throwable) {
+            return@withLock null
+        }
+
+        var baseBitmap: Bitmap? = null
+        try {
+            val srcW = page.width.toFloat().coerceAtLeast(1f)
+            val srcH = page.height.toFloat().coerceAtLeast(1f)
+            val s = pageWidthPx / srcW
+            val pageHeightPx = srcH * s
+
+            baseBitmap = Bitmap.createBitmap(outWidth, outHeight, Bitmap.Config.ARGB_8888)
+            baseBitmap.eraseColor(Color.WHITE)
+
+            val matrix = android.graphics.Matrix().apply {
+                postScale(s, s)
+                postTranslate(-region.left * pageWidthPx, -region.top * pageHeightPx)
+            }
+
+            page.render(baseBitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+            page.close()
+
+            val finalBitmap = when (mode) {
+                ReadingMode.INVERTED_DARK -> {
+                    val converted = invertBitmapColors(baseBitmap)
+                    if (converted !== baseBitmap && !baseBitmap.isRecycled) {
+                        baseBitmap.recycle()
+                    }
+                    converted
+                }
+                ReadingMode.SEPIA -> {
+                    val converted = applySepiaFilter(baseBitmap)
+                    if (converted !== baseBitmap && !baseBitmap.isRecycled) {
+                        baseBitmap.recycle()
+                    }
+                    converted
+                }
+                ReadingMode.NORMAL -> baseBitmap
+            }
+            finalBitmap
+        } catch (_: Throwable) {
+            baseBitmap?.recycle()
+            null
         }
     }
 
@@ -115,15 +178,15 @@ class AndroidPdfRenderer(
     override fun getOutline(): List<OutlineItem> = emptyList()
 
     override fun close() {
-        synchronized(lock) {
+        lock.withLock {
             tileCache.recycleAll()
             try {
                 pdfRenderer?.close()
-            } catch (_: Exception) {
+            } catch (_: Throwable) {
             }
             try {
                 pfd?.close()
-            } catch (_: Exception) {
+            } catch (_: Throwable) {
             }
             pdfRenderer = null
             pfd = null

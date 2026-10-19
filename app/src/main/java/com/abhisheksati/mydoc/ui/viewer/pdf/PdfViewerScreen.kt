@@ -93,6 +93,7 @@ fun PdfViewerScreen(
     onShareClick: () -> Unit,
     onToolsClick: (() -> Unit)? = null,
     onDocumentUpdated: ((DocumentFile) -> Unit)? = null,
+    onSlideshowClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -343,6 +344,7 @@ fun PdfViewerScreen(
                                         pageIndex = leftPage,
                                         viewModel = viewModel,
                                         readingMode = state.readingMode,
+                                        zoomScale = zoomScale,
                                         searchMatches = searchMatchesByPage[leftPage] ?: emptyList()
                                     )
                                 }
@@ -352,6 +354,7 @@ fun PdfViewerScreen(
                                             pageIndex = rightPage,
                                             viewModel = viewModel,
                                             readingMode = state.readingMode,
+                                            zoomScale = zoomScale,
                                             searchMatches = searchMatchesByPage[rightPage] ?: emptyList()
                                         )
                                     }
@@ -371,6 +374,7 @@ fun PdfViewerScreen(
                                 pageIndex = pageIndex,
                                 viewModel = viewModel,
                                 readingMode = state.readingMode,
+                                zoomScale = zoomScale,
                                 searchMatches = searchMatchesByPage[pageIndex] ?: emptyList()
                             )
                             Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
@@ -391,6 +395,7 @@ fun PdfViewerScreen(
                                 pageIndex = pageIndex,
                                 viewModel = viewModel,
                                 readingMode = state.readingMode,
+                                zoomScale = zoomScale,
                                 searchMatches = searchMatchesByPage[pageIndex] ?: emptyList()
                             )
                         }
@@ -465,6 +470,7 @@ fun PdfViewerScreen(
                     }
                 }
             },
+            onSlideshowClick = onSlideshowClick,
             modifier = Modifier.align(Alignment.TopCenter)
         )
 
@@ -616,22 +622,26 @@ private fun PageItemView(
     pageIndex: Int,
     viewModel: ViewerViewModel,
     readingMode: ReadingMode,
+    zoomScale: Float = 1f,
     searchMatches: List<com.abhisheksati.mydoc.rendering.engine.SearchMatch>
 ) {
     val (origWidth, origHeight) = remember(pageIndex) { viewModel.getPageSize(pageIndex) }
     val aspectRatio = if (origHeight > 0) origWidth / origHeight else 0.707f
+    val targetScale = remember(zoomScale) {
+        if (zoomScale > 1.2f) (1.8f * zoomScale).coerceAtMost(3.6f) else 1.8f
+    }
 
     @Suppress("ProduceStateDoesNotAssignValue")
-    val bitmap by produceState<Bitmap?>(initialValue = null, pageIndex, readingMode) {
+    val bitmap by produceState<Bitmap?>(initialValue = null, pageIndex, readingMode, targetScale) {
         // Step 1: Render low-resolution preview immediately for instant feedback
         val lowRes = withContext(Dispatchers.Default) {
             viewModel.renderPageBitmap(pageIndex, 0.35f)
         }
         value = lowRes
 
-        // Step 2: Sharpen to full high resolution
+        // Step 2: Sharpen to full high resolution (adjusts dynamically with zoom)
         val highRes = withContext(Dispatchers.Default) {
-            viewModel.renderPageBitmap(pageIndex, 1.8f)
+            viewModel.renderPageBitmap(pageIndex, targetScale)
         }
         if (highRes != null) {
             value = highRes

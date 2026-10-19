@@ -25,3 +25,8 @@
 -keep class org.videolan.libvlc.** { *; }
 -keepclassmembers class org.videolan.libvlc.** { *; }
 
+# Print Framework programmatic adapter callbacks
+-keep class android.print.OpenLayoutResultCallback { *; }
+-keep class android.print.OpenWriteResultCallback { *; }
+
+

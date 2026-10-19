@@ -11,6 +11,8 @@ import com.artifex.mupdf.fitz.Outline
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 class MuPdfRenderer(
     private val documentBytes: ByteArray? = null,
@@ -19,7 +21,7 @@ class MuPdfRenderer(
     private val tileCache: TileBitmapCache = TileBitmapCache()
 ) : DocumentRenderer {
 
-    private val lock = Any()
+    private val lock = java.util.concurrent.locks.ReentrantLock()
     private var document: Document? = null
 
     init {
@@ -27,7 +29,7 @@ class MuPdfRenderer(
     }
 
     private fun openDocument() {
-        synchronized(lock) {
+        lock.withLock {
             document = try {
                 if (filePath != null && File(filePath).exists()) {
                     Document.openDocument(filePath)
@@ -55,28 +57,28 @@ class MuPdfRenderer(
     }
 
     override val isPasswordProtected: Boolean
-        get() = synchronized(lock) { document?.needsPassword() == true }
+        get() = lock.withLock { document?.needsPassword() == true }
 
     override fun authenticatePassword(password: String): Boolean {
-        return synchronized(lock) {
-            val doc = document ?: return@synchronized false
+        return lock.withLock {
+            val doc = document ?: return@withLock false
             doc.authenticatePassword(password)
         }
     }
 
     override val pageCount: Int
-        get() = synchronized(lock) {
+        get() = lock.withLock {
             try {
                 document?.countPages() ?: 0
-            } catch (_: Exception) {
+            } catch (_: Throwable) {
                 0
             }
         }
 
     override fun getPageSize(pageIndex: Int): Pair<Float, Float> {
-        return synchronized(lock) {
-            val doc = document ?: return@synchronized Pair(595f, 842f)
-            if (pageIndex < 0 || pageIndex >= (document?.countPages() ?: 0)) return@synchronized Pair(595f, 842f)
+        return lock.withLock {
+            val doc = document ?: return@withLock Pair(595f, 842f)
+            if (pageIndex < 0 || pageIndex >= (document?.countPages() ?: 0)) return@withLock Pair(595f, 842f)
 
             try {
                 val page = doc.loadPage(pageIndex)
@@ -85,7 +87,7 @@ class MuPdfRenderer(
                 val height = bounds.y1 - bounds.y0
                 page.destroy()
                 Pair(width, height)
-            } catch (_: Exception) {
+            } catch (_: Throwable) {
                 Pair(595f, 842f)
             }
         }
@@ -97,14 +99,15 @@ class MuPdfRenderer(
             return cached
         }
 
-        return synchronized(lock) {
-            val doc = document ?: return@synchronized null
-            if (pageIndex < 0 || pageIndex >= (document?.countPages() ?: 0)) return@synchronized null
+        return lock.withLock {
+            val doc = document ?: return@withLock null
+            if (pageIndex < 0 || pageIndex >= (document?.countPages() ?: 0)) return@withLock null
 
+            var baseBitmap: Bitmap? = null
             try {
                 val page = doc.loadPage(pageIndex)
                 val matrix = Matrix(scale)
-                val baseBitmap = try {
+                baseBitmap = try {
                     com.artifex.mupdf.fitz.android.AndroidDrawDevice.drawPage(page, matrix)
                 } catch (_: Throwable) {
                     val pixmap = page.toPixmap(matrix, ColorSpace.DeviceRGB, true)
@@ -140,19 +143,80 @@ class MuPdfRenderer(
 
                 tileCache.put(pageIndex, scale, mode, finalBitmap)
                 finalBitmap
-            } catch (e: Exception) {
+            } catch (_: Throwable) {
+                baseBitmap?.recycle()
                 null
             }
+        }
+    }
+
+    override fun renderRegion(
+        pageIndex: Int,
+        region: RectF,
+        pageWidthPx: Float,
+        outWidth: Int,
+        outHeight: Int,
+        mode: ReadingMode
+    ): Bitmap? = lock.withLock {
+        val doc = document ?: return@withLock null
+        if (pageIndex < 0 || pageIndex >= (document?.countPages() ?: 0) || outWidth <= 0 || outHeight <= 0) return@withLock null
+
+        var baseBitmap: Bitmap? = null
+        try {
+            val page = doc.loadPage(pageIndex)
+            val bounds = page.bounds
+            val srcW = (bounds.x1 - bounds.x0).coerceAtLeast(1f)
+            val s = pageWidthPx / srcW
+            val pageHeightPx = (bounds.y1 - bounds.y0) * s
+
+            val matrix = Matrix(s).translate(-region.left * pageWidthPx, -region.top * pageHeightPx)
+            baseBitmap = try {
+                com.artifex.mupdf.fitz.android.AndroidDrawDevice.drawPage(page, matrix)
+            } catch (_: Throwable) {
+                val pixmap = page.toPixmap(matrix, ColorSpace.DeviceRGB, true)
+                val width = pixmap.width
+                val height = pixmap.height
+                val pixels = pixmap.pixels
+                for (i in pixels.indices) {
+                    pixels[i] = pixels[i] or (0xFF shl 24)
+                }
+                val b = Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
+                pixmap.destroy()
+                b
+            }
+            page.destroy()
+
+            val finalBitmap = when (mode) {
+                ReadingMode.INVERTED_DARK -> {
+                    val converted = AndroidPdfRenderer.invertBitmapColors(baseBitmap)
+                    if (converted !== baseBitmap && !baseBitmap.isRecycled) {
+                        baseBitmap.recycle()
+                    }
+                    converted
+                }
+                ReadingMode.SEPIA -> {
+                    val converted = AndroidPdfRenderer.applySepiaFilter(baseBitmap)
+                    if (converted !== baseBitmap && !baseBitmap.isRecycled) {
+                        baseBitmap.recycle()
+                    }
+                    converted
+                }
+                ReadingMode.NORMAL -> baseBitmap
+            }
+            finalBitmap
+        } catch (_: Throwable) {
+            baseBitmap?.recycle()
+            null
         }
     }
 
     override fun search(query: String): List<SearchMatch> {
         if (query.isBlank()) return emptyList()
 
-        return synchronized(lock) {
-            val doc = document ?: return@synchronized emptyList()
+        return lock.withLock {
+            val doc = document ?: return@withLock emptyList()
             val results = mutableListOf<SearchMatch>()
-            val total = try { doc.countPages() } catch (_: Exception) { 0 }
+            val total = try { doc.countPages() } catch (_: Throwable) { 0 }
 
             for (p in 0 until total) {
                 try {
@@ -181,12 +245,12 @@ class MuPdfRenderer(
     }
 
     override fun getOutline(): List<OutlineItem> {
-        return synchronized(lock) {
-            val doc = document ?: return@synchronized emptyList()
+        return lock.withLock {
+            val doc = document ?: return@withLock emptyList()
             try {
-                val rawOutlines = doc.loadOutline() ?: return@synchronized emptyList()
+                val rawOutlines = doc.loadOutline() ?: return@withLock emptyList()
                 rawOutlines.mapNotNull { parseOutlineNode(doc, it, 0) }
-            } catch (_: Exception) {
+            } catch (_: Throwable) {
                 emptyList()
             }
         }
@@ -197,7 +261,7 @@ class MuPdfRenderer(
         val pageNumber = try {
             val loc = doc.resolveLink(outline)
             if (loc != null) doc.pageNumberFromLocation(loc) else 0
-        } catch (_: Exception) {
+        } catch (_: Throwable) {
             0
         }
 
@@ -212,11 +276,11 @@ class MuPdfRenderer(
     }
 
     override fun close() {
-        synchronized(lock) {
+        lock.withLock {
             tileCache.recycleAll()
             try {
                 document?.destroy()
-            } catch (_: Exception) {
+            } catch (_: Throwable) {
             }
             document = null
         }
