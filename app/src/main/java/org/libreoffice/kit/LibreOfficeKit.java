@@ -35,7 +35,13 @@ public final class LibreOfficeKit {
         if (isInitialized) return true;
 
         boolean nativeLoaded = false;
-        if (engineDir != null && engineDir.exists()) {
+        if (context != null) {
+            File codeCacheLibDir = new File(context.getCodeCacheDir(), "lo_libs");
+            if (codeCacheLibDir.exists() && codeCacheLibDir.isDirectory()) {
+                nativeLoaded = NativeLibLoader.loadFromDirectory(codeCacheLibDir);
+            }
+        }
+        if (!nativeLoaded && engineDir != null && engineDir.exists()) {
             File libDir = new File(engineDir, "lib");
             if (!libDir.exists()) {
                 libDir = engineDir;
@@ -118,6 +124,24 @@ class NativeLibLoader {
                 }
             }
         }
+
+        try {
+            ClassLoader classLoader = NativeLibLoader.class.getClassLoader();
+            if (classLoader != null) {
+                java.lang.reflect.Field pathListField = classLoader.getClass().getSuperclass().getDeclaredField("pathList");
+                pathListField.setAccessible(true);
+                Object pathList = pathListField.get(classLoader);
+                if (pathList != null) {
+                    java.lang.reflect.Field nativeLibDirField = pathList.getClass().getDeclaredField("nativeLibraryDirectories");
+                    nativeLibDirField.setAccessible(true);
+                    @SuppressWarnings("unchecked")
+                    java.util.List<File> libDirs = (java.util.List<File>) nativeLibDirField.get(pathList);
+                    if (libDirs != null && !libDirs.contains(searchDir)) {
+                        libDirs.add(0, searchDir);
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
 
         String[] libs = new String[] {
             "libc++_shared.so",

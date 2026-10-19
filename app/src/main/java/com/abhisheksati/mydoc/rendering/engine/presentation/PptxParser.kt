@@ -104,19 +104,378 @@ class PptxParser {
             bytes[0] == 0xD0.toByte() && bytes[1] == 0xCF.toByte() &&
             bytes[2] == 0x11.toByte() && bytes[3] == 0xE0.toByte() // D0 CF 11 E0
 
-        if (isOle2) {
-            return@withContext parseBinaryPpt(bytes)
-        }
-
         if (isZip) {
+            // 1. Try ODP parser (OpenDocument Presentation)
+            val odpPres = parseOdpZip(bytes)
+            if (odpPres.slides.isNotEmpty() && odpPres.slides.first().title != "Empty Presentation") {
+                return@withContext odpPres
+            }
+
+            // 2. Try PPTX OpenXML parser
             val pres = parsePptxZip(bytes, cacheDir)
-            if (pres.slides.isNotEmpty()) {
+            if (pres.slides.isNotEmpty() && pres.slides.first().title != "Empty Presentation") {
                 return@withContext pres
             }
         }
 
-        // Fallback: If not recognized or zip failed, attempt binary PPT extraction
-        parseBinaryPpt(bytes)
+        if (isOle2) {
+            // 3. Try legacy binary PPT parser
+            val olePres = parseBinaryPpt(bytes)
+            if (olePres.slides.isNotEmpty() && olePres.slides.first().title != "Empty Presentation") {
+                return@withContext olePres
+            }
+        }
+
+        // 4. Fallback: If not recognized or standard parser failed, attempt binary PPT extraction
+        val fallbackPres = parseBinaryPpt(bytes)
+        if (fallbackPres.slides.isNotEmpty() && fallbackPres.slides.first().title != "Empty Presentation") {
+            return@withContext fallbackPres
+        }
+
+        parseBinaryPptFallback(bytes)
+    }
+
+    /* =========================================================================
+     * SECTION 0: OPENDOCUMENT PRESENTATION (.odp) PARSER
+     * ========================================================================= */
+
+    private fun parseOdpZip(bytes: ByteArray): PptxPresentation {
+        val entryMap = mutableMapOf<String, ByteArray>()
+        val picturesMap = mutableMapOf<String, ByteArray>()
+        try {
+            val zis = ZipInputStream(ByteArrayInputStream(bytes))
+            var entry: ZipEntry? = zis.nextEntry
+            while (entry != null) {
+                if (!entry.isDirectory) {
+                    val name = entry.name.replace('\\', '/').trimStart('/')
+                    val lower = name.lowercase()
+                    if (lower == "content.xml" || lower == "mimetype") {
+                        entryMap[lower] = zis.readBytes()
+                    } else if (lower.startsWith("pictures/")) {
+                        val imgData = zis.readBytes()
+                        picturesMap[name] = imgData
+                        picturesMap[lower] = imgData
+                    }
+                }
+                zis.closeEntry()
+                entry = zis.nextEntry
+            }
+        } catch (_: Throwable) {
+            return PptxPresentation(emptyList())
+        }
+
+        val contentXml = entryMap["content.xml"] ?: return PptxPresentation(emptyList())
+        val contentStr = runCatching { String(contentXml, 0, minOf(contentXml.size, 2048), Charsets.UTF_8) }.getOrNull() ?: ""
+        if (!contentStr.contains("draw:page") && !contentStr.contains("presentation") && !contentStr.contains("office:document-content")) {
+            return PptxPresentation(emptyList())
+        }
+
+        return parseOdpContentXml(contentXml, picturesMap)
+    }
+
+    private fun parseOdpDimension(value: String?): Float {
+        if (value.isNullOrBlank()) return 0f
+        val clean = value.trim().lowercase()
+        return try {
+            when {
+                clean.endsWith("cm") -> clean.removeSuffix("cm").toFloat()
+                clean.endsWith("mm") -> clean.removeSuffix("mm").toFloat() / 10f
+                clean.endsWith("in") || clean.endsWith("inch") -> clean.removeSuffix("inch").removeSuffix("in").toFloat() * 2.54f
+                clean.endsWith("pt") -> clean.removeSuffix("pt").toFloat() * (2.54f / 72f)
+                clean.endsWith("px") -> clean.removeSuffix("px").toFloat() * (2.54f / 96f)
+                else -> clean.toFloat()
+            }
+        } catch (_: Throwable) {
+            0f
+        }
+    }
+
+    private fun parseOdpContentXml(xmlBytes: ByteArray, picturesMap: Map<String, ByteArray>): PptxPresentation {
+        val slides = mutableListOf<PptxSlide>()
+        var pageWidthCm = 28.0f
+        var pageHeightCm = 15.75f
+
+        try {
+            val parser = createPullParser(ByteArrayInputStream(xmlBytes))
+            var eventType = parser.eventType
+
+            var inPage = false
+            var inNotes = false
+            var inFrame = false
+            var inTextBox = false
+            var inTable = false
+            var inP = false
+            var inH = false
+
+            var slideNumber = 0
+            var slideTitle = ""
+            val slideContent = mutableListOf<String>()
+            val visualElements = mutableListOf<VisualElement>()
+            val notesBuilder = StringBuilder()
+
+            var curFrameBounds: SlideBounds? = null
+            var curParagraphRuns = mutableListOf<SlideTextRun>()
+            var curParagraphs = mutableListOf<SlideParagraph>()
+            var curRunText = StringBuilder()
+            var isBold = false
+            var isItalic = false
+            var isUnderline = false
+
+            val curTableRows = mutableListOf<MutableList<String>>()
+            var curTableRow = mutableListOf<String>()
+            val curTableCellText = StringBuilder()
+
+            while (eventType != XmlPullParser.END_DOCUMENT) {
+                val tagName = parser.name ?: ""
+
+                when (eventType) {
+                    XmlPullParser.START_TAG -> {
+                        when {
+                            isTag(tagName, "page-layout-properties") -> {
+                                val wVal = parser.getAttributeValue(null, "fo:page-width") ?: parser.getAttributeValue(null, "page-width")
+                                val hVal = parser.getAttributeValue(null, "fo:page-height") ?: parser.getAttributeValue(null, "page-height")
+                                val wCm = parseOdpDimension(wVal)
+                                val hCm = parseOdpDimension(hVal)
+                                if (wCm > 0f && hCm > 0f) {
+                                    pageWidthCm = wCm
+                                    pageHeightCm = hCm
+                                }
+                            }
+
+                            isTag(tagName, "page") && (tagName.contains("page", ignoreCase = true)) -> {
+                                if (!inNotes) {
+                                    inPage = true
+                                    slideNumber++
+                                    slideTitle = ""
+                                    slideContent.clear()
+                                    visualElements.clear()
+                                    notesBuilder.clear()
+                                }
+                            }
+
+                            isTag(tagName, "notes") -> {
+                                inNotes = true
+                            }
+
+                            isTag(tagName, "frame") -> {
+                                inFrame = true
+                                curParagraphs.clear()
+                                val xVal = parser.getAttributeValue(null, "svg:x") ?: parser.getAttributeValue(null, "x")
+                                val yVal = parser.getAttributeValue(null, "svg:y") ?: parser.getAttributeValue(null, "y")
+                                val wVal = parser.getAttributeValue(null, "svg:width") ?: parser.getAttributeValue(null, "width")
+                                val hVal = parser.getAttributeValue(null, "svg:height") ?: parser.getAttributeValue(null, "height")
+
+                                val xCm = parseOdpDimension(xVal)
+                                val yCm = parseOdpDimension(yVal)
+                                val wCm = parseOdpDimension(wVal)
+                                val hCm = parseOdpDimension(hVal)
+
+                                val left = (xCm / pageWidthCm).coerceIn(0f, 0.95f)
+                                val top = (yCm / pageHeightCm).coerceIn(0f, 0.95f)
+                                val width = if (wCm > 0f) (wCm / pageWidthCm).coerceIn(0.02f, 1f - left) else 0.88f
+                                val height = if (hCm > 0f) (hCm / pageHeightCm).coerceIn(0.02f, 1f - top) else 0.20f
+                                curFrameBounds = SlideBounds(left, top, width, height)
+                            }
+
+                            isTag(tagName, "image") -> {
+                                val href = parser.getAttributeValue(null, "xlink:href")
+                                    ?: parser.getAttributeValue(null, "href")
+                                    ?: ""
+                                val cleanHref = href.trimStart('#', '/')
+                                val imgBytes = picturesMap[cleanHref]
+                                    ?: picturesMap[cleanHref.lowercase()]
+                                    ?: picturesMap.entries.firstOrNull { it.key.endsWith(cleanHref.substringAfterLast('/'), ignoreCase = true) }?.value
+
+                                if (imgBytes != null && inPage && !inNotes) {
+                                    val bounds = curFrameBounds ?: SlideBounds(0.06f, 0.25f, 0.88f, 0.65f)
+                                    visualElements.add(
+                                        VisualElement(
+                                            type = VisualElementType.IMAGE,
+                                            bounds = bounds,
+                                            imageBytes = optimizeImageBytes(imgBytes)
+                                        )
+                                    )
+                                }
+                            }
+
+                            isTag(tagName, "text-box") -> {
+                                inTextBox = true
+                            }
+
+                            isTag(tagName, "table") -> {
+                                inTable = true
+                                curTableRows.clear()
+                            }
+
+                            isTag(tagName, "table-row") -> {
+                                curTableRow = mutableListOf()
+                            }
+
+                            isTag(tagName, "table-cell") -> {
+                                curTableCellText.clear()
+                            }
+
+                            isTag(tagName, "h") -> {
+                                inH = true
+                                curParagraphRuns.clear()
+                                curRunText.clear()
+                                isBold = true
+                                isItalic = false
+                                isUnderline = false
+                            }
+
+                            isTag(tagName, "p") -> {
+                                inP = true
+                                curParagraphRuns.clear()
+                                curRunText.clear()
+                                isBold = false
+                                isItalic = false
+                                isUnderline = false
+                            }
+
+                            isTag(tagName, "span") -> {
+                                val styleName = parser.getAttributeValue(null, "text:style-name") ?: parser.getAttributeValue(null, "style-name") ?: ""
+                                if (styleName.contains("bold", ignoreCase = true)) isBold = true
+                                if (styleName.contains("italic", ignoreCase = true)) isItalic = true
+                            }
+                        }
+                    }
+
+                    XmlPullParser.TEXT -> {
+                        val text = parser.text ?: ""
+                        if (text.isNotEmpty()) {
+                            curRunText.append(text)
+                            if (inTable) {
+                                curTableCellText.append(text)
+                            }
+                        }
+                    }
+
+                    XmlPullParser.END_TAG -> {
+                        when {
+                            isTag(tagName, "notes") -> {
+                                inNotes = false
+                            }
+
+                            isTag(tagName, "h") || isTag(tagName, "p") -> {
+                                val rawText = curRunText.toString().trim()
+                                if (rawText.isNotEmpty()) {
+                                    if (inNotes) {
+                                        if (notesBuilder.isNotEmpty()) notesBuilder.append("\n")
+                                        notesBuilder.append(rawText)
+                                    } else if (!inTable) {
+                                        val isHeading = inH || (curFrameBounds != null && curFrameBounds!!.top < 0.22f && slideTitle.isEmpty())
+                                        if (isHeading && slideTitle.isEmpty()) {
+                                            slideTitle = rawText
+                                        } else {
+                                            slideContent.add(rawText)
+                                        }
+                                        val run = SlideTextRun(
+                                            text = rawText,
+                                            fontSizeSp = if (isHeading) 22f else 15f,
+                                            isBold = isBold || isHeading,
+                                            isItalic = isItalic,
+                                            isUnderline = isUnderline
+                                        )
+                                        curParagraphs.add(
+                                            SlideParagraph(
+                                                runs = listOf(run),
+                                                isBullet = !isHeading
+                                            )
+                                        )
+                                    }
+                                }
+                                curRunText.clear()
+                                inH = false
+                                inP = false
+                            }
+
+                            isTag(tagName, "text-box") -> {
+                                inTextBox = false
+                            }
+
+                            isTag(tagName, "table-cell") -> {
+                                curTableRow.add(curTableCellText.toString().trim())
+                                curTableCellText.clear()
+                            }
+
+                            isTag(tagName, "table-row") -> {
+                                if (curTableRow.isNotEmpty()) {
+                                    curTableRows.add(curTableRow)
+                                }
+                            }
+
+                            isTag(tagName, "table") -> {
+                                inTable = false
+                                if (curTableRows.isNotEmpty() && inPage && !inNotes) {
+                                    val bounds = curFrameBounds ?: SlideBounds(0.06f, 0.28f, 0.88f, 0.60f)
+                                    visualElements.add(
+                                        VisualElement(
+                                            type = VisualElementType.TABLE,
+                                            bounds = bounds,
+                                            tableRows = curTableRows.map { it.toList() }
+                                        )
+                                    )
+                                }
+                            }
+
+                            isTag(tagName, "frame") -> {
+                                inFrame = false
+                                if (curParagraphs.isNotEmpty() && inPage && !inNotes) {
+                                    val bounds = curFrameBounds ?: SlideBounds(0.06f, 0.28f, 0.88f, 0.60f)
+                                    visualElements.add(
+                                        VisualElement(
+                                            type = VisualElementType.TEXT_BOX,
+                                            bounds = bounds,
+                                            paragraphs = curParagraphs.toList()
+                                        )
+                                    )
+                                    curParagraphs.clear()
+                                }
+                            }
+
+                            isTag(tagName, "page") && (tagName.contains("page", ignoreCase = true)) -> {
+                                if (inPage && !inNotes) {
+                                    val title = if (slideTitle.isNotBlank()) slideTitle
+                                    else if (slideContent.isNotEmpty()) slideContent.first()
+                                    else "Slide $slideNumber"
+
+                                    val content = if (slideTitle.isBlank() && slideContent.isNotEmpty()) slideContent.drop(1)
+                                    else slideContent.toList()
+
+                                    if (visualElements.none { it.type == VisualElementType.TEXT_BOX } && (title.isNotEmpty() || content.isNotEmpty())) {
+                                        val tbVisual = VisualElement(
+                                            type = VisualElementType.TEXT_BOX,
+                                            bounds = SlideBounds(0.06f, 0.08f, 0.88f, 0.82f),
+                                            paragraphs = listOf(
+                                                SlideParagraph(runs = listOf(SlideTextRun(text = title, fontSizeSp = 22f, isBold = true)))
+                                            ) + content.map { SlideParagraph(runs = listOf(SlideTextRun(text = it, fontSizeSp = 15f)), isBullet = true) }
+                                        )
+                                        visualElements.add(0, tbVisual)
+                                    }
+
+                                    slides.add(
+                                        PptxSlide(
+                                            slideNumber = slideNumber,
+                                            title = title,
+                                            content = content,
+                                            visualElements = visualElements.toList(),
+                                            aspectRatio = if (pageHeightCm > 0f) pageWidthCm / pageHeightCm else 16f / 9f,
+                                            notes = notesBuilder.toString().trim().ifBlank { null }
+                                        )
+                                    )
+                                    inPage = false
+                                }
+                            }
+                        }
+                    }
+                }
+                eventType = parser.next()
+            }
+        } catch (_: Throwable) {}
+
+        val aspect = if (pageHeightCm > 0f) pageWidthCm / pageHeightCm else 16f / 9f
+        return PptxPresentation(slides = slides, aspectRatio = aspect)
     }
 
     private fun emptyPresentation(): PptxPresentation {
@@ -2105,7 +2464,7 @@ class PptxParser {
         }
     }
 
-    private fun parseBinaryPptFallback(bytes: ByteArray): PptxPresentation {
+    fun parseBinaryPptFallback(bytes: ByteArray): PptxPresentation {
         val extractedPictures = mutableListOf<ByteArray>()
         extractPicturesFromStream(bytes, extractedPictures)
 
@@ -2284,10 +2643,15 @@ class PptxParser {
 
     /**
      * Pure Kotlin Compound File Binary Format (CFBF / OLE2) parser.
+     * Full support for FAT, chained DIFAT sectors (> 6.8MB files), directory streams,
+     * and MiniFAT / MiniStream allocation tables.
      */
     private class Ole2File(private val data: ByteArray) {
         val sectorSize: Int
         private val fat: IntArray
+        private val miniFat: IntArray
+        private val miniStream: ByteArray
+        private val miniSectorCutoff: Long
         private val dirEntries = mutableListOf<DirEntry>()
 
         data class DirEntry(
@@ -2304,20 +2668,46 @@ class PptxParser {
 
             val numFatSectors = getIntLE(data, 44)
             val firstDirSector = getIntLE(data, 48)
+            val cutoff = getIntLE(data, 56)
+            miniSectorCutoff = if (cutoff > 0) cutoff.toLong() else 4096L
+            val firstMiniFatSector = getIntLE(data, 60)
+            val numMiniFatSectors = getIntLE(data, 64)
+            val firstDifatSector = getIntLE(data, 68)
+            val numDifatSectors = getIntLE(data, 72)
 
-            // Read first 109 DIFAT entries
+            // 1. Read first 109 DIFAT entries from header
             val fatSectorLocations = mutableListOf<Int>()
             for (i in 0 until 109) {
                 val off = 76 + (i * 4)
                 if (off + 4 <= 512) {
                     val sec = getIntLE(data, off)
-                    if (sec >= 0) fatSectorLocations.add(sec)
+                    if (sec >= 0 && sec < 0xFFFFFFFD.toInt()) fatSectorLocations.add(sec)
                 }
             }
 
-            // Assemble FAT table
-            val fatIntCount = numFatSectors * (sectorSize / 4)
-            fat = IntArray(maxOf(fatIntCount, 1024))
+            // 2. Traverse DIFAT sector chain if numDifatSectors > 0
+            if (numDifatSectors > 0 && firstDifatSector >= 0) {
+                var curDifatSec = firstDifatSector
+                var difatCount = 0
+                val difatEntriesPerSector = (sectorSize / 4) - 1
+                val visitedDifat = HashSet<Int>()
+                while (curDifatSec >= 0 && difatCount < numDifatSectors && visitedDifat.add(curDifatSec)) {
+                    val offset = (curDifatSec + 1) * sectorSize
+                    if (offset + sectorSize > data.size) break
+                    for (i in 0 until difatEntriesPerSector) {
+                        val sec = getIntLE(data, offset + (i * 4))
+                        if (sec >= 0 && sec < 0xFFFFFFFD.toInt()) {
+                            fatSectorLocations.add(sec)
+                        }
+                    }
+                    curDifatSec = getIntLE(data, offset + difatEntriesPerSector * 4)
+                    difatCount++
+                }
+            }
+
+            // 3. Assemble FAT table
+            val fatIntCount = maxOf(numFatSectors * (sectorSize / 4), fatSectorLocations.size * (sectorSize / 4), 1024)
+            fat = IntArray(fatIntCount)
             var fatIndex = 0
             for (fatSec in fatSectorLocations) {
                 val secOffset = (fatSec + 1) * sectorSize
@@ -2330,8 +2720,8 @@ class PptxParser {
                 }
             }
 
-            // Read Directory Entries
-            val dirBytes = readSectorChain(firstDirSector, 100_000L)
+            // 4. Read Directory Entries
+            val dirBytes = readSectorChain(firstDirSector, 2_000_000L)
             var dirOffset = 0
             while (dirOffset + 128 <= dirBytes.size) {
                 val nameLen = getShortLE(dirBytes, dirOffset + 64).toInt()
@@ -2348,18 +2738,65 @@ class PptxParser {
                 }
                 dirOffset += 128
             }
+
+            // 5. Assemble MiniStream & MiniFAT
+            val rootEntry = dirEntries.firstOrNull { it.type == 5 || it.name.equals("Root Entry", ignoreCase = true) }
+            if (rootEntry != null && rootEntry.startSector >= 0 && rootEntry.size > 0) {
+                miniStream = readSectorChain(rootEntry.startSector, rootEntry.size)
+            } else {
+                miniStream = ByteArray(0)
+            }
+
+            if (numMiniFatSectors > 0 && firstMiniFatSector >= 0) {
+                val miniFatBytes = readSectorChain(firstMiniFatSector, numMiniFatSectors.toLong() * sectorSize)
+                val miniFatInts = miniFatBytes.size / 4
+                miniFat = IntArray(maxOf(miniFatInts, 64))
+                for (i in 0 until miniFatInts) {
+                    miniFat[i] = getIntLE(miniFatBytes, i * 4)
+                }
+            } else {
+                miniFat = IntArray(0)
+            }
         }
 
         fun getStream(name: String): ByteArray? {
             val entry = dirEntries.find { it.name.equals(name, ignoreCase = true) } ?: return null
             if (entry.startSector < 0 || entry.size <= 0) return null
+            if (entry.size < miniSectorCutoff && miniStream.isNotEmpty() && miniFat.isNotEmpty()) {
+                return readMiniSectorChain(entry.startSector, entry.size)
+            }
             return readSectorChain(entry.startSector, entry.size)
+        }
+
+        private fun readMiniSectorChain(startSector: Int, maxSize: Long): ByteArray {
+            val miniSectorSize = 64
+            val out = java.io.ByteArrayOutputStream()
+            var curSector = startSector
+            val clampedMax = minOf(maxSize, 5_000_000L)
+            var remaining = clampedMax
+            val visited = HashSet<Int>()
+
+            while (curSector >= 0 && curSector < miniFat.size && remaining > 0) {
+                if (!visited.add(curSector)) break
+                val offset = curSector * miniSectorSize
+                if (offset >= miniStream.size) break
+                val toRead = minOf(miniSectorSize.toLong(), remaining).toInt()
+                if (offset + toRead <= miniStream.size) {
+                    out.write(miniStream, offset, toRead)
+                    remaining -= toRead
+                } else break
+
+                val next = miniFat[curSector]
+                if (next < 0 || next >= 0xFFFFFFFD.toInt() || next == curSector) break
+                curSector = next
+            }
+            return out.toByteArray()
         }
 
         private fun readSectorChain(startSector: Int, maxSize: Long): ByteArray {
             val out = java.io.ByteArrayOutputStream()
             var curSector = startSector
-            val clampedMax = minOf(maxSize, 25_000_000L)
+            val clampedMax = minOf(maxSize, 50_000_000L)
             var remaining = clampedMax
             val visited = HashSet<Int>()
 

@@ -282,4 +282,95 @@ class PptxParserTest {
         assertEquals("Resilient Recovery Slide", pres.slides[0].title)
         assertTrue(pres.slides[0].content.contains("Content bullet point 1"))
     }
+
+    @Test
+    fun `parse synthetic odp presentation extracts all slides, headings, bullet points, and tables`() = runBlocking {
+        val odpBytes = createSyntheticOdpZip()
+        val pres = parser.parse(ByteArrayInputStream(odpBytes))
+
+        assertEquals(2, pres.slides.size)
+        val slide1 = pres.slides[0]
+        assertEquals("OpenDocument Architecture", slide1.title)
+        assertTrue(slide1.content.contains("Native ODP slide rendering"))
+        assertTrue(slide1.content.contains("High-fidelity desktop compatibility"))
+        assertEquals("Remember to highlight cross-platform support.", slide1.notes)
+
+        val slide2 = pres.slides[1]
+        assertEquals("Performance Benchmark", slide2.title)
+        val tableElem = slide2.visualElements.find { it.type == VisualElementType.TABLE }
+        assertNotNull(tableElem)
+        assertEquals(2, tableElem!!.tableRows.size)
+        assertEquals(listOf("Engine", "Latency"), tableElem.tableRows[0])
+        assertEquals(listOf("Native", "12ms"), tableElem.tableRows[1])
+    }
+
+    private fun createSyntheticOdpZip(): ByteArray {
+        val baos = ByteArrayOutputStream()
+        val zos = ZipOutputStream(baos)
+
+        zos.putNextEntry(ZipEntry("mimetype"))
+        zos.write("application/vnd.oasis.opendocument.presentation".toByteArray())
+        zos.closeEntry()
+
+        zos.putNextEntry(ZipEntry("content.xml"))
+        zos.write(
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
+                                     xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0"
+                                     xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"
+                                     xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0"
+                                     xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0"
+                                     xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0"
+                                     xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0"
+                                     xmlns:presentation="urn:oasis:names:tc:opendocument:xmlns:presentation:1.0">
+                <office:automatic-styles>
+                    <style:page-layout-properties fo:page-width="28cm" fo:page-height="15.75cm"/>
+                </office:automatic-styles>
+                <office:body>
+                    <office:presentation>
+                        <draw:page draw:name="page1">
+                            <draw:frame svg:x="2cm" svg:y="1.5cm" svg:width="24cm" svg:height="3cm">
+                                <draw:text-box>
+                                    <text:h text:outline-level="1">OpenDocument Architecture</text:h>
+                                </draw:text-box>
+                            </draw:frame>
+                            <draw:frame svg:x="2cm" svg:y="5cm" svg:width="24cm" svg:height="8cm">
+                                <draw:text-box>
+                                    <text:p>Native ODP slide rendering</text:p>
+                                    <text:p>High-fidelity desktop compatibility</text:p>
+                                </draw:text-box>
+                            </draw:frame>
+                            <presentation:notes>
+                                <text:p>Remember to highlight cross-platform support.</text:p>
+                            </presentation:notes>
+                        </draw:page>
+                        <draw:page draw:name="page2">
+                            <draw:frame svg:x="2cm" svg:y="2cm" svg:width="24cm" svg:height="3cm">
+                                <draw:text-box>
+                                    <text:h text:outline-level="1">Performance Benchmark</text:h>
+                                </draw:text-box>
+                            </draw:frame>
+                            <draw:frame svg:x="2cm" svg:y="6cm" svg:width="20cm" svg:height="6cm">
+                                <table:table table:name="Table1">
+                                    <table:table-row>
+                                        <table:table-cell><text:p>Engine</text:p></table:table-cell>
+                                        <table:table-cell><text:p>Latency</text:p></table:table-cell>
+                                    </table:table-row>
+                                    <table:table-row>
+                                        <table:table-cell><text:p>Native</text:p></table:table-cell>
+                                        <table:table-cell><text:p>12ms</text:p></table:table-cell>
+                                    </table:table-row>
+                                </table:table>
+                            </draw:frame>
+                        </draw:page>
+                    </office:presentation>
+                </office:body>
+            </office:document-content>
+            """.trimIndent().toByteArray()
+        )
+        zos.closeEntry()
+        zos.finish()
+        return baos.toByteArray()
+    }
 }

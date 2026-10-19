@@ -311,6 +311,17 @@ fun PresentationViewerScreen(
                     } catch (_: Throwable) {}
                 }
 
+                // If still 0 slides and not loaded in LibreOffice, perform deep raw string/image fallback extraction
+                if (!loSuccess && (presentationData == null || presentationData?.slides.isNullOrEmpty() || presentationData?.slides?.firstOrNull()?.title == "Empty Presentation")) {
+                    try {
+                        val fallback = PptxParser().parseBinaryPptFallback(tempFile.readBytes())
+                        if (fallback.slides.isNotEmpty() && fallback.slides.firstOrNull()?.title != "Empty Presentation") {
+                            presentationData = fallback
+                            activeEngine = PresentationEngineMode.NATIVE
+                        }
+                    } catch (_: Throwable) {}
+                }
+
                 isLoading = false
             } catch (t: Throwable) {
                 android.util.Log.e("PresentationViewer", "Error loading presentation: ${document.displayName}", t)
@@ -961,6 +972,7 @@ fun PresentationViewerScreen(
                         cachedFileOnDisk?.let { file ->
                             scope.launch(Dispatchers.IO) {
                                 isLoading = true
+                                var loSuccess = false
                                 try {
                                     val initOk = app?.libreOfficeEngineManager?.initNativeEngine() == true
                                     if (initOk) {
@@ -971,9 +983,29 @@ fun PresentationViewerScreen(
                                             loAspectRatio = renderer.getAspectRatio()
                                             isLoAvailable = true
                                             activeEngine = PresentationEngineMode.LIBREOFFICE
+                                            loSuccess = true
                                         }
                                     }
                                 } catch (_: Throwable) {}
+
+                                if (!loSuccess) {
+                                    // Try deep native fallback so user is never stuck
+                                    try {
+                                        val fallback = PptxParser().parseBinaryPptFallback(file.readBytes())
+                                        if (fallback.slides.isNotEmpty() && fallback.slides.firstOrNull()?.title != "Empty Presentation") {
+                                            presentationData = fallback
+                                            activeEngine = PresentationEngineMode.NATIVE
+                                            loSuccess = true
+                                        }
+                                    } catch (_: Throwable) {}
+
+                                    if (!loSuccess) {
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(context, "Opening in external presentation viewer...", Toast.LENGTH_SHORT).show()
+                                            openPresentationInOfficeApp(context, document)
+                                        }
+                                    }
+                                }
                                 isLoading = false
                             }
                         }

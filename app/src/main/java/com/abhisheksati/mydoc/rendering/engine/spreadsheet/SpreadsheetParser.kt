@@ -15,11 +15,201 @@ class SpreadsheetParser {
 
     suspend fun parse(inputStream: InputStream, extension: String): SpreadsheetModel = withContext(Dispatchers.IO) {
         val bytes = inputStream.readBytes()
-        if (extension.equals("csv", ignoreCase = true) || extension.equals("tsv", ignoreCase = true) || extension.equals("txt", ignoreCase = true)) {
-            parseCsv(bytes)
-        } else {
-            parseXlsx(bytes)
+        if (bytes.isEmpty()) {
+            return@withContext SpreadsheetModel(listOf(SheetData(name = "Sheet 1")))
         }
+
+        val ext = extension.lowercase().removePrefix(".")
+        if (ext in setOf("csv", "tsv", "txt")) {
+            return@withContext parseCsv(bytes)
+        }
+
+        val isZip = bytes.size >= 4 && bytes[0] == 0x50.toByte() && bytes[1] == 0x4B.toByte()
+
+        if (isZip) {
+            val odsModel = parseOds(bytes)
+            if (odsModel.sheets.isNotEmpty() && odsModel.sheets.any { it.cells.isNotEmpty() }) {
+                return@withContext odsModel
+            }
+
+            val xlsxModel = parseXlsx(bytes)
+            if (xlsxModel.sheets.isNotEmpty() && xlsxModel.sheets.any { it.cells.isNotEmpty() }) {
+                return@withContext xlsxModel
+            }
+        }
+
+        parseXlsFallback(bytes)
+    }
+
+    private fun parseOds(bytes: ByteArray): SpreadsheetModel {
+        var contentXml: ByteArray? = null
+        try {
+            val zis = ZipInputStream(ByteArrayInputStream(bytes))
+            var entry: ZipEntry? = zis.nextEntry
+            while (entry != null) {
+                if (!entry.isDirectory && entry.name.equals("content.xml", ignoreCase = true)) {
+                    contentXml = zis.readBytes()
+                    break
+                }
+                zis.closeEntry()
+                entry = zis.nextEntry
+            }
+        } catch (_: Throwable) {
+            return SpreadsheetModel(emptyList())
+        }
+
+        if (contentXml == null) return SpreadsheetModel(emptyList())
+
+        val sheets = mutableListOf<SheetData>()
+        try {
+            val parser = Xml.newPullParser().apply {
+                setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
+                setInput(ByteArrayInputStream(contentXml), "UTF-8")
+            }
+            var eventType = parser.eventType
+
+            var currentSheetName = "Sheet 1"
+            var sheetCounter = 1
+            var inTable = false
+            var inRow = false
+            var inCell = false
+            var inP = false
+
+            var rowIndex = 0
+            var colIndex = 0
+            var maxRow = 0
+            var maxCol = 0
+            var curRepeatCols = 1
+            var cells = mutableMapOf<Pair<Int, Int>, String>()
+            val cellTextBuilder = StringBuilder()
+
+            while (eventType != XmlPullParser.END_DOCUMENT) {
+                val rawName = parser.name ?: ""
+                val colonIdx = rawName.indexOf(':')
+                val name = if (colonIdx >= 0) rawName.substring(colonIdx + 1) else rawName
+
+                when (eventType) {
+                    XmlPullParser.START_TAG -> {
+                        when {
+                            name.equals("table", ignoreCase = true) -> {
+                                inTable = true
+                                val sheetNameAttr = parser.getAttributeValue(null, "table:name") ?: parser.getAttributeValue(null, "name")
+                                currentSheetName = if (!sheetNameAttr.isNullOrBlank()) sheetNameAttr else "Sheet ${sheetCounter++}"
+                                cells = mutableMapOf()
+                                rowIndex = 0
+                                maxRow = 0
+                                maxCol = 0
+                            }
+                            name.equals("table-row", ignoreCase = true) -> {
+                                inRow = true
+                                colIndex = 0
+                            }
+                            name.equals("table-cell", ignoreCase = true) -> {
+                                inCell = true
+                                cellTextBuilder.clear()
+                                val repVal = parser.getAttributeValue(null, "table:number-columns-repeated") ?: parser.getAttributeValue(null, "number-columns-repeated")
+                                curRepeatCols = repVal?.toIntOrNull()?.coerceIn(1, 100) ?: 1
+                            }
+                            name.equals("p", ignoreCase = true) -> {
+                                inP = true
+                            }
+                        }
+                    }
+                    XmlPullParser.TEXT -> {
+                        if (inCell && inP) {
+                            val text = parser.text ?: ""
+                            if (text.isNotEmpty()) {
+                                cellTextBuilder.append(text)
+                            }
+                        }
+                    }
+                    XmlPullParser.END_TAG -> {
+                        when {
+                            name.equals("p", ignoreCase = true) -> {
+                                inP = false
+                            }
+                            name.equals("table-cell", ignoreCase = true) -> {
+                                val text = cellTextBuilder.toString().trim()
+                                if (text.isNotEmpty()) {
+                                    cells[Pair(rowIndex, colIndex)] = text
+                                    if (colIndex > maxCol) maxCol = colIndex
+                                    if (rowIndex > maxRow) maxRow = rowIndex
+                                }
+                                colIndex += curRepeatCols
+                                inCell = false
+                            }
+                            name.equals("table-row", ignoreCase = true) -> {
+                                rowIndex++
+                                inRow = false
+                            }
+                            name.equals("table", ignoreCase = true) -> {
+                                inTable = false
+                                if (cells.isNotEmpty() || sheets.isEmpty()) {
+                                    sheets.add(
+                                        SheetData(
+                                            name = currentSheetName,
+                                            maxRow = maxRow,
+                                            maxCol = maxCol,
+                                            cells = cells.toMap()
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                eventType = parser.next()
+            }
+        } catch (_: Throwable) {}
+
+        return SpreadsheetModel(sheets)
+    }
+
+    private fun parseXlsFallback(bytes: ByteArray): SpreadsheetModel {
+        val strings = mutableListOf<String>()
+        val seen = mutableSetOf<String>()
+
+        var i = 0
+        val sbUtf16 = StringBuilder()
+        while (i < bytes.size - 1) {
+            val b0 = bytes[i].toInt() and 0xFF
+            val b1 = bytes[i + 1].toInt() and 0xFF
+            val ch = (b1 shl 8) or b0
+            if (b1 == 0 && (b0 in 32..126)) {
+                sbUtf16.append(b0.toChar())
+                i += 2
+            } else if (ch in 0x00A0..0x04FF || ch in 0x0600..0x097F) {
+                sbUtf16.append(ch.toChar())
+                i += 2
+            } else {
+                if (sbUtf16.length >= 2) {
+                    val str = sbUtf16.toString().trim()
+                    if (str.isNotBlank() && seen.add(str.lowercase())) strings.add(str)
+                }
+                sbUtf16.clear()
+                i += 2
+            }
+        }
+
+        val noise = setOf("root entry", "workbook", "book", "summaryinformation", "compobj")
+        val valid = strings.filter { s ->
+            val l = s.lowercase()
+            noise.none { l.contains(it) } && !l.startsWith("<?xml")
+        }
+
+        val cells = mutableMapOf<Pair<Int, Int>, String>()
+        var row = 0
+        var col = 0
+        for (token in valid.take(200)) {
+            cells[Pair(row, col)] = token
+            col++
+            if (col >= 4) {
+                col = 0
+                row++
+            }
+        }
+
+        return SpreadsheetModel(listOf(SheetData(name = "Sheet 1", maxRow = row, maxCol = 3, cells = cells)))
     }
 
     private fun parseCsv(bytes: ByteArray): SpreadsheetModel {

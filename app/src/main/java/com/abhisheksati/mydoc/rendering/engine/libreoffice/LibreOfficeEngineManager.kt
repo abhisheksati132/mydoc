@@ -297,6 +297,8 @@ class LibreOfficeEngineManager private constructor(private val context: Context)
                 if (tempZip2.exists()) tempZip2.delete()
                 val marker = File(context.filesDir, "libreoffice_init.marker")
                 if (marker.exists()) marker.delete()
+                val codeCacheLibs = File(context.codeCacheDir, "lo_libs")
+                if (codeCacheLibs.exists()) deleteRecursively(codeCacheLibs)
 
                 LibreOfficeKit.reset()
                 _status.value = EngineStatus.NotInstalled
@@ -441,7 +443,6 @@ class LibreOfficeEngineManager private constructor(private val context: Context)
                             newFile.setReadable(true, false)
                             newFile.setExecutable(true, false)
 
-                            // Also place directly into lib/ for immediate linker discovery if primary ABI
                             val primaryAbi = getDevicePrimaryAbi()
                             val isPrimaryAbi = name.startsWith("lib/$primaryAbi/") || !name.contains("/")
                             if (isPrimaryAbi) {
@@ -453,6 +454,13 @@ class LibreOfficeEngineManager private constructor(private val context: Context)
                                         directLib.setExecutable(true, false)
                                     } catch (_: Exception) {}
                                 }
+                                try {
+                                    val codeCacheLibDir = File(context.codeCacheDir, "lo_libs").apply { mkdirs() }
+                                    val codeCacheLib = File(codeCacheLibDir, newFile.name)
+                                    newFile.copyTo(codeCacheLib, overwrite = true)
+                                    codeCacheLib.setReadable(true, false)
+                                    codeCacheLib.setExecutable(true, false)
+                                } catch (_: Exception) {}
                             }
                         }
                     }
