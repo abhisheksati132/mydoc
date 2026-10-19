@@ -39,20 +39,8 @@ class MyDocApp : Application(), ImageLoaderFactory {
     lateinit var wifiServerManager: com.abhisheksati.mydoc.network.WifiServerManager
         private set
 
-    lateinit var libreOfficeEngineManager: com.abhisheksati.mydoc.rendering.engine.libreoffice.LibreOfficeEngineManager
-        private set
-
     override fun onCreate() {
         super.onCreate()
-
-        // Crash-Guard & Emergency Recovery: If the process previously terminated during native init,
-        // clear the marker and disable the engine so the app starts cleanly without looping,
-        // while preserving downloaded files so the user never has to re-download.
-        val initMarker = java.io.File(filesDir, "libreoffice_init.marker")
-        val crashDetected = initMarker.exists()
-        if (crashDetected) {
-            initMarker.delete()
-        }
 
         CoroutineScope(Dispatchers.Default).launch {
             try {
@@ -64,11 +52,7 @@ class MyDocApp : Application(), ImageLoaderFactory {
         mediaRepository = MediaRepositoryImpl(this, database)
         storageRepository = com.abhisheksati.mydoc.data.repository.StorageRepositoryImpl(this, database.trashDao())
         settingsRepository = com.abhisheksati.mydoc.data.local.SettingsRepository(this)
-        if (crashDetected) {
-            settingsRepository.setLibreOfficeEngineEnabled(false)
-        }
         wifiServerManager = com.abhisheksati.mydoc.network.WifiServerManager(this)
-        libreOfficeEngineManager = com.abhisheksati.mydoc.rendering.engine.libreoffice.LibreOfficeEngineManager.getInstance(this)
     }
 
     override fun newImageLoader(): ImageLoader {

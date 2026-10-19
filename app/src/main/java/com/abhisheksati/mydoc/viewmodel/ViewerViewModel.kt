@@ -121,55 +121,25 @@ class ViewerViewModel(
                     }
 
                     var activeRenderer: DocumentRenderer? = null
-
-                    // 0. Primary attempt for office docs: LibreOffice Core Engine (if downloaded & enabled)
-                    val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
-                    val isLibreOfficeEnabled = app?.settingsRepository?.isLibreOfficeEngineEnabled?.value ?: false
-                    val loEngineManager = com.abhisheksati.mydoc.rendering.engine.libreoffice.LibreOfficeEngineManager.getInstance(context)
-
-                    if (isLibreOfficeEnabled && loEngineManager.isReady() && loEngineManager.isSupportedFormat(ext)) {
-                        try {
-                            val initOk = loEngineManager.initNativeEngine()
-                            if (initOk) {
-                                val loRenderer = com.abhisheksati.mydoc.rendering.engine.libreoffice.LibreOfficeDocumentRenderer(cacheFile.absolutePath)
-                                if (loRenderer.pageCount > 0) {
-                                    val testBitmap = loRenderer.renderPage(0, 0.2f, ReadingMode.NORMAL)
-                                    if (testBitmap != null) {
-                                        activeRenderer = loRenderer
-                                    } else {
-                                        loRenderer.close()
-                                    }
-                                } else {
-                                    loRenderer.close()
-                                }
-                            }
-                        } catch (e: Throwable) {
-                            android.util.Log.w("ViewerViewModel", "LibreOffice renderer failed, falling back: ${e.message}")
-                        }
-                    }
-
-                    // 1. Second attempt: MuPDF Fitz
-                    if (activeRenderer == null) {
-                        try {
-                            val mupdf = MuPdfRenderer(
-                                filePath = cacheFile.absolutePath,
-                                mimeType = "application/pdf"
-                            )
-                            if (mupdf.isPasswordProtected) {
+                    try {
+                        val mupdf = MuPdfRenderer(
+                            filePath = cacheFile.absolutePath,
+                            mimeType = "application/pdf"
+                        )
+                        if (mupdf.isPasswordProtected) {
+                            activeRenderer = mupdf
+                        } else if (mupdf.pageCount > 0) {
+                            // Smoke test rendering first page to verify native Fitz device works
+                            val testBitmap = mupdf.renderPage(0, 0.2f, ReadingMode.NORMAL)
+                            if (testBitmap != null) {
                                 activeRenderer = mupdf
-                            } else if (mupdf.pageCount > 0) {
-                                // Smoke test rendering first page to verify native Fitz device works
-                                val testBitmap = mupdf.renderPage(0, 0.2f, ReadingMode.NORMAL)
-                                if (testBitmap != null) {
-                                    activeRenderer = mupdf
-                                } else {
-                                    mupdf.close()
-                                }
                             } else {
                                 mupdf.close()
                             }
-                        } catch (_: Throwable) {
+                        } else {
+                            mupdf.close()
                         }
+                    } catch (_: Throwable) {
                     }
 
                     // 2. Fallback attempt: Built-in Android OS PdfRenderer

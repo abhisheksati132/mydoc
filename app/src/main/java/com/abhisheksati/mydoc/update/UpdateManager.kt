@@ -79,9 +79,13 @@ class UpdateManager(
     suspend fun downloadAndInstall(release: AppRelease) {
         _state.value = UpdateUiState.Downloading(0, 0, release.apkSizeBytes)
 
-        var expectedChecksum: String? = null
-        if (!release.checksumUrl.isNullOrBlank()) {
-            expectedChecksum = apkDownloader.fetchChecksumText(release.checksumUrl)
+        val expectedChecksum = if (!release.checksumUrl.isNullOrBlank()) {
+            apkDownloader.fetchChecksumText(release.checksumUrl)
+        } else null
+
+        if (expectedChecksum.isNullOrBlank()) {
+            _state.value = UpdateUiState.Error("Security verification failed: No valid SHA-256 checksum found for this release.")
+            return
         }
 
         val targetName = "mydoc-v${release.versionName}.apk"
@@ -98,7 +102,11 @@ class UpdateManager(
         downloadResult.onSuccess { file ->
             _state.value = UpdateUiState.ReadyToInstall(file, release)
             if (installerHelper.canInstallUnknownApps()) {
-                installerHelper.installApk(file)
+                runCatching {
+                    installerHelper.installApk(file)
+                }.onFailure { ex ->
+                    _state.value = UpdateUiState.Error(ex.localizedMessage ?: "Installation verification failed")
+                }
             }
         }.onFailure { err ->
             _state.value = UpdateUiState.Error(err.localizedMessage ?: "Download failed")

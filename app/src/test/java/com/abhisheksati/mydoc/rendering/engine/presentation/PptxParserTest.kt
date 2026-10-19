@@ -219,10 +219,6 @@ class PptxParserTest {
         assertTrue(pres.slides.isNotEmpty())
     }
 
-    @Test
-    fun `libre office engine availability is safely false to prevent native abort`() {
-        assertEquals(false, LibreOfficePresentationRenderer.isEngineAvailable())
-    }
 
     @Test
     fun `parse non-standard zip paths without ppt prefix successfully extracts slides`() = runBlocking {

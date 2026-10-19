@@ -103,8 +103,6 @@ import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.HomeTab
 import com.abhisheksati.mydoc.domain.model.ReadingMode
-import com.abhisheksati.mydoc.rendering.engine.libreoffice.EngineStatus
-import com.abhisheksati.mydoc.rendering.engine.libreoffice.LibreOfficeEngineManager
 import com.abhisheksati.mydoc.update.UpdateManager
 import com.abhisheksati.mydoc.update.UpdateUiState
 import kotlinx.coroutines.launch
@@ -144,10 +142,6 @@ fun SettingsScreen(
     var cacheSizeBytes by remember { mutableStateOf(settingsRepository.getCacheSizeBytes(context)) }
     var isScanningFolder by remember { mutableStateOf(false) }
 
-    val loEngineManager = remember { app?.libreOfficeEngineManager ?: LibreOfficeEngineManager.getInstance(context) }
-    val loEngineStatus by loEngineManager.status.collectAsState()
-    val isLibreOfficeEnabled by settingsRepository.isLibreOfficeEngineEnabled.collectAsState()
-    var showDeleteEngineDialog by remember { mutableStateOf(false) }
 
     val openFolderLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
@@ -606,190 +600,7 @@ fun SettingsScreen(
                     }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
 
-            // ADVANCED OFFICE ENGINE (LIBREOFFICE CORE)
-            AppSectionHeader(title = "OFFICE ENGINE (LIBREOFFICE)")
-            SettingsDoubleBezelCard {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isOled) Color(0xFF181A20) else colors.surfaceVariant)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.Article,
-                                contentDescription = null,
-                                tint = colors.textPrimary,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "LibreOffice Engine",
-                                style = typography.body.copy(fontWeight = FontWeight.Bold),
-                                color = colors.textPrimary
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = when (loEngineStatus) {
-                                    is EngineStatus.Ready -> "Installed • High-fidelity office viewer"
-                                    is EngineStatus.Downloading -> "Downloading engine assets..."
-                                    is EngineStatus.Extracting -> "Installing native components..."
-                                    else -> "Optional desktop rendering engine for PPT/DOC/XLS"
-                                },
-                                style = typography.caption.copy(fontSize = 12.sp),
-                                color = colors.textSecondary
-                            )
-                        }
-                    }
-
-                    // Clean simple CTA button
-                    when (val st = loEngineStatus) {
-                        is EngineStatus.Ready -> {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(999.dp))
-                                    .background(Color(0xFFEF5350).copy(alpha = 0.12f))
-                                    .clickable { showDeleteEngineDialog = true }
-                                    .padding(horizontal = 14.dp, vertical = 8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Delete,
-                                    contentDescription = null,
-                                    tint = Color(0xFFEF5350),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Delete",
-                                    color = Color(0xFFEF5350),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                        is EngineStatus.Downloading -> {
-                            Text(
-                                text = "${st.progressPercent}%",
-                                style = typography.caption.copy(fontWeight = FontWeight.Bold),
-                                color = colors.accent
-                            )
-                        }
-                        is EngineStatus.Extracting -> {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = colors.accent,
-                                strokeWidth = 2.dp
-                            )
-                        }
-                        else -> {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(999.dp))
-                                    .background(colors.accent)
-                                    .clickable {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        loEngineManager.downloadAndInstall()
-                                    }
-                                    .padding(horizontal = 14.dp, vertical = 8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.CloudDownload,
-                                    contentDescription = null,
-                                    tint = if (isOled) Color(0xFF000000) else Color.White,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Download",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isOled) Color(0xFF000000) else Color.White
-                                )
-                            }
-                        }
-                    }
-                }
-
-                if (loEngineStatus is EngineStatus.Downloading) {
-                    val dl = loEngineStatus as EngineStatus.Downloading
-                    Spacer(modifier = Modifier.height(10.dp))
-                    LinearProgressIndicator(
-                        progress = { dl.progressPercent / 100f },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(2.dp)),
-                        color = colors.accent,
-                        trackColor = colors.accent.copy(alpha = 0.2f)
-                    )
-                }
-            }
-
-            if (showDeleteEngineDialog) {
-                AlertDialog(
-                    onDismissRequest = { showDeleteEngineDialog = false },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Outlined.Delete,
-                            contentDescription = null,
-                            tint = Color(0xFFEF5350)
-                        )
-                    },
-                    title = {
-                        Text(
-                            text = "Delete LibreOffice Engine?",
-                            style = typography.title.copy(fontWeight = FontWeight.Bold),
-                            color = colors.textPrimary
-                        )
-                    },
-                    text = {
-                        Text(
-                            text = "This will delete the downloaded engine files and free up storage. You can download it again anytime.",
-                            style = typography.caption.copy(lineHeight = 18.sp),
-                            color = colors.textSecondary
-                        )
-                    },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                showDeleteEngineDialog = false
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                loEngineManager.uninstall {
-                                    settingsRepository.setLibreOfficeEngineEnabled(false)
-                                }
-                                Toast.makeText(context, "LibreOffice Engine deleted", Toast.LENGTH_SHORT).show()
-                            }
-                        ) {
-                            Text(
-                                text = "Delete",
-                                color = Color(0xFFEF5350),
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showDeleteEngineDialog = false }) {
-                            Text("Cancel", color = colors.textSecondary)
-                        }
-                    },
-                    containerColor = colors.surface
-                )
-            }
 
             Spacer(modifier = Modifier.height(10.dp))
 
