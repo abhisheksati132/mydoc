@@ -386,11 +386,18 @@ class PptxParser {
         // Fallback: If ordered list is empty, scan all slide XML files and sort them numerically
         if (slideKeys.isEmpty()) {
             val candidateSlides = entryMap.keys.filter { key ->
-                val n = key.lowercase()
-                n.contains("ppt/slides/slide") && n.endsWith(".xml") && !n.contains("_rels")
+                val n = key.lowercase().replace('\\', '/')
+                val base = n.substringAfterLast('/')
+                (n.contains("slides/") || base.startsWith("slide")) &&
+                    n.endsWith(".xml") &&
+                    !n.contains("_rels") &&
+                    !base.contains("layout") &&
+                    !base.contains("master") &&
+                    !base.contains("notes")
             }.distinctBy { it.substringAfterLast('/') }.sortedBy { key ->
-                val numStr = key.filter { it.isDigit() }
-                numStr.toIntOrNull() ?: 0
+                val base = key.substringAfterLast('/')
+                val digits = base.filter { it.isDigit() }
+                digits.toIntOrNull() ?: 0
             }
             slideKeys.addAll(candidateSlides)
         }
@@ -426,19 +433,60 @@ class PptxParser {
                 ?: notesMap["notesSlide$slideNum.xml"]
 
             val slideBytes = entryMap[key] ?: continue
-            val slide = parseSlideXml(
-                stream = ByteArrayInputStream(slideBytes),
-                slideNum = slideNum,
-                slideWidth = slideWidth,
-                slideHeight = slideHeight,
-                aspectRatio = presAspectRatio,
-                mediaMap = mediaMap,
-                relsMap = slideRels,
-                theme = theme,
-                layoutInfo = slideLayout,
-                notes = slideNotes
-            )
-            slidesList.add(slide)
+            try {
+                var slide = parseSlideXml(
+                    stream = ByteArrayInputStream(slideBytes),
+                    slideNum = slideNum,
+                    slideWidth = slideWidth,
+                    slideHeight = slideHeight,
+                    aspectRatio = presAspectRatio,
+                    mediaMap = mediaMap,
+                    relsMap = slideRels,
+                    theme = theme,
+                    layoutInfo = slideLayout,
+                    notes = slideNotes
+                )
+                // If standard parser produced an empty placeholder slide with no shapes or paragraphs,
+                // check if the resilient extractor can recover text or images from non-standard tags.
+                if (slide.visualElements.isEmpty() && slide.content.isEmpty() && slide.title == "Slide $slideNum") {
+                    val fallbackSlide = parseResilientSlideXml(
+                        slideBytes = slideBytes,
+                        slideNum = slideNum,
+                        aspectRatio = presAspectRatio,
+                        mediaMap = mediaMap,
+                        relsMap = slideRels,
+                        notes = slideNotes
+                    )
+                    if (fallbackSlide.title != "Slide $slideNum" || fallbackSlide.content.isNotEmpty() || fallbackSlide.visualElements.any { it.type == VisualElementType.IMAGE }) {
+                        slide = fallbackSlide
+                    }
+                }
+                slidesList.add(slide)
+            } catch (slideErr: Throwable) {
+                android.util.Log.w("PptxParser", "Failed to parse slide $key, applying resilient extractor", slideErr)
+                val fallbackSlide = parseResilientSlideXml(
+                    slideBytes = slideBytes,
+                    slideNum = slideNum,
+                    aspectRatio = presAspectRatio,
+                    mediaMap = mediaMap,
+                    relsMap = slideRels,
+                    notes = slideNotes
+                )
+                slidesList.add(fallbackSlide)
+            }
+        }
+
+        // If no slides were produced via slideKeys, recover via media pictures or any XML text
+        if (slidesList.isEmpty()) {
+            val mediaSlides = buildSlidesFromMedia(mediaMap, presAspectRatio)
+            if (mediaSlides.isNotEmpty()) {
+                slidesList.addAll(mediaSlides)
+            } else {
+                val xmlSlides = buildSlidesFromAnyXml(entryMap, presAspectRatio)
+                if (xmlSlides.isNotEmpty()) {
+                    slidesList.addAll(xmlSlides)
+                }
+            }
         }
 
             if (slidesList.isNotEmpty()) {
@@ -447,8 +495,209 @@ class PptxParser {
                 emptyPresentation()
             }
         } catch (_: Throwable) {
-            emptyPresentation()
+            // Ultimate fallback on fatal error: check for media slides before declaring empty
+            val mediaSlides = buildSlidesFromMedia(emptyMap(), 16f / 9f)
+            if (mediaSlides.isNotEmpty()) {
+                PptxPresentation(slides = mediaSlides, aspectRatio = 16f / 9f)
+            } else {
+                emptyPresentation()
+            }
         }
+    }
+
+    private fun parseResilientSlideXml(
+        slideBytes: ByteArray,
+        slideNum: Int,
+        aspectRatio: Float,
+        mediaMap: Map<String, ByteArray>,
+        relsMap: Map<String, String>,
+        notes: String?
+    ): PptxSlide {
+        val extractedLines = mutableListOf<String>()
+        val extractedPictures = mutableListOf<ByteArray>()
+
+        // 1. Resolve pictures from relationships
+        for ((_, target) in relsMap) {
+            val key = target.substringAfterLast('/')
+            val pic = mediaMap[key] ?: mediaMap[target] ?: mediaMap["ppt/$target"]
+            if (pic != null && !extractedPictures.contains(pic)) {
+                extractedPictures.add(pic)
+            }
+        }
+
+        // 2. Parse text runs using basic XmlPullParser
+        try {
+            val parser = XmlPullParserFactory.newInstance().apply { isNamespaceAware = false }.newPullParser()
+            parser.setInput(ByteArrayInputStream(slideBytes), "UTF-8")
+            var eventType = parser.eventType
+            var inTextTag = false
+            while (eventType != XmlPullParser.END_DOCUMENT) {
+                when (eventType) {
+                    XmlPullParser.START_TAG -> {
+                        val name = parser.name?.lowercase() ?: ""
+                        if (name == "t" || name.endsWith(":t")) {
+                            inTextTag = true
+                        }
+                    }
+                    XmlPullParser.TEXT -> {
+                        if (inTextTag) {
+                            val text = parser.text?.trim()
+                            if (!text.isNullOrBlank() && !isMasterTemplateNoise(text)) {
+                                extractedLines.add(text)
+                            }
+                        }
+                    }
+                    XmlPullParser.END_TAG -> {
+                        val name = parser.name?.lowercase() ?: ""
+                        if (name == "t" || name.endsWith(":t")) {
+                            inTextTag = false
+                        }
+                    }
+                }
+                eventType = parser.next()
+            }
+        } catch (_: Throwable) {
+            val textRegex = Regex("<(?:[a-zA-Z0-9]+:)?t[^>]*>(.*?)</(?:[a-zA-Z0-9]+:)?t>", RegexOption.DOT_MATCHES_ALL)
+            textRegex.findAll(String(slideBytes, Charsets.UTF_8)).forEach { match ->
+                val t = match.groupValues[1].trim()
+                if (t.isNotBlank() && !isMasterTemplateNoise(t)) {
+                    extractedLines.add(t)
+                }
+            }
+        }
+
+        val title = extractedLines.firstOrNull() ?: "Slide $slideNum"
+        val content = if (extractedLines.size > 1) extractedLines.drop(1) else emptyList()
+        val visuals = mutableListOf<VisualElement>()
+
+        // Title visual
+        visuals.add(
+            VisualElement(
+                type = VisualElementType.TEXT_BOX,
+                bounds = SlideBounds(0.06f, 0.08f, 0.88f, 0.18f),
+                paragraphs = listOf(
+                    SlideParagraph(runs = listOf(SlideTextRun(text = title, fontSizeSp = 24f, isBold = true)))
+                )
+            )
+        )
+
+        val hasPic = extractedPictures.isNotEmpty()
+        val contentWidth = if (hasPic) 0.46f else 0.88f
+
+        if (content.isNotEmpty()) {
+            visuals.add(
+                VisualElement(
+                    type = VisualElementType.TEXT_BOX,
+                    bounds = SlideBounds(0.06f, 0.28f, contentWidth, 0.64f),
+                    paragraphs = content.map { line ->
+                        SlideParagraph(
+                            runs = listOf(SlideTextRun(text = line, fontSizeSp = 15f)),
+                            isBullet = true
+                        )
+                    }
+                )
+            )
+        }
+
+        if (hasPic) {
+            visuals.add(
+                VisualElement(
+                    type = VisualElementType.IMAGE,
+                    bounds = SlideBounds(0.54f, 0.28f, 0.40f, 0.60f),
+                    imageBytes = extractedPictures.first()
+                )
+            )
+        }
+
+        return PptxSlide(
+            slideNumber = slideNum,
+            title = title,
+            content = content,
+            visualElements = visuals,
+            aspectRatio = aspectRatio,
+            notes = notes
+        )
+    }
+
+    private fun buildSlidesFromMedia(mediaMap: Map<String, ByteArray>, aspectRatio: Float): List<PptxSlide> {
+        val imageEntries = mediaMap.entries
+            .filter { (name, bytes) ->
+                bytes.size > 1024 && (name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".webp"))
+            }
+            .sortedBy { it.key }
+            .distinctBy { it.key.substringAfterLast('/') }
+
+        return imageEntries.mapIndexed { idx, entry ->
+            val slideNum = idx + 1
+            val title = "Slide $slideNum"
+            val visual = VisualElement(
+                type = VisualElementType.IMAGE,
+                bounds = SlideBounds(0f, 0f, 1f, 1f),
+                imageBytes = entry.value
+            )
+            PptxSlide(
+                slideNumber = slideNum,
+                title = title,
+                content = emptyList(),
+                visualElements = listOf(visual),
+                aspectRatio = aspectRatio
+            )
+        }
+    }
+
+    private fun buildSlidesFromAnyXml(entryMap: Map<String, ByteArray>, aspectRatio: Float): List<PptxSlide> {
+        val slides = mutableListOf<PptxSlide>()
+        var counter = 1
+        for ((name, bytes) in entryMap) {
+            val lower = name.lowercase()
+            if (lower.endsWith(".xml") && !lower.contains("_rels") && !lower.contains("theme") &&
+                !lower.contains("presprops") && !lower.contains("viewprops") && !lower.contains("tablestyles")
+            ) {
+                val textRuns = mutableListOf<String>()
+                val textRegex = Regex("<(?:[a-zA-Z0-9]+:)?t[^>]*>(.*?)</(?:[a-zA-Z0-9]+:)?t>", RegexOption.DOT_MATCHES_ALL)
+                textRegex.findAll(String(bytes, Charsets.UTF_8)).forEach { match ->
+                    val t = match.groupValues[1].trim()
+                    if (t.isNotBlank() && !isMasterTemplateNoise(t)) {
+                        textRuns.add(t)
+                    }
+                }
+                if (textRuns.isNotEmpty()) {
+                    val title = textRuns.first()
+                    val body = if (textRuns.size > 1) textRuns.drop(1) else emptyList()
+                    val visuals = mutableListOf<VisualElement>()
+                    visuals.add(
+                        VisualElement(
+                            type = VisualElementType.TEXT_BOX,
+                            bounds = SlideBounds(0.06f, 0.08f, 0.88f, 0.18f),
+                            paragraphs = listOf(
+                                SlideParagraph(runs = listOf(SlideTextRun(text = title, fontSizeSp = 22f, isBold = true)))
+                            )
+                        )
+                    )
+                    if (body.isNotEmpty()) {
+                        visuals.add(
+                            VisualElement(
+                                type = VisualElementType.TEXT_BOX,
+                                bounds = SlideBounds(0.06f, 0.30f, 0.88f, 0.60f),
+                                paragraphs = body.map {
+                                    SlideParagraph(runs = listOf(SlideTextRun(text = it, fontSizeSp = 15f)), isBullet = true)
+                                }
+                            )
+                        )
+                    }
+                    slides.add(
+                        PptxSlide(
+                            slideNumber = counter++,
+                            title = title,
+                            content = body,
+                            visualElements = visuals,
+                            aspectRatio = aspectRatio
+                        )
+                    )
+                }
+            }
+        }
+        return slides
     }
 
     private fun defaultTheme(): ThemeInfo {
@@ -1411,6 +1660,7 @@ class PptxParser {
             }
         } catch (e: Exception) {
             e.printStackTrace()
+            throw e
         }
 
         val title = plainTextParagraphs.firstOrNull() ?: "Slide $slideNum"
@@ -1856,54 +2106,92 @@ class PptxParser {
     }
 
     private fun parseBinaryPptFallback(bytes: ByteArray): PptxPresentation {
+        val extractedPictures = mutableListOf<ByteArray>()
+        extractPicturesFromStream(bytes, extractedPictures)
+
         val extracted = extractReadableStrings(bytes)
-        if (extracted.isEmpty()) {
+        if (extracted.isEmpty() && extractedPictures.isEmpty()) {
             return emptyPresentation()
         }
 
         val slides = mutableListOf<PptxSlide>()
-        val chunks = extracted.chunked(6)
-        for ((idx, chunk) in chunks.withIndex()) {
-            val t = chunk.first()
-            val c = if (chunk.size > 1) chunk.drop(1) else emptyList()
-            val visuals = mutableListOf<VisualElement>()
+        if (extracted.isNotEmpty()) {
+            val chunks = extracted.chunked(6)
+            for ((idx, chunk) in chunks.withIndex()) {
+                val t = chunk.first()
+                val c = if (chunk.size > 1) chunk.drop(1) else emptyList()
+                val visuals = mutableListOf<VisualElement>()
 
-            visuals.add(
-                VisualElement(
-                    type = VisualElementType.TEXT_BOX,
-                    bounds = SlideBounds(0.06f, 0.08f, 0.88f, 0.18f),
-                    paragraphs = listOf(
-                        SlideParagraph(
-                            runs = listOf(SlideTextRun(text = t, fontSizeSp = 22f, isBold = true))
-                        )
-                    )
-                )
-            )
+                val hasPic = idx < extractedPictures.size
+                val bodyWidth = if (hasPic) 0.46f else 0.88f
 
-            if (c.isNotEmpty()) {
                 visuals.add(
                     VisualElement(
                         type = VisualElementType.TEXT_BOX,
-                        bounds = SlideBounds(0.06f, 0.30f, 0.88f, 0.60f),
-                        paragraphs = c.map { line ->
+                        bounds = SlideBounds(0.06f, 0.08f, 0.88f, 0.18f),
+                        paragraphs = listOf(
                             SlideParagraph(
-                                runs = listOf(SlideTextRun(text = line, fontSizeSp = 15f)),
-                                isBullet = true
+                                runs = listOf(SlideTextRun(text = t, fontSizeSp = 22f, isBold = true))
                             )
-                        }
+                        )
+                    )
+                )
+
+                if (c.isNotEmpty()) {
+                    visuals.add(
+                        VisualElement(
+                            type = VisualElementType.TEXT_BOX,
+                            bounds = SlideBounds(0.06f, 0.30f, bodyWidth, 0.60f),
+                            paragraphs = c.map { line ->
+                                SlideParagraph(
+                                    runs = listOf(SlideTextRun(text = line, fontSizeSp = 15f)),
+                                    isBullet = true
+                                )
+                            }
+                        )
+                    )
+                }
+
+                if (hasPic) {
+                    visuals.add(
+                        VisualElement(
+                            type = VisualElementType.IMAGE,
+                            bounds = SlideBounds(0.54f, 0.28f, 0.40f, 0.60f),
+                            imageBytes = extractedPictures[idx]
+                        )
+                    )
+                }
+
+                slides.add(
+                    PptxSlide(
+                        slideNumber = idx + 1,
+                        title = t,
+                        content = c,
+                        visualElements = visuals,
+                        aspectRatio = 4f / 3f
                     )
                 )
             }
-
-            slides.add(
-                PptxSlide(
-                    slideNumber = idx + 1,
-                    title = t,
-                    content = c,
-                    visualElements = visuals,
-                    aspectRatio = 4f / 3f
+        } else {
+            // If only pictures were found, generate slides for each picture
+            for ((idx, pic) in extractedPictures.withIndex()) {
+                val num = idx + 1
+                slides.add(
+                    PptxSlide(
+                        slideNumber = num,
+                        title = "Slide $num",
+                        content = emptyList(),
+                        visualElements = listOf(
+                            VisualElement(
+                                type = VisualElementType.IMAGE,
+                                bounds = SlideBounds(0f, 0f, 1f, 1f),
+                                imageBytes = pic
+                            )
+                        ),
+                        aspectRatio = 4f / 3f
+                    )
                 )
-            )
+            }
         }
 
         return PptxPresentation(slides = slides, aspectRatio = 4f / 3f)
@@ -1933,7 +2221,9 @@ class PptxParser {
                 lower.startsWith("[content_") ||
                 lower.contains("schemas.openxmlformats") ||
                 lower.contains("vnd.openxmlformats") ||
-                lower.contains("microsoft") ||
+                lower == "microsoft powerpoint" ||
+                lower == "microsoft office" ||
+                lower.startsWith("microsoft office powerpoint") ||
                 lower.contains("font name")
         }
 
@@ -1989,7 +2279,7 @@ class PptxParser {
             addCandidate(sbAscii.toString())
         }
 
-        return strings.take(80)
+        return strings.take(500)
     }
 
     /**

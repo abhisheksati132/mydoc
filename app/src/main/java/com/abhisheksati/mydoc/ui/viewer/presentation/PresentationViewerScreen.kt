@@ -54,9 +54,12 @@ import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Print
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.ViewCarousel
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.material3.DropdownMenu
 import androidx.core.content.FileProvider
 import java.io.File
@@ -180,6 +183,11 @@ fun openPresentationInOfficeApp(context: Context, document: DocumentFile) {
     }
 }
 
+enum class PresentationEngineMode {
+    LIBREOFFICE,
+    NATIVE
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PresentationViewerScreen(
@@ -190,8 +198,14 @@ fun PresentationViewerScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
     val app = context.applicationContext as? MyDocApp
+
+    var activeEngine by remember { mutableStateOf(PresentationEngineMode.NATIVE) }
+    var loRenderer by remember { mutableStateOf<LibreOfficePresentationRenderer?>(null) }
+    var isLoAvailable by remember { mutableStateOf(false) }
+    var loSlideCount by remember { mutableIntStateOf(0) }
+    var loAspectRatio by remember { mutableFloatStateOf(16f / 9f) }
+    var cachedFileOnDisk by remember { mutableStateOf<File?>(null) }
 
     var presentationData by remember { mutableStateOf<PptxPresentation?>(null) }
     var isLoading by remember { mutableStateOf(true) }
@@ -213,16 +227,90 @@ fun PresentationViewerScreen(
     var zoomScale by remember { mutableFloatStateOf(1f) }
     var panOffset by remember { mutableStateOf(Offset.Zero) }
 
+    DisposableEffect(document.uri) {
+        onDispose {
+            loRenderer?.close()
+            loRenderer = null
+            cachedFileOnDisk?.delete()
+            cachedFileOnDisk = null
+        }
+    }
+
     LaunchedEffect(document.uri) {
         isLoading = true
         errorMessage = null
         withContext(Dispatchers.IO) {
             try {
                 val uri = Uri.parse(document.uri)
+                val ext = document.extension.lowercase().ifBlank { "pptx" }
+                val cacheDir = File(context.cacheDir, "pres_cache").apply { mkdirs() }
+                val tempFile = File(cacheDir, "pres_${System.currentTimeMillis()}.$ext")
+                cachedFileOnDisk = tempFile
+
                 val inputStream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri, document.displayName)
                     ?: throw IllegalStateException("Could not open presentation stream")
-                val parsed = inputStream.use { PptxParser().parse(it, context.cacheDir) }
-                presentationData = parsed
+                inputStream.use { input ->
+                    tempFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+
+                val isLoReady = app?.libreOfficeEngineManager?.isReady() == true
+                val isLoEnabled = app?.settingsRepository?.isLibreOfficeEngineEnabled?.value ?: true
+
+                var loSuccess = false
+                if (isLoReady && isLoEnabled) {
+                    try {
+                        val initOk = app?.libreOfficeEngineManager?.initNativeEngine() == true
+                        if (initOk) {
+                            val renderer = LibreOfficePresentationRenderer()
+                            if (renderer.load(tempFile.absolutePath) && renderer.getSlideCount() > 0) {
+                                loRenderer = renderer
+                                loSlideCount = renderer.getSlideCount()
+                                loAspectRatio = renderer.getAspectRatio()
+                                isLoAvailable = true
+                                activeEngine = PresentationEngineMode.LIBREOFFICE
+                                loSuccess = true
+                            } else {
+                                renderer.close()
+                            }
+                        }
+                    } catch (e: Throwable) {
+                        android.util.Log.w("PresentationViewer", "LibreOffice load failed, will try native: ${e.message}")
+                    }
+                }
+
+                // Parse with native parser (for native view toggle or background keyword search/notes)
+                try {
+                    val parsed = tempFile.inputStream().use { PptxParser().parse(it, context.cacheDir) }
+                    presentationData = parsed
+                    if (!loSuccess && parsed.slides.isNotEmpty() && parsed.slides.firstOrNull()?.title != "Empty Presentation") {
+                        activeEngine = PresentationEngineMode.NATIVE
+                    }
+                } catch (e: Throwable) {
+                    android.util.Log.w("PresentationViewer", "Native parser failed: ${e.message}")
+                }
+
+                // If native failed or had 0 slides, and LibreOffice wasn't initialized yet, try LibreOffice now!
+                if (!loSuccess && (presentationData == null || presentationData?.slides.isNullOrEmpty() || presentationData?.slides?.firstOrNull()?.title == "Empty Presentation") && isLoReady) {
+                    try {
+                        val initOk = app?.libreOfficeEngineManager?.initNativeEngine() == true
+                        if (initOk) {
+                            val renderer = LibreOfficePresentationRenderer()
+                            if (renderer.load(tempFile.absolutePath) && renderer.getSlideCount() > 0) {
+                                loRenderer = renderer
+                                loSlideCount = renderer.getSlideCount()
+                                loAspectRatio = renderer.getAspectRatio()
+                                isLoAvailable = true
+                                activeEngine = PresentationEngineMode.LIBREOFFICE
+                                loSuccess = true
+                            } else {
+                                renderer.close()
+                            }
+                        }
+                    } catch (_: Throwable) {}
+                }
+
                 isLoading = false
             } catch (t: Throwable) {
                 android.util.Log.e("PresentationViewer", "Error loading presentation: ${document.displayName}", t)
@@ -232,15 +320,48 @@ fun PresentationViewerScreen(
         }
     }
 
-    val slides = presentationData?.slides ?: emptyList()
-    val pagerState = rememberPagerState(pageCount = { slides.size })
+    val rawSlides = presentationData?.slides ?: emptyList()
+    val isNativeEmpty = rawSlides.isEmpty() || (rawSlides.size == 1 && rawSlides.first().title == "Empty Presentation")
+
+    val effectiveSlideCount = if (activeEngine == PresentationEngineMode.LIBREOFFICE && loRenderer != null) {
+        loSlideCount
+    } else if (!isNativeEmpty) {
+        rawSlides.size
+    } else {
+        0
+    }
+
+    val pagerState = rememberPagerState(pageCount = { effectiveSlideCount })
+
+    val effectiveSlides: List<PptxSlide> = remember(activeEngine, rawSlides, loSlideCount, loAspectRatio) {
+        if (activeEngine == PresentationEngineMode.LIBREOFFICE && loRenderer != null) {
+            (0 until loSlideCount).map { idx ->
+                val title = if (!isNativeEmpty) rawSlides.getOrNull(idx)?.title ?: loRenderer?.getPartName(idx) ?: "Slide ${idx + 1}"
+                            else loRenderer?.getPartName(idx) ?: "Slide ${idx + 1}"
+                val notes = if (!isNativeEmpty) rawSlides.getOrNull(idx)?.notes else null
+                val content = if (!isNativeEmpty) rawSlides.getOrNull(idx)?.content ?: emptyList() else emptyList()
+                PptxSlide(
+                    slideNumber = idx + 1,
+                    title = title,
+                    content = content,
+                    visualElements = emptyList(),
+                    aspectRatio = loAspectRatio,
+                    notes = notes
+                )
+            }
+        } else if (!isNativeEmpty) {
+            rawSlides
+        } else {
+            emptyList()
+        }
+    }
 
     // Smart Resume: Restore last viewed slide on open
-    LaunchedEffect(slides.size) {
-        if (slides.isNotEmpty()) {
+    LaunchedEffect(effectiveSlideCount) {
+        if (effectiveSlideCount > 0) {
             withContext(Dispatchers.IO) {
                 val savedState = app?.documentRepository?.getViewState(document.uri)
-                val targetSlide = savedState?.lastPage?.coerceIn(0, slides.size - 1) ?: 0
+                val targetSlide = savedState?.lastPage?.coerceIn(0, effectiveSlideCount - 1) ?: 0
                 if (targetSlide > 0) {
                     withContext(Dispatchers.Main) {
                         pagerState.scrollToPage(targetSlide)
@@ -251,10 +372,10 @@ fun PresentationViewerScreen(
     }
 
     // Smart Resume: Persist slide progress on change
-    LaunchedEffect(pagerState.currentPage, slides.size) {
-        if (slides.isNotEmpty()) {
+    LaunchedEffect(pagerState.currentPage, effectiveSlideCount) {
+        if (effectiveSlideCount > 0) {
             withContext(Dispatchers.IO) {
-                app?.documentRepository?.updatePageProgress(document.uri, pagerState.currentPage, slides.size)
+                app?.documentRepository?.updatePageProgress(document.uri, pagerState.currentPage, effectiveSlideCount)
                 app?.documentRepository?.saveViewState(
                     com.abhisheksati.mydoc.domain.model.ViewState(
                         uri = document.uri,
@@ -273,11 +394,11 @@ fun PresentationViewerScreen(
     }
 
     // Volume key slide navigation
-    LaunchedEffect(slides.size) {
-        if (slides.isNotEmpty()) {
+    LaunchedEffect(effectiveSlideCount) {
+        if (effectiveSlideCount > 0) {
             com.abhisheksati.mydoc.MainActivity.pageTurnEvents.collect { isNext ->
                 val target = if (isNext) {
-                    (pagerState.currentPage + 1).coerceAtMost(slides.size - 1)
+                    (pagerState.currentPage + 1).coerceAtMost(effectiveSlideCount - 1)
                 } else {
                     (pagerState.currentPage - 1).coerceAtLeast(0)
                 }
@@ -289,11 +410,11 @@ fun PresentationViewerScreen(
     }
 
     // In-slide keyword search match indices
-    val searchMatches = remember(searchQuery, slides) {
+    val searchMatches = remember(searchQuery, effectiveSlides) {
         if (searchQuery.length < 2) emptyList<Int>()
         else {
             val list = mutableListOf<Int>()
-            slides.forEachIndexed { idx, slide ->
+            effectiveSlides.forEachIndexed { idx, slide ->
                 val inTitle = slide.title.contains(searchQuery, ignoreCase = true)
                 val inContent = slide.content.any { it.contains(searchQuery, ignoreCase = true) }
                 val inVisual = slide.visualElements.any { el ->
@@ -321,7 +442,7 @@ fun PresentationViewerScreen(
     val isAppDark = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
 
     val bgColor = when (readingMode) {
-        ReadingMode.INVERTED_DARK -> Color(0xFF000000) // True AMOLED Black
+        ReadingMode.INVERTED_DARK -> Color(0xFF000000)
         ReadingMode.SEPIA -> Color(0xFFF4ECD8)
         ReadingMode.NORMAL -> if (isAppDark) Color(0xFF000000) else colors.background
     }
@@ -381,13 +502,40 @@ fun PresentationViewerScreen(
                     } else {
                         TopAppBar(
                             title = {
-                                Text(
-                                    text = document.displayName,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = textColor,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                Column {
+                                    Text(
+                                        text = document.displayName,
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                                        color = textColor,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.padding(top = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = document.extension.uppercase(),
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                letterSpacing = 1.sp
+                                            ),
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(
+                                            text = "•",
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                            color = secondaryTextColor.copy(alpha = 0.5f)
+                                        )
+                                        Text(
+                                            text = if (activeEngine == PresentationEngineMode.LIBREOFFICE) "LibreOffice HD Engine" else "Native Engine",
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                            color = secondaryTextColor
+                                        )
+                                    }
+                                }
                             },
                             navigationIcon = {
                                 IconButton(onClick = onBackClick) {
@@ -399,7 +547,64 @@ fun PresentationViewerScreen(
                                 }
                             },
                             actions = {
-                                // In-Slide Keyword Search
+                                // Engine Switcher Pill (if both LibreOffice and Native parsed)
+                                if (isLoAvailable && !isNativeEmpty) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(100.dp))
+                                            .background(
+                                                if (activeEngine == PresentationEngineMode.LIBREOFFICE)
+                                                    Color(0xFF10B981).copy(alpha = 0.12f)
+                                                else
+                                                    Color(0xFF3B82F6).copy(alpha = 0.12f)
+                                            )
+                                            .border(
+                                                width = 1.dp,
+                                                color = if (activeEngine == PresentationEngineMode.LIBREOFFICE)
+                                                    Color(0xFF10B981).copy(alpha = 0.35f)
+                                                else
+                                                    Color(0xFF3B82F6).copy(alpha = 0.35f),
+                                                shape = RoundedCornerShape(100.dp)
+                                            )
+                                            .clickable {
+                                                activeEngine = if (activeEngine == PresentationEngineMode.LIBREOFFICE)
+                                                    PresentationEngineMode.NATIVE
+                                                else
+                                                    PresentationEngineMode.LIBREOFFICE
+                                            }
+                                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(7.dp)
+                                                    .clip(CircleShape)
+                                                    .background(
+                                                        if (activeEngine == PresentationEngineMode.LIBREOFFICE)
+                                                            Color(0xFF10B981)
+                                                        else
+                                                            Color(0xFF3B82F6)
+                                                    )
+                                            )
+                                            Text(
+                                                text = if (activeEngine == PresentationEngineMode.LIBREOFFICE) "LibreOffice HD" else "Native",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontSize = 11.sp
+                                                ),
+                                                color = if (activeEngine == PresentationEngineMode.LIBREOFFICE)
+                                                    Color(0xFF10B981)
+                                                else
+                                                    Color(0xFF3B82F6)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Search
                                 IconButton(onClick = { isSearchOpen = true }) {
                                     Icon(
                                         imageVector = Icons.Outlined.Search,
@@ -408,7 +613,7 @@ fun PresentationViewerScreen(
                                     )
                                 }
 
-                                // Fullscreen Slideshow / Presenter Mode
+                                // Slideshow Mode
                                 IconButton(onClick = { isSlideshowMode = true }) {
                                     Icon(
                                         imageVector = Icons.Outlined.PlayArrow,
@@ -417,7 +622,7 @@ fun PresentationViewerScreen(
                                     )
                                 }
 
-                                // Clean More Options Menu
+                                // More Options
                                 Box {
                                     IconButton(onClick = { isMenuOpen = true }) {
                                         Icon(
@@ -430,19 +635,38 @@ fun PresentationViewerScreen(
                                         expanded = isMenuOpen,
                                         onDismissRequest = { isMenuOpen = false }
                                     ) {
-                                        DropdownMenuItem(
-                                            text = { Text(if (isVisualMode) "Switch to Outline View" else "Switch to Visual View") },
-                                            leadingIcon = {
-                                                Icon(
-                                                    imageVector = if (isVisualMode) Icons.AutoMirrored.Filled.Article else Icons.Default.Slideshow,
-                                                    contentDescription = null
-                                                )
-                                            },
-                                            onClick = {
-                                                isMenuOpen = false
-                                                isVisualMode = !isVisualMode
-                                            }
-                                        )
+                                        if (isLoAvailable && !isNativeEmpty) {
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Text(if (activeEngine == PresentationEngineMode.LIBREOFFICE) "Switch to Native Fast View" else "Switch to LibreOffice HD Engine")
+                                                },
+                                                leadingIcon = {
+                                                    Icon(Icons.Outlined.Refresh, contentDescription = null)
+                                                },
+                                                onClick = {
+                                                    isMenuOpen = false
+                                                    activeEngine = if (activeEngine == PresentationEngineMode.LIBREOFFICE)
+                                                        PresentationEngineMode.NATIVE
+                                                    else
+                                                        PresentationEngineMode.LIBREOFFICE
+                                                }
+                                            )
+                                        }
+                                        if (activeEngine == PresentationEngineMode.NATIVE) {
+                                            DropdownMenuItem(
+                                                text = { Text(if (isVisualMode) "Switch to Outline View" else "Switch to Visual View") },
+                                                leadingIcon = {
+                                                    Icon(
+                                                        imageVector = if (isVisualMode) Icons.AutoMirrored.Filled.Article else Icons.Default.Slideshow,
+                                                        contentDescription = null
+                                                    )
+                                                },
+                                                onClick = {
+                                                    isMenuOpen = false
+                                                    isVisualMode = !isVisualMode
+                                                }
+                                            )
+                                        }
                                         DropdownMenuItem(
                                             text = {
                                                 Text(when (readingMode) {
@@ -534,7 +758,7 @@ fun PresentationViewerScreen(
             }
         },
         bottomBar = {
-            if (slides.isNotEmpty() && !isSlideshowMode) {
+            if (effectiveSlideCount > 0 && !isSlideshowMode) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -555,43 +779,56 @@ fun PresentationViewerScreen(
                                 contentPadding = PaddingValues(horizontal = AppSpacing.paddingMedium),
                                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
                             ) {
-                                items(slides.size) { index ->
+                                items(effectiveSlideCount) { index ->
                                     val isSelected = index == pagerState.currentPage
-                                    val slide = slides[index]
-                                    Box(
-                                        modifier = Modifier
-                                            .width(96.dp)
-                                            .height(58.dp)
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(cardBgColor)
-                                            .border(
-                                                width = if (isSelected) 2.dp else 1.dp,
-                                                color = if (isSelected) MaterialTheme.colorScheme.primary else Color(0x33888888),
-                                                shape = RoundedCornerShape(6.dp)
-                                            )
-                                            .clickable {
+                                    if (activeEngine == PresentationEngineMode.LIBREOFFICE && loRenderer != null) {
+                                        LibreOfficeThumbnail(
+                                            renderer = loRenderer!!,
+                                            slideIndex = index,
+                                            isSelected = isSelected,
+                                            readingMode = readingMode,
+                                            cardBgColor = cardBgColor,
+                                            onClick = {
                                                 scope.launch { pagerState.animateScrollToPage(index) }
                                             }
-                                            .padding(4.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.Center
+                                        )
+                                    } else {
+                                        val slide = effectiveSlides.getOrNull(index)
+                                        Box(
+                                            modifier = Modifier
+                                                .width(96.dp)
+                                                .height(58.dp)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(cardBgColor)
+                                                .border(
+                                                    width = if (isSelected) 2.dp else 1.dp,
+                                                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.1f),
+                                                    shape = RoundedCornerShape(10.dp)
+                                                )
+                                                .clickable {
+                                                    scope.launch { pagerState.animateScrollToPage(index) }
+                                                }
+                                                .padding(4.dp),
+                                            contentAlignment = Alignment.Center
                                         ) {
-                                            Text(
-                                                text = "${index + 1}",
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (isSelected) MaterialTheme.colorScheme.primary else textColor
-                                            )
-                                            Text(
-                                                text = slide.title,
-                                                fontSize = 9.sp,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                color = secondaryTextColor
-                                            )
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.Center
+                                            ) {
+                                                Text(
+                                                    text = "${index + 1}",
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (isSelected) MaterialTheme.colorScheme.primary else textColor
+                                                )
+                                                Text(
+                                                    text = slide?.title ?: "Slide ${index + 1}",
+                                                    fontSize = 9.sp,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    color = secondaryTextColor
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -609,7 +846,6 @@ fun PresentationViewerScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // Previous slide
                         IconButton(
                             onClick = {
                                 scope.launch {
@@ -627,7 +863,6 @@ fun PresentationViewerScreen(
                             )
                         }
 
-                        // Thumbnail carousel toggle button
                         IconButton(onClick = { isThumbnailStripOpen = !isThumbnailStripOpen }) {
                             Icon(
                                 imageVector = Icons.Outlined.ViewCarousel,
@@ -636,25 +871,23 @@ fun PresentationViewerScreen(
                             )
                         }
 
-                        // Slide counter & page jump pill
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
+                                .clip(RoundedCornerShape(100.dp))
                                 .background(cardBgColor)
-                                .border(1.dp, Color(0x22888888), RoundedCornerShape(16.dp))
+                                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(100.dp))
                                 .clickable { isJumpDialogOpen = true }
                                 .padding(horizontal = 14.dp, vertical = 6.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "Slide ${pagerState.currentPage + 1} of ${slides.size}",
+                                text = "Slide ${pagerState.currentPage + 1} of $effectiveSlideCount",
                                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                                 color = textColor
                             )
                         }
 
-                        // Speaker Notes button
-                        val currentSlide = slides.getOrNull(pagerState.currentPage)
+                        val currentSlide = effectiveSlides.getOrNull(pagerState.currentPage)
                         val hasNotes = !currentSlide?.notes.isNullOrBlank()
                         IconButton(
                             onClick = { isNotesSheetOpen = true },
@@ -667,21 +900,20 @@ fun PresentationViewerScreen(
                             )
                         }
 
-                        // Next slide
                         IconButton(
                             onClick = {
                                 scope.launch {
-                                    if (pagerState.currentPage < slides.size - 1) {
+                                    if (pagerState.currentPage < effectiveSlideCount - 1) {
                                         pagerState.animateScrollToPage(pagerState.currentPage + 1)
                                     }
                                 }
                             },
-                            enabled = pagerState.currentPage < slides.size - 1
+                            enabled = pagerState.currentPage < effectiveSlideCount - 1
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                                 contentDescription = "Next Slide",
-                                tint = if (pagerState.currentPage < slides.size - 1) textColor else secondaryTextColor.copy(alpha = 0.3f)
+                                tint = if (pagerState.currentPage < effectiveSlideCount - 1) textColor else secondaryTextColor.copy(alpha = 0.3f)
                             )
                         }
                     }
@@ -718,46 +950,43 @@ fun PresentationViewerScreen(
                         Text("Open with PowerPoint / Google Slides")
                     }
                 }
-            } else if (slides.isEmpty()) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(AppSpacing.paddingLarge)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Description,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = secondaryTextColor
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "No slides found in this presentation",
-                        color = textColor,
-                        style = MaterialTheme.typography.titleMedium,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "The presentation could not be rendered directly. Tap below to open with an external presentation app.",
-                        color = secondaryTextColor,
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(onClick = { openPresentationInOfficeApp(context, document) }) {
-                        Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Open with PowerPoint / Google Slides")
+            } else if (effectiveSlideCount == 0) {
+                val isLoReady = app?.libreOfficeEngineManager?.isReady() == true
+                PresentationEmptyRecoveryCard(
+                    isLoReady = isLoReady,
+                    cardBgColor = cardBgColor,
+                    textColor = textColor,
+                    secondaryTextColor = secondaryTextColor,
+                    onForceLibreOffice = {
+                        cachedFileOnDisk?.let { file ->
+                            scope.launch(Dispatchers.IO) {
+                                isLoading = true
+                                try {
+                                    val initOk = app?.libreOfficeEngineManager?.initNativeEngine() == true
+                                    if (initOk) {
+                                        val renderer = LibreOfficePresentationRenderer()
+                                        if (renderer.load(file.absolutePath) && renderer.getSlideCount() > 0) {
+                                            loRenderer = renderer
+                                            loSlideCount = renderer.getSlideCount()
+                                            loAspectRatio = renderer.getAspectRatio()
+                                            isLoAvailable = true
+                                            activeEngine = PresentationEngineMode.LIBREOFFICE
+                                        }
+                                    }
+                                } catch (_: Throwable) {}
+                                isLoading = false
+                            }
+                        }
+                    },
+                    onOpenExternal = {
+                        openPresentationInOfficeApp(context, document)
                     }
-                }
+                )
             } else {
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize()
                 ) { pageIndex ->
-                    val slide = slides[pageIndex]
-
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -772,7 +1001,7 @@ fun PresentationViewerScreen(
                                                     scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
                                                 }
                                             } else {
-                                                if (pagerState.currentPage < slides.size - 1) {
+                                                if (pagerState.currentPage < effectiveSlideCount - 1) {
                                                     scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
                                                 }
                                             }
@@ -810,28 +1039,39 @@ fun PresentationViewerScreen(
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        val hasMeaningfulVisuals = slide.visualElements.any {
-                            it.type == VisualElementType.IMAGE ||
-                            it.tableRows.isNotEmpty() ||
-                            it.paragraphs.any { p -> p.runs.any { r -> r.text.isNotBlank() } }
-                        }
-
-                        if (isVisualMode && hasMeaningfulVisuals) {
-                            // Rich visual slide rendering
-                            VisualSlideCard(
-                                slide = slide,
+                        if (activeEngine == PresentationEngineMode.LIBREOFFICE && loRenderer != null) {
+                            LibreOfficeSlideCard(
+                                renderer = loRenderer!!,
+                                slideIndex = pageIndex,
+                                readingMode = readingMode,
                                 cardBgColor = cardBgColor,
-                                defaultTextColor = textColor,
-                                highlightQuery = if (isSearchOpen) searchQuery else ""
+                                aspectRatio = loAspectRatio
                             )
                         } else {
-                            // Outline / clean text bullet points view
-                            OutlineSlideCard(
-                                slide = slide,
-                                cardBgColor = cardBgColor,
-                                textColor = if (cardBgColor.isColorDark()) Color(0xFFEDEDED) else Color(0xFF1E293B),
-                                highlightQuery = if (isSearchOpen) searchQuery else ""
-                            )
+                            val slide = effectiveSlides.getOrNull(pageIndex)
+                            if (slide != null) {
+                                val hasMeaningfulVisuals = slide.visualElements.any {
+                                    it.type == VisualElementType.IMAGE ||
+                                    it.tableRows.isNotEmpty() ||
+                                    it.paragraphs.any { p -> p.runs.any { r -> r.text.isNotBlank() } }
+                                }
+
+                                if (isVisualMode && hasMeaningfulVisuals) {
+                                    VisualSlideCard(
+                                        slide = slide,
+                                        cardBgColor = cardBgColor,
+                                        defaultTextColor = textColor,
+                                        highlightQuery = if (isSearchOpen) searchQuery else ""
+                                    )
+                                } else {
+                                    OutlineSlideCard(
+                                        slide = slide,
+                                        cardBgColor = cardBgColor,
+                                        textColor = if (cardBgColor.isColorDark()) Color(0xFFEDEDED) else Color(0xFF1E293B),
+                                        highlightQuery = if (isSearchOpen) searchQuery else ""
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -858,7 +1098,7 @@ fun PresentationViewerScreen(
             PageJumpDialog(
                 isOpen = isJumpDialogOpen,
                 currentPage = pagerState.currentPage,
-                pageCount = slides.size,
+                pageCount = effectiveSlideCount,
                 onJump = { page ->
                     scope.launch { pagerState.scrollToPage(page) }
                 },
@@ -867,7 +1107,7 @@ fun PresentationViewerScreen(
 
             // Speaker Notes Bottom Sheet
             if (isNotesSheetOpen) {
-                val curNotes = slides.getOrNull(pagerState.currentPage)?.notes ?: "No speaker notes for this slide."
+                val curNotes = effectiveSlides.getOrNull(pagerState.currentPage)?.notes ?: "No speaker notes for this slide."
                 ModalBottomSheet(
                     onDismissRequest = { isNotesSheetOpen = false },
                     containerColor = cardBgColor
@@ -905,6 +1145,310 @@ fun PresentationViewerScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun LibreOfficeSlideCard(
+    renderer: LibreOfficePresentationRenderer,
+    slideIndex: Int,
+    readingMode: ReadingMode,
+    cardBgColor: Color,
+    aspectRatio: Float,
+    modifier: Modifier = Modifier
+) {
+    var slideBitmap by remember(slideIndex, readingMode) { mutableStateOf<android.graphics.Bitmap?>(null) }
+    var isSlideLoading by remember(slideIndex, readingMode) { mutableStateOf(true) }
+
+    LaunchedEffect(slideIndex, readingMode) {
+        isSlideLoading = true
+        withContext(Dispatchers.IO) {
+            val bmp = renderer.renderSlide(
+                slideIndex = slideIndex,
+                targetWidth = 1920,
+                targetHeight = (1920 / aspectRatio.coerceAtLeast(0.5f)).toInt(),
+                mode = readingMode
+            )
+            withContext(Dispatchers.Main) {
+                slideBitmap = bmp
+                isSlideLoading = false
+            }
+        }
+    }
+
+    BoxWithConstraints(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        val containerAspect = if (maxHeight.value > 0f && maxWidth.value.isFinite() && maxHeight.value.isFinite()) {
+            maxWidth / maxHeight
+        } else (16f / 9f)
+        val slideAspect = if (aspectRatio.isFinite() && aspectRatio > 0.1f) aspectRatio else (16f / 9f)
+        val cardModifier = if (containerAspect > slideAspect) {
+            Modifier
+                .fillMaxHeight()
+                .aspectRatio(slideAspect)
+        } else {
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(slideAspect)
+        }
+
+        // Double-Bezel Hardware Architecture (Outer shell + concentric inner presentation canvas)
+        Box(
+            modifier = cardModifier
+                .clip(RoundedCornerShape(24.dp))
+                .background(cardBgColor.copy(alpha = 0.5f))
+                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(24.dp))
+                .padding(6.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(cardBgColor)
+                    .border(0.5.dp, Color.Black.copy(alpha = 0.06f), RoundedCornerShape(18.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (slideBitmap != null && !slideBitmap!!.isRecycled) {
+                    Image(
+                        bitmap = slideBitmap!!.asImageBitmap(),
+                        contentDescription = "Slide ${slideIndex + 1}",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                } else if (isSlideLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(36.dp),
+                        strokeWidth = 2.5.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else {
+                    Text(
+                        text = "Slide ${slideIndex + 1}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LibreOfficeThumbnail(
+    renderer: LibreOfficePresentationRenderer,
+    slideIndex: Int,
+    isSelected: Boolean,
+    readingMode: ReadingMode,
+    cardBgColor: Color,
+    onClick: () -> Unit
+) {
+    var thumbBitmap by remember(slideIndex, readingMode) { mutableStateOf<android.graphics.Bitmap?>(null) }
+    LaunchedEffect(slideIndex, readingMode) {
+        withContext(Dispatchers.IO) {
+            val bmp = renderer.renderSlide(slideIndex, 240, 135, readingMode)
+            withContext(Dispatchers.Main) {
+                thumbBitmap = bmp
+            }
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .width(96.dp)
+            .height(58.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(cardBgColor)
+            .border(
+                width = if (isSelected) 2.dp else 1.dp,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(10.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(2.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (thumbBitmap != null && !thumbBitmap!!.isRecycled) {
+            Image(
+                bitmap = thumbBitmap!!.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Text(
+                text = "${slideIndex + 1}",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray
+            )
+        }
+    }
+}
+
+@Composable
+private fun PresentationEmptyRecoveryCard(
+    isLoReady: Boolean,
+    cardBgColor: Color,
+    textColor: Color,
+    secondaryTextColor: Color,
+    onForceLibreOffice: () -> Unit,
+    onOpenExternal: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Double-Bezel Hardware Architecture (Outer shell + concentric inner presentation canvas)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .clip(RoundedCornerShape(32.dp))
+            .background(Color.White.copy(alpha = 0.04f))
+            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(32.dp))
+            .padding(8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(26.dp))
+                .background(cardBgColor)
+                .border(0.5.dp, Color.Black.copy(alpha = 0.06f), RoundedCornerShape(26.dp))
+                .padding(28.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                // Eyebrow tag
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(100.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                        .padding(horizontal = 12.dp, vertical = 5.dp)
+                ) {
+                    Text(
+                        text = "PRESENTATION ENGINE",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp,
+                            letterSpacing = 1.5.sp
+                        ),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Icon(
+                    imageVector = Icons.Outlined.Description,
+                    contentDescription = null,
+                    modifier = Modifier.size(52.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = if (isLoReady) "Render with LibreOffice HD" else "Desktop Engine Available",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 18.sp),
+                    color = textColor,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = if (isLoReady)
+                        "This presentation has complex or proprietary slides. Tap below to render with the embedded LibreOffice engine."
+                    else
+                        "Install the optional LibreOffice Core Engine in Settings for 100% desktop rendering fidelity on all presentation formats.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = secondaryTextColor,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Button-in-Button CTA
+                if (isLoReady) {
+                    ButtonInButtonCta(
+                        text = "Render with LibreOffice",
+                        icon = Icons.Outlined.Refresh,
+                        onClick = onForceLibreOffice
+                    )
+                } else {
+                    ButtonInButtonCta(
+                        text = "Open in External App",
+                        icon = Icons.AutoMirrored.Outlined.OpenInNew,
+                        onClick = onOpenExternal
+                    )
+                }
+
+                if (isLoReady) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Open with PowerPoint or Google Slides",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        ),
+                        modifier = Modifier
+                            .clickable(onClick = onOpenExternal)
+                            .padding(8.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ButtonInButtonCta(
+    text: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(100.dp))
+            .background(MaterialTheme.colorScheme.primary)
+            .clickable(onClick = onClick)
+            .padding(start = 22.dp, end = 8.dp, top = 8.dp, bottom = 8.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                ),
+                color = Color.White
+            )
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.22f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }
@@ -1206,11 +1750,20 @@ private fun VisualSlideCard(
 
         Box(
             modifier = cardModifier
-                .background(slideBg, RoundedCornerShape(12.dp))
-                .border(1.dp, Color(0x1F888888), RoundedCornerShape(12.dp))
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(24.dp))
+                .background(cardBgColor.copy(alpha = 0.5f))
+                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(24.dp))
+                .padding(6.dp),
+            contentAlignment = Alignment.Center
         ) {
-            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(slideBg, RoundedCornerShape(18.dp))
+                    .border(0.5.dp, Color.Black.copy(alpha = 0.06f), RoundedCornerShape(18.dp))
+                    .clip(RoundedCornerShape(18.dp))
+            ) {
+                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                 val totalWidth = maxWidth
                 val totalHeight = maxHeight
                 val referenceHeight = 540f
@@ -1460,6 +2013,7 @@ private fun VisualSlideCard(
     }
 }
 }
+}
 
 /**
  * Outline mode: Clean bullet-point summary of slide text with keyword highlighting.
@@ -1491,57 +2045,67 @@ private fun OutlineSlideCard(
 
         Box(
             modifier = cardModifier
-                .background(cardBgColor, RoundedCornerShape(12.dp))
-                .border(1.dp, Color(0x1F888888), RoundedCornerShape(12.dp))
-                .clip(RoundedCornerShape(12.dp))
-                .padding(AppSpacing.paddingLarge)
+                .clip(RoundedCornerShape(24.dp))
+                .background(cardBgColor.copy(alpha = 0.5f))
+                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(24.dp))
+                .padding(6.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                    .background(cardBgColor, RoundedCornerShape(18.dp))
+                    .border(0.5.dp, Color.Black.copy(alpha = 0.06f), RoundedCornerShape(18.dp))
+                    .clip(RoundedCornerShape(18.dp))
+                    .padding(AppSpacing.paddingLarge)
             ) {
-                HighlightableText(
-                    text = slide.title,
-                    query = highlightQuery,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor,
-                    modifier = Modifier.padding(bottom = AppSpacing.paddingMedium)
-                )
-
-                val allPoints = if (slide.content.isNotEmpty()) {
-                    slide.content
-                } else {
-                    slide.visualElements
-                        .flatMap { it.paragraphs }
-                        .map { it.plainText.trim() }
-                        .filter { it.isNotBlank() && it != slide.title }
-                }
-
-                if (allPoints.isEmpty()) {
-                    Text(
-                        text = "No additional bullet points on this slide.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = textColor.copy(alpha = 0.5f),
-                        fontStyle = FontStyle.Italic,
-                        modifier = Modifier.padding(top = AppSpacing.paddingSmall)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    HighlightableText(
+                        text = slide.title,
+                        query = highlightQuery,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textColor,
+                        modifier = Modifier.padding(bottom = AppSpacing.paddingMedium)
                     )
-                } else {
-                    for (item in allPoints) {
-                        Row(modifier = Modifier.padding(vertical = 2.dp)) {
-                            Text(
-                                text = "• ",
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontSize = 15.sp
-                            )
-                            HighlightableText(
-                                text = item,
-                                query = highlightQuery,
-                                fontSize = 15.sp,
-                                color = textColor
-                            )
+
+                    val allPoints = if (slide.content.isNotEmpty()) {
+                        slide.content
+                    } else {
+                        slide.visualElements
+                            .flatMap { it.paragraphs }
+                            .map { it.plainText.trim() }
+                            .filter { it.isNotBlank() && it != slide.title }
+                    }
+
+                    if (allPoints.isEmpty()) {
+                        Text(
+                            text = "No additional bullet points on this slide.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = textColor.copy(alpha = 0.5f),
+                            fontStyle = FontStyle.Italic,
+                            modifier = Modifier.padding(top = AppSpacing.paddingSmall)
+                        )
+                    } else {
+                        for (item in allPoints) {
+                            Row(modifier = Modifier.padding(vertical = 2.dp)) {
+                                Text(
+                                    text = "• ",
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontSize = 15.sp
+                                )
+                                HighlightableText(
+                                    text = item,
+                                    query = highlightQuery,
+                                    fontSize = 15.sp,
+                                    color = textColor
+                                )
+                            }
                         }
                     }
                 }

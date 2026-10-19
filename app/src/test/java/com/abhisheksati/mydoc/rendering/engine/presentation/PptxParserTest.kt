@@ -223,4 +223,63 @@ class PptxParserTest {
     fun `libre office engine availability is safely false to prevent native abort`() {
         assertEquals(false, LibreOfficePresentationRenderer.isEngineAvailable())
     }
+
+    @Test
+    fun `parse non-standard zip paths without ppt prefix successfully extracts slides`() = runBlocking {
+        val baos = ByteArrayOutputStream()
+        val zos = ZipOutputStream(baos)
+        zos.putNextEntry(ZipEntry("slides/slide1.xml"))
+        zos.write(
+            """
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                <p:cSld>
+                    <p:spTree>
+                        <p:sp>
+                            <p:txBody>
+                                <a:p>
+                                    <a:r><a:t>Non Standard Slide Title</a:t></a:r>
+                                </a:p>
+                                <a:p>
+                                    <a:r><a:t>Keynote or Canva Exported Slide</a:t></a:r>
+                                </a:p>
+                            </p:txBody>
+                        </p:sp>
+                    </p:spTree>
+                </p:cSld>
+            </p:sld>
+            """.trimIndent().toByteArray()
+        )
+        zos.closeEntry()
+        zos.finish()
+
+        val pres = parser.parse(ByteArrayInputStream(baos.toByteArray()))
+        assertEquals(1, pres.slides.size)
+        assertEquals("Non Standard Slide Title", pres.slides[0].title)
+    }
+
+    @Test
+    fun `parse malformed slide xml uses resilient parser without throwing`() = runBlocking {
+        val baos = ByteArrayOutputStream()
+        val zos = ZipOutputStream(baos)
+        zos.putNextEntry(ZipEntry("ppt/slides/slide1.xml"))
+        zos.write(
+            """
+            <broken:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                <randomTag>
+                    <a:t>Resilient Recovery Slide</a:t>
+                    <a:t>Content bullet point 1</a:t>
+                </randomTag>
+            </broken:sld>
+            """.trimIndent().toByteArray()
+        )
+        zos.closeEntry()
+        zos.finish()
+
+        val pres = parser.parse(ByteArrayInputStream(baos.toByteArray()))
+        assertEquals(1, pres.slides.size)
+        assertEquals("Resilient Recovery Slide", pres.slides[0].title)
+        assertTrue(pres.slides[0].content.contains("Content bullet point 1"))
+    }
 }
