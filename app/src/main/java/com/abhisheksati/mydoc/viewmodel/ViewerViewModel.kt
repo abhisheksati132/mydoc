@@ -15,6 +15,7 @@ import com.abhisheksati.mydoc.rendering.engine.MuPdfRenderer
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import com.abhisheksati.mydoc.rendering.engine.SearchMatch
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -220,6 +221,7 @@ class ViewerViewModel(
                         }
 
                         repository.updatePageProgress(activeDocumentFile.uri, initialPage, totalPages)
+                        prefetchSurroundingPages(initialPage)
                     }
                 } catch (e: Exception) {
                     val isPerm = e is SecurityException || (e.localizedMessage?.contains("Permission Denial", ignoreCase = true) == true)
@@ -267,10 +269,31 @@ class ViewerViewModel(
         return rend.getPageSize(pageIndex)
     }
 
+    private var prefetchJob: Job? = null
+
+    private fun prefetchSurroundingPages(currentPage: Int) {
+        val rend = renderer ?: return
+        val total = _uiState.value.pageCount
+        if (total <= 1) return
+
+        prefetchJob?.cancel()
+        prefetchJob = viewModelScope.launch(Dispatchers.Default) {
+            val pagesToPrefetch = listOf(currentPage + 1, currentPage - 1, currentPage + 2)
+                .filter { it in 0 until total }
+            val currentMode = _uiState.value.readingMode
+            for (p in pagesToPrefetch) {
+                // Prime both the low-resolution thumbnail and standard resolution tile in LRU cache
+                rend.renderPage(p, 0.35f, currentMode)
+                rend.renderPage(p, 1.8f, currentMode)
+            }
+        }
+    }
+
     fun onPageChanged(page: Int) {
         if (page != _uiState.value.currentPage && page in 0 until _uiState.value.pageCount) {
             _uiState.update { it.copy(currentPage = page) }
             persistViewState()
+            prefetchSurroundingPages(page)
             viewModelScope.launch {
                 repository.updatePageProgress(documentFile.uri, page, _uiState.value.pageCount)
             }
@@ -398,6 +421,8 @@ class ViewerViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        prefetchJob?.cancel()
+        prefetchJob = null
         renderer?.close()
         renderer = null
     }

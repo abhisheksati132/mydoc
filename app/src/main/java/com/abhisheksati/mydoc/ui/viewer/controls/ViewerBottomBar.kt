@@ -27,8 +27,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -37,13 +40,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 
 /**
  * Ergonomic one-handed bottom bar for the viewer.
@@ -61,6 +68,8 @@ fun ViewerBottomBar(
     onToggleThumbnails: () -> Unit,
     onOpenSettings: () -> Unit,
     onPageTextClick: () -> Unit,
+    sheetItems: List<OutlineItem> = emptyList(),
+    onSheetSelect: ((Int) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
@@ -85,6 +94,35 @@ fun ViewerBottomBar(
                 .background(colors.surface)
                 .navigationBarsPadding()
         ) {
+            if (sheetItems.size > 1 && onSheetSelect != null &&
+                sheetItems.any { it.title.startsWith("Sheet", ignoreCase = true) || it.title.startsWith("Slide", ignoreCase = true) }
+            ) {
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(sheetItems.size) { idx ->
+                        val item = sheetItems[idx]
+                        val isSelected = idx == currentPage
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onSheetSelect(item.pageIndex)
+                            },
+                            label = { Text(item.title, fontSize = 12.sp) },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = colors.accent,
+                                selectedLabelColor = if (colors.background == DarkAppColors.background) Color.Black else Color.White
+                            )
+                        )
+                    }
+                }
+            }
+
             AppDivider()
 
             Row(

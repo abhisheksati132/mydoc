@@ -510,7 +510,18 @@ fun PdfViewerScreen(
                 onOutlineClick = { viewModel.setOutlineDrawerOpen(true) },
                 onToggleThumbnails = viewModel::toggleThumbnailStrip,
                 onOpenSettings = { isReadingControlsOpen = true },
-                onPageTextClick = { isPageJumpDialogOpen = true }
+                onPageTextClick = { isPageJumpDialogOpen = true },
+                sheetItems = state.outline,
+                onSheetSelect = { pageIdx ->
+                    viewModel.jumpToPage(pageIdx)
+                    coroutineScope.launch {
+                        if (state.isContinuousScroll) {
+                            lazyListState.animateScrollToItem(pageIdx)
+                        } else {
+                            pagerState.animateScrollToPage(pageIdx)
+                        }
+                    }
+                }
             )
         }
 
