@@ -18,6 +18,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
@@ -42,10 +43,12 @@ fun PhotoInfoSheet(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
 
+    val isOled = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = colors.surface,
+        containerColor = if (isOled) Color(0xFF10121A) else colors.surface,
         dragHandle = null
     ) {
         Column(

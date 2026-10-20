@@ -23,6 +23,9 @@ import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import java.io.File
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -913,7 +916,12 @@ fun VideoPlayerScreen(
 
                             DropdownMenu(
                                 expanded = isMoreMenuOpen,
-                                onDismissRequest = { isMoreMenuOpen = false }
+                                onDismissRequest = { isMoreMenuOpen = false },
+                                shape = RoundedCornerShape(16.dp),
+                                containerColor = Color(0xFF1E2129),
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                                shadowElevation = 8.dp,
+                                tonalElevation = 4.dp
                             ) {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                                     DropdownMenuItem(
@@ -1216,7 +1224,12 @@ fun VideoPlayerScreen(
 
                                 DropdownMenu(
                                     expanded = isSpeedMenuOpen,
-                                    onDismissRequest = { isSpeedMenuOpen = false }
+                                    onDismissRequest = { isSpeedMenuOpen = false },
+                                    shape = RoundedCornerShape(16.dp),
+                                    containerColor = Color(0xFF1E2129),
+                                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                                    shadowElevation = 8.dp,
+                                    tonalElevation = 4.dp
                                 ) {
                                     listOf(0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 3.0f, 4.0f).forEach { spd ->
                                         DropdownMenuItem(
@@ -1349,6 +1362,12 @@ fun VideoPlayerScreen(
         if (isSleepTimerDialogOpen) {
             AlertDialog(
                 onDismissRequest = { isSleepTimerDialogOpen = false },
+                shape = RoundedCornerShape(22.dp),
+                containerColor = Color(0xFF141720),
+                modifier = Modifier.border(
+                    BorderStroke(0.8.dp, Color.White.copy(alpha = 0.10f)),
+                    shape = RoundedCornerShape(22.dp)
+                ),
                 title = { Text("Sleep Timer") },
                 text = {
                     Column {
@@ -1404,6 +1423,12 @@ fun VideoPlayerScreen(
 
             AlertDialog(
                 onDismissRequest = { isAudioTrackDialogOpen = false },
+                shape = RoundedCornerShape(22.dp),
+                containerColor = Color(0xFF141720),
+                modifier = Modifier.border(
+                    BorderStroke(0.8.dp, Color.White.copy(alpha = 0.10f)),
+                    shape = RoundedCornerShape(22.dp)
+                ),
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Audiotrack, contentDescription = null, tint = Color(0xFFFF9800))
@@ -1467,6 +1492,12 @@ fun VideoPlayerScreen(
 
             AlertDialog(
                 onDismissRequest = { isSubtitleTrackDialogOpen = false },
+                shape = RoundedCornerShape(22.dp),
+                containerColor = Color(0xFF141720),
+                modifier = Modifier.border(
+                    BorderStroke(0.8.dp, Color.White.copy(alpha = 0.10f)),
+                    shape = RoundedCornerShape(22.dp)
+                ),
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Subtitles, contentDescription = null, tint = Color(0xFFFF9800))
@@ -1563,6 +1594,12 @@ fun VideoPlayerScreen(
         if (isSyncDelayDialogOpen) {
             AlertDialog(
                 onDismissRequest = { isSyncDelayDialogOpen = false },
+                shape = RoundedCornerShape(22.dp),
+                containerColor = Color(0xFF141720),
+                modifier = Modifier.border(
+                    BorderStroke(0.8.dp, Color.White.copy(alpha = 0.10f)),
+                    shape = RoundedCornerShape(22.dp)
+                ),
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Sync, contentDescription = null, tint = Color(0xFFFF9800))
@@ -1681,6 +1718,12 @@ fun VideoPlayerScreen(
 
             AlertDialog(
                 onDismissRequest = { isEqualizerDialogOpen = false },
+                shape = RoundedCornerShape(22.dp),
+                containerColor = Color(0xFF141720),
+                modifier = Modifier.border(
+                    BorderStroke(0.8.dp, Color.White.copy(alpha = 0.10f)),
+                    shape = RoundedCornerShape(22.dp)
+                ),
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

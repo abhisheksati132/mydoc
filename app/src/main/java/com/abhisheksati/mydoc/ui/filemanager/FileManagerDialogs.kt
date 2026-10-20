@@ -6,6 +6,7 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -70,13 +71,16 @@ fun NewFolderDialog(
     var name by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
     val colors = LocalAppColors.current
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
+    val isOled = colors.background == DarkAppColors.background
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(22.dp),
+        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+        modifier = Modifier.border(
+            BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
+            RoundedCornerShape(22.dp)
+        ),
         title = { Text("New Folder", color = colors.textPrimary) },
         text = {
             Column {
@@ -113,8 +117,7 @@ fun NewFolderDialog(
             TextButton(onClick = onDismiss) {
                 Text("Cancel", color = colors.textSecondary)
             }
-        },
-        containerColor = colors.surface
+        }
     )
 }
 
@@ -126,13 +129,16 @@ fun NewFileDialog(
     var name by remember { mutableStateOf("New Document.txt") }
     val focusRequester = remember { FocusRequester() }
     val colors = LocalAppColors.current
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
+    val isOled = colors.background == DarkAppColors.background
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(22.dp),
+        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+        modifier = Modifier.border(
+            BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
+            RoundedCornerShape(22.dp)
+        ),
         title = { Text("New File", color = colors.textPrimary) },
         text = {
             Column {
@@ -169,8 +175,7 @@ fun NewFileDialog(
             TextButton(onClick = onDismiss) {
                 Text("Cancel", color = colors.textSecondary)
             }
-        },
-        containerColor = colors.surface
+        }
     )
 }
 
@@ -183,13 +188,16 @@ fun RenameDialog(
     var name by remember { mutableStateOf(file.name) }
     val focusRequester = remember { FocusRequester() }
     val colors = LocalAppColors.current
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
+    val isOled = colors.background == DarkAppColors.background
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(22.dp),
+        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+        modifier = Modifier.border(
+            BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
+            RoundedCornerShape(22.dp)
+        ),
         title = { Text("Rename", color = colors.textPrimary) },
         text = {
             Column {
@@ -225,8 +233,7 @@ fun RenameDialog(
             TextButton(onClick = onDismiss) {
                 Text("Cancel", color = colors.textSecondary)
             }
-        },
-        containerColor = colors.surface
+        }
     )
 }
 
@@ -238,8 +245,15 @@ fun DeleteConfirmationDialog(
     onConfirm: () -> Unit
 ) {
     val colors = LocalAppColors.current
+    val isOled = colors.background == DarkAppColors.background
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(22.dp),
+        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+        modifier = Modifier.border(
+            BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
+            RoundedCornerShape(22.dp)
+        ),
         title = { Text("Delete", color = colors.textPrimary) },
         text = {
             val message = if (count == 1 && fileNamePreview != null) {
@@ -258,8 +272,7 @@ fun DeleteConfirmationDialog(
             TextButton(onClick = onDismiss) {
                 Text("Cancel", color = colors.textSecondary)
             }
-        },
-        containerColor = colors.surface
+        }
     )
 }
 
@@ -280,8 +293,16 @@ fun FilePropertiesDialog(
         Toast.makeText(context, "$label copied", Toast.LENGTH_SHORT).show()
     }
 
+    val isOled = colors.background == DarkAppColors.background
+
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(22.dp),
+        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+        modifier = Modifier.border(
+            BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
+            RoundedCornerShape(22.dp)
+        ),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -393,8 +414,7 @@ fun FilePropertiesDialog(
             TextButton(onClick = onDismiss) {
                 Text("Close", color = colors.accent)
             }
-        },
-        containerColor = colors.surface
+        }
     )
 }
 
@@ -505,13 +525,16 @@ fun CompressDialog(
     var name by remember { mutableStateOf(defaultName) }
     val focusRequester = remember { FocusRequester() }
     val colors = LocalAppColors.current
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
+    val isOled = colors.background == DarkAppColors.background
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(22.dp),
+        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+        modifier = Modifier.border(
+            BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
+            RoundedCornerShape(22.dp)
+        ),
         title = { Text("Compress to ZIP", color = colors.textPrimary) },
         text = {
             Column {
@@ -553,8 +576,7 @@ fun CompressDialog(
             TextButton(onClick = onDismiss) {
                 Text("Cancel", color = colors.textSecondary)
             }
-        },
-        containerColor = colors.surface
+        }
     )
 }
 
@@ -565,9 +587,16 @@ fun ExtractConfirmDialog(
     onConfirm: () -> Unit
 ) {
     val colors = LocalAppColors.current
+    val isOled = colors.background == DarkAppColors.background
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(22.dp),
+        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+        modifier = Modifier.border(
+            BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
+            RoundedCornerShape(22.dp)
+        ),
         title = { Text("Extract Archive", color = colors.textPrimary) },
         text = {
             Text(
@@ -585,8 +614,7 @@ fun ExtractConfirmDialog(
             TextButton(onClick = onDismiss) {
                 Text("Cancel", color = colors.textSecondary)
             }
-        },
-        containerColor = colors.surface
+        }
     )
 }
 

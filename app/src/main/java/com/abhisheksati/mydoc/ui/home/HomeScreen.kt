@@ -375,7 +375,7 @@ fun HomeScreen(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .navigationBarsPadding()
-                .padding(end = 20.dp, bottom = 86.dp)
+                .padding(end = 20.dp, bottom = 96.dp)
         ) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),

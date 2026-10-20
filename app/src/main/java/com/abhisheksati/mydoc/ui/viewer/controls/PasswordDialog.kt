@@ -72,7 +72,7 @@ fun PasswordDialog(
         confirmButton = {
             Button(
                 onClick = { onSubmit(password) },
-                shape = RoundedCornerShape(6.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
                 Text("Unlock")
@@ -81,12 +81,12 @@ fun PasswordDialog(
         dismissButton = {
             OutlinedButton(
                 onClick = onCancel,
-                shape = RoundedCornerShape(6.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Cancel")
             }
         },
-        shape = RoundedCornerShape(6.dp),
+        shape = RoundedCornerShape(20.dp),
         containerColor = MaterialTheme.colorScheme.surface
     )
 }

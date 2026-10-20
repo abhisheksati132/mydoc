@@ -218,12 +218,17 @@ fun StorageItemGrid(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
+    val isOled = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
     val (icon, tint) = getFileTypeIcon(item.fileType)
 
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) colors.accent.copy(alpha = 0.14f) else colors.surface
+            containerColor = if (isSelected) colors.accent.copy(alpha = 0.12f) else if (isOled) Color(0xFF0F1015) else colors.surface
+        ),
+        border = BorderStroke(
+            1.dp,
+            if (isSelected) colors.accent else if (isOled) Color.White.copy(alpha = 0.06f) else colors.divider.copy(alpha = 0.5f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         modifier = modifier

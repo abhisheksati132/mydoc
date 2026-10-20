@@ -26,6 +26,7 @@ fun ZoomableImage(
     item: MediaItem,
     isFillScale: Boolean,
     displayRotation: Float,
+    isFlippedHorizontal: Boolean = false,
     onTap: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -77,7 +78,7 @@ fun ZoomableImage(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    scaleX = scale
+                    scaleX = if (isFlippedHorizontal) -scale else scale
                     scaleY = scale
                     translationX = offset.x
                     translationY = offset.y

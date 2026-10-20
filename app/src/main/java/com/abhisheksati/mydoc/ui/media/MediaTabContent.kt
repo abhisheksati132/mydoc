@@ -351,7 +351,7 @@ fun MediaTabContent(
             if (selectionActive) {
                 // Contextual multi-selection top bar
                 Surface(
-                    color = colors.surface,
+                    color = colors.background,
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()

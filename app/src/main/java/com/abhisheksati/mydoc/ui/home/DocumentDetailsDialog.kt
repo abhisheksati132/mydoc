@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -45,6 +46,9 @@ import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import java.text.NumberFormat
 import java.util.Locale
+
+import androidx.compose.foundation.BorderStroke
+import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 
 @Composable
 fun DocumentDetailsDialog(
@@ -59,9 +63,19 @@ fun DocumentDetailsDialog(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val haptic = LocalHapticFeedback.current
+    val isOled = colors.background == DarkAppColors.background
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(22.dp),
+        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+        modifier = Modifier.border(
+            BorderStroke(
+                0.8.dp,
+                if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)
+            ),
+            shape = RoundedCornerShape(22.dp)
+        ),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -198,9 +212,7 @@ fun DocumentDetailsDialog(
                     )
                 }
             }
-        },
-        shape = RoundedCornerShape(AppSpacing.cornerRadius),
-        containerColor = colors.surface
+        }
     )
 }
 

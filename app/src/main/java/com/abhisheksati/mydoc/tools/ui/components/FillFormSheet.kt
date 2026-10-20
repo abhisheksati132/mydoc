@@ -270,9 +270,15 @@ fun FillFormSheet(
                                                 unfocusedTextColor = colors.textPrimary
                                             )
                                         )
+                                        val isOled = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
                                         DropdownMenu(
                                             expanded = expanded,
-                                            onDismissRequest = { expanded = false }
+                                            onDismissRequest = { expanded = false },
+                                            shape = RoundedCornerShape(16.dp),
+                                            containerColor = if (isOled) androidx.compose.ui.graphics.Color(0xFF141720) else colors.surface,
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, if (isOled) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.10f) else colors.divider.copy(alpha = 0.7f)),
+                                            shadowElevation = 8.dp,
+                                            tonalElevation = 4.dp
                                         ) {
                                             field.options.forEach { opt ->
                                                 DropdownMenuItem(

@@ -276,7 +276,7 @@ fun FileManagerScreen(
                 hostState = snackbarHostState,
                 modifier = Modifier
                     .navigationBarsPadding()
-                    .padding(bottom = 76.dp, start = 16.dp, end = 16.dp)
+                    .padding(bottom = 96.dp, start = 16.dp, end = 16.dp)
             ) { data ->
                 androidx.compose.material3.Snackbar(
                     snackbarData = data,
@@ -775,12 +775,15 @@ fun FileManagerScreen(
                 exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(16.dp)
+                    .navigationBarsPadding()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 96.dp)
             ) {
                 uiState.clipboardState?.let { clip ->
+                    val isOled = colors.background == DarkAppColors.background
                     Card(
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = colors.surface),
+                        colors = CardDefaults.cardColors(containerColor = if (isOled) Color(0xFF13151F) else colors.surface),
+                        border = BorderStroke(1.dp, if (isOled) Color.White.copy(alpha = 0.1f) else colors.divider),
                         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -973,15 +976,17 @@ fun FileManagerScreen(
 
     // Single item context action bottom sheet
     singleItemActionTarget?.let { item ->
+        val isOled = colors.background == DarkAppColors.background
         val sheetState = rememberModalBottomSheetState()
         ModalBottomSheet(
             onDismissRequest = { singleItemActionTarget = null },
             sheetState = sheetState,
-            containerColor = colors.surface
+            containerColor = if (isOled) Color(0xFF10121A) else colors.surface
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .navigationBarsPadding()
                     .padding(horizontal = 20.dp, vertical = 10.dp)
             ) {
                 // Header

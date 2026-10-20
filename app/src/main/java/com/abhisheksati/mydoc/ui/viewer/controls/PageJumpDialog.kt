@@ -93,7 +93,7 @@ fun PageJumpDialog(
         confirmButton = {
             Button(
                 onClick = { submit() },
-                shape = RoundedCornerShape(6.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Go")
             }
@@ -101,12 +101,12 @@ fun PageJumpDialog(
         dismissButton = {
             OutlinedButton(
                 onClick = onDismiss,
-                shape = RoundedCornerShape(6.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Cancel")
             }
         },
-        shape = RoundedCornerShape(6.dp),
+        shape = RoundedCornerShape(20.dp),
         containerColor = MaterialTheme.colorScheme.surface
     )
 }

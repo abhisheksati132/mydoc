@@ -1,6 +1,8 @@
 package com.abhisheksati.mydoc.ui.filemanager
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -78,6 +80,7 @@ fun TrashBinSheet(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
+    val isOled = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
 
     var selectedIds by remember { mutableStateOf(setOf<Long>()) }
     var showEmptyConfirmDialog by remember { mutableStateOf(false) }
@@ -169,7 +172,8 @@ fun TrashBinSheet(
             bottomBar = {
                 if (isSelectionMode) {
                     Surface(
-                        color = colors.surface,
+                        color = if (isOled) Color(0xFF0F1015) else colors.surface,
+                        border = BorderStroke(1.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider),
                         tonalElevation = 8.dp,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -253,8 +257,14 @@ fun TrashBinSheet(
     if (showEmptyConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showEmptyConfirmDialog = false },
-            title = { Text("Empty Recycle Bin?") },
-            text = { Text("This will permanently delete all ${trashItems.size} items. This action cannot be undone.") },
+            shape = RoundedCornerShape(22.dp),
+            containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+            modifier = Modifier.border(
+                BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
+                RoundedCornerShape(22.dp)
+            ),
+            title = { Text("Empty Recycle Bin?", color = colors.textPrimary) },
+            text = { Text("This will permanently delete all ${trashItems.size} items. This action cannot be undone.", color = colors.textSecondary) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -268,7 +278,7 @@ fun TrashBinSheet(
             },
             dismissButton = {
                 TextButton(onClick = { showEmptyConfirmDialog = false }) {
-                    Text("Cancel")
+                    Text("Cancel", color = colors.textSecondary)
                 }
             }
         )
@@ -277,8 +287,14 @@ fun TrashBinSheet(
     if (showDeleteConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { Text("Delete Permanently?") },
-            text = { Text("Permanently delete ${selectedItems.size} items? This cannot be undone.") },
+            shape = RoundedCornerShape(22.dp),
+            containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+            modifier = Modifier.border(
+                BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
+                RoundedCornerShape(22.dp)
+            ),
+            title = { Text("Delete Permanently?", color = colors.textPrimary) },
+            text = { Text("Permanently delete ${selectedItems.size} items? This cannot be undone.", color = colors.textSecondary) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -293,7 +309,7 @@ fun TrashBinSheet(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirmDialog = false }) {
-                    Text("Cancel")
+                    Text("Cancel", color = colors.textSecondary)
                 }
             }
         )
@@ -312,10 +328,16 @@ private fun TrashItemCard(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
 
+    val isOled = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
+
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) colors.accent.copy(alpha = 0.12f) else colors.surface
+            containerColor = if (isSelected) colors.accent.copy(alpha = 0.12f) else if (isOled) Color(0xFF0F1015) else colors.surface
+        ),
+        border = BorderStroke(
+            1.dp,
+            if (isSelected) colors.accent else if (isOled) Color.White.copy(alpha = 0.06f) else colors.divider.copy(alpha = 0.5f)
         ),
         modifier = modifier
             .fillMaxWidth()

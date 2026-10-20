@@ -9,6 +9,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -347,8 +348,18 @@ fun StorageScreen(
 
     // System & Other explanation dialog
     if (showSystemInfoDialog) {
+        val isOled = colors.background == DarkAppColors.background
         AlertDialog(
             onDismissRequest = { showSystemInfoDialog = false },
+            shape = RoundedCornerShape(22.dp),
+            containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+            modifier = Modifier.border(
+                BorderStroke(
+                    0.8.dp,
+                    if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)
+                ),
+                shape = RoundedCornerShape(22.dp)
+            ),
             icon = {
                 Icon(
                     imageVector = Icons.Outlined.Info,

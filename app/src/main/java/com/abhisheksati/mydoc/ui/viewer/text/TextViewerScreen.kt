@@ -258,7 +258,12 @@ fun TextViewerScreen(
                             }
                             DropdownMenu(
                                 expanded = isMenuOpen,
-                                onDismissRequest = { isMenuOpen = false }
+                                onDismissRequest = { isMenuOpen = false },
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+                                shadowElevation = 8.dp,
+                                tonalElevation = 4.dp
                             ) {
                                 DropdownMenuItem(
                                     text = { Text("Open with another app") },

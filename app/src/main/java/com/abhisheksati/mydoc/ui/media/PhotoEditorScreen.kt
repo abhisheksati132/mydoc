@@ -120,6 +120,8 @@ enum class FilterPreset(val displayName: String) {
 @Composable
 fun PhotoEditorScreen(
     item: MediaItem,
+    initialRotation: Float = 0f,
+    initialFlipped: Boolean = false,
     onDismiss: () -> Unit,
     onPhotoSaved: (File) -> Unit,
     modifier: Modifier = Modifier
@@ -136,8 +138,8 @@ fun PhotoEditorScreen(
 
     // Editor adjustments
     var activeTool by remember { mutableStateOf(EditorTool.ADJUST) }
-    var rotationAngle by remember { mutableFloatStateOf(0f) }
-    var isFlippedHorizontal by remember { mutableStateOf(false) }
+    var rotationAngle by remember { mutableFloatStateOf(initialRotation) }
+    var isFlippedHorizontal by remember { mutableStateOf(initialFlipped) }
     var selectedCropRatio by remember { mutableStateOf(CropAspectRatio.ORIGINAL) }
     var selectedFilter by remember { mutableStateOf(FilterPreset.ORIGINAL) }
 

@@ -32,6 +32,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.RotateRight
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Flip
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
@@ -66,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.ExifMetadata
 import com.abhisheksati.mydoc.domain.model.MediaItem
@@ -88,6 +90,7 @@ fun PhotoViewerScreen(
     if (items.isEmpty()) return
 
     val context = LocalContext.current
+    val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val coroutineScope = rememberCoroutineScope()
 
@@ -113,6 +116,7 @@ fun PhotoViewerScreen(
     var isInfoSheetOpen by remember { mutableStateOf(false) }
     var isFillScale by remember { mutableStateOf(false) }
     var rotationAngle by remember { mutableFloatStateOf(0f) }
+    var isFlippedHorizontal by remember { mutableStateOf(false) }
     var isMoreMenuOpen by remember { mutableStateOf(false) }
     var isSlideshowActive by remember { mutableStateOf(false) }
     var slideshowIntervalSec by remember { mutableIntStateOf(3) }
@@ -131,9 +135,10 @@ fun PhotoViewerScreen(
         }
     }
 
-    // Reset rotation when swiping to another photo
+    // Reset rotation and flip when swiping to another photo
     LaunchedEffect(pagerState.currentPage) {
         rotationAngle = 0f
+        isFlippedHorizontal = false
     }
 
     // Slideshow auto-advance timer
@@ -173,6 +178,7 @@ fun PhotoViewerScreen(
                     item = item,
                     isFillScale = isFillScale,
                     displayRotation = if (page == pagerState.currentPage) rotationAngle else 0f,
+                    isFlippedHorizontal = if (page == pagerState.currentPage) isFlippedHorizontal else false,
                     onTap = {
                         if (isSlideshowActive) {
                             isSlideshowActive = false
@@ -382,6 +388,15 @@ fun PhotoViewerScreen(
                         )
                     }
 
+                    // Flip
+                    IconButton(onClick = { isFlippedHorizontal = !isFlippedHorizontal }) {
+                        Icon(
+                            imageVector = Icons.Default.Flip,
+                            contentDescription = "Flip Horizontal",
+                            tint = if (isFlippedHorizontal) colors.accent else Color(0xFFEDEDED)
+                        )
+                    }
+
                     // Extract Text (OCR)
                     IconButton(onClick = {
                         if (!isOcrRunning) {
@@ -434,9 +449,24 @@ fun PhotoViewerScreen(
         if (isEditorOpen) {
             PhotoEditorScreen(
                 item = currentItem,
+                initialRotation = rotationAngle,
+                initialFlipped = isFlippedHorizontal,
                 onDismiss = { isEditorOpen = false },
                 onPhotoSaved = { savedFile ->
                     isEditorOpen = false
+                    val newMediaItem = currentItem.copy(
+                        id = System.currentTimeMillis(),
+                        uri = Uri.fromFile(savedFile),
+                        displayName = savedFile.name,
+                        filePath = savedFile.absolutePath,
+                        sizeBytes = savedFile.length(),
+                        dateModifiedSec = System.currentTimeMillis() / 1000L
+                    )
+                    val currentIdx = pagerState.currentPage
+                    photoList.add(currentIdx + 1, newMediaItem)
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(currentIdx + 1)
+                    }
                 }
             )
         }

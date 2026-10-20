@@ -71,9 +71,11 @@ fun StorageCleanerSheet(
         isScanning = false
     }
 
+    val isOled = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = colors.surface,
+        containerColor = if (isOled) Color(0xFF10121A) else colors.surface,
         dragHandle = { BottomSheetDefaults.DragHandle() },
         modifier = Modifier.fillMaxHeight(0.92f)
     ) {
@@ -486,9 +488,13 @@ fun StorageCleanerSheet(
                 // Bottom Action Button
                 if (selectedBytesToFree > 0 || cleanEmptyFolders && res.emptyFolders.isNotEmpty()) {
                     Surface(
-                        color = colors.surface,
+                        color = if (isOled) Color(0xFF10121A) else colors.surface,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider),
                         tonalElevation = 4.dp,
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp, top = 8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(bottom = 16.dp, top = 8.dp)
                     ) {
                         Button(
                             onClick = {

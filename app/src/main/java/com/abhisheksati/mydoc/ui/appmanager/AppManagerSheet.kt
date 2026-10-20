@@ -24,6 +24,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -76,9 +77,11 @@ fun AppManagerSheet(
         }
     }
 
+        val isOled = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = colors.surface,
+        containerColor = if (isOled) Color(0xFF10121A) else colors.surface,
         dragHandle = { BottomSheetDefaults.DragHandle() },
         modifier = Modifier.fillMaxHeight(0.92f)
     ) {
@@ -196,7 +199,9 @@ fun AppManagerSheet(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
+                        .weight(1f)
+                        .navigationBarsPadding(),
+                    contentPadding = PaddingValues(bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(filteredApps, key = { it.packageName }) { app ->

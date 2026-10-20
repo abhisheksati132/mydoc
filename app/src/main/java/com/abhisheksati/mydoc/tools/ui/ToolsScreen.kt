@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.tools.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -304,9 +305,11 @@ fun ToolsScreen(
                         }
 
                         item(key = "card_${group.name}") {
+                            val isOled = colors.background == DarkAppColors.background
                             Surface(
-                                shape = RoundedCornerShape(16.dp),
-                                color = colors.surface,
+                                shape = RoundedCornerShape(18.dp),
+                                color = if (isOled) Color(0xFF0F1015) else colors.surface,
+                                border = BorderStroke(1.dp, if (isOled) Color.White.copy(alpha = 0.07f) else colors.divider.copy(alpha = 0.5f)),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
