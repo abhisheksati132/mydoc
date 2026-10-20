@@ -306,8 +306,8 @@ fun FileManagerScreen(
                 if (isSelection) {
                     // Multi-selection Top Bar
                 Surface(
-                    color = colors.surface,
-                    tonalElevation = 3.dp,
+                    color = colors.background,
+                    tonalElevation = 0.dp,
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
@@ -593,22 +593,6 @@ fun FileManagerScreen(
                 }
             }
         }
-        },
-        floatingActionButton = {
-            AnimatedVisibility(
-                visible = uiState.isBrowsingStorage && !uiState.isSelectionMode && uiState.clipboardState == null,
-                enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
-                exit = scaleOut(spring(stiffness = Spring.StiffnessMediumLow)) + fadeOut()
-            ) {
-                FloatingActionButton(
-                    onClick = { showNewFolderDialog = true },
-                    containerColor = colors.accent,
-                    contentColor = Color.White,
-                    shape = CircleShape
-                ) {
-                    Icon(Icons.Outlined.CreateNewFolder, contentDescription = "New Folder")
-                }
-            }
         }
     ) { padding ->
         Box(

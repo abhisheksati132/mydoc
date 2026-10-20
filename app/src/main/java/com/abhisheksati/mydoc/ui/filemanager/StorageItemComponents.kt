@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.filemanager
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -96,65 +97,62 @@ fun StorageItemRow(
     val (icon, tint) = getFileTypeIcon(item.fileType)
 
     val rowBackground = if (isSelected) {
-        colors.accent.copy(alpha = 0.12f)
+        colors.accent.copy(alpha = 0.14f)
     } else {
         Color.Transparent
     }
 
     Surface(
         color = rowBackground,
+        shape = RoundedCornerShape(12.dp),
+        border = if (isSelected) BorderStroke(1.dp, colors.accent.copy(alpha = 0.35f)) else null,
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(12.dp))
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
             )
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .padding(horizontal = 8.dp, vertical = 2.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
-            // Icon or Checkbox
+            // Selection Checkbox
             AnimatedVisibility(
                 visible = isSelectionMode,
                 enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
                 exit = scaleOut() + fadeOut()
             ) {
-                IconButton(
-                    onClick = onClick,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = if (isSelected) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
-                        contentDescription = "Select",
-                        tint = if (isSelected) colors.accent else colors.textSecondary
-                    )
-                }
+                Icon(
+                    imageVector = if (isSelected) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+                    contentDescription = "Select",
+                    tint = if (isSelected) colors.accent else colors.textSecondary.copy(alpha = 0.6f),
+                    modifier = Modifier
+                        .padding(end = 10.dp)
+                        .size(22.dp)
+                )
             }
 
-            AnimatedVisibility(
-                visible = !isSelectionMode,
-                enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
-                exit = scaleOut() + fadeOut()
+            // Always Visible Folder / File Icon Box
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(tint.copy(alpha = 0.15f))
             ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(tint.copy(alpha = 0.15f))
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = item.fileType.name,
-                        tint = tint,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+                Icon(
+                    imageVector = icon,
+                    contentDescription = item.fileType.name,
+                    tint = tint,
+                    modifier = Modifier.size(24.dp)
+                )
             }
-            Spacer(modifier = Modifier.width(if (isSelectionMode) 8.dp else 14.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
             // Name & Subtext
             Column(

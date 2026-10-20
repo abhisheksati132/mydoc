@@ -8,9 +8,6 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,7 +26,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -90,6 +86,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.MyDocApp
@@ -105,19 +102,6 @@ import com.abhisheksati.mydoc.update.UpdateManager
 import com.abhisheksati.mydoc.update.UpdateUiState
 import kotlinx.coroutines.launch
 import java.util.Locale
-
-/**
- * Top category filter pills for rapid segmented navigation.
- */
-private enum class SettingsCategory(val title: String, val icon: ImageVector?) {
-    ALL("All", null),
-    GENERAL("General", Icons.Outlined.Tune),
-    FILES("Files", Icons.Outlined.Folder),
-    DOCS("Docs", Icons.AutoMirrored.Outlined.Article),
-    MEDIA("Media", Icons.Outlined.PermMedia),
-    SECURITY("Security", Icons.Outlined.Security),
-    ABOUT("About", Icons.Outlined.Info)
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -149,7 +133,6 @@ fun SettingsScreen(
     val grantedFolderName by settingsRepository.grantedFolderName.collectAsState()
     var cacheSizeBytes by remember { mutableStateOf(settingsRepository.getCacheSizeBytes(context)) }
     var isScanningFolder by remember { mutableStateOf(false) }
-    val diagnostics = remember { settingsRepository.getSystemDiagnostics() }
 
     // Documents & Reader
     val currentReadingMode by settingsRepository.defaultReadingMode.collectAsState()
@@ -168,9 +151,6 @@ fun SettingsScreen(
     // Privacy & Security
     val biometricLockEnabled by settingsRepository.isBiometricLockEnabled.collectAsState()
     val autoLockVault by settingsRepository.autoLockVaultOnBackground.collectAsState()
-
-    // Segmented category selection
-    var selectedCategory by remember { mutableStateOf(SettingsCategory.ALL) }
 
     val openFolderLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
@@ -197,442 +177,304 @@ fun SettingsScreen(
         }
     }
 
+    val isLegacyDebugInstalled = remember {
+        try {
+            context.packageManager.getPackageInfo("com.abhisheksati.mydoc.debug", 0)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            Column(modifier = Modifier.background(colors.background)) {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "Settings",
-                                style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 20.sp),
-                                color = colors.textPrimary
-                            )
-                            Text(
-                                text = "v${updateManager.currentVersionName} • Configured for Peak Performance",
-                                style = typography.caption.copy(fontSize = 11.sp),
-                                color = colors.textSecondary
-                            )
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onBackClick()
-                        }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                contentDescription = "Back",
-                                tint = colors.textPrimary
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = colors.background
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = "Settings",
+                        style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 20.sp),
+                        color = colors.textPrimary
                     )
-                )
-
-                // Segmented Category Switcher Bar
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    SettingsCategory.entries.forEach { category ->
-                        val isSelected = selectedCategory == category
-                        Surface(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                selectedCategory = category
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) colors.accent.copy(alpha = 0.16f) else (if (isOled) Color(0xFF141720) else colors.surfaceVariant.copy(alpha = 0.6f)),
-                            border = BorderStroke(
-                                if (isSelected) 1.2.dp else 0.8.dp,
-                                if (isSelected) colors.accent else (if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f))
-                            ),
-                            modifier = Modifier.height(34.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                if (category.icon != null) {
-                                    Icon(
-                                        imageVector = category.icon,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(15.dp),
-                                        tint = if (isSelected) colors.accent else colors.textSecondary
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                }
-                                Text(
-                                    text = category.title,
-                                    fontSize = 12.5.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) colors.accent else colors.textSecondary
-                                )
-                            }
-                        }
+                },
+                navigationIcon = {
+                    IconButton(onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onBackClick()
+                    }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = "Back",
+                            tint = colors.textPrimary
+                        )
                     }
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-            }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = colors.background
+                )
+            )
         },
         containerColor = colors.background
     ) { innerPadding ->
-        val isLegacyDebugInstalled = remember {
-            try {
-                context.packageManager.getPackageInfo("com.abhisheksati.mydoc.debug", 0)
-                true
-            } catch (_: Exception) {
-                false
-            }
-        }
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 40.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(bottom = 36.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            // 1. GENERAL & APPEARANCE
-            if (selectedCategory == SettingsCategory.ALL || selectedCategory == SettingsCategory.GENERAL) {
-                SettingsCategorySection(
-                    title = "GENERAL & APPEARANCE",
-                    icon = Icons.Outlined.Tune,
-                    badge = "Display & Dock"
+            // 1. APPEARANCE & GENERAL
+            SettingsCard(title = "APPEARANCE & STARTUP") {
+                // Theme Mode
+                Text(
+                    text = "App Theme",
+                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+                    color = colors.textSecondary,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // App Theme
-                    Text(
-                        text = "App Theme",
-                        style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
-                        color = colors.textSecondary,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        ThemeSelectionChip(
-                            label = "OLED Dark",
-                            icon = Icons.Outlined.DarkMode,
-                            selected = currentTheme == AppThemeMode.AMOLED_DARK,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                settingsRepository.setThemeMode(AppThemeMode.AMOLED_DARK)
-                            }
-                        )
-                        ThemeSelectionChip(
-                            label = "Light",
-                            icon = Icons.Outlined.LightMode,
-                            selected = currentTheme == AppThemeMode.LIGHT,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                settingsRepository.setThemeMode(AppThemeMode.LIGHT)
-                            }
-                        )
-                        ThemeSelectionChip(
-                            label = "System",
-                            icon = null,
-                            selected = currentTheme == AppThemeMode.SYSTEM,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                settingsRepository.setThemeMode(AppThemeMode.SYSTEM)
-                            }
-                        )
-                    }
-
-                    SettingsInnerDivider()
-
-                    // Default Startup Tab
-                    Text(
-                        text = "Default Launch Tab",
-                        style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
-                        color = colors.textSecondary,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        val tabs = listOf(
-                            Triple(HomeTab.FILES, Icons.Outlined.Folder, "Files"),
-                            Triple(HomeTab.DOCUMENTS, Icons.AutoMirrored.Outlined.Article, "Documents"),
-                            Triple(HomeTab.MEDIA, Icons.Outlined.PermMedia, "Media"),
-                            Triple(HomeTab.TOOLS, Icons.Outlined.Build, "Tools")
-                        )
-                        for ((tab, icon, label) in tabs) {
-                            val isSelected = currentStartupTab == tab
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    settingsRepository.setDefaultStartupTab(tab)
-                                },
-                                label = { Text(label, color = if (isSelected) colors.accent else colors.textPrimary) },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = icon,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = if (isSelected) colors.accent else colors.textSecondary
-                                    )
-                                },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = colors.accent.copy(alpha = 0.16f),
-                                    containerColor = Color.Transparent
-                                ),
-                                border = FilterChipDefaults.filterChipBorder(
-                                    borderColor = if (isSelected) colors.accent else colors.divider,
-                                    selectedBorderColor = colors.accent,
-                                    enabled = true,
-                                    selected = isSelected
-                                ),
-                                shape = RoundedCornerShape(10.dp)
-                            )
+                    ThemeChip(
+                        label = "Dark",
+                        icon = Icons.Outlined.DarkMode,
+                        selected = currentTheme == AppThemeMode.AMOLED_DARK,
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            settingsRepository.setThemeMode(AppThemeMode.AMOLED_DARK)
                         }
-                    }
-
-                    SettingsInnerDivider()
-
-                    // Tactile Haptics
-                    SettingToggleRow(
-                        title = "Tactile Vibration Haptics",
-                        subtitle = "Crisp physical vibration feedback for dock navigation, hold gestures, and toggles",
-                        icon = Icons.Outlined.Vibration,
-                        checked = hapticFeedbackEnabled,
-                        onCheckedChange = {
-                            if (it) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            settingsRepository.setHapticFeedbackEnabled(it)
+                    )
+                    ThemeChip(
+                        label = "Light",
+                        icon = Icons.Outlined.LightMode,
+                        selected = currentTheme == AppThemeMode.LIGHT,
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            settingsRepository.setThemeMode(AppThemeMode.LIGHT)
+                        }
+                    )
+                    ThemeChip(
+                        label = "System",
+                        icon = null,
+                        selected = currentTheme == AppThemeMode.SYSTEM,
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            settingsRepository.setThemeMode(AppThemeMode.SYSTEM)
                         }
                     )
                 }
+
+                SettingsDivider()
+
+                // Default Launch Tab
+                Text(
+                    text = "Default Launch Tab",
+                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+                    color = colors.textSecondary,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val tabs = listOf(
+                        Triple(HomeTab.FILES, Icons.Outlined.Folder, "Files"),
+                        Triple(HomeTab.DOCUMENTS, Icons.AutoMirrored.Outlined.Article, "Documents"),
+                        Triple(HomeTab.MEDIA, Icons.Outlined.PermMedia, "Media"),
+                        Triple(HomeTab.TOOLS, Icons.Outlined.Build, "Tools")
+                    )
+                    for ((tab, icon, label) in tabs) {
+                        val isSelected = currentStartupTab == tab
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                settingsRepository.setDefaultStartupTab(tab)
+                            },
+                            label = { Text(label, color = if (isSelected) colors.accent else colors.textPrimary) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = if (isSelected) colors.accent else colors.textSecondary
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = colors.accent.copy(alpha = 0.16f),
+                                containerColor = Color.Transparent
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                borderColor = if (isSelected) colors.accent else colors.divider,
+                                selectedBorderColor = colors.accent,
+                                enabled = true,
+                                selected = isSelected
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                    }
+                }
+
+                SettingsDivider()
+
+                // Tactile Haptics
+                SettingToggleRow(
+                    title = "Tactile Vibration Haptics",
+                    subtitle = "Vibration response for navigation and actions",
+                    icon = Icons.Outlined.Vibration,
+                    checked = hapticFeedbackEnabled,
+                    onCheckedChange = {
+                        if (it) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        settingsRepository.setHapticFeedbackEnabled(it)
+                    }
+                )
             }
 
             // 2. FILES & STORAGE
-            if (selectedCategory == SettingsCategory.ALL || selectedCategory == SettingsCategory.FILES) {
-                SettingsCategorySection(
-                    title = "FILES & STORAGE",
-                    icon = Icons.Outlined.Folder,
-                    badge = "Storage & Engine"
+            SettingsCard(title = "FILES & STORAGE") {
+                // Show Hidden Files
+                SettingToggleRow(
+                    title = "Show Hidden Files & Folders",
+                    subtitle = "Display dotfiles and hidden folders (.nomedia, .hidden)",
+                    icon = Icons.Outlined.Visibility,
+                    checked = showHiddenFiles,
+                    onCheckedChange = { settingsRepository.setShowHiddenFiles(it) }
+                )
+
+                SettingsDivider()
+
+                // Confirm Before Delete
+                SettingToggleRow(
+                    title = "Confirm Before Delete",
+                    subtitle = "Prompt before permanently deleting files",
+                    icon = Icons.Outlined.Delete,
+                    checked = confirmBeforeDelete,
+                    onCheckedChange = { settingsRepository.setConfirmBeforeDelete(it) }
+                )
+
+                SettingsDivider()
+
+                // Cache Cleaner
+                val formattedCache = if (cacheSizeBytes < 1024) {
+                    "$cacheSizeBytes B"
+                } else if (cacheSizeBytes < 1024 * 1024) {
+                    String.format(Locale.US, "%.1f KB", cacheSizeBytes / 1024.0)
+                } else {
+                    String.format(Locale.US, "%.1f MB", cacheSizeBytes / (1024.0 * 1024.0))
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Live System & Storage Diagnostics Box
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = if (isOled) Color(0xFF131620) else colors.surfaceVariant.copy(alpha = 0.45f),
-                        border = BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.4f)),
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(colors.accent.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Outlined.Memory, contentDescription = null, tint = colors.accent, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = diagnostics.deviceName,
-                                        style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 12.sp),
-                                        color = colors.textPrimary
-                                    )
-                                }
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = colors.accent.copy(alpha = 0.15f)
-                                ) {
-                                    Text(
-                                        text = "Android ${diagnostics.androidVersion} (API ${diagnostics.apiLevel})",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = colors.accent,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "Available Storage: ${diagnostics.availableStorageMb / 1024} GB",
-                                    fontSize = 11.5.sp,
-                                    color = colors.textSecondary
-                                )
-                                Text(
-                                    text = "JVM Heap: ${diagnostics.jvmHeapUsedMb} MB / ${diagnostics.jvmHeapMaxMb} MB",
-                                    fontSize = 11.5.sp,
-                                    color = colors.textSecondary
-                                )
-                            }
-                        }
+                        Icon(Icons.Outlined.Storage, contentDescription = null, tint = colors.accent, modifier = Modifier.size(19.dp))
                     }
-
-                    // Show Hidden Files
-                    SettingToggleRow(
-                        title = "Show Hidden Files & Folders",
-                        subtitle = "Display hidden dotfiles and folders (.nomedia, .hidden) in file explorer",
-                        icon = Icons.Outlined.Visibility,
-                        checked = showHiddenFiles,
-                        onCheckedChange = { settingsRepository.setShowHiddenFiles(it) }
-                    )
-
-                    SettingsInnerDivider()
-
-                    // Confirm Before Delete
-                    SettingToggleRow(
-                        title = "Confirm Before Delete",
-                        subtitle = "Require confirmation dialog before permanently removing items from storage",
-                        icon = Icons.Outlined.Delete,
-                        badgeText = "Safe Guard",
-                        checked = confirmBeforeDelete,
-                        onCheckedChange = { settingsRepository.setConfirmBeforeDelete(it) }
-                    )
-
-                    SettingsInnerDivider()
-
-                    // Cache Cleaner
-                    val formattedCache = if (cacheSizeBytes < 1024) {
-                        "$cacheSizeBytes B"
-                    } else if (cacheSizeBytes < 1024 * 1024) {
-                        String.format(Locale.US, "%.1f KB", cacheSizeBytes / 1024.0)
-                    } else {
-                        String.format(Locale.US, "%.1f MB", cacheSizeBytes / (1024.0 * 1024.0))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Thumbnail & Render Cache",
+                            style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
+                            color = colors.textPrimary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Currently used: $formattedCache",
+                            style = typography.caption.copy(fontSize = 12.sp),
+                            color = colors.textSecondary
+                        )
                     }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            val freed = settingsRepository.clearCache(context)
+                            cacheSizeBytes = settingsRepository.getCacheSizeBytes(context)
+                            val freedMb = freed / (1024.0 * 1024.0)
+                            val toastText = if (freedMb >= 0.1) String.format(Locale.US, "Freed %.1f MB", freedMb) else "Cache cleared"
+                            Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.accent,
+                            contentColor = Color.Black
+                        )
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(11.dp))
-                                .background(colors.accent.copy(alpha = 0.12f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Outlined.Storage, contentDescription = null, tint = colors.accent, modifier = Modifier.size(19.dp))
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "Render & Thumbnail Cache",
-                                    style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
-                                    color = colors.textPrimary
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = colors.accent.copy(alpha = 0.16f)
-                                ) {
-                                    Text(
-                                        text = formattedCache,
-                                        fontSize = 10.5.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = colors.accent,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Cached PDF rendering bitmaps, video frames, and album thumbnails",
-                                style = typography.caption.copy(fontSize = 12.sp),
-                                color = colors.textSecondary
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Button(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                val freed = settingsRepository.clearCache(context)
-                                cacheSizeBytes = settingsRepository.getCacheSizeBytes(context)
-                                val freedMb = freed / (1024.0 * 1024.0)
-                                val toastText = if (freedMb >= 0.1) String.format(Locale.US, "Optimized: freed %.1f MB", freedMb) else "Cache cleared"
-                                Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
-                            },
+                        Text("Clear", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+                    }
+                }
+
+                SettingsDivider()
+
+                // Document Folder Access
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(colors.accent.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Outlined.Folder, contentDescription = null, tint = colors.accent, modifier = Modifier.size(19.dp))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Document Folder",
+                            style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
+                            color = colors.textPrimary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = grantedFolderName ?: "None selected",
+                            style = typography.caption.copy(fontSize = 12.sp),
+                            color = colors.textSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedButton(
+                            onClick = { openFolderLauncher.launch(null) },
                             shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = colors.accent,
-                                contentColor = Color.Black
-                            )
+                            border = BorderStroke(1.dp, colors.divider),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
                         ) {
-                            Text("Deep Clean", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                            Text(if (grantedFolderName != null) "Change" else "Select", fontSize = 12.sp, maxLines = 1)
                         }
-                    }
-
-                    SettingsInnerDivider()
-
-                    // Document Folder Grant
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(11.dp))
-                                .background(colors.accent.copy(alpha = 0.12f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Outlined.Folder, contentDescription = null, tint = colors.accent, modifier = Modifier.size(19.dp))
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Document Folder Access",
-                                style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
-                                color = colors.textPrimary
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = grantedFolderName ?: "None selected (System default)",
-                                style = typography.caption.copy(fontSize = 12.sp),
-                                color = colors.textSecondary
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (grantedFolderUri != null && app != null) {
                             OutlinedButton(
-                                onClick = { openFolderLauncher.launch(null) },
+                                onClick = {
+                                    val uri = Uri.parse(grantedFolderUri)
+                                    isScanningFolder = true
+                                    scope.launch {
+                                        val count = FolderScanner.scanTree(context, uri, app.documentRepository)
+                                        isScanningFolder = false
+                                        Toast.makeText(context, "Scanned $count documents", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                enabled = !isScanningFolder,
                                 shape = RoundedCornerShape(10.dp),
                                 border = BorderStroke(1.dp, colors.divider),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent)
                             ) {
-                                Text(if (grantedFolderName != null) "Change" else "Select", fontSize = 12.sp)
-                            }
-                            if (grantedFolderUri != null && app != null) {
-                                OutlinedButton(
-                                    onClick = {
-                                        val uri = Uri.parse(grantedFolderUri)
-                                        isScanningFolder = true
-                                        scope.launch {
-                                            val count = FolderScanner.scanTree(context, uri, app.documentRepository)
-                                            isScanningFolder = false
-                                            Toast.makeText(context, "Scanned $count documents", Toast.LENGTH_SHORT).show()
-                                        }
-                                    },
-                                    enabled = !isScanningFolder,
-                                    shape = RoundedCornerShape(10.dp),
-                                    border = BorderStroke(1.dp, colors.divider),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent)
-                                ) {
-                                    Text(if (isScanningFolder) "…" else "Rescan", fontSize = 12.sp)
-                                }
+                                Text(if (isScanningFolder) "…" else "Rescan", fontSize = 12.sp, maxLines = 1)
                             }
                         }
                     }
@@ -640,529 +482,473 @@ fun SettingsScreen(
             }
 
             // 3. DOCUMENTS & READER
-            if (selectedCategory == SettingsCategory.ALL || selectedCategory == SettingsCategory.DOCS) {
-                SettingsCategorySection(
-                    title = "DOCUMENTS & READER",
-                    icon = Icons.AutoMirrored.Outlined.Article,
-                    badge = "PDF Engine"
+            SettingsCard(title = "DOCUMENTS & READER") {
+                // Default Reading Mode
+                Text(
+                    text = "Default Reading Mode",
+                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+                    color = colors.textSecondary,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Default Reading Mode
-                    Text(
-                        text = "Default Reading Mode",
-                        style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
-                        color = colors.textSecondary,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                    ThemeChip(
+                        label = "Normal",
+                        icon = null,
+                        selected = currentReadingMode == ReadingMode.NORMAL,
+                        onClick = { settingsRepository.setDefaultReadingMode(ReadingMode.NORMAL) }
                     )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        ThemeSelectionChip(
-                            label = "Normal",
-                            icon = null,
-                            selected = currentReadingMode == ReadingMode.NORMAL,
-                            onClick = { settingsRepository.setDefaultReadingMode(ReadingMode.NORMAL) }
-                        )
-                        ThemeSelectionChip(
-                            label = "Dark OLED",
-                            icon = Icons.Outlined.DarkMode,
-                            selected = currentReadingMode == ReadingMode.INVERTED_DARK,
-                            onClick = { settingsRepository.setDefaultReadingMode(ReadingMode.INVERTED_DARK) }
-                        )
-                        ThemeSelectionChip(
-                            label = "Sepia",
-                            icon = null,
-                            selected = currentReadingMode == ReadingMode.SEPIA,
-                            onClick = { settingsRepository.setDefaultReadingMode(ReadingMode.SEPIA) }
-                        )
-                    }
-
-                    SettingsInnerDivider()
-
-                    // PDF Initial Page Fit Mode
-                    Text(
-                        text = "PDF Initial Page Fit",
-                        style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
-                        color = colors.textSecondary,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                    ThemeChip(
+                        label = "Dark",
+                        icon = Icons.Outlined.DarkMode,
+                        selected = currentReadingMode == ReadingMode.INVERTED_DARK,
+                        onClick = { settingsRepository.setDefaultReadingMode(ReadingMode.INVERTED_DARK) }
                     )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        ThemeSelectionChip(
-                            label = "Fit Width (Scrolling)",
-                            icon = null,
-                            selected = pdfFitMode == "FIT_WIDTH",
-                            onClick = { settingsRepository.setPdfFitMode("FIT_WIDTH") }
-                        )
-                        ThemeSelectionChip(
-                            label = "Fit Whole Page",
-                            icon = null,
-                            selected = pdfFitMode == "FIT_PAGE",
-                            onClick = { settingsRepository.setPdfFitMode("FIT_PAGE") }
-                        )
-                    }
-
-                    SettingsInnerDivider()
-
-                    // High-Quality Vector PDF
-                    SettingToggleRow(
-                        title = "High-Quality Vector PDF",
-                        subtitle = "Supersample text and vector geometry for ultra-crisp reading on high-DPI screens",
-                        icon = Icons.Outlined.PictureAsPdf,
-                        badgeText = "Vector HQ",
-                        checked = highQualityPdf,
-                        onCheckedChange = { settingsRepository.setHighQualityPdf(it) }
-                    )
-
-                    SettingsInnerDivider()
-
-                    // Double-Tap Quick Zoom
-                    SettingToggleRow(
-                        title = "Double-Tap Quick Zoom",
-                        subtitle = "Double tap anywhere on the document viewport to instantly jump to 2.5x zoom",
-                        icon = Icons.Outlined.Speed,
-                        checked = doubleTapZoom,
-                        onCheckedChange = { settingsRepository.setDoubleTapZoom(it) }
-                    )
-
-                    SettingsInnerDivider()
-
-                    // Keep Screen Awake
-                    SettingToggleRow(
-                        title = "Keep Screen Awake While Reading",
-                        subtitle = "Prevents display timeout while reading articles or documents",
-                        icon = Icons.Outlined.LightMode,
-                        checked = keepScreenOn,
-                        onCheckedChange = { settingsRepository.setKeepScreenOn(it) }
-                    )
-
-                    SettingsInnerDivider()
-
-                    // Volume Button Page Turning
-                    SettingToggleRow(
-                        title = "Volume Button Page Turning",
-                        subtitle = "Use physical volume up and down keys to flip pages in book view",
-                        icon = Icons.Outlined.Vibration,
-                        checked = volumeKeyTurning,
-                        onCheckedChange = { settingsRepository.setVolumeKeyPageTurning(it) }
+                    ThemeChip(
+                        label = "Sepia",
+                        icon = null,
+                        selected = currentReadingMode == ReadingMode.SEPIA,
+                        onClick = { settingsRepository.setDefaultReadingMode(ReadingMode.SEPIA) }
                     )
                 }
+
+                SettingsDivider()
+
+                // PDF Initial Page Fit Mode
+                Text(
+                    text = "PDF Page Scaling",
+                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+                    color = colors.textSecondary,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ThemeChip(
+                        label = "Fit Width",
+                        icon = null,
+                        selected = pdfFitMode == "FIT_WIDTH",
+                        onClick = { settingsRepository.setPdfFitMode("FIT_WIDTH") }
+                    )
+                    ThemeChip(
+                        label = "Fit Whole Page",
+                        icon = null,
+                        selected = pdfFitMode == "FIT_PAGE",
+                        onClick = { settingsRepository.setPdfFitMode("FIT_PAGE") }
+                    )
+                }
+
+                SettingsDivider()
+
+                // High-Quality Vector PDF
+                SettingToggleRow(
+                    title = "High-Quality Vector PDF",
+                    subtitle = "Supersample text and vectors for crisp reading",
+                    icon = Icons.Outlined.PictureAsPdf,
+                    checked = highQualityPdf,
+                    onCheckedChange = { settingsRepository.setHighQualityPdf(it) }
+                )
+
+                SettingsDivider()
+
+                // Double-Tap Quick Zoom
+                SettingToggleRow(
+                    title = "Double-Tap Quick Zoom",
+                    subtitle = "Double tap document page to jump to 2.5x zoom",
+                    icon = Icons.Outlined.Speed,
+                    checked = doubleTapZoom,
+                    onCheckedChange = { settingsRepository.setDoubleTapZoom(it) }
+                )
+
+                SettingsDivider()
+
+                // Keep Screen Awake
+                SettingToggleRow(
+                    title = "Keep Screen Awake While Reading",
+                    subtitle = "Prevents display timeout while reading documents",
+                    icon = Icons.Outlined.LightMode,
+                    checked = keepScreenOn,
+                    onCheckedChange = { settingsRepository.setKeepScreenOn(it) }
+                )
+
+                SettingsDivider()
+
+                // Volume Button Page Turning
+                SettingToggleRow(
+                    title = "Volume Button Page Turning",
+                    subtitle = "Use volume keys to flip pages in book view",
+                    icon = Icons.Outlined.Vibration,
+                    checked = volumeKeyTurning,
+                    onCheckedChange = { settingsRepository.setVolumeKeyPageTurning(it) }
+                )
             }
 
             // 4. MEDIA & GALLERY
-            if (selectedCategory == SettingsCategory.ALL || selectedCategory == SettingsCategory.MEDIA) {
-                SettingsCategorySection(
-                    title = "MEDIA & GALLERY",
-                    icon = Icons.Outlined.PermMedia,
-                    badge = "VLC & Photo Editor"
+            SettingsCard(title = "MEDIA & GALLERY") {
+                // Photo Editor Export Quality
+                Text(
+                    text = "Photo Editor Export Quality",
+                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+                    color = colors.textSecondary,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Photo Editor Export Quality
-                    Text(
-                        text = "Photo Editor Export Quality",
-                        style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
-                        color = colors.textSecondary,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                    ThemeChip(
+                        label = "High (90%)",
+                        icon = null,
+                        selected = photoEditorQuality == 90,
+                        onClick = { settingsRepository.setPhotoEditorExportQuality(90) }
                     )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        ThemeSelectionChip(
-                            label = "High (90%)",
-                            icon = null,
-                            selected = photoEditorQuality == 90,
-                            onClick = { settingsRepository.setPhotoEditorExportQuality(90) }
-                        )
-                        ThemeSelectionChip(
-                            label = "Ultra (95%)",
-                            icon = null,
-                            selected = photoEditorQuality == 95,
-                            onClick = { settingsRepository.setPhotoEditorExportQuality(95) }
-                        )
-                        ThemeSelectionChip(
-                            label = "Lossless (100%)",
-                            icon = null,
-                            selected = photoEditorQuality == 100,
-                            onClick = { settingsRepository.setPhotoEditorExportQuality(100) }
-                        )
-                    }
-
-                    SettingsInnerDivider()
-
-                    // Hardware Video Acceleration
-                    SettingToggleRow(
-                        title = "Hardware Video Acceleration",
-                        subtitle = "Leverage GPU MediaCodec via VLC engine for smooth 4K 60fps playback",
-                        icon = Icons.Outlined.Memory,
-                        badgeText = "VLC MediaCodec",
-                        checked = videoHwAccel,
-                        onCheckedChange = { settingsRepository.setVideoHardwareAcceleration(it) }
+                    ThemeChip(
+                        label = "Ultra (95%)",
+                        icon = null,
+                        selected = photoEditorQuality == 95,
+                        onClick = { settingsRepository.setPhotoEditorExportQuality(95) }
                     )
-
-                    SettingsInnerDivider()
-
-                    // Auto-Loop Video
-                    SettingToggleRow(
-                        title = "Auto-Loop Video Playback",
-                        subtitle = "Automatically replay video from beginning once it reaches the end",
-                        icon = Icons.Outlined.Refresh,
-                        checked = videoAutoLoop,
-                        onCheckedChange = { settingsRepository.setVideoAutoLoop(it) }
-                    )
-
-                    SettingsInnerDivider()
-
-                    // Auto-Resume Video
-                    SettingToggleRow(
-                        title = "Auto-Resume Video Playback",
-                        subtitle = "Remember and automatically offer to resume where you left off",
-                        icon = Icons.Outlined.Videocam,
-                        checked = autoResumeVideo,
-                        onCheckedChange = { settingsRepository.setAutoResumeVideo(it) }
+                    ThemeChip(
+                        label = "100%",
+                        icon = null,
+                        selected = photoEditorQuality == 100,
+                        onClick = { settingsRepository.setPhotoEditorExportQuality(100) }
                     )
                 }
+
+                SettingsDivider()
+
+                // Hardware Video Acceleration
+                SettingToggleRow(
+                    title = "Hardware Video Acceleration",
+                    subtitle = "Direct GPU MediaCodec via VLC engine",
+                    icon = Icons.Outlined.Memory,
+                    checked = videoHwAccel,
+                    onCheckedChange = { settingsRepository.setVideoHardwareAcceleration(it) }
+                )
+
+                SettingsDivider()
+
+                // Auto-Loop Video
+                SettingToggleRow(
+                    title = "Auto-Loop Video Playback",
+                    subtitle = "Automatically replay video when it ends",
+                    icon = Icons.Outlined.Refresh,
+                    checked = videoAutoLoop,
+                    onCheckedChange = { settingsRepository.setVideoAutoLoop(it) }
+                )
+
+                SettingsDivider()
+
+                // Auto-Resume Video
+                SettingToggleRow(
+                    title = "Auto-Resume Video Playback",
+                    subtitle = "Remember position and offer 1-tap resume",
+                    icon = Icons.Outlined.Videocam,
+                    checked = autoResumeVideo,
+                    onCheckedChange = { settingsRepository.setAutoResumeVideo(it) }
+                )
             }
 
             // 5. PRIVACY & SECURITY
-            if (selectedCategory == SettingsCategory.ALL || selectedCategory == SettingsCategory.SECURITY) {
-                SettingsCategorySection(
-                    title = "PRIVACY & SECURITY",
+            SettingsCard(title = "PRIVACY & SECURITY") {
+                // Biometric Lock
+                SettingToggleRow(
+                    title = "Biometric App Lock",
+                    subtitle = "Require fingerprint or device PIN to open mydoc",
                     icon = Icons.Outlined.Security,
-                    badge = "Protected Vault"
-                ) {
-                    // Biometric Lock
-                    SettingToggleRow(
-                        title = "Biometric App Lock",
-                        subtitle = "Require fingerprint, face unlock, or device PIN to open mydoc",
-                        icon = Icons.Outlined.Security,
-                        badgeText = "Biometric Guard",
-                        checked = biometricLockEnabled,
-                        onCheckedChange = { isChecked ->
-                            if (isChecked) {
-                                val km = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
-                                if (km?.isDeviceSecure == false) {
-                                    Toast.makeText(context, "Set a screen lock in device settings first", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    settingsRepository.setBiometricLockEnabled(true)
-                                }
+                    checked = biometricLockEnabled,
+                    onCheckedChange = { isChecked ->
+                        if (isChecked) {
+                            val km = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+                            if (km?.isDeviceSecure == false) {
+                                Toast.makeText(context, "Set a screen lock in device settings first", Toast.LENGTH_SHORT).show()
                             } else {
-                                settingsRepository.setBiometricLockEnabled(false)
+                                settingsRepository.setBiometricLockEnabled(true)
                             }
+                        } else {
+                            settingsRepository.setBiometricLockEnabled(false)
                         }
-                    )
+                    }
+                )
 
-                    SettingsInnerDivider()
+                SettingsDivider()
 
-                    // Auto-Lock Vault on Background
-                    SettingToggleRow(
-                        title = "Auto-Lock Safe Vault on Exit",
-                        subtitle = "Instantly seal encrypted vault files when mydoc is switched to background",
-                        icon = Icons.Outlined.Lock,
-                        badgeText = "AES-256",
-                        checked = autoLockVault,
-                        onCheckedChange = { settingsRepository.setAutoLockVaultOnBackground(it) }
-                    )
-                }
+                // Auto-Lock Vault on Background
+                SettingToggleRow(
+                    title = "Auto-Lock Safe Vault on Exit",
+                    subtitle = "Seal encrypted vault files when app is minimized",
+                    icon = Icons.Outlined.Lock,
+                    checked = autoLockVault,
+                    onCheckedChange = { settingsRepository.setAutoLockVaultOnBackground(it) }
+                )
             }
 
-            // 6. UPDATES & ABOUT
-            if (selectedCategory == SettingsCategory.ALL || selectedCategory == SettingsCategory.ABOUT) {
-                SettingsCategorySection(
-                    title = "UPDATES & ABOUT",
-                    icon = Icons.Outlined.Info,
-                    badge = "GitHub Releases"
-                ) {
-                    when (val state = updateState) {
-                        is UpdateUiState.Idle -> {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Software Updates",
-                                        style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
-                                        color = colors.textPrimary
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = "Check for latest OTA release APK on GitHub",
-                                        style = typography.caption.copy(fontSize = 12.sp),
-                                        color = colors.textSecondary
-                                    )
-                                }
-                                Button(
-                                    onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = colors.accent,
-                                        contentColor = Color.Black
-                                    )
-                                ) {
-                                    Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Check", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
-                                }
-                            }
-                        }
-
-                        is UpdateUiState.Checking -> {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp,
-                                    color = colors.accent
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
+            // 6. ABOUT & UPDATES
+            SettingsCard(title = "ABOUT & UPDATES") {
+                when (val state = updateState) {
+                    is UpdateUiState.Idle -> {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Checking GitHub Releases…",
-                                    style = typography.body.copy(fontSize = 13.5.sp),
+                                    text = "Software Updates",
+                                    style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
+                                    color = colors.textPrimary
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Current version: v${updateManager.currentVersionName}",
+                                    style = typography.caption.copy(fontSize = 12.sp),
                                     color = colors.textSecondary
                                 )
                             }
-                        }
-
-                        is UpdateUiState.NoUpdate -> {
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "mydoc is up to date (v${state.currentVersion})",
-                                        style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
-                                        color = colors.textPrimary
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Row {
-                                    OutlinedButton(
-                                        onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
-                                        shape = RoundedCornerShape(10.dp),
-                                        border = BorderStroke(0.8.dp, colors.divider),
-                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
-                                    ) {
-                                        Text("Check again", fontSize = 12.sp)
-                                    }
-                                    if (state.latestRelease != null) {
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        OutlinedButton(
-                                            onClick = { scope.launch { updateManager.downloadAndInstall(state.latestRelease) } },
-                                            shape = RoundedCornerShape(10.dp),
-                                            border = BorderStroke(0.8.dp, colors.divider),
-                                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent)
-                                        ) {
-                                            Text("Reinstall APK", fontSize = 12.sp)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        is UpdateUiState.UpdateAvailable -> {
-                            val release = state.release
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.SystemUpdate,
-                                        contentDescription = null,
-                                        tint = colors.accent
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "Version ${release.versionName} available",
-                                        style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
-                                        color = colors.textPrimary
-                                    )
-                                }
-
-                                if (release.releaseNotes.isNotBlank()) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = release.releaseNotes,
-                                        style = typography.body.copy(fontSize = 12.5.sp),
-                                        color = colors.textSecondary
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                Button(
-                                    onClick = { scope.launch { updateManager.downloadAndInstall(release) } },
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = colors.accent,
-                                        contentColor = Color.Black
-                                    )
-                                ) {
-                                    val sizeText = if (release.apkSizeBytes > 0) {
-                                        val mb = release.apkSizeBytes / (1024.0 * 1024.0)
-                                        String.format(Locale.US, " (%.1f MB)", mb)
-                                    } else ""
-                                    Text("Download & Install$sizeText", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
-                                }
-                            }
-                        }
-
-                        is UpdateUiState.Downloading -> {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = "Downloading update: ${state.progressPercent}%",
-                                    style = typography.body.copy(fontWeight = FontWeight.Medium, fontSize = 13.5.sp),
-                                    color = colors.textPrimary
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colors.accent,
+                                    contentColor = Color.Black
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                LinearProgressIndicator(
-                                    progress = { if (state.totalBytes > 0) state.downloadedBytes.toFloat() / state.totalBytes else 0f },
-                                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                                    color = colors.accent,
-                                    trackColor = colors.divider
-                                )
-                            }
-                        }
-
-                        is UpdateUiState.ReadyToInstall -> {
-                            Column {
-                                Text(
-                                    text = "Download complete for v${state.release.versionName}.",
-                                    style = typography.body.copy(fontSize = 13.5.sp),
-                                    color = colors.textPrimary
-                                )
-                                Spacer(modifier = Modifier.height(10.dp))
-
-                                if (!updateManager.installerHelper.canInstallUnknownApps()) {
-                                    Text(
-                                        text = "Permission required: Android requires you to allow mydoc to install update APKs.",
-                                        style = typography.caption,
-                                        color = colors.accent
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Button(
-                                        onClick = {
-                                            val intent = updateManager.installerHelper.createManageUnknownAppSourcesIntent()
-                                            context.startActivity(intent)
-                                        },
-                                        shape = RoundedCornerShape(10.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = colors.accent, contentColor = Color.Black)
-                                    ) {
-                                        Text("Grant Permission in Settings", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
-                                    }
-                                } else {
-                                    Button(
-                                        onClick = { updateManager.installerHelper.installApk(state.apkFile) },
-                                        shape = RoundedCornerShape(10.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = colors.accent, contentColor = Color.Black)
-                                    ) {
-                                        Text("Install Update", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
-                                    }
-                                }
-                            }
-                        }
-
-                        is UpdateUiState.Error -> {
-                            Column {
-                                Text(
-                                    text = state.message,
-                                    style = typography.body.copy(fontSize = 13.sp),
-                                    color = colors.error
-                                )
-                                Spacer(modifier = Modifier.height(10.dp))
-                                OutlinedButton(
-                                    onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
-                                    shape = RoundedCornerShape(10.dp),
-                                    border = BorderStroke(0.8.dp, colors.divider),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
-                                ) {
-                                    Text("Retry", fontSize = 12.sp)
-                                }
+                            ) {
+                                Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Check", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
                             }
                         }
                     }
 
-                    SettingsInnerDivider()
-
-                    // App Info & Shortcuts
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text(
-                                text = "mydoc Hub",
-                                style = typography.body.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
-                                color = colors.textPrimary
+                    is UpdateUiState.Checking -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = colors.accent
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = "Package: ${context.packageName} • v${updateManager.currentVersionName}",
-                                style = typography.caption.copy(fontSize = 11.5.sp),
+                                text = "Checking GitHub Releases…",
+                                style = typography.body.copy(fontSize = 13.5.sp),
                                 color = colors.textSecondary
                             )
                         }
+                    }
 
-                        OutlinedButton(
-                            onClick = {
-                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                    data = Uri.fromParts("package", context.packageName, null)
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
-                                context.startActivity(intent)
-                            },
-                            shape = RoundedCornerShape(10.dp),
-                            border = BorderStroke(0.8.dp, colors.divider),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
-                        ) {
-                            Icon(Icons.AutoMirrored.Outlined.Launch, contentDescription = null, modifier = Modifier.size(15.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("App Info", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    is UpdateUiState.NoUpdate -> {
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "mydoc is up to date (v${state.currentVersion})",
+                                    style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
+                                    color = colors.textPrimary
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                            OutlinedButton(
+                                onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(0.8.dp, colors.divider),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
+                            ) {
+                                Text("Check again", fontSize = 12.sp, maxLines = 1)
+                            }
                         }
                     }
 
-                    if (isLegacyDebugInstalled) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(if (isOled) Color(0xFF141418) else colors.surfaceVariant)
-                                .border(
-                                    BorderStroke(
-                                        0.75.dp,
-                                        if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.6f)
-                                    ),
-                                    RoundedCornerShape(14.dp)
-                                )
-                                .padding(12.dp)
-                        ) {
-                            Column {
+                    is UpdateUiState.UpdateAvailable -> {
+                        val release = state.release
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Outlined.SystemUpdate, contentDescription = null, tint = colors.accent)
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Old Duplicate App Detected",
-                                    style = typography.body.copy(fontWeight = FontWeight.SemiBold),
+                                    text = "Version ${release.versionName} available",
+                                    style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
                                     color = colors.textPrimary
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "An old preview build is installed. Tap below to remove it.",
-                                    style = typography.caption,
-                                    color = colors.textSecondary
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Button(
+                                onClick = { scope.launch { updateManager.downloadAndInstall(release) } },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colors.accent,
+                                    contentColor = Color.Black
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Button(
-                                    onClick = {
-                                        val uninstallIntent = Intent(Intent.ACTION_DELETE).apply {
-                                            data = Uri.parse("package:com.abhisheksati.mydoc.debug")
-                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        }
-                                        context.startActivity(uninstallIntent)
-                                    },
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = colors.accent)
-                                ) {
-                                    Text("Uninstall Duplicate", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                }
+                            ) {
+                                val sizeText = if (release.apkSizeBytes > 0) {
+                                    val mb = release.apkSizeBytes / (1024.0 * 1024.0)
+                                    String.format(Locale.US, " (%.1f MB)", mb)
+                                } else ""
+                                Text("Download & Install$sizeText", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+                            }
+                        }
+                    }
+
+                    is UpdateUiState.Downloading -> {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = "Downloading: ${state.progressPercent}%",
+                                style = typography.body.copy(fontWeight = FontWeight.Medium, fontSize = 13.5.sp),
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LinearProgressIndicator(
+                                progress = { if (state.totalBytes > 0) state.downloadedBytes.toFloat() / state.totalBytes else 0f },
+                                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                                color = colors.accent,
+                                trackColor = colors.divider
+                            )
+                        }
+                    }
+
+                    is UpdateUiState.ReadyToInstall -> {
+                        Column {
+                            Text(
+                                text = "Download complete for v${state.release.versionName}.",
+                                style = typography.body.copy(fontSize = 13.5.sp),
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Button(
+                                onClick = {
+                                    if (!updateManager.installerHelper.canInstallUnknownApps()) {
+                                        val intent = updateManager.installerHelper.createManageUnknownAppSourcesIntent()
+                                        context.startActivity(intent)
+                                    } else {
+                                        updateManager.installerHelper.installApk(state.apkFile)
+                                    }
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = colors.accent, contentColor = Color.Black)
+                            ) {
+                                Text("Install Update", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+                            }
+                        }
+                    }
+
+                    is UpdateUiState.Error -> {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = state.message,
+                                style = typography.body.copy(fontSize = 12.sp),
+                                color = colors.error,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            OutlinedButton(
+                                onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(0.8.dp, colors.divider),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
+                            ) {
+                                Text("Retry", fontSize = 12.sp, maxLines = 1)
+                            }
+                        }
+                    }
+                }
+
+                SettingsDivider()
+
+                // App Info Shortcut
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(colors.accent.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Outlined.Info, contentDescription = null, tint = colors.accent, modifier = Modifier.size(19.dp))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "mydoc",
+                            style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
+                            color = colors.textPrimary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Version ${updateManager.currentVersionName}",
+                            style = typography.caption.copy(fontSize = 12.sp),
+                            color = colors.textSecondary
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(0.8.dp, colors.divider),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
+                    ) {
+                        Icon(Icons.AutoMirrored.Outlined.Launch, contentDescription = null, modifier = Modifier.size(15.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("App Info", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    }
+                }
+
+                if (isLegacyDebugInstalled) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (isOled) Color(0xFF141418) else colors.surfaceVariant)
+                            .border(
+                                BorderStroke(
+                                    0.75.dp,
+                                    if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.6f)
+                                ),
+                                RoundedCornerShape(14.dp)
+                            )
+                            .padding(12.dp)
+                    ) {
+                        Column {
+                            Text(
+                                text = "Old Preview App Installed",
+                                style = typography.body.copy(fontWeight = FontWeight.SemiBold),
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "An old preview build is installed. Tap below to remove it.",
+                                style = typography.caption,
+                                color = colors.textSecondary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(
+                                onClick = {
+                                    val uninstallIntent = Intent(Intent.ACTION_DELETE).apply {
+                                        data = Uri.parse("package:com.abhisheksati.mydoc.debug")
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(uninstallIntent)
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = colors.accent)
+                            ) {
+                                Text("Uninstall Duplicate", fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
                             }
                         }
                     }
@@ -1175,7 +961,7 @@ fun SettingsScreen(
 /**
  * High-Contrast Accent Glow Toggle Switch.
  * - Solid vibrant accent track with pure white thumb when ON.
- * - Crisp slate track with high-contrast thumb and defined border when OFF (never vague or washed out).
+ * - Crisp slate track with high-contrast thumb and defined border when OFF.
  */
 @Composable
 private fun HighContrastSettingSwitch(
@@ -1208,7 +994,7 @@ private fun HighContrastSettingSwitch(
 }
 
 /**
- * Premium row item with rounded tinted icon badge, title, optional contextual badge, and high-contrast toggle.
+ * Clean, consistent toggle row with zero visual noise.
  */
 @Composable
 private fun SettingToggleRow(
@@ -1218,7 +1004,6 @@ private fun SettingToggleRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    badgeText: String? = null,
     enabled: Boolean = true
 ) {
     val colors = LocalAppColors.current
@@ -1228,7 +1013,7 @@ private fun SettingToggleRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(10.dp))
             .clickable(enabled = enabled) { onCheckedChange(!checked) }
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -1236,7 +1021,7 @@ private fun SettingToggleRow(
         Box(
             modifier = Modifier
                 .size(38.dp)
-                .clip(RoundedCornerShape(11.dp))
+                .clip(RoundedCornerShape(10.dp))
                 .background(if (checked) colors.accent.copy(alpha = 0.16f) else (if (isOled) Color(0xFF161922) else colors.surfaceVariant)),
             contentAlignment = Alignment.Center
         ) {
@@ -1251,29 +1036,11 @@ private fun SettingToggleRow(
         Spacer(modifier = Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = title,
-                    style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
-                    color = colors.textPrimary
-                )
-                if (badgeText != null) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = colors.accent.copy(alpha = 0.15f),
-                        border = BorderStroke(0.6.dp, colors.accent.copy(alpha = 0.4f))
-                    ) {
-                        Text(
-                            text = badgeText,
-                            fontSize = 9.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = colors.accent,
-                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.5.dp)
-                        )
-                    }
-                }
-            }
+            Text(
+                text = title,
+                style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
+                color = colors.textPrimary
+            )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
@@ -1293,13 +1060,11 @@ private fun SettingToggleRow(
 }
 
 /**
- * Card section container with icon, section title, and optional badge.
+ * Clean, minimal card section without gimmicky pill badges.
  */
 @Composable
-private fun SettingsCategorySection(
+private fun SettingsCard(
     title: String,
-    icon: ImageVector,
-    badge: String? = null,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -1307,57 +1072,20 @@ private fun SettingsCategorySection(
     val typography = LocalAppTypography.current
     val isOled = colors.background == DarkAppColors.background
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-    ) {
-        // Section Title Header
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 4.dp, bottom = 8.dp, top = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(15.dp),
-                    tint = colors.accent
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = title,
-                    style = typography.caption.copy(
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
-                    ),
-                    color = colors.textSecondary
-                )
-            }
-            if (badge != null) {
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (isOled) Color(0xFF161922) else colors.surfaceVariant,
-                    border = BorderStroke(0.6.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.4f))
-                ) {
-                    Text(
-                        text = badge,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = colors.textSecondary,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
-            }
-        }
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = title,
+            style = typography.caption.copy(
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp
+            ),
+            color = colors.textSecondary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+        )
 
-        // Section Content Card
         Surface(
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(18.dp),
             color = if (isOled) Color(0xFF0F1015) else colors.surface,
             border = BorderStroke(
                 1.dp,
@@ -1377,7 +1105,7 @@ private fun SettingsCategorySection(
 }
 
 @Composable
-private fun SettingsInnerDivider() {
+private fun SettingsDivider() {
     val colors = LocalAppColors.current
     HorizontalDivider(
         color = colors.divider.copy(alpha = 0.4f),
@@ -1386,7 +1114,7 @@ private fun SettingsInnerDivider() {
 }
 
 @Composable
-private fun ThemeSelectionChip(
+private fun ThemeChip(
     label: String,
     icon: ImageVector?,
     selected: Boolean,
@@ -1396,7 +1124,7 @@ private fun ThemeSelectionChip(
     FilterChip(
         selected = selected,
         onClick = onClick,
-        label = { Text(label, color = if (selected) colors.accent else colors.textPrimary, fontSize = 12.sp) },
+        label = { Text(label, color = if (selected) colors.accent else colors.textPrimary, fontSize = 12.sp, maxLines = 1) },
         leadingIcon = if (icon != null) {
             {
                 Icon(
