@@ -27,13 +27,19 @@ object ScanFilterEngine {
      * Applies the chosen [ScanFilter] to [src] and returns a new processed [Bitmap].
      */
     suspend fun applyFilter(src: Bitmap, filter: ScanFilter): Bitmap = withContext(Dispatchers.Default) {
-        when (filter) {
-            ScanFilter.ORIGINAL -> src
-            ScanFilter.GRAYSCALE -> applyColorMatrix(src, grayscaleMatrix())
-            ScanFilter.BLACK_WHITE -> applyDocumentThreshold(src)
-            ScanFilter.AUTO -> applyColorMatrix(src, autoEnhanceMatrix())
-            ScanFilter.COLOR_ENHANCE -> applyColorMatrix(src, colorEnhanceMatrix())
-            ScanFilter.SHADOW_REMOVAL -> removeDocumentShadows(src)
+        if (src.isRecycled) return@withContext src
+        try {
+            when (filter) {
+                ScanFilter.ORIGINAL -> src
+                ScanFilter.GRAYSCALE -> applyColorMatrix(src, grayscaleMatrix())
+                ScanFilter.BLACK_WHITE -> applyDocumentThreshold(src)
+                ScanFilter.AUTO -> applyColorMatrix(src, autoEnhanceMatrix())
+                ScanFilter.COLOR_ENHANCE -> applyColorMatrix(src, colorEnhanceMatrix())
+                ScanFilter.SHADOW_REMOVAL -> removeDocumentShadows(src)
+            }
+        } catch (_: OutOfMemoryError) {
+            // Under memory pressure, return source bitmap safely
+            src
         }
     }
 

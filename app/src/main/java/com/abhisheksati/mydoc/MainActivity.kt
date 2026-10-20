@@ -81,7 +81,11 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
+        const val ACTION_QUICK_SCAN = "com.abhisheksati.mydoc.action.QUICK_SCAN"
+        const val ACTION_WIFI_TRANSFER = "com.abhisheksati.mydoc.action.WIFI_TRANSFER"
         val pageTurnEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
+        val quickScanEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        val openWifiTransferEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     }
 
     private val homeViewModel: HomeViewModel by viewModels {
@@ -110,6 +114,7 @@ class MainActivity : ComponentActivity() {
     private var isSettingsOpen by mutableStateOf(false)
     private var isDesignSystemPreviewOpen by mutableStateOf(false)
     private var isAppUnlocked by mutableStateOf(true)
+    private var showWifiSharingSheet by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -403,6 +408,15 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+
+                if (showWifiSharingSheet) {
+                    val app = application as MyDocApp
+                    com.abhisheksati.mydoc.ui.network.WifiSharingSheet(
+                        wifiServerManager = app.wifiServerManager,
+                        rootDirectory = android.os.Environment.getExternalStorageDirectory(),
+                        onDismiss = { showWifiSharingSheet = false }
+                    )
+                }
             }
         }
     }
@@ -451,6 +465,15 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIncomingIntent(intent: Intent?) {
         if (intent == null) return
+
+        if (intent.action == ACTION_QUICK_SCAN) {
+            quickScanEvents.tryEmit(Unit)
+            return
+        }
+        if (intent.action == ACTION_WIFI_TRANSFER) {
+            showWifiSharingSheet = true
+            return
+        }
 
         val uri: Uri? = when (intent.action) {
             Intent.ACTION_VIEW -> intent.data
@@ -563,7 +586,9 @@ class MainActivity : ComponentActivity() {
         }
 
         // 3. Document or Code/Text
-        val isDocument = name.endsWith(".pdf") || name.endsWith(".docx") || name.endsWith(".doc") ||
+        val isDocument = name.endsWith(".pdf") || name.endsWith(".epub") || name.endsWith(".xps") ||
+                name.endsWith(".oxps") || name.endsWith(".cbz") ||
+                name.endsWith(".docx") || name.endsWith(".doc") ||
                 name.endsWith(".xlsx") || name.endsWith(".xls") || name.endsWith(".csv") ||
                 name.endsWith(".pptx") || name.endsWith(".ppt") || name.endsWith(".txt") ||
                 name.endsWith(".md") || name.endsWith(".json") || name.endsWith(".xml") ||

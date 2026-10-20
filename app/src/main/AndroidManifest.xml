@@ -80,8 +80,12 @@
                 <data android:scheme="content" />
                 <data android:scheme="file" />
 
-                <!-- PDF -->
+                <!-- PDF & E-Books -->
                 <data android:mimeType="application/pdf" />
+                <data android:mimeType="application/epub+zip" />
+                <data android:mimeType="application/x-cbz" />
+                <data android:mimeType="application/oxps" />
+                <data android:mimeType="application/vnd.ms-xpsdocument" />
 
                 <!-- Word -->
                 <data android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
@@ -145,6 +149,30 @@
                 <data android:mimeType="audio/*" />
             </intent-filter>
         </activity>
+
+        <!-- Quick Settings Tile: Instant Camera Document Scanner -->
+        <service
+            android:name=".tiles.ScanTileService"
+            android:label="@string/tile_scan_doc"
+            android:icon="@drawable/ic_tile_scanner"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- Quick Settings Tile: Instant PC Wi-Fi File Transfer -->
+        <service
+            android:name=".tiles.WifiTransferTileService"
+            android:label="@string/tile_wifi_transfer"
+            android:icon="@drawable/ic_tile_wifi"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

@@ -37,6 +37,7 @@ import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.AllInclusive
+import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Description
@@ -237,6 +238,7 @@ fun DocumentsTabContent(
                         val docCategories = listOf(
                             DocumentNavCategory(DocumentCategory.ALL, Icons.Outlined.AllInclusive, colors.accent, "All"),
                             DocumentNavCategory(DocumentCategory.PDF, Icons.Outlined.PictureAsPdf, DocumentFormatColors.pdfTint, "PDF"),
+                            DocumentNavCategory(DocumentCategory.EPUB, Icons.Outlined.Book, Color(0xFFAB47BC), "E-Books"),
                             DocumentNavCategory(DocumentCategory.WORD, Icons.Outlined.Description, DocumentFormatColors.wordTint, "Word"),
                             DocumentNavCategory(DocumentCategory.EXCEL, Icons.Outlined.TableChart, DocumentFormatColors.excelTint, "Excel"),
                             DocumentNavCategory(DocumentCategory.PPT, Icons.Outlined.Slideshow, DocumentFormatColors.pptTint, "PPT"),
@@ -456,6 +458,7 @@ fun DocumentsTabContent(
                             DocumentCategory.ALL -> "ALL DOCUMENTS"
                             DocumentCategory.FAVORITES -> "FAVORITES"
                             DocumentCategory.PDF -> "PDF DOCUMENTS"
+                            DocumentCategory.EPUB -> "E-BOOKS & EPUB"
                             DocumentCategory.WORD -> "WORD DOCUMENTS"
                             DocumentCategory.EXCEL -> "EXCEL SPREADSHEETS"
                             DocumentCategory.PPT -> "POWERPOINT PRESENTATIONS"

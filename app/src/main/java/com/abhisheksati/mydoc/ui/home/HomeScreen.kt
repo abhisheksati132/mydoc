@@ -226,6 +226,13 @@ fun HomeScreen(
         }
     )
 
+    // Trigger instant scanning when launched from Quick Settings tile
+    LaunchedEffect(Unit) {
+        com.abhisheksati.mydoc.MainActivity.quickScanEvents.collect {
+            documentScanner()
+        }
+    }
+
     // Navigate back to FILES tab when pressing Back on secondary tabs
     BackHandler(enabled = currentTab != HomeTab.FILES && !showCameraScanner && !showSignaturePad && selectedDocForDetails == null && !showClearRecentsDialog && !(fileManagerUiState?.isTrashOpen == true)) {
         viewModel.selectTab(HomeTab.FILES)

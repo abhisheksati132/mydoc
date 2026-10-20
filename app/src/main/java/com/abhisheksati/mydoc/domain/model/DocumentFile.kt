@@ -27,6 +27,9 @@ data class DocumentFile(
     val typeBadge: String
         get() = when (extension) {
             "pdf" -> "PDF"
+            "epub" -> "EPUB"
+            "xps", "oxps" -> "XPS"
+            "cbz" -> "CBZ"
             "docx", "doc" -> "WORD"
             "xlsx", "xls" -> "EXCEL"
             "pptx", "ppt", "ppsx", "pps", "potx", "pot" -> "PPT"
@@ -38,6 +41,7 @@ data class DocumentFile(
     val category: DocumentCategory
         get() = when (extension) {
             "pdf" -> DocumentCategory.PDF
+            "epub", "xps", "oxps", "cbz", "fb2" -> DocumentCategory.EPUB
             "docx", "doc" -> DocumentCategory.WORD
             "xlsx", "xls", "csv" -> DocumentCategory.EXCEL
             "pptx", "ppt", "ppsx", "pps", "potx", "pot" -> DocumentCategory.PPT

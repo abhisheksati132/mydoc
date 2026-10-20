@@ -53,6 +53,7 @@ class HomeViewModel(
         val sourceList = when (category) {
             DocumentCategory.FAVORITES -> favorites
             DocumentCategory.PDF -> recents.filter { it.category == DocumentCategory.PDF }
+            DocumentCategory.EPUB -> recents.filter { it.category == DocumentCategory.EPUB }
             DocumentCategory.WORD -> recents.filter { it.category == DocumentCategory.WORD }
             DocumentCategory.EXCEL -> recents.filter { it.category == DocumentCategory.EXCEL }
             DocumentCategory.PPT -> recents.filter { it.category == DocumentCategory.PPT }

@@ -26,6 +26,9 @@
 
 * **🎨 Content-First Design System**: Hand-tuned **AMOLED Pure Black (`#000000`)** and **Crisp Material White (`#FFFFFF`)** palettes, fluid edge-to-edge Compose layouts, and a floating glassmorphic dock.
 * **📄 Vector-Sharp Document Engine**: Powered by **Artifex MuPDF Fitz** for desktop-grade sub-pixel rendering, smooth fling momentum, and pinch-to-zoom up to 500%.
+* **📚 E-Book & EPUB Support**: Native rendering for `.epub`, `.xps`, `.oxps`, and `.cbz` with outline TOC navigation and reading progress restoration.
+* **🌙 AMOLED PDF Inversion & Reading Shaders**: Instant zero-latency color inversion (pure black background with crisp white text), Sepia, and Eye-Comfort reading modes.
+* **⚡ Android Quick Settings Tiles**: Notification drawer tiles for **Quick Scan** (instant camera scanner) and **PC Wi-Fi** (one-tap local wireless server).
 * **📊 2D High-Performance Spreadsheets**: Custom virtualized 2D grid viewer for `.xlsx` and `.csv` with frozen row/column headers, multi-sheet tabs, and cell-level search.
 * **🎬 LibVLC 3.6.5 Hardware-Accelerated Media**: Full-codec video and audio player with gesture controls, multi-track audio/subtitles, and 200% audio boost.
 * **🔒 Hardware-Backed Safe Vault**: AES-256-GCM encryption with biometric authentication, in-memory decryption previews, and multi-pass DoD-grade zero-fill shredding.
@@ -40,12 +43,13 @@
 
 | Format | Extension | Rendering Engine | Capabilities |
 | :--- | :--- | :--- | :--- |
-| **PDF** | `.pdf` | **Artifex MuPDF Fitz** | Sub-pixel vector rasterization, pinch-to-zoom (up to 500%), vertical continuous scroll, horizontal page-flip, dual-page book spread, full-text search with bounding highlights, table of contents/outline drawer, thumbnail strip, password unlocking, and on-device OCR text extraction. |
+| **PDF** | `.pdf` | **Artifex MuPDF Fitz** | Sub-pixel vector rasterization, pinch-to-zoom (up to 500%), vertical continuous scroll, horizontal page-flip, dual-page book spread, full-text search with bounding highlights, table of contents/outline drawer, thumbnail strip, password unlocking, AMOLED color inversion, and on-device OCR text extraction. |
+| **E-Books** | `.epub`, `.xps`, `.cbz` | **MuPDF Fitz** | Reflowable book viewing, outline chapter navigation, reading progress memory, and night reading modes. |
 | **Word** | `.docx`, `.doc` | **MuPDF Fitz / HTML5 Engine** | Smooth layout rendering, fling scrolling, pinch-zoom, and in-document text search. |
 | **PowerPoint**| `.pptx`, `.ppt` | **MuPDF Fitz / Native** | High-fidelity slide-by-slide viewing, swipe navigation, and thumbnail slide strip. |
 | **Excel & CSV**| `.xlsx`, `.csv`, `.tsv` | **Custom Virtualized 2D Grid** | High-performance streaming OpenXML reader, frozen column headers (`A, B, C...`), frozen row headers (`1, 2, 3...`), multi-sheet tab switcher, auto-calculated column widths, and in-sheet cell search. |
 | **Plain Text** | `.txt`, `.md`, `.log` | **Native Text Engine** | Instant file loading, dynamic typography scaling, and search highlighting. |
-| **PDF Tools** | `.pdf` | **On-Device PDF Engine** | Merge multiple PDFs, split ranges, compress file size, reorder/rotate pages, digital signature canvas, and camera paper scanner with auto-edge detection. |
+| **PDF Tools** | `.pdf` | **On-Device PDF Engine** | Merge multiple PDFs, split ranges, compress file size, reorder/rotate pages, digital signature canvas, and camera paper scanner with memory-safe perspective deskewing. |
 
 ---
 

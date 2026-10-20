@@ -251,6 +251,22 @@ fun PdfViewerScreen(
         }
     }
 
+    // Restore saved reading progress when document loading completes
+    var hasRestoredSavedPosition by remember(document.uri) { mutableStateOf(false) }
+    LaunchedEffect(state.isLoading, state.pageCount) {
+        if (!state.isLoading && state.pageCount > 0 && !hasRestoredSavedPosition) {
+            val target = state.currentPage.coerceIn(0, state.pageCount - 1)
+            if (target > 0) {
+                if (state.isContinuousScroll) {
+                    lazyListState.scrollToItem(target)
+                } else {
+                    pagerState.scrollToPage(target)
+                }
+            }
+            hasRestoredSavedPosition = true
+        }
+    }
+
     val pageBgColor = when (state.readingMode) {
         ReadingMode.INVERTED_DARK -> Color(0xFF000000)
         ReadingMode.SEPIA -> Color(0xFFF4ECD8)
@@ -903,6 +919,34 @@ private fun PageItemView(
         ReadingMode.NORMAL -> Color(0xFFFAFAFC)
     }
 
+    val pageColorFilter = when (readingMode) {
+        ReadingMode.INVERTED_DARK -> androidx.compose.ui.graphics.ColorFilter.colorMatrix(
+            androidx.compose.ui.graphics.ColorMatrix(floatArrayOf(
+                -1f,  0f,  0f, 0f, 255f,
+                 0f, -1f,  0f, 0f, 255f,
+                 0f,  0f, -1f, 0f, 255f,
+                 0f,  0f,  0f, 1f,   0f
+            ))
+        )
+        ReadingMode.SEPIA -> androidx.compose.ui.graphics.ColorFilter.colorMatrix(
+            androidx.compose.ui.graphics.ColorMatrix(floatArrayOf(
+                0.393f, 0.769f, 0.189f, 0f, 0f,
+                0.349f, 0.686f, 0.168f, 0f, 0f,
+                0.272f, 0.534f, 0.131f, 0f, 0f,
+                0f,     0f,     0f,     1f, 0f
+            ))
+        )
+        ReadingMode.EYE_COMFORT -> androidx.compose.ui.graphics.ColorFilter.colorMatrix(
+            androidx.compose.ui.graphics.ColorMatrix(floatArrayOf(
+                1.0f,  0f,    0f,    0f, 0f,
+                0f,    0.93f, 0f,    0f, 0f,
+                0f,    0f,    0.82f, 0f, 0f,
+                0f,    0f,    0f,    1f, 0f
+            ))
+        )
+        ReadingMode.NORMAL -> null
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -922,6 +966,7 @@ private fun PageItemView(
             Image(
                 bitmap = bmp.asImageBitmap(),
                 contentDescription = "Page ${pageIndex + 1}",
+                colorFilter = pageColorFilter,
                 modifier = Modifier.fillMaxSize()
             )
 
