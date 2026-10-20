@@ -106,6 +106,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import java.io.File
@@ -531,7 +532,10 @@ fun CameraScanSheet(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         contentPadding = PaddingValues(horizontal = 4.dp)
                     ) {
-                        itemsIndexed(capturedFiles) { idx, file ->
+                        itemsIndexed(
+                            items = capturedFiles,
+                            key = { _, file -> file.absolutePath }
+                        ) { idx, file ->
                             Box(
                                 modifier = Modifier
                                     .size(width = 54.dp, height = 72.dp)
@@ -542,7 +546,13 @@ fun CameraScanSheet(
                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         scope.launch(Dispatchers.IO) {
                                             try {
-                                                val bmp = BitmapFactory.decodeFile(file.absolutePath)
+                                                val boundsOpts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                                                BitmapFactory.decodeFile(file.absolutePath, boundsOpts)
+                                                val maxDim = maxOf(boundsOpts.outWidth, boundsOpts.outHeight)
+                                                var sampleSize = 1
+                                                while (maxDim / sampleSize > 2048) { sampleSize *= 2 }
+                                                val decodeOpts = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+                                                val bmp = BitmapFactory.decodeFile(file.absolutePath, decodeOpts)
                                                 if (bmp != null) {
                                                     withContext(Dispatchers.Main) {
                                                         editingPageForCrop = idx to bmp
@@ -553,7 +563,11 @@ fun CameraScanSheet(
                                     }
                             ) {
                                 AsyncImage(
-                                    model = file,
+                                    model = ImageRequest.Builder(context)
+                                        .data(file)
+                                        .size(160, 215)
+                                        .crossfade(true)
+                                        .build(),
                                     contentDescription = "Page ${idx + 1}",
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop
@@ -735,6 +749,10 @@ fun CameraScanSheet(
                                                             filtered.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, out)
                                                             out.flush()
                                                         }
+                                                        if (filtered != bmp) {
+                                                            filtered.recycle()
+                                                        }
+                                                        bmp.recycle()
                                                     }
                                                     withContext(Dispatchers.Main) {
                                                         isApplyingFilterAndSaving = false

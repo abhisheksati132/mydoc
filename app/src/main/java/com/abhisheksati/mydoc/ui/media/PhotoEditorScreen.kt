@@ -176,7 +176,7 @@ fun PhotoEditorScreen(
 
                 val maxDim = maxOf(boundsOpts.outWidth, boundsOpts.outHeight)
                 var sampleSize = 1
-                while (maxDim / sampleSize > 3840) {
+                while (maxDim / sampleSize > 2048) {
                     sampleSize *= 2
                 }
 
@@ -793,6 +793,17 @@ private suspend fun saveEditedPhoto(
 
         // 5. Trigger Android MediaScanner so it instantly shows in device gallery
         MediaScannerConnection.scanFile(context, arrayOf(targetFile.absolutePath), arrayOf("image/jpeg"), null)
+
+        // Free memory immediately
+        try {
+            if (transformedBitmap != sourceBitmap) {
+                transformedBitmap.recycle()
+            }
+            if (workingBitmap != transformedBitmap && workingBitmap != sourceBitmap) {
+                workingBitmap.recycle()
+            }
+            finalBitmap.recycle()
+        } catch (_: Exception) {}
 
         targetFile
     } catch (_: Exception) {

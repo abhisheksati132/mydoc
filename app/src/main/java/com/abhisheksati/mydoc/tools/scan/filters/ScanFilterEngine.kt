@@ -139,43 +139,42 @@ object ScanFilterEngine {
         src.getPixels(pixels, 0, width, 0, 0, width, height)
 
         // Downsample grid for background illumination estimation
-        val step = maxOf(16, minOf(width, height) / 30)
+        val step = maxOf(24, minOf(width, height) / 25)
         val gridW = (width + step - 1) / step
         val gridH = (height + step - 1) / step
         val bgGrid = FloatArray(gridW * gridH)
 
         for (gy in 0 until gridH) {
             val yCenter = (gy * step).coerceAtMost(height - 1)
+            val gyOffset = gy * gridW
             for (gx in 0 until gridW) {
                 val xCenter = (gx * step).coerceAtMost(width - 1)
-                // Sample local neighborhood max brightness (paper background)
                 var maxLuma = 0f
-                var count = 0
-                for (dy in -step / 2..step / 2 step 4) {
+                for (dy in -step / 2..step / 2 step 6) {
                     val py = (yCenter + dy).coerceIn(0, height - 1)
-                    for (dx in -step / 2..step / 2 step 4) {
+                    val pyOffset = py * width
+                    for (dx in -step / 2..step / 2 step 6) {
                         val px = (xCenter + dx).coerceIn(0, width - 1)
-                        val color = pixels[py * width + px]
+                        val color = pixels[pyOffset + px]
                         val r = (color shr 16) and 0xFF
                         val g = (color shr 8) and 0xFF
                         val b = color and 0xFF
                         val luma = 0.299f * r + 0.587f * g + 0.114f * b
                         if (luma > maxLuma) maxLuma = luma
-                        count++
                     }
                 }
-                bgGrid[gy * gridW + gx] = if (maxLuma > 20f) maxLuma else 180f
+                bgGrid[gyOffset + gx] = if (maxLuma > 20f) maxLuma else 180f
             }
         }
 
-        // Apply illumination normalization to each pixel
-        val outPixels = IntArray(width * height)
+        // Apply illumination normalization directly in-place to halve memory usage
         for (y in 0 until height) {
             val gy = (y / step).coerceIn(0, gridH - 1)
+            val gyOffset = gy * gridW
             val yOffset = y * width
             for (x in 0 until width) {
                 val gx = (x / step).coerceIn(0, gridW - 1)
-                val bg = bgGrid[gy * gridW + gx]
+                val bg = bgGrid[gyOffset + gx]
                 val color = pixels[yOffset + x]
                 val a = color and -0x1000000
                 val r = (color shr 16) and 0xFF
@@ -187,12 +186,12 @@ object ScanFilterEngine {
                 val ng = (g * scale).toInt().coerceIn(0, 255)
                 val nb = (b * scale).toInt().coerceIn(0, 255)
 
-                outPixels[yOffset + x] = a or (nr shl 16) or (ng shl 8) or nb
+                pixels[yOffset + x] = a or (nr shl 16) or (ng shl 8) or nb
             }
         }
 
         val out = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        out.setPixels(outPixels, 0, width, 0, 0, width, height)
+        out.setPixels(pixels, 0, width, 0, 0, width, height)
         return out
     }
 

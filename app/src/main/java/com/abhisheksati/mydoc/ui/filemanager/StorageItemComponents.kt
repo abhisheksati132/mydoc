@@ -63,7 +63,6 @@ import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.StorageFileType
 import com.abhisheksati.mydoc.domain.model.StorageItem
 
-@Composable
 fun getFileTypeIcon(type: StorageFileType): Pair<ImageVector, Color> {
     return when (type) {
         StorageFileType.DIRECTORY -> Icons.Outlined.Folder to Color(0xFFFFB300)

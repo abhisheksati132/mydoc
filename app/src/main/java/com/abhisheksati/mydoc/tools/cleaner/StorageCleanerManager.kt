@@ -78,7 +78,7 @@ class StorageCleanerManager {
                     }
                 } else if (entry.isFile) {
                     fileCount++
-                    if (fileCount % 50 == 0) {
+                    if (fileCount % 120 == 0) {
                         onProgress(fileCount, entry.name)
                     }
 

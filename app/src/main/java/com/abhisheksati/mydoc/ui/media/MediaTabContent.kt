@@ -209,6 +209,14 @@ fun MediaTabContent(
         displayedGroups.flatMap { it.items }
     }
 
+    val allVideoItems = remember(uiState.items) {
+        uiState.items.filter { it.isVideo }
+    }
+
+    val allPhotoItems = remember(uiState.items) {
+        uiState.items.filter { !it.isVideo }
+    }
+
     val selectedItems = remember(selectedUris, uiState.items) {
         uiState.items.filter { it.uri in selectedUris }
     }
@@ -619,7 +627,10 @@ fun MediaTabContent(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     displayedGroups.forEach { group ->
-                        item(span = { GridItemSpan(3) }) {
+                        item(
+                            key = "header_${group.title}",
+                            span = { GridItemSpan(3) }
+                        ) {
                             AppSectionHeader(
                                 title = group.title
                             )
@@ -644,11 +655,7 @@ fun MediaTabContent(
                                             selectedUris + item.uri
                                         }
                                     } else {
-                                        val relevantList = if (item.isVideo) {
-                                            uiState.items.filter { it.isVideo }
-                                        } else {
-                                            uiState.items.filter { !it.isVideo }
-                                        }
+                                        val relevantList = if (item.isVideo) allVideoItems else allPhotoItems
                                         onOpenMedia(item, relevantList)
                                     }
                                 },
@@ -684,6 +691,19 @@ private fun MediaThumbnailItem(
     val colors = LocalAppColors.current
     val isOled = colors.background == DarkAppColors.background
 
+    val imageRequest = remember(item.uri, item.isVideo) {
+        ImageRequest.Builder(context)
+            .data(item.uri)
+            .apply {
+                if (item.isVideo) {
+                    videoFramePercent(0.1)
+                    videoFrameOption(MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                }
+            }
+            .crossfade(true)
+            .build()
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -703,16 +723,7 @@ private fun MediaThumbnailItem(
             )
     ) {
         AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(item.uri)
-                .apply {
-                    if (item.isVideo) {
-                        videoFramePercent(0.1)
-                        videoFrameOption(MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-                    }
-                }
-                .crossfade(true)
-                .build(),
+            model = imageRequest,
             contentDescription = item.displayName,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()

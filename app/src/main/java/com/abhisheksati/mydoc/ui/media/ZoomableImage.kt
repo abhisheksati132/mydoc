@@ -36,6 +36,13 @@ fun ZoomableImage(
 
     val contentScale = if (isFillScale) ContentScale.Crop else ContentScale.Fit
 
+    val imageRequest = remember(item.uri) {
+        ImageRequest.Builder(context)
+            .data(item.uri)
+            .crossfade(true)
+            .build()
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -48,31 +55,25 @@ fun ZoomableImage(
                     }
                 )
             }
-            .then(
-                if (scale > 1.05f) {
-                    Modifier.pointerInput(scale) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            scale = (scale * zoom).coerceIn(1f, 5f)
-                            if (scale > 1f) {
-                                val maxPan = 600f * (scale - 1f)
-                                offset = Offset(
-                                    x = (offset.x + pan.x).coerceIn(-maxPan, maxPan),
-                                    y = (offset.y + pan.y).coerceIn(-maxPan, maxPan)
-                                )
-                            } else {
-                                offset = Offset.Zero
-                            }
-                        }
+            .pointerInput(Unit) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    val newScale = (scale * zoom).coerceIn(1f, 5f)
+                    scale = newScale
+                    if (newScale > 1.02f) {
+                        val maxPan = 700f * (newScale - 1f)
+                        offset = Offset(
+                            x = (offset.x + pan.x).coerceIn(-maxPan, maxPan),
+                            y = (offset.y + pan.y).coerceIn(-maxPan, maxPan)
+                        )
+                    } else {
+                        offset = Offset.Zero
                     }
-                } else Modifier
-            ),
+                }
+            },
         contentAlignment = Alignment.Center
     ) {
         AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(item.uri)
-                .crossfade(true)
-                .build(),
+            model = imageRequest,
             contentDescription = item.displayName,
             contentScale = contentScale,
             modifier = Modifier
