@@ -106,8 +106,7 @@ fun GoogleFilesHubContent(
         item {
             FilesByGoogleStorageCard(
                 uiState = storageUiState,
-                isOled = isOled,
-                onCleanClick = onCleanClick
+                isOled = isOled
             )
         }
 
@@ -312,27 +311,25 @@ fun GoogleFilesHubContent(
 }
 
 /**
- * Master Storage Analysis Box with multi-color segmented progress bar and Quick Clean button
+ * Master Storage Analysis Box with multi-color segmented progress bar and Device Name
  */
 @Composable
 private fun FilesByGoogleStorageCard(
     uiState: StorageAnalysisUiState,
-    isOled: Boolean,
-    onCleanClick: () -> Unit
+    isOled: Boolean
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
 
-    val healthBadgeText = when {
-        uiState.freeBytes > 15L * 1024 * 1024 * 1024 -> "Healthy Storage"
-        uiState.freeBytes > 4L * 1024 * 1024 * 1024 -> "Moderate Storage"
-        else -> "Storage Running Low"
-    }
-
-    val healthBadgeColor = when {
-        uiState.freeBytes > 15L * 1024 * 1024 * 1024 -> Color(0xFF4CAF50)
-        uiState.freeBytes > 4L * 1024 * 1024 * 1024 -> Color(0xFFFFA000)
-        else -> Color(0xFFE53935)
+    val deviceName = remember {
+        val manufacturer = android.os.Build.MANUFACTURER.orEmpty()
+        val model = android.os.Build.MODEL.orEmpty()
+        val formatted = if (model.startsWith(manufacturer, ignoreCase = true)) {
+            model.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.getDefault()) else it.toString() }
+        } else {
+            "${manufacturer.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.getDefault()) else it.toString() }} $model".trim()
+        }
+        formatted.ifEmpty { "This Device" }
     }
 
     Surface(
@@ -347,7 +344,7 @@ private fun FilesByGoogleStorageCard(
             .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
-            // Top Row: Percentage Used + Health Badge
+            // Top Row: Percentage Used + Device Name
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -370,15 +367,28 @@ private fun FilesByGoogleStorageCard(
 
                 Surface(
                     shape = RoundedCornerShape(999.dp),
-                    color = healthBadgeColor.copy(alpha = 0.15f),
-                    border = BorderStroke(1.dp, healthBadgeColor.copy(alpha = 0.35f))
+                    color = if (isOled) Color(0xFF171B24) else colors.surfaceVariant.copy(alpha = 0.6f),
+                    border = BorderStroke(1.dp, if (isOled) Color.White.copy(alpha = 0.10f) else colors.divider.copy(alpha = 0.7f))
                 ) {
-                    Text(
-                        text = healthBadgeText,
-                        style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp),
-                        color = healthBadgeColor,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.PhoneAndroid,
+                            contentDescription = null,
+                            tint = colors.accent,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = deviceName,
+                            style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 11.sp),
+                            color = colors.textPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
 
@@ -429,76 +439,6 @@ private fun FilesByGoogleStorageCard(
                             text = "${cat.type.title}: ${cat.formattedSize}",
                             style = typography.caption.copy(fontSize = 11.sp),
                             color = colors.textSecondary
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Clean Space Action Banner
-            val clean = uiState.cleanSummary
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = if (isOled) Color(0xFF171B24) else colors.surfaceVariant.copy(alpha = 0.5f),
-                border = BorderStroke(1.dp, colors.accent.copy(alpha = 0.2f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .background(colors.accent.copy(alpha = 0.14f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.AutoAwesome,
-                                contentDescription = null,
-                                tint = colors.accent,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = if (clean.totalReclaimableBytes > 0L) {
-                                    "${StorageVolume.formatBytes(clean.totalReclaimableBytes)} Reclaimable Junk"
-                                } else "Storage Cleaner",
-                                style = typography.body.copy(fontWeight = FontWeight.Bold, fontSize = 13.sp),
-                                color = colors.textPrimary
-                            )
-                            Text(
-                                text = "Clear cache, duplicates & temp files",
-                                style = typography.caption.copy(fontSize = 11.sp),
-                                color = colors.textSecondary
-                            )
-                        }
-                    }
-
-                    Button(
-                        onClick = onCleanClick,
-                        shape = RoundedCornerShape(999.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colors.accent,
-                            contentColor = if (isOled) Color.Black else Color.White
-                        ),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = "Clean Space",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
                         )
                     }
                 }
