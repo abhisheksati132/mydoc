@@ -9,7 +9,6 @@ import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.tools.model.ToolExecutionResult
 import com.abhisheksati.mydoc.tools.model.ToolGroup
 import com.abhisheksati.mydoc.tools.model.ToolOptions
-import com.abhisheksati.mydoc.tools.model.WorkflowPresetType
 import com.abhisheksati.mydoc.tools.model.formatByteSize
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -20,12 +19,12 @@ import org.junit.Test
 class PdfToolsTest {
 
     @Test
-    fun verifyAll30ToolsPresentAcross8Groups() {
+    fun verifyAll29ToolsPresentAcross7Groups() {
         val tools = PdfTool.entries
-        assertEquals(30, tools.size)
+        assertEquals(29, tools.size)
 
         val groups = tools.groupBy { it.group }
-        assertEquals(8, groups.size)
+        assertEquals(7, groups.size)
 
         // 1. Organize (7 tools)
         assertEquals(7, groups[ToolGroup.ORGANIZE]?.size)
@@ -73,13 +72,10 @@ class PdfToolsTest {
         assertTrue(tools.contains(PdfTool.STRIP_METADATA))
 
         // 7. Scan & OCR (2 tools)
+        // 7. Scan & OCR (2 tools)
         assertEquals(2, groups[ToolGroup.SCAN]?.size)
         assertTrue(tools.contains(PdfTool.SCAN_TO_PDF))
         assertTrue(tools.contains(PdfTool.OCR_PDF))
-
-        // 8. Automation (1 tool)
-        assertEquals(1, groups[ToolGroup.AUTOMATION]?.size)
-        assertTrue(tools.contains(PdfTool.WORKFLOW))
     }
 
     @Test
@@ -130,7 +126,6 @@ class PdfToolsTest {
         assertEquals(1, options.pageNumberStart)
         assertEquals("CONFIDENTIAL", options.watermarkText)
         assertEquals(-45f, options.watermarkRotation, 0.01f)
-        assertEquals(WorkflowPresetType.DOCUMENT_CLEANUP, options.workflowPreset)
         assertEquals("APPROVED", options.annotationText)
         assertEquals("STAMP", options.annotationType)
     }

@@ -25,7 +25,6 @@ import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.tools.model.ToolExecutionResult
 import com.abhisheksati.mydoc.tools.model.ToolOptions
 import com.abhisheksati.mydoc.tools.model.ToolProgress
-import com.abhisheksati.mydoc.tools.model.WorkflowPresetType
 import com.abhisheksati.mydoc.tools.pdf.form.PdfFormService
 import com.abhisheksati.mydoc.tools.pdf.pagenumber.PdfPageNumberer
 import com.abhisheksati.mydoc.tools.pdf.watermark.PdfWatermarker
@@ -83,7 +82,7 @@ class PdfToolsEngine(private val context: Context) {
         val tempFilesToDelete = mutableListOf<File>()
 
         try {
-            if (inputUris.isEmpty() && tool != PdfTool.WORKFLOW) {
+            if (inputUris.isEmpty()) {
                 return@withContext ToolExecutionResult(
                     success = false,
                     tool = tool,
@@ -150,9 +149,6 @@ class PdfToolsEngine(private val context: Context) {
                 // 7. Scan & OCR
                 PdfTool.SCAN_TO_PDF -> imagesToPdf(inputFiles, options, onProgress)
                 PdfTool.OCR_PDF -> ocrPdf(primaryFile!!, onProgress)
-
-                // 8. Automation
-                PdfTool.WORKFLOW -> runWorkflowPreset(inputFiles, options, onProgress)
             }
 
             currentCoroutineContext().ensureActive()
@@ -1651,60 +1647,6 @@ class PdfToolsEngine(private val context: Context) {
             return outFile
         } finally {
             srcDoc.destroy()
-        }
-    }
-
-    // -------------------------------------------------------------
-    // 8. Automation Workflows
-    // -------------------------------------------------------------
-
-    private suspend fun runWorkflowPreset(files: List<File>, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File {
-        val preset = options.workflowPreset
-        val intermediateFiles = mutableListOf<File>()
-
-        try {
-            when (preset) {
-                WorkflowPresetType.DOCUMENT_CLEANUP -> {
-                    onProgress(ToolProgress(1, 3, 20, "Step 1/3: Repairing structure...", false))
-                    val step1 = repairPdf(files.first(), onProgress)
-                    intermediateFiles.add(step1)
-
-                    onProgress(ToolProgress(2, 3, 50, "Step 2/3: Purging metadata...", false))
-                    val step2 = stripMetadata(step1, onProgress)
-                    intermediateFiles.add(step2)
-
-                    onProgress(ToolProgress(3, 3, 80, "Step 3/3: Compressing objects...", false))
-                    val finalFile = compressPdf(step2, options.copy(compressionLevel = CompressionLevel.BALANCED), onProgress)
-                    return finalFile
-                }
-                WorkflowPresetType.CONFIDENTIAL_SHARE -> {
-                    onProgress(ToolProgress(1, 3, 20, "Step 1/3: Stamping watermark...", false))
-                    val step1 = addWatermark(files.first(), options.copy(watermarkText = "CONFIDENTIAL"), onProgress)
-                    intermediateFiles.add(step1)
-
-                    onProgress(ToolProgress(2, 3, 50, "Step 2/3: Purging metadata...", false))
-                    val step2 = stripMetadata(step1, onProgress)
-                    intermediateFiles.add(step2)
-
-                    onProgress(ToolProgress(3, 3, 80, "Step 3/3: Encrypting with AES-256...", false))
-                    val finalFile = protectPdf(step2, options, onProgress)
-                    return finalFile
-                }
-                WorkflowPresetType.ARCHIVE_PREPARE -> {
-                    onProgress(ToolProgress(1, 2, 40, "Step 1/2: Purging tracking tags...", false))
-                    val step1 = stripMetadata(files.first(), onProgress)
-                    intermediateFiles.add(step1)
-
-                    onProgress(ToolProgress(2, 2, 80, "Step 2/2: Converting to PDF/A...", false))
-                    val finalFile = pdfToPdfA(step1, onProgress)
-                    return finalFile
-                }
-            }
-        } finally {
-            // Delete intermediate workflow steps
-            for (f in intermediateFiles) {
-                try { if (f.exists()) f.delete() } catch (_: Exception) {}
-            }
         }
     }
 

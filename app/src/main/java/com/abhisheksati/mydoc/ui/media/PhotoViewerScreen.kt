@@ -38,7 +38,8 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.DropdownMenu
@@ -161,13 +162,16 @@ fun PhotoViewerScreen(
         value = mediaRepository.extractExif(currentItem.uri)
     }
 
-    val darkBackground = Color(0xFF000000) // True AMOLED Black
-    val overlayBackground = Color(0xD9000000)
+    val isDarkMode = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
+    val viewerBackground = if (isDarkMode) Color(0xFF0D0F14) else colors.background
+    val overlayBackground = if (isDarkMode) Color(0xF0101217) else colors.surface.copy(alpha = 0.94f)
+    val contentColor = if (isDarkMode) Color(0xFFEDEDED) else colors.textPrimary
+    val secondaryColor = if (isDarkMode) Color(0xFFA0A0A5) else colors.textSecondary
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(darkBackground)
+            .background(viewerBackground)
     ) {
         // Image Pager
         HorizontalPager(
@@ -218,7 +222,7 @@ fun PhotoViewerScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color(0xFFEDEDED)
+                            tint = contentColor
                         )
                     }
 
@@ -230,7 +234,7 @@ fun PhotoViewerScreen(
                         Text(
                             text = currentItem.displayName,
                             style = typography.body.copy(fontWeight = FontWeight.Medium),
-                            color = Color(0xFFEDEDED),
+                            color = contentColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -238,7 +242,7 @@ fun PhotoViewerScreen(
                             Text(
                                 text = "${pagerState.currentPage + 1} of ${photoList.size}",
                                 style = typography.caption,
-                                color = Color(0xFFA0A0A5)
+                                color = secondaryColor
                             )
                         }
                     }
@@ -247,7 +251,7 @@ fun PhotoViewerScreen(
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = "Info",
-                            tint = Color(0xFFEDEDED)
+                            tint = contentColor
                         )
                     }
 
@@ -256,7 +260,7 @@ fun PhotoViewerScreen(
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
                                 contentDescription = "More options",
-                                tint = Color(0xFFEDEDED)
+                                tint = contentColor
                             )
                         }
 
@@ -264,15 +268,15 @@ fun PhotoViewerScreen(
                             expanded = isMoreMenuOpen,
                             onDismissRequest = { isMoreMenuOpen = false },
                             shape = RoundedCornerShape(16.dp),
-                            containerColor = Color(0xFF1E2129),
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                            containerColor = if (isDarkMode) Color(0xFF1E2129) else colors.surface,
+                            border = BorderStroke(1.dp, if (isDarkMode) Color.White.copy(alpha = 0.12f) else colors.cardBorder),
                             shadowElevation = 8.dp,
                             tonalElevation = 4.dp
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Rotate 90°") },
+                                text = { Text("Rotate 90°", color = colors.textPrimary) },
                                 leadingIcon = {
-                                    Icon(Icons.AutoMirrored.Filled.RotateRight, contentDescription = null, tint = Color(0xFFEDEDED))
+                                    Icon(Icons.AutoMirrored.Filled.RotateRight, contentDescription = null, tint = colors.textPrimary)
                                 },
                                 onClick = {
                                     isMoreMenuOpen = false
@@ -280,9 +284,9 @@ fun PhotoViewerScreen(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Flip horizontal") },
+                                text = { Text("Flip horizontal", color = colors.textPrimary) },
                                 leadingIcon = {
-                                    Icon(Icons.Default.Flip, contentDescription = null, tint = Color(0xFFEDEDED))
+                                    Icon(Icons.Default.Flip, contentDescription = null, tint = colors.textPrimary)
                                 },
                                 onClick = {
                                     isMoreMenuOpen = false
@@ -290,14 +294,20 @@ fun PhotoViewerScreen(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text(if (isSlideshowActive) "Stop slideshow" else "Slideshow (3s)") },
+                                text = { Text(if (isSlideshowActive) "Stop slideshow" else "Slideshow (3s)", color = colors.textPrimary) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.PlayArrow, contentDescription = null, tint = colors.textPrimary)
+                                },
                                 onClick = {
                                     isMoreMenuOpen = false
                                     isSlideshowActive = !isSlideshowActive
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Open with...") },
+                                text = { Text("Open with...", color = colors.textPrimary) },
+                                leadingIcon = {
+                                    Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = colors.textPrimary)
+                                },
                                 onClick = {
                                     isMoreMenuOpen = false
                                     val openIntent = Intent(Intent.ACTION_VIEW).apply {
@@ -312,7 +322,10 @@ fun PhotoViewerScreen(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Set as wallpaper") },
+                                text = { Text("Set as wallpaper", color = colors.textPrimary) },
+                                leadingIcon = {
+                                    Icon(Icons.Outlined.Image, contentDescription = null, tint = colors.textPrimary)
+                                },
                                 onClick = {
                                     isMoreMenuOpen = false
                                     val setAsIntent = Intent(Intent.ACTION_ATTACH_DATA).apply {
@@ -328,12 +341,12 @@ fun PhotoViewerScreen(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Move to Recycle Bin", color = Color(0xFFFF5252)) },
+                                text = { Text("Move to Recycle Bin", color = colors.error) },
                                 leadingIcon = {
                                     Icon(
                                         imageVector = Icons.Outlined.Delete,
                                         contentDescription = null,
-                                        tint = Color(0xFFFF5252)
+                                        tint = colors.error
                                     )
                                 },
                                 onClick = {
@@ -371,7 +384,7 @@ fun PhotoViewerScreen(
                     PhotoViewerActionButton(
                         icon = Icons.Default.Share,
                         label = "Share",
-                        tint = Color(0xFFEDEDED),
+                        tint = contentColor,
                         onClick = {
                             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                 type = currentItem.mimeType
@@ -386,7 +399,7 @@ fun PhotoViewerScreen(
                     PhotoViewerActionButton(
                         icon = Icons.Default.Edit,
                         label = "Edit",
-                        tint = Color(0xFFEDEDED),
+                        tint = contentColor,
                         onClick = { isEditorOpen = true }
                     )
 
@@ -394,7 +407,7 @@ fun PhotoViewerScreen(
                     PhotoViewerActionButton(
                         icon = Icons.Outlined.TextFields,
                         label = "OCR Text",
-                        tint = if (isOcrRunning) Color(0xFF3B82F6) else Color(0xFFEDEDED),
+                        tint = if (isOcrRunning) colors.accent else contentColor,
                         onClick = {
                             if (!isOcrRunning) {
                                 isOcrRunning = true
@@ -421,7 +434,7 @@ fun PhotoViewerScreen(
                     PhotoViewerActionButton(
                         icon = Icons.Outlined.Delete,
                         label = "Delete",
-                        tint = Color(0xFFEF4444),
+                        tint = colors.error,
                         onClick = { showDeleteConfirmDialog = true }
                     )
                 }

@@ -82,10 +82,8 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val ACTION_QUICK_SCAN = "com.abhisheksati.mydoc.action.QUICK_SCAN"
-        const val ACTION_WIFI_TRANSFER = "com.abhisheksati.mydoc.action.WIFI_TRANSFER"
         val pageTurnEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
         val quickScanEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-        val openWifiTransferEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     }
 
     private val homeViewModel: HomeViewModel by viewModels {
@@ -114,7 +112,6 @@ class MainActivity : ComponentActivity() {
     private var isSettingsOpen by mutableStateOf(false)
     private var isDesignSystemPreviewOpen by mutableStateOf(false)
     private var isAppUnlocked by mutableStateOf(true)
-    private var showWifiSharingSheet by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -408,15 +405,6 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-
-                if (showWifiSharingSheet) {
-                    val app = application as MyDocApp
-                    com.abhisheksati.mydoc.ui.network.WifiSharingSheet(
-                        wifiServerManager = app.wifiServerManager,
-                        rootDirectory = android.os.Environment.getExternalStorageDirectory(),
-                        onDismiss = { showWifiSharingSheet = false }
-                    )
-                }
             }
         }
     }
@@ -468,10 +456,6 @@ class MainActivity : ComponentActivity() {
 
         if (intent.action == ACTION_QUICK_SCAN) {
             quickScanEvents.tryEmit(Unit)
-            return
-        }
-        if (intent.action == ACTION_WIFI_TRANSFER) {
-            showWifiSharingSheet = true
             return
         }
 

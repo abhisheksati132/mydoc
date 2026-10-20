@@ -49,8 +49,7 @@ enum class ToolGroup(val title: String) {
     CONVERT_FROM("CONVERT FROM PDF"),
     EDIT("EDIT"),
     SECURITY("SECURITY"),
-    SCAN("SCAN & OCR"),
-    AUTOMATION("AUTOMATION")
+    SCAN("SCAN & OCR")
 }
 
 enum class PdfTool(
@@ -323,15 +322,5 @@ enum class PdfTool(
         group = ToolGroup.SCAN,
         icon = Icons.Outlined.Transform,
         defaultSuffix = "ocr"
-    ),
-
-    // 8. Automation
-    WORKFLOW(
-        id = "workflow",
-        title = "Workflow presets",
-        description = "Chain sequential tasks (e.g., Scan -> OCR -> Compress -> Protect) on a file.",
-        group = ToolGroup.AUTOMATION,
-        icon = Icons.Outlined.AutoMode,
-        defaultSuffix = "workflow"
     )
 }

@@ -327,9 +327,18 @@ fun PhotoEditorScreen(
         )
     }
 
+    val isDarkMode = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
+    val editorBg = if (isDarkMode) Color(0xFF0D0F14) else colors.background
+    val canvasBg = if (isDarkMode) Color(0xFF05070A) else colors.surfaceVariant
+    val toolTrayBg = if (isDarkMode) Color(0xFF101217) else colors.surface
+    val textColor = if (isDarkMode) Color(0xFFF6F7F9) else colors.textPrimary
+    val textSecondaryColor = if (isDarkMode) Color(0xFF8B92A0) else colors.textSecondary
+    val chipUnselectedBg = if (isDarkMode) Color(0xFF26262A) else colors.surfaceVariant
+    val chipUnselectedText = if (isDarkMode) Color(0xFFCCCCCC) else colors.textSecondary
+
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = Color(0xFF000000)
+        color = editorBg
     ) {
         Column(
             modifier = Modifier
@@ -350,14 +359,14 @@ fun PhotoEditorScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Cancel",
-                            tint = Color.White
+                            tint = textColor
                         )
                     }
 
                     Text(
                         text = "Photo Editor",
                         style = typography.title.copy(fontSize = 17.sp, fontWeight = FontWeight.SemiBold),
-                        color = Color.White
+                        color = textColor
                     )
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -421,7 +430,7 @@ fun PhotoEditorScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .background(Color(0xFF000000)),
+                        .background(canvasBg),
                     contentAlignment = Alignment.Center
                 ) {
                     if (isLoading || transformedPreviewBitmap == null) {
@@ -434,7 +443,7 @@ fun PhotoEditorScreen(
                                 .fillMaxSize(0.92f)
                                 .aspectRatio(cropRatio)
                                 .clip(RoundedCornerShape(4.dp))
-                                .border(1.dp, Color(0x66FFFFFF), RoundedCornerShape(4.dp))
+                                .border(1.dp, if (isDarkMode) Color(0x66FFFFFF) else Color(0x33000000), RoundedCornerShape(4.dp))
                         } else {
                             Modifier.fillMaxSize()
                         }
@@ -457,7 +466,7 @@ fun PhotoEditorScreen(
 
                 // Tool Options Tray
                 Surface(
-                    color = Color(0xFF0A0A0C),
+                    color = toolTrayBg,
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
@@ -504,13 +513,13 @@ fun PhotoEditorScreen(
                                     CropAspectRatio.entries.forEach { ratio ->
                                         val isSelected = selectedCropRatio == ratio
                                         Surface(
-                                            color = if (isSelected) colors.accent else Color(0xFF26262A),
+                                            color = if (isSelected) colors.accent else chipUnselectedBg,
                                             shape = RoundedCornerShape(8.dp),
                                             modifier = Modifier.clickable { selectedCropRatio = ratio }
                                         ) {
                                             Text(
                                                 text = ratio.label,
-                                                color = if (isSelected) Color.White else Color(0xFFCCCCCC),
+                                                color = if (isSelected) Color.White else chipUnselectedText,
                                                 fontSize = 12.sp,
                                                 fontWeight = FontWeight.SemiBold,
                                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
@@ -530,20 +539,20 @@ fun PhotoEditorScreen(
                                 ) {
                                     IconButton(onClick = { rotationAngle = (rotationAngle - 90f + 360f) % 360f }) {
                                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Icon(Icons.AutoMirrored.Filled.RotateLeft, contentDescription = "Rotate -90", tint = Color.White)
-                                            Text("-90°", fontSize = 10.sp, color = Color.White)
+                                            Icon(Icons.AutoMirrored.Filled.RotateLeft, contentDescription = "Rotate -90", tint = textColor)
+                                            Text("-90°", fontSize = 10.sp, color = textColor)
                                         }
                                     }
                                     IconButton(onClick = { rotationAngle = (rotationAngle + 90f) % 360f }) {
                                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Icon(Icons.AutoMirrored.Filled.RotateRight, contentDescription = "Rotate +90", tint = Color.White)
-                                            Text("+90°", fontSize = 10.sp, color = Color.White)
+                                            Icon(Icons.AutoMirrored.Filled.RotateRight, contentDescription = "Rotate +90", tint = textColor)
+                                            Text("+90°", fontSize = 10.sp, color = textColor)
                                         }
                                     }
                                     IconButton(onClick = { isFlippedHorizontal = !isFlippedHorizontal }) {
                                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Icon(Icons.Default.Flip, contentDescription = "Flip Horizontal", tint = if (isFlippedHorizontal) colors.accent else Color.White)
-                                            Text("Flip", fontSize = 10.sp, color = if (isFlippedHorizontal) colors.accent else Color.White)
+                                            Icon(Icons.Default.Flip, contentDescription = "Flip Horizontal", tint = if (isFlippedHorizontal) colors.accent else textColor)
+                                            Text("Flip", fontSize = 10.sp, color = if (isFlippedHorizontal) colors.accent else textColor)
                                         }
                                     }
                                 }
@@ -569,7 +578,7 @@ fun PhotoEditorScreen(
                                         ) {
                                             Text(
                                                 text = title,
-                                                color = if (isSelected) colors.accent else Color(0xFFA0A0A5),
+                                                color = if (isSelected) colors.accent else textSecondaryColor,
                                                 fontSize = 12.sp,
                                                 fontWeight = FontWeight.Medium,
                                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
@@ -591,21 +600,22 @@ fun PhotoEditorScreen(
                                         else -> warmth to { v: Float -> warmth = v }
                                     }
 
-                                    Slider(
+                                    com.abhisheksati.mydoc.designsystem.components.AppSlider(
                                         value = currVal,
                                         onValueChange = onValChange,
                                         valueRange = -100f..100f,
                                         colors = SliderDefaults.colors(
                                             thumbColor = colors.accent,
                                             activeTrackColor = colors.accent,
-                                            inactiveTrackColor = Color(0x33FFFFFF)
+                                            inactiveTrackColor = if (isDarkMode) Color(0x33FFFFFF) else colors.divider
                                         ),
+                                        thumbSize = 13.dp,
                                         modifier = Modifier.weight(1f)
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Text(
                                         text = "${currVal.toInt()}",
-                                        color = Color.White,
+                                        color = textColor,
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.width(36.dp)
@@ -633,17 +643,17 @@ fun PhotoEditorScreen(
                                                     .clip(CircleShape)
                                                     .background(
                                                         when (filter) {
-                                                            FilterPreset.ORIGINAL -> Color(0xFF555555)
-                                                            FilterPreset.DOC_AUTO -> Color(0xFF4CAF50)
-                                                            FilterPreset.BW_THRESHOLD -> Color(0xFF212121)
-                                                            FilterPreset.SHADOW_CLEAN -> Color(0xFF00ACC1)
-                                                            FilterPreset.VIVID -> Color(0xFFFF5252)
-                                                            FilterPreset.MONO -> Color(0xFF888888)
-                                                            FilterPreset.SEPIA -> Color(0xFFBCAAA4)
-                                                            FilterPreset.WARM -> Color(0xFFFFB74D)
-                                                            FilterPreset.COOL -> Color(0xFF64B5F6)
-                                                            FilterPreset.DRAMA -> Color(0xFF37474F)
-                                                        }
+                                                             FilterPreset.ORIGINAL -> Color(0xFF555555)
+                                                             FilterPreset.DOC_AUTO -> Color(0xFF4CAF50)
+                                                             FilterPreset.BW_THRESHOLD -> Color(0xFF212121)
+                                                             FilterPreset.SHADOW_CLEAN -> Color(0xFF00ACC1)
+                                                             FilterPreset.VIVID -> Color(0xFFFF5252)
+                                                             FilterPreset.MONO -> Color(0xFF888888)
+                                                             FilterPreset.SEPIA -> Color(0xFFBCAAA4)
+                                                             FilterPreset.WARM -> Color(0xFFFFB74D)
+                                                             FilterPreset.COOL -> Color(0xFF64B5F6)
+                                                             FilterPreset.DRAMA -> Color(0xFF37474F)
+                                                         }
                                                     )
                                                     .border(
                                                         width = if (isSelected) 2.dp else 0.dp,
@@ -655,7 +665,7 @@ fun PhotoEditorScreen(
                                             Text(
                                                 text = filter.displayName,
                                                 fontSize = 11.sp,
-                                                color = if (isSelected) colors.accent else Color(0xFFA0A0A5),
+                                                color = if (isSelected) colors.accent else textSecondaryColor,
                                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                             )
                                         }
@@ -691,14 +701,14 @@ fun PhotoEditorScreen(
                                         Icon(
                                             imageVector = tool.icon,
                                             contentDescription = tool.title,
-                                            tint = if (isSelected) colors.accent else Color(0xFFA0A0A5),
+                                            tint = if (isSelected) colors.accent else textSecondaryColor,
                                             modifier = Modifier.size(22.dp)
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = tool.title,
                                             fontSize = 11.sp,
-                                            color = if (isSelected) colors.accent else Color(0xFFA0A0A5),
+                                            color = if (isSelected) colors.accent else textSecondaryColor,
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                         )
                                     }

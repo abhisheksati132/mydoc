@@ -23,7 +23,6 @@ import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.Badge
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -96,7 +95,6 @@ fun ToolsScreen(
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
-    var showWifiSharingSheet by remember { mutableStateOf(false) }
     var showStorageCleanerSheet by remember { mutableStateOf(false) }
 
     var searchQuery by remember { mutableStateOf("") }
@@ -151,8 +149,7 @@ fun ToolsScreen(
                     ToolNavCategory(ToolGroup.CONVERT_FROM, Icons.Outlined.Difference, Color(0xFF6366F1), "Convert From"),
                     ToolNavCategory(ToolGroup.EDIT, Icons.Outlined.Edit, Color(0xFFF59E0B), "Edit"),
                     ToolNavCategory(ToolGroup.SECURITY, Icons.Outlined.Security, Color(0xFFEF4444), "Security"),
-                    ToolNavCategory(ToolGroup.SCAN, Icons.Outlined.CameraAlt, Color(0xFF14B8A6), "Scan & OCR"),
-                    ToolNavCategory(ToolGroup.AUTOMATION, Icons.Outlined.AutoMode, Color(0xFF06B6D4), "Automation")
+                    ToolNavCategory(ToolGroup.SCAN, Icons.Outlined.CameraAlt, Color(0xFF14B8A6), "Scan & OCR")
                 )
 
                 Row(
@@ -233,16 +230,6 @@ fun ToolsScreen(
                     onClick = {
                         onDismiss()
                         onToolClick(PdfTool.SCAN_TO_PDF)
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("PC Wi-Fi Transfer", style = typography.body) },
-                    leadingIcon = {
-                        Icon(Icons.Outlined.Wifi, contentDescription = null, tint = colors.accent)
-                    },
-                    onClick = {
-                        onDismiss()
-                        showWifiSharingSheet = true
                     }
                 )
                 DropdownMenuItem(
@@ -339,14 +326,6 @@ fun ToolsScreen(
             }
         }
 
-        if (showWifiSharingSheet && app != null) {
-            com.abhisheksati.mydoc.ui.network.WifiSharingSheet(
-                wifiServerManager = app.wifiServerManager,
-                rootDirectory = android.os.Environment.getExternalStorageDirectory(),
-                onDismiss = { showWifiSharingSheet = false }
-            )
-        }
-
         if (showStorageCleanerSheet) {
             com.abhisheksati.mydoc.ui.cleaner.StorageCleanerSheet(
                 rootDir = android.os.Environment.getExternalStorageDirectory(),
@@ -374,7 +353,6 @@ private fun ToolListRow(
         ToolGroup.EDIT -> Color(0xFFF59E0B) to if (isDark) Color(0x28F59E0B) else Color(0xFFFEF3C7)
         ToolGroup.SECURITY -> Color(0xFFEF4444) to if (isDark) Color(0x28EF4444) else Color(0xFFFEE2E2)
         ToolGroup.SCAN -> Color(0xFF14B8A6) to if (isDark) Color(0x2814B8A6) else Color(0xFFCCFBF1)
-        ToolGroup.AUTOMATION -> Color(0xFF06B6D4) to if (isDark) Color(0x2806B6D4) else Color(0xFFCFFAFE)
     }
 
     val specialtyBadge: String? = when (tool) {
@@ -391,7 +369,6 @@ private fun ToolListRow(
         PdfTool.PDF_TO_IMAGES -> "Render"
         PdfTool.PDF_TO_TEXT_MD -> "Markdown"
         PdfTool.OCR_PDF -> "Searchable"
-        PdfTool.WORKFLOW -> "Chain"
         PdfTool.REPAIR -> "Fix"
         PdfTool.REDACT -> "Sanitize"
         else -> null

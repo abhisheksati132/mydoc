@@ -105,6 +105,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
+import com.abhisheksati.mydoc.designsystem.components.AppSlider
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.MediaItem
@@ -1143,8 +1144,8 @@ fun VideoPlayerScreen(
                             )
                         }
 
-                        // Seek Slider
-                        Slider(
+                        // Seek Slider (YouTube-style circular thumb)
+                        AppSlider(
                             value = if (totalDurationMs > 0) {
                                 val pos = if (isSeeking) seekPositionMs else currentPositionMs
                                 (pos.toFloat() / totalDurationMs).coerceIn(0f, 1f)
@@ -1163,6 +1164,7 @@ fun VideoPlayerScreen(
                                 activeTrackColor = Color(0xFFFF9800),
                                 inactiveTrackColor = Color(0x33FFFFFF)
                             ),
+                            thumbSize = 13.dp,
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -1635,7 +1637,7 @@ fun VideoPlayerScreen(
                                 Text("+50 ms")
                             }
                         }
-                        Slider(
+                        AppSlider(
                             value = audioDelayMs.toFloat(),
                             onValueChange = {
                                 audioDelayMs = it.toLong()
@@ -1676,7 +1678,7 @@ fun VideoPlayerScreen(
                                 Text("+50 ms")
                             }
                         }
-                        Slider(
+                        AppSlider(
                             value = spuDelayMs.toFloat(),
                             onValueChange = {
                                 spuDelayMs = it.toLong()
@@ -1765,7 +1767,7 @@ fun VideoPlayerScreen(
                             style = typography.caption,
                             color = if (isEqualizerEnabled) Color.White else Color.Gray
                         )
-                        Slider(
+                        AppSlider(
                             value = eqPreAmp,
                             onValueChange = {
                                 eqPreAmp = it

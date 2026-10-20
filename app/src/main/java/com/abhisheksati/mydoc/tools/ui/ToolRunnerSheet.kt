@@ -73,7 +73,6 @@ import com.abhisheksati.mydoc.tools.model.PageNumberPosition
 import com.abhisheksati.mydoc.tools.model.PageSizeFormat
 import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.tools.model.ToolExecutionResult
-import com.abhisheksati.mydoc.tools.model.WorkflowPresetType
 import com.abhisheksati.mydoc.tools.viewmodel.ToolExecutionUiState
 import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -230,7 +229,7 @@ fun ToolRunnerSheet(
                     Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
 
                     // Action Button (Min 48dp touch target)
-                    val canRun = inputUris.isNotEmpty() || tool == PdfTool.WORKFLOW
+                    val canRun = inputUris.isNotEmpty()
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -626,28 +625,6 @@ private fun ToolOptionsSection(
                         unfocusedTextColor = colors.textPrimary
                     )
                 )
-            }
-
-            PdfTool.WORKFLOW -> {
-                Text(text = "PRESET WORKFLOW", style = typography.label, color = colors.textSecondary)
-                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
-                WorkflowPresetType.entries.forEach { p ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = AppSpacing.paddingSmall)
-                            .clickable { onOptionsChange { it.copy(workflowPreset = p) } },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        AppFilterChip(
-                            label = p.title,
-                            isSelected = options.workflowPreset == p,
-                            onClick = { onOptionsChange { it.copy(workflowPreset = p) } }
-                        )
-                    }
-                    Text(text = p.stepsSummary, style = typography.caption, color = colors.accent)
-                    Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
-                }
             }
 
             PdfTool.IMAGE_TO_PDF -> {

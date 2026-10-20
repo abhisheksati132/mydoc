@@ -60,10 +60,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -242,23 +239,25 @@ fun DocumentsTabContent(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
                             ) {
                                 Surface(
                                     onClick = {
                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         openDocumentLauncher.launch(SUPPORTED_MIME_TYPES)
                                     },
-                                    shape = RoundedCornerShape(12.dp),
+                                    shape = RoundedCornerShape(16.dp),
                                     color = colors.surfaceVariant,
                                     border = BorderStroke(1.dp, colors.cardBorder),
                                     modifier = Modifier
                                         .weight(1f)
-                                        .height(42.dp)
+                                        .height(48.dp)
                                 ) {
                                     Row(
-                                        modifier = Modifier.fillMaxSize(),
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(horizontal = 12.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.Center
                                     ) {
@@ -266,12 +265,12 @@ fun DocumentsTabContent(
                                             imageVector = Icons.Outlined.FileOpen,
                                             contentDescription = "Open File",
                                             tint = colors.accent,
-                                            modifier = Modifier.size(17.dp)
+                                            modifier = Modifier.size(19.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
                                             text = "Open File",
-                                            style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
+                                            style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 13.sp),
                                             color = colors.textPrimary
                                         )
                                     }
@@ -283,15 +282,17 @@ fun DocumentsTabContent(
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             onQuickScan()
                                         },
-                                        shape = RoundedCornerShape(12.dp),
+                                        shape = RoundedCornerShape(16.dp),
                                         color = colors.accentVariant,
                                         border = BorderStroke(1.dp, colors.accent.copy(alpha = 0.35f)),
                                         modifier = Modifier
                                             .weight(1f)
-                                            .height(42.dp)
+                                            .height(48.dp)
                                     ) {
                                         Row(
-                                            modifier = Modifier.fillMaxSize(),
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(horizontal = 12.dp),
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.Center
                                         ) {
@@ -299,12 +300,12 @@ fun DocumentsTabContent(
                                                 imageVector = Icons.Outlined.CameraAlt,
                                                 contentDescription = "Quick Scan",
                                                 tint = colors.accent,
-                                                modifier = Modifier.size(17.dp)
+                                                modifier = Modifier.size(19.dp)
                                             )
                                             Spacer(modifier = Modifier.width(8.dp))
                                             Text(
                                                 text = "Quick Scan",
-                                                style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
+                                                style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 13.sp),
                                                 color = colors.accent
                                             )
                                         }
@@ -480,21 +481,21 @@ fun DocumentsTabContent(
                             key = { "search_${it.uri}" },
                             contentType = { "doc_row" }
                         ) { document ->
-                            SwipeableDocumentRow(
+                            AppFileRow(
                                 document = document,
                                 onClick = { onDocumentClick(document) },
                                 onToggleFavorite = { viewModel.toggleFavorite(document) },
-                                onRemoveFromRecents = { viewModel.removeFromRecents(document) },
-                                onShare = { onShareDocument(document) },
-                                onShowDetails = { onSelectDocForDetails(document) },
-                                onDeletedSnackbar = { name ->
+                                onRemoveFromRecents = {
+                                    viewModel.removeFromRecents(document)
                                     scope.launch {
                                         snackbarHostState.showSnackbar(
-                                            message = "Removed \"$name\"",
+                                            message = "Removed \"${document.displayName}\"",
                                             duration = SnackbarDuration.Short
                                         )
                                     }
-                                }
+                                },
+                                onShare = { onShareDocument(document) },
+                                onShowDetails = { onSelectDocForDetails(document) }
                             )
                         }
                     } else {
@@ -547,27 +548,27 @@ fun DocumentsTabContent(
                             AppSectionHeader(title = headerTitle)
                         }
 
-                        // Document Items with Micro-Gesture Swipes
+                        // Document Items without gesture interference
                         items(
                             items = uiState.documents,
                             key = { "doc_${it.uri}" },
                             contentType = { "doc_row" }
                         ) { document ->
-                            SwipeableDocumentRow(
+                            AppFileRow(
                                 document = document,
                                 onClick = { onDocumentClick(document) },
                                 onToggleFavorite = { viewModel.toggleFavorite(document) },
-                                onRemoveFromRecents = { viewModel.removeFromRecents(document) },
-                                onShare = { onShareDocument(document) },
-                                onShowDetails = { onSelectDocForDetails(document) },
-                                onDeletedSnackbar = { name ->
+                                onRemoveFromRecents = {
+                                    viewModel.removeFromRecents(document)
                                     scope.launch {
                                         snackbarHostState.showSnackbar(
-                                            message = "Removed \"$name\"",
+                                            message = "Removed \"${document.displayName}\"",
                                             duration = SnackbarDuration.Short
                                         )
                                     }
-                                }
+                                },
+                                onShare = { onShareDocument(document) },
+                                onShowDetails = { onSelectDocForDetails(document) }
                             )
                         }
 
@@ -581,21 +582,21 @@ fun DocumentsTabContent(
                                 key = { "fav_${it.uri}" },
                                 contentType = { "doc_row" }
                             ) { document ->
-                                SwipeableDocumentRow(
+                                AppFileRow(
                                     document = document,
                                     onClick = { onDocumentClick(document) },
                                     onToggleFavorite = { viewModel.toggleFavorite(document) },
-                                    onRemoveFromRecents = { viewModel.removeFromRecents(document) },
-                                    onShare = { onShareDocument(document) },
-                                    onShowDetails = { onSelectDocForDetails(document) },
-                                    onDeletedSnackbar = { name ->
+                                    onRemoveFromRecents = {
+                                        viewModel.removeFromRecents(document)
                                         scope.launch {
                                             snackbarHostState.showSnackbar(
-                                                message = "Removed \"$name\"",
+                                                message = "Removed \"${document.displayName}\"",
                                                 duration = SnackbarDuration.Short
                                             )
                                         }
-                                    }
+                                    },
+                                    onShare = { onShareDocument(document) },
+                                    onShowDetails = { onSelectDocForDetails(document) }
                                 )
                             }
                         }
@@ -715,109 +716,3 @@ private fun DocumentsRecentsCarousel(
     }
 }
 
-/**
- * Swipe-to-dismiss row offering right-swipe star and left-swipe trash with tactile haptics.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SwipeableDocumentRow(
-    document: DocumentFile,
-    onClick: () -> Unit,
-    onToggleFavorite: () -> Unit,
-    onRemoveFromRecents: () -> Unit,
-    onShare: () -> Unit,
-    onShowDetails: () -> Unit,
-    onDeletedSnackbar: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val colors = LocalAppColors.current
-    val haptic = LocalHapticFeedback.current
-
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { dismissValue ->
-            when (dismissValue) {
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    onToggleFavorite()
-                    false
-                }
-                SwipeToDismissBoxValue.EndToStart -> {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    onRemoveFromRecents()
-                    onDeletedSnackbar(document.displayName)
-                    true
-                }
-                SwipeToDismissBoxValue.Settled -> false
-            }
-        }
-    )
-
-    SwipeToDismissBox(
-        state = dismissState,
-        modifier = modifier.fillMaxWidth(),
-        enableDismissFromStartToEnd = true,
-        enableDismissFromEndToStart = true,
-        backgroundContent = {
-            val direction = dismissState.dismissDirection
-            val isFavorite = document.isFavorite
-            val bgColor = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> colors.accent.copy(alpha = 0.22f)
-                SwipeToDismissBoxValue.EndToStart -> colors.error.copy(alpha = 0.22f)
-                SwipeToDismissBoxValue.Settled -> Color.Transparent
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(bgColor)
-                    .padding(horizontal = 20.dp),
-                contentAlignment = if (direction == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd
-            ) {
-                if (direction == SwipeToDismissBoxValue.StartToEnd) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Outlined.StarBorder else Icons.Outlined.Star,
-                            contentDescription = if (isFavorite) "Unstar" else "Star",
-                            tint = colors.accent,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (isFavorite) "Unstar" else "Favorite",
-                            color = colors.accent,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp
-                        )
-                    }
-                } else if (direction == SwipeToDismissBoxValue.EndToStart) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "Remove",
-                            color = colors.error,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Icon(
-                            imageVector = Icons.Outlined.DeleteSweep,
-                            contentDescription = "Remove",
-                            tint = colors.error,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-            }
-        }
-    ) {
-        Surface(color = colors.background) {
-            AppFileRow(
-                document = document,
-                onClick = onClick,
-                onToggleFavorite = onToggleFavorite,
-                onRemoveFromRecents = onRemoveFromRecents,
-                onShare = onShare,
-                onShowDetails = onShowDetails
-            )
-        }
-    }
-}

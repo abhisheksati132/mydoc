@@ -94,7 +94,6 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.WarningAmber
-import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
@@ -214,7 +213,6 @@ fun FileManagerScreen(
     var showExtractConfirmDialogForFile by remember { mutableStateOf<File?>(null) }
     var singleItemCompressTarget by remember { mutableStateOf<File?>(null) }
     var isSearchActive by remember { mutableStateOf(false) }
-    var showWifiSharingSheet by remember { mutableStateOf(false) }
     var showStorageCleanerSheet by remember { mutableStateOf(false) }
     var showAppManagerSheet by remember { mutableStateOf(false) }
     var showVaultSheet by remember { mutableStateOf(false) }
@@ -633,9 +631,6 @@ fun FileManagerScreen(
                         onOpenVault = {
                             showVaultSheet = true
                         },
-                        onOpenWifiTransfer = {
-                            showWifiSharingSheet = true
-                        },
                         pinnedFolders = pinnedFolders,
                         onFolderClick = { folder ->
                             viewModel.startBrowsingStorage(folder)
@@ -922,17 +917,6 @@ fun FileManagerScreen(
                 viewModel.extractArchive(file)
             }
         )
-    }
-
-    if (showWifiSharingSheet) {
-        val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
-        if (app != null) {
-            com.abhisheksati.mydoc.ui.network.WifiSharingSheet(
-                wifiServerManager = app.wifiServerManager,
-                rootDirectory = uiState.currentDirectory,
-                onDismiss = { showWifiSharingSheet = false }
-            )
-        }
     }
 
     if (showStorageCleanerSheet) {

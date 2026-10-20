@@ -83,24 +83,6 @@ enum class PageNumberFormat(val label: String) {
     ONLY_X("{n}")
 }
 
-enum class WorkflowPresetType(val title: String, val description: String, val stepsSummary: String) {
-    DOCUMENT_CLEANUP(
-        "Document Cleanup",
-        "Rebuilds structure, purges tracking metadata, and cleans unused PDF objects.",
-        "Repair → Strip Metadata → Compress (Balanced)"
-    ),
-    CONFIDENTIAL_SHARE(
-        "Confidential Share",
-        "Applies diagonal confidentiality watermark, sanitizes metadata, and encrypts with AES-256.",
-        "Watermark → Strip Metadata → Protect (AES-256)"
-    ),
-    ARCHIVE_PREPARE(
-        "Archive Ready",
-        "Strips metadata and converts document into PDF/A-style format for long-term storage.",
-        "Strip Metadata → PDF/A Conversion"
-    )
-}
-
 /**
  * Universal options configuration passed to tool execution.
  */
@@ -144,8 +126,5 @@ data class ToolOptions(
     val ownerPassword: String = "",
     val allowPrinting: Boolean = true,
     val allowCopying: Boolean = true,
-    val redactQuery: String = "",
-
-    // Automation
-    val workflowPreset: WorkflowPresetType = WorkflowPresetType.DOCUMENT_CLEANUP
+    val redactQuery: String = ""
 )

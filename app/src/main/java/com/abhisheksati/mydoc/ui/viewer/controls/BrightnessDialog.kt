@@ -117,13 +117,14 @@ fun BrightnessDialog(
                         )
                     }
 
-                    Slider(
+                    com.abhisheksati.mydoc.designsystem.components.AppSlider(
                         value = brightnessValue,
                         onValueChange = { newValue ->
                             brightnessValue = newValue
                             onBrightnessChanged(newValue)
                         },
                         valueRange = 0.01f..1.0f,
+                        thumbSize = 13.dp,
                         modifier = Modifier.fillMaxWidth()
                     )
 

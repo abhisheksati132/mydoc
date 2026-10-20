@@ -39,7 +39,6 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.SdCard
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Videocam
-import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -88,7 +87,6 @@ fun GoogleFilesHubContent(
     onCleanClick: () -> Unit,
     onOpenTrash: () -> Unit,
     onOpenVault: () -> Unit,
-    onOpenWifiTransfer: () -> Unit,
     pinnedFolders: List<File>,
     onFolderClick: (File) -> Unit,
     trashCount: Int,
@@ -274,26 +272,6 @@ fun GoogleFilesHubContent(
                         badgeText = null,
                         badgeColor = Color.Transparent,
                         onClick = onOpenVault
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .height(1.dp)
-                            .background(colors.divider.copy(alpha = 0.4f))
-                    )
-
-                    // Wi-Fi PC Transfer Item
-                    HubUtilityRow(
-                        icon = Icons.Outlined.Wifi,
-                        iconTint = Color(0xFF03A9F4),
-                        iconBackground = Color(0xFF03A9F4).copy(alpha = 0.14f),
-                        title = "Wi-Fi PC File Transfer",
-                        subtitle = "Transfer files wirelessly using your browser",
-                        badgeText = null,
-                        badgeColor = Color.Transparent,
-                        onClick = onOpenWifiTransfer
                     )
                 }
             }

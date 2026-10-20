@@ -212,7 +212,7 @@ fun ReadingControlsBottomSheet(
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(AppSpacing.paddingMedium))
-                Slider(
+                com.abhisheksati.mydoc.designsystem.components.AppSlider(
                     value = if (currentBrightness < 0f) 0.5f else currentBrightness,
                     onValueChange = { newVal ->
                         onBrightnessChange(newVal)
@@ -226,6 +226,7 @@ fun ReadingControlsBottomSheet(
                         activeTrackColor = colors.accent,
                         inactiveTrackColor = colors.divider
                     ),
+                    thumbSize = 13.dp,
                     modifier = Modifier.weight(1f)
                 )
                 Spacer(modifier = Modifier.width(AppSpacing.paddingSmall))

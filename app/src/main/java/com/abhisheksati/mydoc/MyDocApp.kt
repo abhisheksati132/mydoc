@@ -36,9 +36,6 @@ class MyDocApp : Application(), ImageLoaderFactory {
     lateinit var storageRepository: com.abhisheksati.mydoc.domain.repository.StorageRepository
         private set
 
-    lateinit var wifiServerManager: com.abhisheksati.mydoc.network.WifiServerManager
-        private set
-
     val applicationScope = CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
@@ -54,7 +51,6 @@ class MyDocApp : Application(), ImageLoaderFactory {
         mediaRepository = MediaRepositoryImpl(this, database)
         storageRepository = com.abhisheksati.mydoc.data.repository.StorageRepositoryImpl(this, database.trashDao())
         settingsRepository = com.abhisheksati.mydoc.data.local.SettingsRepository(this)
-        wifiServerManager = com.abhisheksati.mydoc.network.WifiServerManager(this)
     }
 
     override fun newImageLoader(): ImageLoader {

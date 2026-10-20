@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 
@@ -184,6 +185,8 @@ private fun FreeCornersCropperCanvas(
     val cornerCircleRadiusPx = with(density) { 11.dp.toPx() }
     val strokeWidthPx = with(density) { 2.2.dp.toPx() }
     val gridStrokeWidthPx = with(density) { 1.dp.toPx() }
+    val snapThresholdPx = with(density) { 14.dp.toPx() }
+    var wasSnapped by remember { mutableStateOf(false) }
 
     val imageBitmap = remember(bitmap) { bitmap.asImageBitmap() }
 
@@ -285,39 +288,117 @@ private fun FreeCornersCropperCanvas(
                                     }
                                 }
                             }
+                            wasSnapped = false
                             dragTouchPosition = startOffset
                         },
                         onDrag = { change, dragAmount ->
                             change.consume()
                             dragTouchPosition = change.position
 
-                            fun clamp(offset: Offset): Offset {
-                                return Offset(
-                                    x = offset.x.coerceIn(imageBounds.left, imageBounds.right),
-                                    y = offset.y.coerceIn(imageBounds.top, imageBounds.bottom)
-                                )
+                            fun snapAndClamp(
+                                offset: Offset,
+                                hRef: Float? = null,
+                                vRef: Float? = null
+                            ): Offset {
+                                var x = offset.x.coerceIn(imageBounds.left, imageBounds.right)
+                                var y = offset.y.coerceIn(imageBounds.top, imageBounds.bottom)
+                                var snapped = false
+
+                                // Magnetic snap to outer image bounds
+                                if (abs(x - imageBounds.left) <= snapThresholdPx) {
+                                    x = imageBounds.left
+                                    snapped = true
+                                } else if (abs(x - imageBounds.right) <= snapThresholdPx) {
+                                    x = imageBounds.right
+                                    snapped = true
+                                }
+
+                                if (abs(y - imageBounds.top) <= snapThresholdPx) {
+                                    y = imageBounds.top
+                                    snapped = true
+                                } else if (abs(y - imageBounds.bottom) <= snapThresholdPx) {
+                                    y = imageBounds.bottom
+                                    snapped = true
+                                }
+
+                                // Magnetic snap to orthogonal alignment with adjacent corners
+                                if (hRef != null && abs(x - hRef) <= snapThresholdPx) {
+                                    x = hRef
+                                    snapped = true
+                                }
+                                if (vRef != null && abs(y - vRef) <= snapThresholdPx) {
+                                    y = vRef
+                                    snapped = true
+                                }
+
+                                if (snapped && !wasSnapped) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                                wasSnapped = snapped
+
+                                return Offset(x, y)
                             }
 
                             when (activeHandle) {
-                                DragHandle.CORNER_TL -> quadPoints[0] = clamp(quadPoints[0] + dragAmount)
-                                DragHandle.CORNER_TR -> quadPoints[1] = clamp(quadPoints[1] + dragAmount)
-                                DragHandle.CORNER_BR -> quadPoints[2] = clamp(quadPoints[2] + dragAmount)
-                                DragHandle.CORNER_BL -> quadPoints[3] = clamp(quadPoints[3] + dragAmount)
+                                DragHandle.CORNER_TL -> quadPoints[0] = snapAndClamp(quadPoints[0] + dragAmount, hRef = quadPoints[3].x, vRef = quadPoints[1].y)
+                                DragHandle.CORNER_TR -> quadPoints[1] = snapAndClamp(quadPoints[1] + dragAmount, hRef = quadPoints[2].x, vRef = quadPoints[0].y)
+                                DragHandle.CORNER_BR -> quadPoints[2] = snapAndClamp(quadPoints[2] + dragAmount, hRef = quadPoints[1].x, vRef = quadPoints[3].y)
+                                DragHandle.CORNER_BL -> quadPoints[3] = snapAndClamp(quadPoints[3] + dragAmount, hRef = quadPoints[0].x, vRef = quadPoints[2].y)
                                 DragHandle.EDGE_TOP -> {
-                                    quadPoints[0] = clamp(quadPoints[0] + Offset(0f, dragAmount.y))
-                                    quadPoints[1] = clamp(quadPoints[1] + Offset(0f, dragAmount.y))
+                                    var newY = (quadPoints[0].y + dragAmount.y).coerceIn(imageBounds.top, imageBounds.bottom)
+                                    var snapped = false
+                                    if (abs(newY - imageBounds.top) <= snapThresholdPx) {
+                                        newY = imageBounds.top
+                                        snapped = true
+                                    }
+                                    if (snapped && !wasSnapped) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    }
+                                    wasSnapped = snapped
+                                    quadPoints[0] = Offset(quadPoints[0].x, newY)
+                                    quadPoints[1] = Offset(quadPoints[1].x, newY)
                                 }
                                 DragHandle.EDGE_RIGHT -> {
-                                    quadPoints[1] = clamp(quadPoints[1] + Offset(dragAmount.x, 0f))
-                                    quadPoints[2] = clamp(quadPoints[2] + Offset(dragAmount.x, 0f))
+                                    var newX = (quadPoints[1].x + dragAmount.x).coerceIn(imageBounds.left, imageBounds.right)
+                                    var snapped = false
+                                    if (abs(newX - imageBounds.right) <= snapThresholdPx) {
+                                        newX = imageBounds.right
+                                        snapped = true
+                                    }
+                                    if (snapped && !wasSnapped) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    }
+                                    wasSnapped = snapped
+                                    quadPoints[1] = Offset(newX, quadPoints[1].y)
+                                    quadPoints[2] = Offset(newX, quadPoints[2].y)
                                 }
                                 DragHandle.EDGE_BOTTOM -> {
-                                    quadPoints[2] = clamp(quadPoints[2] + Offset(0f, dragAmount.y))
-                                    quadPoints[3] = clamp(quadPoints[3] + Offset(0f, dragAmount.y))
+                                    var newY = (quadPoints[2].y + dragAmount.y).coerceIn(imageBounds.top, imageBounds.bottom)
+                                    var snapped = false
+                                    if (abs(newY - imageBounds.bottom) <= snapThresholdPx) {
+                                        newY = imageBounds.bottom
+                                        snapped = true
+                                    }
+                                    if (snapped && !wasSnapped) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    }
+                                    wasSnapped = snapped
+                                    quadPoints[2] = Offset(quadPoints[2].x, newY)
+                                    quadPoints[3] = Offset(quadPoints[3].x, newY)
                                 }
                                 DragHandle.EDGE_LEFT -> {
-                                    quadPoints[3] = clamp(quadPoints[3] + Offset(dragAmount.x, 0f))
-                                    quadPoints[0] = clamp(quadPoints[0] + Offset(dragAmount.x, 0f))
+                                    var newX = (quadPoints[3].x + dragAmount.x).coerceIn(imageBounds.left, imageBounds.right)
+                                    var snapped = false
+                                    if (abs(newX - imageBounds.left) <= snapThresholdPx) {
+                                        newX = imageBounds.left
+                                        snapped = true
+                                    }
+                                    if (snapped && !wasSnapped) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    }
+                                    wasSnapped = snapped
+                                    quadPoints[3] = Offset(newX, quadPoints[3].y)
+                                    quadPoints[0] = Offset(newX, quadPoints[0].y)
                                 }
                                 else -> {}
                             }
@@ -325,10 +406,12 @@ private fun FreeCornersCropperCanvas(
                         onDragEnd = {
                             activeHandle = DragHandle.NONE
                             dragTouchPosition = Offset.Unspecified
+                            wasSnapped = false
                         },
                         onDragCancel = {
                             activeHandle = DragHandle.NONE
                             dragTouchPosition = Offset.Unspecified
+                            wasSnapped = false
                         }
                     )
                 }
