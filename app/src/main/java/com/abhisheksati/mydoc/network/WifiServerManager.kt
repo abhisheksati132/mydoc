@@ -1,7 +1,6 @@
 package com.abhisheksati.mydoc.network
 
 import android.content.Context
-import android.net.wifi.WifiManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -24,8 +23,7 @@ import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.URLDecoder
-import java.text.DateFormat
-import java.util.Date
+import java.security.SecureRandom
 import java.util.Locale
 
 class WifiServerManager(private val context: Context) {
@@ -39,6 +37,9 @@ class WifiServerManager(private val context: Context) {
 
     private val _serverUrl = MutableStateFlow<String?>(null)
     val serverUrl: StateFlow<String?> = _serverUrl.asStateFlow()
+
+    private val _serverPin = MutableStateFlow<String?>(null)
+    val serverPin: StateFlow<String?> = _serverPin.asStateFlow()
 
     private val _connectedClientsCount = MutableStateFlow(0)
     val connectedClientsCount: StateFlow<Int> = _connectedClientsCount.asStateFlow()
@@ -67,8 +68,12 @@ class WifiServerManager(private val context: Context) {
         val ip = getLocalIpAddress()
         if (ip == null) {
             _serverUrl.value = null
+            _serverPin.value = null
             return
         }
+
+        val generatedPin = String.format(Locale.ROOT, "%06d", SecureRandom().nextInt(1_000_000))
+        _serverPin.value = generatedPin
 
         serverJob = scope.launch {
             var port = preferredPort
@@ -83,7 +88,7 @@ class WifiServerManager(private val context: Context) {
 
             if (socket == null) return@launch
             serverSocket = socket
-            val url = "http://$ip:$port"
+            val url = "http://$ip:$port?pin=$generatedPin"
             _serverUrl.value = url
             _isRunning.value = true
 
@@ -103,6 +108,7 @@ class WifiServerManager(private val context: Context) {
     fun stopServer() {
         _isRunning.value = false
         _serverUrl.value = null
+        _serverPin.value = null
         try {
             serverSocket?.close()
         } catch (_: Exception) {}
@@ -117,7 +123,7 @@ class WifiServerManager(private val context: Context) {
             val input = BufferedInputStream(client.getInputStream())
             val output = BufferedOutputStream(client.getOutputStream())
 
-            val reader = BufferedReader(InputStreamReader(input))
+            val reader = BufferedReader(InputStreamReader(input, Charsets.UTF_8))
             val requestLine = reader.readLine() ?: return@withContext
             val parts = requestLine.split(" ")
             if (parts.size < 2) return@withContext
@@ -128,50 +134,125 @@ class WifiServerManager(private val context: Context) {
             val queryString = if (fullUrl.contains('?')) fullUrl.substringAfter('?') else ""
             val queryParams = parseQueryParams(queryString)
 
-            // Read headers to get content length if POST
+            // Read headers
+            val headers = mutableMapOf<String, String>()
             var contentLength = 0L
             var line: String? = reader.readLine()
             while (!line.isNullOrEmpty()) {
-                if (line.startsWith("Content-Length:", ignoreCase = true)) {
-                    contentLength = line.substringAfter(':').trim().toLongOrNull() ?: 0L
+                val colonIdx = line.indexOf(':')
+                if (colonIdx > 0) {
+                    val hName = line.substring(0, colonIdx).trim().lowercase(Locale.ROOT)
+                    val hVal = line.substring(colonIdx + 1).trim()
+                    headers[hName] = hVal
+                    if (hName == "content-length") {
+                        contentLength = hVal.toLongOrNull() ?: 0L
+                    }
                 }
                 line = reader.readLine()
             }
+
+            // Authentication verification for API endpoints
+            val activePin = _serverPin.value
+            val clientPin = headers["x-auth-pin"]
+                ?: parseCookiePin(headers["cookie"])
+                ?: queryParams["pin"]
+
+            val isAuthorized = activePin != null && clientPin == activePin
 
             when {
                 method == "GET" && path == "/" -> {
                     serveWebUi(output)
                 }
 
+                method == "GET" && path == "/api/auth/verify" -> {
+                    if (isAuthorized) {
+                        sendResponse(output, 200, "application/json", """{"status":"ok","authenticated":true}""".toByteArray(Charsets.UTF_8))
+                    } else {
+                        sendResponse(output, 401, "application/json", """{"error":"Invalid PIN"}""".toByteArray(Charsets.UTF_8))
+                    }
+                }
+
+                path.startsWith("/api/") && !isAuthorized -> {
+                    sendResponse(
+                        output,
+                        401,
+                        "application/json",
+                        """{"error":"Unauthorized: Missing or invalid security PIN"}""".toByteArray(Charsets.UTF_8)
+                    )
+                }
+
                 method == "GET" && path == "/api/list" -> {
-                    val reqPath = queryParams["path"] ?: rootDir.absolutePath
-                    serveDirectoryList(output, File(reqPath), rootDir)
+                    val reqPath = queryParams["path"]
+                    val targetDir = if (!reqPath.isNullOrBlank()) File(reqPath) else rootDir
+                    if (!isSafePath(targetDir, rootDir) || !targetDir.isDirectory) {
+                        sendResponse(output, 403, "application/json", """{"error":"Forbidden: Path outside shared directory"}""".toByteArray(Charsets.UTF_8))
+                    } else {
+                        serveDirectoryList(output, targetDir, rootDir)
+                    }
                 }
 
                 method == "GET" && path == "/api/download" -> {
                     val reqPath = queryParams["path"] ?: ""
-                    serveFileDownload(output, File(reqPath), rootDir)
+                    val targetFile = File(reqPath)
+                    if (!isSafePath(targetFile, rootDir) || !targetFile.isFile || !targetFile.exists()) {
+                        sendResponse(output, 403, "text/plain", "Forbidden: Invalid or inaccessible file path".toByteArray(Charsets.UTF_8))
+                    } else {
+                        serveFileDownload(output, targetFile, rootDir)
+                    }
                 }
 
                 method == "POST" && path == "/api/upload" -> {
-                    val destFolder = File(queryParams["path"] ?: rootDir.absolutePath)
-                    val filename = queryParams["name"] ?: "upload_${System.currentTimeMillis()}"
-                    handleFileUpload(input, output, destFolder, filename, contentLength)
+                    val destFolder = if (!queryParams["path"].isNullOrBlank()) File(queryParams["path"]!!) else rootDir
+                    if (!isSafePath(destFolder, rootDir) || !destFolder.isDirectory) {
+                        sendResponse(output, 403, "application/json", """{"error":"Forbidden: Destination outside shared directory"}""".toByteArray(Charsets.UTF_8))
+                        return@withContext
+                    }
+                    val rawName = queryParams["name"] ?: "upload_${System.currentTimeMillis()}"
+                    val safeName = File(rawName).name.replace(Regex("[^a-zA-Z0-9._ -]"), "_").trim()
+                    if (safeName.isBlank() || safeName == "." || safeName == "..") {
+                        sendResponse(output, 400, "application/json", """{"error":"Invalid file name"}""".toByteArray(Charsets.UTF_8))
+                        return@withContext
+                    }
+                    val destFile = File(destFolder, safeName)
+                    if (!isSafePath(destFile, rootDir)) {
+                        sendResponse(output, 403, "application/json", """{"error":"Forbidden: Destination file outside shared directory"}""".toByteArray(Charsets.UTF_8))
+                        return@withContext
+                    }
+                    handleFileUpload(input, output, destFile, contentLength)
                 }
 
                 method == "POST" && path == "/api/mkdir" -> {
-                    val parentFolder = File(queryParams["path"] ?: rootDir.absolutePath)
-                    val name = queryParams["name"] ?: "New Folder"
-                    handleCreateFolder(output, parentFolder, name)
+                    val parentFolder = if (!queryParams["path"].isNullOrBlank()) File(queryParams["path"]!!) else rootDir
+                    if (!isSafePath(parentFolder, rootDir) || !parentFolder.isDirectory) {
+                        sendResponse(output, 403, "application/json", """{"error":"Forbidden: Parent outside shared directory"}""".toByteArray(Charsets.UTF_8))
+                        return@withContext
+                    }
+                    val rawName = queryParams["name"] ?: "New Folder"
+                    val safeName = File(rawName).name.replace(Regex("[^a-zA-Z0-9._ -]"), "_").trim()
+                    if (safeName.isBlank() || safeName == "." || safeName == "..") {
+                        sendResponse(output, 400, "application/json", """{"error":"Invalid folder name"}""".toByteArray(Charsets.UTF_8))
+                        return@withContext
+                    }
+                    val targetFolder = File(parentFolder, safeName)
+                    if (!isSafePath(targetFolder, rootDir)) {
+                        sendResponse(output, 403, "application/json", """{"error":"Forbidden: Target outside shared directory"}""".toByteArray(Charsets.UTF_8))
+                        return@withContext
+                    }
+                    handleCreateFolder(output, targetFolder)
                 }
 
                 method == "POST" && path == "/api/delete" -> {
-                    val target = File(queryParams["path"] ?: "")
-                    handleDelete(output, target, rootDir)
+                    val reqPath = queryParams["path"] ?: ""
+                    val target = File(reqPath)
+                    if (!isSafePath(target, rootDir) || target.canonicalFile == rootDir.canonicalFile || !target.exists()) {
+                        sendResponse(output, 403, "application/json", """{"error":"Forbidden: Cannot delete specified target"}""".toByteArray(Charsets.UTF_8))
+                    } else {
+                        handleDelete(output, target, rootDir)
+                    }
                 }
 
                 else -> {
-                    sendResponse(output, 404, "text/plain", "Not Found".toByteArray())
+                    sendResponse(output, 404, "text/plain", "Not Found".toByteArray(Charsets.UTF_8))
                 }
             }
         } catch (_: Exception) {
@@ -180,6 +261,28 @@ class WifiServerManager(private val context: Context) {
                 client.close()
             } catch (_: Exception) {}
         }
+    }
+
+    private fun isSafePath(target: File, rootDir: File): Boolean {
+        return try {
+            val canonicalTarget = target.canonicalFile.canonicalPath
+            val canonicalRoot = rootDir.canonicalFile.canonicalPath
+            canonicalTarget == canonicalRoot || canonicalTarget.startsWith(canonicalRoot + File.separator)
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun parseCookiePin(cookieHeader: String?): String? {
+        if (cookieHeader == null) return null
+        val cookies = cookieHeader.split(";")
+        for (c in cookies) {
+            val trimmed = c.trim()
+            if (trimmed.startsWith("mydoc_pin=")) {
+                return trimmed.substringAfter("=").trim()
+            }
+        }
+        return null
     }
 
     private fun parseQueryParams(queryString: String): Map<String, String> {
@@ -223,7 +326,7 @@ class WifiServerManager(private val context: Context) {
 
     private fun serveFileDownload(output: OutputStream, file: File, rootDir: File) {
         if (!file.exists() || file.isDirectory) {
-            sendResponse(output, 404, "text/plain", "File not found".toByteArray())
+            sendResponse(output, 404, "text/plain", "File not found".toByteArray(Charsets.UTF_8))
             return
         }
 
@@ -232,7 +335,7 @@ class WifiServerManager(private val context: Context) {
         writer.print("HTTP/1.1 200 OK\r\n")
         writer.print("Content-Type: application/octet-stream\r\n")
         writer.print("Content-Length: $len\r\n")
-        writer.print("Content-Disposition: attachment; filename=\"${file.name}\"\r\n")
+        writer.print("Content-Disposition: attachment; filename=\"${file.name.replace("\"", "")}\"\r\n")
         writer.print("Connection: close\r\n\r\n")
         writer.flush()
 
@@ -246,9 +349,8 @@ class WifiServerManager(private val context: Context) {
         output.flush()
     }
 
-    private fun handleFileUpload(input: BufferedInputStream, output: OutputStream, destFolder: File, filename: String, contentLength: Long) {
-        if (!destFolder.exists()) destFolder.mkdirs()
-        val destFile = File(destFolder, filename)
+    private fun handleFileUpload(input: BufferedInputStream, output: OutputStream, destFile: File, contentLength: Long) {
+        destFile.parentFile?.mkdirs()
 
         FileOutputStream(destFile).use { fos ->
             val buf = ByteArray(64 * 1024)
@@ -260,33 +362,36 @@ class WifiServerManager(private val context: Context) {
                 fos.write(buf, 0, read)
                 remaining -= read
             }
+            fos.flush()
         }
 
-        sendResponse(output, 200, "application/json", """{"status":"ok","name":"${destFile.name}"}""".toByteArray())
+        sendResponse(output, 200, "application/json", """{"status":"ok","name":"${destFile.name}"}""".toByteArray(Charsets.UTF_8))
     }
 
-    private fun handleCreateFolder(output: OutputStream, parent: File, name: String) {
-        val target = File(parent, name)
+    private fun handleCreateFolder(output: OutputStream, target: File) {
         val created = target.mkdirs()
         val code = if (created) 200 else 400
-        sendResponse(output, code, "application/json", """{"status":"${if (created) "ok" else "error"}"}""".toByteArray())
+        sendResponse(output, code, "application/json", """{"status":"${if (created) "ok" else "error"}"}""".toByteArray(Charsets.UTF_8))
     }
 
     private fun handleDelete(output: OutputStream, target: File, rootDir: File) {
-        if (!target.exists() || target == rootDir) {
-            sendResponse(output, 400, "application/json", """{"status":"error"}""".toByteArray())
-            return
-        }
         val deleted = if (target.isDirectory) target.deleteRecursively() else target.delete()
-        sendResponse(output, 200, "application/json", """{"status":"${if (deleted) "ok" else "error"}"}""".toByteArray())
+        sendResponse(output, 200, "application/json", """{"status":"${if (deleted) "ok" else "error"}"}""".toByteArray(Charsets.UTF_8))
     }
 
     private fun sendResponse(output: OutputStream, status: Int, contentType: String, data: ByteArray) {
         val writer = PrintWriter(output)
-        writer.print("HTTP/1.1 $status ${if (status == 200) "OK" else "Error"}\r\n")
+        val statusText = when (status) {
+            200 -> "OK"
+            400 -> "Bad Request"
+            401 -> "Unauthorized"
+            403 -> "Forbidden"
+            404 -> "Not Found"
+            else -> "Error"
+        }
+        writer.print("HTTP/1.1 $status $statusText\r\n")
         writer.print("Content-Type: $contentType\r\n")
         writer.print("Content-Length: ${data.size}\r\n")
-        writer.print("Access-Control-Allow-Origin: *\r\n")
         writer.print("Connection: close\r\n\r\n")
         writer.flush()
         output.write(data)
@@ -358,15 +463,40 @@ class WifiServerManager(private val context: Context) {
         .btn-icon.del:hover { color: var(--danger); }
         .progress-bar-container { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 10px; display: none; }
         .progress-bar { height: 100%; width: 0%; background: var(--accent); transition: width 0.1s; }
+        
+        /* PIN Modal */
+        #pinModal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+            display: none; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .pin-box {
+            background: var(--surface); border: 1px solid var(--border); padding: 32px; border-radius: 16px;
+            width: 320px; text-align: center; box-shadow: 0 16px 36px rgba(0,0,0,0.5);
+        }
+        .pin-input {
+            width: 100%; font-size: 24px; letter-spacing: 8px; text-align: center; padding: 12px;
+            margin: 20px 0; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+            color: var(--accent); font-weight: bold; outline: none;
+        }
+        .pin-input:focus { border-color: var(--accent); }
     </style>
 </head>
 <body>
+    <div id="pinModal">
+        <div class="pin-box">
+            <h2 style="font-size: 18px; margin-bottom: 8px;">Device PIN Required</h2>
+            <p style="font-size: 12px; color: var(--text-secondary);">Enter the 6-digit security PIN shown on your phone's screen</p>
+            <input type="text" id="pinField" class="pin-input" maxlength="6" placeholder="000000" autofocus>
+            <button class="primary" style="width: 100%; justify-content: center; padding: 10px;" onclick="submitPin()">Authorize Connection</button>
+        </div>
+    </div>
+
     <header>
         <div class="logo-area">
             <div class="logo">MD</div>
             <div>
                 <h1>MyDoc Wi-Fi Transfer</h1>
-                <p style="font-size: 12px; color: var(--text-secondary);">Direct phone-to-browser high-speed transfer</p>
+                <p style="font-size: 12px; color: var(--text-secondary);">Direct phone-to-browser authenticated transfer</p>
             </div>
         </div>
         <div class="actions">
@@ -395,14 +525,75 @@ class WifiServerManager(private val context: Context) {
         let currentPath = '';
         let rootPath = '';
 
+        function getStoredPin() {
+            return sessionStorage.getItem('mydoc_pin') || '';
+        }
+
+        function setStoredPin(pin) {
+            sessionStorage.setItem('mydoc_pin', pin);
+            document.cookie = "mydoc_pin=" + pin + "; path=/; max-age=86400; SameSite=Strict";
+        }
+
+        async function authFetch(url, options = {}) {
+            options.headers = options.headers || {};
+            const pin = getStoredPin();
+            if (pin) {
+                options.headers['X-Auth-Pin'] = pin;
+            }
+            const res = await fetch(url, options);
+            if (res.status === 401) {
+                showPinModal();
+                throw new Error('Authentication required');
+            }
+            return res;
+        }
+
+        function showPinModal() {
+            document.getElementById('pinModal').style.display = 'flex';
+            document.getElementById('pinField').focus();
+        }
+
+        async function submitPin() {
+            const pin = document.getElementById('pinField').value.trim();
+            if (pin.length !== 6) {
+                alert('Please enter a valid 6-digit PIN');
+                return;
+            }
+            setStoredPin(pin);
+            try {
+                const res = await authFetch('/api/auth/verify');
+                if (res.ok) {
+                    document.getElementById('pinModal').style.display = 'none';
+                    await loadDir(currentPath);
+                } else {
+                    alert('Incorrect PIN. Please check your phone screen.');
+                }
+            } catch (e) {
+                alert('Authentication failed: ' + e.message);
+            }
+        }
+
         async function init() {
+            // Check if PIN was passed in URL query param
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlPin = urlParams.get('pin');
+            if (urlPin) {
+                setStoredPin(urlPin);
+                history.replaceState(null, '', window.location.pathname);
+            }
+
             setupDropzone();
-            await loadDir('');
+
+            if (!getStoredPin()) {
+                showPinModal();
+            } else {
+                await loadDir('');
+            }
         }
 
         async function loadDir(path) {
             try {
-                const res = await fetch('/api/list?path=' + encodeURIComponent(path));
+                const res = await authFetch('/api/list?path=' + encodeURIComponent(path));
                 const items = await res.json();
                 if (!rootPath && path === '') {
                     rootPath = path;
@@ -411,7 +602,7 @@ class WifiServerManager(private val context: Context) {
                 renderBreadcrumbs(path);
                 renderItems(items);
             } catch (e) {
-                alert('Failed to load folder: ' + e);
+                console.error(e);
             }
         }
 
@@ -448,7 +639,7 @@ class WifiServerManager(private val context: Context) {
         function renderItems(items) {
             const list = document.getElementById('fileList');
             list.innerHTML = '';
-            if (items.length === 0) {
+            if (!items || items.length === 0) {
                 list.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-secondary); font-size: 13px;">Empty folder</div>';
                 return;
             }
@@ -502,16 +693,17 @@ class WifiServerManager(private val context: Context) {
         }
 
         function downloadFile(path) {
-            window.location.href = '/api/download?path=' + encodeURIComponent(path);
+            const pin = getStoredPin();
+            window.location.href = '/api/download?path=' + encodeURIComponent(path) + '&pin=' + encodeURIComponent(pin);
         }
 
         async function deleteItem(path, name) {
             if (!confirm('Are you sure you want to delete "' + name + '"?')) return;
             try {
-                await fetch('/api/delete?path=' + encodeURIComponent(path), { method: 'POST' });
+                await authFetch('/api/delete?path=' + encodeURIComponent(path), { method: 'POST' });
                 loadDir(currentPath);
             } catch (e) {
-                alert('Failed to delete: ' + e);
+                alert('Failed to delete: ' + e.message);
             }
         }
 
@@ -519,10 +711,10 @@ class WifiServerManager(private val context: Context) {
             const name = prompt('Enter new folder name:');
             if (!name || !name.trim()) return;
             try {
-                await fetch('/api/mkdir?path=' + encodeURIComponent(currentPath) + '&name=' + encodeURIComponent(name.trim()), { method: 'POST' });
+                await authFetch('/api/mkdir?path=' + encodeURIComponent(currentPath) + '&name=' + encodeURIComponent(name.trim()), { method: 'POST' });
                 loadDir(currentPath);
             } catch (e) {
-                alert('Failed to create folder: ' + e);
+                alert('Failed to create folder: ' + e.message);
             }
         }
 
@@ -550,12 +742,12 @@ class WifiServerManager(private val context: Context) {
                 const file = files[i];
                 bar.style.width = ((i / files.length) * 100) + '%';
                 try {
-                    await fetch('/api/upload?path=' + encodeURIComponent(currentPath) + '&name=' + encodeURIComponent(file.name), {
+                    await authFetch('/api/upload?path=' + encodeURIComponent(currentPath) + '&name=' + encodeURIComponent(file.name), {
                         method: 'POST',
                         body: file
                     });
                 } catch (e) {
-                    alert('Failed to upload ' + file.name + ': ' + e);
+                    alert('Failed to upload ' + file.name + ': ' + e.message);
                 }
             }
 

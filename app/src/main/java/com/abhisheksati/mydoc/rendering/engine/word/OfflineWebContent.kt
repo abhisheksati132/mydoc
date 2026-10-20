@@ -16,6 +16,10 @@ internal object OfflineWebContent {
     fun harden(view: WebView) {
         view.settings.blockNetworkLoads = true
         view.settings.allowContentAccess = false
+        @Suppress("DEPRECATION")
+        view.settings.allowFileAccessFromFileURLs = false
+        @Suppress("DEPRECATION")
+        view.settings.allowUniversalAccessFromFileURLs = false
     }
 
     fun intercept(request: WebResourceRequest): WebResourceResponse? {

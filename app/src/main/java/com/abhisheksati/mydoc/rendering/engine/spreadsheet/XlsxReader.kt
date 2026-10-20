@@ -16,11 +16,33 @@ object XlsxReader {
 
     fun read(source: InputStream): XlsxWorkbook {
         val entries = HashMap<String, ByteArray>()
+        var totalBytesRead = 0L
+        val maxTotalBytes = 100L * 1024L * 1024L // 100MB maximum
+        val maxEntryBytes = 25 * 1024 * 1024 // 25MB per XML entry
+        val buf = ByteArray(16384)
+
         ZipInputStream(source).use { zip ->
-            while (true) {
+            var count = 0
+            while (count < 2000) {
                 val e = zip.nextEntry ?: break
+                count++
                 val n = e.name.removePrefix("/")
-                if (isNeeded(n)) entries[n] = zip.readBytes()
+                if (isNeeded(n)) {
+                    if (totalBytesRead < maxTotalBytes) {
+                        val baos = java.io.ByteArrayOutputStream(minOf(maxEntryBytes, 64 * 1024))
+                        var entryRead = 0
+                        var read: Int
+                        while (zip.read(buf).also { read = it } != -1) {
+                            val toWrite = minOf(read, maxEntryBytes - entryRead)
+                            baos.write(buf, 0, toWrite)
+                            entryRead += toWrite
+                            if (entryRead >= maxEntryBytes) break
+                        }
+                        val entryData = baos.toByteArray()
+                        totalBytesRead += entryData.size
+                        entries[n] = entryData
+                    }
+                }
             }
         }
         val theme = entries.entries.firstOrNull { it.key.startsWith("xl/theme/") && it.key.endsWith(".xml") }

@@ -88,6 +88,7 @@ fun WifiSharingSheet(
 
     val isRunning by wifiServerManager.isRunning.collectAsState()
     val serverUrl by wifiServerManager.serverUrl.collectAsState()
+    val serverPin by wifiServerManager.serverPin.collectAsState()
     val ip = remember { wifiServerManager.getLocalIpAddress() }
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
@@ -298,6 +299,50 @@ fun WifiSharingSheet(
                                     tint = colors.textSecondary,
                                     modifier = Modifier.size(18.dp)
                                 )
+                            }
+                        }
+
+                        if (serverPin != null) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = colors.accent.copy(alpha = 0.12f),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        cm.setPrimaryClip(ClipData.newPlainText("MyDoc PIN", serverPin))
+                                        Toast.makeText(context, "PIN copied to clipboard", Toast.LENGTH_SHORT).show()
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "SECURITY PIN",
+                                            style = typography.caption.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                                            color = colors.textSecondary
+                                        )
+                                        Text(
+                                            text = serverPin!!,
+                                            style = typography.body.copy(
+                                                fontFamily = FontFamily.Monospace,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 18.sp,
+                                                letterSpacing = 3.sp
+                                            ),
+                                            color = colors.accent
+                                        )
+                                    }
+                                    Text(
+                                        text = "Tap to copy",
+                                        style = typography.caption.copy(fontSize = 11.sp),
+                                        color = colors.textSecondary
+                                    )
+                                }
                             }
                         }
 

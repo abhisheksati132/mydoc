@@ -49,7 +49,7 @@ class DocxParser {
                     if (!entry.isDirectory) {
                         val norm = entry.name.replace('\\', '/').trimStart('/').lowercase()
                         if (norm == "word/document.xml" || norm == "content.xml") {
-                            entryMap[norm] = zis.readBytes()
+                            entryMap[norm] = readBounded(zis, 25 * 1024 * 1024)
                         }
                     }
                     zis.closeEntry()
@@ -411,5 +411,19 @@ class DocxParser {
         }
 
         return blocks
+    }
+
+    private fun readBounded(input: java.io.InputStream, maxBytes: Int): ByteArray {
+        val baos = java.io.ByteArrayOutputStream(minOf(maxBytes, 64 * 1024))
+        val buf = ByteArray(16384)
+        var total = 0
+        var n: Int
+        while (input.read(buf).also { n = it } != -1) {
+            val toWrite = minOf(n, maxBytes - total)
+            baos.write(buf, 0, toWrite)
+            total += toWrite
+            if (total >= maxBytes) break
+        }
+        return baos.toByteArray()
     }
 }

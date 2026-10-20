@@ -169,10 +169,11 @@ class VaultManager(
         try {
             if (!destDir.exists()) destDir.mkdirs()
 
-            var targetFile = File(destDir, item.originalName)
+            val safeOriginalName = File(item.originalName).name.ifBlank { "restored_file" }
+            var targetFile = File(destDir, safeOriginalName)
             if (targetFile.exists()) {
-                val nameWithoutExt = item.originalName.substringBeforeLast('.', item.originalName)
-                val ext = item.originalName.substringAfterLast('.', "")
+                val nameWithoutExt = safeOriginalName.substringBeforeLast('.', safeOriginalName)
+                val ext = safeOriginalName.substringAfterLast('.', "")
                 val extPart = if (ext.isNotEmpty()) ".$ext" else ""
                 targetFile = File(destDir, "${nameWithoutExt}_restored$extPart")
             }
@@ -191,7 +192,8 @@ class VaultManager(
             val cacheDir = File(context.cacheDir, "vault_preview")
             if (!cacheDir.exists()) cacheDir.mkdirs()
 
-            val tempFile = File(cacheDir, item.originalName)
+            val safeOriginalName = File(item.originalName).name.ifBlank { "preview_file" }
+            val tempFile = File(cacheDir, safeOriginalName)
             decryptFileTo(item.encryptedFile, tempFile)
             Result.success(tempFile)
         } catch (e: Exception) {

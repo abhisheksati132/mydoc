@@ -22,7 +22,7 @@ class ApkDownloader(private val context: Context) {
             if (cleanExpectedSha256.isBlank()) {
                 throw IllegalArgumentException("Expected SHA-256 checksum cannot be blank")
             }
-            val baseDir = context.externalCacheDir ?: context.cacheDir
+            val baseDir = context.cacheDir
             val updatesDir = File(baseDir, "updates").apply {
                 if (!exists()) mkdirs()
             }

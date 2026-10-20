@@ -234,7 +234,18 @@ internal object DocxWebRenderer {
                 while (true) {
                     val entry = zip.nextEntry ?: break
                     if (entry.name.removePrefix("/") == "word/document.xml") {
-                        found = zip.readBytes()
+                        val baos = java.io.ByteArrayOutputStream(64 * 1024)
+                        val buf = ByteArray(16384)
+                        var readTotal = 0
+                        val maxBytes = 15 * 1024 * 1024 // Max 15MB
+                        var n: Int
+                        while (zip.read(buf).also { n = it } != -1) {
+                            val toWrite = minOf(n, maxBytes - readTotal)
+                            baos.write(buf, 0, toWrite)
+                            readTotal += toWrite
+                            if (readTotal >= maxBytes) break
+                        }
+                        found = baos.toByteArray()
                         break
                     }
                 }

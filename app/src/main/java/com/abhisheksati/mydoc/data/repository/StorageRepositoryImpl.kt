@@ -470,11 +470,19 @@ class StorageRepositoryImpl(
 
             val canonicalDest = destinationDir.canonicalFile.canonicalPath
             var extractedCount = 0
+            var totalExtractedBytes = 0L
+            val maxAllowedBytes = 1024L * 1024L * 1024L // 1 GB uncompressed limit
+            val maxAllowedFiles = 10_000 // 10,000 files limit
             val buffer = ByteArray(32 * 1024)
 
             ZipInputStream(BufferedInputStream(FileInputStream(zipFile), 32 * 1024)).use { zis ->
                 var entry = zis.nextEntry
                 while (entry != null) {
+                    extractedCount++
+                    if (extractedCount > maxAllowedFiles) {
+                        throw SecurityException("Zip extraction aborted: Archive exceeds maximum allowed file count ($maxAllowedFiles).")
+                    }
+
                     val normalizedName = entry.name.replace('\\', '/')
                     val outFile = File(destinationDir, normalizedName)
                     // Zip Slip vulnerability check
@@ -490,10 +498,13 @@ class StorageRepositoryImpl(
                         FileOutputStream(outFile).use { fos ->
                             var len: Int
                             while (zis.read(buffer).also { len = it } > 0) {
+                                totalExtractedBytes += len
+                                if (totalExtractedBytes > maxAllowedBytes) {
+                                    throw SecurityException("Zip extraction aborted: Total uncompressed content exceeds safe limit (1 GB).")
+                                }
                                 fos.write(buffer, 0, len)
                             }
                         }
-                        extractedCount++
                         onProgress(extractedCount)
                     }
                     zis.closeEntry()

@@ -190,7 +190,10 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(isAppUnlocked, isBiometricLockEnabled) {
                 if (!isAppUnlocked && isBiometricLockEnabled) {
+                    window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
                     attemptUnlock()
+                } else {
+                    window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
                 }
             }
 
@@ -408,6 +411,7 @@ class MainActivity : ComponentActivity() {
         super.onRestart()
         val app = application as MyDocApp
         if (app.settingsRepository.isBiometricLockEnabled.value) {
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
             isAppUnlocked = false
         }
     }
@@ -463,37 +467,51 @@ class MainActivity : ComponentActivity() {
 
         if (uri != null) {
             lifecycleScope.launch {
-                val app = application as MyDocApp
-                val mimeType = contentResolver.getType(uri) ?: intent.type ?: ""
-                val path = uri.path?.lowercase() ?: ""
-                val isImage = mimeType.startsWith("image/") ||
-                        path.endsWith(".jpg") || path.endsWith(".jpeg") ||
-                        path.endsWith(".png") || path.endsWith(".webp") ||
-                        path.endsWith(".gif") || path.endsWith(".bmp") ||
-                        path.endsWith(".heic") || path.endsWith(".avif")
-                val isVideo = mimeType.startsWith("video/") || mimeType.startsWith("audio/") ||
-                        path.endsWith(".mp4") || path.endsWith(".mkv") ||
-                        path.endsWith(".webm") || path.endsWith(".3gp") ||
-                        path.endsWith(".mov") || path.endsWith(".mp3") ||
-                        path.endsWith(".wav") || path.endsWith(".aac")
-
-                if (isImage || isVideo) {
-                    val mediaItem = app.mediaRepository.getMediaItem(uri)
-                    if (mediaItem != null) {
-                        activeMediaItem = mediaItem
-                        activeMediaList = listOf(mediaItem)
-                        return@launch
+                try {
+                    val app = application as MyDocApp
+                    val mimeType = try {
+                        contentResolver.getType(uri) ?: intent.type ?: ""
+                    } catch (_: SecurityException) {
+                        intent.type ?: ""
                     }
-                }
+                    val path = uri.path?.lowercase(Locale.ROOT) ?: ""
+                    val isImage = mimeType.startsWith("image/") ||
+                            path.endsWith(".jpg") || path.endsWith(".jpeg") ||
+                            path.endsWith(".png") || path.endsWith(".webp") ||
+                            path.endsWith(".gif") || path.endsWith(".bmp") ||
+                            path.endsWith(".heic") || path.endsWith(".avif")
+                    val isVideo = mimeType.startsWith("video/") || mimeType.startsWith("audio/") ||
+                            path.endsWith(".mp4") || path.endsWith(".mkv") ||
+                            path.endsWith(".webm") || path.endsWith(".3gp") ||
+                            path.endsWith(".mov") || path.endsWith(".mp3") ||
+                            path.endsWith(".wav") || path.endsWith(".aac")
 
-                val result = app.documentRepository.registerOpenedDocument(uri)
-                result.onSuccess { doc ->
-                    currentDocument = doc
-                }.onFailure { e ->
+                    if (isImage || isVideo) {
+                        val mediaItem = try {
+                            app.mediaRepository.getMediaItem(uri)
+                        } catch (_: Exception) { null }
+                        if (mediaItem != null) {
+                            activeMediaItem = mediaItem
+                            activeMediaList = listOf(mediaItem)
+                            return@launch
+                        }
+                    }
+
+                    val result = app.documentRepository.registerOpenedDocument(uri)
+                    result.onSuccess { doc ->
+                        currentDocument = doc
+                    }.onFailure { e ->
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Could not open file: ${e.localizedMessage ?: "Unknown error"}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                } catch (e: Exception) {
                     Toast.makeText(
                         this@MainActivity,
-                        "Could not open file: ${e.localizedMessage ?: "Unknown error"}",
-                        Toast.LENGTH_LONG
+                        "Unable to access file: ${e.localizedMessage ?: "Permission denied"}",
+                        Toast.LENGTH_SHORT
                     ).show()
                 }
             }

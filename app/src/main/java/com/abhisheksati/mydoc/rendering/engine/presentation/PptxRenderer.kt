@@ -62,9 +62,16 @@ internal object PptxRenderer {
 
     private fun readPackage(bytes: ByteArray): Package? = runCatching {
         val entries = HashMap<String, ByteArray>()
+        var totalExtractedBytes = 0L
+        val maxTotalBytes = 120L * 1024L * 1024L // 120MB maximum memory limit
+        val maxEntryBytes = 25 * 1024 * 1024 // 25MB per entry
+        val buf = ByteArray(16384)
+
         ZipInputStream(bytes.inputStream()).use { zip ->
-            while (true) {
+            var count = 0
+            while (count < 2500) {
                 val entry = zip.nextEntry ?: break
+                count++
                 val n = entry.name.removePrefix("/")
                 val keep = n == "ppt/presentation.xml" ||
                     n == "ppt/_rels/presentation.xml.rels" ||
@@ -73,7 +80,22 @@ internal object PptxRenderer {
                     n.startsWith("ppt/slideMasters/") ||
                     n.startsWith("ppt/theme/") ||
                     n.startsWith("ppt/media/")
-                if (keep && !n.startsWith("ppt/notesSlides/")) entries[n] = zip.readBytes()
+                if (keep && !n.startsWith("ppt/notesSlides/")) {
+                    if (totalExtractedBytes < maxTotalBytes) {
+                        val baos = java.io.ByteArrayOutputStream(minOf(maxEntryBytes, 64 * 1024))
+                        var entryRead = 0
+                        var read: Int
+                        while (zip.read(buf).also { read = it } != -1) {
+                            val toWrite = minOf(read, maxEntryBytes - entryRead)
+                            baos.write(buf, 0, toWrite)
+                            entryRead += toWrite
+                            if (entryRead >= maxEntryBytes) break
+                        }
+                        val entryBytes = baos.toByteArray()
+                        totalExtractedBytes += entryBytes.size
+                        entries[n] = entryBytes
+                    }
+                }
             }
         }
         if (entries["ppt/presentation.xml"] == null) null else Package(entries)

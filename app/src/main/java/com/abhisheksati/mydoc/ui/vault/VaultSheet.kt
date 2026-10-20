@@ -79,6 +79,14 @@ fun VaultSheet(
         }
     }
 
+    // Protect Safe Vault against screenshotting and task switcher snapshots
+    DisposableEffect(Unit) {
+        activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        onDispose {
+            activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = colors.surface,
