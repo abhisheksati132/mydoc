@@ -78,6 +78,27 @@ class SettingsRepository(context: Context) {
     private val _volumeKeyPageTurning = MutableStateFlow(prefs.getBoolean(KEY_VOLUME_KEY_TURNING, true))
     val volumeKeyPageTurning: StateFlow<Boolean> = _volumeKeyPageTurning.asStateFlow()
 
+    private val _confirmBeforeDelete = MutableStateFlow(prefs.getBoolean(KEY_CONFIRM_BEFORE_DELETE, true))
+    val confirmBeforeDelete: StateFlow<Boolean> = _confirmBeforeDelete.asStateFlow()
+
+    private val _photoEditorExportQuality = MutableStateFlow(prefs.getInt(KEY_PHOTO_EDITOR_QUALITY, 95))
+    val photoEditorExportQuality: StateFlow<Int> = _photoEditorExportQuality.asStateFlow()
+
+    private val _videoHardwareAcceleration = MutableStateFlow(prefs.getBoolean(KEY_VIDEO_HW_ACCEL, true))
+    val videoHardwareAcceleration: StateFlow<Boolean> = _videoHardwareAcceleration.asStateFlow()
+
+    private val _videoAutoLoop = MutableStateFlow(prefs.getBoolean(KEY_VIDEO_AUTO_LOOP, true))
+    val videoAutoLoop: StateFlow<Boolean> = _videoAutoLoop.asStateFlow()
+
+    private val _pdfFitMode = MutableStateFlow(prefs.getString(KEY_PDF_FIT_MODE, "FIT_WIDTH") ?: "FIT_WIDTH")
+    val pdfFitMode: StateFlow<String> = _pdfFitMode.asStateFlow()
+
+    private val _doubleTapZoom = MutableStateFlow(prefs.getBoolean(KEY_DOUBLE_TAP_ZOOM, true))
+    val doubleTapZoom: StateFlow<Boolean> = _doubleTapZoom.asStateFlow()
+
+    private val _autoLockVaultOnBackground = MutableStateFlow(prefs.getBoolean(KEY_AUTO_LOCK_VAULT, true))
+    val autoLockVaultOnBackground: StateFlow<Boolean> = _autoLockVaultOnBackground.asStateFlow()
+
     fun setThemeMode(mode: AppThemeMode) {
         prefs.edit().putString(KEY_THEME_MODE, mode.name).apply()
         _themeMode.value = mode
@@ -159,6 +180,41 @@ class SettingsRepository(context: Context) {
     fun setHighQualityPdf(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_HIGH_QUALITY_PDF, enabled).apply()
         _highQualityPdf.value = enabled
+    }
+
+    fun setConfirmBeforeDelete(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_CONFIRM_BEFORE_DELETE, enabled).apply()
+        _confirmBeforeDelete.value = enabled
+    }
+
+    fun setPhotoEditorExportQuality(quality: Int) {
+        prefs.edit().putInt(KEY_PHOTO_EDITOR_QUALITY, quality).apply()
+        _photoEditorExportQuality.value = quality
+    }
+
+    fun setVideoHardwareAcceleration(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_VIDEO_HW_ACCEL, enabled).apply()
+        _videoHardwareAcceleration.value = enabled
+    }
+
+    fun setVideoAutoLoop(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_VIDEO_AUTO_LOOP, enabled).apply()
+        _videoAutoLoop.value = enabled
+    }
+
+    fun setPdfFitMode(mode: String) {
+        prefs.edit().putString(KEY_PDF_FIT_MODE, mode).apply()
+        _pdfFitMode.value = mode
+    }
+
+    fun setDoubleTapZoom(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_DOUBLE_TAP_ZOOM, enabled).apply()
+        _doubleTapZoom.value = enabled
+    }
+
+    fun setAutoLockVaultOnBackground(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTO_LOCK_VAULT, enabled).apply()
+        _autoLockVaultOnBackground.value = enabled
     }
 
     fun getSystemDiagnostics(): AppSystemDiagnostics {
@@ -248,5 +304,12 @@ class SettingsRepository(context: Context) {
         private const val KEY_GRANTED_FOLDER_NAME = "granted_folder_name"
         private const val KEY_BIOMETRIC_LOCK = "biometric_lock_enabled"
         private const val KEY_VOLUME_KEY_TURNING = "volume_key_turning"
+        private const val KEY_CONFIRM_BEFORE_DELETE = "confirm_before_delete"
+        private const val KEY_PHOTO_EDITOR_QUALITY = "photo_editor_export_quality"
+        private const val KEY_VIDEO_HW_ACCEL = "video_hw_acceleration"
+        private const val KEY_VIDEO_AUTO_LOOP = "video_auto_loop"
+        private const val KEY_PDF_FIT_MODE = "pdf_fit_mode"
+        private const val KEY_DOUBLE_TAP_ZOOM = "double_tap_zoom"
+        private const val KEY_AUTO_LOCK_VAULT = "auto_lock_vault"
     }
 }

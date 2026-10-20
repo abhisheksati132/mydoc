@@ -232,7 +232,8 @@ fun VideoPlayerScreen(
     var currentPositionMs by remember { mutableLongStateOf(0L) }
     var totalDurationMs by remember { mutableLongStateOf(item.durationMs) }
     var areControlsVisible by remember { mutableStateOf(true) }
-    var isLooping by remember { mutableStateOf(false) }
+    val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
+    var isLooping by remember { mutableStateOf(app?.settingsRepository?.videoAutoLoop?.value ?: false) }
     var isSeeking by remember { mutableStateOf(false) }
     var seekPositionMs by remember { mutableLongStateOf(0L) }
     var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
@@ -295,7 +296,7 @@ fun VideoPlayerScreen(
     var activePfd by remember { mutableStateOf<ParcelFileDescriptor?>(null) }
     var activeVlcMedia by remember { mutableStateOf<Media?>(null) }
     var vlcLayoutRef by remember { mutableStateOf<android.view.View?>(null) }
-    var hwDecoderEnabled by remember { mutableStateOf(true) }
+    var hwDecoderEnabled by remember { mutableStateOf(app?.settingsRepository?.videoHardwareAcceleration?.value ?: true) }
     var retryAttempt by remember { mutableIntStateOf(0) }
 
     // Full VLC Feature States

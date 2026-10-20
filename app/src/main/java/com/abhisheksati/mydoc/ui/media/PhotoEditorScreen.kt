@@ -773,7 +773,7 @@ private suspend fun saveEditedPhoto(
             isFilterBitmap = true
             colorFilter = android.graphics.ColorMatrixColorFilter(colorMatrix.values)
         }
-        canvas.drawBitmap(transformedBitmap, 0f, 0f, paint)
+        canvas.drawBitmap(workingBitmap, 0f, 0f, paint)
 
         // 4. Save to Pictures/mydoc folder
         val picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
@@ -781,8 +781,11 @@ private suspend fun saveEditedPhoto(
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val targetFile = File(myDocDir, "IMG_EDIT_${timeStamp}.jpg")
 
+        val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
+        val quality = app?.settingsRepository?.photoEditorExportQuality?.value ?: 95
+
         FileOutputStream(targetFile).use { out ->
-            finalBitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+            finalBitmap.compress(Bitmap.CompressFormat.JPEG, quality.coerceIn(50, 100), out)
             out.flush()
         }
 

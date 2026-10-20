@@ -329,9 +329,12 @@ fun PdfViewerScreen(
                                 }
                             },
                             onDoubleTap = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                zoomScale = if (zoomScale > 1.5f) 1f else 2.5f
-                                panOffset = Offset.Zero
+                                val isDoubleTapEnabled = app?.settingsRepository?.doubleTapZoom?.value ?: true
+                                if (isDoubleTapEnabled) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    zoomScale = if (zoomScale > 1.5f) 1f else 2.5f
+                                    panOffset = Offset.Zero
+                                }
                             }
                         )
                     }
