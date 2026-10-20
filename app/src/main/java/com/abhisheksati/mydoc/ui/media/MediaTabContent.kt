@@ -612,7 +612,7 @@ fun MediaTabContent(
                         start = AppSpacing.paddingSmall,
                         end = AppSpacing.paddingSmall,
                         top = AppSpacing.paddingSmall,
-                        bottom = 88.dp
+                        bottom = 104.dp
                     ),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),

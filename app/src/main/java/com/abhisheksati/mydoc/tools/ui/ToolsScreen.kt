@@ -285,7 +285,7 @@ fun ToolsScreen(
             // Plain list grouped by section headers
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 4.dp, bottom = 88.dp)
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 4.dp, bottom = 104.dp)
             ) {
                 val groupsToDisplay = if (selectedToolGroup != null) {
                     listOf(selectedToolGroup!!)

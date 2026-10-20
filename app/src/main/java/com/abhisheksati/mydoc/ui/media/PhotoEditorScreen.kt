@@ -141,6 +141,20 @@ fun PhotoEditorScreen(
     var selectedCropRatio by remember { mutableStateOf(CropAspectRatio.ORIGINAL) }
     var selectedFilter by remember { mutableStateOf(FilterPreset.ORIGINAL) }
 
+    // Live preview bitmap with real-time rotation and horizontal flip
+    val transformedPreviewBitmap = remember(originalBitmap, rotationAngle, isFlippedHorizontal) {
+        val src = originalBitmap ?: return@remember null
+        if (rotationAngle == 0f && !isFlippedHorizontal) {
+            src
+        } else {
+            val matrix = Matrix().apply {
+                if (rotationAngle != 0f) postRotate(rotationAngle)
+                if (isFlippedHorizontal) postScale(-1f, 1f)
+            }
+            Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true)
+        }
+    }
+
     // Sliders: -100 to +100
     var brightness by remember { mutableFloatStateOf(0f) }
     var contrast by remember { mutableFloatStateOf(0f) }
@@ -295,13 +309,15 @@ fun PhotoEditorScreen(
 
     BackHandler { onDismiss() }
 
-    if (showPerspectiveCropper && originalBitmap != null) {
+    if (showPerspectiveCropper && (transformedPreviewBitmap ?: originalBitmap) != null) {
         FreeCornersCropperDialog(
-            bitmap = originalBitmap!!,
+            bitmap = (transformedPreviewBitmap ?: originalBitmap)!!,
             onDismiss = { showPerspectiveCropper = false },
             onCropped = { cropped ->
                 showPerspectiveCropper = false
                 originalBitmap = cropped
+                rotationAngle = 0f
+                isFlippedHorizontal = false
                 selectedCropRatio = CropAspectRatio.ORIGINAL
                 Toast.makeText(context, "Perspective corrected & deskewed.", Toast.LENGTH_SHORT).show()
             },
@@ -406,10 +422,10 @@ fun PhotoEditorScreen(
                         .background(Color(0xFF000000)),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (isLoading || originalBitmap == null) {
+                    if (isLoading || transformedPreviewBitmap == null) {
                         CircularProgressIndicator(color = colors.accent)
                     } else {
-                        val bitmap = originalBitmap!!
+                        val bitmap = transformedPreviewBitmap
                         val cropRatio = selectedCropRatio.ratio
                         val boxModifier = if (cropRatio != null) {
                             Modifier
@@ -713,12 +729,23 @@ private suspend fun saveEditedPhoto(
     colorMatrix: ColorMatrix
 ): File? = withContext(Dispatchers.IO) {
     try {
-        // 1. Calculate Crop Bounds if selected
-        var workingBitmap = sourceBitmap
+        // 1. Apply Matrix (Rotation & Flip) first
+        val matrix = Matrix().apply {
+            if (rotation != 0f) postRotate(rotation)
+            if (isFlippedH) postScale(-1f, 1f)
+        }
+        val transformedBitmap = if (!matrix.isIdentity) {
+            Bitmap.createBitmap(sourceBitmap, 0, 0, sourceBitmap.width, sourceBitmap.height, matrix, true)
+        } else {
+            sourceBitmap
+        }
+
+        // 2. Calculate Crop Bounds if selected (relative to the transformed orientation)
+        var workingBitmap = transformedBitmap
         val ratio = aspectRatio.ratio
         if (ratio != null) {
-            val srcWidth = sourceBitmap.width.toFloat()
-            val srcHeight = sourceBitmap.height.toFloat()
+            val srcWidth = transformedBitmap.width.toFloat()
+            val srcHeight = transformedBitmap.height.toFloat()
             val currentRatio = srcWidth / srcHeight
 
             val (cropW, cropH) = if (currentRatio > ratio) {
@@ -735,26 +762,11 @@ private suspend fun saveEditedPhoto(
 
             val x = ((srcWidth - cropW) / 2f).toInt().coerceAtLeast(0)
             val y = ((srcHeight - cropH) / 2f).toInt().coerceAtLeast(0)
-            workingBitmap = Bitmap.createBitmap(sourceBitmap, x, y, cropW.coerceAtMost(sourceBitmap.width - x), cropH.coerceAtMost(sourceBitmap.height - y))
-        }
-
-        // 2. Apply Matrix (Rotation & Flip)
-        val matrix = Matrix()
-        if (rotation != 0f) {
-            matrix.postRotate(rotation)
-        }
-        if (isFlippedH) {
-            matrix.postScale(-1f, 1f)
-        }
-
-        val transformedBitmap = if (!matrix.isIdentity) {
-            Bitmap.createBitmap(workingBitmap, 0, 0, workingBitmap.width, workingBitmap.height, matrix, true)
-        } else {
-            workingBitmap
+            workingBitmap = Bitmap.createBitmap(transformedBitmap, x, y, cropW.coerceAtMost(transformedBitmap.width - x), cropH.coerceAtMost(transformedBitmap.height - y))
         }
 
         // 3. Render ColorMatrix filters into a final output Bitmap
-        val finalBitmap = Bitmap.createBitmap(transformedBitmap.width, transformedBitmap.height, Bitmap.Config.ARGB_8888)
+        val finalBitmap = Bitmap.createBitmap(workingBitmap.width, workingBitmap.height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(finalBitmap)
         val paint = Paint().apply {
             isAntiAlias = true

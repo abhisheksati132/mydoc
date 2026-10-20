@@ -99,7 +99,7 @@ fun GoogleFilesHubContent(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
+        contentPadding = PaddingValues(top = 8.dp, bottom = 104.dp)
     ) {
         // 1. Categories Section Header
         item {

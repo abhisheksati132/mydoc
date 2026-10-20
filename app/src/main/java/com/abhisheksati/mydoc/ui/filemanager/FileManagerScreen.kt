@@ -701,7 +701,7 @@ fun FileManagerScreen(
                     if (uiState.isGridView) {
                         LazyVerticalGrid(
                             columns = GridCells.Adaptive(minSize = 100.dp),
-                            contentPadding = PaddingValues(12.dp),
+                            contentPadding = PaddingValues(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 104.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             modifier = Modifier
@@ -742,7 +742,7 @@ fun FileManagerScreen(
                         }
                     } else {
                         LazyColumn(
-                            contentPadding = PaddingValues(vertical = 6.dp),
+                            contentPadding = PaddingValues(top = 6.dp, bottom = 104.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)

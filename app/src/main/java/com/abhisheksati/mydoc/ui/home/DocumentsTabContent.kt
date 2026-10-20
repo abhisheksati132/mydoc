@@ -387,7 +387,7 @@ fun DocumentsTabContent(
                     modifier = Modifier
                         .fillMaxSize()
                         .nestedScroll(pullToSearchConnection),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp)
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 104.dp)
                 ) {
                     if (uiState.isSearching) {
                         item {

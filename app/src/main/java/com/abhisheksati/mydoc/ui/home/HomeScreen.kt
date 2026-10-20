@@ -276,82 +276,17 @@ fun HomeScreen(
         }
     }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        topBar = {},
-        bottomBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                FloatingPillDock(
-                    currentTab = currentTab,
-                    onTabSelected = { tab ->
-                        viewModel.selectTab(tab)
-                        scope.launch { pagerState.animateScrollToPage(tab.ordinal) }
-                    }
-                )
-            }
-        },
-        floatingActionButton = {
-            AnimatedVisibility(
-                visible = currentTab == HomeTab.DOCUMENTS,
-                enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
-                exit = scaleOut(spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)) + fadeOut()
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    FloatingActionButton(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            documentScanner()
-                        },
-                        shape = CircleShape,
-                        containerColor = colors.surfaceVariant,
-                        contentColor = colors.textPrimary,
-                        elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.CameraAlt,
-                            contentDescription = "Scan Document",
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-
-                    FloatingActionButton(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            openDocumentLauncher.launch(SUPPORTED_MIME_TYPES)
-                        },
-                        shape = CircleShape,
-                        containerColor = colors.accent,
-                        contentColor = if (colors.background == DarkAppColors.background) Color(0xFF000000) else Color.White,
-                        elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Add,
-                            contentDescription = "Open Document",
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-            }
-        },
-        containerColor = colors.background
-    ) { innerPadding ->
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(colors.background)
+    ) {
+        // 1. Edge-to-Edge Scrollable Content across all tabs (flows smoothly underneath the floating dock)
         HorizontalPager(
             state = pagerState,
             key = { HomeTab.entries[it].name },
             beyondViewportPageCount = 1,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
+            modifier = Modifier.fillMaxSize()
         ) { page ->
             when (HomeTab.entries[page]) {
                 HomeTab.FILES -> {
@@ -430,6 +365,74 @@ fun HomeScreen(
                     )
                 }
             }
+        }
+
+        // 2. Floating Action Buttons (Floats smoothly above the dock on Documents tab)
+        AnimatedVisibility(
+            visible = currentTab == HomeTab.DOCUMENTS,
+            enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
+            exit = scaleOut(spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)) + fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .navigationBarsPadding()
+                .padding(end = 20.dp, bottom = 86.dp)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FloatingActionButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        documentScanner()
+                    },
+                    shape = CircleShape,
+                    containerColor = colors.surfaceVariant,
+                    contentColor = colors.textPrimary,
+                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp, pressedElevation = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.CameraAlt,
+                        contentDescription = "Scan Document",
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                FloatingActionButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        openDocumentLauncher.launch(SUPPORTED_MIME_TYPES)
+                    },
+                    shape = CircleShape,
+                    containerColor = colors.accent,
+                    contentColor = if (colors.background == DarkAppColors.background) Color(0xFF000000) else Color.White,
+                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp, pressedElevation = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = "Open Document",
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
+
+        // 3. Apple Glassmorphic Floating Pill Navigation Dock (Hovering on top of scrolling content)
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            FloatingPillDock(
+                currentTab = currentTab,
+                onTabSelected = { tab ->
+                    viewModel.selectTab(tab)
+                    scope.launch { pagerState.animateScrollToPage(tab.ordinal) }
+                }
+            )
         }
     }
 
@@ -548,17 +551,27 @@ fun FloatingPillDock(
     val haptic = LocalHapticFeedback.current
     val isOled = colors.background == DarkAppColors.background
 
+    // Apple Glassmorphism: Frosted translucent glass background with luminous hairline border
+    val glassBg = if (isOled) {
+        Color(0xC710131B) // ~78% opacity deep translucent glass
+    } else {
+        Color(0xC7FCFCFD) // ~78% opacity frosted white glass
+    }
+
+    val glassBorder = BorderStroke(
+        width = 1.dp,
+        color = if (isOled) Color.White.copy(alpha = 0.16f) else Color.Black.copy(alpha = 0.08f)
+    )
+
     Surface(
         shape = RoundedCornerShape(999.dp),
-        color = if (isOled) Color(0xF2101217) else colors.surface.copy(alpha = 0.96f),
-        border = BorderStroke(
-            1.dp,
-            if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)
-        ),
-        shadowElevation = 8.dp,
+        color = glassBg,
+        border = glassBorder,
+        shadowElevation = 12.dp,
+        tonalElevation = 6.dp,
         modifier = modifier
             .fillMaxWidth()
-            .height(58.dp)
+            .height(60.dp)
     ) {
         Row(
             modifier = Modifier
