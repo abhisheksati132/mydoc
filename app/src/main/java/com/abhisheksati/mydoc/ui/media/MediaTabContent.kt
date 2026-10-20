@@ -100,6 +100,7 @@ import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
 import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.MediaFilter
@@ -526,28 +527,28 @@ fun MediaTabContent(
                     {
                         val mediaCategories = listOf(
                             MediaNavCategory(MediaFilter.ALL, Icons.Outlined.PermMedia, colors.accent, "All"),
-                            MediaNavCategory(MediaFilter.PHOTOS, Icons.Outlined.Image, Color(0xFF4CAF50), "Photos"),
-                            MediaNavCategory(MediaFilter.VIDEOS, Icons.Outlined.Videocam, Color(0xFFE91E63), "Videos")
+                            MediaNavCategory(MediaFilter.PHOTOS, Icons.Outlined.Image, Color(0xFF10B981), "Photos"),
+                            MediaNavCategory(MediaFilter.VIDEOS, Icons.Outlined.Videocam, DocumentFormatColors.mediaTint, "Videos")
                         )
 
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                                .padding(horizontal = 14.dp, vertical = 6.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             for (item in mediaCategories) {
                                 val isSelected = uiState.filter == item.filter
-                                val chipBg = if (isSelected) item.color.copy(alpha = 0.2f) else colors.surface
-                                val chipBorderColor = if (isSelected) item.color else colors.divider
+                                val chipBg = if (isSelected) item.color.copy(alpha = 0.16f) else colors.surfaceVariant
+                                val chipBorderColor = if (isSelected) item.color else colors.cardBorder
 
                                 Surface(
-                                    shape = RoundedCornerShape(16.dp),
+                                    shape = RoundedCornerShape(12.dp),
                                     color = chipBg,
-                                    border = androidx.compose.foundation.BorderStroke(if (isSelected) 1.5.dp else 1.dp, chipBorderColor),
+                                    border = BorderStroke(if (isSelected) 1.5.dp else 1.dp, chipBorderColor),
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(16.dp))
+                                        .clip(RoundedCornerShape(12.dp))
                                         .clickable {
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             viewModel.setFilter(item.filter)
@@ -561,7 +562,7 @@ fun MediaTabContent(
                                             imageVector = item.icon,
                                             contentDescription = item.label,
                                             tint = if (isSelected) item.color else item.color.copy(alpha = 0.85f),
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(15.dp)
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(

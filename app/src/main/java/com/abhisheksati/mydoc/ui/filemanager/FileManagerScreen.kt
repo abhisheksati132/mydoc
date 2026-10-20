@@ -527,13 +527,13 @@ fun FileManagerScreen(
                                             }
                                             IconButton(
                                                 onClick = { viewModel.selectCategory(null) },
-                                                modifier = Modifier.size(24.dp)
+                                                modifier = Modifier.size(40.dp)
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Outlined.Close,
                                                     contentDescription = "Exit Category",
                                                     tint = colors.textSecondary,
-                                                    modifier = Modifier.size(16.dp)
+                                                    modifier = Modifier.size(18.dp)
                                                 )
                                             }
                                         }

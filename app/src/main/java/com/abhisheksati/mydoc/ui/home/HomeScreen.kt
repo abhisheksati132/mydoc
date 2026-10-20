@@ -327,6 +327,7 @@ fun HomeScreen(
                             fileManagerViewModel?.openTrash()
                         },
                         trashCount = trashCount,
+                        onQuickScan = { documentScanner() },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -374,57 +375,7 @@ fun HomeScreen(
             }
         }
 
-        // 2. Floating Action Buttons (Floats smoothly above the dock on Documents tab)
-        AnimatedVisibility(
-            visible = currentTab == HomeTab.DOCUMENTS,
-            enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
-            exit = scaleOut(spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)) + fadeOut(),
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .navigationBarsPadding()
-                .padding(end = 20.dp, bottom = 96.dp)
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                FloatingActionButton(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        documentScanner()
-                    },
-                    shape = CircleShape,
-                    containerColor = colors.surfaceVariant,
-                    contentColor = colors.textPrimary,
-                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp, pressedElevation = 8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.CameraAlt,
-                        contentDescription = "Scan Document",
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-
-                FloatingActionButton(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        openDocumentLauncher.launch(SUPPORTED_MIME_TYPES)
-                    },
-                    shape = CircleShape,
-                    containerColor = colors.accent,
-                    contentColor = if (colors.background == DarkAppColors.background) Color(0xFF000000) else Color.White,
-                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp, pressedElevation = 8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = "Open Document",
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-        }
-
-        // 3. Apple Glassmorphic Floating Pill Navigation Dock (Hovering on top of scrolling content)
+        // 2. Neo-Precision Floating Pill Navigation Dock (Signature hovering dock)
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -558,27 +509,27 @@ fun FloatingPillDock(
     val haptic = LocalHapticFeedback.current
     val isOled = colors.background == DarkAppColors.background
 
-    // Apple Glassmorphism: Frosted translucent glass background with luminous hairline border
+    // Neo-Precision Frosted Glass: Deep obsidian in dark mode, crisp alabaster in light mode
     val glassBg = if (isOled) {
-        Color(0xC710131B) // ~78% opacity deep translucent glass
+        Color(0xDC101217) // 86% opacity deep obsidian glass
     } else {
-        Color(0xC7FCFCFD) // ~78% opacity frosted white glass
+        Color(0xECF8F9FA) // 92% opacity frosted alabaster glass
     }
 
     val glassBorder = BorderStroke(
         width = 1.dp,
-        color = if (isOled) Color.White.copy(alpha = 0.16f) else Color.Black.copy(alpha = 0.08f)
+        color = colors.cardBorder
     )
 
     Surface(
         shape = RoundedCornerShape(999.dp),
         color = glassBg,
         border = glassBorder,
-        shadowElevation = 12.dp,
-        tonalElevation = 6.dp,
+        shadowElevation = 8.dp,
+        tonalElevation = 2.dp,
         modifier = modifier
             .fillMaxWidth()
-            .height(60.dp)
+            .height(62.dp)
     ) {
         Row(
             modifier = Modifier
@@ -646,7 +597,8 @@ private fun FloatingDockItem(
     badgeText: String? = null,
     modifier: Modifier = Modifier
 ) {
-    val backgroundTarget = if (selected) accentColor.copy(alpha = 0.16f) else Color.Transparent
+    val colors = LocalAppColors.current
+    val backgroundTarget = if (selected) colors.accentVariant else Color.Transparent
     val backgroundColor by animateColorAsState(
         targetValue = backgroundTarget,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),

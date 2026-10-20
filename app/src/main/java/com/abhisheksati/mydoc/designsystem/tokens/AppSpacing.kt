@@ -33,7 +33,9 @@ object AppSpacing {
 
     // Corner Radii
     val cornerRadius: Dp = 8.dp
-    val chipCornerRadius: Dp = 4.dp
+    val chipCornerRadius: Dp = 6.dp
+    val cardCornerRadius: Dp = 14.dp
+    val pillCornerRadius: Dp = 999.dp
 
     // Elevation (none)
     val elevation: Dp = 0.dp

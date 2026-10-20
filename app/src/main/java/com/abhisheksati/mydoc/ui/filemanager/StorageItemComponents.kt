@@ -190,7 +190,7 @@ fun StorageItemRow(
             if (!isSelectionMode) {
                 IconButton(
                     onClick = onMoreClick,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.MoreVert,
@@ -223,11 +223,11 @@ fun StorageItemGrid(
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) colors.accent.copy(alpha = 0.12f) else if (isOled) Color(0xFF0F1015) else colors.surface
+            containerColor = if (isSelected) colors.accentVariant else if (isOled) colors.surface else colors.surface
         ),
         border = BorderStroke(
             1.dp,
-            if (isSelected) colors.accent else if (isOled) Color.White.copy(alpha = 0.06f) else colors.divider.copy(alpha = 0.5f)
+            if (isSelected) colors.accent else colors.cardBorder
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         modifier = modifier
@@ -242,7 +242,7 @@ fun StorageItemGrid(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(10.dp)
+                .padding(8.dp)
         ) {
             // Trailing Selection Badge or More Kebab
             androidx.compose.animation.AnimatedVisibility(
@@ -263,7 +263,7 @@ fun StorageItemGrid(
                     onClick = onMoreClick,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .size(24.dp)
+                        .size(36.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.MoreVert,

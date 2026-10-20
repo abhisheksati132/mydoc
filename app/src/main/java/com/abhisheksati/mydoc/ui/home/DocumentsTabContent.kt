@@ -38,9 +38,11 @@ import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.AllInclusive
 import androidx.compose.material.icons.outlined.Book
+import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.FileOpen
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Settings
@@ -123,6 +125,7 @@ fun DocumentsTabContent(
     onSelectDocForDetails: (DocumentFile) -> Unit,
     onOpenTrash: (() -> Unit)? = null,
     trashCount: Int = 0,
+    onQuickScan: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
@@ -234,58 +237,134 @@ fun DocumentsTabContent(
                         )
                     },
                     bottomContent = {
-                        // Symmetrical rounded rect category pills matching Files page navigation
-                        val docCategories = listOf(
-                            DocumentNavCategory(DocumentCategory.ALL, Icons.Outlined.AllInclusive, colors.accent, "All"),
-                            DocumentNavCategory(DocumentCategory.PDF, Icons.Outlined.PictureAsPdf, DocumentFormatColors.pdfTint, "PDF"),
-                            DocumentNavCategory(DocumentCategory.EPUB, Icons.Outlined.Book, Color(0xFFAB47BC), "E-Books"),
-                            DocumentNavCategory(DocumentCategory.WORD, Icons.Outlined.Description, DocumentFormatColors.wordTint, "Word"),
-                            DocumentNavCategory(DocumentCategory.EXCEL, Icons.Outlined.TableChart, DocumentFormatColors.excelTint, "Excel"),
-                            DocumentNavCategory(DocumentCategory.PPT, Icons.Outlined.Slideshow, DocumentFormatColors.pptTint, "PPT"),
-                            DocumentNavCategory(DocumentCategory.TEXT, Icons.AutoMirrored.Outlined.Article, DocumentFormatColors.textTint, "Text")
-                        )
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            for (item in docCategories) {
-                                val isSelected = uiState.selectedCategory == item.category
-                                val chipBg = if (isSelected) item.color.copy(alpha = 0.2f) else colors.surface
-                                val chipBorderColor = if (isSelected) item.color else colors.divider
-
+                        Column {
+                            // Neo-Precision Integrated Action Bar
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
                                 Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = chipBg,
-                                    border = androidx.compose.foundation.BorderStroke(if (isSelected) 1.5.dp else 1.dp, chipBorderColor),
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        openDocumentLauncher.launch(SUPPORTED_MIME_TYPES)
+                                    },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = colors.surfaceVariant,
+                                    border = BorderStroke(1.dp, colors.cardBorder),
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .clickable {
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            viewModel.selectCategory(item.category)
-                                        }
+                                        .weight(1f)
+                                        .height(42.dp)
                                 ) {
                                     Row(
+                                        modifier = Modifier.fillMaxSize(),
                                         verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                        horizontalArrangement = Arrangement.Center
                                     ) {
                                         Icon(
-                                            imageVector = item.icon,
-                                            contentDescription = item.label,
-                                            tint = if (isSelected) item.color else item.color.copy(alpha = 0.85f),
-                                            modifier = Modifier.size(16.dp)
+                                            imageVector = Icons.Outlined.FileOpen,
+                                            contentDescription = "Open File",
+                                            tint = colors.accent,
+                                            modifier = Modifier.size(17.dp)
                                         )
-                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = item.label,
-                                            style = typography.caption.copy(
-                                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                                            ),
-                                            color = if (isSelected) colors.textPrimary else colors.textSecondary
+                                            text = "Open File",
+                                            style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
+                                            color = colors.textPrimary
                                         )
+                                    }
+                                }
+
+                                if (onQuickScan != null) {
+                                    Surface(
+                                        onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            onQuickScan()
+                                        },
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = colors.accentVariant,
+                                        border = BorderStroke(1.dp, colors.accent.copy(alpha = 0.35f)),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(42.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxSize(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.CameraAlt,
+                                                contentDescription = "Quick Scan",
+                                                tint = colors.accent,
+                                                modifier = Modifier.size(17.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = "Quick Scan",
+                                                style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
+                                                color = colors.accent
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Symmetrical rounded rect category pills matching Neo-Precision identity
+                            val docCategories = listOf(
+                                DocumentNavCategory(DocumentCategory.ALL, Icons.Outlined.AllInclusive, colors.accent, "All"),
+                                DocumentNavCategory(DocumentCategory.PDF, Icons.Outlined.PictureAsPdf, DocumentFormatColors.pdfTint, "PDF"),
+                                DocumentNavCategory(DocumentCategory.EPUB, Icons.Outlined.Book, DocumentFormatColors.zipTint, "E-Books"),
+                                DocumentNavCategory(DocumentCategory.WORD, Icons.Outlined.Description, DocumentFormatColors.wordTint, "Word"),
+                                DocumentNavCategory(DocumentCategory.EXCEL, Icons.Outlined.TableChart, DocumentFormatColors.excelTint, "Excel"),
+                                DocumentNavCategory(DocumentCategory.PPT, Icons.Outlined.Slideshow, DocumentFormatColors.pptTint, "PPT"),
+                                DocumentNavCategory(DocumentCategory.TEXT, Icons.AutoMirrored.Outlined.Article, DocumentFormatColors.textTint, "Text")
+                            )
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
+                                    .padding(start = 14.dp, end = 14.dp, bottom = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                for (item in docCategories) {
+                                    val isSelected = uiState.selectedCategory == item.category
+                                    val chipBg = if (isSelected) item.color.copy(alpha = 0.16f) else colors.surfaceVariant
+                                    val chipBorderColor = if (isSelected) item.color else colors.cardBorder
+
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = chipBg,
+                                        border = BorderStroke(if (isSelected) 1.5.dp else 1.dp, chipBorderColor),
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .clickable {
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                viewModel.selectCategory(item.category)
+                                            }
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = item.icon,
+                                                contentDescription = item.label,
+                                                tint = if (isSelected) item.color else item.color.copy(alpha = 0.85f),
+                                                modifier = Modifier.size(15.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = item.label,
+                                                style = typography.caption.copy(
+                                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                                                ),
+                                                color = if (isSelected) colors.textPrimary else colors.textSecondary
+                                            )
+                                        }
                                     }
                                 }
                             }

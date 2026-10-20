@@ -61,6 +61,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.FileCategory
@@ -236,8 +237,8 @@ fun GoogleFilesHubContent(
 
             Surface(
                 shape = RoundedCornerShape(20.dp),
-                color = if (isOled) Color(0xFF101217) else colors.surface,
-                border = BorderStroke(1.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.6f)),
+                color = if (isOled) colors.surface else colors.surface,
+                border = BorderStroke(1.dp, colors.cardBorder),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
@@ -338,7 +339,7 @@ private fun GoogleFilesCategoryGrid(
                 countText = downloadsStat?.let { "${it.fileCount} files" } ?: "Scanning...",
                 sizeText = downloadsStat?.formattedSize ?: "",
                 icon = Icons.Outlined.Download,
-                tint = Color(0xFF00ACC1),
+                tint = Color(0xFF38BDF8),
                 isOled = isOled,
                 modifier = Modifier.weight(1f),
                 onClick = { onCategoryClick(FileCategory.DOWNLOADS) }
@@ -348,7 +349,7 @@ private fun GoogleFilesCategoryGrid(
                 countText = imagesStat?.let { "${it.fileCount} files" } ?: "Scanning...",
                 sizeText = imagesStat?.formattedSize ?: "",
                 icon = Icons.Outlined.Image,
-                tint = Color(0xFF4CAF50),
+                tint = Color(0xFF10B981),
                 isOled = isOled,
                 modifier = Modifier.weight(1f),
                 onClick = { onCategoryClick(FileCategory.IMAGES) }
@@ -365,7 +366,7 @@ private fun GoogleFilesCategoryGrid(
                 countText = videosStat?.let { "${it.fileCount} files" } ?: "Scanning...",
                 sizeText = videosStat?.formattedSize ?: "",
                 icon = Icons.Outlined.Videocam,
-                tint = Color(0xFFE91E63),
+                tint = DocumentFormatColors.mediaTint,
                 isOled = isOled,
                 modifier = Modifier.weight(1f),
                 onClick = { onCategoryClick(FileCategory.VIDEOS) }
@@ -375,7 +376,7 @@ private fun GoogleFilesCategoryGrid(
                 countText = audioStat?.let { "${it.fileCount} files" } ?: "Scanning...",
                 sizeText = audioStat?.formattedSize ?: "",
                 icon = Icons.Outlined.AudioFile,
-                tint = Color(0xFF9C27B0),
+                tint = DocumentFormatColors.zipTint,
                 isOled = isOled,
                 modifier = Modifier.weight(1f),
                 onClick = { onCategoryClick(FileCategory.AUDIO) }
@@ -392,7 +393,7 @@ private fun GoogleFilesCategoryGrid(
                 countText = docsStat?.let { "${it.fileCount} files" } ?: "Scanning...",
                 sizeText = docsStat?.formattedSize ?: "",
                 icon = Icons.Outlined.Description,
-                tint = Color(0xFF3F51B5),
+                tint = DocumentFormatColors.wordTint,
                 isOled = isOled,
                 modifier = Modifier.weight(1f),
                 onClick = { onCategoryClick(FileCategory.DOCUMENTS) }
@@ -402,7 +403,7 @@ private fun GoogleFilesCategoryGrid(
                 countText = if (storageUiState.userAppCount > 0) "${storageUiState.userAppCount} apps" else "Scanning...",
                 sizeText = if (storageUiState.userAppBytes > 0) StorageVolume.formatBytes(storageUiState.userAppBytes) else "",
                 icon = Icons.Outlined.Apps,
-                tint = Color(0xFF2196F3),
+                tint = DocumentFormatColors.pptTint,
                 isOled = isOled,
                 modifier = Modifier.weight(1f),
                 onClick = onAppsClick
@@ -438,11 +439,8 @@ private fun GoogleFilesCategoryCard(
 
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = if (isOled) Color(0xFF101217) else colors.surface,
-        border = BorderStroke(
-            1.dp,
-            if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.6f)
-        ),
+        color = if (isOled) colors.surface else colors.surface,
+        border = BorderStroke(1.dp, colors.cardBorder),
         modifier = modifier
             .graphicsLayer {
                 scaleX = scale
@@ -460,7 +458,7 @@ private fun GoogleFilesCategoryCard(
             Box(
                 modifier = Modifier
                     .size(42.dp)
-                    .clip(CircleShape)
+                    .clip(RoundedCornerShape(12.dp))
                     .background(tint.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center
             ) {
@@ -518,11 +516,8 @@ private fun InternalStorageCard(
 
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = if (isOled) Color(0xFF101217) else colors.surface,
-        border = BorderStroke(
-            1.dp,
-            if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.6f)
-        ),
+        color = if (isOled) colors.surface else colors.surface,
+        border = BorderStroke(1.dp, colors.cardBorder),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
@@ -606,11 +601,8 @@ private fun SecondaryStorageCard(
 
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = if (isOled) Color(0xFF101217) else colors.surface,
-        border = BorderStroke(
-            1.dp,
-            if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.6f)
-        ),
+        color = if (isOled) colors.surface else colors.surface,
+        border = BorderStroke(1.dp, colors.cardBorder),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)

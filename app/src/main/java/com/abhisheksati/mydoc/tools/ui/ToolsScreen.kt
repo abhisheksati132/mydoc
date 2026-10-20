@@ -145,34 +145,34 @@ fun ToolsScreen(
             bottomContent = {
                 val toolCategories = listOf(
                     ToolNavCategory(null, Icons.Outlined.AllInclusive, colors.accent, "All"),
-                    ToolNavCategory(ToolGroup.ORGANIZE, Icons.AutoMirrored.Outlined.CallSplit, Color(0xFF1A73E8), "Organize"),
-                    ToolNavCategory(ToolGroup.OPTIMIZE, Icons.Outlined.Compress, Color(0xFF188038), "Optimize"),
-                    ToolNavCategory(ToolGroup.CONVERT_TO, Icons.Outlined.Transform, Color(0xFF9334E6), "Convert To"),
-                    ToolNavCategory(ToolGroup.CONVERT_FROM, Icons.Outlined.Difference, Color(0xFF3F51B5), "Convert From"),
-                    ToolNavCategory(ToolGroup.EDIT, Icons.Outlined.Edit, Color(0xFFF29900), "Edit"),
-                    ToolNavCategory(ToolGroup.SECURITY, Icons.Outlined.Security, Color(0xFFEA4335), "Security"),
-                    ToolNavCategory(ToolGroup.SCAN, Icons.Outlined.CameraAlt, Color(0xFF00897B), "Scan & OCR"),
-                    ToolNavCategory(ToolGroup.AUTOMATION, Icons.Outlined.AutoMode, Color(0xFF0284C7), "Automation")
+                    ToolNavCategory(ToolGroup.ORGANIZE, Icons.AutoMirrored.Outlined.CallSplit, Color(0xFF3B82F6), "Organize"),
+                    ToolNavCategory(ToolGroup.OPTIMIZE, Icons.Outlined.Compress, Color(0xFF10B981), "Optimize"),
+                    ToolNavCategory(ToolGroup.CONVERT_TO, Icons.Outlined.Transform, Color(0xFF8B5CF6), "Convert To"),
+                    ToolNavCategory(ToolGroup.CONVERT_FROM, Icons.Outlined.Difference, Color(0xFF6366F1), "Convert From"),
+                    ToolNavCategory(ToolGroup.EDIT, Icons.Outlined.Edit, Color(0xFFF59E0B), "Edit"),
+                    ToolNavCategory(ToolGroup.SECURITY, Icons.Outlined.Security, Color(0xFFEF4444), "Security"),
+                    ToolNavCategory(ToolGroup.SCAN, Icons.Outlined.CameraAlt, Color(0xFF14B8A6), "Scan & OCR"),
+                    ToolNavCategory(ToolGroup.AUTOMATION, Icons.Outlined.AutoMode, Color(0xFF06B6D4), "Automation")
                 )
 
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     for (item in toolCategories) {
                         val isSelected = selectedToolGroup == item.group
-                        val chipBg = if (isSelected) item.color.copy(alpha = 0.2f) else colors.surface
-                        val chipBorderColor = if (isSelected) item.color else colors.divider
+                        val chipBg = if (isSelected) item.color.copy(alpha = 0.16f) else colors.surfaceVariant
+                        val chipBorderColor = if (isSelected) item.color else colors.cardBorder
 
                         Surface(
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(12.dp),
                             color = chipBg,
-                            border = androidx.compose.foundation.BorderStroke(if (isSelected) 1.5.dp else 1.dp, chipBorderColor),
+                            border = BorderStroke(if (isSelected) 1.5.dp else 1.dp, chipBorderColor),
                             modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
+                                .clip(RoundedCornerShape(12.dp))
                                 .clickable {
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     selectedToolGroup = item.group
@@ -186,7 +186,7 @@ fun ToolsScreen(
                                     imageVector = item.icon,
                                     contentDescription = item.label,
                                     tint = if (isSelected) item.color else item.color.copy(alpha = 0.85f),
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(15.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
@@ -308,8 +308,8 @@ fun ToolsScreen(
                             val isOled = colors.background == DarkAppColors.background
                             Surface(
                                 shape = RoundedCornerShape(18.dp),
-                                color = if (isOled) Color(0xFF0F1015) else colors.surface,
-                                border = BorderStroke(1.dp, if (isOled) Color.White.copy(alpha = 0.07f) else colors.divider.copy(alpha = 0.5f)),
+                                color = if (isOled) colors.surface else colors.surface,
+                                border = BorderStroke(1.dp, colors.cardBorder),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
@@ -325,7 +325,7 @@ fun ToolsScreen(
                                         )
                                         if (index < toolsInGroup.size - 1) {
                                             HorizontalDivider(
-                                                color = colors.divider,
+                                                color = colors.divider.copy(alpha = 0.5f),
                                                 modifier = Modifier.padding(start = 68.dp, end = 14.dp)
                                             )
                                         }
@@ -367,14 +367,34 @@ private fun ToolListRow(
     val isDark = colors.background == DarkAppColors.background
 
     val (groupTint, groupContainer) = when (tool.group) {
-        ToolGroup.ORGANIZE -> Color(0xFF1A73E8) to if (isDark) Color(0xFF1B2A4A) else Color(0xFFE8F0FE)
-        ToolGroup.OPTIMIZE -> Color(0xFF188038) to if (isDark) Color(0xFF1B3824) else Color(0xFFE6F4EA)
-        ToolGroup.CONVERT_TO -> Color(0xFF9334E6) to if (isDark) Color(0xFF2D1E4A) else Color(0xFFF3E8FD)
-        ToolGroup.CONVERT_FROM -> Color(0xFF3F51B5) to if (isDark) Color(0xFF1E2448) else Color(0xFFE8EAF6)
-        ToolGroup.EDIT -> Color(0xFFF29900) to if (isDark) Color(0xFF3A301A) else Color(0xFFFEF7E0)
-        ToolGroup.SECURITY -> Color(0xFFEA4335) to if (isDark) Color(0xFF381E1E) else Color(0xFFFCE8E6)
-        ToolGroup.SCAN -> Color(0xFF00897B) to if (isDark) Color(0xFF1A3834) else Color(0xFFE0F2F1)
-        ToolGroup.AUTOMATION -> Color(0xFF0284C7) to if (isDark) Color(0xFF162E4A) else Color(0xFFE0F2FE)
+        ToolGroup.ORGANIZE -> Color(0xFF3B82F6) to if (isDark) Color(0x283B82F6) else Color(0xFFDBEAFE)
+        ToolGroup.OPTIMIZE -> Color(0xFF10B981) to if (isDark) Color(0x2810B981) else Color(0xFFD1FAE5)
+        ToolGroup.CONVERT_TO -> Color(0xFF8B5CF6) to if (isDark) Color(0x288B5CF6) else Color(0xFFEDE9FE)
+        ToolGroup.CONVERT_FROM -> Color(0xFF6366F1) to if (isDark) Color(0x286366F1) else Color(0xFFE0E7FF)
+        ToolGroup.EDIT -> Color(0xFFF59E0B) to if (isDark) Color(0x28F59E0B) else Color(0xFFFEF3C7)
+        ToolGroup.SECURITY -> Color(0xFFEF4444) to if (isDark) Color(0x28EF4444) else Color(0xFFFEE2E2)
+        ToolGroup.SCAN -> Color(0xFF14B8A6) to if (isDark) Color(0x2814B8A6) else Color(0xFFCCFBF1)
+        ToolGroup.AUTOMATION -> Color(0xFF06B6D4) to if (isDark) Color(0x2806B6D4) else Color(0xFFCFFAFE)
+    }
+
+    val specialtyBadge: String? = when (tool) {
+        PdfTool.SCAN_TO_PDF -> "OCR"
+        PdfTool.COMPRESS -> "Lossless"
+        PdfTool.PROTECT -> "AES-256"
+        PdfTool.UNLOCK -> "Key"
+        PdfTool.PDF_TO_PDFA -> "Archival"
+        PdfTool.MERGE -> "Batch"
+        PdfTool.SIGN_PDF -> "Secure"
+        PdfTool.SPLIT -> "Extract"
+        PdfTool.ADD_WATERMARK -> "Stamp"
+        PdfTool.TEXT_TO_PDF -> "Doc"
+        PdfTool.PDF_TO_IMAGES -> "Render"
+        PdfTool.PDF_TO_TEXT_MD -> "Markdown"
+        PdfTool.OCR_PDF -> "Searchable"
+        PdfTool.WORKFLOW -> "Chain"
+        PdfTool.REPAIR -> "Fix"
+        PdfTool.REDACT -> "Sanitize"
+        else -> null
     }
 
     Row(
@@ -384,11 +404,11 @@ private fun ToolListRow(
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Soft-tinted squircle icon (Google Files style)
+        // Neo-Precision Squircle icon container
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .background(groupContainer),
             contentAlignment = Alignment.Center
         ) {
@@ -396,27 +416,43 @@ private fun ToolListRow(
                 imageVector = tool.icon,
                 contentDescription = null,
                 tint = groupTint,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(20.dp)
             )
         }
 
         Spacer(modifier = Modifier.width(14.dp))
 
-        // Title and calm single-sentence description
+        // Title and description
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = tool.title,
-                style = typography.body.copy(fontWeight = FontWeight.Medium),
+                style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
                 color = colors.textPrimary,
                 maxLines = 1
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = tool.description,
-                style = typography.caption,
+                style = typography.caption.copy(fontSize = 12.sp),
                 color = colors.textSecondary,
                 maxLines = 1
             )
+        }
+
+        if (specialtyBadge != null) {
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = groupTint.copy(alpha = 0.12f),
+                border = BorderStroke(1.dp, groupTint.copy(alpha = 0.25f)),
+                modifier = Modifier.padding(start = 8.dp)
+            ) {
+                Text(
+                    text = specialtyBadge,
+                    style = typography.caption.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                    color = groupTint,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
         }
     }
 }

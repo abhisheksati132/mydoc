@@ -11,6 +11,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,11 +60,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
@@ -247,15 +251,6 @@ fun PhotoViewerScreen(
                         )
                     }
 
-                    // Delete Photo Button
-                    IconButton(onClick = { showDeleteConfirmDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Outlined.Delete,
-                            contentDescription = "Delete photo",
-                            tint = Color(0xFFFF5252)
-                        )
-                    }
-
                     Box {
                         IconButton(onClick = { isMoreMenuOpen = true }) {
                             Icon(
@@ -275,17 +270,23 @@ fun PhotoViewerScreen(
                             tonalElevation = 4.dp
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Move to Recycle Bin", color = Color(0xFFFF5252)) },
+                                text = { Text("Rotate 90°") },
                                 leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Delete,
-                                        contentDescription = null,
-                                        tint = Color(0xFFFF5252)
-                                    )
+                                    Icon(Icons.AutoMirrored.Filled.RotateRight, contentDescription = null, tint = Color(0xFFEDEDED))
                                 },
                                 onClick = {
                                     isMoreMenuOpen = false
-                                    showDeleteConfirmDialog = true
+                                    rotationAngle = (rotationAngle + 90f) % 360f
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Flip horizontal") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Flip, contentDescription = null, tint = Color(0xFFEDEDED))
+                                },
+                                onClick = {
+                                    isMoreMenuOpen = false
+                                    isFlippedHorizontal = !isFlippedHorizontal
                                 }
                             )
                             DropdownMenuItem(
@@ -326,13 +327,27 @@ fun PhotoViewerScreen(
                                     }
                                 }
                             )
+                            DropdownMenuItem(
+                                text = { Text("Move to Recycle Bin", color = Color(0xFFFF5252)) },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Delete,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFF5252)
+                                    )
+                                },
+                                onClick = {
+                                    isMoreMenuOpen = false
+                                    showDeleteConfirmDialog = true
+                                }
+                            )
                         }
                     }
                 }
             }
         }
 
-        // Bottom Controls Overlay
+        // Bottom Controls Overlay (Sleek 4-action ergonomic dock)
         AnimatedVisibility(
             visible = areControlsVisible,
             enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
@@ -347,13 +362,16 @@ fun PhotoViewerScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .height(64.dp)
-                        .padding(horizontal = AppSpacing.paddingMedium),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
+                        .height(68.dp)
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceAround,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Share
-                    IconButton(
+                    PhotoViewerActionButton(
+                        icon = Icons.Default.Share,
+                        label = "Share",
+                        tint = Color(0xFFEDEDED),
                         onClick = {
                             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                 type = currentItem.mimeType
@@ -362,77 +380,50 @@ fun PhotoViewerScreen(
                             }
                             context.startActivity(Intent.createChooser(shareIntent, "Share image"))
                         }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Share",
-                            tint = Color(0xFFEDEDED)
-                        )
-                    }
+                    )
 
                     // Edit
-                    IconButton(onClick = { isEditorOpen = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit photo",
-                            tint = Color(0xFFEDEDED)
-                        )
-                    }
-
-                    // Rotate
-                    IconButton(onClick = { rotationAngle = (rotationAngle + 90f) % 360f }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.RotateRight,
-                            contentDescription = "Rotate",
-                            tint = Color(0xFFEDEDED)
-                        )
-                    }
-
-                    // Flip
-                    IconButton(onClick = { isFlippedHorizontal = !isFlippedHorizontal }) {
-                        Icon(
-                            imageVector = Icons.Default.Flip,
-                            contentDescription = "Flip Horizontal",
-                            tint = if (isFlippedHorizontal) colors.accent else Color(0xFFEDEDED)
-                        )
-                    }
+                    PhotoViewerActionButton(
+                        icon = Icons.Default.Edit,
+                        label = "Edit",
+                        tint = Color(0xFFEDEDED),
+                        onClick = { isEditorOpen = true }
+                    )
 
                     // Extract Text (OCR)
-                    IconButton(onClick = {
-                        if (!isOcrRunning) {
-                            isOcrRunning = true
-                            Toast.makeText(context, "Scanning image for text...", Toast.LENGTH_SHORT).show()
-                            coroutineScope.launch {
-                                try {
-                                    val text = ocrEngine.recognizeText(currentItem.uri)
-                                    if (text.isBlank()) {
-                                        Toast.makeText(context, "No text detected in this image", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        ocrExtractedText = text
+                    PhotoViewerActionButton(
+                        icon = Icons.Outlined.TextFields,
+                        label = "OCR Text",
+                        tint = if (isOcrRunning) Color(0xFF3B82F6) else Color(0xFFEDEDED),
+                        onClick = {
+                            if (!isOcrRunning) {
+                                isOcrRunning = true
+                                Toast.makeText(context, "Scanning image for text...", Toast.LENGTH_SHORT).show()
+                                coroutineScope.launch {
+                                    try {
+                                        val text = ocrEngine.recognizeText(currentItem.uri)
+                                        if (text.isBlank()) {
+                                            Toast.makeText(context, "No text detected in this image", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            ocrExtractedText = text
+                                        }
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "OCR failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                                    } finally {
+                                        isOcrRunning = false
                                     }
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "OCR failed: ${e.message}", Toast.LENGTH_SHORT).show()
-                                } finally {
-                                    isOcrRunning = false
                                 }
                             }
                         }
-                    }) {
-                        Icon(
-                            imageVector = Icons.Outlined.TextFields,
-                            contentDescription = "Extract Text (OCR)",
-                            tint = if (isOcrRunning) Color(0xFFFF9800) else Color(0xFFEDEDED)
-                        )
-                    }
+                    )
 
-                    // Delete Photo (Prominent in bottom bar)
-                    IconButton(onClick = { showDeleteConfirmDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Outlined.Delete,
-                            contentDescription = "Delete photo",
-                            tint = Color(0xFFFF5252)
-                        )
-                    }
+                    // Delete Photo
+                    PhotoViewerActionButton(
+                        icon = Icons.Outlined.Delete,
+                        label = "Delete",
+                        tint = Color(0xFFEF4444),
+                        onClick = { showDeleteConfirmDialog = true }
+                    )
                 }
             }
         }
@@ -525,3 +516,35 @@ fun PhotoViewerScreen(
         }
     }
 }
+
+@Composable
+private fun PhotoViewerActionButton(
+    icon: ImageVector,
+    label: String,
+    tint: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 6.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = tint,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(modifier = Modifier.height(3.dp))
+        Text(
+            text = label,
+            style = LocalAppTypography.current.caption.copy(fontSize = 11.sp, fontWeight = FontWeight.Medium),
+            color = tint
+        )
+    }
+}
+

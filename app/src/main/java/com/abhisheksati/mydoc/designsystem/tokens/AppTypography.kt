@@ -25,11 +25,19 @@ val InterFontFamily = FontFamily(
 
 @Immutable
 data class AppTypography(
+    val headline: TextStyle = TextStyle(
+        fontFamily = InterFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 20.sp,
+        lineHeight = 26.sp,
+        letterSpacing = (-0.3).sp
+    ),
     val title: TextStyle = TextStyle(
         fontFamily = InterFontFamily,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 18.sp,
-        lineHeight = 24.sp
+        fontSize = 17.sp,
+        lineHeight = 22.sp,
+        letterSpacing = (-0.2).sp
     ),
     val body: TextStyle = TextStyle(
         fontFamily = InterFontFamily,
@@ -41,7 +49,8 @@ data class AppTypography(
         fontFamily = InterFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
-        lineHeight = 16.sp
+        lineHeight = 16.sp,
+        letterSpacing = 0.2.sp
     ),
     val caption: TextStyle = TextStyle(
         fontFamily = InterFontFamily,
