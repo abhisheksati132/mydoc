@@ -131,5 +131,7 @@ class PdfToolsTest {
         assertEquals("CONFIDENTIAL", options.watermarkText)
         assertEquals(-45f, options.watermarkRotation, 0.01f)
         assertEquals(WorkflowPresetType.DOCUMENT_CLEANUP, options.workflowPreset)
+        assertEquals("APPROVED", options.annotationText)
+        assertEquals("STAMP", options.annotationType)
     }
 }

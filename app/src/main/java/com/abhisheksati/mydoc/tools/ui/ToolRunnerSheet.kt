@@ -32,8 +32,10 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FileOpen
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Save
+import androidx.compose.material.icons.outlined.Draw
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Warning
+import com.abhisheksati.mydoc.tools.security.SignatureStorage
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.Icon
@@ -98,6 +100,7 @@ fun ToolRunnerSheet(
 
     var showVisualPageOrganizer by remember { mutableStateOf(false) }
     var showFillFormSheet by remember { mutableStateOf(false) }
+    var showSignaturePad by remember { mutableStateOf(false) }
 
     // SAF Document Pickers
     val singlePickerLauncher = rememberLauncherForActivityResult(
@@ -220,6 +223,7 @@ fun ToolRunnerSheet(
                         uris = inputUris,
                         onOpenOrganizer = { showVisualPageOrganizer = true },
                         onOpenFormFiller = { showFillFormSheet = true },
+                        onOpenSignPad = { showSignaturePad = true },
                         onOptionsChange = { transform -> viewModel.updateOptions(transform) }
                     )
 
@@ -365,6 +369,15 @@ fun ToolRunnerSheet(
             }
         )
     }
+
+    if (showSignaturePad) {
+        com.abhisheksati.mydoc.tools.ui.components.SignPdfSheet(
+            onDismiss = { showSignaturePad = false },
+            onSignatureSaved = {
+                showSignaturePad = false
+            }
+        )
+    }
 }
 
 @Composable
@@ -477,6 +490,7 @@ private fun ToolOptionsSection(
     uris: List<Uri>,
     onOpenOrganizer: () -> Unit,
     onOpenFormFiller: () -> Unit = {},
+    onOpenSignPad: () -> Unit = {},
     onOptionsChange: ((com.abhisheksati.mydoc.tools.model.ToolOptions) -> com.abhisheksati.mydoc.tools.model.ToolOptions) -> Unit
 ) {
     val colors = LocalAppColors.current
@@ -741,6 +755,121 @@ private fun ToolOptionsSection(
                         isSelected = !options.exportFormatJpg,
                         onClick = { onOptionsChange { it.copy(exportFormatJpg = false) } }
                     )
+                }
+            }
+
+            PdfTool.ANNOTATE -> {
+                Text(text = "ANNOTATION MODE", style = typography.label, color = colors.textSecondary)
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)) {
+                    AppFilterChip(
+                        label = "Stamp Badge",
+                        isSelected = options.annotationType.equals("STAMP", ignoreCase = true),
+                        onClick = { onOptionsChange { it.copy(annotationType = "STAMP") } }
+                    )
+                    AppFilterChip(
+                        label = "Highlight Keyword",
+                        isSelected = options.annotationType.equals("HIGHLIGHT", ignoreCase = true),
+                        onClick = { onOptionsChange { it.copy(annotationType = "HIGHLIGHT") } }
+                    )
+                }
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                if (options.annotationType.equals("STAMP", ignoreCase = true)) {
+                    Text(text = "PRESET STAMPS", style = typography.label, color = colors.textSecondary)
+                    Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
+                    ) {
+                        listOf("APPROVED", "CONFIDENTIAL", "REVIEWED", "DRAFT", "REJECTED").forEach { preset ->
+                            AppFilterChip(
+                                label = preset,
+                                isSelected = options.annotationText == preset,
+                                onClick = { onOptionsChange { it.copy(annotationText = preset) } }
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                }
+                Text(
+                    text = if (options.annotationType.equals("STAMP", ignoreCase = true)) "STAMP TEXT" else "KEYWORD TO HIGHLIGHT",
+                    style = typography.label,
+                    color = colors.textSecondary
+                )
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                OutlinedTextField(
+                    value = options.annotationText,
+                    onValueChange = { t -> onOptionsChange { it.copy(annotationText = t) } },
+                    placeholder = { Text(if (options.annotationType.equals("STAMP", ignoreCase = true)) "APPROVED" else "Search keyword") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = colors.accent,
+                        unfocusedBorderColor = colors.divider,
+                        focusedTextColor = colors.textPrimary,
+                        unfocusedTextColor = colors.textPrimary
+                    )
+                )
+            }
+
+            PdfTool.SIGN_PDF -> {
+                val hasSignature = SignatureStorage.hasSavedSignature(LocalContext.current)
+                Text(text = "DIGITAL SIGNATURE", style = typography.label, color = colors.textSecondary)
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+                        .background(if (hasSignature) colors.surfaceVariant else colors.accent)
+                        .clickable { onOpenSignPad() }
+                        .padding(14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Outlined.Draw,
+                            contentDescription = null,
+                            tint = if (hasSignature) colors.textPrimary else colors.background
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (hasSignature) "Edit / Redraw Signature" else "Draw Signature Now",
+                            style = typography.body,
+                            color = if (hasSignature) colors.textPrimary else colors.background,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Text(text = "PLACEMENT PAGE", style = typography.label, color = colors.textSecondary)
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)) {
+                    listOf("First Page" to 0, "Last Page" to 999).forEach { (label, pg) ->
+                        AppFilterChip(
+                            label = label,
+                            isSelected = options.signaturePage == pg,
+                            onClick = { onOptionsChange { it.copy(signaturePage = pg) } }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Text(text = "POSITION", style = typography.label, color = colors.textSecondary)
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)) {
+                    listOf("Bottom Right" to Pair(0.75f, 0.85f), "Bottom Center" to Pair(0.5f, 0.85f), "Bottom Left" to Pair(0.25f, 0.85f)).forEach { (label, coords) ->
+                        val isSel = kotlin.math.abs(options.signatureXPercent - coords.first) < 0.05f && kotlin.math.abs(options.signatureYPercent - coords.second) < 0.05f
+                        AppFilterChip(
+                            label = label,
+                            isSelected = isSel,
+                            onClick = {
+                                onOptionsChange {
+                                    it.copy(signatureXPercent = coords.first, signatureYPercent = coords.second)
+                                }
+                            }
+                        )
+                    }
                 }
             }
 

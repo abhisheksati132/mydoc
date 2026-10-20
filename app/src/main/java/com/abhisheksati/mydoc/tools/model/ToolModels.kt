@@ -136,6 +136,8 @@ data class ToolOptions(
     val signatureXPercent: Float = 0.5f,
     val signatureYPercent: Float = 0.8f,
     val signatureScale: Float = 0.3f,
+    val annotationText: String = "APPROVED",
+    val annotationType: String = "STAMP",
 
     // Security
     val userPassword: String = "",
