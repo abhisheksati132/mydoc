@@ -5,7 +5,9 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,12 +36,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 
@@ -65,6 +69,7 @@ fun AppTabHeader(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val haptic = LocalHapticFeedback.current
+    val isOled = colors.background == DarkAppColors.background
 
     var isMenuOpen by remember { mutableStateOf(false) }
 
@@ -164,7 +169,14 @@ fun AppTabHeader(
                         DropdownMenu(
                             expanded = isMenuOpen,
                             onDismissRequest = { isMenuOpen = false },
-                            modifier = Modifier.background(colors.surface)
+                            shape = RoundedCornerShape(18.dp),
+                            containerColor = if (isOled) Color(0xFF141720) else colors.surface,
+                            border = BorderStroke(
+                                1.dp,
+                                if (isOled) Color.White.copy(alpha = 0.10f) else colors.divider.copy(alpha = 0.7f)
+                            ),
+                            shadowElevation = 8.dp,
+                            tonalElevation = 4.dp
                         ) {
                             moreMenuContent { isMenuOpen = false }
                         }

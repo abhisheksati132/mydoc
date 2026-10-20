@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -213,7 +214,12 @@ fun WordViewerScreen(
                             }
                             DropdownMenu(
                                 expanded = isMenuOpen,
-                                onDismissRequest = { isMenuOpen = false }
+                                onDismissRequest = { isMenuOpen = false },
+                                shape = RoundedCornerShape(16.dp),
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+                                shadowElevation = 8.dp,
+                                tonalElevation = 4.dp
                             ) {
                                 DropdownMenuItem(
                                     text = { Text("Open with another app") },

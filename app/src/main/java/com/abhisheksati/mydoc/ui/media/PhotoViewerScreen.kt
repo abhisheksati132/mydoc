@@ -9,7 +9,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -259,7 +261,12 @@ fun PhotoViewerScreen(
 
                         DropdownMenu(
                             expanded = isMoreMenuOpen,
-                            onDismissRequest = { isMoreMenuOpen = false }
+                            onDismissRequest = { isMoreMenuOpen = false },
+                            shape = RoundedCornerShape(16.dp),
+                            containerColor = Color(0xFF1E2129),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                            shadowElevation = 8.dp,
+                            tonalElevation = 4.dp
                         ) {
                             DropdownMenuItem(
                                 text = { Text("Move to Recycle Bin", color = Color(0xFFFF5252)) },

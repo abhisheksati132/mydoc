@@ -84,7 +84,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.automirrored.outlined.NoteAdd
 import androidx.compose.material.icons.automirrored.outlined.ViewList
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Share
@@ -425,104 +428,17 @@ fun FileManagerScreen(
                             )
                             DropdownMenuItem(
                                 text = {
-                                    Row(
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Text("Recycle Bin", style = typography.body, color = colors.textPrimary)
-                                        if (uiState.trashItems.isNotEmpty()) {
-                                            Badge { Text(uiState.trashItems.size.toString()) }
-                                        }
-                                    }
-                                },
-                                leadingIcon = { Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.accent) },
-                                onClick = {
-                                    onDismiss()
-                                    viewModel.openTrash()
-                                }
-                            )
-
-                            HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 4.dp))
-
-                            Text(
-                                text = "TOOLS & VAULT",
-                                style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp),
-                                color = colors.accent,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                            )
-                            DropdownMenuItem(
-                                text = { Text("PC Wi-Fi Transfer", style = typography.body, color = colors.textPrimary) },
-                                leadingIcon = { Icon(Icons.Outlined.Wifi, contentDescription = null, tint = colors.accent) },
-                                onClick = {
-                                    onDismiss()
-                                    showWifiSharingSheet = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Storage Cleaner", style = typography.body, color = colors.textPrimary) },
-                                leadingIcon = { Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.accent) },
-                                onClick = {
-                                    onDismiss()
-                                    showStorageCleanerSheet = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("App Manager & APKs", style = typography.body, color = colors.textPrimary) },
-                                leadingIcon = { Icon(Icons.Outlined.Android, contentDescription = null, tint = colors.accent) },
-                                onClick = {
-                                    onDismiss()
-                                    showAppManagerSheet = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Safe Vault (Encrypted)", style = typography.body, color = colors.textPrimary) },
-                                leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.accent) },
-                                onClick = {
-                                    onDismiss()
-                                    showVaultSheet = true
-                                }
-                            )
-
-                            HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 4.dp))
-
-                            Text(
-                                text = "ACTIONS",
-                                style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp),
-                                color = colors.accent,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                            )
-                            DropdownMenuItem(
-                                text = { Text("New Folder", style = typography.body, color = colors.textPrimary) },
-                                leadingIcon = { Icon(Icons.Outlined.CreateNewFolder, contentDescription = null, tint = colors.textSecondary) },
-                                onClick = {
-                                    onDismiss()
-                                    showNewFolderDialog = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("New File", style = typography.body, color = colors.textPrimary) },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Outlined.NoteAdd, contentDescription = null, tint = colors.textSecondary) },
-                                onClick = {
-                                    onDismiss()
-                                    showNewFileDialog = true
-                                }
-                            )
-
-                            HorizontalDivider(color = colors.divider, modifier = Modifier.padding(vertical = 4.dp))
-
-                            Text(
-                                text = "PREFERENCES",
-                                style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp),
-                                color = colors.accent,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                            )
-                            DropdownMenuItem(
-                                text = {
                                     Text(
                                         if (uiState.showHiddenFiles) "Hide hidden files" else "Show hidden files",
                                         style = typography.body,
                                         color = colors.textPrimary
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = if (uiState.showHiddenFiles) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                        contentDescription = null,
+                                        tint = colors.accent
                                     )
                                 },
                                 onClick = {
@@ -530,8 +446,31 @@ fun FileManagerScreen(
                                     viewModel.toggleHiddenFiles()
                                 }
                             )
+
+                            HorizontalDivider(color = colors.divider.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 4.dp))
+
+                            DropdownMenuItem(
+                                text = { Text("New Folder", style = typography.body, color = colors.textPrimary) },
+                                leadingIcon = { Icon(Icons.Outlined.CreateNewFolder, contentDescription = null, tint = colors.accent) },
+                                onClick = {
+                                    onDismiss()
+                                    showNewFolderDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("New File", style = typography.body, color = colors.textPrimary) },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Outlined.NoteAdd, contentDescription = null, tint = colors.accent) },
+                                onClick = {
+                                    onDismiss()
+                                    showNewFileDialog = true
+                                }
+                            )
+
+                            HorizontalDivider(color = colors.divider.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 4.dp))
+
                             DropdownMenuItem(
                                 text = { Text("Refresh", style = typography.body, color = colors.textPrimary) },
+                                leadingIcon = { Icon(Icons.Outlined.Refresh, contentDescription = null, tint = colors.textSecondary) },
                                 onClick = {
                                     onDismiss()
                                     viewModel.loadDirectory(uiState.currentDirectory, addToHistory = false)

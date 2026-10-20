@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
@@ -138,7 +139,12 @@ fun DocumentListRow(
 
                 DropdownMenu(
                     expanded = menuExpanded,
-                    onDismissRequest = { menuExpanded = false }
+                    onDismissRequest = { menuExpanded = false },
+                    shape = RoundedCornerShape(16.dp),
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+                    shadowElevation = 8.dp,
+                    tonalElevation = 4.dp
                 ) {
                     DropdownMenuItem(
                         text = { Text("Details & Info") },

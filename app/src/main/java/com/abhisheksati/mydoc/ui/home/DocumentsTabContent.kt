@@ -126,6 +126,7 @@ fun DocumentsTabContent(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val haptic = LocalHapticFeedback.current
+    val isOled = colors.background == DarkAppColors.background
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
@@ -292,7 +293,15 @@ fun DocumentsTabContent(
                 // Sort Menu
                 DropdownMenu(
                     expanded = isSortMenuOpen,
-                    onDismissRequest = { isSortMenuOpen = false }
+                    onDismissRequest = { isSortMenuOpen = false },
+                    shape = RoundedCornerShape(18.dp),
+                    containerColor = if (isOled) Color(0xFF141720) else colors.surface,
+                    border = BorderStroke(
+                        1.dp,
+                        if (isOled) Color.White.copy(alpha = 0.10f) else colors.divider.copy(alpha = 0.7f)
+                    ),
+                    shadowElevation = 8.dp,
+                    tonalElevation = 4.dp
                 ) {
                     DropdownMenuItem(
                         text = { Text("Last opened", style = typography.body) },

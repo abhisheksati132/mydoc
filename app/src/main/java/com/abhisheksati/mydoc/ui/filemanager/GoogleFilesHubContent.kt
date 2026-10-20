@@ -36,7 +36,6 @@ import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.outlined.SdCard
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Videocam
@@ -100,19 +99,10 @@ fun GoogleFilesHubContent(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 100.dp)
+        contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
     ) {
-        // 1. Top Storage Analysis Master Box
+        // 1. Categories Section Header
         item {
-            FilesByGoogleStorageCard(
-                uiState = storageUiState,
-                isOled = isOled
-            )
-        }
-
-        // 2. Categories Section Header
-        item {
-            Spacer(modifier = Modifier.height(20.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -310,188 +300,6 @@ fun GoogleFilesHubContent(
     }
 }
 
-/**
- * Master Storage Analysis Box with multi-color segmented progress bar and Device Name
- */
-@Composable
-private fun FilesByGoogleStorageCard(
-    uiState: StorageAnalysisUiState,
-    isOled: Boolean
-) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
-
-    val deviceName = remember {
-        val manufacturer = android.os.Build.MANUFACTURER.orEmpty()
-        val model = android.os.Build.MODEL.orEmpty()
-        val formatted = if (model.startsWith(manufacturer, ignoreCase = true)) {
-            model.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.getDefault()) else it.toString() }
-        } else {
-            "${manufacturer.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.getDefault()) else it.toString() }} $model".trim()
-        }
-        formatted.ifEmpty { "This Device" }
-    }
-
-    Surface(
-        shape = RoundedCornerShape(22.dp),
-        color = if (isOled) Color(0xFF101217) else colors.surface,
-        border = BorderStroke(
-            1.dp,
-            if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.6f)
-        ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-    ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            // Top Row: Percentage Used + Device Name
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(
-                        text = "${uiState.usedPercentage}%",
-                        style = typography.title.copy(fontSize = 34.sp, fontWeight = FontWeight.ExtraBold),
-                        color = colors.textPrimary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "used",
-                        style = typography.body.copy(fontWeight = FontWeight.Medium, fontSize = 15.sp),
-                        color = colors.textSecondary,
-                        modifier = Modifier.padding(bottom = 5.dp)
-                    )
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(999.dp),
-                    color = if (isOled) Color(0xFF171B24) else colors.surfaceVariant.copy(alpha = 0.6f),
-                    border = BorderStroke(1.dp, if (isOled) Color.White.copy(alpha = 0.10f) else colors.divider.copy(alpha = 0.7f))
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp),
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.PhoneAndroid,
-                            contentDescription = null,
-                            tint = colors.accent,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Text(
-                            text = deviceName,
-                            style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 11.sp),
-                            color = colors.textPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Subtitle size
-            Text(
-                text = "${uiState.formattedUsed} used of ${uiState.formattedTotal} • ${uiState.formattedFree} free",
-                style = typography.caption.copy(fontSize = 13.sp),
-                color = colors.textSecondary
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Segmented Storage Visualizer Bar
-            HubSegmentedStorageBar(
-                categories = uiState.categories,
-                totalBytes = uiState.totalBytes,
-                freeBytes = uiState.freeBytes,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Legend Row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val displayCategories = uiState.categories.filter {
-                    it.type != StorageCategoryType.DOWNLOADS && it.bytes > 0L
-                }
-                displayCategories.forEach { cat ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(cat.type.color)
-                        )
-                        Text(
-                            text = "${cat.type.title}: ${cat.formattedSize}",
-                            style = typography.caption.copy(fontSize = 11.sp),
-                            color = colors.textSecondary
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * Segmented storage bar showing proportional category blocks
- */
-@Composable
-private fun HubSegmentedStorageBar(
-    categories: List<StorageCategoryStat>,
-    totalBytes: Long,
-    freeBytes: Long,
-    modifier: Modifier = Modifier
-) {
-    val barHeight = 12.dp
-    val freeColor = Color(0x33888888)
-
-    Box(
-        modifier = modifier
-            .height(barHeight)
-            .clip(RoundedCornerShape(6.dp))
-            .background(freeColor)
-    ) {
-        if (totalBytes > 0L) {
-            Row(modifier = Modifier.fillMaxSize()) {
-                val nonZero = categories.filter { it.type != StorageCategoryType.DOWNLOADS && it.bytes > 0L }
-                for (cat in nonZero) {
-                    val weight = (cat.bytes.toFloat() / totalBytes.toFloat()).coerceAtLeast(0.005f)
-                    Box(
-                        modifier = Modifier
-                            .weight(weight)
-                            .height(barHeight)
-                            .background(cat.type.color)
-                    )
-                }
-
-                val freeWeight = (freeBytes.toFloat() / totalBytes.toFloat()).coerceAtLeast(0.001f)
-                if (freeWeight > 0f) {
-                    Box(
-                        modifier = Modifier
-                            .weight(freeWeight)
-                            .height(barHeight)
-                            .background(Color.Transparent)
-                    )
-                }
-            }
-        }
-    }
-}
 
 /**
  * 2-Columns Grid of 6 Core Categories:

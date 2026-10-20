@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.designsystem.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
@@ -31,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
@@ -170,14 +172,18 @@ fun AppFileRow(
                     )
                 }
 
+                val isOled = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
                 DropdownMenu(
                     expanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false },
-                    modifier = Modifier.border(
-                        width = AppSpacing.dividerThickness,
-                        color = colors.divider,
-                        shape = RoundedCornerShape(AppSpacing.cornerRadius)
-                    )
+                    shape = RoundedCornerShape(16.dp),
+                    containerColor = if (isOled) Color(0xFF141720) else colors.surface,
+                    border = BorderStroke(
+                        1.dp,
+                        if (isOled) Color.White.copy(alpha = 0.10f) else colors.divider.copy(alpha = 0.7f)
+                    ),
+                    shadowElevation = 8.dp,
+                    tonalElevation = 4.dp
                 ) {
                     DropdownMenuItem(
                         text = { Text("Details & Info", style = typography.body) },

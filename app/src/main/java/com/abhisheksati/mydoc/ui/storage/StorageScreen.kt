@@ -168,9 +168,18 @@ fun StorageScreen(
                                 )
                             }
 
+                            val isOled = colors.background == DarkAppColors.background
                             DropdownMenu(
                                 expanded = isVolumeDropdownOpen,
-                                onDismissRequest = { isVolumeDropdownOpen = false }
+                                onDismissRequest = { isVolumeDropdownOpen = false },
+                                shape = RoundedCornerShape(16.dp),
+                                containerColor = if (isOled) Color(0xFF141720) else colors.surface,
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isOled) Color.White.copy(alpha = 0.10f) else colors.divider.copy(alpha = 0.7f)
+                                ),
+                                shadowElevation = 8.dp,
+                                tonalElevation = 4.dp
                             ) {
                                 uiState.volumes.forEachIndexed { idx, vol ->
                                     DropdownMenuItem(
