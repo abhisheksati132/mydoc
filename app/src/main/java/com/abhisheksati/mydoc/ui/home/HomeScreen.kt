@@ -358,28 +358,15 @@ fun HomeScreen(
                     if (fileManagerViewModel != null && onOpenFile != null) {
                         FileManagerScreen(
                             viewModel = fileManagerViewModel,
+                            storageViewModel = storageViewModel,
                             onOpenFile = onOpenFile,
                             onSettingsClick = onSettingsClick,
                             onToggleTheme = onToggleTheme,
                             isDarkTheme = isDarkTheme,
                             isActive = (currentTab == HomeTab.FILES),
-                            onNavigateToStorage = {
-                                viewModel.selectTab(HomeTab.STORAGE)
-                            },
                             modifier = Modifier.fillMaxSize()
                         )
                     }
-                }
-                HomeTab.STORAGE -> {
-                    StorageScreen(
-                        viewModel = storageViewModel,
-                        onNavigateToCategory = { category ->
-                            viewModel.selectTab(HomeTab.FILES)
-                            fileManagerViewModel?.selectCategory(category)
-                        },
-                        onSettingsClick = onSettingsClick,
-                        modifier = Modifier.fillMaxSize()
-                    )
                 }
                 HomeTab.DOCUMENTS -> {
                     DocumentsTabContent(
@@ -589,17 +576,6 @@ fun FloatingPillDock(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     onTabSelected(HomeTab.FILES)
-                }
-            )
-            FloatingDockItem(
-                selected = currentTab == HomeTab.STORAGE,
-                icon = if (currentTab == HomeTab.STORAGE) Icons.Filled.Storage else Icons.Outlined.Storage,
-                label = "Storage",
-                accentColor = colors.accent,
-                unselectedColor = colors.textSecondary,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    onTabSelected(HomeTab.STORAGE)
                 }
             )
             FloatingDockItem(

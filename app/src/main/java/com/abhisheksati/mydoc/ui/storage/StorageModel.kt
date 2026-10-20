@@ -6,6 +6,7 @@ import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.AudioFile
 import androidx.compose.material.icons.outlined.DataUsage
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.SettingsSuggest
@@ -21,6 +22,7 @@ enum class StorageCategoryType(
     val icon: ImageVector,
     val fileCategory: FileCategory?
 ) {
+    DOWNLOADS("Downloads", Color(0xFF00ACC1), Icons.Outlined.Download, FileCategory.DOWNLOADS),
     IMAGES("Images", Color(0xFF4CAF50), Icons.Outlined.Image, FileCategory.IMAGES),
     VIDEOS("Videos", Color(0xFFE91E63), Icons.Outlined.Videocam, FileCategory.VIDEOS),
     AUDIO("Audio", Color(0xFF9C27B0), Icons.Outlined.AudioFile, FileCategory.AUDIO),

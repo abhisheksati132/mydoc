@@ -149,6 +149,7 @@ import com.abhisheksati.mydoc.domain.model.ClipboardOperation
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.StorageFileType
 import com.abhisheksati.mydoc.domain.model.StorageItem
+import com.abhisheksati.mydoc.ui.storage.StorageViewModel
 import com.abhisheksati.mydoc.viewmodel.FileManagerViewModel
 import java.io.File
 
@@ -157,15 +158,16 @@ import java.io.File
 @Composable
 fun FileManagerScreen(
     viewModel: FileManagerViewModel,
+    storageViewModel: StorageViewModel,
     onOpenFile: (File) -> Unit,
     onSettingsClick: (() -> Unit)? = null,
     onToggleTheme: (() -> Unit)? = null,
     isDarkTheme: Boolean = false,
     isActive: Boolean = true,
-    onNavigateToStorage: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val storageUiState by storageViewModel.uiState.collectAsState()
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val context = LocalContext.current
@@ -182,7 +184,10 @@ fun FileManagerScreen(
                     hasPermission = granted
                     if (granted) {
                         viewModel.refreshVolumes()
-                        viewModel.loadDirectory(viewModel.uiState.value.currentDirectory, addToHistory = false)
+                        storageViewModel.refresh()
+                        if (viewModel.uiState.value.isBrowsingStorage) {
+                            viewModel.loadDirectory(viewModel.uiState.value.currentDirectory, addToHistory = false)
+                        }
                     }
                 }
             }
@@ -213,6 +218,7 @@ fun FileManagerScreen(
     val pinnedFoldersManager = remember { com.abhisheksati.mydoc.data.local.PinnedFoldersManager(context) }
     val pinnedFolders by pinnedFoldersManager.pinnedFolders.collectAsState()
 
+    val isHubMode = !uiState.isBrowsingStorage && uiState.activeCategory == null && !isSearchActive && !uiState.isTrashOpen
 
     // User message toasts
     LaunchedEffect(uiState.userMessage) {
@@ -243,7 +249,7 @@ fun FileManagerScreen(
     }
 
     // Intercept back presses only when Files tab is active
-    BackHandler(enabled = isActive && (uiState.isTrashOpen || uiState.isSelectionMode || isSearchActive || uiState.canGoBack || uiState.activeCategory != null)) {
+    BackHandler(enabled = isActive && (uiState.isTrashOpen || uiState.isSelectionMode || isSearchActive || uiState.isBrowsingStorage || uiState.activeCategory != null)) {
         if (uiState.isTrashOpen) {
             viewModel.closeTrash()
         } else if (uiState.isSelectionMode) {
@@ -251,7 +257,9 @@ fun FileManagerScreen(
         } else if (isSearchActive) {
             isSearchActive = false
             viewModel.setSearchQuery("")
-        } else {
+        } else if (uiState.activeCategory != null) {
+            viewModel.selectCategory(null)
+        } else if (uiState.isBrowsingStorage) {
             viewModel.navigateUp()
         }
     }
@@ -354,10 +362,24 @@ fun FileManagerScreen(
             } else {
                 Box {
                     AppTabHeader(
-                        title = if (uiState.canGoBack) uiState.currentDirectory.name else "Files",
-                        navigationIcon = if (uiState.canGoBack) {
+                        title = when {
+                            uiState.activeCategory != null -> uiState.activeCategory!!.displayName
+                            uiState.isBrowsingStorage -> {
+                                val isAtRoot = uiState.storageVolumes.any { it.path == uiState.currentDirectory.absolutePath } ||
+                                        uiState.currentDirectory.absolutePath == "/storage/emulated/0"
+                                if (isAtRoot) "Internal Storage" else uiState.currentDirectory.name
+                            }
+                            else -> "Files"
+                        },
+                        navigationIcon = if (uiState.activeCategory != null || uiState.isBrowsingStorage) {
                             {
-                                IconButton(onClick = { viewModel.navigateUp() }) {
+                                IconButton(onClick = {
+                                    if (uiState.activeCategory != null) {
+                                        viewModel.selectCategory(null)
+                                    } else {
+                                        viewModel.navigateUp()
+                                    }
+                                }) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                                         contentDescription = "Back",
@@ -527,98 +549,100 @@ fun FileManagerScreen(
                                 )
                             }
                         },
-                        bottomContent = {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                // Fast Categories Chips
-                                FileManagerCategoryChips(
-                                    activeCategory = uiState.activeCategory,
-                                    onCategorySelected = { category ->
-                                        if (uiState.activeCategory == category) {
-                                            viewModel.selectCategory(null)
-                                        } else {
-                                            viewModel.selectCategory(category)
-                                        }
-                                    }
-                                )
-
-                                // Breadcrumb Trail or Category Banner
-                                if (uiState.activeCategory != null) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 14.dp, vertical = 6.dp)
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(
-                                                text = "Category: ${uiState.activeCategory?.displayName}",
-                                                style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 14.sp),
-                                                color = colors.accent
-                                            )
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text(
-                                                text = "(${uiState.filteredItems.size} items)",
-                                                style = typography.caption.copy(fontSize = 12.sp),
-                                                color = colors.textSecondary
-                                            )
-                                        }
-                                        IconButton(
-                                            onClick = { viewModel.selectCategory(null) },
-                                            modifier = Modifier.size(24.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.Close,
-                                                contentDescription = "Exit Category",
-                                                tint = colors.textSecondary,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-                                    }
-                                } else {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .horizontalScroll(rememberScrollState())
-                                            .padding(horizontal = 14.dp, vertical = 6.dp)
-                                    ) {
-                                        uiState.breadcrumbTrail.forEachIndexed { index, crumb ->
-                                            val isLast = index == uiState.breadcrumbTrail.size - 1
-                                            val volumeForCrumb = uiState.storageVolumes.firstOrNull { it.path == crumb.absolutePath }
-                                            val crumbName = when {
-                                                volumeForCrumb != null -> volumeForCrumb.title
-                                                crumb.absolutePath == "/storage/emulated/0" -> "Internal Storage"
-                                                index == 0 -> "Storage"
-                                                else -> crumb.name
+                        bottomContent = if (!isHubMode) {
+                            {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    // Fast Categories Chips
+                                    FileManagerCategoryChips(
+                                        activeCategory = uiState.activeCategory,
+                                        onCategorySelected = { category ->
+                                            if (uiState.activeCategory == category) {
+                                                viewModel.selectCategory(null)
+                                            } else {
+                                                viewModel.selectCategory(category)
                                             }
+                                        }
+                                    )
 
-                                            Text(
-                                                text = crumbName,
-                                                style = typography.body.copy(
-                                                    fontWeight = if (isLast) FontWeight.Bold else FontWeight.Normal,
-                                                    fontSize = 13.sp
-                                                ),
-                                                color = if (isLast) colors.accent else colors.textSecondary,
-                                                modifier = Modifier
-                                                    .clip(RoundedCornerShape(6.dp))
-                                                    .clickable { viewModel.navigateToCrumb(crumb) }
-                                                    .padding(horizontal = 6.dp, vertical = 4.dp)
-                                            )
-
-                                            if (!isLast) {
-                                                Icon(
-                                                    imageVector = Icons.Outlined.ChevronRight,
-                                                    contentDescription = null,
-                                                    tint = colors.divider,
-                                                    modifier = Modifier.size(14.dp)
+                                    // Breadcrumb Trail or Category Banner
+                                    if (uiState.activeCategory != null) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp, vertical = 6.dp)
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = "Category: ${uiState.activeCategory?.displayName}",
+                                                    style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 14.sp),
+                                                    color = colors.accent
                                                 )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = "(${uiState.filteredItems.size} items)",
+                                                    style = typography.caption.copy(fontSize = 12.sp),
+                                                    color = colors.textSecondary
+                                                )
+                                            }
+                                            IconButton(
+                                                onClick = { viewModel.selectCategory(null) },
+                                                modifier = Modifier.size(24.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Close,
+                                                    contentDescription = "Exit Category",
+                                                    tint = colors.textSecondary,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .horizontalScroll(rememberScrollState())
+                                                .padding(horizontal = 14.dp, vertical = 6.dp)
+                                        ) {
+                                            uiState.breadcrumbTrail.forEachIndexed { index, crumb ->
+                                                val isLast = index == uiState.breadcrumbTrail.size - 1
+                                                val volumeForCrumb = uiState.storageVolumes.firstOrNull { it.path == crumb.absolutePath }
+                                                val crumbName = when {
+                                                    volumeForCrumb != null -> volumeForCrumb.title
+                                                    crumb.absolutePath == "/storage/emulated/0" -> "Internal Storage"
+                                                    index == 0 -> "Storage"
+                                                    else -> crumb.name
+                                                }
+
+                                                Text(
+                                                    text = crumbName,
+                                                    style = typography.body.copy(
+                                                        fontWeight = if (isLast) FontWeight.Bold else FontWeight.Normal,
+                                                        fontSize = 13.sp
+                                                    ),
+                                                    color = if (isLast) colors.accent else colors.textSecondary,
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(6.dp))
+                                                        .clickable { viewModel.navigateToCrumb(crumb) }
+                                                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                                                )
+
+                                                if (!isLast) {
+                                                    Icon(
+                                                        imageVector = Icons.Outlined.ChevronRight,
+                                                        contentDescription = null,
+                                                        tint = colors.divider,
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
-                        }
+                        } else null
                     )
 
                     SortOrderDropdownMenu(
@@ -633,7 +657,7 @@ fun FileManagerScreen(
         },
         floatingActionButton = {
             AnimatedVisibility(
-                visible = !uiState.isSelectionMode && uiState.clipboardState == null,
+                visible = uiState.isBrowsingStorage && !uiState.isSelectionMode && uiState.clipboardState == null,
                 enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
                 exit = scaleOut(spring(stiffness = Spring.StiffnessMediumLow)) + fadeOut()
             ) {
@@ -653,42 +677,62 @@ fun FileManagerScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-
-                // Storage Volume Meter (only when at root of storage volume and not in a category)
-                val isAtVolumeRoot = uiState.storageVolumes.any { it.path == uiState.currentDirectory.absolutePath } ||
-                        uiState.currentDirectory.absolutePath == "/storage/emulated/0"
-                if (uiState.activeCategory == null && isAtVolumeRoot) {
-                    StorageVolumeSummary(
-                        volumes = uiState.storageVolumes,
-                        onVolumeClick = { volume ->
-                            if (onNavigateToStorage != null) {
-                                onNavigateToStorage()
-                            } else {
-                                viewModel.loadDirectory(volume.file)
+            if (isHubMode) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    if (!hasPermission) {
+                        StoragePermissionBanner(
+                            onRequestPermission = {
+                                StoragePermissionHelper.launchManageStorageSettings(context)
                             }
+                        )
+                    }
+
+                    GoogleFilesHubContent(
+                        storageUiState = storageUiState,
+                        onBrowseInternalStorage = {
+                            viewModel.startBrowsingStorage()
                         },
-                        onStorageDetailsClick = onNavigateToStorage
+                        onBrowseStorageVolume = { volume ->
+                            viewModel.startBrowsingStorage(volume.file)
+                        },
+                        onCategoryClick = { category ->
+                            viewModel.selectCategory(category)
+                        },
+                        onAppsClick = {
+                            showAppManagerSheet = true
+                        },
+                        onCleanClick = {
+                            showStorageCleanerSheet = true
+                        },
+                        onOpenTrash = {
+                            viewModel.openTrash()
+                        },
+                        onOpenVault = {
+                            showVaultSheet = true
+                        },
+                        onOpenWifiTransfer = {
+                            showWifiSharingSheet = true
+                        },
+                        pinnedFolders = pinnedFolders,
+                        onFolderClick = { folder ->
+                            viewModel.startBrowsingStorage(folder)
+                        },
+                        trashCount = uiState.trashItems.size,
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
+            } else {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Storage Permission Missing Warning
+                    if (!hasPermission) {
+                        StoragePermissionBanner(
+                            onRequestPermission = {
+                                StoragePermissionHelper.launchManageStorageSettings(context)
+                            }
+                        )
+                    }
 
-                if (uiState.activeCategory == null && pinnedFolders.isNotEmpty() && isAtVolumeRoot) {
-                    PinnedFoldersStrip(
-                        folders = pinnedFolders,
-                        onFolderClick = { viewModel.loadDirectory(it) }
-                    )
-                }
-
-                // Storage Permission Missing Warning
-                if (!hasPermission) {
-                    StoragePermissionBanner(
-                        onRequestPermission = {
-                            StoragePermissionHelper.launchManageStorageSettings(context)
-                        }
-                    )
-                }
-
-                // File List / Grid Content
+                    // File List / Grid Content
                 if (uiState.isLoading) {
                     Box(
                         contentAlignment = Alignment.Center,
@@ -799,6 +843,7 @@ fun FileManagerScreen(
                     }
                 }
             }
+        }
 
             // Floating Clipboard Action Bar (Paste / Cancel)
             AnimatedVisibility(
@@ -969,8 +1014,11 @@ fun FileManagerScreen(
             rootDir = android.os.Environment.getExternalStorageDirectory(),
             onDismiss = {
                 showStorageCleanerSheet = false
-                viewModel.loadDirectory(uiState.currentDirectory, addToHistory = false)
                 viewModel.refreshVolumes()
+                storageViewModel.refresh()
+                if (uiState.isBrowsingStorage) {
+                    viewModel.loadDirectory(uiState.currentDirectory, addToHistory = false)
+                }
             },
             onFileClick = { file ->
                 showStorageCleanerSheet = false
@@ -984,6 +1032,7 @@ fun FileManagerScreen(
             onDismiss = {
                 showAppManagerSheet = false
                 viewModel.refreshVolumes()
+                storageViewModel.refresh()
             }
         )
     }

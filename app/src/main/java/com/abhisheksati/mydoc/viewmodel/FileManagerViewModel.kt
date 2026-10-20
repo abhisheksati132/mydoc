@@ -38,6 +38,7 @@ data class FileManagerUiState(
     val showHiddenFiles: Boolean = false,
     val searchQuery: String = "",
     val activeCategory: FileCategory? = null,
+    val isBrowsingStorage: Boolean = false,
     val isLoading: Boolean = false,
     val activeOperation: String? = null,
     val userMessage: String? = null,
@@ -81,6 +82,26 @@ class FileManagerViewModel(
         _uiState.update { it.copy(storageVolumes = volumes) }
     }
 
+    fun startBrowsingStorage(directory: File = initialDir) {
+        backStack.clear()
+        _uiState.update { it.copy(isBrowsingStorage = true, activeCategory = null) }
+        loadDirectory(directory, addToHistory = false)
+    }
+
+    fun exitToHub() {
+        backStack.clear()
+        _uiState.update {
+            it.copy(
+                isBrowsingStorage = false,
+                activeCategory = null,
+                searchQuery = "",
+                isSelectionMode = false,
+                selectedFiles = emptySet(),
+                canGoBack = false
+            )
+        }
+    }
+
     fun loadDirectory(directory: File, addToHistory: Boolean = true) {
         if (!directory.exists() || !directory.isDirectory) return
 
@@ -97,7 +118,7 @@ class FileManagerViewModel(
                     isLoading = true,
                     selectedFiles = emptySet(),
                     isSelectionMode = false,
-                    canGoBack = backStack.isNotEmpty() || hasParent(directory)
+                    canGoBack = backStack.isNotEmpty() || hasParent(directory) || it.isBrowsingStorage
                 )
             }
 
@@ -132,6 +153,10 @@ class FileManagerViewModel(
         }
 
         if (isRootDirectory(_uiState.value.currentDirectory)) {
+            if (_uiState.value.isBrowsingStorage) {
+                exitToHub()
+                return true
+            }
             return false
         }
 
@@ -140,10 +165,19 @@ class FileManagerViewModel(
             loadDirectory(parent, addToHistory = false)
             return true
         }
+
+        if (_uiState.value.isBrowsingStorage) {
+            exitToHub()
+            return true
+        }
         return false
     }
 
     fun handleBackPress(): Boolean {
+        if (_uiState.value.isTrashOpen) {
+            closeTrash()
+            return true
+        }
         if (_uiState.value.isSelectionMode) {
             clearSelection()
             return true
@@ -156,7 +190,10 @@ class FileManagerViewModel(
             selectCategory(null)
             return true
         }
-        return navigateUp()
+        if (_uiState.value.isBrowsingStorage) {
+            return navigateUp()
+        }
+        return false
     }
 
     fun navigateToCrumb(folder: File) {
@@ -516,18 +553,11 @@ class FileManagerViewModel(
 
     fun selectCategory(category: FileCategory?) {
         if (category == null) {
-            _uiState.update { it.copy(activeCategory = null) }
-            loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
-            return
-        }
-
-        if (category == FileCategory.DOWNLOADS) {
-            val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            if (downloadDir != null && downloadDir.exists()) {
-                _uiState.update { it.copy(activeCategory = null) }
-                loadDirectory(downloadDir, addToHistory = true)
-                return
+            _uiState.update { it.copy(activeCategory = null, canGoBack = _uiState.value.isBrowsingStorage) }
+            if (_uiState.value.isBrowsingStorage) {
+                loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
             }
+            return
         }
 
         viewModelScope.launch {

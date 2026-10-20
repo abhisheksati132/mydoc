@@ -136,6 +136,7 @@ class StorageViewModel(
         val totalCapacity = volume.totalBytes
 
         // 1. MediaStore queries by category
+        val downloads = queryMediaCategoryStats(FileCategory.DOWNLOADS)
         val images = queryMediaCategoryStats(FileCategory.IMAGES)
         val videos = queryMediaCategoryStats(FileCategory.VIDEOS)
         val audio = queryMediaCategoryStats(FileCategory.AUDIO)
@@ -184,6 +185,7 @@ class StorageViewModel(
         }
 
         val categoryList = listOf(
+            createStat(StorageCategoryType.DOWNLOADS, downloads.bytes, downloads.count),
             createStat(StorageCategoryType.IMAGES, images.bytes, images.count),
             createStat(StorageCategoryType.VIDEOS, videos.bytes, videos.count),
             createStat(StorageCategoryType.AUDIO, audio.bytes, audio.count),

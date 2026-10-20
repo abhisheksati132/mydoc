@@ -33,6 +33,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Article
+import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.DarkMode
@@ -318,9 +319,9 @@ fun SettingsScreen(
                     ) {
                         val tabs = listOf(
                             Triple(HomeTab.FILES, Icons.Outlined.Folder, "Files"),
-                            Triple(HomeTab.STORAGE, Icons.Outlined.Storage, "Storage"),
                             Triple(HomeTab.DOCUMENTS, Icons.AutoMirrored.Outlined.Article, "Documents"),
-                            Triple(HomeTab.MEDIA, Icons.Outlined.PermMedia, "Media")
+                            Triple(HomeTab.MEDIA, Icons.Outlined.PermMedia, "Media"),
+                            Triple(HomeTab.TOOLS, Icons.Outlined.Build, "Tools")
                         )
                         for ((tab, icon, label) in tabs) {
                             val isSelected = currentStartupTab == tab
