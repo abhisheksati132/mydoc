@@ -36,6 +36,9 @@ import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
 import com.tom_roush.pdfbox.pdmodel.font.PDType1Font
+import com.tom_roush.pdfbox.pdmodel.PDDocumentInformation
+import com.tom_roush.pdfbox.pdmodel.common.PDMetadata
+import com.tom_roush.pdfbox.pdmodel.graphics.color.PDOutputIntent
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
@@ -750,36 +753,84 @@ class PdfToolsEngine(private val context: Context) {
         val pageWidth = PageSizeFormat.A4.widthPt.toInt()
         val pageHeight = PageSizeFormat.A4.heightPt.toInt()
         val margin = 54f // 0.75 in
-        val lineHeight = 20f
+        val printableWidth = pageWidth - (2 * margin)
 
-        val paint = Paint().apply {
+        val headingPaint = Paint().apply {
+            color = Color.rgb(0x1A, 0x73, 0xE8)
+            textSize = 13f
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+            isAntiAlias = true
+        }
+
+        val bodyPaint = Paint().apply {
             color = Color.BLACK
-            textSize = 11f
+            textSize = 10.5f
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
             isAntiAlias = true
         }
 
+        fun wrapLine(text: String, paint: Paint, maxW: Float): List<String> {
+            if (text.isBlank()) return listOf("")
+            if (paint.measureText(text) <= maxW) return listOf(text)
+
+            val words = text.split("\\s+".toRegex())
+            val wrapped = mutableListOf<String>()
+            val cur = StringBuilder()
+
+            for (w in words) {
+                val candidate = if (cur.isEmpty()) w else "$cur $w"
+                if (paint.measureText(candidate) <= maxW) {
+                    cur.setLength(0)
+                    cur.append(candidate)
+                } else {
+                    if (cur.isNotEmpty()) wrapped.add(cur.toString())
+                    if (paint.measureText(w) > maxW) {
+                        var chunk = w
+                        while (paint.measureText(chunk) > maxW && chunk.length > 1) {
+                            val splitIdx = (chunk.length * (maxW / paint.measureText(chunk))).toInt().coerceIn(1, chunk.length - 1)
+                            wrapped.add(chunk.substring(0, splitIdx))
+                            chunk = chunk.substring(splitIdx)
+                        }
+                        cur.setLength(0)
+                        cur.append(chunk)
+                    } else {
+                        cur.setLength(0)
+                        cur.append(w)
+                    }
+                }
+            }
+            if (cur.isNotEmpty()) wrapped.add(cur.toString())
+            return wrapped
+        }
+
+        val effectiveLines = if (lines.isEmpty()) listOf("[Document has no extractable text content]") else lines
+
         var pageNum = 1
-        var currentY = margin + lineHeight
         var currentPage = outDoc.startPage(AndroidPdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNum).create())
         var canvas = currentPage.canvas
+        var currentY = margin + 18f
 
-        val totalLines = lines.size
-        lines.forEachIndexed { idx, line ->
+        val totalLines = effectiveLines.size
+        effectiveLines.forEachIndexed { idx, rawLine ->
             currentCoroutineContext().ensureActive()
-            if (currentY + lineHeight > pageHeight - margin) {
-                outDoc.finishPage(currentPage)
-                pageNum++
-                currentPage = outDoc.startPage(AndroidPdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNum).create())
-                canvas = currentPage.canvas
-                currentY = margin + lineHeight
-            }
 
-            // Simple text truncation/wrap to margins
-            val maxChars = 85
-            val cleanLine = if (line.length > maxChars) line.substring(0, maxChars) + "…" else line
-            canvas.drawText(cleanLine, margin, currentY, paint)
-            currentY += lineHeight
+            val isHeading = rawLine.startsWith("##") || rawLine.startsWith("[Sheet:") || rawLine.startsWith("[Slide")
+            val paint = if (isHeading) headingPaint else bodyPaint
+            val lineHeight = if (isHeading) 22f else 17f
+
+            val wrappedParts = wrapLine(rawLine, paint, printableWidth)
+            for (part in wrappedParts) {
+                if (currentY + lineHeight > pageHeight - margin) {
+                    outDoc.finishPage(currentPage)
+                    pageNum++
+                    currentPage = outDoc.startPage(AndroidPdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNum).create())
+                    canvas = currentPage.canvas
+                    currentY = margin + lineHeight
+                }
+
+                canvas.drawText(part, margin, currentY, paint)
+                currentY += lineHeight
+            }
 
             if (idx % 20 == 0) {
                 val pct = 20 + ((idx.toFloat() / totalLines) * 70).toInt()
@@ -880,27 +931,55 @@ class PdfToolsEngine(private val context: Context) {
             val sb = StringBuilder()
             sb.append("# ${file.nameWithoutExtension}\n\n")
 
+            var hasAnyText = false
             for (p in 0 until totalPages) {
                 currentCoroutineContext().ensureActive()
                 val page = srcDoc.loadPage(p)
                 val st = page.toStructuredText()
-                sb.append("## Page ${p + 1}\n\n")
+                val pageSb = StringBuilder()
 
                 for (block in st.blocks) {
                     for (line in block.lines) {
                         for (charItem in line.chars) {
-                            sb.append(charItem.c.toChar())
+                            pageSb.append(charItem.c.toChar())
                         }
-                        sb.append("\n")
+                        pageSb.append("\n")
                     }
-                    sb.append("\n")
+                    pageSb.append("\n")
                 }
-
                 st.destroy()
                 page.destroy()
 
-                val pct = 10 + (((p + 1).toFloat() / totalPages) * 80).toInt()
+                val pageStr = pageSb.toString().trim()
+                if (pageStr.isNotBlank()) {
+                    hasAnyText = true
+                    sb.append("## Page ${p + 1}\n\n").append(pageStr).append("\n\n")
+                }
+
+                val pct = 10 + (((p + 1).toFloat() / totalPages) * 70).toInt()
                 onProgress(ToolProgress(p + 1, totalPages, pct, "Extracting text from page ${p + 1}...", false))
+            }
+
+            // OCR fallback for scanned or image-only documents
+            if (!hasAnyText) {
+                val ocrEngine = OcrEngine(context)
+                for (p in 0 until totalPages) {
+                    currentCoroutineContext().ensureActive()
+                    val page = srcDoc.loadPage(p)
+                    val pixmap = page.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, false)
+                    val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
+                    pixmap.destroy()
+                    page.destroy()
+
+                    val ocrText = runCatching { ocrEngine.recognizeText(bmp) }.getOrDefault("")
+                    bmp.recycle()
+
+                    if (ocrText.isNotBlank()) {
+                        sb.append("## Page ${p + 1} (OCR)\n\n").append(ocrText).append("\n\n")
+                    }
+                    val pct = 70 + (((p + 1).toFloat() / totalPages) * 25).toInt()
+                    onProgress(ToolProgress(p + 1, totalPages, pct, "Extracting text via OCR from page ${p + 1}...", false))
+                }
             }
 
             val outFile = createTempOutputFile("extracted", "md")
@@ -942,6 +1021,34 @@ class PdfToolsEngine(private val context: Context) {
 
                 val pct = 10 + (((p + 1).toFloat() / totalPages) * 70).toInt()
                 onProgress(ToolProgress(p + 1, totalPages, pct, "Converting page ${p + 1}...", false))
+            }
+
+            // OCR fallback for scanned or image-only PDFs
+            if (paragraphs.isEmpty()) {
+                val ocrEngine = OcrEngine(context)
+                for (p in 0 until totalPages) {
+                    currentCoroutineContext().ensureActive()
+                    val page = srcDoc.loadPage(p)
+                    val pixmap = page.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, false)
+                    val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
+                    pixmap.destroy()
+                    page.destroy()
+
+                    val ocrText = runCatching { ocrEngine.recognizeText(bmp) }.getOrDefault("")
+                    bmp.recycle()
+
+                    for (l in ocrText.lines()) {
+                        val trimmed = l.trim()
+                        if (trimmed.isNotBlank()) paragraphs.add(trimmed)
+                    }
+
+                    val pct = 70 + (((p + 1).toFloat() / totalPages) * 25).toInt()
+                    onProgress(ToolProgress(p + 1, totalPages, pct, "Extracting text via OCR from page ${p + 1}...", false))
+                }
+            }
+
+            if (paragraphs.isEmpty()) {
+                paragraphs.add("[Document has no extractable text content]")
             }
 
             // Create valid OOXML DOCX ZIP
@@ -987,66 +1094,172 @@ class PdfToolsEngine(private val context: Context) {
     }
 
     private suspend fun pdfToPdfA(file: File, onProgress: (ToolProgress) -> Unit): File {
-        onProgress(ToolProgress(1, 100, 30, "Injecting archival OutputIntent headers...", false))
-        val srcDoc = Document.openDocument(file.absolutePath) as? PDFDocument
-            ?: throw IllegalArgumentException("Cannot open document")
+        onProgress(ToolProgress(1, 100, 30, "Injecting PDF/A-1b metadata schema...", false))
+        PdfBoxHelper.ensureInitialized(context)
+        val boxOutFile = createTempOutputFile("pdfa_temp", "pdf")
+
         try {
-            // Embed standard archival descriptor tags and clean metadata
-            srcDoc.setMetaData(Document.META_INFO_PRODUCER, "MyDoc Archival Engine (PDF/A-1b Profile)")
-            val outFile = createTempOutputFile("pdfa_archival", "pdf")
-            srcDoc.save(outFile.absolutePath, "compress,clean,garbage=4")
-            onProgress(ToolProgress(100, 100, 95, "Finalizing archival document...", false))
-            return outFile
-        } finally {
-            srcDoc.destroy()
+            FileInputStream(file).use { fis ->
+                PDDocument.load(fis).use { doc ->
+                    val cat = doc.documentCatalog ?: throw IllegalStateException("Invalid PDF catalog")
+
+                    val xmp = """<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+      <pdfaid:part>1</pdfaid:part>
+      <pdfaid:conformance>B</pdfaid:conformance>
+    </rdf:Description>
+    <rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">
+      <dc:format>application/pdf</dc:format>
+      <dc:title>
+        <rdf:Alt>
+          <rdf:li xml:lang="x-default">${sanitizeXml(file.nameWithoutExtension)}</rdf:li>
+        </rdf:Alt>
+      </dc:title>
+    </rdf:Description>
+    <rdf:Description rdf:about="" xmlns:pdf="http://ns.adobe.com/pdf/1.3/">
+      <pdf:Producer>MyDoc Archival Engine (PDF/A-1b Profile)</pdf:Producer>
+    </rdf:Description>
+  </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end="w"?>"""
+
+                    val metadataStream = PDMetadata(doc)
+                    metadataStream.createOutputStream().use { os ->
+                        os.write(xmp.toByteArray(Charsets.UTF_8))
+                    }
+                    cat.metadata = metadataStream
+
+                    doc.documentInformation?.producer = "MyDoc Archival Engine (PDF/A-1b Profile)"
+
+                    FileOutputStream(boxOutFile).use { fos -> doc.save(fos) }
+                }
+            }
+
+            // Compact xref table
+            val srcDoc = Document.openDocument(boxOutFile.absolutePath) as? PDFDocument
+            if (srcDoc != null) {
+                try {
+                    val finalOut = createTempOutputFile("pdfa_archival", "pdf")
+                    srcDoc.save(finalOut.absolutePath, "compress,clean,garbage=3")
+                    return finalOut
+                } finally {
+                    srcDoc.destroy()
+                    try { if (boxOutFile.exists()) boxOutFile.delete() } catch (_: Exception) {}
+                }
+            }
+            return boxOutFile
+        } catch (_: Exception) {
+            val srcDoc = Document.openDocument(file.absolutePath) as? PDFDocument
+                ?: throw IllegalArgumentException("Cannot open document")
+            try {
+                srcDoc.setMetaData(Document.META_INFO_PRODUCER, "MyDoc Archival Engine (PDF/A-1b Profile)")
+                val outFile = createTempOutputFile("pdfa_archival", "pdf")
+                srcDoc.save(outFile.absolutePath, "compress,clean,garbage=4")
+                return outFile
+            } finally {
+                srcDoc.destroy()
+            }
         }
     }
 
     private suspend fun extractAssetsZip(file: File, onProgress: (ToolProgress) -> Unit): File {
+        onProgress(ToolProgress(1, 100, 10, "Extracting embedded images & text...", false))
+        PdfBoxHelper.ensureInitialized(context)
+        val zipFile = createTempOutputFile("extracted_assets", "zip")
+
         val srcDoc = Document.openDocument(file.absolutePath)
             ?: throw IllegalArgumentException("Cannot open document")
+
         try {
             val totalPages = srcDoc.countPages()
-            val zipFile = createTempOutputFile("extracted_assets", "zip")
+            var extractedImagesCount = 0
+            val fullText = StringBuilder()
 
             ZipOutputStream(BufferedOutputStream(FileOutputStream(zipFile))).use { zos ->
-                val fullText = StringBuilder()
+                // Step 1: Extract real embedded PDImageXObjects via PDFBox
+                runCatching {
+                    FileInputStream(file).use { fis ->
+                        PDDocument.load(fis).use { doc ->
+                            for (p in 0 until doc.numberOfPages) {
+                                currentCoroutineContext().ensureActive()
+                                val page = doc.getPage(p)
+                                val resources = page.resources ?: continue
+                                var pageImgIdx = 1
+                                for (name in resources.xObjectNames) {
+                                    val xObject = resources.getXObject(name)
+                                    if (xObject is PDImageXObject) {
+                                        val bmp = runCatching { xObject.image }.getOrNull()
+                                        if (bmp != null) {
+                                            val entryName = String.format("images/page_%03d_img_%02d.png", p + 1, pageImgIdx++)
+                                            zos.putNextEntry(ZipEntry(entryName))
+                                            bmp.compress(Bitmap.CompressFormat.PNG, 100, zos)
+                                            zos.closeEntry()
+                                            bmp.recycle()
+                                            extractedImagesCount++
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
+                // Step 2: Extract text and fallback renders if no embedded XObjects found
+                val ocrEngine = OcrEngine(context)
                 for (p in 0 until totalPages) {
                     currentCoroutineContext().ensureActive()
                     val page = srcDoc.loadPage(p)
                     val st = page.toStructuredText()
 
-                    fullText.append("--- PAGE ${p + 1} ---\n")
+                    val pageTextSb = StringBuilder()
                     for (b in st.blocks) {
                         for (l in b.lines) {
-                            for (c in l.chars) fullText.append(c.c.toChar())
-                            fullText.append("\n")
+                            for (c in l.chars) pageTextSb.append(c.c.toChar())
+                            pageTextSb.append("\n")
                         }
                     }
+                    val pageText = pageTextSb.toString().trim()
 
-                    // Render page thumbnail as visual asset
-                    val pixmap = page.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, false)
-                    val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
+                    fullText.append("--- PAGE ${p + 1} ---\n")
+                    if (pageText.isNotBlank()) {
+                        fullText.append(pageText).append("\n\n")
+                    }
 
-                    zos.putNextEntry(ZipEntry(String.format("images/page_%03d.png", p + 1)))
-                    bmp.compress(Bitmap.CompressFormat.PNG, 100, zos)
-                    zos.closeEntry()
+                    // If document had no embedded individual images (e.g. raster scan), export full page
+                    if (extractedImagesCount == 0) {
+                        val pixmap = page.toPixmap(Matrix(2.0f, 2.0f), ColorSpace.DeviceRGB, false)
+                        val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
 
-                    bmp.recycle()
-                    pixmap.destroy()
+                        zos.putNextEntry(ZipEntry(String.format("images/page_%03d.png", p + 1)))
+                        bmp.compress(Bitmap.CompressFormat.PNG, 95, zos)
+                        zos.closeEntry()
+
+                        if (pageText.isBlank()) {
+                            val ocrText = runCatching { ocrEngine.recognizeText(bmp) }.getOrDefault("")
+                            if (ocrText.isNotBlank()) {
+                                fullText.append(ocrText).append("\n\n")
+                            }
+                        }
+
+                        bmp.recycle()
+                        pixmap.destroy()
+                    }
+
                     st.destroy()
                     page.destroy()
 
-                    val pct = 10 + (((p + 1).toFloat() / totalPages) * 80).toInt()
+                    val pct = 20 + (((p + 1).toFloat() / totalPages) * 75).toInt()
                     onProgress(ToolProgress(p + 1, totalPages, pct, "Extracting page ${p + 1} assets...", false))
                 }
 
-                // Add full text file
+                // Step 3: Write extracted text file
                 zos.putNextEntry(ZipEntry("text/document_text.txt"))
                 zos.write(fullText.toString().toByteArray())
                 zos.closeEntry()
             }
+
             return zipFile
         } finally {
             srcDoc.destroy()
@@ -1336,10 +1549,26 @@ class PdfToolsEngine(private val context: Context) {
     }
 
     private suspend fun stripMetadata(file: File, onProgress: (ToolProgress) -> Unit): File {
-        val srcDoc = Document.openDocument(file.absolutePath) as? PDFDocument
+        onProgress(ToolProgress(1, 100, 25, "Purging XMP streams & author tags...", false))
+        PdfBoxHelper.ensureInitialized(context)
+        val intermediate = createTempOutputFile("pdfbox_stripped", "pdf")
+
+        try {
+            FileInputStream(file).use { fis ->
+                PDDocument.load(fis).use { doc ->
+                    doc.documentCatalog?.metadata = null
+                    doc.documentInformation = PDDocumentInformation()
+                    FileOutputStream(intermediate).use { fos -> doc.save(fos) }
+                }
+            }
+        } catch (_: Exception) {
+            file.copyTo(intermediate, overwrite = true)
+        }
+
+        // Secondary pass via MuPDF xref cleaner to destroy unreachable objects and clear /Info
+        val srcDoc = Document.openDocument(intermediate.absolutePath) as? PDFDocument
             ?: throw IllegalArgumentException("Cannot open document")
         try {
-            onProgress(ToolProgress(1, 100, 30, "Sanitizing author and metadata streams...", false))
             srcDoc.setMetaData(Document.META_INFO_AUTHOR, "")
             srcDoc.setMetaData(Document.META_INFO_TITLE, "")
             srcDoc.setMetaData(Document.META_INFO_CREATOR, "")
@@ -1353,6 +1582,7 @@ class PdfToolsEngine(private val context: Context) {
             return outFile
         } finally {
             srcDoc.destroy()
+            try { if (intermediate.exists()) intermediate.delete() } catch (_: Exception) {}
         }
     }
 
