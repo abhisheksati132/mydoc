@@ -89,6 +89,8 @@ import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
 import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
 import com.abhisheksati.mydoc.designsystem.components.DocumentFormatBadge
+import com.abhisheksati.mydoc.designsystem.components.DocumentListSkeleton
+import com.abhisheksati.mydoc.designsystem.components.QuickLookModal
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
@@ -135,6 +137,7 @@ fun DocumentsTabContent(
 
     var isSortMenuOpen by remember { mutableStateOf(false) }
     var isSearchActive by remember { mutableStateOf(uiState.searchQuery.isNotEmpty()) }
+    var quickLookDoc by remember { mutableStateOf<DocumentFile?>(null) }
 
     // Tactile pull-to-search gesture listener
     val pullToSearchConnection = remember {
@@ -404,8 +407,10 @@ fun DocumentsTabContent(
                 }
             }
 
-            // Document list or empty state
-            if (uiState.documents.isEmpty()) {
+            // Document list, loading shimmer, or empty state
+            if (uiState.isLoading && uiState.documents.isEmpty()) {
+                DocumentListSkeleton(count = 7)
+            } else if (uiState.documents.isEmpty()) {
                 if (uiState.isSearching) {
                     AppEmptyState(
                         title = "No documents matched your search.",
@@ -450,7 +455,8 @@ fun DocumentsTabContent(
                                     }
                                 },
                                 onShare = { onShareDocument(document) },
-                                onShowDetails = { onSelectDocForDetails(document) }
+                                onShowDetails = { onSelectDocForDetails(document) },
+                                onLongClick = { quickLookDoc = document }
                             )
                         }
                     } else {
@@ -477,7 +483,8 @@ fun DocumentsTabContent(
                                         onToggleFavorite = { viewModel.toggleFavorite(continueDoc) },
                                         onRemoveFromRecents = { viewModel.removeFromRecents(continueDoc) },
                                         onShare = { onShareDocument(continueDoc) },
-                                        onShowDetails = { onSelectDocForDetails(continueDoc) }
+                                        onShowDetails = { onSelectDocForDetails(continueDoc) },
+                                        onLongClick = { quickLookDoc = continueDoc }
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(10.dp))
@@ -519,7 +526,8 @@ fun DocumentsTabContent(
                                     }
                                 },
                                 onShare = { onShareDocument(document) },
-                                onShowDetails = { onSelectDocForDetails(document) }
+                                onShowDetails = { onSelectDocForDetails(document) },
+                                onLongClick = { quickLookDoc = document }
                             )
                         }
 
@@ -547,7 +555,8 @@ fun DocumentsTabContent(
                                         }
                                     },
                                     onShare = { onShareDocument(document) },
-                                    onShowDetails = { onSelectDocForDetails(document) }
+                                    onShowDetails = { onSelectDocForDetails(document) },
+                                    onLongClick = { quickLookDoc = document }
                                 )
                             }
                         }
@@ -563,6 +572,33 @@ fun DocumentsTabContent(
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
                 .padding(bottom = 96.dp)
+        )
+
+        // Next-Grade Peek & Pop Quick Look Modal
+        QuickLookModal(
+            document = quickLookDoc,
+            onDismiss = { quickLookDoc = null },
+            onOpen = { doc ->
+                quickLookDoc = null
+                onDocumentClick(doc)
+            },
+            onShare = { doc ->
+                quickLookDoc = null
+                onShareDocument(doc)
+            },
+            onToggleFavorite = { doc ->
+                viewModel.toggleFavorite(doc)
+            },
+            onDelete = { doc ->
+                quickLookDoc = null
+                viewModel.removeFromRecents(doc)
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = "Removed \"${doc.displayName}\"",
+                        duration = SnackbarDuration.Short
+                    )
+                }
+            }
         )
     }
 }

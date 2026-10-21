@@ -23,6 +23,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -214,6 +221,34 @@ fun HomeScreen(
     var showClearRecentsDialog by remember { mutableStateOf(false) }
     var selectedDocForDetails by remember { mutableStateOf<DocumentFile?>(null) }
 
+    // Fluid Motion & Spatial Continuity: Scroll-aware floating dock with spring physics
+    var isDockVisible by remember { mutableStateOf(true) }
+    val dockTranslationY by animateFloatAsState(
+        targetValue = if (isDockVisible) 0f else 130f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "dockTranslationY"
+    )
+
+    LaunchedEffect(currentTab) {
+        isDockVisible = true
+    }
+
+    val dockNestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (available.y < -12f && isDockVisible) {
+                    isDockVisible = false
+                } else if (available.y > 12f && !isDockVisible) {
+                    isDockVisible = true
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
     val documentScanner = com.abhisheksati.mydoc.tools.scan.rememberDocumentScanner(
         onPages = { uris ->
             showCameraScanner = false
@@ -286,6 +321,7 @@ fun HomeScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
+            .nestedScroll(dockNestedScrollConnection)
             .background(colors.background)
     ) {
         // 1. Edge-to-Edge Scrollable Content across all tabs (flows smoothly underneath the floating dock)
@@ -374,10 +410,14 @@ fun HomeScreen(
             }
         }
 
-        // 2. Neo-Precision Floating Pill Navigation Dock (Signature hovering dock)
+        // 2. Neo-Precision Floating Pill Navigation Dock (Signature hovering dock with spring continuity & adaptive tablet sizing)
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
+                .graphicsLayer {
+                    translationY = dockTranslationY
+                }
+                .widthIn(max = 520.dp)
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
@@ -386,6 +426,7 @@ fun HomeScreen(
             FloatingPillDock(
                 currentTab = currentTab,
                 onTabSelected = { tab ->
+                    isDockVisible = true
                     viewModel.selectTab(tab)
                     scope.launch { pagerState.animateScrollToPage(tab.ordinal) }
                 }
@@ -505,7 +546,7 @@ fun FloatingPillDock(
     modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
-    val haptic = LocalHapticFeedback.current
+    val haptics = rememberAppHaptics()
     val isOled = colors.background == DarkAppColors.background
 
     // Frosted Glass: Deep obsidian in OLED mode, dynamic surfaceContainer in Material You
@@ -544,7 +585,7 @@ fun FloatingPillDock(
                 accentColor = colors.onPrimaryContainer,
                 unselectedColor = colors.textSecondary,
                 onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    haptics.select()
                     onTabSelected(HomeTab.FILES)
                 }
             )
@@ -555,7 +596,7 @@ fun FloatingPillDock(
                 accentColor = colors.onPrimaryContainer,
                 unselectedColor = colors.textSecondary,
                 onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    haptics.select()
                     onTabSelected(HomeTab.DOCUMENTS)
                 }
             )
@@ -566,7 +607,7 @@ fun FloatingPillDock(
                 accentColor = colors.onPrimaryContainer,
                 unselectedColor = colors.textSecondary,
                 onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    haptics.select()
                     onTabSelected(HomeTab.MEDIA)
                 }
             )
@@ -577,7 +618,7 @@ fun FloatingPillDock(
                 accentColor = colors.onPrimaryContainer,
                 unselectedColor = colors.textSecondary,
                 onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    haptics.select()
                     onTabSelected(HomeTab.TOOLS)
                 }
             )

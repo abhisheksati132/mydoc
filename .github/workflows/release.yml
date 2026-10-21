@@ -51,7 +51,9 @@ jobs:
             TAG="${GITHUB_REF_NAME}"
           else
             COUNT=$(git rev-list --count HEAD)
-            TAG="v1.1.${COUNT}"
+            PATCH=$((COUNT - 95))
+            if [ $PATCH -lt 0 ]; then PATCH=0; fi
+            TAG="v1.1.${PATCH}"
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 

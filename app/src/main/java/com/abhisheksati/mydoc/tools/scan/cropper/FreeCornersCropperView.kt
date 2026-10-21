@@ -29,8 +29,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.RestartAlt
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -180,7 +179,7 @@ private fun FreeCornersCropperCanvas(
     onCropped: (Bitmap) -> Unit
 ) {
     val density = LocalDensity.current
-    val haptic = LocalHapticFeedback.current
+    val haptics = rememberAppHaptics()
     val handleTouchRadiusPx = with(density) { 36.dp.toPx() }
     val cornerCircleRadiusPx = with(density) { 11.dp.toPx() }
     val strokeWidthPx = with(density) { 2.2.dp.toPx() }
@@ -288,6 +287,9 @@ private fun FreeCornersCropperCanvas(
                                     }
                                 }
                             }
+                            if (activeHandle != DragHandle.NONE) {
+                                haptics.select()
+                            }
                             wasSnapped = false
                             dragTouchPosition = startOffset
                         },
@@ -332,7 +334,7 @@ private fun FreeCornersCropperCanvas(
                                 }
 
                                 if (snapped && !wasSnapped) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    haptics.snap()
                                 }
                                 wasSnapped = snapped
 
@@ -352,7 +354,7 @@ private fun FreeCornersCropperCanvas(
                                         snapped = true
                                     }
                                     if (snapped && !wasSnapped) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        haptics.snap()
                                     }
                                     wasSnapped = snapped
                                     quadPoints[0] = Offset(quadPoints[0].x, newY)
@@ -366,7 +368,7 @@ private fun FreeCornersCropperCanvas(
                                         snapped = true
                                     }
                                     if (snapped && !wasSnapped) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        haptics.snap()
                                     }
                                     wasSnapped = snapped
                                     quadPoints[1] = Offset(newX, quadPoints[1].y)
@@ -380,7 +382,7 @@ private fun FreeCornersCropperCanvas(
                                         snapped = true
                                     }
                                     if (snapped && !wasSnapped) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        haptics.snap()
                                     }
                                     wasSnapped = snapped
                                     quadPoints[2] = Offset(quadPoints[2].x, newY)
@@ -394,7 +396,7 @@ private fun FreeCornersCropperCanvas(
                                         snapped = true
                                     }
                                     if (snapped && !wasSnapped) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        haptics.snap()
                                     }
                                     wasSnapped = snapped
                                     quadPoints[3] = Offset(newX, quadPoints[3].y)
@@ -587,7 +589,7 @@ private fun FreeCornersCropperCanvas(
                 // Reset to full image bounds
                 IconButton(
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        haptics.select()
                         if (imageBounds.width > 0) {
                             quadPoints[0] = Offset(imageBounds.left, imageBounds.top)
                             quadPoints[1] = Offset(imageBounds.right, imageBounds.top)
@@ -610,7 +612,7 @@ private fun FreeCornersCropperCanvas(
                 // Smart Document Edge Auto-Snap
                 IconButton(
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        haptics.confirm()
                         val autoQuad = DocumentEdgeDetector.detectDocumentQuad(bitmap)
                         if (autoQuad != null && scaleFactor > 0f) {
                             quadPoints[0] = Offset(imageBounds.left + autoQuad.topLeft.x * scaleFactor, imageBounds.top + autoQuad.topLeft.y * scaleFactor)

@@ -16,6 +16,7 @@ fun getGitCommitCount(): Int {
 }
 
 val commitCount = getGitCommitCount()
+val patchNumber = (commitCount - 95).coerceAtLeast(0)
 
 android {
     namespace = "com.abhisheksati.mydoc"
@@ -35,7 +36,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = commitCount
-        versionName = "1.1.$commitCount"
+        versionName = "1.1.$patchNumber"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

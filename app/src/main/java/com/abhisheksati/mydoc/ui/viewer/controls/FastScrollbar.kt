@@ -63,7 +63,7 @@ fun FastScrollbar(
 
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val haptic = LocalHapticFeedback.current
+    val haptics = com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics()
     val density = LocalDensity.current
 
     var isDragging by remember { mutableStateOf(false) }
@@ -116,7 +116,7 @@ fun FastScrollbar(
                             dragProgress = normalized
                             val targetPage = (normalized * (pageCount - 1)).roundToInt().coerceIn(0, pageCount - 1)
                             if (targetPage != lastHapticPage) {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                haptics.tick()
                                 lastHapticPage = targetPage
                             }
                             onPageSelected(targetPage)
@@ -133,7 +133,7 @@ fun FastScrollbar(
                             dragProgress = normalized
                             val targetPage = (normalized * (pageCount - 1)).roundToInt().coerceIn(0, pageCount - 1)
                             if (targetPage != lastHapticPage) {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                haptics.tick()
                                 lastHapticPage = targetPage
                             }
                             onPageSelected(targetPage)

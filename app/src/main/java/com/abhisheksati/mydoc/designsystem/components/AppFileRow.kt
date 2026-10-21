@@ -2,6 +2,7 @@ package com.abhisheksati.mydoc.designsystem.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -36,10 +38,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
+import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 
@@ -63,7 +70,7 @@ fun formatMiddleTruncated(name: String, maxChars: Int = 36): String {
     return base.take(frontChars) + "…" + base.takeLast(backChars) + ext
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun AppFileRow(
     displayName: String,
@@ -84,26 +91,92 @@ fun AppFileRow(
     var menuExpanded by remember { mutableStateOf(false) }
     val colors = AppTheme.colors
     val typography = AppTheme.typography
-    val haptic = LocalHapticFeedback.current
+    val haptics = rememberAppHaptics()
+
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            when (value) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    haptics.confirm()
+                    onToggleFavorite()
+                    false
+                }
+                SwipeToDismissBoxValue.EndToStart -> {
+                    if (onRemove != null) {
+                        haptics.reject()
+                        onRemove()
+                        true
+                    } else false
+                }
+                SwipeToDismissBoxValue.Settled -> false
+            }
+        }
+    )
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = AppSpacing.minTouchTarget)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .combinedClickable(
-                    onClick = onClick,
-                    onLongClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onLongClick()
+        SwipeToDismissBox(
+            state = dismissState,
+            enableDismissFromStartToEnd = true,
+            enableDismissFromEndToStart = onRemove != null,
+            backgroundContent = {
+                val direction = dismissState.dismissDirection
+                val bg = when (direction) {
+                    SwipeToDismissBoxValue.StartToEnd -> colors.accent.copy(alpha = 0.16f)
+                    SwipeToDismissBoxValue.EndToStart -> colors.error.copy(alpha = 0.16f)
+                    else -> Color.Transparent
+                }
+                val alignment = when (direction) {
+                    SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                    SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                    else -> Alignment.Center
+                }
+                val icon = when (direction) {
+                    SwipeToDismissBoxValue.StartToEnd -> if (isFavorite) Icons.Outlined.StarBorder else Icons.Outlined.Star
+                    SwipeToDismissBoxValue.EndToStart -> Icons.Outlined.Delete
+                    else -> null
+                }
+                val iconTint = when (direction) {
+                    SwipeToDismissBoxValue.StartToEnd -> colors.accent
+                    SwipeToDismissBoxValue.EndToStart -> colors.error
+                    else -> Color.Transparent
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(bg)
+                        .padding(horizontal = 20.dp),
+                    contentAlignment = alignment
+                ) {
+                    if (icon != null) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = iconTint,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
-                )
-                .padding(horizontal = AppSpacing.medium, vertical = AppSpacing.small),
-            verticalAlignment = Alignment.CenterVertically
+                }
+            }
         ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.background)
+                    .combinedClickable(
+                        onClick = onClick,
+                        onLongClick = {
+                            haptics.snap()
+                            onLongClick()
+                        }
+                    )
+                    .padding(horizontal = AppSpacing.medium, vertical = AppSpacing.small),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
             // Recognizable Google-style format-colored badge
             DocumentFormatBadge(
                 extension = typeBadge,
@@ -155,7 +228,7 @@ fun AppFileRow(
             // Favorite button (48dp touch target)
             IconButton(
                 onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    haptics.confirm()
                     onToggleFavorite()
                 },
                 modifier = Modifier.size(AppSpacing.minTouchTarget)
@@ -172,7 +245,7 @@ fun AppFileRow(
             Box {
                 IconButton(
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        haptics.select()
                         menuExpanded = true
                     },
                     modifier = Modifier.size(AppSpacing.minTouchTarget)
@@ -197,7 +270,7 @@ fun AppFileRow(
                     DropdownMenuItem(
                         text = { Text("Details & Info", style = typography.body) },
                         onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            haptics.select()
                             menuExpanded = false
                             onDetails()
                         }
@@ -205,7 +278,7 @@ fun AppFileRow(
                     DropdownMenuItem(
                         text = { Text("Share", style = typography.body) },
                         onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            haptics.select()
                             menuExpanded = false
                             onShare()
                         }
@@ -214,7 +287,7 @@ fun AppFileRow(
                         DropdownMenuItem(
                             text = { Text("Remove from recents", style = typography.body) },
                             onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                haptics.reject()
                                 menuExpanded = false
                                 onRemove()
                             }
@@ -223,6 +296,7 @@ fun AppFileRow(
                 }
             }
         }
+    }
 
         // Standard hairline divider
         if (showDivider) {
