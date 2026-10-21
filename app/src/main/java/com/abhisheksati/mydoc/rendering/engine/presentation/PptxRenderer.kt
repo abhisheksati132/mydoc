@@ -36,15 +36,23 @@ internal object PptxRenderer {
 
     private const val MaxSlides = 500
 
+    data class PptxRenderResult(
+        val doc: PdfDocument,
+        val outlines: List<com.abhisheksati.mydoc.rendering.engine.OutlineItem>
+    )
+
     /**
      * @return a rendered PdfDocument, or null if this isn't a presentation we can read.
      */
-    fun render(bytes: ByteArray): PdfDocument? {
+    fun render(bytes: ByteArray): PdfDocument? = renderWithOutlines(bytes)?.doc
+
+    fun renderWithOutlines(bytes: ByteArray): PptxRenderResult? {
         val pkg = readPackage(bytes) ?: return null
         val slides = pkg.slidePaths()
         if (slides.isEmpty()) return null
 
         val doc = PdfDocument()
+        val outlines = mutableListOf<com.abhisheksati.mydoc.rendering.engine.OutlineItem>()
         val (slideW, slideH) = pkg.slideSize()
         var pageNumber = 1
         for (path in slides.take(MaxSlides)) {
@@ -52,10 +60,18 @@ internal object PptxRenderer {
                 PdfDocument.PageInfo.Builder(Math.round(slideW), Math.round(slideH), pageNumber).create()
             )
             runCatching { pkg.drawSlide(page.canvas, path, pageNumber) }
+            val title = pkg.slideTitle(path) ?: "Slide $pageNumber"
+            outlines.add(
+                com.abhisheksati.mydoc.rendering.engine.OutlineItem(
+                    title = "$pageNumber. $title",
+                    pageIndex = pageNumber - 1,
+                    level = 0
+                )
+            )
             doc.finishPage(page)
             pageNumber++
         }
-        return doc
+        return PptxRenderResult(doc, outlines)
     }
 
     // ── Package ─────────────────────────────────────────────────────────────────
@@ -154,6 +170,31 @@ internal object PptxRenderer {
             return entries.keys
                 .filter { it.startsWith("ppt/slides/slide") && it.endsWith(".xml") }
                 .sortedBy { Regex("slide(\\d+)\\.xml").find(it)?.groupValues?.get(1)?.toIntOrNull() ?: Int.MAX_VALUE }
+        }
+
+        fun slideTitle(slidePath: String): String? {
+            val slide = part(slidePath) ?: return null
+            val tree = slide.find("p:spTree") ?: return null
+            // Check explicit title placeholder first
+            for (shape in tree.childrenNamed("p:sp")) {
+                val phType = shape.find("p:ph")?.attr("type")
+                if (phType == "title" || phType == "ctrTitle") {
+                    val text = shape.child("p:txBody")?.textContent()?.trim()
+                    if (!text.isNullOrBlank()) {
+                        val singleLine = text.replace(Regex("\\s+"), " ")
+                        return if (singleLine.length > 55) singleLine.take(52) + "..." else singleLine
+                    }
+                }
+            }
+            // Fallback: check first text paragraph in any shape
+            for (shape in tree.childrenNamed("p:sp")) {
+                val text = shape.child("p:txBody")?.textContent()?.trim()
+                if (!text.isNullOrBlank() && text.length >= 3) {
+                    val singleLine = text.replace(Regex("\\s+"), " ")
+                    return if (singleLine.length > 55) singleLine.take(52) + "..." else singleLine
+                }
+            }
+            return null
         }
 
         // ── Theme colours ───────────────────────────────────────────────────────

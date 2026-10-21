@@ -204,7 +204,12 @@ class ViewerViewModel(
                         val outline = if (rawOutline.isNotEmpty()) {
                             rawOutline
                         } else {
-                            com.abhisheksati.mydoc.rendering.engine.spreadsheet.XlsxConverter.getSheetOutlines(cacheFile.absolutePath)
+                            val xlsx = com.abhisheksati.mydoc.rendering.engine.spreadsheet.XlsxConverter.getSheetOutlines(cacheFile.absolutePath)
+                            if (xlsx.isNotEmpty()) {
+                                xlsx
+                            } else {
+                                com.abhisheksati.mydoc.rendering.engine.presentation.PptxConverter.getSlideOutlines(cacheFile.absolutePath)
+                            }
                         }
                         val initialPage = savedState?.lastPage?.coerceIn(0, maxOf(0, totalPages - 1)) ?: 0
                         val defaultMode = (context.applicationContext as? com.abhisheksati.mydoc.MyDocApp)?.settingsRepository?.defaultReadingMode?.value ?: ReadingMode.NORMAL

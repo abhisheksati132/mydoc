@@ -13,7 +13,7 @@ object XlsxConverter {
     private val sheetOutlinesMap = java.util.concurrent.ConcurrentHashMap<String, List<com.abhisheksati.mydoc.rendering.engine.OutlineItem>>()
 
     fun getSheetOutlines(pdfPath: String): List<com.abhisheksati.mydoc.rendering.engine.OutlineItem> =
-        sheetOutlinesMap[pdfPath] ?: emptyList()
+        sheetOutlinesMap[pdfPath] ?: com.abhisheksati.mydoc.rendering.engine.OutlineCache.loadOutlines(pdfPath)
 
     suspend fun convertXlsxToPdf(
         context: Context,
@@ -54,6 +54,7 @@ object XlsxConverter {
 
             val renderResult = XlsxPdfRenderer.renderWithOutlines(workbook) ?: return@withContext null
             sheetOutlinesMap[targetPdf.absolutePath] = renderResult.outlines
+            com.abhisheksati.mydoc.rendering.engine.OutlineCache.saveOutlines(targetPdf, renderResult.outlines)
 
             FileOutputStream(targetPdf).use { out ->
                 renderResult.doc.writeTo(out)

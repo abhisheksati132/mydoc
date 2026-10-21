@@ -2,10 +2,18 @@ package com.abhisheksati.mydoc.rendering.engine.presentation
 
 import android.content.Context
 import android.net.Uri
+import com.abhisheksati.mydoc.rendering.engine.OutlineCache
+import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import java.io.File
 import java.io.FileOutputStream
+import java.util.concurrent.ConcurrentHashMap
 
 object PptxConverter {
+
+    private val slideOutlinesMap = ConcurrentHashMap<String, List<OutlineItem>>()
+
+    fun getSlideOutlines(pdfPath: String): List<OutlineItem> =
+        slideOutlinesMap[pdfPath] ?: OutlineCache.loadOutlines(pdfPath)
 
     /**
      * Converts a .pptx file into a high-fidelity vector PDF file and caches it.
@@ -37,7 +45,11 @@ object PptxConverter {
             fixed
         }.getOrDefault(bytes)
 
-        val pdfDoc = PptxRenderer.render(processedBytes) ?: return null
+        val renderResult = PptxRenderer.renderWithOutlines(processedBytes) ?: return null
+        slideOutlinesMap[targetPdf.absolutePath] = renderResult.outlines
+        OutlineCache.saveOutlines(targetPdf, renderResult.outlines)
+
+        val pdfDoc = renderResult.doc
         return try {
             FileOutputStream(targetPdf).use { out ->
                 pdfDoc.writeTo(out)
