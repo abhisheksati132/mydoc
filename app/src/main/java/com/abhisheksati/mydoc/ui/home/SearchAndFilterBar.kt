@@ -29,7 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.domain.model.DocumentCategory
-import com.abhisheksati.mydoc.ui.theme.Spacing
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
 
 @Composable
 fun SearchAndFilterBar(

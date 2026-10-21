@@ -16,7 +16,8 @@ object FolderScanner {
     suspend fun scanTree(
         context: Context,
         treeUri: Uri,
-        repository: DocumentRepository
+        repository: DocumentRepository,
+        shelfId: Long? = null
     ): Int = withContext(Dispatchers.IO) {
         var count = 0
         try {
@@ -44,7 +45,10 @@ object FolderScanner {
 
                     if (isSupported) {
                         val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
-                        repository.registerOpenedDocument(docUri)
+                        val regResult = repository.registerOpenedDocument(docUri)
+                        if (shelfId != null && regResult.isSuccess) {
+                            repository.assignDocumentToShelf(docUri.toString(), shelfId)
+                        }
                         count++
                     }
                 }

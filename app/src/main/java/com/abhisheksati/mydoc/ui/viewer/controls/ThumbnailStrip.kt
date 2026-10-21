@@ -35,7 +35,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.ui.common.AppDivider
-import com.abhisheksati.mydoc.ui.theme.Spacing
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

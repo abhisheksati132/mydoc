@@ -6,7 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
-import com.abhisheksati.mydoc.ui.theme.Spacing
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
 
 @Composable
 fun AppDivider(

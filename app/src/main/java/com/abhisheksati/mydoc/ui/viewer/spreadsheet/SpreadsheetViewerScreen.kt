@@ -56,7 +56,7 @@ import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SheetData
 import com.abhisheksati.mydoc.ui.common.AppDivider
-import com.abhisheksati.mydoc.ui.theme.Spacing
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
 import com.abhisheksati.mydoc.viewmodel.SpreadsheetViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)

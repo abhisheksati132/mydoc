@@ -63,7 +63,7 @@ import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.ui.common.AppDivider
-import com.abhisheksati.mydoc.ui.theme.Spacing
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
 import com.abhisheksati.mydoc.ui.viewer.controls.PrintHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

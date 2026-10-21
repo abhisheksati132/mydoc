@@ -16,7 +16,8 @@ fun getGitCommitCount(): Int {
 }
 
 val commitCount = getGitCommitCount()
-val patchNumber = (commitCount - 95).coerceAtLeast(0)
+// Start version 1.1.x series cleanly at 1.1.0 (baseline at commit 97)
+val patchNumber = (commitCount - 97).coerceAtLeast(0)
 
 android {
     namespace = "com.abhisheksati.mydoc"

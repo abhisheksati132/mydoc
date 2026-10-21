@@ -1,66 +1,78 @@
 # MyDoc
 
-A high-performance document reader, media viewer, and PDF toolkit for Android, built with Jetpack Compose and Material 3.
+A clean, offline-first document reader and PDF toolkit for Android, built with Jetpack Compose.
 
 ---
 
-## Features
+## Overview
 
-### Document Viewer
-- **PDF Engine**: Vector sub-pixel rendering with pinch-to-zoom (up to 500%), vertical continuous scroll, page-jump slider, full-text search, and table-of-contents outline drawer.
-- **E-Books & Office**: Built-in support for `.epub`, `.docx`, `.pptx`, `.xlsx`, and `.txt` files with reading progress memory and night mode.
-- **AMOLED Night Mode**: Pitch-black canvas mode with white text inversion for comfortable reading and OLED battery savings.
+MyDoc is built around **Shelves** — an intentional, distraction-free document hub designed for studying, reading, and working with files. It trades generic templates for a calm editorial aesthetic: neutral off-white or deep OLED surfaces, clean flat color for course shelves, distinct Bricolage Grotesque typography, and an immediate three-tab workflow:
+
+- **Now**: Your current document hero card, active course shelves, and recent files.
+- **Library**: A unified, date-grouped list of all your documents, books, and media with quick shelf and type filters.
+- **Tools**: Essential PDF utilities organized into clean groups with one-tap actions.
+
+---
+
+## Key Features
+
+### Document Reader
+- **High-Performance PDF Engine**: Powered by Artifex MuPDF Fitz with sub-pixel vector rendering, smooth zoom up to 500%, vertical continuous scroll, page-jump slider, and table of contents outline drawer.
+- **Office & E-Books**: Native rendering for `.docx`, `.pptx`, `.xlsx`, `.epub`, and plain text files.
+- **Reading Comfort**: Neutral light canvas, soft dark mode, and pure AMOLED black (`#000000`) for OLED battery savings.
+- **Reading Continuity**: Remembers exact reading page and position across all sessions.
 
 ### PDF Toolkit
-- **Merge & Split**: Combine multiple PDFs into a single document or extract specific page ranges.
-- **Compress & Optimize**: Reduce PDF file size with adjustable compression levels.
-- **Scan & OCR**: Camera-based document scanner with perspective correction and on-device text extraction.
-- **Security & Forms**: Add signatures, watermarks, password protect, and unlock encrypted files.
+- **Organize**: Merge multiple documents, split by page ranges, reorder or rotate pages.
+- **Optimize**: Compress files with image downsampling, repair damaged streams, standardize to PDF/A.
+- **Convert**: Image to PDF, PDF to Images (ZIP), extract text and markdown.
+- **Security & Sign**: Sign documents, AES password encryption, password removal, and metadata stripping.
+- **Scanner**: Camera-assisted document capture with auto-edge detection and black-and-white filters.
 
-### Media Player & Photos
-- **Video Player**: Hardware-accelerated playback (LibVLC) supporting MKV, MP4, WebM, and AVI with gesture-based volume, brightness, and seek controls.
-- **Photo Viewer**: High-resolution image canvas with zoom, EXIF metadata inspector, and Recycle Bin integration.
-
-### Material You Design
-- **Dynamic Theming**: Extracts system wallpaper color schemes on Android 12+ (API 31+).
-- **Pure AMOLED Black**: Dedicated setting toggle for true `#000000` deep black dark mode.
-- **Ergonomic Navigation**: Signature floating pill dock, responsive haptic feedback, and modern M3 shapes.
+### Shelves Organization
+- **Color-Coded Shelves**: Group course notes, research papers, and assignments into distinct shelves.
+- **Folder Sync**: Link a shelf directly to any folder on your device storage with automatic file indexing.
+- **Unified Library**: Switch between Docs, Photos, Videos, and Audio with date grouping (Today, Yesterday, This Month, Earlier).
 
 ---
 
 ## Tech Stack
 
 - **Language**: Kotlin 2.1.0
-- **UI Framework**: Jetpack Compose (BOM 2024.12.01) with Material 3 (1.3.1)
-- **Document Rendering**: Artifex MuPDF Fitz
-- **Media Playback**: VideoLAN LibVLC Android 3.6.5
-- **Local Storage**: Android Room 2.6.1 & Jetpack DataStore
+- **UI Framework**: Jetpack Compose (BOM 2024.12.01) with Material 3
+- **Typography**: Bricolage Grotesque (variable font)
+- **PDF Engine**: Artifex MuPDF Fitz
+- **Local Storage**: Room 2.6.1 & Jetpack DataStore
+- **Media Playback**: LibVLC Android 3.6.5
 - **Image Loading**: Coil 2.7.0
 - **Target SDK**: Android 15 (API 35) • **Minimum SDK**: Android 8.0 (API 26)
 
 ---
 
-## Privacy & Security
+## Privacy & Offline
 
-- **100% Offline**: All rendering, conversions, and tool operations execute on-device.
-- **Zero Telemetry**: No tracking, no user profiling, no analytics SDKs.
-- **Zero Ads**: Completely ad-free experience.
+- **100% Offline**: All rendering, conversions, and tool operations execute entirely on your device.
+- **Zero Telemetry**: No tracking, analytics SDKs, or cloud dependencies.
+- **Zero Ads**: Free, open, and private.
 
 ---
 
 ## Building from Source
 
 ### Prerequisites
-- Android Studio Ladybug or newer
+- Android Studio Ladybug (2024.2.1) or newer
 - JDK 21
 
 ### Build APK
 ```bash
-# Debug build
-./gradlew assembleDebug
+# Compile Kotlin sources
+./gradlew compileDebugKotlin
 
 # Run unit tests
 ./gradlew testDebugUnitTest
+
+# Assemble debug APK
+./gradlew assembleDebug
 ```
 
 ---

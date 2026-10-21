@@ -244,21 +244,30 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     ThemeChip(
-                        label = "Dark",
-                        icon = Icons.Outlined.DarkMode,
-                        selected = currentTheme == AppThemeMode.AMOLED_DARK,
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            settingsRepository.setThemeMode(AppThemeMode.AMOLED_DARK)
-                        }
-                    )
-                    ThemeChip(
                         label = "Light",
                         icon = Icons.Outlined.LightMode,
                         selected = currentTheme == AppThemeMode.LIGHT,
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             settingsRepository.setThemeMode(AppThemeMode.LIGHT)
+                        }
+                    )
+                    ThemeChip(
+                        label = "Dark",
+                        icon = Icons.Outlined.DarkMode,
+                        selected = currentTheme == AppThemeMode.DARK,
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            settingsRepository.setThemeMode(AppThemeMode.DARK)
+                        }
+                    )
+                    ThemeChip(
+                        label = "Black",
+                        icon = Icons.Outlined.Contrast,
+                        selected = currentTheme == AppThemeMode.BLACK,
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            settingsRepository.setThemeMode(AppThemeMode.BLACK)
                         }
                     )
                     ThemeChip(
@@ -273,19 +282,6 @@ fun SettingsScreen(
                 }
 
                 SettingsDivider()
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    SettingToggleRow(
-                        title = "Dynamic Color (Material You)",
-                        subtitle = "Sample accent colors from your system wallpaper",
-                        icon = Icons.Outlined.Palette,
-                        checked = dynamicColor,
-                        onCheckedChange = {
-                            settingsRepository.setDynamicColor(it)
-                        }
-                    )
-                    SettingsDivider()
-                }
 
                 SettingToggleRow(
                     title = "Pure AMOLED Black",
@@ -313,9 +309,8 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     val tabs = listOf(
-                        Triple(HomeTab.FILES, Icons.Outlined.Folder, "Files"),
-                        Triple(HomeTab.DOCUMENTS, Icons.AutoMirrored.Outlined.Article, "Documents"),
-                        Triple(HomeTab.MEDIA, Icons.Outlined.PermMedia, "Media"),
+                        Triple(HomeTab.NOW, Icons.Outlined.Folder, "Now"),
+                        Triple(HomeTab.LIBRARY, Icons.AutoMirrored.Outlined.Article, "Library"),
                         Triple(HomeTab.TOOLS, Icons.Outlined.Build, "Tools")
                     )
                     for ((tab, icon, label) in tabs) {

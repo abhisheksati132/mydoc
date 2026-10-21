@@ -4,22 +4,57 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.abhisheksati.mydoc.data.local.dao.FavoriteDao
+import com.abhisheksati.mydoc.data.local.dao.MediaPlaybackDao
 import com.abhisheksati.mydoc.data.local.dao.RecentDao
+import com.abhisheksati.mydoc.data.local.dao.ShelfDao
+import com.abhisheksati.mydoc.data.local.dao.TrashDao
 import com.abhisheksati.mydoc.data.local.dao.ViewStateDao
 import com.abhisheksati.mydoc.data.local.entity.FavoriteDocumentEntity
+import com.abhisheksati.mydoc.data.local.entity.MediaPlaybackEntity
 import com.abhisheksati.mydoc.data.local.entity.RecentDocumentEntity
+import com.abhisheksati.mydoc.data.local.entity.ShelfAssignmentEntity
+import com.abhisheksati.mydoc.data.local.entity.ShelfEntity
+import com.abhisheksati.mydoc.data.local.entity.TrashEntity
 import com.abhisheksati.mydoc.data.local.entity.ViewStateEntity
+
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `shelves` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `name` TEXT NOT NULL,
+                `colorIndex` INTEGER NOT NULL,
+                `folderUri` TEXT,
+                `createdAt` INTEGER NOT NULL
+            )
+        """)
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `shelf_assignments` (
+                `documentUri` TEXT NOT NULL,
+                `shelfId` INTEGER NOT NULL,
+                PRIMARY KEY(`documentUri`, `shelfId`),
+                FOREIGN KEY(`shelfId`) REFERENCES `shelves`(`id`) ON DELETE CASCADE
+            )
+        """)
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_shelf_assignments_shelfId` ON `shelf_assignments` (`shelfId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_shelf_assignments_documentUri` ON `shelf_assignments` (`documentUri`)")
+    }
+}
 
 @Database(
     entities = [
         RecentDocumentEntity::class,
         FavoriteDocumentEntity::class,
         ViewStateEntity::class,
-        com.abhisheksati.mydoc.data.local.entity.MediaPlaybackEntity::class,
-        com.abhisheksati.mydoc.data.local.entity.TrashEntity::class
+        MediaPlaybackEntity::class,
+        TrashEntity::class,
+        ShelfEntity::class,
+        ShelfAssignmentEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -27,8 +62,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun recentDao(): RecentDao
     abstract fun favoriteDao(): FavoriteDao
     abstract fun viewStateDao(): ViewStateDao
-    abstract fun mediaPlaybackDao(): com.abhisheksati.mydoc.data.local.dao.MediaPlaybackDao
-    abstract fun trashDao(): com.abhisheksati.mydoc.data.local.dao.TrashDao
+    abstract fun mediaPlaybackDao(): MediaPlaybackDao
+    abstract fun trashDao(): TrashDao
+    abstract fun shelfDao(): ShelfDao
 
     companion object {
         @Volatile
@@ -41,6 +77,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "mydoc.db"
                 )
+                    .addMigrations(MIGRATION_3_4)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

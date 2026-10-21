@@ -10,67 +10,97 @@ import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.R
 
 /**
- * Strict Design System Typography Tokens.
+ * Single Source of Truth for Typography ("Shelves" Design System).
  *
- * Rules:
- * - Exactly 4 text styles: title, body, label, caption
- * - One bundled font family: Inter (bundled in res/font/inter.ttf)
- * - Hierarchy by size and weight ONLY
+ * Font: Bricolage Grotesque (Google Fonts, SIL OFL).
+ * Type scale (sp / line height / weight / letter-spacing):
+ * - display: 38 / 42 / 600 / -1.4sp (screen hero titles)
+ * - title: 34 / 40 / 600 / -1.2sp (screen titles)
+ * - heading: 26 / 30 / 600 / -0.8sp
+ * - shelf: 20 / 22 / 600 / -0.5sp
+ * - bodyLarge: 16 / 24 / 400 / 0.0sp
+ * - body: 15 / 20 / 500 / 0.0sp
+ * - label: 13 / 18 / 500 / 0.0sp
+ * - caption: 12 / 16 / 500 / +0.6sp (ALL CAPS section labels)
+ *
+ * Tabular figures (tnum) applied to numbers, sizes, and counters.
  */
-val InterFontFamily = FontFamily(
-    Font(R.font.inter, FontWeight.Normal),
-    Font(R.font.inter, FontWeight.Medium),
-    Font(R.font.inter, FontWeight.SemiBold)
+val BricolageFontFamily = FontFamily(
+    Font(R.font.bricolage_grotesque, FontWeight.Normal),
+    Font(R.font.bricolage_grotesque, FontWeight.Medium),
+    Font(R.font.bricolage_grotesque, FontWeight.SemiBold),
+    Font(R.font.bricolage_grotesque, FontWeight.Bold)
 )
+
+val InterFontFamily = BricolageFontFamily
 
 @Immutable
 data class AppTypography(
-    val headline: TextStyle = TextStyle(
-        fontFamily = InterFontFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 20.sp,
-        lineHeight = 26.sp,
-        letterSpacing = (-0.3).sp
+    val display: TextStyle = TextStyle(
+        fontFamily = BricolageFontFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 38.sp,
+        lineHeight = 42.sp,
+        letterSpacing = (-1.4).sp
     ),
     val title: TextStyle = TextStyle(
-        fontFamily = InterFontFamily,
+        fontFamily = BricolageFontFamily,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 17.sp,
+        fontSize = 34.sp,
+        lineHeight = 40.sp,
+        letterSpacing = (-1.2).sp
+    ),
+    val heading: TextStyle = TextStyle(
+        fontFamily = BricolageFontFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 26.sp,
+        lineHeight = 30.sp,
+        letterSpacing = (-0.8).sp
+    ),
+    val shelf: TextStyle = TextStyle(
+        fontFamily = BricolageFontFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 20.sp,
         lineHeight = 22.sp,
-        letterSpacing = (-0.2).sp
+        letterSpacing = (-0.5).sp
+    ),
+    val bodyLarge: TextStyle = TextStyle(
+        fontFamily = BricolageFontFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
+        letterSpacing = 0.sp
     ),
     val body: TextStyle = TextStyle(
-        fontFamily = InterFontFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
-        lineHeight = 20.sp
+        fontFamily = BricolageFontFamily,
+        fontWeight = FontWeight.Medium,
+        fontSize = 15.sp,
+        lineHeight = 20.sp,
+        letterSpacing = 0.sp
     ),
     val label: TextStyle = TextStyle(
-        fontFamily = InterFontFamily,
+        fontFamily = BricolageFontFamily,
+        fontWeight = FontWeight.Medium,
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
+        letterSpacing = 0.sp
+    ),
+    val caption: TextStyle = TextStyle(
+        fontFamily = BricolageFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 16.sp,
-        letterSpacing = 0.2.sp
+        letterSpacing = 0.6.sp
     ),
-    val caption: TextStyle = TextStyle(
-        fontFamily = InterFontFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 11.sp,
-        lineHeight = 14.sp
-    ),
-    val tabularCaption: TextStyle = TextStyle(
-        fontFamily = InterFontFamily,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        fontFeatureSettings = "tnum"
-    )
+    // Compatibility alias
+    val headline: TextStyle = heading
 )
 
 val LocalAppTypography = staticCompositionLocalOf { AppTypography() }
 
 /**
- * Tabular figures extension for numbers, timers, file sizes, and coordinates.
- * Eliminates character jitter when values dynamically tick or update.
+ * Extension helper to apply OpenType Tabular Figures (tnum) to any TextStyle.
  */
-fun TextStyle.withTabularFigures(): TextStyle = this.copy(fontFeatureSettings = "tnum")
+fun TextStyle.withTabularFigures(): TextStyle {
+    return this.copy(fontFeatureSettings = "tnum")
+}

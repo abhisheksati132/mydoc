@@ -14,7 +14,10 @@ data class DocumentFile(
     val lastOpenedTimestamp: Long,
     val pageCount: Int = 0,
     val lastPage: Int = 0,
-    val isFavorite: Boolean = false
+    val isFavorite: Boolean = false,
+    val shelfId: Long? = null,
+    val shelfName: String? = null,
+    val shelfColorIndex: Int? = null
 ) {
     val extension: String
         get() {

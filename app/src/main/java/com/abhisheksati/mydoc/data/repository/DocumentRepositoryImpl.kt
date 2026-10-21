@@ -8,13 +8,17 @@ import com.abhisheksati.mydoc.data.local.AppDatabase
 import com.abhisheksati.mydoc.data.local.entity.FavoriteDocumentEntity
 import com.abhisheksati.mydoc.data.local.entity.RecentDocumentEntity
 import com.abhisheksati.mydoc.data.local.entity.ViewStateEntity
+import com.abhisheksati.mydoc.data.local.entity.ShelfAssignmentEntity
+import com.abhisheksati.mydoc.data.local.entity.ShelfEntity
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
+import com.abhisheksati.mydoc.domain.model.Shelf
 import com.abhisheksati.mydoc.domain.model.ViewState
 import com.abhisheksati.mydoc.domain.repository.DocumentRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -27,14 +31,18 @@ class DocumentRepositoryImpl(
     private val recentDao = database.recentDao()
     private val favoriteDao = database.favoriteDao()
     private val viewStateDao = database.viewStateDao()
+    private val shelfDao = database.shelfDao()
 
     override fun getRecents(): Flow<List<DocumentFile>> {
         return combine(
             recentDao.getAllRecents(),
-            favoriteDao.getAllFavorites()
-        ) { recents, favorites ->
+            favoriteDao.getAllFavorites(),
+            shelfDao.getAllDocumentShelfInfos()
+        ) { recents, favorites, shelfInfos ->
             val favUris = favorites.map { it.uri }.toSet()
+            val shelfMap = shelfInfos.associateBy { it.documentUri }
             recents.map { recent ->
+                val shelfInfo = shelfMap[recent.uri]
                 DocumentFile(
                     uri = recent.uri,
                     displayName = recent.displayName,
@@ -43,7 +51,10 @@ class DocumentRepositoryImpl(
                     lastOpenedTimestamp = recent.lastOpenedTimestamp,
                     pageCount = recent.pageCount,
                     lastPage = recent.lastPage,
-                    isFavorite = favUris.contains(recent.uri)
+                    isFavorite = favUris.contains(recent.uri),
+                    shelfId = shelfInfo?.shelfId,
+                    shelfName = shelfInfo?.shelfName,
+                    shelfColorIndex = shelfInfo?.colorIndex
                 )
             }
         }
@@ -52,11 +63,14 @@ class DocumentRepositoryImpl(
     override fun getFavorites(): Flow<List<DocumentFile>> {
         return combine(
             favoriteDao.getAllFavorites(),
-            recentDao.getAllRecents()
-        ) { favorites, recents ->
+            recentDao.getAllRecents(),
+            shelfDao.getAllDocumentShelfInfos()
+        ) { favorites, recents, shelfInfos ->
             val recentsMap = recents.associateBy { it.uri }
+            val shelfMap = shelfInfos.associateBy { it.documentUri }
             favorites.map { fav ->
                 val recent = recentsMap[fav.uri]
+                val shelfInfo = shelfMap[fav.uri]
                 DocumentFile(
                     uri = fav.uri,
                     displayName = fav.displayName,
@@ -65,7 +79,10 @@ class DocumentRepositoryImpl(
                     lastOpenedTimestamp = recent?.lastOpenedTimestamp ?: fav.addedTimestamp,
                     pageCount = recent?.pageCount ?: 0,
                     lastPage = recent?.lastPage ?: 0,
-                    isFavorite = true
+                    isFavorite = true,
+                    shelfId = shelfInfo?.shelfId,
+                    shelfName = shelfInfo?.shelfName,
+                    shelfColorIndex = shelfInfo?.colorIndex
                 )
             }
         }
@@ -308,6 +325,53 @@ class DocumentRepositoryImpl(
             sizeBytes = sizeBytes,
             mimeType = mimeType
         )
+    }
+
+    override fun getAllShelves(): Flow<List<Shelf>> {
+        return shelfDao.getAllShelvesWithCount().map { list ->
+            list.map { item ->
+                Shelf(
+                    id = item.id,
+                    name = item.name,
+                    colorIndex = item.colorIndex,
+                    folderUri = item.folderUri,
+                    fileCount = item.fileCount,
+                    createdAt = item.createdAt
+                )
+            }
+        }
+    }
+
+    override suspend fun createShelf(name: String, colorIndex: Int, folderUri: String?): Long = withContext(Dispatchers.IO) {
+        val entity = ShelfEntity(
+            name = name,
+            colorIndex = colorIndex,
+            folderUri = folderUri
+        )
+        shelfDao.insertShelf(entity)
+    }
+
+    override suspend fun updateShelf(shelf: Shelf) = withContext(Dispatchers.IO) {
+        val entity = ShelfEntity(
+            id = shelf.id,
+            name = shelf.name,
+            colorIndex = shelf.colorIndex,
+            folderUri = shelf.folderUri,
+            createdAt = shelf.createdAt
+        )
+        shelfDao.updateShelf(entity)
+    }
+
+    override suspend fun deleteShelf(id: Long) = withContext(Dispatchers.IO) {
+        shelfDao.deleteShelf(id)
+    }
+
+    override suspend fun assignDocumentToShelf(documentUri: String, shelfId: Long) = withContext(Dispatchers.IO) {
+        shelfDao.assignDocumentToShelf(ShelfAssignmentEntity(documentUri, shelfId))
+    }
+
+    override suspend fun unassignDocument(documentUri: String) = withContext(Dispatchers.IO) {
+        shelfDao.unassignDocument(documentUri)
     }
 
     private data class DocumentMetadata(

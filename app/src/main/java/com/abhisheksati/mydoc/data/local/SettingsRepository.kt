@@ -22,9 +22,14 @@ data class AppSystemDiagnostics(
 )
 
 enum class AppThemeMode {
-    SYSTEM,
-    AMOLED_DARK,
-    LIGHT
+    LIGHT,
+    DARK,
+    BLACK,
+    SYSTEM;
+
+    companion object {
+        val AMOLED_DARK = BLACK
+    }
 }
 
 enum class DocumentSortOrder(val displayName: String) {
@@ -96,7 +101,7 @@ class SettingsRepository(context: Context) {
     private val _doubleTapZoom = MutableStateFlow(prefs.getBoolean(KEY_DOUBLE_TAP_ZOOM, true))
     val doubleTapZoom: StateFlow<Boolean> = _doubleTapZoom.asStateFlow()
 
-    private val _dynamicColor = MutableStateFlow(prefs.getBoolean(KEY_DYNAMIC_COLOR, Build.VERSION.SDK_INT >= Build.VERSION_CODES.S))
+    private val _dynamicColor = MutableStateFlow(prefs.getBoolean(KEY_DYNAMIC_COLOR, false))
     val dynamicColor: StateFlow<Boolean> = _dynamicColor.asStateFlow()
 
     private val _amoledBlack = MutableStateFlow(prefs.getBoolean(KEY_AMOLED_BLACK, true))
@@ -276,14 +281,17 @@ class SettingsRepository(context: Context) {
 
     private fun loadThemeMode(): AppThemeMode {
         val saved = prefs.getString(KEY_THEME_MODE, AppThemeMode.SYSTEM.name)
+        if (saved == "AMOLED_DARK") return AppThemeMode.BLACK
         return runCatching { AppThemeMode.valueOf(saved ?: AppThemeMode.SYSTEM.name) }
             .getOrDefault(AppThemeMode.SYSTEM)
     }
 
     private fun loadDefaultStartupTab(): HomeTab {
-        val saved = prefs.getString(KEY_DEFAULT_STARTUP_TAB, HomeTab.FILES.name)
-        return runCatching { HomeTab.valueOf(saved ?: HomeTab.FILES.name) }
-            .getOrDefault(HomeTab.FILES)
+        val saved = prefs.getString(KEY_DEFAULT_STARTUP_TAB, HomeTab.NOW.name)
+        if (saved == "FILES") return HomeTab.NOW
+        if (saved == "DOCUMENTS" || saved == "MEDIA") return HomeTab.LIBRARY
+        return runCatching { HomeTab.valueOf(saved ?: HomeTab.NOW.name) }
+            .getOrDefault(HomeTab.NOW)
     }
 
     private fun loadDefaultReadingMode(): ReadingMode {

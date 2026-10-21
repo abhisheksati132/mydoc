@@ -3,108 +3,18 @@ package com.abhisheksati.mydoc.ui.home
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.automirrored.filled.Article
-import androidx.compose.material.icons.automirrored.outlined.Article
-import androidx.compose.material.icons.automirrored.outlined.Sort
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.PermMedia
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.outlined.Build
-import androidx.compose.material.icons.outlined.Storage
-import com.abhisheksati.mydoc.ui.storage.StorageScreen
-import com.abhisheksati.mydoc.ui.storage.StorageViewModel
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.CameraAlt
-import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.DeleteSweep
-import androidx.compose.material.icons.outlined.FileOpen
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.FolderOpen
-import androidx.compose.material.icons.outlined.LightMode
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.PermMedia
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Settings
-import com.abhisheksati.mydoc.ui.filemanager.FileManagerScreen
-import com.abhisheksati.mydoc.viewmodel.FileManagerViewModel
-import java.io.File
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.NavigationBar
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
-import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
-
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -112,39 +22,34 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.abhisheksati.mydoc.MainActivity
 import com.abhisheksati.mydoc.MyDocApp
-import com.abhisheksati.mydoc.data.local.DocumentSortOrder
 import com.abhisheksati.mydoc.data.local.FolderScanner
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
-import com.abhisheksati.mydoc.designsystem.components.AppDivider
-import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
-import com.abhisheksati.mydoc.designsystem.components.AppFileRow
-import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
-import com.abhisheksati.mydoc.designsystem.components.AppSearchField
-import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
-import com.abhisheksati.mydoc.domain.model.DocumentCategory
+import com.abhisheksati.mydoc.designsystem.components.ShelvesBottomBar
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.domain.model.DocumentFile
+import com.abhisheksati.mydoc.domain.model.HomeTab
 import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.tools.ui.ToolRunnerSheet
-import com.abhisheksati.mydoc.tools.ui.ToolsScreen
 import com.abhisheksati.mydoc.tools.ui.components.CameraScanSheet
 import com.abhisheksati.mydoc.tools.ui.components.SignPdfSheet
 import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
+import com.abhisheksati.mydoc.ui.shelves.AutoShelvesDialog
+import com.abhisheksati.mydoc.ui.shelves.DetectedFolder
+import com.abhisheksati.mydoc.ui.shelves.LibraryScreen
+import com.abhisheksati.mydoc.ui.shelves.NewShelfSheet
+import com.abhisheksati.mydoc.ui.shelves.NowScreen
+import com.abhisheksati.mydoc.ui.shelves.ShelvesToolsScreen
+import com.abhisheksati.mydoc.ui.storage.StorageScreen
+import com.abhisheksati.mydoc.ui.storage.StorageViewModel
+import com.abhisheksati.mydoc.viewmodel.FileManagerViewModel
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
+import com.abhisheksati.mydoc.viewmodel.MediaViewModel
+import java.io.File
 import kotlinx.coroutines.launch
-
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import com.abhisheksati.mydoc.domain.model.HomeTab
 
 val SUPPORTED_MIME_TYPES = arrayOf(
     "application/pdf",
@@ -166,7 +71,7 @@ val SUPPORTED_MIME_TYPES = arrayOf(
 fun HomeScreen(
     viewModel: HomeViewModel,
     toolsViewModel: ToolsViewModel,
-    mediaViewModel: com.abhisheksati.mydoc.viewmodel.MediaViewModel? = null,
+    mediaViewModel: MediaViewModel? = null,
     fileManagerViewModel: FileManagerViewModel? = null,
     isDarkTheme: Boolean = false,
     onToggleTheme: () -> Unit = {},
@@ -179,10 +84,7 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val fileManagerUiState by fileManagerViewModel?.uiState?.collectAsState() ?: remember { mutableStateOf(null) }
-    val trashCount = fileManagerUiState?.trashItems?.size ?: 0
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
-    val haptic = LocalHapticFeedback.current
+    val colors = AppTheme.colors
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp
@@ -202,7 +104,7 @@ fun HomeScreen(
 
     // Synchronize pager swipe to viewModel
     LaunchedEffect(pagerState.currentPage) {
-        val tab = HomeTab.entries.getOrNull(pagerState.currentPage) ?: HomeTab.FILES
+        val tab = HomeTab.entries.getOrNull(pagerState.currentPage) ?: HomeTab.NOW
         if (tab != currentTab) {
             viewModel.selectTab(tab)
         }
@@ -217,37 +119,14 @@ fun HomeScreen(
 
     var showCameraScanner by remember { mutableStateOf(false) }
     var showSignaturePad by remember { mutableStateOf(false) }
-    var isSortMenuOpen by remember { mutableStateOf(false) }
     var showClearRecentsDialog by remember { mutableStateOf(false) }
     var selectedDocForDetails by remember { mutableStateOf<DocumentFile?>(null) }
-
-    // Fluid Motion & Spatial Continuity: Scroll-aware floating dock with spring physics
-    var isDockVisible by remember { mutableStateOf(true) }
-    val dockTranslationY by animateFloatAsState(
-        targetValue = if (isDockVisible) 0f else 130f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        ),
-        label = "dockTranslationY"
-    )
-
-    LaunchedEffect(currentTab) {
-        isDockVisible = true
-    }
-
-    val dockNestedScrollConnection = remember {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (available.y < -12f && isDockVisible) {
-                    isDockVisible = false
-                } else if (available.y > 12f && !isDockVisible) {
-                    isDockVisible = true
-                }
-                return Offset.Zero
-            }
-        }
-    }
+    var showStorageAnalyzer by remember { mutableStateOf(false) }
+    var showNewShelfSheet by remember { mutableStateOf(false) }
+    var showAutoShelvesDialog by remember { mutableStateOf(false) }
+    var detectedFolders by remember { mutableStateOf<List<DetectedFolder>>(emptyList()) }
+    var chosenShelfFolderUri by remember { mutableStateOf<String?>(null) }
+    var chosenShelfFolderName by remember { mutableStateOf<String?>(null) }
 
     val documentScanner = com.abhisheksati.mydoc.tools.scan.rememberDocumentScanner(
         onPages = { uris ->
@@ -263,15 +142,25 @@ fun HomeScreen(
 
     // Trigger instant scanning when launched from Quick Settings tile
     LaunchedEffect(Unit) {
-        com.abhisheksati.mydoc.MainActivity.quickScanEvents.collect {
+        MainActivity.quickScanEvents.collect {
             documentScanner()
         }
     }
 
-    // Navigate back to FILES tab when pressing Back on secondary tabs
-    BackHandler(enabled = currentTab != HomeTab.FILES && !showCameraScanner && !showSignaturePad && selectedDocForDetails == null && !showClearRecentsDialog && !(fileManagerUiState?.isTrashOpen == true)) {
-        viewModel.selectTab(HomeTab.FILES)
-        scope.launch { pagerState.animateScrollToPage(HomeTab.FILES.ordinal) }
+    // Navigate back to NOW tab when pressing Back on secondary tabs
+    BackHandler(
+        enabled = currentTab != HomeTab.NOW &&
+            !showStorageAnalyzer &&
+            !showNewShelfSheet &&
+            !showAutoShelvesDialog &&
+            !showCameraScanner &&
+            !showSignaturePad &&
+            selectedDocForDetails == null &&
+            !showClearRecentsDialog &&
+            !(fileManagerUiState?.isTrashOpen == true)
+    ) {
+        viewModel.selectTab(HomeTab.NOW)
+        scope.launch { pagerState.animateScrollToPage(HomeTab.NOW.ordinal) }
     }
 
     // SAF Document Picker launcher
@@ -295,7 +184,27 @@ fun HomeScreen(
         }
     }
 
-    // SAF Folder Picker launcher
+    // SAF Folder Picker launcher for Shelf creation
+    val openFolderLauncherForShelf = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+                val segment = uri.lastPathSegment ?: "Folder"
+                val cleanName = segment.substringAfterLast(':').ifEmpty { segment }
+                chosenShelfFolderUri = uri.toString()
+                chosenShelfFolderName = cleanName
+            } catch (e: Exception) {
+                Toast.makeText(context, "Unable to access folder: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // SAF Folder Picker launcher for general scanning
     val openFolderLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri: Uri? ->
@@ -321,10 +230,9 @@ fun HomeScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .nestedScroll(dockNestedScrollConnection)
             .background(colors.background)
     ) {
-        // 1. Edge-to-Edge Scrollable Content across all tabs (flows smoothly underneath the floating dock)
+        // 1. Edge-to-Edge Three Destination Pager: Now | Library | Tools
         HorizontalPager(
             state = pagerState,
             key = { HomeTab.entries[it].name },
@@ -332,64 +240,65 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize()
         ) { page ->
             when (HomeTab.entries[page]) {
-                HomeTab.FILES -> {
-                    if (fileManagerViewModel != null && onOpenFile != null) {
-                        FileManagerScreen(
-                            viewModel = fileManagerViewModel,
-                            storageViewModel = storageViewModel,
-                            onOpenFile = onOpenFile,
-                            onSettingsClick = onSettingsClick,
-                            onToggleTheme = onToggleTheme,
-                            isDarkTheme = isDarkTheme,
-                            isActive = (currentTab == HomeTab.FILES),
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                }
-                HomeTab.DOCUMENTS -> {
-                    DocumentsTabContent(
-                        uiState = uiState,
-                        viewModel = viewModel,
-                        isDarkTheme = isDarkTheme,
-                        onToggleTheme = onToggleTheme,
-                        onSettingsClick = onSettingsClick,
+                HomeTab.NOW -> {
+                    NowScreen(
+                        shelves = uiState.shelves,
+                        continueDoc = uiState.continueReadingDoc,
+                        recentDocs = uiState.recents,
+                        unfiledCount = uiState.unfiledCount,
                         onDocumentClick = onDocumentClick,
-                        onShareDocument = onShareDocument,
-                        openFolderLauncher = openFolderLauncher,
-                        openDocumentLauncher = openDocumentLauncher,
-                        onShowClearRecentsDialog = { showClearRecentsDialog = true },
-                        onSelectDocForDetails = { selectedDocForDetails = it },
-                        onOpenTrash = {
-                            fileManagerViewModel?.openTrash()
+                        onShelfClick = { shelf ->
+                            viewModel.selectShelf(shelf.id)
+                            viewModel.selectTab(HomeTab.LIBRARY)
+                            scope.launch { pagerState.animateScrollToPage(HomeTab.LIBRARY.ordinal) }
                         },
-                        trashCount = trashCount,
+                        onUnfiledClick = {
+                            viewModel.selectShelf(-1L)
+                            viewModel.selectTab(HomeTab.LIBRARY)
+                            scope.launch { pagerState.animateScrollToPage(HomeTab.LIBRARY.ordinal) }
+                        },
+                        onNewShelfClick = {
+                            showNewShelfSheet = true
+                        },
+                        onSearchClick = {
+                            viewModel.selectTab(HomeTab.LIBRARY)
+                            scope.launch { pagerState.animateScrollToPage(HomeTab.LIBRARY.ordinal) }
+                        },
+                        onChooseFolder = {
+                            openFolderLauncher.launch(null)
+                        },
+                        onOpenSingleFile = {
+                            openDocumentLauncher.launch(SUPPORTED_MIME_TYPES)
+                        },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
-                HomeTab.MEDIA -> {
-                    if (mediaViewModel != null) {
-                        com.abhisheksati.mydoc.ui.media.MediaTabContent(
-                            viewModel = mediaViewModel,
-                            onOpenMedia = { item, list ->
-                                onOpenMedia?.invoke(item, list)
-                            },
-                            onSettingsClick = onSettingsClick,
-                            onToggleTheme = onToggleTheme,
-                            isDarkTheme = isDarkTheme,
-                            onOpenTrash = {
-                                fileManagerViewModel?.openTrash()
-                            },
-                            trashCount = trashCount,
-                            onMoveToTrash = { files, onComplete ->
-                                fileManagerViewModel?.moveToTrashFiles(files, onComplete)
-                            },
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+                HomeTab.LIBRARY -> {
+                    LibraryScreen(
+                        documents = uiState.documents,
+                        shelves = uiState.shelves,
+                        searchQuery = uiState.searchQuery,
+                        onSearchQueryChange = { viewModel.onSearchQueryChanged(it) },
+                        selectedShelfId = uiState.selectedShelfId,
+                        onSelectShelfId = { viewModel.selectShelf(it) },
+                        selectedTypeFilter = uiState.selectedTypeFilter,
+                        onSelectTypeFilter = { viewModel.selectTypeFilter(it) },
+                        sortOrder = uiState.sortOrder,
+                        onSetSortOrder = { viewModel.setSortOrder(it) },
+                        onDocumentClick = onDocumentClick,
+                        onToggleFavorite = { viewModel.toggleFavorite(it) },
+                        onDeleteDocument = { viewModel.removeFromRecents(it) },
+                        onShareDocument = onShareDocument,
+                        onSettingsClick = onSettingsClick,
+                        onStorageAnalyzerClick = { showStorageAnalyzer = true },
+                        onRecycleBinClick = { fileManagerViewModel?.openTrash() },
+                        onScanFolderClick = { openFolderLauncher.launch(null) },
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
                 HomeTab.TOOLS -> {
-                    ToolsScreen(
-                        viewModel = toolsViewModel,
+                    ShelvesToolsScreen(
+                        recentDoc = uiState.continueReadingDoc ?: uiState.recents.firstOrNull(),
                         onToolClick = { tool ->
                             if (tool == PdfTool.SCAN_TO_PDF) {
                                 documentScanner()
@@ -397,41 +306,108 @@ fun HomeScreen(
                                 toolsViewModel.selectTool(tool)
                             }
                         },
-                        onSettingsClick = onSettingsClick,
-                        onToggleTheme = onToggleTheme,
-                        isDarkTheme = isDarkTheme,
-                        onOpenTrash = {
-                            fileManagerViewModel?.openTrash()
+                        onScanToPdf = {
+                            documentScanner()
                         },
-                        trashCount = trashCount,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
             }
         }
 
-        // 2. Neo-Precision Floating Pill Navigation Dock (Signature hovering dock with spring continuity & adaptive tablet sizing)
+        // 2. Shelves Solid Bottom Bar (Solid background, 1dp top hairline, 72dp bar height)
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .graphicsLayer {
-                    translationY = dockTranslationY
-                }
-                .widthIn(max = 520.dp)
                 .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
-            contentAlignment = Alignment.Center
         ) {
-            FloatingPillDock(
+            ShelvesBottomBar(
                 currentTab = currentTab,
                 onTabSelected = { tab ->
-                    isDockVisible = true
                     viewModel.selectTab(tab)
                     scope.launch { pagerState.animateScrollToPage(tab.ordinal) }
                 }
             )
         }
+    }
+
+    // Storage Analyzer Screen (as overlay when requested from Library overflow menu)
+    if (showStorageAnalyzer) {
+        BackHandler { showStorageAnalyzer = false }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colors.background)
+        ) {
+            StorageScreen(
+                viewModel = storageViewModel,
+                onNavigateToCategory = {
+                    showStorageAnalyzer = false
+                },
+                onSettingsClick = onSettingsClick,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
+
+    // New Shelf Creation Sheet
+    if (showNewShelfSheet) {
+        NewShelfSheet(
+            onDismiss = {
+                showNewShelfSheet = false
+                chosenShelfFolderUri = null
+                chosenShelfFolderName = null
+            },
+            onCreateShelf = { name, colorIndex, folderUri ->
+                viewModel.createShelf(name, colorIndex, folderUri) { createdShelfId ->
+                    if (folderUri != null && app != null) {
+                        scope.launch {
+                            val count = FolderScanner.scanTree(
+                                context,
+                                Uri.parse(folderUri),
+                                app.documentRepository,
+                                shelfId = createdShelfId
+                            )
+                            Toast.makeText(context, "Created shelf '$name' with $count documents", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        Toast.makeText(context, "Shelf '$name' created", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                showNewShelfSheet = false
+                chosenShelfFolderUri = null
+                chosenShelfFolderName = null
+            },
+            onPickFolder = {
+                openFolderLauncherForShelf.launch(null)
+            },
+            chosenFolderUri = chosenShelfFolderUri,
+            chosenFolderName = chosenShelfFolderName
+        )
+    }
+
+    // Auto-Shelves Dialog
+    if (showAutoShelvesDialog && detectedFolders.isNotEmpty()) {
+        AutoShelvesDialog(
+            folders = detectedFolders,
+            onConfirm = { selected ->
+                scope.launch {
+                    selected.forEach { folder ->
+                        val shelfId = app?.documentRepository?.createShelf(folder.name, folder.colorIndex, folder.uri) ?: 0L
+                        if (shelfId > 0 && app != null) {
+                            FolderScanner.scanTree(context, Uri.parse(folder.uri), app.documentRepository, shelfId = shelfId)
+                        }
+                    }
+                    Toast.makeText(context, "Created ${selected.size} shelves", Toast.LENGTH_SHORT).show()
+                }
+                showAutoShelvesDialog = false
+            },
+            onMakeMyself = {
+                showAutoShelvesDialog = false
+                showNewShelfSheet = true
+            },
+            onDismiss = { showAutoShelvesDialog = false }
+        )
     }
 
     // Document Details Dialog
@@ -453,7 +429,7 @@ fun HomeScreen(
         )
     }
 
-    // Clear Recents Confirmation Dialog (Destructive action confirms, no undo snackbar)
+    // Clear Recents Confirmation Dialog
     AppDialog(
         isOpen = showClearRecentsDialog,
         title = "Clear recent history",
@@ -538,172 +514,3 @@ fun HomeScreen(
         )
     }
 }
-
-@Composable
-fun FloatingPillDock(
-    currentTab: HomeTab,
-    onTabSelected: (HomeTab) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val colors = LocalAppColors.current
-    val haptics = rememberAppHaptics()
-    val isOled = colors.background == DarkAppColors.background
-
-    // Frosted Glass: Deep obsidian in OLED mode, dynamic surfaceContainer in Material You
-    val glassBg = if (isOled) {
-        Color(0xDC101217) // 86% opacity deep obsidian glass
-    } else {
-        colors.surfaceContainer.copy(alpha = 0.92f)
-    }
-
-    val glassBorder = BorderStroke(
-        width = 1.dp,
-        color = colors.cardBorder
-    )
-
-    Surface(
-        shape = RoundedCornerShape(999.dp),
-        color = glassBg,
-        border = glassBorder,
-        shadowElevation = 8.dp,
-        tonalElevation = 2.dp,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(62.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 10.dp, vertical = 5.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            FloatingDockItem(
-                selected = currentTab == HomeTab.FILES,
-                icon = if (currentTab == HomeTab.FILES) Icons.Filled.Folder else Icons.Outlined.Folder,
-                label = "Files",
-                accentColor = colors.onPrimaryContainer,
-                unselectedColor = colors.textSecondary,
-                onClick = {
-                    haptics.select()
-                    onTabSelected(HomeTab.FILES)
-                }
-            )
-            FloatingDockItem(
-                selected = currentTab == HomeTab.DOCUMENTS,
-                icon = if (currentTab == HomeTab.DOCUMENTS) Icons.AutoMirrored.Filled.Article else Icons.AutoMirrored.Outlined.Article,
-                label = "Docs",
-                accentColor = colors.onPrimaryContainer,
-                unselectedColor = colors.textSecondary,
-                onClick = {
-                    haptics.select()
-                    onTabSelected(HomeTab.DOCUMENTS)
-                }
-            )
-            FloatingDockItem(
-                selected = currentTab == HomeTab.MEDIA,
-                icon = if (currentTab == HomeTab.MEDIA) Icons.Filled.PermMedia else Icons.Outlined.PermMedia,
-                label = "Media",
-                accentColor = colors.onPrimaryContainer,
-                unselectedColor = colors.textSecondary,
-                onClick = {
-                    haptics.select()
-                    onTabSelected(HomeTab.MEDIA)
-                }
-            )
-            FloatingDockItem(
-                selected = currentTab == HomeTab.TOOLS,
-                icon = if (currentTab == HomeTab.TOOLS) Icons.Filled.Build else Icons.Outlined.Build,
-                label = "Tools",
-                accentColor = colors.onPrimaryContainer,
-                unselectedColor = colors.textSecondary,
-                onClick = {
-                    haptics.select()
-                    onTabSelected(HomeTab.TOOLS)
-                }
-            )
-        }
-    }
-}
-
-@Composable
-private fun FloatingDockItem(
-    selected: Boolean,
-    icon: ImageVector,
-    label: String,
-    accentColor: Color,
-    unselectedColor: Color,
-    onClick: () -> Unit,
-    badgeText: String? = null,
-    modifier: Modifier = Modifier
-) {
-    val colors = LocalAppColors.current
-    val backgroundTarget = if (selected) colors.primaryContainer else Color.Transparent
-    val backgroundColor by animateColorAsState(
-        targetValue = backgroundTarget,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-        label = "dockItemBackground"
-    )
-
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(999.dp))
-            .background(backgroundColor)
-            .clickable(onClick = onClick)
-            .padding(horizontal = if (selected) 15.dp else 11.dp, vertical = 7.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            if (badgeText != null) {
-                BadgedBox(
-                    badge = {
-                        Badge(
-                            containerColor = colors.accent,
-                            contentColor = colors.onPrimaryContainer
-                        ) {
-                            Text(badgeText, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = label,
-                        tint = if (selected) accentColor else unselectedColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            } else {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = label,
-                    tint = if (selected) accentColor else unselectedColor,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            AnimatedVisibility(
-                visible = selected,
-                enter = fadeIn() + expandHorizontally(),
-                exit = fadeOut() + shrinkHorizontally()
-            ) {
-                Row {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = label,
-                        color = accentColor,
-                        style = TextStyle(
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.3.sp
-                        ),
-                        maxLines = 1
-                    )
-                }
-            }
-        }
-    }
-}
-

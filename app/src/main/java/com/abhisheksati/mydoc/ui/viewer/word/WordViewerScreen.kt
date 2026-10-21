@@ -72,7 +72,7 @@ import com.abhisheksati.mydoc.rendering.engine.word.DocxBlock
 import com.abhisheksati.mydoc.rendering.engine.word.DocxDocument
 import com.abhisheksati.mydoc.rendering.engine.word.DocxParser
 import com.abhisheksati.mydoc.ui.common.AppDivider
-import com.abhisheksati.mydoc.ui.theme.Spacing
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
 import com.abhisheksati.mydoc.ui.viewer.controls.PrintHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

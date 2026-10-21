@@ -168,10 +168,11 @@ class MainActivity : ComponentActivity() {
             val amoledBlack by app.settingsRepository.amoledBlack.collectAsStateWithLifecycle()
             val isBiometricLockEnabled by app.settingsRepository.isBiometricLockEnabled.collectAsStateWithLifecycle()
             val isDark = when (themeMode) {
-                AppThemeMode.AMOLED_DARK -> true
+                AppThemeMode.BLACK, AppThemeMode.DARK -> true
                 AppThemeMode.LIGHT -> false
                 AppThemeMode.SYSTEM -> isSystemInDarkTheme()
             }
+            val isBlack = themeMode == AppThemeMode.BLACK || (isDark && amoledBlack)
 
             val confirmCredentialLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.StartActivityForResult()
@@ -203,8 +204,8 @@ class MainActivity : ComponentActivity() {
 
             AppDesignSystemTheme(
                 darkTheme = isDark,
-                dynamicColor = dynamicColor,
-                amoledBlack = amoledBlack
+                dynamicColor = false,
+                amoledBlack = isBlack
             ) {
                 val selectedTool by toolsViewModel.selectedTool.collectAsStateWithLifecycle()
 
@@ -395,7 +396,7 @@ class MainActivity : ComponentActivity() {
                                     fileManagerViewModel = fileManagerViewModel,
                                     isDarkTheme = isDark,
                                     onToggleTheme = {
-                                        val nextTheme = if (isDark) AppThemeMode.LIGHT else AppThemeMode.AMOLED_DARK
+                                        val nextTheme = if (isDark) AppThemeMode.LIGHT else AppThemeMode.DARK
                                         app.settingsRepository.setThemeMode(nextTheme)
                                     },
                                     onDocumentClick = { doc -> currentDocument = doc },
