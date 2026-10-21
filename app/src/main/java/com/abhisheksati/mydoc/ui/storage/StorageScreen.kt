@@ -178,7 +178,7 @@ fun StorageScreen(
                                 expanded = isVolumeDropdownOpen,
                                 onDismissRequest = { isVolumeDropdownOpen = false },
                                 shape = RoundedCornerShape(16.dp),
-                                containerColor = colors.surface,
+                                containerColor = if (isOled) colors.surface else colors.surfaceContainer,
                                 border = BorderStroke(1.dp, colors.cardBorder),
                                 shadowElevation = 8.dp,
                                 tonalElevation = 4.dp
@@ -421,7 +421,7 @@ private fun StorageHeroCard(
 
     Surface(
         shape = RoundedCornerShape(22.dp),
-        color = colors.surface,
+        color = if (isOled) colors.surface else colors.surfaceContainer,
         border = BorderStroke(1.dp, colors.cardBorder),
         modifier = Modifier
             .fillMaxWidth()
@@ -582,7 +582,7 @@ private fun StorageQuickCleanSection(
         // Quick clean master banner
         Surface(
             shape = RoundedCornerShape(20.dp),
-            color = colors.surfaceVariant,
+            color = if (isOled) colors.surface else colors.surfaceContainer,
             border = BorderStroke(1.dp, colors.accent.copy(alpha = 0.25f)),
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -710,7 +710,7 @@ private fun StorageMiniCard(
     val haptic = LocalHapticFeedback.current
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = colors.surface,
+        color = if (isOled) colors.surface else colors.surfaceContainer,
         border = BorderStroke(1.dp, colors.cardBorder),
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
@@ -771,7 +771,7 @@ private fun StorageCategoryRowItem(
     val haptic = LocalHapticFeedback.current
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = colors.surface,
+        color = if (isOled) colors.surface else colors.surfaceContainer,
         border = BorderStroke(1.dp, colors.cardBorder),
         modifier = Modifier
             .fillMaxWidth()

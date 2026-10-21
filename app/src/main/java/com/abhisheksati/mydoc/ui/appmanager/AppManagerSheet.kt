@@ -81,7 +81,7 @@ fun AppManagerSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = if (isOled) Color(0xFF10121A) else colors.surface,
+        containerColor = if (isOled) Color(0xFF10121A) else colors.surfaceContainerLow,
         dragHandle = { BottomSheetDefaults.DragHandle() },
         modifier = Modifier.fillMaxHeight(0.92f)
     ) {

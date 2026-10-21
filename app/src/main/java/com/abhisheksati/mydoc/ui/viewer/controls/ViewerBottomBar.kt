@@ -89,10 +89,11 @@ fun ViewerBottomBar(
         ) + fadeOut(spring(stiffness = Spring.StiffnessMediumLow)),
         modifier = modifier
     ) {
+        val isOled = colors.background == DarkAppColors.background
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(colors.surface)
+                .background(if (isOled) Color(0xFF000000) else colors.surfaceContainer)
                 .navigationBarsPadding()
         ) {
             if (sheetItems.size > 1 && onSheetSelect != null) {

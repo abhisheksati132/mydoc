@@ -236,7 +236,7 @@ fun StorageItemGrid(
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) colors.accentVariant else colors.surface
+            containerColor = if (isSelected) colors.primaryContainer else if (isOled) colors.surface else colors.surfaceContainer
         ),
         border = BorderStroke(
             1.dp,

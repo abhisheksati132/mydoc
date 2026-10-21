@@ -242,7 +242,7 @@ fun DocumentsTabContent(
                                     openDocumentLauncher.launch(SUPPORTED_MIME_TYPES)
                                 },
                                 shape = RoundedCornerShape(16.dp),
-                                color = colors.surfaceVariant,
+                                color = colors.surfaceContainer,
                                 border = BorderStroke(1.dp, colors.cardBorder),
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -291,7 +291,7 @@ fun DocumentsTabContent(
                             ) {
                                 for (item in docCategories) {
                                     val isSelected = uiState.selectedCategory == item.category
-                                    val chipBg = if (isSelected) item.color.copy(alpha = 0.16f) else colors.surfaceVariant
+                                    val chipBg = if (isSelected) item.color.copy(alpha = 0.16f) else colors.surfaceContainer
                                     val chipBorderColor = if (isSelected) item.color else colors.cardBorder
 
                                     Surface(
@@ -592,7 +592,7 @@ private fun DocumentsRecentsCarousel(
         ) { doc ->
             Surface(
                 shape = RoundedCornerShape(14.dp),
-                color = colors.surface,
+                color = if (isOled) colors.surface else colors.surfaceContainer,
                 border = BorderStroke(1.dp, colors.cardBorder),
                 modifier = Modifier
                     .width(136.dp)

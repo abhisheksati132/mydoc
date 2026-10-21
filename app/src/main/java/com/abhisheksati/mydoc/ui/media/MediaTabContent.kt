@@ -541,7 +541,7 @@ fun MediaTabContent(
                         ) {
                             for (item in mediaCategories) {
                                 val isSelected = uiState.filter == item.filter
-                                val chipBg = if (isSelected) item.color.copy(alpha = 0.16f) else colors.surfaceVariant
+                                val chipBg = if (isSelected) item.color.copy(alpha = 0.16f) else colors.surfaceContainer
                                 val chipBorderColor = if (isSelected) item.color else colors.cardBorder
 
                                 Surface(

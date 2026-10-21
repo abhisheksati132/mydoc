@@ -161,7 +161,7 @@ fun ToolsScreen(
                 ) {
                     for (item in toolCategories) {
                         val isSelected = selectedToolGroup == item.group
-                        val chipBg = if (isSelected) item.color.copy(alpha = 0.16f) else colors.surfaceVariant
+                        val chipBg = if (isSelected) item.color.copy(alpha = 0.16f) else colors.surfaceContainer
                         val chipBorderColor = if (isSelected) item.color else colors.cardBorder
 
                         Surface(
@@ -295,7 +295,7 @@ fun ToolsScreen(
                             val isOled = colors.background == DarkAppColors.background
                             Surface(
                                 shape = RoundedCornerShape(18.dp),
-                                color = if (isOled) colors.surface else colors.surface,
+                                color = if (isOled) colors.surface else colors.surfaceContainer,
                                 border = BorderStroke(1.dp, colors.cardBorder),
                                 modifier = Modifier
                                     .fillMaxWidth()

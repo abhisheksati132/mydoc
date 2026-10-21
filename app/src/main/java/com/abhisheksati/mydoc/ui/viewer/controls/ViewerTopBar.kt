@@ -38,10 +38,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 
@@ -82,10 +84,11 @@ fun ViewerTopBar(
         ) + fadeOut(spring(stiffness = Spring.StiffnessMediumLow)),
         modifier = modifier
     ) {
+        val isOled = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(colors.surface)
+                .background(if (isOled) Color(0xFF000000) else colors.surfaceContainer)
                 .statusBarsPadding()
         ) {
             Row(

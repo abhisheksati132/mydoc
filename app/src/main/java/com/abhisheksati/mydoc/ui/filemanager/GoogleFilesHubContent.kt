@@ -198,7 +198,7 @@ fun GoogleFilesHubContent(
                         val haptic = LocalHapticFeedback.current
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = colors.surface,
+                            color = if (isOled) colors.surface else colors.surfaceContainer,
                             border = BorderStroke(1.dp, colors.cardBorder),
                             modifier = Modifier.clickable {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -241,7 +241,7 @@ fun GoogleFilesHubContent(
 
             Surface(
                 shape = RoundedCornerShape(20.dp),
-                color = if (isOled) colors.surface else colors.surface,
+                color = if (isOled) colors.surface else colors.surfaceContainer,
                 border = BorderStroke(1.dp, colors.cardBorder),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -404,7 +404,7 @@ private fun GoogleFilesCategoryCard(
 
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = colors.surface,
+        color = if (isOled) colors.surface else colors.surfaceContainer,
         border = BorderStroke(1.dp, colors.cardBorder),
         modifier = modifier
             .graphicsLayer {
@@ -488,7 +488,7 @@ private fun InternalStorageCard(
 
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = if (isOled) colors.surface else colors.surface,
+        color = if (isOled) colors.surface else colors.surfaceContainer,
         border = BorderStroke(1.dp, colors.cardBorder),
         modifier = Modifier
             .fillMaxWidth()
@@ -573,7 +573,7 @@ private fun SecondaryStorageCard(
 
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = if (isOled) colors.surface else colors.surface,
+        color = if (isOled) colors.surface else colors.surfaceContainer,
         border = BorderStroke(1.dp, colors.cardBorder),
         modifier = Modifier
             .fillMaxWidth()
