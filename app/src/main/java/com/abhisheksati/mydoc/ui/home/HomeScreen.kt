@@ -327,7 +327,6 @@ fun HomeScreen(
                             fileManagerViewModel?.openTrash()
                         },
                         trashCount = trashCount,
-                        onQuickScan = { documentScanner() },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -509,11 +508,11 @@ fun FloatingPillDock(
     val haptic = LocalHapticFeedback.current
     val isOled = colors.background == DarkAppColors.background
 
-    // Neo-Precision Frosted Glass: Deep obsidian in dark mode, crisp alabaster in light mode
+    // Frosted Glass: Deep obsidian in OLED mode, dynamic surfaceContainer in Material You
     val glassBg = if (isOled) {
         Color(0xDC101217) // 86% opacity deep obsidian glass
     } else {
-        Color(0xECF8F9FA) // 92% opacity frosted alabaster glass
+        colors.surfaceContainer.copy(alpha = 0.92f)
     }
 
     val glassBorder = BorderStroke(
@@ -542,7 +541,7 @@ fun FloatingPillDock(
                 selected = currentTab == HomeTab.FILES,
                 icon = if (currentTab == HomeTab.FILES) Icons.Filled.Folder else Icons.Outlined.Folder,
                 label = "Files",
-                accentColor = colors.accent,
+                accentColor = colors.onPrimaryContainer,
                 unselectedColor = colors.textSecondary,
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -553,7 +552,7 @@ fun FloatingPillDock(
                 selected = currentTab == HomeTab.DOCUMENTS,
                 icon = if (currentTab == HomeTab.DOCUMENTS) Icons.AutoMirrored.Filled.Article else Icons.AutoMirrored.Outlined.Article,
                 label = "Docs",
-                accentColor = colors.accent,
+                accentColor = colors.onPrimaryContainer,
                 unselectedColor = colors.textSecondary,
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -564,7 +563,7 @@ fun FloatingPillDock(
                 selected = currentTab == HomeTab.MEDIA,
                 icon = if (currentTab == HomeTab.MEDIA) Icons.Filled.PermMedia else Icons.Outlined.PermMedia,
                 label = "Media",
-                accentColor = colors.accent,
+                accentColor = colors.onPrimaryContainer,
                 unselectedColor = colors.textSecondary,
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -575,7 +574,7 @@ fun FloatingPillDock(
                 selected = currentTab == HomeTab.TOOLS,
                 icon = if (currentTab == HomeTab.TOOLS) Icons.Filled.Build else Icons.Outlined.Build,
                 label = "Tools",
-                accentColor = colors.accent,
+                accentColor = colors.onPrimaryContainer,
                 unselectedColor = colors.textSecondary,
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -598,7 +597,7 @@ private fun FloatingDockItem(
     modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
-    val backgroundTarget = if (selected) colors.accentVariant else Color.Transparent
+    val backgroundTarget = if (selected) colors.primaryContainer else Color.Transparent
     val backgroundColor by animateColorAsState(
         targetValue = backgroundTarget,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
@@ -621,8 +620,8 @@ private fun FloatingDockItem(
                 BadgedBox(
                     badge = {
                         Badge(
-                            containerColor = accentColor,
-                            contentColor = Color(0xFF000000)
+                            containerColor = colors.accent,
+                            contentColor = colors.onPrimaryContainer
                         ) {
                             Text(badgeText, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                         }

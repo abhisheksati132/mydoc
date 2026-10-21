@@ -44,7 +44,7 @@ fun AppSearchField(
             .border(
                 BorderStroke(
                     0.8.dp,
-                    if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)
+                    if (isOled) Color.White.copy(alpha = 0.08f) else colors.cardBorder
                 ),
                 shape = shape
             ),
@@ -82,8 +82,8 @@ fun AppSearchField(
         singleLine = true,
         shape = shape,
         colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = if (isOled) Color(0xFF141418) else colors.surfaceVariant.copy(alpha = 0.7f),
-            unfocusedContainerColor = if (isOled) Color(0xFF101014) else colors.surfaceVariant.copy(alpha = 0.5f),
+            focusedContainerColor = if (isOled) Color(0xFF141418) else colors.surfaceContainerHigh,
+            unfocusedContainerColor = if (isOled) Color(0xFF101014) else colors.surfaceContainer,
             focusedBorderColor = colors.accent,
             unfocusedBorderColor = Color.Transparent,
             cursorColor = colors.accent

@@ -51,7 +51,7 @@ jobs:
             TAG="${GITHUB_REF_NAME}"
           else
             COUNT=$(git rev-list --count HEAD)
-            TAG="v1.0.${COUNT}"
+            TAG="v1.1.${COUNT}"
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 

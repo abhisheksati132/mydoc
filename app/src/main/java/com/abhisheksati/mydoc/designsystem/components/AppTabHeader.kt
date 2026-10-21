@@ -170,10 +170,10 @@ fun AppTabHeader(
                             expanded = isMenuOpen,
                             onDismissRequest = { isMenuOpen = false },
                             shape = RoundedCornerShape(18.dp),
-                            containerColor = if (isOled) Color(0xFF141720) else colors.surface,
+                            containerColor = if (isOled) Color(0xFF141720) else colors.surfaceContainer,
                             border = BorderStroke(
                                 1.dp,
-                                if (isOled) Color.White.copy(alpha = 0.10f) else colors.divider.copy(alpha = 0.7f)
+                                if (isOled) Color.White.copy(alpha = 0.10f) else colors.cardBorder
                             ),
                             shadowElevation = 8.dp,
                             tonalElevation = 4.dp

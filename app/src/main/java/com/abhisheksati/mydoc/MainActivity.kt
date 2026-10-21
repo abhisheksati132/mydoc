@@ -164,6 +164,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val themeMode by app.settingsRepository.themeMode.collectAsStateWithLifecycle()
+            val dynamicColor by app.settingsRepository.dynamicColor.collectAsStateWithLifecycle()
+            val amoledBlack by app.settingsRepository.amoledBlack.collectAsStateWithLifecycle()
             val isBiometricLockEnabled by app.settingsRepository.isBiometricLockEnabled.collectAsStateWithLifecycle()
             val isDark = when (themeMode) {
                 AppThemeMode.AMOLED_DARK -> true
@@ -199,7 +201,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            AppDesignSystemTheme(darkTheme = isDark) {
+            AppDesignSystemTheme(
+                darkTheme = isDark,
+                dynamicColor = dynamicColor,
+                amoledBlack = amoledBlack
+            ) {
                 val selectedTool by toolsViewModel.selectedTool.collectAsStateWithLifecycle()
 
                 // Intercept back presses smoothly so the app never exits abruptly

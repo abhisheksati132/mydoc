@@ -35,9 +35,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
+import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 
 /**
@@ -81,6 +84,7 @@ fun AppFileRow(
     var menuExpanded by remember { mutableStateOf(false) }
     val colors = AppTheme.colors
     val typography = AppTheme.typography
+    val haptic = LocalHapticFeedback.current
 
     Column(
         modifier = modifier
@@ -92,7 +96,10 @@ fun AppFileRow(
                 .fillMaxWidth()
                 .combinedClickable(
                     onClick = onClick,
-                    onLongClick = onLongClick
+                    onLongClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onLongClick()
+                    }
                 )
                 .padding(horizontal = AppSpacing.medium, vertical = AppSpacing.small),
             verticalAlignment = Alignment.CenterVertically
@@ -125,7 +132,7 @@ fun AppFileRow(
 
                 Text(
                     text = subText,
-                    style = typography.caption,
+                    style = typography.caption.withTabularFigures(),
                     color = colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -147,7 +154,10 @@ fun AppFileRow(
 
             // Favorite button (48dp touch target)
             IconButton(
-                onClick = onToggleFavorite,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onToggleFavorite()
+                },
                 modifier = Modifier.size(AppSpacing.minTouchTarget)
             ) {
                 Icon(
@@ -161,7 +171,10 @@ fun AppFileRow(
             // Options menu button (48dp touch target)
             Box {
                 IconButton(
-                    onClick = { menuExpanded = true },
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        menuExpanded = true
+                    },
                     modifier = Modifier.size(AppSpacing.minTouchTarget)
                 ) {
                     Icon(
@@ -172,22 +185,19 @@ fun AppFileRow(
                     )
                 }
 
-                val isOled = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
                 DropdownMenu(
                     expanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false },
                     shape = RoundedCornerShape(16.dp),
-                    containerColor = if (isOled) Color(0xFF141720) else colors.surface,
-                    border = BorderStroke(
-                        1.dp,
-                        if (isOled) Color.White.copy(alpha = 0.10f) else colors.divider.copy(alpha = 0.7f)
-                    ),
+                    containerColor = colors.surfaceContainer,
+                    border = BorderStroke(1.dp, colors.cardBorder),
                     shadowElevation = 8.dp,
                     tonalElevation = 4.dp
                 ) {
                     DropdownMenuItem(
                         text = { Text("Details & Info", style = typography.body) },
                         onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             menuExpanded = false
                             onDetails()
                         }
@@ -195,6 +205,7 @@ fun AppFileRow(
                     DropdownMenuItem(
                         text = { Text("Share", style = typography.body) },
                         onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             menuExpanded = false
                             onShare()
                         }
@@ -203,6 +214,7 @@ fun AppFileRow(
                         DropdownMenuItem(
                             text = { Text("Remove from recents", style = typography.body) },
                             onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 menuExpanded = false
                                 onRemove()
                             }

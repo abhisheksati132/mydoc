@@ -93,6 +93,7 @@ import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.DocumentCategory
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.viewmodel.HomeUiState
@@ -122,7 +123,6 @@ fun DocumentsTabContent(
     onSelectDocForDetails: (DocumentFile) -> Unit,
     onOpenTrash: (() -> Unit)? = null,
     trashCount: Int = 0,
-    onQuickScan: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
@@ -235,81 +235,39 @@ fun DocumentsTabContent(
                     },
                     bottomContent = {
                         Column {
-                            // Neo-Precision Integrated Action Bar
-                            Row(
+                            // Full-Width Open Document Action Card
+                            Surface(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    openDocumentLauncher.launch(SUPPORTED_MIME_TYPES)
+                                },
+                                shape = RoundedCornerShape(16.dp),
+                                color = colors.surfaceVariant,
+                                border = BorderStroke(1.dp, colors.cardBorder),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 12.dp),
-                                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                    .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)
+                                    .height(48.dp)
                             ) {
-                                Surface(
-                                    onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        openDocumentLauncher.launch(SUPPORTED_MIME_TYPES)
-                                    },
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = colors.surfaceVariant,
-                                    border = BorderStroke(1.dp, colors.cardBorder),
+                                Row(
                                     modifier = Modifier
-                                        .weight(1f)
-                                        .height(48.dp)
+                                        .fillMaxSize()
+                                        .padding(horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
                                 ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(horizontal = 12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.FileOpen,
-                                            contentDescription = "Open File",
-                                            tint = colors.accent,
-                                            modifier = Modifier.size(19.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = "Open File",
-                                            style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 13.sp),
-                                            color = colors.textPrimary
-                                        )
-                                    }
-                                }
-
-                                if (onQuickScan != null) {
-                                    Surface(
-                                        onClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            onQuickScan()
-                                        },
-                                        shape = RoundedCornerShape(16.dp),
-                                        color = colors.accentVariant,
-                                        border = BorderStroke(1.dp, colors.accent.copy(alpha = 0.35f)),
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(48.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .padding(horizontal = 12.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.Center
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.CameraAlt,
-                                                contentDescription = "Quick Scan",
-                                                tint = colors.accent,
-                                                modifier = Modifier.size(19.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(
-                                                text = "Quick Scan",
-                                                style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 13.sp),
-                                                color = colors.accent
-                                            )
-                                        }
-                                    }
+                                    Icon(
+                                        imageVector = Icons.Outlined.FileOpen,
+                                        contentDescription = "Open Document",
+                                        tint = colors.accent,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = "Open Document",
+                                        style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
+                                        color = colors.textPrimary
+                                    )
                                 }
                             }
 
@@ -378,11 +336,8 @@ fun DocumentsTabContent(
                     expanded = isSortMenuOpen,
                     onDismissRequest = { isSortMenuOpen = false },
                     shape = RoundedCornerShape(18.dp),
-                    containerColor = if (isOled) Color(0xFF141720) else colors.surface,
-                    border = BorderStroke(
-                        1.dp,
-                        if (isOled) Color.White.copy(alpha = 0.10f) else colors.divider.copy(alpha = 0.7f)
-                    ),
+                    containerColor = colors.surface,
+                    border = BorderStroke(1.dp, colors.cardBorder),
                     shadowElevation = 8.dp,
                     tonalElevation = 4.dp
                 ) {
@@ -506,14 +461,10 @@ fun DocumentsTabContent(
                                 AppSectionHeader(title = "CONTINUE READING")
                             }
                             item(key = "continue_${continueDoc.uri}") {
-                                val isOled = colors.background == DarkAppColors.background
                                 Surface(
                                     shape = RoundedCornerShape(18.dp),
-                                    color = if (isOled) Color(0xFF0F1116) else colors.surface,
-                                    border = BorderStroke(
-                                        1.dp,
-                                        if (isOled) Color.White.copy(alpha = 0.07f) else colors.divider.copy(alpha = 0.5f)
-                                    ),
+                                    color = colors.surface,
+                                    border = BorderStroke(1.dp, colors.cardBorder),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(horizontal = 16.dp)
@@ -641,8 +592,8 @@ private fun DocumentsRecentsCarousel(
         ) { doc ->
             Surface(
                 shape = RoundedCornerShape(14.dp),
-                color = if (isOled) Color(0xFF0D0D10) else colors.surface,
-                border = BorderStroke(1.dp, if (isOled) Color(0xFF222222) else colors.divider),
+                color = colors.surface,
+                border = BorderStroke(1.dp, colors.cardBorder),
                 modifier = Modifier
                     .width(136.dp)
                     .clickable {
@@ -692,7 +643,7 @@ private fun DocumentsRecentsCarousel(
 
                     Text(
                         text = "${doc.formattedSize}  •  ${doc.typeBadge.uppercase()}",
-                        style = typography.caption.copy(fontSize = 10.sp),
+                        style = typography.caption.withTabularFigures().copy(fontSize = 10.sp),
                         color = colors.textSecondary,
                         maxLines = 1
                     )

@@ -50,6 +50,7 @@ import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 
 /**
@@ -186,7 +187,7 @@ fun ViewerBottomBar(
                 ) {
                     Text(
                         text = if (pageCount > 0) "${currentPage + 1} / $pageCount" else "0 / 0",
-                        style = typography.label,
+                        style = typography.label.withTabularFigures(),
                         color = colors.textPrimary
                     )
                 }

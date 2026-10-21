@@ -4,6 +4,7 @@ import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.outlined.Launch
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Folder
@@ -41,6 +43,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.PermMedia
 import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Refresh
@@ -123,6 +126,8 @@ fun SettingsScreen(
 
     // General & Appearance
     val currentTheme by settingsRepository.themeMode.collectAsState()
+    val dynamicColor by settingsRepository.dynamicColor.collectAsState()
+    val amoledBlack by settingsRepository.amoledBlack.collectAsState()
     val currentStartupTab by settingsRepository.defaultStartupTab.collectAsState()
     val hapticFeedbackEnabled by settingsRepository.isHapticFeedbackEnabled.collectAsState()
 
@@ -150,7 +155,6 @@ fun SettingsScreen(
 
     // Privacy & Security
     val biometricLockEnabled by settingsRepository.isBiometricLockEnabled.collectAsState()
-    val autoLockVault by settingsRepository.autoLockVaultOnBackground.collectAsState()
 
     val openFolderLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
@@ -267,6 +271,31 @@ fun SettingsScreen(
                         }
                     )
                 }
+
+                SettingsDivider()
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    SettingToggleRow(
+                        title = "Dynamic Color (Material You)",
+                        subtitle = "Sample accent colors from your system wallpaper",
+                        icon = Icons.Outlined.Palette,
+                        checked = dynamicColor,
+                        onCheckedChange = {
+                            settingsRepository.setDynamicColor(it)
+                        }
+                    )
+                    SettingsDivider()
+                }
+
+                SettingToggleRow(
+                    title = "Pure AMOLED Black",
+                    subtitle = "Use pitch black background in dark mode to save OLED battery",
+                    icon = Icons.Outlined.Contrast,
+                    checked = amoledBlack,
+                    onCheckedChange = {
+                        settingsRepository.setAmoledBlack(it)
+                    }
+                )
 
                 SettingsDivider()
 
@@ -673,17 +702,6 @@ fun SettingsScreen(
                             settingsRepository.setBiometricLockEnabled(false)
                         }
                     }
-                )
-
-                SettingsDivider()
-
-                // Auto-Lock Vault on Background
-                SettingToggleRow(
-                    title = "Auto-Lock Safe Vault on Exit",
-                    subtitle = "Seal encrypted vault files when app is minimized",
-                    icon = Icons.Outlined.Lock,
-                    checked = autoLockVault,
-                    onCheckedChange = { settingsRepository.setAutoLockVaultOnBackground(it) }
                 )
             }
 

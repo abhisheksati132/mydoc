@@ -47,7 +47,7 @@ fun AppBottomSheet(
             bottomStart = 0.dp,
             bottomEnd = 0.dp
         ),
-        containerColor = colors.surface,
+        containerColor = colors.surfaceContainerLow,
         tonalElevation = AppSpacing.elevation,
         scrimColor = colors.background.copy(alpha = 0.6f),
         dragHandle = {

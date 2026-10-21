@@ -72,9 +72,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.StorageVolume
 import com.abhisheksati.mydoc.ui.appmanager.AppManagerSheet
@@ -174,11 +178,8 @@ fun StorageScreen(
                                 expanded = isVolumeDropdownOpen,
                                 onDismissRequest = { isVolumeDropdownOpen = false },
                                 shape = RoundedCornerShape(16.dp),
-                                containerColor = if (isOled) Color(0xFF141720) else colors.surface,
-                                border = BorderStroke(
-                                    1.dp,
-                                    if (isOled) Color.White.copy(alpha = 0.10f) else colors.divider.copy(alpha = 0.7f)
-                                ),
+                                containerColor = colors.surface,
+                                border = BorderStroke(1.dp, colors.cardBorder),
                                 shadowElevation = 8.dp,
                                 tonalElevation = 4.dp
                             ) {
@@ -352,12 +353,9 @@ fun StorageScreen(
         AlertDialog(
             onDismissRequest = { showSystemInfoDialog = false },
             shape = RoundedCornerShape(22.dp),
-            containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+            containerColor = colors.surface,
             modifier = Modifier.border(
-                BorderStroke(
-                    0.8.dp,
-                    if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)
-                ),
+                BorderStroke(1.dp, colors.cardBorder),
                 shape = RoundedCornerShape(22.dp)
             ),
             icon = {
@@ -416,18 +414,15 @@ private fun StorageHeroCard(
     }
 
     val healthBadgeColor = when {
-        uiState.freeBytes > 15L * 1024 * 1024 * 1024 -> Color(0xFF4CAF50)
-        uiState.freeBytes > 4L * 1024 * 1024 * 1024 -> Color(0xFFFFA000)
-        else -> Color(0xFFE53935)
+        uiState.freeBytes > 15L * 1024 * 1024 * 1024 -> DocumentFormatColors.excelTint
+        uiState.freeBytes > 4L * 1024 * 1024 * 1024 -> DocumentFormatColors.pptTint
+        else -> colors.error
     }
 
     Surface(
         shape = RoundedCornerShape(22.dp),
-        color = if (isOled) Color(0xFF101217) else colors.surface,
-        border = BorderStroke(
-            1.dp,
-            if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.6f)
-        ),
+        color = colors.surface,
+        border = BorderStroke(1.dp, colors.cardBorder),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
@@ -587,7 +582,7 @@ private fun StorageQuickCleanSection(
         // Quick clean master banner
         Surface(
             shape = RoundedCornerShape(20.dp),
-            color = if (isOled) Color(0xFF141720) else colors.surfaceVariant.copy(alpha = 0.6f),
+            color = colors.surfaceVariant,
             border = BorderStroke(1.dp, colors.accent.copy(alpha = 0.25f)),
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -712,16 +707,17 @@ private fun StorageMiniCard(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
 
+    val haptic = LocalHapticFeedback.current
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = if (isOled) Color(0xFF101217) else colors.surface,
-        border = BorderStroke(
-            1.dp,
-            if (isOled) Color.White.copy(alpha = 0.06f) else colors.divider.copy(alpha = 0.4f)
-        ),
+        color = colors.surface,
+        border = BorderStroke(1.dp, colors.cardBorder),
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
+            .clickable(onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClick()
+            })
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Box(
@@ -749,13 +745,13 @@ private fun StorageMiniCard(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = sizeText,
-                style = typography.title.copy(fontWeight = FontWeight.ExtraBold, fontSize = 13.sp),
+                style = typography.title.withTabularFigures().copy(fontWeight = FontWeight.ExtraBold, fontSize = 13.sp),
                 color = colors.textPrimary,
                 maxLines = 1
             )
             Text(
                 text = countText,
-                style = typography.caption.copy(fontSize = 10.sp),
+                style = typography.caption.withTabularFigures().copy(fontSize = 10.sp),
                 color = colors.textSecondary,
                 maxLines = 1
             )
@@ -772,18 +768,19 @@ private fun StorageCategoryRowItem(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
 
+    val haptic = LocalHapticFeedback.current
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = if (isOled) Color(0xFF101217) else colors.surface,
-        border = BorderStroke(
-            1.dp,
-            if (isOled) Color.White.copy(alpha = 0.05f) else colors.divider.copy(alpha = 0.4f)
-        ),
+        color = colors.surface,
+        border = BorderStroke(1.dp, colors.cardBorder),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
+            .clickable(onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClick()
+            })
     ) {
         Row(
             modifier = Modifier
@@ -835,7 +832,7 @@ private fun StorageCategoryRowItem(
                     LinearProgressIndicator(
                         progress = { stat.percentageOfUsed },
                         color = stat.type.color,
-                        trackColor = if (isOled) Color(0xFF1E2026) else colors.divider,
+                        trackColor = colors.surfaceVariant,
                         modifier = Modifier
                             .fillMaxWidth(0.9f)
                             .height(4.dp)
@@ -851,7 +848,7 @@ private fun StorageCategoryRowItem(
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
                         text = stat.formattedSize,
-                        style = typography.title.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold),
+                        style = typography.title.withTabularFigures().copy(fontSize = 14.sp, fontWeight = FontWeight.Bold),
                         color = colors.textPrimary
                     )
                     Text(

@@ -57,7 +57,20 @@ data class AppTypography(
         fontWeight = FontWeight.Normal,
         fontSize = 11.sp,
         lineHeight = 14.sp
+    ),
+    val tabularCaption: TextStyle = TextStyle(
+        fontFamily = InterFontFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        fontFeatureSettings = "tnum"
     )
 )
 
 val LocalAppTypography = staticCompositionLocalOf { AppTypography() }
+
+/**
+ * Tabular figures extension for numbers, timers, file sizes, and coordinates.
+ * Eliminates character jitter when values dynamically tick or update.
+ */
+fun TextStyle.withTabularFigures(): TextStyle = this.copy(fontFeatureSettings = "tnum")

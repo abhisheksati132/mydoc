@@ -47,42 +47,47 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PictureInPicture
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.ScreenRotation
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Slider
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -99,7 +104,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -107,6 +114,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppSlider
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.MediaItem
 import com.abhisheksati.mydoc.domain.repository.MediaRepository
@@ -217,6 +225,7 @@ private fun createVlcMedia(
     return VlcMediaResult(media, null)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VideoPlayerScreen(
     item: MediaItem,
@@ -226,7 +235,10 @@ fun VideoPlayerScreen(
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
+    val colors = LocalAppColors.current
+    val accentColor = colors.accent
     val typography = LocalAppTypography.current
+    val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
 
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
@@ -244,13 +256,14 @@ fun VideoPlayerScreen(
     var aspectModeIndex by remember { mutableIntStateOf(0) }
     val currentAspectMode = VlcAspectMode.entries[aspectModeIndex]
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var isSpeedMenuOpen by remember { mutableStateOf(false) }
-    var isMoreMenuOpen by remember { mutableStateOf(false) }
+
+    // Unified Settings Bottom Sheet state
+    var isSettingsSheetOpen by remember { mutableStateOf(false) }
+    var settingsSheetTab by remember { mutableIntStateOf(0) }
 
     // VLC-grade Screen Lock & Sleep Timer states
     var isScreenLocked by remember { mutableStateOf(false) }
     var showUnlockButton by remember { mutableStateOf(false) }
-    var isSleepTimerDialogOpen by remember { mutableStateOf(false) }
     var sleepTimerMinutes by remember { mutableIntStateOf(0) }
     var isAudioBoostEnabled by remember { mutableStateOf(false) }
 
@@ -302,12 +315,6 @@ fun VideoPlayerScreen(
     var vlcLayoutRef by remember { mutableStateOf<android.view.View?>(null) }
     var hwDecoderEnabled by remember { mutableStateOf(app?.settingsRepository?.videoHardwareAcceleration?.value ?: true) }
     var retryAttempt by remember { mutableIntStateOf(0) }
-
-    // Full VLC Feature States
-    var isAudioTrackDialogOpen by remember { mutableStateOf(false) }
-    var isSubtitleTrackDialogOpen by remember { mutableStateOf(false) }
-    var isSyncDelayDialogOpen by remember { mutableStateOf(false) }
-    var isEqualizerDialogOpen by remember { mutableStateOf(false) }
 
     var audioDelayMs by remember { mutableLongStateOf(0L) }
     var spuDelayMs by remember { mutableLongStateOf(0L) }
@@ -796,7 +803,7 @@ fun VideoPlayerScreen(
                 }
             }
 
-            // Top Toolbar
+            // Top Toolbar (Sleek, Minimalist, YouTube/Google Photos style)
             AnimatedVisibility(
                 visible = areControlsVisible,
                 enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
@@ -823,75 +830,34 @@ fun VideoPlayerScreen(
                             )
                         }
 
-                        Column(
+                        Text(
+                            text = item.displayName,
+                            style = typography.body.copy(fontWeight = FontWeight.Medium),
+                            color = Color(0xFFEDEDED),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier
                                 .weight(1f)
                                 .padding(horizontal = AppSpacing.paddingSmall)
-                        ) {
-                            Text(
-                                text = item.displayName,
-                                style = typography.body.copy(fontWeight = FontWeight.Medium),
-                                color = Color(0xFFEDEDED),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = "LibVLC Engine",
-                                style = typography.caption,
-                                color = Color(0xFFFF9800)
-                            )
-                        }
+                        )
 
-                        // Audio Tracks (VLC)
-                        IconButton(onClick = { isAudioTrackDialogOpen = true }) {
-                            Icon(
-                                imageVector = Icons.Filled.Audiotrack,
-                                contentDescription = "Audio Tracks",
-                                tint = Color(0xFFEDEDED)
-                            )
-                        }
-
-                        // Subtitle Track (VLC)
-                        IconButton(onClick = { isSubtitleTrackDialogOpen = true }) {
+                        // Subtitle Quick Indicator / Switch
+                        val hasSubtitles = subtitleUri != null || (mediaPlayer.spuTrack != -1 && mediaPlayer.spuTrack != 0)
+                        IconButton(onClick = {
+                            settingsSheetTab = 0
+                            isSettingsSheetOpen = true
+                        }) {
                             Icon(
                                 imageVector = Icons.Filled.Subtitles,
                                 contentDescription = "Subtitles",
-                                tint = if (subtitleUri != null || mediaPlayer.spuTrack != -1) Color(0xFFFF9800) else Color(0xFFEDEDED)
+                                tint = if (hasSubtitles) accentColor else Color(0xFFEDEDED)
                             )
                         }
 
-                        // Delay Sync (VLC)
-                        IconButton(onClick = { isSyncDelayDialogOpen = true }) {
-                            Icon(
-                                imageVector = Icons.Filled.Sync,
-                                contentDescription = "Audio/Subtitle Sync",
-                                tint = if (audioDelayMs != 0L || spuDelayMs != 0L) Color(0xFFFF9800) else Color(0xFFEDEDED)
-                            )
-                        }
-
-                        // Equalizer (VLC)
-                        IconButton(onClick = { isEqualizerDialogOpen = true }) {
-                            Icon(
-                                imageVector = Icons.Filled.GraphicEq,
-                                contentDescription = "VLC Equalizer",
-                                tint = if (isEqualizerEnabled) Color(0xFFFF9800) else Color(0xFFEDEDED)
-                            )
-                        }
-
-                        // Video Snapshot
-                        IconButton(onClick = {
-                            takeVideoSnapshot(context, vlcLayoutRef, item.displayName)
-                        }) {
-                            Icon(
-                                imageVector = Icons.Filled.CameraAlt,
-                                contentDescription = "Take Snapshot",
-                                tint = Color(0xFFEDEDED)
-                            )
-                        }
-
-                        // Screen Lock Button (VLC style)
+                        // Screen Lock Button
                         IconButton(
                             onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 isScreenLocked = true
                                 areControlsVisible = false
                                 showUnlockButton = true
@@ -905,126 +871,22 @@ fun VideoPlayerScreen(
                             )
                         }
 
-                        // More Menu (PiP, Orientation, Sleep Timer, Audio Boost, Extract Audio, Share)
-                        Box {
-                            IconButton(onClick = { isMoreMenuOpen = true }) {
-                                Icon(
-                                    imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "More Options",
-                                    tint = Color(0xFFEDEDED)
-                                )
-                            }
-
-                            DropdownMenu(
-                                expanded = isMoreMenuOpen,
-                                onDismissRequest = { isMoreMenuOpen = false },
-                                shape = RoundedCornerShape(16.dp),
-                                containerColor = Color(0xFF1E2129),
-                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
-                                shadowElevation = 8.dp,
-                                tonalElevation = 4.dp
-                            ) {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                    DropdownMenuItem(
-                                        text = { Text("Picture-in-picture (PiP)") },
-                                        leadingIcon = {
-                                            Icon(Icons.Default.PictureInPicture, contentDescription = null)
-                                        },
-                                        onClick = {
-                                            isMoreMenuOpen = false
-                                            val params = PictureInPictureParams.Builder()
-                                                .setAspectRatio(Rational(16, 9))
-                                                .build()
-                                            activity?.enterPictureInPictureMode(params)
-                                        }
-                                    )
-                                }
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            when (orientationMode) {
-                                                1 -> "Orientation: Landscape"
-                                                2 -> "Orientation: Portrait"
-                                                else -> "Orientation: Auto-rotate"
-                                            }
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.ScreenRotation, contentDescription = null)
-                                    },
-                                    onClick = {
-                                        isMoreMenuOpen = false
-                                        orientationMode = (orientationMode + 1) % 3
-                                        val target = when (orientationMode) {
-                                            1 -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                                            2 -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                                            else -> ActivityInfo.SCREEN_ORIENTATION_SENSOR
-                                        }
-                                        activity?.requestedOrientation = target
-                                        val label = when (orientationMode) {
-                                            1 -> "Landscape"
-                                            2 -> "Portrait"
-                                            else -> "Auto-rotate"
-                                        }
-                                        Toast.makeText(context, label, Toast.LENGTH_SHORT).show()
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Sleep Timer (${if (sleepTimerMinutes > 0) "${sleepTimerMinutes}m" else "Off"})") },
-                                    onClick = {
-                                        isMoreMenuOpen = false
-                                        isSleepTimerDialogOpen = true
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(if (isAudioBoostEnabled) "Audio Boost: On (Up to 200%)" else "Audio Boost: Off") },
-                                    onClick = {
-                                        isMoreMenuOpen = false
-                                        isAudioBoostEnabled = !isAudioBoostEnabled
-                                        if (isAudioBoostEnabled) {
-                                            mediaPlayer.volume = 150
-                                            Toast.makeText(context, "LibVLC Audio Boost enabled (150%)", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            mediaPlayer.volume = 100
-                                            Toast.makeText(context, "Standard Volume (100%)", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Extract Audio (M4A)") },
-                                    onClick = {
-                                        isMoreMenuOpen = false
-                                        scope.launch {
-                                            Toast.makeText(context, "Extracting audio track...", Toast.LENGTH_SHORT).show()
-                                            val extractor = com.abhisheksati.mydoc.media.audio.AudioExtractor(context)
-                                            val result = extractor.extractAudioFromVideo(item.uri, item.displayName.substringBeforeLast('.'))
-                                            result.onSuccess { audioFile ->
-                                                Toast.makeText(context, "Audio saved: Music/${audioFile.name}", Toast.LENGTH_LONG).show()
-                                            }.onFailure { err ->
-                                                Toast.makeText(context, "Audio extraction failed: ${err.message}", Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Share Video") },
-                                    onClick = {
-                                        isMoreMenuOpen = false
-                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                            type = item.mimeType
-                                            putExtra(Intent.EXTRA_STREAM, item.uri)
-                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                        }
-                                        context.startActivity(Intent.createChooser(shareIntent, "Share video"))
-                                    }
-                                )
-                            }
+                        // Player Settings Gear (Unified controls)
+                        IconButton(onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            isSettingsSheetOpen = true
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Player Settings",
+                                tint = Color(0xFFEDEDED)
+                            )
                         }
                     }
                 }
             }
 
-            // Center Transport Controls (Rewind 10s, Large Play/Pause, Forward 10s)
+            // Center Transport Controls (Translucent glass -10s, 64dp Play/Pause, +10s)
             AnimatedVisibility(
                 visible = areControlsVisible && !isScreenLocked,
                 enter = fadeIn(),
@@ -1040,9 +902,10 @@ fun VideoPlayerScreen(
                         shape = androidx.compose.foundation.shape.CircleShape,
                         color = Color(0x66000000),
                         modifier = Modifier
-                            .size(52.dp)
+                            .size(48.dp)
                             .clip(androidx.compose.foundation.shape.CircleShape)
                             .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 val target = (mediaPlayer.time - 10000L).coerceAtLeast(0L)
                                 mediaPlayer.time = target
                                 currentPositionMs = target
@@ -1055,20 +918,21 @@ fun VideoPlayerScreen(
                                 imageVector = Icons.Default.FastRewind,
                                 contentDescription = "Rewind 10s",
                                 tint = Color.White,
-                                modifier = Modifier.size(28.dp)
+                                modifier = Modifier.size(26.dp)
                             )
                         }
                     }
 
-                    // Play / Pause (Large 68dp button)
+                    // Play / Pause (Large 64dp frosted glass button)
                     Surface(
                         shape = androidx.compose.foundation.shape.CircleShape,
-                        color = Color(0xCC000000),
-                        border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFFF9800)),
+                        color = Color(0x99000000),
+                        border = BorderStroke(1.5.dp, accentColor),
                         modifier = Modifier
-                            .size(68.dp)
+                            .size(64.dp)
                             .clip(androidx.compose.foundation.shape.CircleShape)
                             .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 if (mediaPlayer.isPlaying) mediaPlayer.pause() else mediaPlayer.play()
                             }
                     ) {
@@ -1076,8 +940,8 @@ fun VideoPlayerScreen(
                             Icon(
                                 imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                 contentDescription = if (isPlaying) "Pause" else "Play",
-                                tint = Color(0xFFFF9800),
-                                modifier = Modifier.size(38.dp)
+                                tint = accentColor,
+                                modifier = Modifier.size(36.dp)
                             )
                         }
                     }
@@ -1087,9 +951,10 @@ fun VideoPlayerScreen(
                         shape = androidx.compose.foundation.shape.CircleShape,
                         color = Color(0x66000000),
                         modifier = Modifier
-                            .size(52.dp)
+                            .size(48.dp)
                             .clip(androidx.compose.foundation.shape.CircleShape)
                             .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 val target = (mediaPlayer.time + 10000L).coerceAtMost(totalDurationMs)
                                 mediaPlayer.time = target
                                 currentPositionMs = target
@@ -1102,14 +967,14 @@ fun VideoPlayerScreen(
                                 imageVector = Icons.Default.FastForward,
                                 contentDescription = "Forward 10s",
                                 tint = Color.White,
-                                modifier = Modifier.size(28.dp)
+                                modifier = Modifier.size(26.dp)
                             )
                         }
                     }
                 }
             }
 
-            // Bottom Controls Bar (Timeline, Time Labels, Bottom Navigation Actions)
+            // Bottom Controls Bar (YouTube-style full-width seekbar + concise action dock)
             AnimatedVisibility(
                 visible = areControlsVisible && !isScreenLocked,
                 enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
@@ -1124,27 +989,9 @@ fun VideoPlayerScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .navigationBarsPadding()
-                            .padding(horizontal = 20.dp, vertical = 8.dp)
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
                     ) {
-                        // Time labels & Duration
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = formatTime(if (isSeeking) seekPositionMs else currentPositionMs),
-                                style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
-                                color = Color(0xFFEDEDED)
-                            )
-                            Text(
-                                text = formatTime(totalDurationMs),
-                                style = typography.caption,
-                                color = Color(0xFFA0A0A5)
-                            )
-                        }
-
-                        // Seek Slider (YouTube-style circular thumb)
+                        // Full width Seek Slider
                         AppSlider(
                             value = if (totalDurationMs > 0) {
                                 val pos = if (isSeeking) seekPositionMs else currentPositionMs
@@ -1160,159 +1007,123 @@ fun VideoPlayerScreen(
                                 isSeeking = false
                             },
                             colors = SliderDefaults.colors(
-                                thumbColor = Color(0xFFFF9800),
-                                activeTrackColor = Color(0xFFFF9800),
+                                thumbColor = accentColor,
+                                activeTrackColor = accentColor,
                                 inactiveTrackColor = Color(0x33FFFFFF)
                             ),
                             thumbSize = 13.dp,
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        // Bottom Actions row (Spacious, elegant, uncluttered)
+                        // Bottom Actions row
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp),
+                                .padding(top = 2.dp, bottom = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Aspect Ratio
-                            Surface(
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-                                color = Color(0x22FFFFFF),
-                                modifier = Modifier
-                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-                                    .clickable {
-                                        aspectModeIndex = (aspectModeIndex + 1) % VlcAspectMode.entries.size
-                                        val nextMode = VlcAspectMode.entries[aspectModeIndex]
-                                        mediaPlayer.aspectRatio = nextMode.ratioStr
-                                        mediaPlayer.scale = nextMode.scale
-                                        Toast.makeText(context, nextMode.label, Toast.LENGTH_SHORT).show()
-                                    }
+                            // Left: Current time / Total time (tabular figures for zero-jitter seeking)
+                            Text(
+                                text = "${formatTime(if (isSeeking) seekPositionMs else currentPositionMs)} / ${formatTime(totalDurationMs)}",
+                                style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontFeatureSettings = "tnum"),
+                                color = Color(0xFFEDEDED)
+                            )
+
+                            // Right: Quick tools (Aspect pill, Speed pill, Snapshot, Rotate)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text(
-                                    text = currentAspectMode.buttonText,
-                                    style = typography.caption.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                                )
-                            }
-
-                            // Subtitle (CC) Button
-                            IconButton(onClick = { isSubtitleTrackDialogOpen = true }) {
-                                Icon(
-                                    imageVector = Icons.Filled.Subtitles,
-                                    contentDescription = "Subtitles",
-                                    tint = if (subtitleUri != null || mediaPlayer.spuTrack != -1) Color(0xFFFF9800) else Color(0xFFEDEDED)
-                                )
-                            }
-
-                            // Speed Selector button
-                            Box {
+                                // Aspect Ratio Pill
                                 Surface(
-                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-                                    color = if (playbackSpeed != 1.0f) Color(0x33FF9800) else Color(0x22FFFFFF),
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color(0x22FFFFFF),
                                     modifier = Modifier
-                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-                                        .clickable { isSpeedMenuOpen = true }
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            aspectModeIndex = (aspectModeIndex + 1) % VlcAspectMode.entries.size
+                                            val nextMode = VlcAspectMode.entries[aspectModeIndex]
+                                            mediaPlayer.aspectRatio = nextMode.ratioStr
+                                            mediaPlayer.scale = nextMode.scale
+                                            Toast.makeText(context, nextMode.label, Toast.LENGTH_SHORT).show()
+                                        }
                                 ) {
                                     Text(
-                                        text = "${playbackSpeed}x",
+                                        text = currentAspectMode.buttonText,
                                         style = typography.caption.copy(fontWeight = FontWeight.Bold),
-                                        color = if (playbackSpeed != 1.0f) Color(0xFFFF9800) else Color.White,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                        color = Color.White,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                                     )
                                 }
 
-                                DropdownMenu(
-                                    expanded = isSpeedMenuOpen,
-                                    onDismissRequest = { isSpeedMenuOpen = false },
-                                    shape = RoundedCornerShape(16.dp),
-                                    containerColor = Color(0xFF1E2129),
-                                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
-                                    shadowElevation = 8.dp,
-                                    tonalElevation = 4.dp
-                                ) {
-                                    listOf(0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 3.0f, 4.0f).forEach { spd ->
-                                        DropdownMenuItem(
-                                            text = { Text("${spd}x") },
-                                            onClick = {
-                                                isSpeedMenuOpen = false
-                                                playbackSpeed = spd
-                                                mediaPlayer.rate = spd
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-
-                            // A-B Repeat Loop button
-                            IconButton(
-                                onClick = {
-                                    if (abRepeatA == null) {
-                                        abRepeatA = currentPositionMs
-                                        Toast.makeText(context, "Point A set at ${formatTime(currentPositionMs)}", Toast.LENGTH_SHORT).show()
-                                    } else if (abRepeatB == null) {
-                                        if (currentPositionMs > abRepeatA!!) {
-                                            abRepeatB = currentPositionMs
-                                            Toast.makeText(context, "Point B set at ${formatTime(currentPositionMs)}. Looping A-B", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            Toast.makeText(context, "Point B must be after Point A", Toast.LENGTH_SHORT).show()
+                                // Speed Pill
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (playbackSpeed != 1.0f) accentColor.copy(alpha = 0.25f) else Color(0x22FFFFFF),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            val speeds = listOf(1.0f, 1.25f, 1.5f, 2.0f, 0.5f, 0.75f)
+                                            val nextIndex = (speeds.indexOf(playbackSpeed) + 1).let { if (it in speeds.indices) it else 0 }
+                                            playbackSpeed = speeds[nextIndex]
+                                            mediaPlayer.rate = playbackSpeed
+                                            Toast.makeText(context, "${playbackSpeed}x Speed", Toast.LENGTH_SHORT).show()
                                         }
-                                    } else {
-                                        abRepeatA = null
-                                        abRepeatB = null
-                                        Toast.makeText(context, "A-B Repeat cleared", Toast.LENGTH_SHORT).show()
-                                    }
+                                ) {
+                                    Text(
+                                        text = "${playbackSpeed}x",
+                                        style = typography.caption.copy(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum"),
+                                        color = if (playbackSpeed != 1.0f) accentColor else Color.White,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                    )
                                 }
-                            ) {
-                                Text(
-                                    text = when {
-                                        abRepeatA != null && abRepeatB != null -> "A-B"
-                                        abRepeatA != null -> "A"
-                                        else -> "A-B"
+
+                                // Snapshot Button
+                                IconButton(
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        takeVideoSnapshot(context, vlcLayoutRef, item.displayName)
                                     },
-                                    style = typography.caption.copy(fontWeight = FontWeight.Bold),
-                                    color = when {
-                                        abRepeatA != null && abRepeatB != null -> Color(0xFFFF9800)
-                                        abRepeatA != null -> Color(0xFF8AB4F8)
-                                        else -> Color(0xFF888888)
-                                    }
-                                )
-                            }
-
-                            // Repeat / Loop Single Video
-                            IconButton(onClick = { isLooping = !isLooping }) {
-                                Icon(
-                                    imageVector = Icons.Default.Repeat,
-                                    contentDescription = "Loop",
-                                    tint = if (isLooping) Color(0xFFFF9800) else Color(0xFFEDEDED)
-                                )
-                            }
-
-                            // Screen Orientation Toggle
-                            IconButton(
-                                onClick = {
-                                    orientationMode = (orientationMode + 1) % 3
-                                    val target = when (orientationMode) {
-                                        1 -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                                        2 -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                                        else -> ActivityInfo.SCREEN_ORIENTATION_SENSOR
-                                    }
-                                    activity?.requestedOrientation = target
-                                    val label = when (orientationMode) {
-                                        1 -> "Landscape"
-                                        2 -> "Portrait"
-                                        else -> "Auto-rotate"
-                                    }
-                                    Toast.makeText(context, label, Toast.LENGTH_SHORT).show()
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CameraAlt,
+                                        contentDescription = "Take Snapshot",
+                                        tint = Color(0xFFEDEDED),
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ScreenRotation,
-                                    contentDescription = "Rotate Screen",
-                                    tint = if (orientationMode != 0) Color(0xFFFF9800) else Color(0xFFEDEDED)
-                                )
+
+                                // Screen Rotation Toggle
+                                IconButton(
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        orientationMode = (orientationMode + 1) % 3
+                                        val target = when (orientationMode) {
+                                            1 -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                                            2 -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                                            else -> ActivityInfo.SCREEN_ORIENTATION_SENSOR
+                                        }
+                                        activity?.requestedOrientation = target
+                                        val label = when (orientationMode) {
+                                            1 -> "Landscape"
+                                            2 -> "Portrait"
+                                            else -> "Auto-rotate"
+                                        }
+                                        Toast.makeText(context, label, Toast.LENGTH_SHORT).show()
+                                    },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ScreenRotation,
+                                        contentDescription = "Rotate Screen",
+                                        tint = if (orientationMode != 0) accentColor else Color(0xFFEDEDED),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -1328,11 +1139,12 @@ fun VideoPlayerScreen(
             ) {
                 Surface(
                     color = Color(0xE6202022),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x55FFFFFF)),
+                    shape = RoundedCornerShape(24.dp),
+                    border = BorderStroke(1.dp, Color(0x55FFFFFF)),
                     modifier = Modifier
                         .padding(8.dp)
                         .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             isScreenLocked = false
                             showUnlockButton = false
                             areControlsVisible = true
@@ -1346,7 +1158,7 @@ fun VideoPlayerScreen(
                         Icon(
                             imageVector = Icons.Default.Lock,
                             contentDescription = null,
-                            tint = Color(0xFFFF9800),
+                            tint = accentColor,
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
@@ -1360,482 +1172,781 @@ fun VideoPlayerScreen(
             }
         }
 
-        // Sleep Timer Dialog
-        if (isSleepTimerDialogOpen) {
-            AlertDialog(
-                onDismissRequest = { isSleepTimerDialogOpen = false },
-                shape = RoundedCornerShape(22.dp),
+        // Unified Video Player Settings Bottom Sheet (Modern, Google Photos / YouTube style)
+        if (isSettingsSheetOpen) {
+            ModalBottomSheet(
+                onDismissRequest = { isSettingsSheetOpen = false },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                 containerColor = Color(0xFF141720),
-                modifier = Modifier.border(
-                    BorderStroke(0.8.dp, Color.White.copy(alpha = 0.10f)),
-                    shape = RoundedCornerShape(22.dp)
-                ),
-                title = { Text("Sleep Timer") },
-                text = {
-                    Column {
-                        listOf(
-                            0 to "Turn off",
-                            15 to "15 minutes",
-                            30 to "30 minutes",
-                            45 to "45 minutes",
-                            60 to "60 minutes"
-                        ).forEach { (mins, label) ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
+                tonalElevation = 6.dp,
+                dragHandle = {
+                    Box(
+                        modifier = Modifier
+                            .padding(vertical = 10.dp)
+                            .width(36.dp)
+                            .height(4.dp)
+                            .background(Color(0x44FFFFFF), RoundedCornerShape(2.dp))
+                    )
+                }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(bottom = 16.dp)
+                ) {
+                    // Sheet Header
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Player Settings",
+                            style = typography.title.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White
+                        )
+                        IconButton(onClick = { isSettingsSheetOpen = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color(0xFF9EA3AE))
+                        }
+                    }
+
+                    // Segmented Navigation Pill Tabs
+                    val tabs = listOf(
+                        "Audio & CC" to Icons.Default.Audiotrack,
+                        "Sound & EQ" to Icons.Default.GraphicEq,
+                        "Playback & Tools" to Icons.Default.Tune
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                            .background(Color(0xFF1E222D), RoundedCornerShape(12.dp))
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        tabs.forEachIndexed { index, (label, icon) ->
+                            val selected = settingsSheetTab == index
+                            Surface(
                                 modifier = Modifier
-                                    .fillMaxWidth()
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
                                     .clickable {
-                                        sleepTimerMinutes = mins
-                                        isSleepTimerDialogOpen = false
-                                        if (mins > 0) {
-                                            Toast.makeText(context, "Sleep timer set for $mins minutes", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            Toast.makeText(context, "Sleep timer turned off", Toast.LENGTH_SHORT).show()
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        settingsSheetTab = index
+                                    },
+                                color = if (selected) accentColor else Color.Transparent,
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = if (selected) Color.White else Color(0xFF9EA3AE),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = label,
+                                        style = typography.caption.copy(fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium),
+                                        color = if (selected) Color.White else Color(0xFF9EA3AE),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Tab Body
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 20.dp, vertical = 8.dp)
+                    ) {
+                        when (settingsSheetTab) {
+                            0 -> {
+                                // Tab 0: Audio & Subtitles
+                                Text(
+                                    text = "Audio Track",
+                                    style = typography.body.copy(fontWeight = FontWeight.SemiBold),
+                                    color = Color.White
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                val audioTracks = mediaPlayer.audioTracks ?: emptyArray()
+                                var currentAudioTrack by remember(isSettingsSheetOpen) { mutableIntStateOf(mediaPlayer.audioTrack) }
+                                if (audioTracks.isEmpty()) {
+                                    Text("No alternate audio tracks found", style = typography.caption, color = Color(0xFF9EA3AE))
+                                } else {
+                                    audioTracks.forEach { track ->
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .clickable {
+                                                    currentAudioTrack = track.id
+                                                    mediaPlayer.setAudioTrack(track.id)
+                                                    Toast.makeText(context, "Audio: ${track.name}", Toast.LENGTH_SHORT).show()
+                                                }
+                                                .padding(vertical = 6.dp, horizontal = 4.dp)
+                                        ) {
+                                            RadioButton(
+                                                selected = track.id == currentAudioTrack,
+                                                onClick = null,
+                                                colors = RadioButtonDefaults.colors(selectedColor = accentColor, unselectedColor = Color(0xFF6B7280))
+                                            )
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Text(
+                                                text = if (track.id == -1) "Disable Audio" else track.name,
+                                                style = typography.body,
+                                                color = if (track.id == currentAudioTrack) Color.White else Color(0xFFD1D5DB),
+                                                fontWeight = if (track.id == currentAudioTrack) FontWeight.SemiBold else FontWeight.Normal
+                                            )
                                         }
                                     }
-                                    .padding(vertical = 10.dp)
-                            ) {
-                                RadioButton(
-                                    selected = sleepTimerMinutes == mins,
-                                    onClick = null
+                                }
+
+                                Spacer(modifier = Modifier.height(20.dp))
+
+                                // Subtitles
+                                Text(
+                                    text = "Subtitles",
+                                    style = typography.body.copy(fontWeight = FontWeight.SemiBold),
+                                    color = Color.White
                                 )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(label, style = typography.body)
-                            }
-                        }
-                    }
-                },
-                confirmButton = {},
-                dismissButton = {
-                    TextButton(onClick = { isSleepTimerDialogOpen = false }) {
-                        Text("Close")
-                    }
-                }
-            )
-        }
+                                Spacer(modifier = Modifier.height(8.dp))
 
-        // VLC Audio Tracks Dialog
-        if (isAudioTrackDialogOpen) {
-            val audioTracks = remember(isAudioTrackDialogOpen) {
-                mediaPlayer.audioTracks ?: emptyArray()
-            }
-            var selectedTrackId by remember(isAudioTrackDialogOpen) {
-                mutableIntStateOf(mediaPlayer.audioTrack)
-            }
-
-            AlertDialog(
-                onDismissRequest = { isAudioTrackDialogOpen = false },
-                shape = RoundedCornerShape(22.dp),
-                containerColor = Color(0xFF141720),
-                modifier = Modifier.border(
-                    BorderStroke(0.8.dp, Color.White.copy(alpha = 0.10f)),
-                    shape = RoundedCornerShape(22.dp)
-                ),
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Audiotrack, contentDescription = null, tint = Color(0xFFFF9800))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Audio Tracks", fontWeight = FontWeight.Bold)
-                    }
-                },
-                text = {
-                    if (audioTracks.isEmpty()) {
-                        Text(
-                            text = "No alternate audio tracks found in this video.",
-                            style = typography.body
-                        )
-                    } else {
-                        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                            items(audioTracks.toList()) { track ->
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color(0xFF1E222D),
+                                    border = BorderStroke(1.dp, Color(0x22FFFFFF)),
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
                                         .clickable {
-                                            selectedTrackId = track.id
-                                            mediaPlayer.setAudioTrack(track.id)
-                                            Toast.makeText(context, "Audio: ${track.name}", Toast.LENGTH_SHORT).show()
-                                            isAudioTrackDialogOpen = false
+                                            isSettingsSheetOpen = false
+                                            subtitleLauncher.launch("*/*")
                                         }
-                                        .padding(vertical = 10.dp)
                                 ) {
-                                    RadioButton(
-                                        selected = track.id == selectedTrackId,
-                                        onClick = null
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        text = if (track.id == -1) "Disable Audio" else track.name,
-                                        style = typography.body,
-                                        fontWeight = if (track.id == selectedTrackId) FontWeight.Bold else FontWeight.Normal
-                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                                    ) {
+                                        Icon(Icons.Filled.FolderOpen, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp))
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text(
+                                            text = if (subtitleUri != null) "Loaded: ${subtitleUri?.lastPathSegment}" else "Load External Subtitle (.srt / .vtt)",
+                                            style = typography.body.copy(fontWeight = FontWeight.Medium),
+                                            color = Color.White
+                                        )
+                                    }
                                 }
-                            }
-                        }
-                    }
-                },
-                confirmButton = {},
-                dismissButton = {
-                    TextButton(onClick = { isAudioTrackDialogOpen = false }) {
-                        Text("Close")
-                    }
-                }
-            )
-        }
 
-        // VLC Subtitle Tracks Dialog
-        if (isSubtitleTrackDialogOpen) {
-            val spuTracks = remember(isSubtitleTrackDialogOpen) {
-                mediaPlayer.spuTracks ?: emptyArray()
-            }
-            var selectedSpuId by remember(isSubtitleTrackDialogOpen) {
-                mutableIntStateOf(mediaPlayer.spuTrack)
-            }
+                                Spacer(modifier = Modifier.height(6.dp))
 
-            AlertDialog(
-                onDismissRequest = { isSubtitleTrackDialogOpen = false },
-                shape = RoundedCornerShape(22.dp),
-                containerColor = Color(0xFF141720),
-                modifier = Modifier.border(
-                    BorderStroke(0.8.dp, Color.White.copy(alpha = 0.10f)),
-                    shape = RoundedCornerShape(22.dp)
-                ),
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Subtitles, contentDescription = null, tint = Color(0xFFFF9800))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Subtitles", fontWeight = FontWeight.Bold)
-                    }
-                },
-                text = {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        // Option to load external subtitle file
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    isSubtitleTrackDialogOpen = false
-                                    subtitleLauncher.launch("*/*")
-                                }
-                                .padding(vertical = 10.dp)
-                        ) {
-                            Icon(Icons.Filled.FolderOpen, contentDescription = null, tint = Color(0xFFFF9800))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = "Load External Subtitle (.srt / .vtt / .ass)",
-                                style = typography.body.copy(fontWeight = FontWeight.SemiBold)
-                            )
-                        }
+                                val spuTracks = mediaPlayer.spuTracks ?: emptyArray()
+                                var currentSpuTrack by remember(isSettingsSheetOpen) { mutableIntStateOf(mediaPlayer.spuTrack) }
 
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                            // Turn Off Subtitles option
-                            item {
+                                // Disable Subtitles
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
                                         .clickable {
-                                            selectedSpuId = -1
+                                            currentSpuTrack = -1
                                             subtitleUri = null
                                             mediaPlayer.spuTrack = -1
-                                            Toast.makeText(context, "Subtitles turned off", Toast.LENGTH_SHORT).show()
-                                            isSubtitleTrackDialogOpen = false
+                                            Toast.makeText(context, "Subtitles disabled", Toast.LENGTH_SHORT).show()
                                         }
-                                        .padding(vertical = 10.dp)
+                                        .padding(vertical = 6.dp, horizontal = 4.dp)
                                 ) {
                                     RadioButton(
-                                        selected = selectedSpuId == -1 && subtitleUri == null,
-                                        onClick = null
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text("Disable Subtitles", style = typography.body)
-                                }
-                            }
-
-                            items(spuTracks.filter { it.id != -1 }) { track ->
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            selectedSpuId = track.id
-                                            mediaPlayer.setSpuTrack(track.id)
-                                            Toast.makeText(context, "Subtitle: ${track.name}", Toast.LENGTH_SHORT).show()
-                                            isSubtitleTrackDialogOpen = false
-                                        }
-                                        .padding(vertical = 10.dp)
-                                ) {
-                                    RadioButton(
-                                        selected = track.id == selectedSpuId,
-                                        onClick = null
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        text = track.name,
-                                        style = typography.body,
-                                        fontWeight = if (track.id == selectedSpuId) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                }
-                            }
-                        }
-                    }
-                },
-                confirmButton = {},
-                dismissButton = {
-                    TextButton(onClick = { isSubtitleTrackDialogOpen = false }) {
-                        Text("Close")
-                    }
-                }
-            )
-        }
-
-        // VLC Audio & Subtitle Sync Delay Dialog
-        if (isSyncDelayDialogOpen) {
-            AlertDialog(
-                onDismissRequest = { isSyncDelayDialogOpen = false },
-                shape = RoundedCornerShape(22.dp),
-                containerColor = Color(0xFF141720),
-                modifier = Modifier.border(
-                    BorderStroke(0.8.dp, Color.White.copy(alpha = 0.10f)),
-                    shape = RoundedCornerShape(22.dp)
-                ),
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Sync, contentDescription = null, tint = Color(0xFFFF9800))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("VLC Delay Sync", fontWeight = FontWeight.Bold)
-                    }
-                },
-                text = {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        // Audio Delay section
-                        Text("Audio Delay", fontWeight = FontWeight.SemiBold, style = typography.body)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            TextButton(onClick = {
-                                audioDelayMs = (audioDelayMs - 50L).coerceAtLeast(-5000L)
-                                mediaPlayer.setAudioDelay(audioDelayMs * 1000L)
-                            }) {
-                                Text("-50 ms")
-                            }
-                            Text(
-                                text = "${if (audioDelayMs > 0) "+$audioDelayMs" else "$audioDelayMs"} ms",
-                                style = typography.body.copy(fontWeight = FontWeight.Bold),
-                                color = if (audioDelayMs != 0L) Color(0xFFFF9800) else Color.White
-                            )
-                            TextButton(onClick = {
-                                audioDelayMs = (audioDelayMs + 50L).coerceAtMost(5000L)
-                                mediaPlayer.setAudioDelay(audioDelayMs * 1000L)
-                            }) {
-                                Text("+50 ms")
-                            }
-                        }
-                        AppSlider(
-                            value = audioDelayMs.toFloat(),
-                            onValueChange = {
-                                audioDelayMs = it.toLong()
-                                mediaPlayer.setAudioDelay(audioDelayMs * 1000L)
-                            },
-                            valueRange = -5000f..5000f,
-                            colors = SliderDefaults.colors(
-                                thumbColor = Color(0xFFFF9800),
-                                activeTrackColor = Color(0xFFFF9800)
-                            )
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Subtitle Delay section
-                        Text("Subtitle Delay", fontWeight = FontWeight.SemiBold, style = typography.body)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            TextButton(onClick = {
-                                spuDelayMs = (spuDelayMs - 50L).coerceAtLeast(-5000L)
-                                mediaPlayer.setSpuDelay(spuDelayMs * 1000L)
-                            }) {
-                                Text("-50 ms")
-                            }
-                            Text(
-                                text = "${if (spuDelayMs > 0) "+$spuDelayMs" else "$spuDelayMs"} ms",
-                                style = typography.body.copy(fontWeight = FontWeight.Bold),
-                                color = if (spuDelayMs != 0L) Color(0xFFFF9800) else Color.White
-                            )
-                            TextButton(onClick = {
-                                spuDelayMs = (spuDelayMs + 50L).coerceAtMost(5000L)
-                                mediaPlayer.setSpuDelay(spuDelayMs * 1000L)
-                            }) {
-                                Text("+50 ms")
-                            }
-                        }
-                        AppSlider(
-                            value = spuDelayMs.toFloat(),
-                            onValueChange = {
-                                spuDelayMs = it.toLong()
-                                mediaPlayer.setSpuDelay(spuDelayMs * 1000L)
-                            },
-                            valueRange = -5000f..5000f,
-                            colors = SliderDefaults.colors(
-                                thumbColor = Color(0xFFFF9800),
-                                activeTrackColor = Color(0xFFFF9800)
-                            )
-                        )
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        audioDelayMs = 0L
-                        spuDelayMs = 0L
-                        mediaPlayer.setAudioDelay(0L)
-                        mediaPlayer.setSpuDelay(0L)
-                        Toast.makeText(context, "Sync delays reset to 0", Toast.LENGTH_SHORT).show()
-                    }) {
-                        Text("Reset All")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { isSyncDelayDialogOpen = false }) {
-                        Text("Done")
-                    }
-                }
-            )
-        }
-
-        // VLC Equalizer Dialog (All 18 Presets + Pre-amp)
-        if (isEqualizerDialogOpen) {
-            val presetCount = remember { MediaPlayer.Equalizer.getPresetCount() }
-            val presets = remember {
-                (0 until presetCount).map { i -> MediaPlayer.Equalizer.getPresetName(i) }
-            }
-
-            AlertDialog(
-                onDismissRequest = { isEqualizerDialogOpen = false },
-                shape = RoundedCornerShape(22.dp),
-                containerColor = Color(0xFF141720),
-                modifier = Modifier.border(
-                    BorderStroke(0.8.dp, Color.White.copy(alpha = 0.10f)),
-                    shape = RoundedCornerShape(22.dp)
-                ),
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.GraphicEq, contentDescription = null, tint = Color(0xFFFF9800))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("VLC Equalizer", fontWeight = FontWeight.Bold)
-                        }
-                        Switch(
-                            checked = isEqualizerEnabled,
-                            onCheckedChange = { enabled ->
-                                isEqualizerEnabled = enabled
-                                if (enabled) {
-                                    val eq = MediaPlayer.Equalizer.createFromPreset(selectedEqPresetIndex).apply {
-                                        setPreAmp(eqPreAmp)
-                                    }
-                                    mediaPlayer.setEqualizer(eq)
-                                    Toast.makeText(context, "Equalizer: ${presets.getOrNull(selectedEqPresetIndex) ?: "Flat"}", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    mediaPlayer.setEqualizer(null)
-                                    Toast.makeText(context, "Equalizer disabled", Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color(0xFFFF9800),
-                                checkedTrackColor = Color(0xFFFF9800).copy(alpha = 0.4f)
-                            )
-                        )
-                    }
-                },
-                text = {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        // Pre-amp slider
-                        Text(
-                            text = "Pre-Amplification: ${String.format(Locale.US, "%.1f", eqPreAmp)} dB",
-                            style = typography.caption,
-                            color = if (isEqualizerEnabled) Color.White else Color.Gray
-                        )
-                        AppSlider(
-                            value = eqPreAmp,
-                            onValueChange = {
-                                eqPreAmp = it
-                                if (isEqualizerEnabled) {
-                                    val eq = MediaPlayer.Equalizer.createFromPreset(selectedEqPresetIndex).apply {
-                                        setPreAmp(it)
-                                    }
-                                    mediaPlayer.setEqualizer(eq)
-                                }
-                            },
-                            valueRange = -20f..20f,
-                            enabled = isEqualizerEnabled,
-                            colors = SliderDefaults.colors(
-                                thumbColor = Color(0xFFFF9800),
-                                activeTrackColor = Color(0xFFFF9800)
-                            )
-                        )
-
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            text = "Audio Presets",
-                            fontWeight = FontWeight.SemiBold,
-                            style = typography.body,
-                            color = if (isEqualizerEnabled) Color.White else Color.Gray
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        LazyColumn(modifier = Modifier.height(240.dp)) {
-                            items(presets.indices.toList()) { index ->
-                                val name = presets[index]
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable(enabled = isEqualizerEnabled) {
-                                            selectedEqPresetIndex = index
-                                            val eq = MediaPlayer.Equalizer.createFromPreset(index).apply {
-                                                setPreAmp(eqPreAmp)
-                                            }
-                                            mediaPlayer.setEqualizer(eq)
-                                            Toast.makeText(context, "Preset: $name", Toast.LENGTH_SHORT).show()
-                                        }
-                                        .padding(vertical = 8.dp)
-                                ) {
-                                    RadioButton(
-                                        selected = selectedEqPresetIndex == index,
+                                        selected = currentSpuTrack == -1 && subtitleUri == null,
                                         onClick = null,
-                                        enabled = isEqualizerEnabled
+                                        colors = RadioButtonDefaults.colors(selectedColor = accentColor, unselectedColor = Color(0xFF6B7280))
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
+                                    Text("Disable Subtitles", style = typography.body, color = Color(0xFFD1D5DB))
+                                }
+
+                                // Embedded Subtitle Tracks
+                                spuTracks.filter { it.id != -1 }.forEach { track ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .clickable {
+                                                currentSpuTrack = track.id
+                                                mediaPlayer.setSpuTrack(track.id)
+                                                Toast.makeText(context, "Subtitle: ${track.name}", Toast.LENGTH_SHORT).show()
+                                            }
+                                            .padding(vertical = 6.dp, horizontal = 4.dp)
+                                    ) {
+                                        RadioButton(
+                                            selected = track.id == currentSpuTrack,
+                                            onClick = null,
+                                            colors = RadioButtonDefaults.colors(selectedColor = accentColor, unselectedColor = Color(0xFF6B7280))
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text(
+                                            text = track.name,
+                                            style = typography.body,
+                                            color = if (track.id == currentSpuTrack) Color.White else Color(0xFFD1D5DB),
+                                            fontWeight = if (track.id == currentSpuTrack) FontWeight.SemiBold else FontWeight.Normal
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(20.dp))
+
+                                // Delay Synchronization
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Text(
-                                        text = name,
-                                        style = typography.body,
-                                        fontWeight = if (selectedEqPresetIndex == index) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isEqualizerEnabled) Color.White else Color.Gray
+                                        text = "Delay Synchronization",
+                                        style = typography.body.copy(fontWeight = FontWeight.SemiBold),
+                                        color = Color.White
                                     )
+                                    if (audioDelayMs != 0L || spuDelayMs != 0L) {
+                                        TextButton(onClick = {
+                                            audioDelayMs = 0L
+                                            spuDelayMs = 0L
+                                            mediaPlayer.setAudioDelay(0L)
+                                            mediaPlayer.setSpuDelay(0L)
+                                            Toast.makeText(context, "Sync delays reset", Toast.LENGTH_SHORT).show()
+                                        }) {
+                                            Text("Reset", color = accentColor, style = typography.caption.copy(fontWeight = FontWeight.Bold))
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                // Audio Delay Slider
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Audio Delay", style = typography.caption, color = Color(0xFF9EA3AE))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        TextButton(onClick = {
+                                            audioDelayMs = (audioDelayMs - 50L).coerceAtLeast(-5000L)
+                                            mediaPlayer.setAudioDelay(audioDelayMs * 1000L)
+                                        }) { Text("-50ms", color = Color(0xFFD1D5DB)) }
+                                        Text(
+                                            text = "${if (audioDelayMs > 0) "+$audioDelayMs" else "$audioDelayMs"} ms",
+                                            style = typography.caption.copy(fontWeight = FontWeight.Bold),
+                                            color = if (audioDelayMs != 0L) accentColor else Color.White,
+                                            modifier = Modifier.padding(horizontal = 4.dp)
+                                        )
+                                        TextButton(onClick = {
+                                            audioDelayMs = (audioDelayMs + 50L).coerceAtMost(5000L)
+                                            mediaPlayer.setAudioDelay(audioDelayMs * 1000L)
+                                        }) { Text("+50ms", color = Color(0xFFD1D5DB)) }
+                                    }
+                                }
+                                AppSlider(
+                                    value = audioDelayMs.toFloat(),
+                                    onValueChange = {
+                                        audioDelayMs = it.toLong()
+                                        mediaPlayer.setAudioDelay(audioDelayMs * 1000L)
+                                    },
+                                    valueRange = -5000f..5000f,
+                                    colors = SliderDefaults.colors(thumbColor = accentColor, activeTrackColor = accentColor)
+                                )
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                // Subtitle Delay Slider
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Subtitle Delay", style = typography.caption, color = Color(0xFF9EA3AE))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        TextButton(onClick = {
+                                            spuDelayMs = (spuDelayMs - 50L).coerceAtLeast(-5000L)
+                                            mediaPlayer.setSpuDelay(spuDelayMs * 1000L)
+                                        }) { Text("-50ms", color = Color(0xFFD1D5DB)) }
+                                        Text(
+                                            text = "${if (spuDelayMs > 0) "+$spuDelayMs" else "$spuDelayMs"} ms",
+                                            style = typography.caption.copy(fontWeight = FontWeight.Bold),
+                                            color = if (spuDelayMs != 0L) accentColor else Color.White,
+                                            modifier = Modifier.padding(horizontal = 4.dp)
+                                        )
+                                        TextButton(onClick = {
+                                            spuDelayMs = (spuDelayMs + 50L).coerceAtMost(5000L)
+                                            mediaPlayer.setSpuDelay(spuDelayMs * 1000L)
+                                        }) { Text("+50ms", color = Color(0xFFD1D5DB)) }
+                                    }
+                                }
+                                AppSlider(
+                                    value = spuDelayMs.toFloat(),
+                                    onValueChange = {
+                                        spuDelayMs = it.toLong()
+                                        mediaPlayer.setSpuDelay(spuDelayMs * 1000L)
+                                    },
+                                    valueRange = -5000f..5000f,
+                                    colors = SliderDefaults.colors(thumbColor = accentColor, activeTrackColor = accentColor)
+                                )
+                            }
+                            1 -> {
+                                // Tab 1: Sound & Equalizer
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("VLC 10-Band Equalizer", style = typography.body.copy(fontWeight = FontWeight.SemiBold), color = Color.White)
+                                        Text("Hardware-accelerated frequency tuning", style = typography.caption, color = Color(0xFF9EA3AE))
+                                    }
+                                    Switch(
+                                        checked = isEqualizerEnabled,
+                                        onCheckedChange = { enabled ->
+                                            isEqualizerEnabled = enabled
+                                            if (enabled) {
+                                                val eq = MediaPlayer.Equalizer.createFromPreset(selectedEqPresetIndex).apply {
+                                                    setPreAmp(eqPreAmp)
+                                                }
+                                                mediaPlayer.setEqualizer(eq)
+                                                Toast.makeText(context, "Equalizer enabled", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                mediaPlayer.setEqualizer(null)
+                                                Toast.makeText(context, "Equalizer disabled", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = accentColor)
+                                    )
+                                }
+
+                                if (isEqualizerEnabled) {
+                                    Spacer(modifier = Modifier.height(14.dp))
+                                    Text(
+                                        text = "Pre-Amplification: ${String.format(Locale.US, "%.1f", eqPreAmp)} dB",
+                                        style = typography.caption,
+                                        color = Color(0xFFD1D5DB)
+                                    )
+                                    AppSlider(
+                                        value = eqPreAmp,
+                                        onValueChange = {
+                                            eqPreAmp = it
+                                            val eq = MediaPlayer.Equalizer.createFromPreset(selectedEqPresetIndex).apply {
+                                                setPreAmp(it)
+                                            }
+                                            mediaPlayer.setEqualizer(eq)
+                                        },
+                                        valueRange = -20f..20f,
+                                        colors = SliderDefaults.colors(thumbColor = accentColor, activeTrackColor = accentColor)
+                                    )
+
+                                    Spacer(modifier = Modifier.height(14.dp))
+                                    Text("Equalizer Presets", style = typography.body.copy(fontWeight = FontWeight.SemiBold), color = Color.White)
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    val presetCount = remember { MediaPlayer.Equalizer.getPresetCount() }
+                                    val presets = remember { (0 until presetCount).map { i -> MediaPlayer.Equalizer.getPresetName(i) } }
+
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        presets.forEachIndexed { index, name ->
+                                            val isSelected = selectedEqPresetIndex == index
+                                            Surface(
+                                                shape = RoundedCornerShape(10.dp),
+                                                color = if (isSelected) accentColor else Color(0xFF1E222D),
+                                                border = BorderStroke(1.dp, if (isSelected) accentColor else Color(0x22FFFFFF)),
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .clickable {
+                                                        selectedEqPresetIndex = index
+                                                        val eq = MediaPlayer.Equalizer.createFromPreset(index).apply {
+                                                            setPreAmp(eqPreAmp)
+                                                        }
+                                                        mediaPlayer.setEqualizer(eq)
+                                                        Toast.makeText(context, "Preset: $name", Toast.LENGTH_SHORT).show()
+                                                    }
+                                            ) {
+                                                Text(
+                                                    text = name,
+                                                    style = typography.caption.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal),
+                                                    color = if (isSelected) Color.White else Color(0xFFD1D5DB),
+                                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(20.dp))
+
+                                // Audio Boost
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("Audio Boost (Up to 200%)", style = typography.body.copy(fontWeight = FontWeight.SemiBold), color = Color.White)
+                                        Text("Allows volume slider to amplify sound beyond standard Android 100% ceiling", style = typography.caption, color = Color(0xFF9EA3AE))
+                                    }
+                                    Switch(
+                                        checked = isAudioBoostEnabled,
+                                        onCheckedChange = { enabled ->
+                                            isAudioBoostEnabled = enabled
+                                            if (enabled) {
+                                                mediaPlayer.volume = 150
+                                                Toast.makeText(context, "Audio boost enabled (150%)", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                mediaPlayer.volume = 100
+                                                Toast.makeText(context, "Standard volume (100%)", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = accentColor)
+                                    )
+                                }
+                            }
+                            2 -> {
+                                // Tab 2: Playback & Tools
+                                Text("Playback Speed", style = typography.body.copy(fontWeight = FontWeight.SemiBold), color = Color.White)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                val speedList = listOf(0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    speedList.forEach { spd ->
+                                        val isSelected = playbackSpeed == spd
+                                        Surface(
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = if (isSelected) accentColor else Color(0xFF1E222D),
+                                            border = BorderStroke(1.dp, if (isSelected) accentColor else Color(0x22FFFFFF)),
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .clickable {
+                                                    playbackSpeed = spd
+                                                    mediaPlayer.rate = spd
+                                                }
+                                        ) {
+                                            Text(
+                                                text = "${spd}x",
+                                                style = typography.caption.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal),
+                                                color = if (isSelected) Color.White else Color(0xFFD1D5DB),
+                                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(18.dp))
+
+                                Text("Aspect Ratio", style = typography.body.copy(fontWeight = FontWeight.SemiBold), color = Color.White)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    VlcAspectMode.entries.forEachIndexed { index, mode ->
+                                        val isSelected = aspectModeIndex == index
+                                        Surface(
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = if (isSelected) accentColor else Color(0xFF1E222D),
+                                            border = BorderStroke(1.dp, if (isSelected) accentColor else Color(0x22FFFFFF)),
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .clickable {
+                                                    aspectModeIndex = index
+                                                    mediaPlayer.aspectRatio = mode.ratioStr
+                                                    mediaPlayer.scale = mode.scale
+                                                    Toast.makeText(context, mode.label, Toast.LENGTH_SHORT).show()
+                                                }
+                                        ) {
+                                            Text(
+                                                text = mode.buttonText,
+                                                style = typography.caption.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal),
+                                                color = if (isSelected) Color.White else Color(0xFFD1D5DB),
+                                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(18.dp))
+
+                                Text("A-B Repeat", style = typography.body.copy(fontWeight = FontWeight.SemiBold), color = Color.White)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = if (abRepeatA != null) accentColor.copy(alpha = 0.25f) else Color(0xFF1E222D),
+                                        border = BorderStroke(1.dp, if (abRepeatA != null) accentColor else Color(0x22FFFFFF)),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .clickable {
+                                                abRepeatA = currentPositionMs
+                                                Toast.makeText(context, "Point A: ${formatTime(currentPositionMs)}", Toast.LENGTH_SHORT).show()
+                                            }
+                                    ) {
+                                        Text(
+                                            text = if (abRepeatA != null) "A: ${formatTime(abRepeatA!!)}" else "Set Point A",
+                                            style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
+                                            color = if (abRepeatA != null) accentColor else Color.White,
+                                            modifier = Modifier.padding(vertical = 10.dp),
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                        )
+                                    }
+
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = if (abRepeatB != null) accentColor.copy(alpha = 0.25f) else Color(0xFF1E222D),
+                                        border = BorderStroke(1.dp, if (abRepeatB != null) accentColor else Color(0x22FFFFFF)),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .clickable {
+                                                if (abRepeatA != null && currentPositionMs > abRepeatA!!) {
+                                                    abRepeatB = currentPositionMs
+                                                    Toast.makeText(context, "Point B: ${formatTime(currentPositionMs)}. Looping A-B", Toast.LENGTH_SHORT).show()
+                                                } else {
+                                                    Toast.makeText(context, "Point B must be after Point A", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                    ) {
+                                        Text(
+                                            text = if (abRepeatB != null) "B: ${formatTime(abRepeatB!!)}" else "Set Point B",
+                                            style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
+                                            color = if (abRepeatB != null) accentColor else Color.White,
+                                            modifier = Modifier.padding(vertical = 10.dp),
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                        )
+                                    }
+
+                                    if (abRepeatA != null || abRepeatB != null) {
+                                        Surface(
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = Color(0xFF1E222D),
+                                            border = BorderStroke(1.dp, Color(0x22FFFFFF)),
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .clickable {
+                                                    abRepeatA = null
+                                                    abRepeatB = null
+                                                    Toast.makeText(context, "A-B Repeat cleared", Toast.LENGTH_SHORT).show()
+                                                }
+                                        ) {
+                                            Text(
+                                                text = "Clear",
+                                                style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
+                                                color = Color(0xFFEF4444),
+                                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(18.dp))
+
+                                Text("Sleep Timer", style = typography.body.copy(fontWeight = FontWeight.SemiBold), color = Color.White)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                val timerOptions = listOf(0 to "Off", 15 to "15m", 30 to "30m", 45 to "45m", 60 to "60m")
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    timerOptions.forEach { (mins, label) ->
+                                        val isSelected = sleepTimerMinutes == mins
+                                        Surface(
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = if (isSelected) accentColor else Color(0xFF1E222D),
+                                            border = BorderStroke(1.dp, if (isSelected) accentColor else Color(0x22FFFFFF)),
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .clickable {
+                                                    sleepTimerMinutes = mins
+                                                    if (mins > 0) {
+                                                        Toast.makeText(context, "Sleep timer: $mins minutes", Toast.LENGTH_SHORT).show()
+                                                    } else {
+                                                        Toast.makeText(context, "Sleep timer turned off", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                style = typography.caption.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal),
+                                                color = if (isSelected) Color.White else Color(0xFFD1D5DB),
+                                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(18.dp))
+
+                                // Loop & Hardware Acceleration toggles
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Loop Single Video", style = typography.body, color = Color.White)
+                                    Switch(
+                                        checked = isLooping,
+                                        onCheckedChange = { isLooping = it },
+                                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = accentColor)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Hardware Acceleration", style = typography.body, color = Color.White)
+                                    Switch(
+                                        checked = hwDecoderEnabled,
+                                        onCheckedChange = {
+                                            hwDecoderEnabled = it
+                                            retryAttempt++
+                                            Toast.makeText(context, if (it) "Hardware decoding enabled" else "Software decoding enabled", Toast.LENGTH_SHORT).show()
+                                        },
+                                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = accentColor)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(20.dp))
+
+                                // Action Buttons Row: PiP, Audio Extraction, Share
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                        Surface(
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = Color(0xFF1E222D),
+                                            border = BorderStroke(1.dp, Color(0x22FFFFFF)),
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .clickable {
+                                                    isSettingsSheetOpen = false
+                                                    val params = PictureInPictureParams.Builder()
+                                                        .setAspectRatio(Rational(16, 9))
+                                                        .build()
+                                                    activity?.enterPictureInPictureMode(params)
+                                                }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(vertical = 10.dp),
+                                                horizontalArrangement = Arrangement.Center,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(Icons.Filled.PictureInPicture, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text("PiP", style = typography.caption.copy(fontWeight = FontWeight.SemiBold), color = Color.White)
+                                            }
+                                        }
+                                    }
+
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = Color(0xFF1E222D),
+                                        border = BorderStroke(1.dp, Color(0x22FFFFFF)),
+                                        modifier = Modifier
+                                            .weight(1.3f)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .clickable {
+                                                isSettingsSheetOpen = false
+                                                scope.launch {
+                                                    Toast.makeText(context, "Extracting audio track...", Toast.LENGTH_SHORT).show()
+                                                    val extractor = com.abhisheksati.mydoc.media.audio.AudioExtractor(context)
+                                                    val result = extractor.extractAudioFromVideo(item.uri, item.displayName.substringBeforeLast('.'))
+                                                    result.onSuccess { audioFile ->
+                                                        Toast.makeText(context, "Audio saved: Music/${audioFile.name}", Toast.LENGTH_LONG).show()
+                                                    }.onFailure { err ->
+                                                        Toast.makeText(context, "Audio extraction failed: ${err.message}", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+                                            }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(vertical = 10.dp),
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(Icons.Filled.Audiotrack, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("Extract M4A", style = typography.caption.copy(fontWeight = FontWeight.SemiBold), color = Color.White)
+                                        }
+                                    }
+
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = Color(0xFF1E222D),
+                                        border = BorderStroke(1.dp, Color(0x22FFFFFF)),
+                                        modifier = Modifier
+                                            .weight(1.1f)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .clickable {
+                                                isSettingsSheetOpen = false
+                                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                                    type = item.mimeType
+                                                    putExtra(Intent.EXTRA_STREAM, item.uri)
+                                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                }
+                                                context.startActivity(Intent.createChooser(shareIntent, "Share video"))
+                                            }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(vertical = 10.dp),
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(Icons.Filled.Share, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("Share", style = typography.caption.copy(fontWeight = FontWeight.SemiBold), color = Color.White)
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
-                },
-                confirmButton = {},
-                dismissButton = {
-                    TextButton(onClick = { isEqualizerDialogOpen = false }) {
-                        Text("Done")
-                    }
                 }
-            )
+            }
         }
     }
 }

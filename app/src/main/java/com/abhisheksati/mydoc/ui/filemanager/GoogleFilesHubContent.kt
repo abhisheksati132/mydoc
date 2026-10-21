@@ -59,10 +59,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.StorageVolume
 import com.abhisheksati.mydoc.ui.storage.StorageAnalysisUiState
@@ -75,7 +78,7 @@ import java.io.File
  * 1. Master Storage Analysis card with multi-color segmented bar & quick clean button.
  * 2. 6 core categories split in a sleek 2-column grid.
  * 3. Storage Devices section with Internal Storage (and SD card if present).
- * 4. Tools & Protection section (Recycle Bin with badge, Safe Folder, Wi-Fi Transfer).
+ * 4. Tools & Protection section (Recycle Bin with badge).
  */
 @Composable
 fun GoogleFilesHubContent(
@@ -86,7 +89,6 @@ fun GoogleFilesHubContent(
     onAppsClick: () -> Unit,
     onCleanClick: () -> Unit,
     onOpenTrash: () -> Unit,
-    onOpenVault: () -> Unit,
     pinnedFolders: List<File>,
     onFolderClick: (File) -> Unit,
     trashCount: Int,
@@ -193,11 +195,15 @@ fun GoogleFilesHubContent(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     pinnedFolders.forEach { folder ->
+                        val haptic = LocalHapticFeedback.current
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = if (isOled) Color(0xFF141720) else colors.surface,
-                            border = BorderStroke(1.dp, colors.divider.copy(alpha = 0.5f)),
-                            modifier = Modifier.clickable { onFolderClick(folder) }
+                            color = colors.surface,
+                            border = BorderStroke(1.dp, colors.cardBorder),
+                            modifier = Modifier.clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onFolderClick(folder)
+                            }
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -222,7 +228,7 @@ fun GoogleFilesHubContent(
             }
         }
 
-        // 5. Tools & Protection Section (Recycle Bin, Safe Folder, Wi-Fi Transfer)
+        // 5. Tools & Protection Section (Recycle Bin)
         item {
             Spacer(modifier = Modifier.height(24.dp))
             Text(
@@ -252,26 +258,6 @@ fun GoogleFilesHubContent(
                         badgeText = if (trashCount > 0) "$trashCount items" else null,
                         badgeColor = colors.accent,
                         onClick = onOpenTrash
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .height(1.dp)
-                            .background(colors.divider.copy(alpha = 0.4f))
-                    )
-
-                    // Safe Folder (Vault) Item
-                    HubUtilityRow(
-                        icon = Icons.Outlined.Lock,
-                        iconTint = Color(0xFF4CAF50),
-                        iconBackground = Color(0xFF4CAF50).copy(alpha = 0.14f),
-                        title = "Safe Folder",
-                        subtitle = "Encrypted vault with biometric or PIN lock",
-                        badgeText = null,
-                        badgeColor = Color.Transparent,
-                        onClick = onOpenVault
                     )
                 }
             }
@@ -406,6 +392,7 @@ private fun GoogleFilesCategoryCard(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
+    val haptic = LocalHapticFeedback.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
@@ -417,7 +404,7 @@ private fun GoogleFilesCategoryCard(
 
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = if (isOled) colors.surface else colors.surface,
+        color = colors.surface,
         border = BorderStroke(1.dp, colors.cardBorder),
         modifier = modifier
             .graphicsLayer {
@@ -425,7 +412,14 @@ private fun GoogleFilesCategoryCard(
                 scaleY = scale
             }
             .clip(RoundedCornerShape(18.dp))
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClick()
+                }
+            )
     ) {
         Row(
             modifier = Modifier
@@ -462,7 +456,7 @@ private fun GoogleFilesCategoryCard(
                 val sub = if (sizeText.isNotEmpty()) "$countText • $sizeText" else countText
                 Text(
                     text = sub,
-                    style = typography.caption.copy(fontSize = 11.sp),
+                    style = typography.caption.withTabularFigures().copy(fontSize = 11.sp),
                     color = colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -538,7 +532,7 @@ private fun InternalStorageCard(
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "${uiState.formattedFree} free of ${uiState.formattedTotal}",
-                    style = typography.caption.copy(fontSize = 12.sp),
+                    style = typography.caption.withTabularFigures().copy(fontSize = 12.sp),
                     color = colors.textSecondary
                 )
                 Spacer(modifier = Modifier.height(6.dp))
@@ -619,7 +613,7 @@ private fun SecondaryStorageCard(
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "${StorageVolume.formatBytes(volume.freeBytes)} free of ${StorageVolume.formatBytes(volume.totalBytes)}",
-                    style = typography.caption.copy(fontSize = 12.sp),
+                    style = typography.caption.withTabularFigures().copy(fontSize = 12.sp),
                     color = colors.textSecondary
                 )
                 Spacer(modifier = Modifier.height(6.dp))
@@ -647,7 +641,7 @@ private fun SecondaryStorageCard(
 }
 
 /**
- * Clean Utility list row (Recycle Bin, Safe Folder, Wi-Fi Transfer)
+ * Clean Utility list row (Recycle Bin)
  */
 @Composable
 private fun HubUtilityRow(

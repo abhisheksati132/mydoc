@@ -103,6 +103,7 @@ import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.MediaFilter
 import com.abhisheksati.mydoc.domain.model.MediaItem
 import com.abhisheksati.mydoc.viewmodel.MediaViewModel
@@ -710,11 +711,11 @@ private fun MediaThumbnailItem(
             .fillMaxWidth()
             .aspectRatio(1f)
             .clip(RoundedCornerShape(14.dp))
-            .background(if (isOled) Color(0xFF0D0D0F) else colors.surfaceVariant)
+            .background(colors.surfaceVariant)
             .border(
                 BorderStroke(
-                    if (isSelected) 2.dp else 0.75.dp,
-                    if (isSelected) colors.accent else if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)
+                    if (isSelected) 2.dp else 1.dp,
+                    if (isSelected) colors.accent else colors.cardBorder
                 ),
                 RoundedCornerShape(14.dp)
             )
@@ -804,7 +805,7 @@ private fun MediaThumbnailItem(
                     Spacer(modifier = Modifier.size(2.dp))
                     Text(
                         text = item.formattedDuration,
-                        style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
+                        style = typography.caption.withTabularFigures().copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
                         color = Color.White
                     )
                 }

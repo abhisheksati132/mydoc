@@ -203,7 +203,7 @@ fun FastScrollbar(
                     }
                     Text(
                         text = "${lastHapticPage + 1} / $pageCount",
-                        style = typography.caption.copy(fontWeight = FontWeight.Bold),
+                        style = typography.caption.copy(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum"),
                         color = colors.textPrimary
                     )
                 }

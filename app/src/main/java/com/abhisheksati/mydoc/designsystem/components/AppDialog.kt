@@ -52,11 +52,11 @@ fun AppDialog(
     AlertDialog(
         onDismissRequest = effectiveDismiss,
         shape = RoundedCornerShape(24.dp),
-        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surfaceContainerHigh,
         modifier = Modifier.border(
             BorderStroke(
                 0.8.dp,
-                if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)
+                if (isOled) Color.White.copy(alpha = 0.08f) else colors.cardBorder
             ),
             shape = RoundedCornerShape(24.dp)
         ),
@@ -120,7 +120,7 @@ fun AppDialog(
                     shape = RoundedCornerShape(999.dp),
                     border = BorderStroke(
                         0.8.dp,
-                        if (isOled) Color.White.copy(alpha = 0.12f) else colors.divider
+                        if (isOled) Color.White.copy(alpha = 0.12f) else colors.cardBorder
                     ),
                     modifier = Modifier.defaultMinSize(minHeight = 40.dp)
                 ) {

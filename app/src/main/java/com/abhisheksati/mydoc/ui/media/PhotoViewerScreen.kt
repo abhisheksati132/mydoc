@@ -97,6 +97,7 @@ fun PhotoViewerScreen(
     val context = LocalContext.current
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
 
     val photoList = remember(items) { mutableStateListOf(*items.toTypedArray()) }
@@ -163,10 +164,10 @@ fun PhotoViewerScreen(
     }
 
     val isDarkMode = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
-    val viewerBackground = if (isDarkMode) Color(0xFF0D0F14) else colors.background
-    val overlayBackground = if (isDarkMode) Color(0xF0101217) else colors.surface.copy(alpha = 0.94f)
-    val contentColor = if (isDarkMode) Color(0xFFEDEDED) else colors.textPrimary
-    val secondaryColor = if (isDarkMode) Color(0xFFA0A0A5) else colors.textSecondary
+    val viewerBackground = colors.background
+    val overlayBackground = if (isDarkMode) colors.surface.copy(alpha = 0.88f) else colors.surface.copy(alpha = 0.94f)
+    val contentColor = colors.textPrimary
+    val secondaryColor = colors.textSecondary
 
     Box(
         modifier = modifier
@@ -241,7 +242,7 @@ fun PhotoViewerScreen(
                         if (photoList.size > 1) {
                             Text(
                                 text = "${pagerState.currentPage + 1} of ${photoList.size}",
-                                style = typography.caption,
+                                style = typography.caption.copy(fontFeatureSettings = "tnum"),
                                 color = secondaryColor
                             )
                         }
@@ -538,12 +539,16 @@ private fun PhotoViewerActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick)
+            .clickable(onClick = {
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                onClick()
+            })
             .padding(horizontal = 14.dp, vertical = 6.dp)
     ) {
         Icon(

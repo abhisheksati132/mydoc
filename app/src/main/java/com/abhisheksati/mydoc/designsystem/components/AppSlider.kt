@@ -13,6 +13,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
@@ -36,6 +38,7 @@ fun AppSlider(
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() }
 ) {
     val appColors = LocalAppColors.current
+    val haptic = LocalHapticFeedback.current
     val sliderColors = colors ?: SliderDefaults.colors(
         thumbColor = appColors.accent,
         activeTrackColor = appColors.accent,
@@ -49,7 +52,10 @@ fun AppSlider(
         enabled = enabled,
         valueRange = valueRange,
         steps = steps,
-        onValueChangeFinished = onValueChangeFinished,
+        onValueChangeFinished = {
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            onValueChangeFinished?.invoke()
+        },
         colors = sliderColors,
         interactionSource = interactionSource,
         thumb = {

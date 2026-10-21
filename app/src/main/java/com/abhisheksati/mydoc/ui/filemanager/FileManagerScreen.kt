@@ -144,9 +144,13 @@ import androidx.core.content.FileProvider
 import com.abhisheksati.mydoc.data.local.StoragePermissionHelper
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppSearchField
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.ClipboardOperation
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.StorageFileType
@@ -215,7 +219,6 @@ fun FileManagerScreen(
     var isSearchActive by remember { mutableStateOf(false) }
     var showStorageCleanerSheet by remember { mutableStateOf(false) }
     var showAppManagerSheet by remember { mutableStateOf(false) }
-    var showVaultSheet by remember { mutableStateOf(false) }
     val pinnedFoldersManager = remember { com.abhisheksati.mydoc.data.local.PinnedFoldersManager(context) }
     val pinnedFolders by pinnedFoldersManager.pinnedFolders.collectAsState()
 
@@ -278,10 +281,10 @@ fun FileManagerScreen(
             ) { data ->
                 androidx.compose.material3.Snackbar(
                     snackbarData = data,
-                    containerColor = Color(0xFF1E1E1E),
-                    contentColor = Color.White,
+                    containerColor = colors.surfaceVariant,
+                    contentColor = colors.textPrimary,
                     actionColor = colors.accent,
-                    shape = RoundedCornerShape(AppSpacing.chipCornerRadius)
+                    shape = RoundedCornerShape(AppSpacing.cornerRadius)
                 )
             }
         },
@@ -628,9 +631,6 @@ fun FileManagerScreen(
                         onOpenTrash = {
                             viewModel.openTrash()
                         },
-                        onOpenVault = {
-                            showVaultSheet = true
-                        },
                         pinnedFolders = pinnedFolders,
                         onFolderClick = { folder ->
                             viewModel.startBrowsingStorage(folder)
@@ -774,11 +774,10 @@ fun FileManagerScreen(
                     .padding(start = 16.dp, end = 16.dp, bottom = 96.dp)
             ) {
                 uiState.clipboardState?.let { clip ->
-                    val isOled = colors.background == DarkAppColors.background
                     Card(
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = if (isOled) Color(0xFF13151F) else colors.surface),
-                        border = BorderStroke(1.dp, if (isOled) Color.White.copy(alpha = 0.1f) else colors.divider),
+                        colors = CardDefaults.cardColors(containerColor = colors.surface),
+                        border = BorderStroke(1.dp, colors.cardBorder),
                         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -947,25 +946,13 @@ fun FileManagerScreen(
         )
     }
 
-    if (showVaultSheet) {
-        com.abhisheksati.mydoc.ui.vault.VaultSheet(
-            onDismiss = {
-                showVaultSheet = false
-                viewModel.loadDirectory(uiState.currentDirectory, addToHistory = false)
-                viewModel.refreshVolumes()
-            },
-            onOpenFile = onOpenFile
-        )
-    }
-
     // Single item context action bottom sheet
     singleItemActionTarget?.let { item ->
-        val isOled = colors.background == DarkAppColors.background
         val sheetState = rememberModalBottomSheetState()
         ModalBottomSheet(
             onDismissRequest = { singleItemActionTarget = null },
             sheetState = sheetState,
-            containerColor = if (isOled) Color(0xFF10121A) else colors.surface
+            containerColor = colors.surface
         ) {
             Column(
                 modifier = Modifier
@@ -1059,26 +1046,7 @@ fun FileManagerScreen(
                     }
                 )
 
-                if (!item.isDirectory) {
-                    ItemActionOption(
-                        title = "Move to Safe Vault (Encrypt)",
-                        icon = Icons.Outlined.Lock,
-                        tint = colors.accent,
-                        onClick = {
-                            singleItemActionTarget = null
-                            coroutineScope.launch {
-                                val vaultMgr = com.abhisheksati.mydoc.security.vault.VaultManager(context)
-                                val res = vaultMgr.encryptAndMoveToVault(item.file)
-                                res.onSuccess {
-                                    Toast.makeText(context, "Encrypted and moved to Safe Vault", Toast.LENGTH_SHORT).show()
-                                    viewModel.loadDirectory(uiState.currentDirectory, addToHistory = false)
-                                }.onFailure { err ->
-                                    Toast.makeText(context, "Vault error: ${err.message}", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        }
-                    )
-                } else {
+                if (item.isDirectory) {
                     val isPinned = pinnedFoldersManager.isPinned(item.file)
                     ItemActionOption(
                         title = if (isPinned) "Unpin from Quick Access" else "Pin to Quick Access",
@@ -1194,11 +1162,8 @@ fun StorageVolumeSummary(
 
             Surface(
                 shape = RoundedCornerShape(18.dp),
-                color = if (isOled) Color(0xFF0F1116) else colors.surface,
-                border = BorderStroke(
-                    1.dp,
-                    if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)
-                ),
+                color = colors.surface,
+                border = BorderStroke(1.dp, colors.cardBorder),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp)
@@ -1297,7 +1262,7 @@ fun StorageVolumeSummary(
                     LinearProgressIndicator(
                         progress = { volume.usedRatio },
                         color = colors.accent,
-                        trackColor = if (isOled) Color(0xFF1E2026) else colors.divider,
+                        trackColor = colors.surfaceVariant,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(6.dp)
@@ -1319,7 +1284,7 @@ fun StoragePermissionBanner(
 
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = if (isOled) Color(0xFF101218) else colors.surface,
+        color = colors.surface,
         border = BorderStroke(1.dp, colors.accent.copy(alpha = 0.25f)),
         modifier = Modifier
             .fillMaxWidth()
@@ -1417,15 +1382,17 @@ fun FileManagerCategoryChips(
     val typography = LocalAppTypography.current
 
     val categories = listOf(
-        Triple(FileCategory.DOWNLOADS, Icons.Outlined.Download, Color(0xFF0288D1)),
-        Triple(FileCategory.DOCUMENTS, Icons.Outlined.Description, Color(0xFF3F51B5)),
-        Triple(FileCategory.IMAGES, Icons.Outlined.Image, Color(0xFF4CAF50)),
-        Triple(FileCategory.VIDEOS, Icons.Outlined.Videocam, Color(0xFFE91E63)),
-        Triple(FileCategory.AUDIO, Icons.Outlined.AudioFile, Color(0xFF9C27B0)),
-        Triple(FileCategory.APKS, Icons.Outlined.Android, Color(0xFF2E7D32)),
-        Triple(FileCategory.ARCHIVES, Icons.Outlined.FolderZip, Color(0xFFFFA000)),
-        Triple(FileCategory.LARGE_FILES, Icons.Outlined.DataUsage, Color(0xFFFF5722))
+        Triple(FileCategory.DOWNLOADS, Icons.Outlined.Download, colors.accent),
+        Triple(FileCategory.DOCUMENTS, Icons.Outlined.Description, DocumentFormatColors.wordTint),
+        Triple(FileCategory.IMAGES, Icons.Outlined.Image, DocumentFormatColors.excelTint),
+        Triple(FileCategory.VIDEOS, Icons.Outlined.Videocam, DocumentFormatColors.mediaTint),
+        Triple(FileCategory.AUDIO, Icons.Outlined.AudioFile, DocumentFormatColors.zipTint),
+        Triple(FileCategory.APKS, Icons.Outlined.Android, Color(0xFF10B981)),
+        Triple(FileCategory.ARCHIVES, Icons.Outlined.FolderZip, DocumentFormatColors.pptTint),
+        Triple(FileCategory.LARGE_FILES, Icons.Outlined.DataUsage, DocumentFormatColors.pdfTint)
     )
+
+    val haptic = LocalHapticFeedback.current
 
     Row(
         modifier = modifier
@@ -1436,8 +1403,8 @@ fun FileManagerCategoryChips(
     ) {
         for ((cat, icon, color) in categories) {
             val isSelected = activeCategory == cat
-            val chipBg = if (isSelected) color.copy(alpha = 0.2f) else colors.surface
-            val chipBorderColor = if (isSelected) color else colors.divider
+            val chipBg = if (isSelected) color.copy(alpha = 0.16f) else colors.surface
+            val chipBorderColor = if (isSelected) color else colors.cardBorder
 
             Surface(
                 shape = RoundedCornerShape(16.dp),
@@ -1445,7 +1412,10 @@ fun FileManagerCategoryChips(
                 border = androidx.compose.foundation.BorderStroke(if (isSelected) 1.5.dp else 1.dp, chipBorderColor),
                 modifier = Modifier
                     .clip(RoundedCornerShape(16.dp))
-                    .clickable { onCategorySelected(cat) }
+                    .clickable {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onCategorySelected(cat)
+                    }
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

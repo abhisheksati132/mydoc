@@ -96,8 +96,21 @@ class SettingsRepository(context: Context) {
     private val _doubleTapZoom = MutableStateFlow(prefs.getBoolean(KEY_DOUBLE_TAP_ZOOM, true))
     val doubleTapZoom: StateFlow<Boolean> = _doubleTapZoom.asStateFlow()
 
-    private val _autoLockVaultOnBackground = MutableStateFlow(prefs.getBoolean(KEY_AUTO_LOCK_VAULT, true))
-    val autoLockVaultOnBackground: StateFlow<Boolean> = _autoLockVaultOnBackground.asStateFlow()
+    private val _dynamicColor = MutableStateFlow(prefs.getBoolean(KEY_DYNAMIC_COLOR, Build.VERSION.SDK_INT >= Build.VERSION_CODES.S))
+    val dynamicColor: StateFlow<Boolean> = _dynamicColor.asStateFlow()
+
+    private val _amoledBlack = MutableStateFlow(prefs.getBoolean(KEY_AMOLED_BLACK, true))
+    val amoledBlack: StateFlow<Boolean> = _amoledBlack.asStateFlow()
+
+    fun setDynamicColor(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_DYNAMIC_COLOR, enabled).apply()
+        _dynamicColor.value = enabled
+    }
+
+    fun setAmoledBlack(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AMOLED_BLACK, enabled).apply()
+        _amoledBlack.value = enabled
+    }
 
     fun setThemeMode(mode: AppThemeMode) {
         prefs.edit().putString(KEY_THEME_MODE, mode.name).apply()
@@ -212,11 +225,6 @@ class SettingsRepository(context: Context) {
         _doubleTapZoom.value = enabled
     }
 
-    fun setAutoLockVaultOnBackground(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_AUTO_LOCK_VAULT, enabled).apply()
-        _autoLockVaultOnBackground.value = enabled
-    }
-
     fun getSystemDiagnostics(): AppSystemDiagnostics {
         val runtime = Runtime.getRuntime()
         val usedBytes = runtime.totalMemory() - runtime.freeMemory()
@@ -310,6 +318,7 @@ class SettingsRepository(context: Context) {
         private const val KEY_VIDEO_AUTO_LOOP = "video_auto_loop"
         private const val KEY_PDF_FIT_MODE = "pdf_fit_mode"
         private const val KEY_DOUBLE_TAP_ZOOM = "double_tap_zoom"
-        private const val KEY_AUTO_LOCK_VAULT = "auto_lock_vault"
+        private const val KEY_DYNAMIC_COLOR = "dynamic_color_enabled"
+        private const val KEY_AMOLED_BLACK = "amoled_black_enabled"
     }
 }

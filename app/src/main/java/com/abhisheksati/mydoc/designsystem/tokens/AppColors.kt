@@ -24,7 +24,17 @@ data class AppColors(
     val accent: Color,
     val accentVariant: Color = accent.copy(alpha = 0.16f),
     val cardBorder: Color = divider,
-    val error: Color
+    val error: Color,
+    // Material 3 / Material You tokens
+    val primaryContainer: Color = accentVariant,
+    val onPrimaryContainer: Color = accent,
+    val secondaryContainer: Color = surfaceVariant,
+    val onSecondaryContainer: Color = textPrimary,
+    val surfaceContainer: Color = surface,
+    val surfaceContainerHigh: Color = surfaceVariant,
+    val surfaceContainerLow: Color = surface,
+    val outline: Color = divider,
+    val outlineVariant: Color = cardBorder
 )
 
 val DarkAppColors = AppColors(

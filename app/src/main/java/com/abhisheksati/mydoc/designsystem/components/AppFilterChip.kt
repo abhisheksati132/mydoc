@@ -38,22 +38,22 @@ fun AppFilterChip(
     ) {
         Surface(
             shape = RoundedCornerShape(999.dp),
-            color = if (selected) colors.surfaceVariant else Color.Transparent,
+            color = if (selected) colors.primaryContainer else Color.Transparent,
             border = androidx.compose.foundation.BorderStroke(
                 1.dp,
-                if (selected) colors.accent.copy(alpha = 0.4f) else colors.divider.copy(alpha = 0.6f)
+                if (selected) Color.Transparent else colors.cardBorder
             ),
             modifier = Modifier.clickable(onClick = onClick)
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (leadingIcon != null) {
                     androidx.compose.material3.Icon(
                         imageVector = leadingIcon,
                         contentDescription = null,
-                        tint = if (selected) colors.accent else colors.textSecondary,
+                        tint = if (selected) colors.onPrimaryContainer else colors.textSecondary,
                         modifier = Modifier.defaultMinSize(16.dp, 16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -61,7 +61,7 @@ fun AppFilterChip(
                 Text(
                     text = label,
                     style = typography.label,
-                    color = if (selected) colors.textPrimary else colors.textSecondary
+                    color = if (selected) colors.onPrimaryContainer else colors.textSecondary
                 )
             }
         }

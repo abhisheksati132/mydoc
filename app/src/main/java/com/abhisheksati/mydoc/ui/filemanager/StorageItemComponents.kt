@@ -57,9 +57,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.StorageFileType
 import com.abhisheksati.mydoc.domain.model.StorageItem
 
@@ -93,6 +96,7 @@ fun StorageItemRow(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
+    val haptic = LocalHapticFeedback.current
     val (icon, tint) = getFileTypeIcon(item.fileType)
 
     val rowBackground = if (isSelected) {
@@ -109,8 +113,16 @@ fun StorageItemRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
+                onClick = {
+                    if (isSelectionMode) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
+                    onClick()
+                },
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                }
             )
             .padding(horizontal = 8.dp, vertical = 2.dp)
     ) {
@@ -173,13 +185,13 @@ fun StorageItemRow(
                 ) {
                     Text(
                         text = item.formattedSize,
-                        style = typography.caption.copy(fontSize = 12.sp),
+                        style = typography.caption.withTabularFigures().copy(fontSize = 12.sp),
                         color = colors.textSecondary
                     )
                     if (item.formattedLastModified.isNotEmpty()) {
                         Text(
                             text = "  •  ${item.formattedLastModified}",
-                            style = typography.caption.copy(fontSize = 12.sp),
+                            style = typography.caption.withTabularFigures().copy(fontSize = 12.sp),
                             color = colors.textSecondary
                         )
                     }
@@ -217,13 +229,14 @@ fun StorageItemGrid(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
+    val haptic = LocalHapticFeedback.current
     val isOled = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
     val (icon, tint) = getFileTypeIcon(item.fileType)
 
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) colors.accentVariant else if (isOled) colors.surface else colors.surface
+            containerColor = if (isSelected) colors.accentVariant else colors.surface
         ),
         border = BorderStroke(
             1.dp,
@@ -235,8 +248,16 @@ fun StorageItemGrid(
             .aspectRatio(0.92f)
             .clip(RoundedCornerShape(12.dp))
             .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
+                onClick = {
+                    if (isSelectionMode) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
+                    onClick()
+                },
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                }
             )
     ) {
         Box(
@@ -308,7 +329,7 @@ fun StorageItemGrid(
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = item.formattedSize,
-                    style = typography.caption.copy(fontSize = 11.sp),
+                    style = typography.caption.withTabularFigures().copy(fontSize = 11.sp),
                     color = colors.textSecondary
                 )
             }
