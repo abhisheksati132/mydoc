@@ -223,6 +223,11 @@ fun HomeScreen(
                 scope.launch {
                     val count = FolderScanner.scanTree(context, uri, app.documentRepository)
                     Toast.makeText(context, "Added $count documents from $cleanName", Toast.LENGTH_SHORT).show()
+                    val subfolders = FolderScanner.detectSubfolders(context, uri)
+                    if (subfolders.isNotEmpty()) {
+                        detectedFolders = subfolders
+                        showAutoShelvesDialog = true
+                    }
                 }
             } catch (e: Exception) {
                 Toast.makeText(context, "Unable to access folder: ${e.message}", Toast.LENGTH_SHORT).show()

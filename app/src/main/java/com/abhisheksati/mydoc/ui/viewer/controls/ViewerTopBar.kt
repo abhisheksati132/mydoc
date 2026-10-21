@@ -59,6 +59,7 @@ fun ViewerTopBar(
     onBackClick: () -> Unit,
     onShareClick: () -> Unit,
     onToggleBookmark: () -> Unit,
+    shelfColor: Color? = null,
     onToolsClick: (() -> Unit)? = null,
     onOcrClick: (() -> Unit)? = null,
     onTtsClick: (() -> Unit)? = null,
@@ -135,7 +136,7 @@ fun ViewerTopBar(
                     Icon(
                         imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
                         contentDescription = if (isBookmarked) "Remove bookmark" else "Add bookmark",
-                        tint = if (isBookmarked) colors.accent else colors.textSecondary
+                        tint = if (isBookmarked) (shelfColor ?: colors.accent) else colors.textSecondary
                     )
                 }
 

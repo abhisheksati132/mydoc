@@ -82,6 +82,7 @@ import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
@@ -506,6 +507,7 @@ fun PdfViewerScreen(
             title = document.displayName,
             visible = state.areControlsVisible && !state.isSearchOpen,
             isBookmarked = isCurrentBookmarked,
+            shelfColor = document.shelfColorIndex?.let { AppTheme.colors.getShelfColor(it).color },
             onBackClick = onBackClick,
             onShareClick = onShareClick,
             onToggleBookmark = {
