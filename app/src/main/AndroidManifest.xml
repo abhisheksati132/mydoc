@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- The network permissions for local Wi-Fi transfer and updater -->
+    <!-- The network permissions for updater -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
@@ -20,11 +20,6 @@
     <uses-permission android:name="android.permission.READ_MEDIA_DOCUMENTS" />
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
 
-    <!-- Phase 8: Media permissions for browsing photos and videos in Media tab -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -60,7 +55,6 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:supportsPictureInPicture="true"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:theme="@style/Theme.MyDoc">
             
@@ -70,7 +64,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- ACTION_VIEW: Opening documents and media from File Manager, WhatsApp, Email, Downloads -->
+            <!-- ACTION_VIEW: Opening documents from File Manager, WhatsApp, Email, Downloads -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -104,13 +98,6 @@
                 <data android:mimeType="text/csv" />
                 <data android:mimeType="text/comma-separated-values" />
                 <data android:mimeType="application/json" />
-
-                <!-- Phase 8: Images & Photos -->
-                <data android:mimeType="image/*" />
-
-                <!-- Phase 8: Videos & Audio -->
-                <data android:mimeType="video/*" />
-                <data android:mimeType="audio/*" />
             </intent-filter>
 
             <!-- ACTION_SEND: When a user taps Share -> mydoc on a file -->
@@ -139,13 +126,6 @@
                 <data android:mimeType="text/csv" />
                 <data android:mimeType="text/comma-separated-values" />
                 <data android:mimeType="application/json" />
-
-                <!-- Phase 8: Images & Photos -->
-                <data android:mimeType="image/*" />
-
-                <!-- Phase 8: Videos & Audio -->
-                <data android:mimeType="video/*" />
-                <data android:mimeType="audio/*" />
             </intent-filter>
         </activity>
 

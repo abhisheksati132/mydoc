@@ -85,17 +85,11 @@ fun ToolsScreen(
     onSettingsClick: (() -> Unit)? = null,
     onToggleTheme: (() -> Unit)? = null,
     isDarkTheme: Boolean = false,
-    onOpenTrash: (() -> Unit)? = null,
-    trashCount: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val haptic = LocalHapticFeedback.current
-
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
-    var showStorageCleanerSheet by remember { mutableStateOf(false) }
 
     var searchQuery by remember { mutableStateOf("") }
 
@@ -199,29 +193,6 @@ fun ToolsScreen(
                 }
             },
             moreMenuContent = { onDismiss ->
-                if (onOpenTrash != null) {
-                    DropdownMenuItem(
-                        text = {
-                            Row(
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Recycle Bin", style = typography.body)
-                                if (trashCount > 0) {
-                                    Badge { Text(trashCount.toString()) }
-                                }
-                            }
-                        },
-                        leadingIcon = {
-                            Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.accent)
-                        },
-                        onClick = {
-                            onDismiss()
-                            onOpenTrash()
-                        }
-                    )
-                }
                 DropdownMenuItem(
                     text = { Text("Scan Document to PDF", style = typography.body) },
                     leadingIcon = {
@@ -230,16 +201,6 @@ fun ToolsScreen(
                     onClick = {
                         onDismiss()
                         onToolClick(PdfTool.SCAN_TO_PDF)
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Storage Cleaner", style = typography.body) },
-                    leadingIcon = {
-                        Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.accent)
-                    },
-                    onClick = {
-                        onDismiss()
-                        showStorageCleanerSheet = true
                     }
                 )
                 if (onSettingsClick != null) {
@@ -324,13 +285,6 @@ fun ToolsScreen(
                     }
                 }
             }
-        }
-
-        if (showStorageCleanerSheet) {
-            com.abhisheksati.mydoc.ui.cleaner.StorageCleanerSheet(
-                rootDir = android.os.Environment.getExternalStorageDirectory(),
-                onDismiss = { showStorageCleanerSheet = false }
-            )
         }
     }
 }

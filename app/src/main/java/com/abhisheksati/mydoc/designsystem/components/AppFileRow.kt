@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -18,10 +17,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FolderSpecial
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -35,15 +34,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
@@ -71,19 +63,19 @@ fun formatMiddleTruncated(name: String, maxChars: Int = 36): String {
     return base.take(frontChars) + "…" + base.takeLast(backChars) + ext
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppFileRow(
     displayName: String,
     typeBadge: String,
     metadataText: String,
-    isFavorite: Boolean,
+    isFavorite: Boolean = false,
     progressFraction: Float? = null,
     progressText: String? = null,
     showDivider: Boolean = true,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
-    onToggleFavorite: () -> Unit,
+    onToggleFavorite: (() -> Unit)? = null,
     onShare: () -> Unit,
     onDetails: () -> Unit,
     onMoveToShelf: (() -> Unit)? = null,
@@ -95,90 +87,25 @@ fun AppFileRow(
     val typography = AppTheme.typography
     val haptics = rememberAppHaptics()
 
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    haptics.confirm()
-                    onToggleFavorite()
-                    false
-                }
-                SwipeToDismissBoxValue.EndToStart -> {
-                    if (onRemove != null) {
-                        haptics.reject()
-                        onRemove()
-                        true
-                    } else false
-                }
-                SwipeToDismissBoxValue.Settled -> false
-            }
-        }
-    )
-
     Column(
         modifier = modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = AppSpacing.minTouchTarget)
     ) {
-        SwipeToDismissBox(
-            state = dismissState,
-            enableDismissFromStartToEnd = true,
-            enableDismissFromEndToStart = onRemove != null,
-            backgroundContent = {
-                val direction = dismissState.dismissDirection
-                val bg = when (direction) {
-                    SwipeToDismissBoxValue.StartToEnd -> colors.accent.copy(alpha = 0.16f)
-                    SwipeToDismissBoxValue.EndToStart -> colors.error.copy(alpha = 0.16f)
-                    else -> Color.Transparent
-                }
-                val alignment = when (direction) {
-                    SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
-                    SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
-                    else -> Alignment.Center
-                }
-                val icon = when (direction) {
-                    SwipeToDismissBoxValue.StartToEnd -> if (isFavorite) Icons.Outlined.StarBorder else Icons.Outlined.Star
-                    SwipeToDismissBoxValue.EndToStart -> Icons.Outlined.Delete
-                    else -> null
-                }
-                val iconTint = when (direction) {
-                    SwipeToDismissBoxValue.StartToEnd -> colors.accent
-                    SwipeToDismissBoxValue.EndToStart -> colors.error
-                    else -> Color.Transparent
-                }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(bg)
-                        .padding(horizontal = 20.dp),
-                    contentAlignment = alignment
-                ) {
-                    if (icon != null) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = iconTint,
-                            modifier = Modifier.size(24.dp)
-                        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(colors.background)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = {
+                        haptics.snap()
+                        onLongClick()
                     }
-                }
-            }
+                )
+                .padding(horizontal = AppSpacing.medium, vertical = AppSpacing.small),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(colors.background)
-                    .combinedClickable(
-                        onClick = onClick,
-                        onLongClick = {
-                            haptics.snap()
-                            onLongClick()
-                        }
-                    )
-                    .padding(horizontal = AppSpacing.medium, vertical = AppSpacing.small),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
             // Recognizable Google-style format-colored badge
             DocumentFormatBadge(
                 extension = typeBadge,
@@ -227,23 +154,7 @@ fun AppFileRow(
                 }
             }
 
-            // Favorite button (48dp touch target)
-            IconButton(
-                onClick = {
-                    haptics.confirm()
-                    onToggleFavorite()
-                },
-                modifier = Modifier.size(AppSpacing.minTouchTarget)
-            ) {
-                Icon(
-                    imageVector = if (isFavorite) Icons.Outlined.Star else Icons.Outlined.StarBorder,
-                    contentDescription = "Toggle favorite",
-                    tint = if (isFavorite) colors.accent else colors.textSecondary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            // Options menu button (48dp touch target)
+            // Options menu button (3 dots)
             Box {
                 IconButton(
                     onClick = {
@@ -270,42 +181,48 @@ fun AppFileRow(
                     tonalElevation = 4.dp
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Details & Info", style = typography.body) },
-                        onClick = {
-                            haptics.select()
-                            menuExpanded = false
-                            onDetails()
-                        }
-                    )
-                    if (onMoveToShelf != null) {
-                        DropdownMenuItem(
-                            text = { Text("Move to shelf...", style = typography.body) },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Outlined.FolderSpecial,
-                                    contentDescription = null,
-                                    tint = colors.accent,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            },
-                            onClick = {
-                                haptics.select()
-                                menuExpanded = false
-                                onMoveToShelf()
-                            }
-                        )
-                    }
-                    DropdownMenuItem(
                         text = { Text("Share", style = typography.body) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Share,
+                                contentDescription = null,
+                                tint = colors.textSecondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
                         onClick = {
                             haptics.select()
                             menuExpanded = false
                             onShare()
                         }
                     )
+                    DropdownMenuItem(
+                        text = { Text("Details & Info", style = typography.body) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Info,
+                                contentDescription = null,
+                                tint = colors.textSecondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        onClick = {
+                            haptics.select()
+                            menuExpanded = false
+                            onDetails()
+                        }
+                    )
                     if (onRemove != null) {
                         DropdownMenuItem(
-                            text = { Text("Remove from recents", style = typography.body) },
+                            text = { Text("Delete", style = typography.body.copy(color = colors.error)) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Delete,
+                                    contentDescription = null,
+                                    tint = colors.error,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
                             onClick = {
                                 haptics.reject()
                                 menuExpanded = false
@@ -316,7 +233,6 @@ fun AppFileRow(
                 }
             }
         }
-    }
 
         // Standard hairline divider
         if (showDivider) {
@@ -337,7 +253,7 @@ fun AppFileRow(
     showContinueReading: Boolean = false,
     showDivider: Boolean = true,
     onClick: () -> Unit,
-    onToggleFavorite: () -> Unit,
+    onToggleFavorite: (() -> Unit)? = null,
     onShare: () -> Unit,
     onShowDetails: () -> Unit,
     onMoveToShelf: (() -> Unit)? = null,
@@ -363,4 +279,3 @@ fun AppFileRow(
         modifier = modifier
     )
 }
-

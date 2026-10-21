@@ -124,10 +124,7 @@ class DocumentRepositoryImpl(
                     ${MediaStore.Files.FileColumns.DATA} LIKE '%.txt' OR
                     ${MediaStore.Files.FileColumns.DATA} LIKE '%.csv' OR
                     ${MediaStore.Files.FileColumns.DATA} LIKE '%.md' OR
-                    ${MediaStore.Files.FileColumns.DATA} LIKE '%.epub' OR
-                    ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE} OR
-                    ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ${MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO} OR
-                    ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ${MediaStore.Files.FileColumns.MEDIA_TYPE_AUDIO}
+                    ${MediaStore.Files.FileColumns.DATA} LIKE '%.epub'
                 """.trimIndent()
 
                 contentResolver.query(
