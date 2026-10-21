@@ -133,6 +133,7 @@ fun SettingsScreen(
 
     // Files & Storage
     val showHiddenFiles by settingsRepository.showHiddenFiles.collectAsState()
+    val scanFullDeviceStorage by settingsRepository.scanFullDeviceStorage.collectAsState()
     val confirmBeforeDelete by settingsRepository.confirmBeforeDelete.collectAsState()
     val grantedFolderUri by settingsRepository.grantedFolderUri.collectAsState()
     val grantedFolderName by settingsRepository.grantedFolderName.collectAsState()
@@ -362,6 +363,17 @@ fun SettingsScreen(
 
             // 2. FILES & STORAGE
             SettingsCard(title = "FILES & STORAGE") {
+                // Scan Complete Device Storage
+                SettingToggleRow(
+                    title = "Scan Entire Phone for Library",
+                    subtitle = "Automatically show all documents, books, and media found on device storage",
+                    icon = Icons.Outlined.Folder,
+                    checked = scanFullDeviceStorage,
+                    onCheckedChange = { settingsRepository.setScanFullDeviceStorage(it) }
+                )
+
+                SettingsDivider()
+
                 // Show Hidden Files
                 SettingToggleRow(
                     title = "Show Hidden Files & Folders",

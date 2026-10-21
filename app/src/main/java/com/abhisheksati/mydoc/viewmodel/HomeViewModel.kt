@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -46,6 +47,13 @@ private data class HomeFilters(
     val sortOrder: DocumentSortOrder
 )
 
+private data class DataSnapshot(
+    val recents: List<DocumentFile>,
+    val favorites: List<DocumentFile>,
+    val shelves: List<Shelf>,
+    val libraryDocs: List<DocumentFile>
+)
+
 class HomeViewModel(
     private val repository: DocumentRepository,
     private val settingsRepository: SettingsRepository
@@ -63,12 +71,22 @@ class HomeViewModel(
     private val _selectedCategory = MutableStateFlow(DocumentCategory.ALL)
     private val _searchQuery = MutableStateFlow("")
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val _documentsSource = settingsRepository.scanFullDeviceStorage.flatMapLatest { scanAll ->
+        if (scanAll) {
+            repository.getAllDeviceDocuments()
+        } else {
+            repository.getRecents()
+        }
+    }
+
     private val _dataFlow = combine(
         repository.getRecents(),
         repository.getFavorites(),
-        repository.getAllShelves()
-    ) { recents, favorites, shelves ->
-        Triple(recents, favorites, shelves)
+        repository.getAllShelves(),
+        _documentsSource
+    ) { recents, favorites, shelves, libraryDocs ->
+        DataSnapshot(recents, favorites, shelves, libraryDocs)
     }
 
     private val _filterFlow = combine(
@@ -84,18 +102,18 @@ class HomeViewModel(
     val uiState: StateFlow<HomeUiState> = combine(
         _dataFlow,
         _filterFlow
-    ) { (recents, favorites, shelves), filters ->
+    ) { (recents, favorites, shelves, libraryDocs), filters ->
         val (shelfId, typeFilter, category, query, sortOrder) = filters
 
         val sourceList = when (category) {
             DocumentCategory.FAVORITES -> favorites
-            DocumentCategory.PDF -> recents.filter { it.category == DocumentCategory.PDF }
-            DocumentCategory.EPUB -> recents.filter { it.category == DocumentCategory.EPUB }
-            DocumentCategory.WORD -> recents.filter { it.category == DocumentCategory.WORD }
-            DocumentCategory.EXCEL -> recents.filter { it.category == DocumentCategory.EXCEL }
-            DocumentCategory.PPT -> recents.filter { it.category == DocumentCategory.PPT }
-            DocumentCategory.TEXT -> recents.filter { it.category == DocumentCategory.TEXT }
-            DocumentCategory.ALL -> recents
+            DocumentCategory.PDF -> libraryDocs.filter { it.category == DocumentCategory.PDF }
+            DocumentCategory.EPUB -> libraryDocs.filter { it.category == DocumentCategory.EPUB }
+            DocumentCategory.WORD -> libraryDocs.filter { it.category == DocumentCategory.WORD }
+            DocumentCategory.EXCEL -> libraryDocs.filter { it.category == DocumentCategory.EXCEL }
+            DocumentCategory.PPT -> libraryDocs.filter { it.category == DocumentCategory.PPT }
+            DocumentCategory.TEXT -> libraryDocs.filter { it.category == DocumentCategory.TEXT }
+            DocumentCategory.ALL -> libraryDocs
         }
 
         val filtered = sourceList.filter { doc ->
@@ -142,7 +160,7 @@ class HomeViewModel(
         }
 
         val continueDoc = recents.firstOrNull { it.lastPage > 0 && it.pageCount > 0 } ?: recents.firstOrNull()
-        val unfiledCount = recents.count { it.shelfId == null }
+        val unfiledCount = libraryDocs.count { it.shelfId == null }
 
         HomeUiState(
             shelves = shelves,
@@ -218,6 +236,12 @@ class HomeViewModel(
         viewModelScope.launch {
             val id = repository.createShelf(name, colorIndex, folderUri)
             onCreated?.invoke(id)
+        }
+    }
+
+    fun updateShelf(shelf: Shelf) {
+        viewModelScope.launch {
+            repository.updateShelf(shelf)
         }
     }
 

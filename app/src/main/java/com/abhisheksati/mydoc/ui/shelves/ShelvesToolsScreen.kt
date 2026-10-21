@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -135,6 +136,7 @@ fun ShelvesToolsScreen(
             modifier = modifier
                 .fillMaxSize()
                 .background(colors.background)
+                .statusBarsPadding()
         ) {
             Row(
                 modifier = Modifier
@@ -231,12 +233,13 @@ fun ShelvesToolsScreen(
         LazyColumn(
             modifier = modifier
                 .fillMaxSize()
-                .background(colors.background),
+                .background(colors.background)
+                .statusBarsPadding(),
             contentPadding = PaddingValues(
                 start = AppSpacing.screenPadding,
                 end = AppSpacing.screenPadding,
-                top = 16.dp,
-                bottom = AppSpacing.navBarHeight + 36.dp
+                top = 8.dp,
+                bottom = 24.dp
             )
         ) {
             // 1. Title "Tools"

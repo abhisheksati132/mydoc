@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
@@ -143,6 +145,10 @@ fun LibraryScreen(
     onToggleFavorite: (DocumentFile) -> Unit,
     onDeleteDocument: (DocumentFile) -> Unit,
     onShareDocument: (DocumentFile) -> Unit,
+    onAssignDocumentToShelf: (documentUri: String, shelfId: Long) -> Unit = { _, _ -> },
+    onUnassignDocument: (documentUri: String) -> Unit = {},
+    onUpdateShelf: (Shelf) -> Unit = {},
+    onDeleteShelf: (Long) -> Unit = {},
     onSettingsClick: () -> Unit,
     onStorageAnalyzerClick: () -> Unit,
     onRecycleBinClick: () -> Unit,
@@ -156,13 +162,22 @@ fun LibraryScreen(
     var isOverflowOpen by remember { mutableStateOf(false) }
     var isSortMenuOpen by remember { mutableStateOf(false) }
     var quickLookDoc by remember { mutableStateOf<DocumentFile?>(null) }
+    var shelfOptionsTarget by remember { mutableStateOf<Shelf?>(null) }
+    var docToMoveShelf by remember { mutableStateOf<DocumentFile?>(null) }
+
+    val activeShelf = remember(shelves, selectedShelfId) {
+        if (selectedShelfId != null && selectedShelfId > 0) {
+            shelves.find { it.id == selectedShelfId }
+        } else null
+    }
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(colors.background)
+            .statusBarsPadding()
     ) {
-        // 1. Top Bar: Title "Library" + Overflow Menu
+        // 1. Top Bar: Title "Library" + Active Shelf Actions + Overflow Menu
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -181,20 +196,37 @@ fun LibraryScreen(
                 color = colors.ink
             )
 
-            Box {
-                IconButton(
-                    onClick = {
-                        haptics.select()
-                        isOverflowOpen = true
-                    },
-                    modifier = Modifier.size(44.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.MoreVert,
-                        contentDescription = "Options menu",
-                        tint = colors.ink
-                    )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (activeShelf != null) {
+                    IconButton(
+                        onClick = {
+                            haptics.select()
+                            shelfOptionsTarget = activeShelf
+                        },
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Edit,
+                            contentDescription = "Edit shelf",
+                            tint = colors.ink
+                        )
+                    }
                 }
+
+                Box {
+                    IconButton(
+                        onClick = {
+                            haptics.select()
+                            isOverflowOpen = true
+                        },
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.MoreVert,
+                            contentDescription = "Options menu",
+                            tint = colors.ink
+                        )
+                    }
 
                 DropdownMenu(
                     expanded = isOverflowOpen,
@@ -271,6 +303,7 @@ fun LibraryScreen(
                 }
             }
         }
+    }
 
         // 2. Pill Search Field ("Search N files")
         Box(
@@ -375,12 +408,40 @@ fun LibraryScreen(
                             onSelectShelfId(if (isSelected) null else shelf.id)
                         }
                 ) {
-                    Text(
-                        text = shelf.name,
-                        style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
-                        color = if (isSelected) shelfColor.onColor else colors.ink,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(
+                            start = 14.dp,
+                            end = if (isSelected) 8.dp else 14.dp,
+                            top = 7.dp,
+                            bottom = 7.dp
+                        )
+                    ) {
+                        Text(
+                            text = shelf.name,
+                            style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
+                            color = if (isSelected) shelfColor.onColor else colors.ink
+                        )
+                        if (isSelected) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .clickable {
+                                        haptics.select()
+                                        shelfOptionsTarget = shelf
+                                    }
+                                    .padding(2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Edit,
+                                    contentDescription = "Edit shelf",
+                                    tint = shelfColor.onColor,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -457,7 +518,7 @@ fun LibraryScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = AppSpacing.navBarHeight + 36.dp),
+                    .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -474,7 +535,7 @@ fun LibraryScreen(
                     start = 4.dp,
                     end = 4.dp,
                     top = 8.dp,
-                    bottom = AppSpacing.navBarHeight + 36.dp
+                    bottom = 24.dp
                 ),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -511,7 +572,7 @@ fun LibraryScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
                     top = 8.dp,
-                    bottom = AppSpacing.navBarHeight + 36.dp
+                    bottom = 24.dp
                 )
             ) {
                 for (group in DateGroup.entries) {
@@ -543,6 +604,7 @@ fun LibraryScreen(
                                 onToggleFavorite = { onToggleFavorite(doc) },
                                 onShare = { onShareDocument(doc) },
                                 onShowDetails = { quickLookDoc = doc },
+                                onMoveToShelf = { docToMoveShelf = doc },
                                 onRemoveFromRecents = { onDeleteDocument(doc) },
                                 onLongClick = { quickLookDoc = doc },
                                 modifier = Modifier.padding(horizontal = 8.dp)
@@ -574,4 +636,40 @@ fun LibraryScreen(
             onDeleteDocument(it)
         }
     )
+
+    // Shelf Options Sheet (Rename, Change Color, Delete Shelf)
+    shelfOptionsTarget?.let { targetShelf ->
+        ShelfOptionsSheet(
+            shelf = targetShelf,
+            onDismiss = { shelfOptionsTarget = null },
+            onUpdateShelf = { updated ->
+                onUpdateShelf(updated)
+                shelfOptionsTarget = null
+            },
+            onDeleteShelf = { id ->
+                onDeleteShelf(id)
+                shelfOptionsTarget = null
+                if (selectedShelfId == id) {
+                    onSelectShelfId(null)
+                }
+            }
+        )
+    }
+
+    // Move to Shelf Sheet (Assign to any shelf or unfile)
+    docToMoveShelf?.let { targetDoc ->
+        MoveToShelfSheet(
+            document = targetDoc,
+            shelves = shelves,
+            onDismiss = { docToMoveShelf = null },
+            onAssignToShelf = { shelfId ->
+                onAssignDocumentToShelf(targetDoc.uri, shelfId)
+                docToMoveShelf = null
+            },
+            onUnassignFromShelf = {
+                onUnassignDocument(targetDoc.uri)
+                docToMoveShelf = null
+            }
+        )
+    }
 }

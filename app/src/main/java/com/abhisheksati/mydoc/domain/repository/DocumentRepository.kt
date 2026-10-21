@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 interface DocumentRepository {
     fun getRecents(): Flow<List<DocumentFile>>
     fun getFavorites(): Flow<List<DocumentFile>>
+    fun getAllDeviceDocuments(): Flow<List<DocumentFile>>
     suspend fun registerOpenedDocument(uri: Uri): Result<DocumentFile>
     suspend fun toggleFavorite(document: DocumentFile)
     suspend fun removeFromRecents(uri: String)

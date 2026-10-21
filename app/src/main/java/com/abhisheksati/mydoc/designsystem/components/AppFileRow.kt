@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FolderSpecial
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.StarBorder
@@ -85,6 +86,7 @@ fun AppFileRow(
     onToggleFavorite: () -> Unit,
     onShare: () -> Unit,
     onDetails: () -> Unit,
+    onMoveToShelf: (() -> Unit)? = null,
     onRemove: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -275,6 +277,24 @@ fun AppFileRow(
                             onDetails()
                         }
                     )
+                    if (onMoveToShelf != null) {
+                        DropdownMenuItem(
+                            text = { Text("Move to shelf...", style = typography.body) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.FolderSpecial,
+                                    contentDescription = null,
+                                    tint = colors.accent,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            onClick = {
+                                haptics.select()
+                                menuExpanded = false
+                                onMoveToShelf()
+                            }
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text("Share", style = typography.body) },
                         onClick = {
@@ -320,6 +340,7 @@ fun AppFileRow(
     onToggleFavorite: () -> Unit,
     onShare: () -> Unit,
     onShowDetails: () -> Unit,
+    onMoveToShelf: (() -> Unit)? = null,
     onRemoveFromRecents: (() -> Unit)? = null,
     onLongClick: () -> Unit = onShowDetails,
     modifier: Modifier = Modifier
@@ -337,6 +358,7 @@ fun AppFileRow(
         onToggleFavorite = onToggleFavorite,
         onShare = onShare,
         onDetails = onShowDetails,
+        onMoveToShelf = onMoveToShelf,
         onRemove = onRemoveFromRecents,
         modifier = modifier
     )

@@ -1,8 +1,10 @@
 package com.abhisheksati.mydoc.data.repository
 
+import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.MediaStore
 import android.provider.OpenableColumns
 import com.abhisheksati.mydoc.data.local.AppDatabase
 import com.abhisheksati.mydoc.data.local.entity.FavoriteDocumentEntity
@@ -85,6 +87,125 @@ class DocumentRepositoryImpl(
                     shelfColorIndex = shelfInfo?.colorIndex
                 )
             }
+        }
+    }
+
+    override fun getAllDeviceDocuments(): Flow<List<DocumentFile>> = combine(
+        favoriteDao.getAllFavorites(),
+        recentDao.getAllRecents(),
+        shelfDao.getAllDocumentShelfInfos()
+    ) { favorites, recents, shelfInfos ->
+        val favUris = favorites.map { it.uri }.toSet()
+        val recentsMap = recents.associateBy { it.uri }
+        val shelfMap = shelfInfos.associateBy { it.documentUri }
+
+        withContext(Dispatchers.IO) {
+            val deviceDocs = mutableListOf<DocumentFile>()
+            val seenPaths = mutableSetOf<String>()
+
+            try {
+                val uri = MediaStore.Files.getContentUri("external")
+                val projection = arrayOf(
+                    MediaStore.Files.FileColumns._ID,
+                    MediaStore.Files.FileColumns.DISPLAY_NAME,
+                    MediaStore.Files.FileColumns.DATA,
+                    MediaStore.Files.FileColumns.SIZE,
+                    MediaStore.Files.FileColumns.MIME_TYPE,
+                    MediaStore.Files.FileColumns.DATE_MODIFIED
+                )
+                val selection = """
+                    ${MediaStore.Files.FileColumns.DATA} LIKE '%.pdf' OR
+                    ${MediaStore.Files.FileColumns.DATA} LIKE '%.doc' OR
+                    ${MediaStore.Files.FileColumns.DATA} LIKE '%.docx' OR
+                    ${MediaStore.Files.FileColumns.DATA} LIKE '%.xls' OR
+                    ${MediaStore.Files.FileColumns.DATA} LIKE '%.xlsx' OR
+                    ${MediaStore.Files.FileColumns.DATA} LIKE '%.ppt' OR
+                    ${MediaStore.Files.FileColumns.DATA} LIKE '%.pptx' OR
+                    ${MediaStore.Files.FileColumns.DATA} LIKE '%.txt' OR
+                    ${MediaStore.Files.FileColumns.DATA} LIKE '%.csv' OR
+                    ${MediaStore.Files.FileColumns.DATA} LIKE '%.md' OR
+                    ${MediaStore.Files.FileColumns.DATA} LIKE '%.epub' OR
+                    ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE} OR
+                    ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ${MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO} OR
+                    ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ${MediaStore.Files.FileColumns.MEDIA_TYPE_AUDIO}
+                """.trimIndent()
+
+                contentResolver.query(
+                    uri,
+                    projection,
+                    selection,
+                    null,
+                    "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC"
+                )?.use { cursor ->
+                    val idCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+                    val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+                    val dataCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA)
+                    val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
+                    val mimeCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MIME_TYPE)
+                    val dateCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)
+
+                    while (cursor.moveToNext()) {
+                        val data = cursor.getString(dataCol) ?: continue
+                        if (!seenPaths.add(data)) continue
+
+                        val file = File(data)
+                        val docUri = if (file.exists()) {
+                            Uri.fromFile(file).toString()
+                        } else {
+                            val id = cursor.getLong(idCol)
+                            ContentUris.withAppendedId(uri, id).toString()
+                        }
+
+                        val name = cursor.getString(nameCol) ?: file.name
+                        val size = cursor.getLong(sizeCol)
+                        val mime = cursor.getString(mimeCol) ?: "application/octet-stream"
+                        val dateModified = cursor.getLong(dateCol) * 1000L
+
+                        val recent = recentsMap[docUri]
+                        val shelfInfo = shelfMap[docUri]
+
+                        deviceDocs.add(
+                            DocumentFile(
+                                uri = docUri,
+                                displayName = name,
+                                sizeBytes = size,
+                                mimeType = mime,
+                                lastOpenedTimestamp = recent?.lastOpenedTimestamp ?: dateModified,
+                                pageCount = recent?.pageCount ?: 0,
+                                lastPage = recent?.lastPage ?: 0,
+                                isFavorite = favUris.contains(docUri),
+                                shelfId = shelfInfo?.shelfId,
+                                shelfName = shelfInfo?.shelfName,
+                                shelfColorIndex = shelfInfo?.colorIndex
+                            )
+                        )
+                    }
+                }
+            } catch (_: Exception) {}
+
+            // Also merge any recents that might not be indexed in MediaStore
+            recents.forEach { recent ->
+                if (seenPaths.add(recent.uri)) {
+                    val shelfInfo = shelfMap[recent.uri]
+                    deviceDocs.add(
+                        DocumentFile(
+                            uri = recent.uri,
+                            displayName = recent.displayName,
+                            sizeBytes = recent.sizeBytes,
+                            mimeType = recent.mimeType,
+                            lastOpenedTimestamp = recent.lastOpenedTimestamp,
+                            pageCount = recent.pageCount,
+                            lastPage = recent.lastPage,
+                            isFavorite = favUris.contains(recent.uri),
+                            shelfId = shelfInfo?.shelfId,
+                            shelfName = shelfInfo?.shelfName,
+                            shelfColorIndex = shelfInfo?.colorIndex
+                        )
+                    )
+                }
+            }
+
+            deviceDocs
         }
     }
 

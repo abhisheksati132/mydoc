@@ -54,6 +54,7 @@ fun ShelvesBottomBar(
         modifier = modifier
             .fillMaxWidth()
             .background(colors.background)
+            .navigationBarsPadding()
     ) {
         // 1dp top hairline
         Box(
@@ -67,8 +68,7 @@ fun ShelvesBottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(AppSpacing.navBarHeight)
-                .navigationBarsPadding(),
+                .height(AppSpacing.navBarHeight),
             verticalAlignment = Alignment.CenterVertically
         ) {
             HomeTab.entries.forEach { tab ->

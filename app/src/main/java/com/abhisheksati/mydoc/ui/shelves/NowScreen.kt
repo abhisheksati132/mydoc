@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -29,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,6 +38,10 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,21 +85,30 @@ fun NowScreen(
     onSearchClick: () -> Unit,
     onChooseFolder: () -> Unit,
     onOpenSingleFile: () -> Unit,
+    onUpdateShelf: (Shelf) -> Unit = {},
+    onDeleteShelf: (Long) -> Unit = {},
+    onAssignDocumentToShelf: (documentUri: String, shelfId: Long) -> Unit = { _, _ -> },
+    onUnassignDocument: (documentUri: String) -> Unit = {},
+    onRemoveFromRecents: (DocumentFile) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
     val typography = AppTheme.typography
     val haptics = rememberAppHaptics()
 
+    var shelfOptionsTarget by remember { mutableStateOf<Shelf?>(null) }
+    var docToMoveShelf by remember { mutableStateOf<DocumentFile?>(null) }
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.background),
+            .background(colors.background)
+            .statusBarsPadding(),
         contentPadding = PaddingValues(
             start = AppSpacing.screenPadding,
             end = AppSpacing.screenPadding,
-            top = 16.dp,
-            bottom = AppSpacing.navBarHeight + 36.dp
+            top = 8.dp,
+            bottom = 24.dp
         )
     ) {
         // 1. Top Bar: Wordmark "mydoc" & Search Icon
@@ -283,16 +298,42 @@ fun NowScreen(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .padding(16.dp),
+                                            .padding(14.dp),
                                         verticalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text(
-                                            text = shelf.name,
-                                            style = typography.shelf,
-                                            color = shelfColor.onColor,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.Top
+                                        ) {
+                                            Text(
+                                                text = shelf.name,
+                                                style = typography.shelf,
+                                                color = shelfColor.onColor,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.weight(1f).padding(end = 4.dp)
+                                            )
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(28.dp)
+                                                    .clip(CircleShape)
+                                                    .background(shelfColor.onColor.copy(alpha = 0.16f))
+                                                    .clickable {
+                                                        haptics.select()
+                                                        shelfOptionsTarget = shelf
+                                                    },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.MoreVert,
+                                                    contentDescription = "Shelf options",
+                                                    tint = shelfColor.onColor,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
 
                                         val countText = if (shelf.fileCount == 1) "1 file" else "${shelf.fileCount} files"
                                         Text(
@@ -446,6 +487,21 @@ fun NowScreen(
                             color = colors.inkMuted
                         )
                     }
+
+                    IconButton(
+                        onClick = {
+                            haptics.select()
+                            docToMoveShelf = doc
+                        },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.MoreVert,
+                            contentDescription = "Document options",
+                            tint = colors.inkMuted,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
 
                 // 1dp hairline divider
@@ -457,5 +513,38 @@ fun NowScreen(
                 )
             }
         }
+    }
+
+    // Shelf Options Sheet (Rename, Change Color, Delete Shelf)
+    shelfOptionsTarget?.let { targetShelf ->
+        ShelfOptionsSheet(
+            shelf = targetShelf,
+            onDismiss = { shelfOptionsTarget = null },
+            onUpdateShelf = { updated ->
+                onUpdateShelf(updated)
+                shelfOptionsTarget = null
+            },
+            onDeleteShelf = { id ->
+                onDeleteShelf(id)
+                shelfOptionsTarget = null
+            }
+        )
+    }
+
+    // Move to Shelf Sheet (Assign to any shelf or unfile)
+    docToMoveShelf?.let { targetDoc ->
+        MoveToShelfSheet(
+            document = targetDoc,
+            shelves = shelves,
+            onDismiss = { docToMoveShelf = null },
+            onAssignToShelf = { shelfId ->
+                onAssignDocumentToShelf(targetDoc.uri, shelfId)
+                docToMoveShelf = null
+            },
+            onUnassignFromShelf = {
+                onUnassignDocument(targetDoc.uri)
+                docToMoveShelf = null
+            }
+        )
     }
 }

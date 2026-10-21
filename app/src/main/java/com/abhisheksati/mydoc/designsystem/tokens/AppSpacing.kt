@@ -40,6 +40,7 @@ object AppSpacing {
     val cardRadius: Dp = 24.dp
     val sheetTopRadius: Dp = 32.dp
     val inputRadius: Dp = 24.dp
+    val buttonRadius: Dp = 24.dp
     val pillRadius: Dp = 999.dp
     val chipRadius: Dp = 999.dp
     val fileIconSquareRadius: Dp = 14.dp

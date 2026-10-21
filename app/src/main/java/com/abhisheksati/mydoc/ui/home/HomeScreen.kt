@@ -8,10 +8,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -227,17 +230,28 @@ fun HomeScreen(
         }
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(colors.background)
-    ) {
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        containerColor = colors.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = {
+            ShelvesBottomBar(
+                currentTab = currentTab,
+                onTabSelected = { tab ->
+                    viewModel.selectTab(tab)
+                    scope.launch { pagerState.animateScrollToPage(tab.ordinal) }
+                }
+            )
+        }
+    ) { innerPadding ->
         // 1. Edge-to-Edge Three Destination Pager: Now | Library | Tools
         HorizontalPager(
             state = pagerState,
             key = { HomeTab.entries[it].name },
             beyondViewportPageCount = 1,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = innerPadding.calculateBottomPadding())
         ) { page ->
             when (HomeTab.entries[page]) {
                 HomeTab.NOW -> {
@@ -270,6 +284,21 @@ fun HomeScreen(
                         onOpenSingleFile = {
                             openDocumentLauncher.launch(SUPPORTED_MIME_TYPES)
                         },
+                        onUpdateShelf = { shelf ->
+                            viewModel.updateShelf(shelf)
+                        },
+                        onDeleteShelf = { shelfId ->
+                            viewModel.deleteShelf(shelfId)
+                        },
+                        onAssignDocumentToShelf = { uri, shelfId ->
+                            viewModel.assignDocumentToShelf(uri, shelfId)
+                        },
+                        onUnassignDocument = { uri ->
+                            viewModel.unassignDocument(uri)
+                        },
+                        onRemoveFromRecents = { doc ->
+                            viewModel.removeFromRecents(doc)
+                        },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -289,6 +318,18 @@ fun HomeScreen(
                         onToggleFavorite = { viewModel.toggleFavorite(it) },
                         onDeleteDocument = { viewModel.removeFromRecents(it) },
                         onShareDocument = onShareDocument,
+                        onAssignDocumentToShelf = { uri, shelfId ->
+                            viewModel.assignDocumentToShelf(uri, shelfId)
+                        },
+                        onUnassignDocument = { uri ->
+                            viewModel.unassignDocument(uri)
+                        },
+                        onUpdateShelf = { shelf ->
+                            viewModel.updateShelf(shelf)
+                        },
+                        onDeleteShelf = { shelfId ->
+                            viewModel.deleteShelf(shelfId)
+                        },
                         onSettingsClick = onSettingsClick,
                         onStorageAnalyzerClick = { showStorageAnalyzer = true },
                         onRecycleBinClick = { fileManagerViewModel?.openTrash() },
@@ -313,21 +354,6 @@ fun HomeScreen(
                     )
                 }
             }
-        }
-
-        // 2. Shelves Solid Bottom Bar (Solid background, 1dp top hairline, 72dp bar height)
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-        ) {
-            ShelvesBottomBar(
-                currentTab = currentTab,
-                onTabSelected = { tab ->
-                    viewModel.selectTab(tab)
-                    scope.launch { pagerState.animateScrollToPage(tab.ordinal) }
-                }
-            )
         }
     }
 

@@ -59,6 +59,9 @@ class SettingsRepository(context: Context) {
     private val _autoResumeVideo = MutableStateFlow(prefs.getBoolean(KEY_AUTO_RESUME_VIDEO, true))
     val autoResumeVideo: StateFlow<Boolean> = _autoResumeVideo.asStateFlow()
 
+    private val _scanFullDeviceStorage = MutableStateFlow(prefs.getBoolean(KEY_SCAN_FULL_DEVICE, true))
+    val scanFullDeviceStorage: StateFlow<Boolean> = _scanFullDeviceStorage.asStateFlow()
+
     private val _highQualityPdf = MutableStateFlow(prefs.getBoolean(KEY_HIGH_QUALITY_PDF, true))
     val highQualityPdf: StateFlow<Boolean> = _highQualityPdf.asStateFlow()
 
@@ -195,6 +198,11 @@ class SettingsRepository(context: Context) {
         _autoResumeVideo.value = enabled
     }
 
+    fun setScanFullDeviceStorage(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_SCAN_FULL_DEVICE, enabled).apply()
+        _scanFullDeviceStorage.value = enabled
+    }
+
     fun setHighQualityPdf(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_HIGH_QUALITY_PDF, enabled).apply()
         _highQualityPdf.value = enabled
@@ -328,5 +336,6 @@ class SettingsRepository(context: Context) {
         private const val KEY_DOUBLE_TAP_ZOOM = "double_tap_zoom"
         private const val KEY_DYNAMIC_COLOR = "dynamic_color_enabled"
         private const val KEY_AMOLED_BLACK = "amoled_black_enabled"
+        private const val KEY_SCAN_FULL_DEVICE = "scan_full_device_storage"
     }
 }
