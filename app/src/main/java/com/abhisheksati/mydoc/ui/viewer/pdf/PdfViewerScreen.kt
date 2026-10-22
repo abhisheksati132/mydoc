@@ -18,11 +18,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.TextFields
-import androidx.compose.material.icons.outlined.VolumeUp
+import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.width
+import com.abhisheksati.mydoc.tools.model.PdfTool
+import com.abhisheksati.mydoc.ui.viewer.controls.DocumentToolsSheet
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import androidx.compose.ui.text.font.FontWeight
 import com.abhisheksati.mydoc.designsystem.components.AppBottomSheet
@@ -112,6 +114,7 @@ fun PdfViewerScreen(
     onBackClick: () -> Unit,
     onShareClick: () -> Unit,
     onToolsClick: (() -> Unit)? = null,
+    onSelectTool: ((PdfTool) -> Unit)? = null,
     onDocumentUpdated: ((DocumentFile) -> Unit)? = null,
     onSlideshowClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -129,6 +132,7 @@ fun PdfViewerScreen(
     var isPageJumpDialogOpen by remember { mutableStateOf(false) }
     var isReadingControlsOpen by remember { mutableStateOf(false) }
     var isThumbnailGridOpen by remember { mutableStateOf(false) }
+    var isToolsSheetOpen by remember { mutableStateOf(false) }
     var ocrExtractedText by remember { mutableStateOf<String?>(null) }
     var isOcrRunning by remember { mutableStateOf(false) }
     val ocrEngine = remember { com.abhisheksati.mydoc.ocr.OcrEngine(context) }
@@ -515,7 +519,7 @@ fun PdfViewerScreen(
                 bookmarks = app?.settingsRepository?.getBookmarks(document.uri) ?: emptySet()
                 Toast.makeText(context, if (added) "Bookmarked page ${state.currentPage + 1}" else "Bookmark removed", Toast.LENGTH_SHORT).show()
             },
-            onToolsClick = onToolsClick,
+            onToolsClick = { isToolsSheetOpen = true },
             onOcrClick = {
                 if (!isOcrRunning) {
                     isOcrRunning = true
@@ -709,6 +713,20 @@ fun PdfViewerScreen(
             }
         )
 
+        // Document In-Viewer Tools Sheet
+        DocumentToolsSheet(
+            isOpen = isToolsSheetOpen,
+            onDismiss = { isToolsSheetOpen = false },
+            document = document,
+            onSelectTool = { tool ->
+                if (onSelectTool != null) {
+                    onSelectTool(tool)
+                } else {
+                    onToolsClick?.invoke()
+                }
+            }
+        )
+
         // Password Dialog
         PasswordDialog(
             isOpen = state.isPasswordRequired,
@@ -802,7 +820,7 @@ fun PdfViewerScreen(
                             .padding(vertical = 12.dp, horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Outlined.VolumeUp, contentDescription = null, tint = colors.accent)
+                        Icon(Icons.AutoMirrored.Outlined.VolumeUp, contentDescription = null, tint = colors.accent)
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
                             Text("Read Page Aloud (TTS)", style = typography.body, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)

@@ -159,7 +159,7 @@ object DocumentFormatColors {
         }
     }
 
-    fun getContainer(extension: String, isDark: Boolean): Color {
+    fun getContainer(extension: String, isDark: Boolean = false): Color {
         return if (isDark) Color(0xFF242426) else Color(0xFFEFEFEA)
     }
 }

@@ -17,6 +17,7 @@ import com.abhisheksati.mydoc.ui.viewer.presentation.PresentationViewerScreen
 import com.abhisheksati.mydoc.ui.viewer.spreadsheet.SpreadsheetViewerScreen
 import com.abhisheksati.mydoc.ui.viewer.text.TextViewerScreen
 import com.abhisheksati.mydoc.ui.viewer.word.WordViewerScreen
+import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.viewmodel.SpreadsheetViewModel
 import com.abhisheksati.mydoc.viewmodel.ViewerViewModel
 
@@ -26,6 +27,7 @@ fun DocumentViewerScreen(
     onBackClick: () -> Unit,
     onShareClick: () -> Unit,
     onToolsClick: (() -> Unit)? = null,
+    onSelectTool: ((PdfTool) -> Unit)? = null,
     onDocumentUpdated: ((DocumentFile) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -75,6 +77,7 @@ fun DocumentViewerScreen(
                     onBackClick = onBackClick,
                     onShareClick = onShareClick,
                     onToolsClick = onToolsClick,
+                    onSelectTool = onSelectTool,
                     onDocumentUpdated = onDocumentUpdated,
                     onSlideshowClick = { isSlideshowActive = true },
                     modifier = modifier.fillMaxSize()
@@ -94,6 +97,7 @@ fun DocumentViewerScreen(
                 onBackClick = onBackClick,
                 onShareClick = onShareClick,
                 onToolsClick = onToolsClick,
+                onSelectTool = onSelectTool,
                 onDocumentUpdated = onDocumentUpdated,
                 modifier = modifier.fillMaxSize()
             )
@@ -111,6 +115,7 @@ fun DocumentViewerScreen(
                 onBackClick = onBackClick,
                 onShareClick = onShareClick,
                 onToolsClick = onToolsClick,
+                onSelectTool = onSelectTool,
                 onDocumentUpdated = onDocumentUpdated,
                 modifier = modifier.fillMaxSize()
             )
@@ -150,6 +155,7 @@ fun DocumentViewerScreen(
                 onBackClick = onBackClick,
                 onShareClick = onShareClick,
                 onToolsClick = onToolsClick,
+                onSelectTool = onSelectTool,
                 onDocumentUpdated = onDocumentUpdated,
                 modifier = modifier.fillMaxSize()
             )

@@ -69,6 +69,7 @@ fun AppFileRow(
     displayName: String,
     typeBadge: String,
     metadataText: String,
+    document: DocumentFile? = null,
     isFavorite: Boolean = false,
     progressFraction: Float? = null,
     progressText: String? = null,
@@ -106,11 +107,18 @@ fun AppFileRow(
                 .padding(horizontal = AppSpacing.medium, vertical = AppSpacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Recognizable Google-style format-colored badge
-            DocumentFormatBadge(
-                extension = typeBadge,
-                size = 40.dp
-            )
+            // Real Document Cover thumbnail (or format badge fallback)
+            if (document != null) {
+                DocumentCoverImage(
+                    document = document,
+                    modifier = Modifier.width(42.dp)
+                )
+            } else {
+                DocumentFormatBadge(
+                    extension = typeBadge,
+                    size = 42.dp
+                )
+            }
 
             Spacer(modifier = Modifier.width(14.dp))
 
@@ -265,6 +273,7 @@ fun AppFileRow(
         displayName = document.displayName,
         typeBadge = document.typeBadge,
         metadataText = "${document.formattedSize}  •  ${document.formattedLastOpened}",
+        document = document,
         isFavorite = document.isFavorite,
         progressFraction = if (showContinueReading && document.pageCount > 0) document.lastPage.toFloat() / document.pageCount else null,
         progressText = if (showContinueReading && document.pageCount > 0) "Page ${document.lastPage + 1} of ${document.pageCount}" else null,

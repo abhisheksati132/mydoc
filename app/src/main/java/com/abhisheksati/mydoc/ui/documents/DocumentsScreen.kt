@@ -1,8 +1,8 @@
 package com.abhisheksati.mydoc.ui.documents
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +20,9 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -28,13 +31,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Article
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
@@ -45,11 +56,11 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +75,7 @@ import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.data.local.DocumentSortOrder
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppFileRow
+import com.abhisheksati.mydoc.designsystem.components.DocumentCoverImage
 import com.abhisheksati.mydoc.designsystem.components.DocumentFormatBadge
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
@@ -120,11 +132,14 @@ private fun groupDocumentsByDate(documents: List<DocumentFile>): Map<DateGroup, 
 }
 
 /**
- * Pure Document Experience Screen.
+ * Premier Document Experience Dashboard.
  *
- * Separates files into swipeable pager tabs: All, PDF, Word, Excel, PowerPoint, Text.
- * Direct tap to open, 3 dots for Share, Details, Delete (with confirm).
- * Camera Scan floating button.
+ * Features:
+ * - Real generated cover previews for documents
+ * - "Jump Back In" Continue Reading Hero Card
+ * - Grid / List View Toggle
+ * - Swipeable Format Category Pager (All, PDF, Word, Excel, PPT, Text)
+ * - Instant Camera Scan Floating Action Button
  */
 @Composable
 fun DocumentsScreen(
@@ -149,6 +164,7 @@ fun DocumentsScreen(
 
     var showSearchField by remember { mutableStateOf(false) }
     var sortMenuExpanded by remember { mutableStateOf(false) }
+    var isGridView by rememberSaveable { mutableStateOf(false) }
 
     val pagerState = rememberPagerState(
         initialPage = 0,
@@ -169,6 +185,8 @@ fun DocumentsScreen(
         }
     }
 
+    val continueDoc = recentDocs.firstOrNull()
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -187,15 +205,24 @@ fun DocumentsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AnimatedVisibility(visible = !showSearchField, modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "mydoc",
-                        style = typography.title.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 24.sp,
-                            letterSpacing = (-0.5).sp
-                        ),
-                        color = colors.textPrimary
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.Article,
+                            contentDescription = null,
+                            tint = colors.accent,
+                            modifier = Modifier.size(26.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "mydoc",
+                            style = typography.title.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 24.sp,
+                                letterSpacing = (-0.5).sp
+                            ),
+                            color = colors.textPrimary
+                        )
+                    }
                 }
 
                 AnimatedVisibility(visible = showSearchField, modifier = Modifier.weight(1f)) {
@@ -267,6 +294,20 @@ fun DocumentsScreen(
                     )
                 }
 
+                // Grid / List Toggle
+                IconButton(
+                    onClick = {
+                        haptics.select()
+                        isGridView = !isGridView
+                    }
+                ) {
+                    Icon(
+                        imageVector = if (isGridView) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
+                        contentDescription = if (isGridView) "List view" else "Grid view",
+                        tint = colors.textPrimary
+                    )
+                }
+
                 // Sort Order menu
                 Box {
                     IconButton(
@@ -286,7 +327,7 @@ fun DocumentsScreen(
                         expanded = sortMenuExpanded,
                         onDismissRequest = { sortMenuExpanded = false },
                         containerColor = colors.surfaceContainer,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.cardBorder)
+                        border = BorderStroke(1.dp, colors.cardBorder)
                     ) {
                         val sortOptions = listOf(
                             DocumentSortOrder.LAST_OPENED to "Recently Opened",
@@ -348,7 +389,7 @@ fun DocumentsScreen(
                             },
                         shape = RoundedCornerShape(12.dp),
                         color = if (isSelected) colors.ink else colors.surfaceContainer,
-                        border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, colors.cardBorder)
+                        border = if (isSelected) null else BorderStroke(1.dp, colors.cardBorder)
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
@@ -416,26 +457,59 @@ fun DocumentsScreen(
                     ) {
                         AppEmptyState(
                             icon = Icons.Outlined.Description,
-                            title = if (searchQuery.isNotEmpty()) "No matching documents" else "No ${category.label} documents",
+                            title = if (searchQuery.isNotEmpty()) "No matching documents" else "No ${catName(category)} documents",
                             message = if (searchQuery.isNotEmpty()) "Try searching for a different keyword" else "Documents in this format will appear here automatically",
                             modifier = Modifier.fillMaxWidth().padding(32.dp)
                         )
                     }
+                } else if (isGridView) {
+                    // Grid View: Bookshelf presentation with large covers
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(minSize = 150.dp),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(pageDocs, key = { it.uri }) { doc ->
+                            DocumentGridCard(
+                                document = doc,
+                                onClick = { onDocumentClick(doc) },
+                                onShare = { onShareDocument(doc) },
+                                onDetails = { onShowDetails(doc) },
+                                onDelete = { onDeleteDocument(doc) }
+                            )
+                        }
+                    }
                 } else {
+                    // List View: Rich document rows with covers and hero card
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 96.dp)
                     ) {
-                        // In "All" tab, show Recent Documents carousel if available and not searching
-                        if (category == DocumentCategory.ALL && recentDocs.isNotEmpty() && searchQuery.isEmpty()) {
+                        // "Continue Reading" Hero Card on "All" tab when user has a recent file
+                        if (category == DocumentCategory.ALL && continueDoc != null && searchQuery.isEmpty()) {
+                            item(key = "hero_continue_reading") {
+                                HeroContinueReadingCard(
+                                    document = continueDoc,
+                                    onResumeClick = { onDocumentClick(continueDoc) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                                )
+                            }
+                        }
+
+                        // Recent carousel strip
+                        if (category == DocumentCategory.ALL && recentDocs.size > 1 && searchQuery.isEmpty()) {
                             item(key = "recents_carousel_section") {
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(top = 8.dp, bottom = 12.dp)
+                                        .padding(top = 4.dp, bottom = 12.dp)
                                 ) {
                                     Text(
-                                        text = "RECENT",
+                                        text = "RECENT DOCUMENTS",
                                         style = typography.caption.copy(
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 11.5.sp,
@@ -451,7 +525,7 @@ fun DocumentsScreen(
                                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
                                         items(
-                                            items = recentDocs.take(6),
+                                            items = recentDocs.drop(1).take(8),
                                             key = { "recent_${it.uri}" }
                                         ) { doc ->
                                             RecentCard(
@@ -472,7 +546,7 @@ fun DocumentsScreen(
                             }
                         }
 
-                        // Group documents by date
+                        // Date Grouped Document Rows
                         val grouped = groupDocumentsByDate(pageDocs)
                         DateGroup.entries.forEach { group ->
                             val docsInGroup = grouped[group] ?: emptyList()
@@ -500,7 +574,7 @@ fun DocumentsScreen(
                                 ) { doc ->
                                     AppFileRow(
                                         document = doc,
-                                        showContinueReading = false,
+                                        showContinueReading = true,
                                         showDivider = true,
                                         onClick = { onDocumentClick(doc) },
                                         onShare = { onShareDocument(doc) },
@@ -548,45 +622,183 @@ fun DocumentsScreen(
     }
 }
 
+private fun catName(category: DocumentCategory): String = when (category) {
+    DocumentCategory.ALL -> "all"
+    DocumentCategory.PDF -> "PDF"
+    DocumentCategory.WORD -> "Word"
+    DocumentCategory.EXCEL -> "Excel"
+    DocumentCategory.PPT -> "PowerPoint"
+    DocumentCategory.TEXT -> "Text"
+}
+
+/**
+ * Hero Card highlighting the user's active document with cover thumbnail, page progress, and Resume button.
+ */
 @Composable
-private fun RecentCard(
+private fun HeroContinueReadingCard(
     document: DocumentFile,
-    onClick: () -> Unit,
+    onResumeClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
     val typography = AppTheme.typography
+    val haptics = rememberAppHaptics()
 
     Surface(
         modifier = modifier
-            .width(160.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .clickable {
+                haptics.confirm()
+                onResumeClick()
+            },
+        shape = RoundedCornerShape(20.dp),
+        color = colors.surfaceContainer,
+        border = BorderStroke(1.dp, colors.cardBorder)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Real Cover thumbnail with depth
+            DocumentCoverImage(
+                document = document,
+                modifier = Modifier.width(72.dp),
+                cornerRadius = 10.dp
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = colors.accent.copy(alpha = 0.16f)
+                ) {
+                    Text(
+                        text = "CONTINUE READING",
+                        style = typography.caption.copy(
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp,
+                            color = colors.accent
+                        ),
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = document.displayName,
+                    style = typography.title.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        lineHeight = 20.sp
+                    ),
+                    color = colors.textPrimary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                val pageProgressText = if (document.pageCount > 0 && document.lastPage > 0) {
+                    val percent = ((document.lastPage + 1) * 100 / document.pageCount)
+                    "Page ${document.lastPage + 1} of ${document.pageCount} (${percent}%)"
+                } else {
+                    document.formattedSize
+                }
+
+                Text(
+                    text = pageProgressText,
+                    style = typography.caption.withTabularFigures().copy(fontSize = 12.sp),
+                    color = colors.textSecondary
+                )
+
+                if (document.pageCount > 0 && document.lastPage > 0) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = { (document.lastPage.toFloat() / document.pageCount).coerceIn(0f, 1f) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp)),
+                        color = colors.accent,
+                        trackColor = colors.surfaceVariant
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Button(
+                        onClick = {
+                            haptics.confirm()
+                            onResumeClick()
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.accent,
+                            contentColor = Color.Black
+                        ),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                        modifier = Modifier.height(34.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.PlayArrow,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Resume",
+                            style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Card for Grid View (Bookshelf style).
+ */
+@Composable
+private fun DocumentGridCard(
+    document: DocumentFile,
+    onClick: () -> Unit,
+    onShare: () -> Unit,
+    onDetails: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = AppTheme.colors
+    val typography = AppTheme.typography
+    val haptics = rememberAppHaptics()
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
         color = colors.surfaceContainer,
-        border = androidx.compose.foundation.BorderStroke(1.dp, colors.cardBorder)
+        border = BorderStroke(1.dp, colors.cardBorder)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp)
+            modifier = Modifier.padding(10.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                DocumentFormatBadge(
-                    extension = document.typeBadge,
-                    size = 32.dp
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                if (document.pageCount > 0 && document.lastPage > 0) {
-                    Text(
-                        text = "p. ${document.lastPage + 1}/${document.pageCount}",
-                        style = typography.caption.withTabularFigures().copy(fontSize = 11.sp),
-                        color = colors.textSecondary
-                    )
-                }
-            }
+            // Document Cover
+            DocumentCoverImage(
+                document = document,
+                modifier = Modifier.fillMaxWidth(),
+                aspectRatio = 0.75f,
+                cornerRadius = 8.dp
+            )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = document.displayName,
@@ -598,9 +810,110 @@ private fun RecentCard(
 
             Spacer(modifier = Modifier.height(4.dp))
 
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = document.formattedSize,
+                    style = typography.caption.copy(fontSize = 11.sp),
+                    color = colors.textSecondary,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Box {
+                    IconButton(
+                        onClick = {
+                            haptics.select()
+                            menuExpanded = true
+                        },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.MoreVert,
+                            contentDescription = "Options",
+                            tint = colors.textSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false },
+                        containerColor = colors.surfaceContainer,
+                        border = BorderStroke(1.dp, colors.cardBorder)
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Share", style = typography.body) },
+                            onClick = {
+                                menuExpanded = false
+                                onShare()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Details", style = typography.body) },
+                            onClick = {
+                                menuExpanded = false
+                                onDetails()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Delete", style = typography.body.copy(color = colors.error)) },
+                            onClick = {
+                                menuExpanded = false
+                                onDelete()
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentCard(
+    document: DocumentFile,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = AppTheme.colors
+    val typography = AppTheme.typography
+
+    Surface(
+        modifier = modifier
+            .width(150.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        color = colors.surfaceContainer,
+        border = BorderStroke(1.dp, colors.cardBorder)
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp)
+        ) {
+            DocumentCoverImage(
+                document = document,
+                modifier = Modifier.fillMaxWidth(),
+                aspectRatio = 1.0f,
+                cornerRadius = 8.dp
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = document.displayName,
+                style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp),
+                color = colors.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
             Text(
                 text = document.formattedSize,
-                style = typography.caption.copy(fontSize = 11.sp),
+                style = typography.caption.copy(fontSize = 10.5.sp),
                 color = colors.textSecondary
             )
 

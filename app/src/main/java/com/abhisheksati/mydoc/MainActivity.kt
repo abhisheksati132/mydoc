@@ -263,8 +263,8 @@ class MainActivity : ComponentActivity() {
                                         onDocumentUpdated = { newDoc ->
                                             currentDocument = newDoc
                                         },
-                                        onToolsClick = {
-                                            toolsViewModel.selectTool(PdfTool.COMPRESS, preselectedUri = Uri.parse(activeDoc.uri))
+                                        onSelectTool = { tool ->
+                                            toolsViewModel.selectTool(tool, preselectedUri = Uri.parse(activeDoc.uri))
                                         }
                                     )
 

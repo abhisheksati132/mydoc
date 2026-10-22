@@ -127,7 +127,7 @@ fun ToolsScreen(
                 AppSearchField(
                     query = searchQuery,
                     onQueryChanged = { searchQuery = it },
-                    placeholder = "Search 30 PDF tools...",
+                    placeholder = "Search 24 PDF tools...",
                     modifier = Modifier.fillMaxWidth()
                 )
             },
