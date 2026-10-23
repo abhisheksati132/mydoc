@@ -79,7 +79,6 @@ fun AppFileRow(
     onToggleFavorite: (() -> Unit)? = null,
     onShare: () -> Unit,
     onDetails: () -> Unit,
-    onMoveToShelf: (() -> Unit)? = null,
     onRemove: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -264,7 +263,6 @@ fun AppFileRow(
     onToggleFavorite: (() -> Unit)? = null,
     onShare: () -> Unit,
     onShowDetails: () -> Unit,
-    onMoveToShelf: (() -> Unit)? = null,
     onRemoveFromRecents: (() -> Unit)? = null,
     onLongClick: () -> Unit = onShowDetails,
     modifier: Modifier = Modifier
@@ -283,7 +281,6 @@ fun AppFileRow(
         onToggleFavorite = onToggleFavorite,
         onShare = onShare,
         onDetails = onShowDetails,
-        onMoveToShelf = onMoveToShelf,
         onRemove = onRemoveFromRecents,
         modifier = modifier
     )

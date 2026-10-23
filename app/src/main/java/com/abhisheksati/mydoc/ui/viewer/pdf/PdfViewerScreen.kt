@@ -26,8 +26,18 @@ import androidx.compose.foundation.layout.width
 import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.ui.viewer.controls.DocumentToolsSheet
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
-import androidx.compose.ui.text.font.FontWeight
 import com.abhisheksati.mydoc.designsystem.components.AppBottomSheet
+import androidx.compose.ui.text.font.FontWeight
+import android.graphics.RectF
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.findRootCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import com.abhisheksati.mydoc.ui.viewer.controls.TileBitmapCache
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -98,6 +108,8 @@ import com.abhisheksati.mydoc.ui.viewer.controls.SearchOverlay
 import com.abhisheksati.mydoc.ui.viewer.controls.ThumbnailStrip
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerBottomBar
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerTopBar
+import com.abhisheksati.mydoc.ui.viewer.controls.ZoomableViewport
+import com.abhisheksati.mydoc.ui.viewer.controls.rememberZoomState
 import com.abhisheksati.mydoc.viewmodel.ViewerViewModel
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -127,12 +139,18 @@ fun PdfViewerScreen(
     val coroutineScope = rememberCoroutineScope()
     val state by viewModel.uiState.collectAsState()
 
-    var zoomScale by remember { mutableFloatStateOf(1f) }
-    var panOffset by remember { mutableStateOf(Offset.Zero) }
+    val zoomState = rememberZoomState(key = document.uri)
+    val zoomScale = zoomState.scale
+
+    // Reset zoom when page or viewing layout mode changes
+    LaunchedEffect(state.currentPage, state.isContinuousScroll, state.isDualPageView) {
+        zoomState.reset()
+    }
     var isPageJumpDialogOpen by remember { mutableStateOf(false) }
     var isReadingControlsOpen by remember { mutableStateOf(false) }
     var isThumbnailGridOpen by remember { mutableStateOf(false) }
     var isToolsSheetOpen by remember { mutableStateOf(false) }
+    var isDocumentDetailsOpen by remember { mutableStateOf(false) }
     var ocrExtractedText by remember { mutableStateOf<String?>(null) }
     var isOcrRunning by remember { mutableStateOf(false) }
     val ocrEngine = remember { com.abhisheksati.mydoc.ocr.OcrEngine(context) }
@@ -202,6 +220,42 @@ fun PdfViewerScreen(
         initialPage = state.currentPage,
         pageCount = { state.pageCount }
     )
+
+    // Reading immersion: hide system bars when controls are hidden, restore on exit
+    val activity = context as? Activity
+    val window = activity?.window
+    val insetsController = remember(window) {
+        if (window != null) {
+            androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+                systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        } else null
+    }
+
+    LaunchedEffect(state.areControlsVisible, insetsController) {
+        if (insetsController != null) {
+            if (state.areControlsVisible) {
+                insetsController.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            } else {
+                insetsController.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            }
+        }
+    }
+
+    DisposableEffect(insetsController) {
+        onDispose {
+            insetsController?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        }
+    }
+
+    // Auto-hide controls after 3 seconds of active scrolling
+    val isScrolling = lazyListState.isScrollInProgress || pagerState.isScrollInProgress
+    LaunchedEffect(isScrolling) {
+        if (isScrolling && state.areControlsVisible) {
+            kotlinx.coroutines.delay(3000L)
+            viewModel.setControlsVisible(false)
+        }
+    }
 
     // Volume key page turning listener
     LaunchedEffect(Unit) {
@@ -317,68 +371,29 @@ fun PdfViewerScreen(
                 end = AppSpacing.paddingSmall
             )
 
-            // Main viewport with double-tap zoom, pinch-pan, and tap-zones
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(state.isContinuousScroll, state.currentPage, state.pageCount) {
-                        detectTapGestures(
-                            onTap = { offset ->
-                                if (!state.isContinuousScroll && !state.isDualPageView) {
-                                    val viewWidth = size.width.toFloat()
-                                    if (offset.x < viewWidth * 0.2f) {
-                                        // Left 20% zone: Previous page
-                                        val prev = (state.currentPage - 1).coerceAtLeast(0)
-                                        if (prev != state.currentPage) {
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            viewModel.jumpToPage(prev)
-                                            coroutineScope.launch { pagerState.animateScrollToPage(prev) }
-                                        }
-                                    } else if (offset.x > viewWidth * 0.8f) {
-                                        // Right 20% zone: Next page
-                                        val next = (state.currentPage + 1).coerceAtMost(state.pageCount - 1)
-                                        if (next != state.currentPage) {
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            viewModel.jumpToPage(next)
-                                            coroutineScope.launch { pagerState.animateScrollToPage(next) }
-                                        }
-                                    } else {
-                                        viewModel.toggleControls()
-                                    }
-                                } else {
-                                    viewModel.toggleControls()
-                                }
-                            },
-                            onDoubleTap = {
-                                val isDoubleTapEnabled = app?.settingsRepository?.doubleTapZoom?.value ?: true
-                                if (isDoubleTapEnabled) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    zoomScale = if (zoomScale > 1.5f) 1f else 2.5f
-                                    panOffset = Offset.Zero
-                                }
-                            }
-                        )
+            // Main viewport with unified gesture handling, pinch-pan around centroid, and inertia
+            ZoomableViewport(
+                zoomState = zoomState,
+                isContinuous = state.isContinuousScroll,
+                isDualPage = state.isDualPageView,
+                isDoubleTapEnabled = app?.settingsRepository?.doubleTapZoom?.value ?: true,
+                onToggleControls = viewModel::toggleControls,
+                onPrevPage = {
+                    val prev = (state.currentPage - 1).coerceAtLeast(0)
+                    if (prev != state.currentPage) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        viewModel.jumpToPage(prev)
+                        coroutineScope.launch { pagerState.animateScrollToPage(prev) }
                     }
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            zoomScale = (zoomScale * zoom).coerceIn(1f, 5f)
-                            if (zoomScale > 1f) {
-                                val maxPan = 500f * (zoomScale - 1f)
-                                panOffset = Offset(
-                                    x = (panOffset.x + pan.x).coerceIn(-maxPan, maxPan),
-                                    y = (panOffset.y + pan.y).coerceIn(-maxPan, maxPan)
-                                )
-                            } else {
-                                panOffset = Offset.Zero
-                            }
-                        }
+                },
+                onNextPage = {
+                    val next = (state.currentPage + 1).coerceAtMost(state.pageCount - 1)
+                    if (next != state.currentPage) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        viewModel.jumpToPage(next)
+                        coroutineScope.launch { pagerState.animateScrollToPage(next) }
                     }
-                    .graphicsLayer {
-                        scaleX = zoomScale
-                        scaleY = zoomScale
-                        translationX = panOffset.x
-                        translationY = panOffset.y
-                    }
+                }
             ) {
                 val searchMatchesByPage = remember(state.searchMatches) {
                     state.searchMatches.groupBy { it.pageIndex }
@@ -509,16 +524,18 @@ fun PdfViewerScreen(
         // Clean, uncluttered Top Toolbar
         ViewerTopBar(
             title = document.displayName,
+            currentPage = state.currentPage,
+            pageCount = state.pageCount,
             visible = state.areControlsVisible && !state.isSearchOpen,
             isBookmarked = isCurrentBookmarked,
-            shelfColor = document.shelfColorIndex?.let { AppTheme.colors.getShelfColor(it).color },
             onBackClick = onBackClick,
-            onShareClick = onShareClick,
+            onSearchClick = viewModel::openSearch,
             onToggleBookmark = {
                 val added = app?.settingsRepository?.toggleBookmark(document.uri, state.currentPage) ?: false
                 bookmarks = app?.settingsRepository?.getBookmarks(document.uri) ?: emptySet()
                 Toast.makeText(context, if (added) "Bookmarked page ${state.currentPage + 1}" else "Bookmark removed", Toast.LENGTH_SHORT).show()
             },
+            onShareClick = onShareClick,
             onToolsClick = { isToolsSheetOpen = true },
             onOcrClick = {
                 if (!isOcrRunning) {
@@ -566,9 +583,7 @@ fun PdfViewerScreen(
                 }
             },
             onSlideshowClick = onSlideshowClick,
-            onSearchClick = viewModel::openSearch,
-            onThumbnailGridClick = { isThumbnailGridOpen = true },
-            onReadingModeClick = viewModel::toggleReadingMode,
+            onDocumentDetailsClick = { isDocumentDetailsOpen = true },
             modifier = Modifier.align(Alignment.TopCenter)
         )
 
@@ -613,12 +628,19 @@ fun PdfViewerScreen(
                 pageCount = state.pageCount,
                 visible = state.areControlsVisible,
                 hasOutline = state.outline.isNotEmpty(),
-                isThumbnailStripOpen = state.isThumbnailStripVisible,
-                onSearchClick = viewModel::openSearch,
                 onOutlineClick = { viewModel.setOutlineDrawerOpen(true) },
-                onToggleThumbnails = viewModel::toggleThumbnailStrip,
-                onOpenSettings = { isReadingControlsOpen = true },
-                onPageTextClick = { isPageJumpDialogOpen = true },
+                onPagesClick = { isThumbnailGridOpen = true },
+                onAppearanceClick = { isReadingControlsOpen = true },
+                onPageScrubbed = { targetPage ->
+                    viewModel.jumpToPage(targetPage)
+                    coroutineScope.launch {
+                        if (state.isContinuousScroll) {
+                            lazyListState.scrollToItem(targetPage)
+                        } else {
+                            pagerState.scrollToPage(targetPage)
+                        }
+                    }
+                },
                 sheetItems = state.outline,
                 onSheetSelect = { pageIdx ->
                     viewModel.jumpToPage(pageIdx)
@@ -650,8 +672,21 @@ fun PdfViewerScreen(
                 isKeepScreenOn = newKeep
                 app?.settingsRepository?.setKeepScreenOn(newKeep)
             },
-            document = document
+            document = document,
+            isFitPage = state.isFitPage,
+            onFitPageChange = viewModel::setFitPage
         )
+
+        // Document Details Dialog
+        if (isDocumentDetailsOpen) {
+            com.abhisheksati.mydoc.ui.home.DocumentDetailsDialog(
+                document = document,
+                onDismiss = { isDocumentDetailsOpen = false },
+                onOpen = { isDocumentDetailsOpen = false },
+                onShare = { onShareClick() },
+                onRemove = { isDocumentDetailsOpen = false }
+            )
+        }
 
         // 3-Column Page Thumbnail Grid Overview Sheet
         PageGridSheet(
@@ -911,24 +946,95 @@ private fun PageItemView(
     val haptic = LocalHapticFeedback.current
     val (origWidth, origHeight) = remember(pageIndex) { viewModel.getPageSize(pageIndex) }
     val aspectRatio = if (origHeight > 0) origWidth / origHeight else 0.707f
-    val targetScale = remember(zoomScale) {
-        if (zoomScale > 1.2f) (1.8f * zoomScale).coerceAtMost(3.6f) else 1.8f
-    }
 
+    // Base bitmap: Two-step load (0.35x instant thumbnail, then 1.8x high-res base)
     @Suppress("ProduceStateDoesNotAssignValue")
-    val bitmap by produceState<Bitmap?>(initialValue = null, pageIndex, readingMode, targetScale) {
-        // Step 1: Render low-resolution preview immediately for instant feedback
+    val baseBitmap by produceState<Bitmap?>(initialValue = null, pageIndex, readingMode) {
         val lowRes = withContext(Dispatchers.Default) {
             viewModel.renderPageBitmap(pageIndex, 0.35f)
         }
         value = lowRes
 
-        // Step 2: Sharpen to full high resolution (adjusts dynamically with zoom)
         val highRes = withContext(Dispatchers.Default) {
-            viewModel.renderPageBitmap(pageIndex, targetScale)
+            viewModel.renderPageBitmap(pageIndex, 1.8f)
         }
         if (highRes != null) {
             value = highRes
+        }
+    }
+
+    // High-scale Sharp Zoom Tile state
+    var pageLayoutCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    var visibleRegion by remember { mutableStateOf<RectF?>(null) }
+    var tileBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var tileRegion by remember { mutableStateOf<RectF?>(null) }
+
+    val tileAlpha by animateFloatAsState(
+        targetValue = if (tileBitmap != null) 1.0f else 0.0f,
+        animationSpec = tween(120),
+        label = "tileCrossfade"
+    )
+
+    // Debounced region rendering: starts 150ms after gesture settles when zoom > 1.3x
+    LaunchedEffect(pageIndex, readingMode, zoomScale > 1.3f, visibleRegion) {
+        if (zoomScale > 1.3f && visibleRegion != null) {
+            val reg = visibleRegion!!
+            if (reg.width() > 0.02f && reg.height() > 0.02f) {
+                delay(150) // Debounce 150ms
+                val docUri = viewModel.documentUri
+                val key = TileBitmapCache.makeKey(docUri, pageIndex, reg, zoomScale, readingMode)
+                val cached = TileBitmapCache.get(key)
+                if (cached != null) {
+                    tileBitmap = cached
+                    tileRegion = reg
+                } else {
+                    val coords = pageLayoutCoordinates
+                    if (coords != null && coords.isAttached) {
+                        val pageW = coords.boundsInWindow().width
+                        val overlapW = (reg.width() * pageW).toInt().coerceAtLeast(1)
+                        val overlapH = (reg.height() * (pageW / aspectRatio)).toInt().coerceAtLeast(1)
+
+                        // Cap to 24 MB and max dimension 4096 px
+                        val maxPixels = (24 * 1024 * 1024) / 4
+                        var targetW = overlapW.coerceAtMost(4096)
+                        var targetH = overlapH.coerceAtMost(4096)
+                        if (targetW.toLong() * targetH > maxPixels) {
+                            val ratio = kotlin.math.sqrt(maxPixels.toDouble() / (targetW.toLong() * targetH))
+                            targetW = (targetW * ratio).toInt().coerceAtLeast(1)
+                            targetH = (targetH * ratio).toInt().coerceAtLeast(1)
+                        }
+
+                        val rendered = withContext(Dispatchers.Default) {
+                            try {
+                                viewModel.renderRegionBitmap(
+                                    pageIndex = pageIndex,
+                                    region = reg,
+                                    pageWidthPx = pageW,
+                                    outWidth = targetW,
+                                    outHeight = targetH
+                                )
+                            } catch (_: Throwable) {
+                                null
+                            }
+                        }
+                        if (rendered != null) {
+                            TileBitmapCache.put(key, rendered)
+                            tileBitmap = rendered
+                            tileRegion = reg
+                        }
+                    }
+                }
+            }
+        } else {
+            tileBitmap = null
+            tileRegion = null
+        }
+    }
+
+    DisposableEffect(pageIndex) {
+        onDispose {
+            tileBitmap = null
+            tileRegion = null
         }
     }
 
@@ -972,6 +1078,22 @@ private fun PageItemView(
             .fillMaxWidth()
             .aspectRatio(aspectRatio)
             .background(itemBg)
+            .onGloballyPositioned { coordinates ->
+                pageLayoutCoordinates = coordinates
+                val root = coordinates.findRootCoordinates()
+                val pageInWindow = coordinates.boundsInWindow()
+                val windowRect = Rect(0f, 0f, root.size.width.toFloat(), root.size.height.toFloat())
+                val overlap = pageInWindow.intersect(windowRect)
+                if (overlap.width > 0f && overlap.height > 0f && pageInWindow.width > 0f && pageInWindow.height > 0f) {
+                    val relL = ((overlap.left - pageInWindow.left) / pageInWindow.width).coerceIn(0f, 1f)
+                    val relT = ((overlap.top - pageInWindow.top) / pageInWindow.height).coerceIn(0f, 1f)
+                    val relR = ((overlap.right - pageInWindow.left) / pageInWindow.width).coerceIn(0f, 1f)
+                    val relB = ((overlap.bottom - pageInWindow.top) / pageInWindow.height).coerceIn(0f, 1f)
+                    visibleRegion = RectF(relL, relT, relR, relB)
+                } else {
+                    visibleRegion = null
+                }
+            }
             .pointerInput(pageIndex) {
                 detectTapGestures(
                     onLongPress = {
@@ -981,14 +1103,34 @@ private fun PageItemView(
                 )
             }
     ) {
-        val bmp = bitmap
+        val bmp = baseBitmap
         if (bmp != null && !bmp.isRecycled) {
+            // Base layer: Always displays the stable 1.8x base bitmap
             Image(
                 bitmap = bmp.asImageBitmap(),
                 contentDescription = "Page ${pageIndex + 1}",
                 colorFilter = pageColorFilter,
                 modifier = Modifier.fillMaxSize()
             )
+
+            // Sharp zoom tile overlay: Displayed with smooth 120ms crossfade
+            val tile = tileBitmap
+            val reg = tileRegion
+            if (tile != null && !tile.isRecycled && reg != null && tileAlpha > 0f) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val dstLeft = reg.left * size.width
+                    val dstTop = reg.top * size.height
+                    val dstW = (reg.right - reg.left) * size.width
+                    val dstH = (reg.bottom - reg.top) * size.height
+                    drawImage(
+                        image = tile.asImageBitmap(),
+                        dstOffset = androidx.compose.ui.unit.IntOffset(dstLeft.toInt(), dstTop.toInt()),
+                        dstSize = androidx.compose.ui.unit.IntSize(dstW.toInt().coerceAtLeast(1), dstH.toInt().coerceAtLeast(1)),
+                        alpha = tileAlpha,
+                        colorFilter = pageColorFilter
+                    )
+                }
+            }
 
             // Draw search match highlights over the page
             if (searchMatches.isNotEmpty()) {

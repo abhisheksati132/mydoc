@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Environment
 import com.abhisheksati.mydoc.domain.model.HomeTab
 import com.abhisheksati.mydoc.domain.model.ReadingMode
+import com.abhisheksati.mydoc.domain.model.ReadingPrefs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -71,6 +72,9 @@ class SettingsRepository(context: Context) {
     private val _keepScreenOn = MutableStateFlow(prefs.getBoolean(KEY_KEEP_SCREEN_ON, true))
     val keepScreenOn: StateFlow<Boolean> = _keepScreenOn.asStateFlow()
 
+    private val _readingPrefs = MutableStateFlow(loadReadingPrefs())
+    val readingPrefs: StateFlow<ReadingPrefs> = _readingPrefs.asStateFlow()
+
     private val _sortOrder = MutableStateFlow(loadSortOrder())
     val sortOrder: StateFlow<DocumentSortOrder> = _sortOrder.asStateFlow()
 
@@ -128,11 +132,29 @@ class SettingsRepository(context: Context) {
     fun setDefaultReadingMode(mode: ReadingMode) {
         prefs.edit().putString(KEY_DEFAULT_READING_MODE, mode.name).apply()
         _defaultReadingMode.value = mode
+        _readingPrefs.value = _readingPrefs.value.copy(readingMode = mode)
     }
 
     fun setKeepScreenOn(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_KEEP_SCREEN_ON, enabled).apply()
         _keepScreenOn.value = enabled
+        _readingPrefs.value = _readingPrefs.value.copy(keepScreenOn = enabled)
+    }
+
+    fun updateReadingPrefs(update: (ReadingPrefs) -> ReadingPrefs) {
+        val next = update(_readingPrefs.value)
+        _readingPrefs.value = next
+        prefs.edit()
+            .putString(KEY_DEFAULT_READING_MODE, next.readingMode.name)
+            .putFloat(KEY_READING_BRIGHTNESS, next.brightness)
+            .putFloat(KEY_READING_FONT_SCALE, next.fontScale)
+            .putBoolean(KEY_KEEP_SCREEN_ON, next.keepScreenOn)
+            .putBoolean(KEY_READING_CONTINUOUS_SCROLL, next.isContinuousScroll)
+            .putBoolean(KEY_READING_DUAL_PAGE, next.isDualPageView)
+            .putBoolean(KEY_READING_FIT_PAGE, next.isFitPage)
+            .apply()
+        _defaultReadingMode.value = next.readingMode
+        _keepScreenOn.value = next.keepScreenOn
     }
 
     fun setSortOrder(order: DocumentSortOrder) {
@@ -302,6 +324,25 @@ class SettingsRepository(context: Context) {
             .getOrDefault(HomeTab.NOW)
     }
 
+    private fun loadReadingPrefs(): ReadingPrefs {
+        val mode = loadDefaultReadingMode()
+        val brightness = prefs.getFloat(KEY_READING_BRIGHTNESS, -1f)
+        val fontScale = prefs.getFloat(KEY_READING_FONT_SCALE, 1.0f)
+        val keepOn = prefs.getBoolean(KEY_KEEP_SCREEN_ON, true)
+        val continuous = prefs.getBoolean(KEY_READING_CONTINUOUS_SCROLL, true)
+        val dual = prefs.getBoolean(KEY_READING_DUAL_PAGE, false)
+        val fitPage = prefs.getBoolean(KEY_READING_FIT_PAGE, false)
+        return ReadingPrefs(
+            readingMode = mode,
+            brightness = brightness,
+            fontScale = fontScale,
+            keepScreenOn = keepOn,
+            isContinuousScroll = continuous,
+            isDualPageView = dual,
+            isFitPage = fitPage
+        )
+    }
+
     private fun loadDefaultReadingMode(): ReadingMode {
         val saved = prefs.getString(KEY_DEFAULT_READING_MODE, ReadingMode.NORMAL.name)
         return runCatching { ReadingMode.valueOf(saved ?: ReadingMode.NORMAL.name) }
@@ -337,5 +378,10 @@ class SettingsRepository(context: Context) {
         private const val KEY_DYNAMIC_COLOR = "dynamic_color_enabled"
         private const val KEY_AMOLED_BLACK = "amoled_black_enabled"
         private const val KEY_SCAN_FULL_DEVICE = "scan_full_device_storage"
+        private const val KEY_READING_BRIGHTNESS = "reading_brightness"
+        private const val KEY_READING_FONT_SCALE = "reading_font_scale"
+        private const val KEY_READING_CONTINUOUS_SCROLL = "reading_continuous_scroll"
+        private const val KEY_READING_DUAL_PAGE = "reading_dual_page"
+        private const val KEY_READING_FIT_PAGE = "reading_fit_page"
     }
 }

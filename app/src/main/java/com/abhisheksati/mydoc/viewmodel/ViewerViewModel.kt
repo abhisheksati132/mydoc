@@ -32,6 +32,7 @@ data class ViewerUiState(
     val readingMode: ReadingMode = ReadingMode.NORMAL,
     val isContinuousScroll: Boolean = true,
     val isDualPageView: Boolean = false,
+    val isFitPage: Boolean = false,
     val areControlsVisible: Boolean = true,
     val isSearchOpen: Boolean = false,
     val searchQuery: String = "",
@@ -58,6 +59,9 @@ class ViewerViewModel(
 
     private var renderer: DocumentRenderer? = null
     private var activeDocumentFile: DocumentFile = documentFile
+
+    val documentUri: String
+        get() = activeDocumentFile.uri
 
     init {
         loadDocument()
@@ -352,6 +356,11 @@ class ViewerViewModel(
 
     fun setContinuousScroll(continuous: Boolean) {
         _uiState.update { it.copy(isContinuousScroll = continuous) }
+        persistViewState()
+    }
+
+    fun setFitPage(fitPage: Boolean) {
+        _uiState.update { it.copy(isFitPage = fitPage) }
         persistViewState()
     }
 

@@ -27,7 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.abhisheksati.mydoc.MainActivity
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
-import com.abhisheksati.mydoc.designsystem.components.ShelvesBottomBar
+import com.abhisheksati.mydoc.designsystem.components.HomeBottomBar
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.HomeTab
@@ -137,7 +137,7 @@ fun HomeScreen(
         containerColor = colors.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            ShelvesBottomBar(
+            HomeBottomBar(
                 currentTab = currentTab,
                 onTabSelected = { tab ->
                     viewModel.selectTab(tab)

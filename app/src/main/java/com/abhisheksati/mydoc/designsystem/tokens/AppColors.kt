@@ -5,23 +5,10 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
- * Shelves Color Definition.
- * Stored as an index (0..5) in the database so Light and Dark themes dynamically render the matching shade.
- */
-@Immutable
-data class ShelfColor(
-    val id: Int,
-    val name: String,
-    val color: Color,
-    val onColor: Color
-)
-
-/**
- * Single Source of Truth for Design System Colors ("Shelves" Design System).
+ * Single Source of Truth for Design System Colors.
  *
  * Rules:
- * - Neutral canvas and surfaces (no random cobalt or rainbow backgrounds).
- * - Colour is reserved exclusively for SHELVES.
+ * - Neutral canvas and surfaces.
  * - Flat 1dp hairline lines, no shadows or gradients.
  */
 @Immutable
@@ -33,15 +20,15 @@ data class AppColors(
     val ink: Color,
     val inkMuted: Color,
     val highlight: Color,
-    val shelves: List<ShelfColor>,
+    val accent: Color,
+    val onAccent: Color,
 
     // Semantic mappings
     val textPrimary: Color = ink,
     val textSecondary: Color = inkMuted,
     val divider: Color = line,
     val cardBorder: Color = line,
-    val accent: Color = shelves[0].color,
-    val accentVariant: Color = shelves[0].color.copy(alpha = 0.16f),
+    val accentVariant: Color = accent.copy(alpha = 0.16f),
     val error: Color = Color(0xFFE5484D),
 
     // Container mappings
@@ -55,31 +42,6 @@ data class AppColors(
     val surfaceContainerLow: Color = surface,
     val outline: Color = line,
     val outlineVariant: Color = line
-) {
-    /**
-     * Retrieves the shelf color by its persistent index (0..5), defaulting to Blue if invalid.
-     */
-    fun getShelfColor(index: Int): ShelfColor {
-        return shelves.getOrElse(index) { shelves[0] }
-    }
-}
-
-val LightShelfColors = listOf(
-    ShelfColor(0, "Blue", Color(0xFF3D4CFF), Color(0xFFFFFFFF)),
-    ShelfColor(1, "Orange", Color(0xFFFF7A3D), Color(0xFF1A0E05)),
-    ShelfColor(2, "Mint", Color(0xFF86E7B8), Color(0xFF06210F)),
-    ShelfColor(3, "Pink", Color(0xFFFF8AC2), Color(0xFF2A0A18)),
-    ShelfColor(4, "Yellow", Color(0xFFFFD84D), Color(0xFF2A2000)),
-    ShelfColor(5, "Ink", Color(0xFF121212), Color(0xFFFFFFFF))
-)
-
-val DarkShelfColors = listOf(
-    ShelfColor(0, "Blue", Color(0xFF8A94FF), Color(0xFF0E0E0F)),
-    ShelfColor(1, "Orange", Color(0xFFFF8F5C), Color(0xFF0E0E0F)),
-    ShelfColor(2, "Mint", Color(0xFF86E7B8), Color(0xFF0E0E0F)),
-    ShelfColor(3, "Pink", Color(0xFFFF9BCB), Color(0xFF0E0E0F)),
-    ShelfColor(4, "Yellow", Color(0xFFFFDF6B), Color(0xFF0E0E0F)),
-    ShelfColor(5, "Paper", Color(0xFFF2F1EC), Color(0xFF0E0E0F))
 )
 
 val LightAppColors = AppColors(
@@ -90,7 +52,8 @@ val LightAppColors = AppColors(
     ink = Color(0xFF121212),
     inkMuted = Color(0xFF55554F),
     highlight = Color(0xFFD9DCFF),
-    shelves = LightShelfColors
+    accent = Color(0xFF3D4CFF),
+    onAccent = Color(0xFFFFFFFF)
 )
 
 val DarkAppColors = AppColors(
@@ -101,7 +64,8 @@ val DarkAppColors = AppColors(
     ink = Color(0xFFF2F1EC),
     inkMuted = Color(0xFFA3A29B),
     highlight = Color(0xFF2A2F6B),
-    shelves = DarkShelfColors
+    accent = Color(0xFF8A94FF),
+    onAccent = Color(0xFF0E0E0F)
 )
 
 val BlackAppColors = AppColors(
@@ -112,15 +76,16 @@ val BlackAppColors = AppColors(
     ink = Color(0xFFF2F1EC),
     inkMuted = Color(0xFFA3A29B),
     highlight = Color(0xFF2A2F6B),
-    shelves = DarkShelfColors
+    accent = Color(0xFF8A94FF),
+    onAccent = Color(0xFF0E0E0F)
 )
 
 val LocalAppColors = staticCompositionLocalOf { LightAppColors }
 
 /**
  * File extension badge helper.
- * Small 14dp rounded square extension tag using the file's shelf color tint,
- * or surfaceMuted for unfiled documents.
+ * Small 14dp rounded square extension tag using the file's format color tint,
+ * or surfaceMuted for unrecognized formats.
  */
 object DocumentFormatColors {
     val pdfTint = Color(0xFFE5484D)

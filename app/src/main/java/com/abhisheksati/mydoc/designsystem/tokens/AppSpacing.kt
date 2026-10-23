@@ -4,13 +4,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Single Source of Truth for Spacing, Shapes, and Touch Targets ("Shelves" Design System).
+ * Single Source of Truth for Spacing, Shapes, and Touch Targets.
  *
  * Rules:
  * - 8dp grid spacing (4dp, 8dp, 16dp, 24dp, 32dp, 48dp)
  * - Strict Radii:
  *   hero card: 28dp
- *   shelf tile: 24dp
  *   cards / sheets: 24dp (sheet top corners: 32dp)
  *   inputs and pills: 24dp
  *   file icon square: 14dp
@@ -36,7 +35,6 @@ object AppSpacing {
 
     // Strict Radii Hierarchy
     val heroCardRadius: Dp = 28.dp
-    val shelfTileRadius: Dp = 24.dp
     val cardRadius: Dp = 24.dp
     val sheetTopRadius: Dp = 32.dp
     val inputRadius: Dp = 24.dp

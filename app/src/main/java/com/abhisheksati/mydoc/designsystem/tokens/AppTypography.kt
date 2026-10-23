@@ -17,7 +17,6 @@ import com.abhisheksati.mydoc.R
  * - display: 38 / 42 / 600 / -1.4sp (screen hero titles)
  * - title: 34 / 40 / 600 / -1.2sp (screen titles)
  * - heading: 26 / 30 / 600 / -0.8sp
- * - shelf: 20 / 22 / 600 / -0.5sp
  * - bodyLarge: 16 / 24 / 400 / 0.0sp
  * - body: 15 / 20 / 500 / 0.0sp
  * - label: 13 / 18 / 500 / 0.0sp
@@ -56,13 +55,6 @@ data class AppTypography(
         fontSize = 26.sp,
         lineHeight = 30.sp,
         letterSpacing = (-0.8).sp
-    ),
-    val shelf: TextStyle = TextStyle(
-        fontFamily = BricolageFontFamily,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 20.sp,
-        lineHeight = 22.sp,
-        letterSpacing = (-0.5).sp
     ),
     val bodyLarge: TextStyle = TextStyle(
         fontFamily = BricolageFontFamily,

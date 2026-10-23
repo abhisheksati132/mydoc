@@ -40,7 +40,7 @@ import com.abhisheksati.mydoc.domain.model.HomeTab
  * Solid, premium 2-destination Bottom Bar: Documents and Tools.
  */
 @Composable
-fun ShelvesBottomBar(
+fun HomeBottomBar(
     currentTab: HomeTab,
     onTabSelected: (HomeTab) -> Unit,
     modifier: Modifier = Modifier
@@ -136,4 +136,17 @@ fun ShelvesBottomBar(
             }
         }
     }
+}
+
+/**
+ * Backward compatibility alias for ShelvesBottomBar.
+ */
+@Deprecated("Use HomeBottomBar instead", ReplaceWith("HomeBottomBar(currentTab, onTabSelected, modifier)"))
+@Composable
+fun ShelvesBottomBar(
+    currentTab: HomeTab,
+    onTabSelected: (HomeTab) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    HomeBottomBar(currentTab, onTabSelected, modifier)
 }

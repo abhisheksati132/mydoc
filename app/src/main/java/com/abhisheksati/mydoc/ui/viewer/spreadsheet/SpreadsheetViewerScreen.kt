@@ -14,30 +14,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -47,18 +33,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.R
+import com.abhisheksati.mydoc.MyDocApp
+import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
+import com.abhisheksati.mydoc.domain.model.ReadingPrefs
+import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SheetData
 import com.abhisheksati.mydoc.ui.common.AppDivider
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
+import com.abhisheksati.mydoc.ui.viewer.controls.ViewerCapabilities
+import com.abhisheksati.mydoc.ui.viewer.controls.ViewerScaffold
+import com.abhisheksati.mydoc.ui.viewer.controls.ViewerThemeTokens
 import com.abhisheksati.mydoc.viewmodel.SpreadsheetViewModel
 
+/**
+ * Modern spreadsheet table viewer wrapped in unified ViewerScaffold.
+ * Features frozen column and row headers, cell selection, multi-sheet tabs, and in-sheet cell search.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SpreadsheetViewerScreen(
@@ -68,99 +63,52 @@ fun SpreadsheetViewerScreen(
     onShareClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val app = context.applicationContext as? MyDocApp
+    val colors = LocalAppColors.current
+
     val state by viewModel.uiState.collectAsState()
     var isSearchOpen by remember { mutableStateOf(false) }
 
     val horizontalScrollState = rememberScrollState()
     val verticalScrollState = rememberScrollState()
 
-    val colors = com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors.current
-    val isAppDark = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
-    val bgColor = if (isAppDark) androidx.compose.ui.graphics.Color(0xFF000000) else colors.background
+    val defaultPrefs = remember { ReadingPrefs() }
+    val readingPrefs by (app?.settingsRepository?.readingPrefs ?: remember { kotlinx.coroutines.flow.MutableStateFlow(defaultPrefs) }).collectAsState()
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = document.displayName,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = colors.textPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "Back",
-                            tint = colors.textPrimary
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { isSearchOpen = !isSearchOpen }) {
-                        Icon(
-                            imageVector = Icons.Outlined.Search,
-                            contentDescription = "Search",
-                            tint = if (isSearchOpen) colors.accent else colors.textSecondary
-                        )
-                    }
-                    IconButton(onClick = onShareClick) {
-                        Icon(
-                            imageVector = Icons.Outlined.Share,
-                            contentDescription = stringResource(R.string.share),
-                            tint = colors.textSecondary
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = bgColor
-                )
-            )
-        },
-        bottomBar = {
-            // Sheet Tabs Selector
-            if (state.model.sheets.size > 1) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(colors.surface)
-                        .navigationBarsPadding()
-                ) {
-                    AppDivider()
-                    LazyRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = Spacing.medium, vertical = Spacing.extraSmall)
-                    ) {
-                        items(state.model.sheets.size) { index ->
-                            val sheet = state.model.sheets[index]
-                            val isSelected = index == state.selectedSheetIndex
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = { viewModel.selectSheet(index) },
-                                label = { Text(sheet.name) },
-                                shape = RoundedCornerShape(6.dp),
-                                modifier = Modifier.padding(end = Spacing.small),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = colors.accent,
-                                    selectedLabelColor = if (isAppDark) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.White
-                                )
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        containerColor = bgColor
-    ) { innerPadding ->
+    val textColor = ViewerThemeTokens.getTextColor(readingPrefs.readingMode, colors.textPrimary)
+
+    val outlineItems = remember(state.model.sheets) {
+        state.model.sheets.mapIndexed { idx, s ->
+            OutlineItem(title = s.name, pageIndex = idx, level = 0)
+        }
+    }
+
+    ViewerScaffold(
+        document = document,
+        capabilities = ViewerCapabilities(
+            supportsSearch = true,
+            supportsOutline = state.model.sheets.size > 1,
+            supportsPageGrid = false,
+            supportsSlideshow = false,
+            supportsTts = false,
+            supportsZoom = true
+        ),
+        currentPage = state.selectedSheetIndex,
+        pageCount = state.model.sheets.size.coerceAtLeast(1),
+        isControlsVisible = !isSearchOpen,
+        onBackClick = onBackClick,
+        onShareClick = onShareClick,
+        onSearchClick = { isSearchOpen = true },
+        sheetItems = outlineItems,
+        onSheetSelect = { viewModel.selectSheet(it) },
+        readingPrefs = readingPrefs,
+        modifier = modifier
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(top = 64.dp, bottom = 64.dp)
         ) {
             // In-sheet search input
             if (isSearchOpen) {
@@ -169,10 +117,10 @@ fun SpreadsheetViewerScreen(
                     onValueChange = viewModel::onSearchQueryChanged,
                     placeholder = { Text("Search sheet cells…") },
                     singleLine = true,
-                    shape = RoundedCornerShape(6.dp),
+                    shape = RoundedCornerShape(8.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = Spacing.medium, vertical = Spacing.small),
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -183,7 +131,7 @@ fun SpreadsheetViewerScreen(
 
             if (state.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    CircularProgressIndicator(color = colors.accent)
                 }
             } else if (state.errorMessage != null) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -191,7 +139,7 @@ fun SpreadsheetViewerScreen(
                         text = state.errorMessage ?: "Failed to open sheet",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(Spacing.large)
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
             } else {
@@ -260,14 +208,14 @@ fun SpreadsheetViewerScreen(
                                             Text(
                                                 text = "${r + 1}",
                                                 style = MaterialTheme.typography.bodySmall,
-                                                fontWeight = FontWeight.SemiBold,
+                                                fontWeight = FontWeight.Medium,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
                                 }
 
-                                // 2D Scrollable Cell Grid
+                                // Cells Grid
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
@@ -278,9 +226,15 @@ fun SpreadsheetViewerScreen(
                                         for (r in 0..maxRow) {
                                             Row {
                                                 for (c in 0..maxCol) {
-                                                    val cellVal = currentSheet.getCellValue(r, c)
-                                                    val isMatch = state.searchQuery.isNotBlank() && cellVal.contains(state.searchQuery, ignoreCase = true)
-                                                    val isSelected = state.selectedCell?.first == r && state.selectedCell?.second == c
+                                                    val cellText = currentSheet.getCellValue(r, c)
+                                                    val isSelected = state.selectedCell == (r to c)
+                                                    val isMatch = state.searchQuery.isNotBlank() && cellText.contains(state.searchQuery, ignoreCase = true)
+
+                                                    val cellBg = when {
+                                                        isSelected -> colors.accent.copy(alpha = 0.25f)
+                                                        isMatch -> Color(0x66FFEB3B)
+                                                        else -> Color.Transparent
+                                                    }
 
                                                     Box(
                                                         modifier = Modifier
@@ -288,23 +242,20 @@ fun SpreadsheetViewerScreen(
                                                             .height(rowHeight)
                                                             .border(
                                                                 width = if (isSelected) 1.5.dp else 0.5.dp,
-                                                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                                                color = if (isSelected) colors.accent else MaterialTheme.colorScheme.outlineVariant
                                                             )
-                                                            .background(
-                                                                if (isMatch) Color(0x66FFEB3B)
-                                                                else if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                                                else Color.Transparent
-                                                            )
+                                                            .background(cellBg)
                                                             .clickable { viewModel.selectCell(r, c) }
                                                             .padding(horizontal = 6.dp),
                                                         contentAlignment = Alignment.CenterStart
                                                     ) {
                                                         Text(
-                                                            text = cellVal,
+                                                            text = cellText,
                                                             style = MaterialTheme.typography.bodySmall,
-                                                            color = MaterialTheme.colorScheme.onBackground,
+                                                            color = textColor,
                                                             maxLines = 1,
-                                                            overflow = TextOverflow.Ellipsis
+                                                            overflow = TextOverflow.Ellipsis,
+                                                            textAlign = TextAlign.Start
                                                         )
                                                     }
                                                 }
@@ -333,21 +284,21 @@ fun SpreadsheetViewerScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(Spacing.medium)
+                        .padding(16.dp)
                         .navigationBarsPadding()
                 ) {
                     Text(
                         text = "CELL $cellRef",
                         style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = colors.accent
                     )
-                    Spacer(modifier = Modifier.height(Spacing.small))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = cellVal.ifEmpty { "(Empty cell)" },
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = textColor
                     )
-                    Spacer(modifier = Modifier.height(Spacing.large))
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }

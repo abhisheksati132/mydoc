@@ -1,23 +1,21 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
@@ -25,9 +23,8 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Slideshow
 import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.material.icons.outlined.Brightness4
 import androidx.compose.material.icons.outlined.Build
-import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.TextFields
@@ -46,36 +43,36 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 
 /**
- * Clean, uncluttered, and ergonomic top bar for the document viewer.
- * Keeps core actions (Back, Title, Search, Bookmark, Tools, More) instantly accessible
- * without horizontal crowding or overflowing on mobile screens.
+ * Clean, uncluttered, and ergonomic top bar for document viewers.
+ * Strictly presents: Back, Title with Page Subtitle, Search, Bookmark, and Overflow Menu.
+ * Complies with 48dp minimum touch targets and eliminates horizontal crowding.
  */
 @Composable
 fun ViewerTopBar(
     title: String,
+    currentPage: Int,
+    pageCount: Int,
     visible: Boolean,
     isBookmarked: Boolean,
     onBackClick: () -> Unit,
-    onShareClick: () -> Unit,
+    onSearchClick: () -> Unit,
     onToggleBookmark: () -> Unit,
-    shelfColor: Color? = null,
+    onShareClick: () -> Unit,
     onToolsClick: (() -> Unit)? = null,
     onOcrClick: (() -> Unit)? = null,
     onTtsClick: (() -> Unit)? = null,
     onSlideshowClick: (() -> Unit)? = null,
-    onSearchClick: (() -> Unit)? = null,
-    onThumbnailGridClick: (() -> Unit)? = null,
-    onReadingModeClick: (() -> Unit)? = null,
+    onDocumentDetailsClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
@@ -95,11 +92,10 @@ fun ViewerTopBar(
         ) + fadeOut(spring(stiffness = Spring.StiffnessMediumLow)),
         modifier = modifier
     ) {
-        val isOled = colors.background == DarkAppColors.background
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(if (isOled) Color(0xFF000000) else colors.surfaceContainer)
+                .background(colors.surfaceContainer)
                 .statusBarsPadding()
         ) {
             Row(
@@ -109,7 +105,7 @@ fun ViewerTopBar(
                     .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Back button
+                // Back button (48dp touch target)
                 IconButton(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -119,84 +115,76 @@ fun ViewerTopBar(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                        contentDescription = "Back",
+                        contentDescription = "Navigate back",
                         tint = colors.textPrimary
                     )
                 }
 
-                // Middle document title
-                Text(
-                    text = formatMiddleTruncated(title, maxChars = 28),
-                    style = typography.title,
-                    color = colors.textPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                // Title and Page Subtitle
+                Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(horizontal = 6.dp)
-                )
-
-                // Search button
-                if (onSearchClick != null) {
-                    IconButton(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onSearchClick()
-                        },
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Search,
-                            contentDescription = "Search text",
-                            tint = colors.textSecondary
+                        .padding(horizontal = 8.dp)
+                ) {
+                    Text(
+                        text = formatMiddleTruncated(title, maxChars = 28),
+                        style = typography.title,
+                        color = colors.textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (pageCount > 0) {
+                        Text(
+                            text = "Page ${currentPage + 1} of $pageCount",
+                            style = typography.caption.withTabularFigures(),
+                            color = colors.textSecondary,
+                            maxLines = 1
                         )
                     }
                 }
 
-                // Bookmark toggle
+                // In-Viewer Search
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onSearchClick()
+                    },
+                    modifier = Modifier.size(AppSpacing.minTouchTarget)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Search,
+                        contentDescription = "Search text in document",
+                        tint = colors.textSecondary
+                    )
+                }
+
+                // Bookmark Toggle
                 IconButton(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onToggleBookmark()
                     },
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.size(AppSpacing.minTouchTarget)
                 ) {
                     Icon(
                         imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                        contentDescription = if (isBookmarked) "Remove bookmark" else "Add bookmark",
-                        tint = if (isBookmarked) (shelfColor ?: colors.accent) else colors.textSecondary
+                        contentDescription = if (isBookmarked) "Remove page bookmark" else "Add page bookmark",
+                        tint = if (isBookmarked) colors.accent else colors.textSecondary
                     )
                 }
 
-                // PDF Tools Button (Prominent)
-                if (onToolsClick != null) {
-                    IconButton(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onToolsClick()
-                        },
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Build,
-                            contentDescription = "PDF Tools",
-                            tint = colors.accent
-                        )
-                    }
-                }
-
-                // Overflow / More Menu
+                // Three-dot Overflow Menu
                 Box {
                     IconButton(
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             isMoreMenuOpen = true
                         },
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(AppSpacing.minTouchTarget)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.MoreVert,
-                            contentDescription = "More actions",
+                            contentDescription = "More options",
                             tint = colors.textSecondary
                         )
                     }
@@ -205,7 +193,6 @@ fun ViewerTopBar(
                         expanded = isMoreMenuOpen,
                         onDismissRequest = { isMoreMenuOpen = false }
                     ) {
-                        // Share
                         DropdownMenuItem(
                             text = { Text("Share document", style = typography.body) },
                             leadingIcon = {
@@ -217,49 +204,6 @@ fun ViewerTopBar(
                             }
                         )
 
-                        // Page Grid Overview
-                        if (onThumbnailGridClick != null) {
-                            DropdownMenuItem(
-                                text = { Text("Page thumbnails grid", style = typography.body) },
-                                leadingIcon = {
-                                    Icon(Icons.Outlined.GridView, contentDescription = null, tint = colors.textSecondary)
-                                },
-                                onClick = {
-                                    isMoreMenuOpen = false
-                                    onThumbnailGridClick()
-                                }
-                            )
-                        }
-
-                        // Reading theme
-                        if (onReadingModeClick != null) {
-                            DropdownMenuItem(
-                                text = { Text("Reading theme & settings", style = typography.body) },
-                                leadingIcon = {
-                                    Icon(Icons.Outlined.Brightness4, contentDescription = null, tint = colors.textSecondary)
-                                },
-                                onClick = {
-                                    isMoreMenuOpen = false
-                                    onReadingModeClick()
-                                }
-                            )
-                        }
-
-                        // OCR text extraction
-                        if (onOcrClick != null) {
-                            DropdownMenuItem(
-                                text = { Text("Extract text (OCR)", style = typography.body) },
-                                leadingIcon = {
-                                    Icon(Icons.Outlined.TextFields, contentDescription = null, tint = colors.textSecondary)
-                                },
-                                onClick = {
-                                    isMoreMenuOpen = false
-                                    onOcrClick()
-                                }
-                            )
-                        }
-
-                        // Text-to-speech Read Aloud
                         if (onTtsClick != null) {
                             DropdownMenuItem(
                                 text = { Text("Read aloud (TTS)", style = typography.body) },
@@ -273,16 +217,54 @@ fun ViewerTopBar(
                             )
                         }
 
-                        // Slideshow mode
+                        if (onOcrClick != null) {
+                            DropdownMenuItem(
+                                text = { Text("Extract text (OCR)", style = typography.body) },
+                                leadingIcon = {
+                                    Icon(Icons.Outlined.TextFields, contentDescription = null, tint = colors.textSecondary)
+                                },
+                                onClick = {
+                                    isMoreMenuOpen = false
+                                    onOcrClick()
+                                }
+                            )
+                        }
+
+                        if (onToolsClick != null) {
+                            DropdownMenuItem(
+                                text = { Text("PDF tools", style = typography.body) },
+                                leadingIcon = {
+                                    Icon(Icons.Outlined.Build, contentDescription = null, tint = colors.accent)
+                                },
+                                onClick = {
+                                    isMoreMenuOpen = false
+                                    onToolsClick()
+                                }
+                            )
+                        }
+
                         if (onSlideshowClick != null) {
                             DropdownMenuItem(
-                                text = { Text("Start presentation slideshow", style = typography.body) },
+                                text = { Text("Start slideshow", style = typography.body) },
                                 leadingIcon = {
                                     Icon(Icons.Filled.Slideshow, contentDescription = null, tint = colors.textSecondary)
                                 },
                                 onClick = {
                                     isMoreMenuOpen = false
                                     onSlideshowClick()
+                                }
+                            )
+                        }
+
+                        if (onDocumentDetailsClick != null) {
+                            DropdownMenuItem(
+                                text = { Text("Document details", style = typography.body) },
+                                leadingIcon = {
+                                    Icon(Icons.Outlined.Info, contentDescription = null, tint = colors.textSecondary)
+                                },
+                                onClick = {
+                                    isMoreMenuOpen = false
+                                    onDocumentDetailsClick()
                                 }
                             )
                         }
@@ -294,3 +276,58 @@ fun ViewerTopBar(
         }
     }
 }
+
+@Preview(name = "ViewerTopBar - Light")
+@Composable
+private fun ViewerTopBarLightPreview() {
+    com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme(darkTheme = false, amoledBlack = false) {
+        ViewerTopBar(
+            title = "Annual Financial Report 2026.pdf",
+            currentPage = 4,
+            pageCount = 32,
+            visible = true,
+            isBookmarked = true,
+            onBackClick = {},
+            onSearchClick = {},
+            onToggleBookmark = {},
+            onShareClick = {}
+        )
+    }
+}
+
+@Preview(name = "ViewerTopBar - Dark")
+@Composable
+private fun ViewerTopBarDarkPreview() {
+    com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme(darkTheme = true, amoledBlack = false) {
+        ViewerTopBar(
+            title = "Annual Financial Report 2026.pdf",
+            currentPage = 4,
+            pageCount = 32,
+            visible = true,
+            isBookmarked = false,
+            onBackClick = {},
+            onSearchClick = {},
+            onToggleBookmark = {},
+            onShareClick = {}
+        )
+    }
+}
+
+@Preview(name = "ViewerTopBar - AMOLED")
+@Composable
+private fun ViewerTopBarAmoledPreview() {
+    com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme(darkTheme = true, amoledBlack = true) {
+        ViewerTopBar(
+            title = "Annual Financial Report 2026.pdf",
+            currentPage = 4,
+            pageCount = 32,
+            visible = true,
+            isBookmarked = true,
+            onBackClick = {},
+            onSearchClick = {},
+            onToggleBookmark = {},
+            onShareClick = {}
+        )
+    }
+}
+
