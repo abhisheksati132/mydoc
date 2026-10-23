@@ -109,8 +109,10 @@ class HomeViewModel(
             )
         }
 
+        val continueUris = continueItems.take(4).map { it.uri }.toSet()
         val dynamicRecents = (recentDocs + continueItems)
             .distinctBy { it.uri }
+            .filterNot { it.uri in continueUris }
             .sortedByDescending { it.lastModified }
             .take(20)
 

@@ -26,6 +26,8 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -154,24 +156,7 @@ fun AppTabHeader(
                     }
                 }
 
-                // 3. Settings Action (Standardized Settings Icon)
-                if (onSettingsClick != null) {
-                    IconButton(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onSettingsClick()
-                        },
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = "Settings",
-                            tint = colors.textPrimary
-                        )
-                    }
-                }
-
-                // 4. More / Contextual Overflow Menu (if enabled)
+                // 3. Action 3: Contextual Overflow Menu (with nested Settings) OR Standalone Settings Icon
                 if (moreMenuContent != null) {
                     Box {
                         IconButton(
@@ -201,7 +186,48 @@ fun AppTabHeader(
                             tonalElevation = 4.dp
                         ) {
                             moreMenuContent { isMenuOpen = false }
+                            if (onSettingsClick != null) {
+                                HorizontalDivider(
+                                    color = colors.divider.copy(alpha = 0.5f),
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = "Settings",
+                                            style = typography.body,
+                                            color = colors.textPrimary
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Settings,
+                                            contentDescription = null,
+                                            tint = colors.accent
+                                        )
+                                    },
+                                    onClick = {
+                                        isMenuOpen = false
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        onSettingsClick()
+                                    }
+                                )
+                            }
                         }
+                    }
+                } else if (onSettingsClick != null) {
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onSettingsClick()
+                        },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Settings,
+                            contentDescription = "Settings",
+                            tint = colors.textPrimary
+                        )
                     }
                 }
             }

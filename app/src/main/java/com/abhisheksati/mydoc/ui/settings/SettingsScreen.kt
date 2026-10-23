@@ -22,6 +22,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.res.stringResource
+import com.abhisheksati.mydoc.R
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Contrast
@@ -464,16 +466,16 @@ fun SettingsScreen(
                             val freed = settingsRepository.clearCache(context)
                             cacheSizeBytes = settingsRepository.getCacheSizeBytes(context)
                             val freedMb = freed / (1024.0 * 1024.0)
-                            val toastText = if (freedMb >= 0.1) String.format(Locale.US, "Freed %.1f MB", freedMb) else "Cache cleared"
+                            val toastText = if (freedMb >= 0.1) String.format(Locale.US, "Freed %.1f MB", freedMb) else context.getString(R.string.cache_cleared)
                             Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
                         },
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colors.accent,
-                            contentColor = Color.Black
+                            contentColor = colors.onAccent
                         )
                     ) {
-                        Text("Clear", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+                        Text(stringResource(R.string.clear_cache), fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
                     }
                 }
 
@@ -512,15 +514,15 @@ fun SettingsScreen(
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onClearRecent()
-                                Toast.makeText(context, "Recent history cleared", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.recent_history_cleared), Toast.LENGTH_SHORT).show()
                             },
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = colors.accent,
-                                contentColor = Color.Black
+                                contentColor = colors.onAccent
                             )
                         ) {
-                            Text("Clear", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+                            Text(stringResource(R.string.clear_cache), fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
                         }
                     }
                 }

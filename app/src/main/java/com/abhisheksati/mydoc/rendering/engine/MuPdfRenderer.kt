@@ -24,12 +24,23 @@ class MuPdfRenderer(
     private val lock = java.util.concurrent.locks.ReentrantLock()
     private var document: Document? = null
 
+    companion object {
+        init {
+            try {
+                com.artifex.mupdf.fitz.Context.init()
+            } catch (_: Throwable) {}
+        }
+    }
+
     init {
         openDocument()
     }
 
     private fun openDocument() {
         lock.withLock {
+            try {
+                com.artifex.mupdf.fitz.Context.init()
+            } catch (_: Throwable) {}
             document = try {
                 if (filePath != null && File(filePath).exists()) {
                     Document.openDocument(filePath)

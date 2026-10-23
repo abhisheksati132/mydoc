@@ -19,4 +19,9 @@
     <string name="details">Details</string>
     <string name="permission_denied_or_missing">Could not access this file. It may have been moved or deleted.</string>
     <string name="tile_scan_doc">Quick Scan</string>
+    <string name="clear_recent_history">Clear Recent History</string>
+    <string name="clear_recent_history_desc">Clear all recent documents and playback progress?</string>
+    <string name="recent_history_cleared">Recent history cleared</string>
+    <string name="clear_cache">Clear</string>
+    <string name="cache_cleared">Cache cleared</string>
 </resources>

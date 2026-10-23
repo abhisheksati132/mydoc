@@ -47,11 +47,10 @@ class MyDocApp : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
 
-        applicationScope.launch {
-            try {
-                com.artifex.mupdf.fitz.Context.init()
-            } catch (_: Throwable) {}
-        }
+        // Initialize MuPDF Fitz native library synchronously before any document access
+        try {
+            com.artifex.mupdf.fitz.Context.init()
+        } catch (_: Throwable) {}
         database = AppDatabase.getInstance(this)
         documentRepository = DocumentRepositoryImpl(this, database)
         mediaRepository = MediaRepositoryImpl(this, database)

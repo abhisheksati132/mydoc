@@ -53,10 +53,13 @@ class AndroidPdfRenderer(
             if (pageIndex < 0 || pageIndex >= (pdfRenderer?.pageCount ?: 0)) return@withLock Pair(595f, 842f)
             try {
                 val page = renderer.openPage(pageIndex)
-                val w = page.width.toFloat()
-                val h = page.height.toFloat()
-                page.close()
-                Pair(w, h)
+                try {
+                    val w = page.width.toFloat()
+                    val h = page.height.toFloat()
+                    Pair(w, h)
+                } finally {
+                    page.close()
+                }
             } catch (_: Throwable) {
                 Pair(595f, 842f)
             }
@@ -74,18 +77,21 @@ class AndroidPdfRenderer(
             var baseBitmap: Bitmap? = null
             try {
                 val page = renderer.openPage(pageIndex)
-                val origWidth = page.width
-                val origHeight = page.height
+                try {
+                    val origWidth = page.width
+                    val origHeight = page.height
 
-                val scaledWidth = (origWidth * scale).toInt().coerceAtLeast(1)
-                val scaledHeight = (origHeight * scale).toInt().coerceAtLeast(1)
+                    val scaledWidth = (origWidth * scale).toInt().coerceAtLeast(1)
+                    val scaledHeight = (origHeight * scale).toInt().coerceAtLeast(1)
 
-                baseBitmap = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888)
-                val canvas = Canvas(baseBitmap)
-                canvas.drawColor(Color.WHITE)
+                    baseBitmap = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888)
+                    val canvas = Canvas(baseBitmap)
+                    canvas.drawColor(Color.WHITE)
 
-                page.render(baseBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                page.close()
+                    page.render(baseBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                } finally {
+                    page.close()
+                }
 
                 val finalBitmap = when (mode) {
                     ReadingMode.INVERTED_DARK -> {
@@ -140,21 +146,24 @@ class AndroidPdfRenderer(
 
         var baseBitmap: Bitmap? = null
         try {
-            val srcW = page.width.toFloat().coerceAtLeast(1f)
-            val srcH = page.height.toFloat().coerceAtLeast(1f)
-            val s = pageWidthPx / srcW
-            val pageHeightPx = srcH * s
+            try {
+                val srcW = page.width.toFloat().coerceAtLeast(1f)
+                val srcH = page.height.toFloat().coerceAtLeast(1f)
+                val s = pageWidthPx / srcW
+                val pageHeightPx = srcH * s
 
-            baseBitmap = Bitmap.createBitmap(outWidth, outHeight, Bitmap.Config.ARGB_8888)
-            baseBitmap.eraseColor(Color.WHITE)
+                baseBitmap = Bitmap.createBitmap(outWidth, outHeight, Bitmap.Config.ARGB_8888)
+                baseBitmap.eraseColor(Color.WHITE)
 
-            val matrix = android.graphics.Matrix().apply {
-                postScale(s, s)
-                postTranslate(-region.left * pageWidthPx, -region.top * pageHeightPx)
+                val matrix = android.graphics.Matrix().apply {
+                    postScale(s, s)
+                    postTranslate(-region.left * pageWidthPx, -region.top * pageHeightPx)
+                }
+
+                page.render(baseBitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+            } finally {
+                page.close()
             }
-
-            page.render(baseBitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-            page.close()
 
             val finalBitmap = when (mode) {
                 ReadingMode.INVERTED_DARK -> {

@@ -30,19 +30,80 @@ import com.abhisheksati.mydoc.R
  *
  * Tabular figures (tnum) applied to numbers, sizes, and counters.
  */
-val BricolageFontFamily = FontFamily(
-    Font(R.font.bricolage_grotesque, FontWeight.Normal),
-    Font(R.font.bricolage_grotesque, FontWeight.Medium),
-    Font(R.font.bricolage_grotesque, FontWeight.SemiBold),
-    Font(R.font.bricolage_grotesque, FontWeight.Bold)
-)
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.font.FontVariation
 
-val InterFontFamily = FontFamily(
-    Font(R.font.inter, FontWeight.Normal),
-    Font(R.font.inter, FontWeight.Medium),
-    Font(R.font.inter, FontWeight.SemiBold),
-    Font(R.font.inter, FontWeight.Bold)
-)
+@OptIn(ExperimentalTextApi::class)
+val BricolageFontFamily: FontFamily = runCatching {
+    FontFamily(
+        Font(
+            resId = R.font.bricolage_grotesque,
+            weight = FontWeight.Normal,
+            variationSettings = FontVariation.Settings(
+                FontVariation.weight(400),
+                FontVariation.Setting("opsz", 24f)
+            )
+        ),
+        Font(
+            resId = R.font.bricolage_grotesque,
+            weight = FontWeight.Medium,
+            variationSettings = FontVariation.Settings(
+                FontVariation.weight(500),
+                FontVariation.Setting("opsz", 28f)
+            )
+        ),
+        Font(
+            resId = R.font.bricolage_grotesque,
+            weight = FontWeight.SemiBold,
+            variationSettings = FontVariation.Settings(
+                FontVariation.weight(600),
+                FontVariation.Setting("opsz", 36f)
+            )
+        ),
+        Font(
+            resId = R.font.bricolage_grotesque,
+            weight = FontWeight.Bold,
+            variationSettings = FontVariation.Settings(
+                FontVariation.weight(700),
+                FontVariation.Setting("opsz", 48f)
+            )
+        )
+    )
+}.getOrElse { FontFamily.SansSerif }
+
+@OptIn(ExperimentalTextApi::class)
+val InterFontFamily: FontFamily = runCatching {
+    FontFamily(
+        Font(
+            resId = R.font.inter,
+            weight = FontWeight.Normal,
+            variationSettings = FontVariation.Settings(
+                FontVariation.weight(400)
+            )
+        ),
+        Font(
+            resId = R.font.inter,
+            weight = FontWeight.Medium,
+            variationSettings = FontVariation.Settings(
+                FontVariation.weight(500)
+            )
+        ),
+        Font(
+            resId = R.font.inter,
+            weight = FontWeight.SemiBold,
+            variationSettings = FontVariation.Settings(
+                FontVariation.weight(600)
+            )
+        ),
+        Font(
+            resId = R.font.inter,
+            weight = FontWeight.Bold,
+            variationSettings = FontVariation.Settings(
+                FontVariation.weight(700)
+            )
+        )
+    )
+}.getOrElse { FontFamily.SansSerif }
 
 @Immutable
 data class AppTypography(

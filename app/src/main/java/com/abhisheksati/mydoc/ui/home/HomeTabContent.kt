@@ -43,6 +43,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.stringResource
+import com.abhisheksati.mydoc.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -86,9 +88,9 @@ fun HomeTabContent(
     if (showClearRecentDialog) {
         AppDialog(
             isOpen = true,
-            title = "Clear Recent History",
-            message = "Clear all recent documents and playback progress?",
-            confirmLabel = "Clear",
+            title = stringResource(R.string.clear_recent_history),
+            message = stringResource(R.string.clear_recent_history_desc),
+            confirmLabel = stringResource(R.string.clear_cache),
             dismissLabel = "Cancel",
             onConfirm = {
                 showClearRecentDialog = false
@@ -441,7 +443,7 @@ fun HomeTabContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No recent items found",
+                        text = if (continueItems.isNotEmpty()) "No other recent items" else "No recent items found",
                         style = typography.caption,
                         color = colors.inkMuted
                     )

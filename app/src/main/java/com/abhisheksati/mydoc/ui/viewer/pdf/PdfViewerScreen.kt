@@ -215,11 +215,8 @@ fun PdfViewerScreen(
         }
     }
 
-    val safeInitialPage = remember(document.uri) {
-        document.lastPage.coerceAtLeast(0)
-    }
     val lazyListState = rememberLazyListState(
-        initialFirstVisibleItemIndex = if (state.pageCount > 0) state.currentPage.coerceIn(0, state.pageCount - 1) else safeInitialPage
+        initialFirstVisibleItemIndex = if (state.pageCount > 0) state.currentPage.coerceIn(0, state.pageCount - 1) else 0
     )
     val pagerState = rememberPagerState(
         initialPage = if (state.pageCount > 0) state.currentPage.coerceIn(0, state.pageCount - 1) else 0,
@@ -950,7 +947,8 @@ private fun PageItemView(
 ) {
     val haptic = LocalHapticFeedback.current
     val (origWidth, origHeight) = remember(pageIndex) { viewModel.getPageSize(pageIndex) }
-    val aspectRatio = if (origHeight > 0) origWidth / origHeight else 0.707f
+    val rawRatio = if (origHeight > 0f && origWidth > 0f) origWidth / origHeight else 0.707f
+    val aspectRatio = if (rawRatio.isFinite() && rawRatio > 0.05f) rawRatio else 0.707f
 
     // Base bitmap: Two-step load (0.35x instant thumbnail, then 1.8x high-res base)
     @Suppress("ProduceStateDoesNotAssignValue")
@@ -997,7 +995,7 @@ private fun PageItemView(
                     if (coords != null && coords.isAttached) {
                         val pageW = coords.boundsInWindow().width
                         val overlapW = (reg.width() * pageW).toInt().coerceAtLeast(1)
-                        val overlapH = (reg.height() * (pageW / aspectRatio)).toInt().coerceAtLeast(1)
+                        val overlapH = (reg.height() * (pageW / aspectRatio.coerceAtLeast(0.05f))).toInt().coerceAtLeast(1)
 
                         // Cap to 24 MB and max dimension 4096 px
                         val maxPixels = (24 * 1024 * 1024) / 4
