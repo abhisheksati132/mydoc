@@ -35,7 +35,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +51,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.components.AppDialog
+import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.kindColor
@@ -62,32 +70,44 @@ fun HomeTabContent(
     onItemClick: (LibraryItem) -> Unit,
     onSearchClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onToggleTheme: () -> Unit = {},
+    onClearRecent: () -> Unit = {},
     isDarkTheme: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
     val typography = AppTheme.typography
     val haptics = rememberAppHaptics()
+    var showClearRecentDialog by remember { mutableStateOf(false) }
 
     val topItem = continueItems.firstOrNull()
     val nextThreeItems = continueItems.drop(1).take(3)
 
-    LazyColumn(
+    if (showClearRecentDialog) {
+        AppDialog(
+            isOpen = true,
+            title = "Clear Recent History",
+            message = "Clear all recent documents and playback progress?",
+            confirmLabel = "Clear",
+            dismissLabel = "Cancel",
+            onConfirm = {
+                showClearRecentDialog = false
+                haptics.tap()
+                onClearRecent()
+            },
+            onDismiss = { showClearRecentDialog = false }
+        )
+    }
+
+    Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.background),
-        contentPadding = PaddingValues(bottom = 96.dp)
+            .background(colors.background)
     ) {
-        // 1. Top Header: wordmark "stacks" + Actions
-        item(key = "header") {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = AppSpacing.paddingLarge, vertical = AppSpacing.paddingSmall),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        // Standard symmetrical 56dp App Header
+        AppTabHeader(
+            title = "stacks",
+            titleContent = {
                 Text(
                     text = "stacks",
                     style = typography.headline.copy(
@@ -97,38 +117,17 @@ fun HomeTabContent(
                     ),
                     color = colors.ink
                 )
+            },
+            onSearchClick = onSearchClick,
+            isDarkTheme = isDarkTheme,
+            onToggleTheme = onToggleTheme,
+            onSettingsClick = onSettingsClick
+        )
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = {
-                            haptics.tap()
-                            onSearchClick()
-                        },
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Search,
-                            contentDescription = "Search",
-                            tint = colors.ink
-                        )
-                    }
-
-                    IconButton(
-                        onClick = {
-                            haptics.tap()
-                            onSettingsClick()
-                        },
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = "Settings",
-                            tint = colors.ink
-                        )
-                    }
-                }
-            }
-        }
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 96.dp)
+        ) {
 
         // 2. Section: Continue
         item(key = "continue_header") {
@@ -401,12 +400,36 @@ fun HomeTabContent(
         // 5. Section: Recent with kind-tinted extension squares
         item(key = "recent_header") {
             Spacer(modifier = Modifier.height(28.dp))
-            Text(
-                text = "Recent",
-                style = typography.title.copy(fontSize = 20.sp, fontWeight = FontWeight.Bold),
-                color = colors.ink,
-                modifier = Modifier.padding(horizontal = AppSpacing.paddingLarge, vertical = AppSpacing.paddingSmall)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = AppSpacing.paddingLarge, vertical = AppSpacing.paddingSmall),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Recent",
+                    style = typography.title.copy(fontSize = 20.sp, fontWeight = FontWeight.Bold),
+                    color = colors.ink
+                )
+                if (recentItems.isNotEmpty() || continueItems.isNotEmpty()) {
+                    TextButton(
+                        onClick = {
+                            haptics.tap()
+                            showClearRecentDialog = true
+                        }
+                    ) {
+                        Text(
+                            text = "Clear",
+                            style = typography.caption.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp,
+                                color = colors.accent
+                            )
+                        )
+                    }
+                }
+            }
         }
 
         if (recentItems.isEmpty()) {
@@ -438,6 +461,8 @@ fun HomeTabContent(
         }
     }
 }
+}
+
 
 @Composable
 private fun RecentItemRow(

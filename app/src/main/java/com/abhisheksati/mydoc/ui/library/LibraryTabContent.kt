@@ -61,6 +61,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.request.videoFrameMillis
+import com.abhisheksati.mydoc.designsystem.components.AppSearchField
+import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.kindColor
@@ -80,6 +82,7 @@ fun LibraryTabContent(
     countsByKind: Map<MediaKind, Pair<Int, Long>>,
     onItemClick: (LibraryItem) -> Unit,
     onSettingsClick: () -> Unit,
+    onToggleTheme: () -> Unit = {},
     isDarkTheme: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -108,106 +111,38 @@ fun LibraryTabContent(
         modifier = modifier.fillMaxSize()
     ) { currentKind ->
         if (currentKind == null) {
-            // Main Library View (Title, Pill Search, 2x2 Grid, Recently Added)
-            LazyColumn(
+            var isSearchActive by remember { mutableStateOf(false) }
+
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(colors.background),
-                contentPadding = PaddingValues(bottom = 96.dp)
+                    .background(colors.background)
             ) {
-                // Header
-                item(key = "lib_header") {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .padding(horizontal = AppSpacing.paddingLarge, vertical = AppSpacing.paddingSmall),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Library",
-                            style = typography.headline.copy(fontSize = 24.sp, fontWeight = FontWeight.Bold),
-                            color = colors.ink
+                AppTabHeader(
+                    title = "Library",
+                    onSearchClick = {
+                        isSearchActive = !isSearchActive
+                    },
+                    isSearchActive = isSearchActive || searchQuery.isNotBlank(),
+                    searchContent = {
+                        AppSearchField(
+                            query = searchQuery,
+                            onQueryChanged = { searchQuery = it },
+                            placeholder = "Search documents, photos, video, audio...",
+                            modifier = Modifier.fillMaxWidth()
                         )
+                    },
+                    isDarkTheme = isDarkTheme,
+                    onToggleTheme = onToggleTheme,
+                    onSettingsClick = onSettingsClick
+                )
 
-                        IconButton(
-                            onClick = {
-                                haptics.tap()
-                                onSettingsClick()
-                            },
-                            modifier = Modifier.size(48.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Settings,
-                                contentDescription = "Settings",
-                                tint = colors.ink
-                            )
-                        }
-                    }
-                }
-
-                // Pill Search Bar
-                item(key = "lib_search_pill") {
-                    Surface(
-                        shape = RoundedCornerShape(24.dp),
-                        color = colors.surfaceMuted,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = AppSpacing.paddingLarge, vertical = AppSpacing.paddingSmall)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Search,
-                                contentDescription = "Search",
-                                tint = colors.inkMuted,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            TextField(
-                                value = searchQuery,
-                                onValueChange = { searchQuery = it },
-                                placeholder = {
-                                    Text(
-                                        text = "Search documents, photos, video, audio",
-                                        style = typography.body.copy(fontSize = 14.sp),
-                                        color = colors.inkMuted
-                                    )
-                                },
-                                singleLine = true,
-                                colors = TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    disabledContainerColor = Color.Transparent,
-                                    focusedIndicatorColor = Color.Transparent,
-                                    unfocusedIndicatorColor = Color.Transparent
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(
-                                    onClick = { searchQuery = "" },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Clear,
-                                        contentDescription = "Clear",
-                                        tint = colors.inkMuted,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 2x2 Kind Tiles (Documents, Photos, Videos, Audio)
-                if (searchQuery.isBlank()) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 96.dp)
+                ) {
+                    // 2x2 Kind Tiles (Documents, Photos, Videos, Audio)
+                    if (searchQuery.isBlank()) {
                     item(key = "lib_tiles_grid") {
                         Spacer(modifier = Modifier.height(10.dp))
                         Column(
@@ -322,7 +257,8 @@ fun LibraryTabContent(
                     }
                 }
             }
-        } else {
+        }
+    } else {
             // Kind Drill-down View
             KindDrillDownView(
                 kind = currentKind,

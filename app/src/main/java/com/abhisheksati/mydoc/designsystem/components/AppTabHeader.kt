@@ -54,6 +54,7 @@ import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 @Composable
 fun AppTabHeader(
     title: String,
+    titleContent: (@Composable () -> Unit)? = null,
     onSearchClick: (() -> Unit)? = null,
     isSearchActive: Boolean = false,
     searchContent: (@Composable () -> Unit)? = null,
@@ -96,19 +97,23 @@ fun AppTabHeader(
                 if (navigationIcon != null) {
                     navigationIcon()
                 }
-                Text(
-                    text = title,
-                    style = typography.title.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 22.sp
-                    ),
-                    color = colors.textPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                if (titleContent != null) {
+                    titleContent()
+                } else {
+                    Text(
+                        text = title,
+                        style = typography.title.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 22.sp
+                        ),
+                        color = colors.textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
 
-            // Right Balanced Action Buttons (Exactly 3 standard actions)
+            // Right Balanced Action Buttons (Consistent trio: Search, Theme Toggle, Settings)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.End
@@ -149,7 +154,24 @@ fun AppTabHeader(
                     }
                 }
 
-                // 3. More / Overflow Menu or Settings
+                // 3. Settings Action (Standardized Settings Icon)
+                if (onSettingsClick != null) {
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onSettingsClick()
+                        },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Settings,
+                            contentDescription = "Settings",
+                            tint = colors.textPrimary
+                        )
+                    }
+                }
+
+                // 4. More / Contextual Overflow Menu (if enabled)
                 if (moreMenuContent != null) {
                     Box {
                         IconButton(
@@ -180,20 +202,6 @@ fun AppTabHeader(
                         ) {
                             moreMenuContent { isMenuOpen = false }
                         }
-                    }
-                } else if (onSettingsClick != null) {
-                    IconButton(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onSettingsClick()
-                        },
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = "Settings",
-                            tint = colors.textPrimary
-                        )
                     }
                 }
             }

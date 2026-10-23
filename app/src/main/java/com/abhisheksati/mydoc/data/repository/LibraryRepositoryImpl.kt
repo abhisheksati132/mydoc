@@ -7,9 +7,11 @@ import com.abhisheksati.mydoc.domain.model.MediaKind
 import com.abhisheksati.mydoc.domain.repository.DocumentRepository
 import com.abhisheksati.mydoc.domain.repository.LibraryRepository
 import com.abhisheksati.mydoc.domain.repository.MediaRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 
 class LibraryRepositoryImpl(
     private val documentRepository: DocumentRepository,
@@ -143,4 +145,10 @@ class LibraryRepositoryImpl(
     override fun recentlyAdded(limit: Int): Flow<List<LibraryItem>> {
         return getAllItems().map { it.take(limit) }
     }
+
+    override suspend fun clearAllRecents() = withContext(Dispatchers.IO) {
+        documentRepository.clearAllRecents()
+        mediaPlaybackDao.clearAllPlaybacks()
+    }
 }
+

@@ -17,4 +17,6 @@ interface LibraryRepository {
     fun searchItems(query: String, kind: MediaKind? = null): Flow<List<LibraryItem>>
     fun continueItems(limit: Int = 10): Flow<List<LibraryItem>>
     fun recentlyAdded(limit: Int = 20): Flow<List<LibraryItem>>
+    suspend fun clearAllRecents()
 }
+

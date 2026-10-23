@@ -215,10 +215,15 @@ fun PdfViewerScreen(
         }
     }
 
-    val lazyListState = rememberLazyListState(initialFirstVisibleItemIndex = state.currentPage)
+    val safeInitialPage = remember(document.uri) {
+        document.lastPage.coerceAtLeast(0)
+    }
+    val lazyListState = rememberLazyListState(
+        initialFirstVisibleItemIndex = if (state.pageCount > 0) state.currentPage.coerceIn(0, state.pageCount - 1) else safeInitialPage
+    )
     val pagerState = rememberPagerState(
-        initialPage = state.currentPage,
-        pageCount = { state.pageCount }
+        initialPage = if (state.pageCount > 0) state.currentPage.coerceIn(0, state.pageCount - 1) else 0,
+        pageCount = { state.pageCount.coerceAtLeast(1) }
     )
 
     // Reading immersion: hide system bars when controls are hidden, restore on exit

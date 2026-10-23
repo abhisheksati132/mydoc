@@ -101,7 +101,7 @@ class PackageInstallerHelper(private val context: Context) {
                 currentSignatures.any { currSig -> currSig.contentEquals(newSig) }
             }
             if (!hasMatch) {
-                throw SecurityException("Verification failed: APK signing certificate does not match the installed app certificate.")
+                throw SecurityException("Cannot update automatically: The downloaded APK certificate differs from this installed build (e.g. debug vs release keystore). Please install the APK manually or uninstall the debug build first.")
             }
         }
     }

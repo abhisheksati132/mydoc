@@ -16,8 +16,8 @@ fun getGitCommitCount(): Int {
 }
 
 val commitCount = getGitCommitCount()
-// Start version 1.1.x series cleanly at 1.1.0 (baseline at commit 97)
-val patchNumber = (commitCount - 97).coerceAtLeast(0)
+// Start version 1.2.x series cleanly for Stacks local media engine
+val patchNumber = (commitCount - 100).coerceAtLeast(0)
 
 android {
     namespace = "com.abhisheksati.mydoc"
@@ -37,7 +37,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = commitCount
-        versionName = "1.1.$patchNumber"
+        versionName = "1.2.$patchNumber"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

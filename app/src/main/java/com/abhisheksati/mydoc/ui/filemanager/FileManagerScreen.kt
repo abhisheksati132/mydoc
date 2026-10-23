@@ -478,16 +478,6 @@ fun FileManagerScreen(
                                     viewModel.refreshVolumes()
                                 }
                             )
-                            if (onSettingsClick != null) {
-                                DropdownMenuItem(
-                                    text = { Text("Settings", style = typography.body, color = colors.textPrimary) },
-                                    leadingIcon = { Icon(Icons.Outlined.Settings, contentDescription = null, tint = colors.textSecondary) },
-                                    onClick = {
-                                        onDismiss()
-                                        onSettingsClick()
-                                    }
-                                )
-                            }
                         },
                         bottomContent = if (!isHubMode) {
                             {

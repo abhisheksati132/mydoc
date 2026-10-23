@@ -29,6 +29,7 @@ data class HomeUiState(
     val continueItems: List<LibraryItem> = emptyList(),
     val libraryItems: List<LibraryItem> = emptyList(),
     val recentLibraryItems: List<LibraryItem> = emptyList(),
+    val recentlyAdded: List<LibraryItem> = emptyList(),
     val countsByKind: Map<MediaKind, Pair<Int, Long>> = emptyMap(),
     val sortOrder: DocumentSortOrder = DocumentSortOrder.LAST_OPENED,
     val isSearching: Boolean = false,
@@ -93,13 +94,34 @@ class HomeViewModel(
             Pair(itemsForKind.size, itemsForKind.sumOf { it.sizeBytes })
         }
 
+        val recentDocs = recents.filter { it.lastOpenedTimestamp > 0 }.map { doc ->
+            LibraryItem(
+                uri = doc.uri,
+                name = doc.displayName,
+                kind = MediaKind.DOCUMENT,
+                mimeType = doc.mimeType,
+                sizeBytes = doc.sizeBytes,
+                lastModified = doc.lastOpenedTimestamp,
+                isFavorite = doc.isFavorite,
+                lastPage = doc.lastPage,
+                pageCount = doc.pageCount,
+                progressFraction = if (doc.pageCount > 0) (doc.lastPage.toFloat() / doc.pageCount).coerceIn(0f, 1f) else 0f
+            )
+        }
+
+        val dynamicRecents = (recentDocs + continueItems)
+            .distinctBy { it.uri }
+            .sortedByDescending { it.lastModified }
+            .take(20)
+
         HomeUiState(
             searchQuery = query,
             documents = sortedDocs,
             recents = recents,
             continueItems = continueItems,
             libraryItems = filteredLibItems,
-            recentLibraryItems = allLibraryItems.take(20),
+            recentLibraryItems = dynamicRecents,
+            recentlyAdded = allLibraryItems.take(20),
             countsByKind = counts,
             sortOrder = sortOrder,
             isSearching = query.isNotBlank(),
@@ -131,7 +153,7 @@ class HomeViewModel(
 
     fun clearAllRecents() {
         viewModelScope.launch {
-            repository.clearAllRecents()
+            libraryRepository.clearAllRecents()
         }
     }
 

@@ -9,9 +9,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.R
 
-import androidx.compose.ui.text.ExperimentalTextApi
-import androidx.compose.ui.text.font.FontVariation
-
 /**
  * Typography System: Balanced Dual-Typeface Pairing.
  *
@@ -33,72 +30,18 @@ import androidx.compose.ui.text.font.FontVariation
  *
  * Tabular figures (tnum) applied to numbers, sizes, and counters.
  */
-@OptIn(ExperimentalTextApi::class)
 val BricolageFontFamily = FontFamily(
-    Font(
-        resId = R.font.bricolage_grotesque,
-        weight = FontWeight.Normal,
-        variationSettings = FontVariation.Settings(
-            FontVariation.weight(400),
-            FontVariation.Setting("opsz", 24f)
-        )
-    ),
-    Font(
-        resId = R.font.bricolage_grotesque,
-        weight = FontWeight.Medium,
-        variationSettings = FontVariation.Settings(
-            FontVariation.weight(500),
-            FontVariation.Setting("opsz", 28f)
-        )
-    ),
-    Font(
-        resId = R.font.bricolage_grotesque,
-        weight = FontWeight.SemiBold,
-        variationSettings = FontVariation.Settings(
-            FontVariation.weight(600),
-            FontVariation.Setting("opsz", 36f)
-        )
-    ),
-    Font(
-        resId = R.font.bricolage_grotesque,
-        weight = FontWeight.Bold,
-        variationSettings = FontVariation.Settings(
-            FontVariation.weight(700),
-            FontVariation.Setting("opsz", 48f)
-        )
-    )
+    Font(R.font.bricolage_grotesque, FontWeight.Normal),
+    Font(R.font.bricolage_grotesque, FontWeight.Medium),
+    Font(R.font.bricolage_grotesque, FontWeight.SemiBold),
+    Font(R.font.bricolage_grotesque, FontWeight.Bold)
 )
 
-@OptIn(ExperimentalTextApi::class)
 val InterFontFamily = FontFamily(
-    Font(
-        resId = R.font.inter,
-        weight = FontWeight.Normal,
-        variationSettings = FontVariation.Settings(
-            FontVariation.weight(400)
-        )
-    ),
-    Font(
-        resId = R.font.inter,
-        weight = FontWeight.Medium,
-        variationSettings = FontVariation.Settings(
-            FontVariation.weight(500)
-        )
-    ),
-    Font(
-        resId = R.font.inter,
-        weight = FontWeight.SemiBold,
-        variationSettings = FontVariation.Settings(
-            FontVariation.weight(600)
-        )
-    ),
-    Font(
-        resId = R.font.inter,
-        weight = FontWeight.Bold,
-        variationSettings = FontVariation.Settings(
-            FontVariation.weight(700)
-        )
-    )
+    Font(R.font.inter, FontWeight.Normal),
+    Font(R.font.inter, FontWeight.Medium),
+    Font(R.font.inter, FontWeight.SemiBold),
+    Font(R.font.inter, FontWeight.Bold)
 )
 
 @Immutable

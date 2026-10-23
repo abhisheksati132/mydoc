@@ -276,7 +276,7 @@ fun PresentationViewerScreen(
     val rawSlides = presentationData?.slides ?: emptyList()
     val isNativeEmpty = rawSlides.isEmpty() || (rawSlides.size == 1 && rawSlides.first().title == "Empty Presentation")
     val effectiveSlideCount = if (!isNativeEmpty) rawSlides.size else 0
-    val pagerState = rememberPagerState(pageCount = { effectiveSlideCount })
+    val pagerState = rememberPagerState(pageCount = { effectiveSlideCount.coerceAtLeast(1) })
     val lazyListState = rememberLazyListState()
     var isContinuousVertical by remember { mutableStateOf(false) }
     val effectiveSlides: List<PptxSlide> = if (!isNativeEmpty) rawSlides else emptyList()

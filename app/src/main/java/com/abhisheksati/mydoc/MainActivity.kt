@@ -282,7 +282,12 @@ class MainActivity : ComponentActivity() {
                                     updateManager = updateManager,
                                     settingsRepository = app.settingsRepository,
                                     onBackClick = { isSettingsOpen = false },
-                                    onDesignSystemPreviewClick = { isDesignSystemPreviewOpen = true }
+                                    onDesignSystemPreviewClick = { isDesignSystemPreviewOpen = true },
+                                    onClearRecent = {
+                                        lifecycleScope.launch {
+                                            app.libraryRepository.clearAllRecents()
+                                        }
+                                    }
                                 )
                             }
                             is ActiveScreen.Photo -> {
@@ -357,7 +362,17 @@ class MainActivity : ComponentActivity() {
                                             com.abhisheksati.mydoc.domain.model.MediaKind.DOCUMENT -> {
                                                 lifecycleScope.launch {
                                                     val res = app.documentRepository.registerOpenedDocument(Uri.parse(item.uri))
-                                                    res.onSuccess { doc -> currentDocument = doc }
+                                                    res.onSuccess { doc ->
+                                                        currentDocument = doc
+                                                    }.onFailure {
+                                                        currentDocument = DocumentFile(
+                                                            uri = item.uri,
+                                                            displayName = item.name,
+                                                            sizeBytes = item.sizeBytes,
+                                                            mimeType = item.mimeType,
+                                                            lastOpenedTimestamp = System.currentTimeMillis()
+                                                        )
+                                                    }
                                                 }
                                             }
                                             com.abhisheksati.mydoc.domain.model.MediaKind.PHOTO -> {

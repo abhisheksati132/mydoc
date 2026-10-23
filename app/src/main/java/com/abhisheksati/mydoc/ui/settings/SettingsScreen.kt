@@ -82,6 +82,8 @@ import com.abhisheksati.mydoc.update.UpdateUiState
 import java.util.Locale
 import kotlinx.coroutines.launch
 
+import androidx.compose.material.icons.outlined.DeleteSweep
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -89,6 +91,7 @@ fun SettingsScreen(
     settingsRepository: SettingsRepository,
     onBackClick: () -> Unit,
     onDesignSystemPreviewClick: () -> Unit = {},
+    onClearRecent: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val updateState by updateManager.state.collectAsState()
@@ -473,6 +476,54 @@ fun SettingsScreen(
                         Text("Clear", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
                     }
                 }
+
+                if (onClearRecent != null) {
+                    SettingsDivider()
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(colors.accent.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.accent, modifier = Modifier.size(19.dp))
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Recent History & Progress",
+                                style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Clear recent documents and continue reading/watching progress",
+                                style = typography.caption.copy(fontSize = 12.sp),
+                                color = colors.textSecondary
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onClearRecent()
+                                Toast.makeText(context, "Recent history cleared", Toast.LENGTH_SHORT).show()
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colors.accent,
+                                contentColor = Color.Black
+                            )
+                        ) {
+                            Text("Clear", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+                        }
+                    }
+                }
             }
 
             // 5. ABOUT
@@ -587,19 +638,30 @@ fun SettingsScreen(
                                 )
                             }
                             Spacer(modifier = Modifier.height(10.dp))
-                            Button(
-                                onClick = { scope.launch { updateManager.downloadAndInstall(release) } },
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = colors.accent,
-                                    contentColor = Color.Black
-                                )
-                            ) {
-                                val sizeText = if (release.apkSizeBytes > 0) {
-                                    val mb = release.apkSizeBytes / (1024.0 * 1024.0)
-                                    String.format(Locale.US, " (%.1f MB)", mb)
-                                } else ""
-                                Text("Download & Install$sizeText", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(
+                                    onClick = { scope.launch { updateManager.downloadAndInstall(release) } },
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = colors.accent,
+                                        contentColor = Color.Black
+                                    )
+                                ) {
+                                    val sizeText = if (release.apkSizeBytes > 0) {
+                                        val mb = release.apkSizeBytes / (1024.0 * 1024.0)
+                                        String.format(Locale.US, " (%.1f MB)", mb)
+                                    } else ""
+                                    Text("Download & Install$sizeText", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+                                }
+
+                                OutlinedButton(
+                                    onClick = { updateManager.dismissUpdate(release.tagName) },
+                                    shape = RoundedCornerShape(10.dp),
+                                    border = BorderStroke(0.8.dp, colors.divider),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textSecondary)
+                                ) {
+                                    Text("Dismiss", fontSize = 12.5.sp, maxLines = 1)
+                                }
                             }
                         }
                     }

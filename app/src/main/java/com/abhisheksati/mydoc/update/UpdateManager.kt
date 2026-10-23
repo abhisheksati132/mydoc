@@ -59,8 +59,13 @@ class UpdateManager(
                 return
             }
 
+            val ignoredTag = prefs.getString(KEY_IGNORED_TAG, "")
             if (isNewerVersion(release.versionName, currentVersionName)) {
-                _state.value = UpdateUiState.UpdateAvailable(release, currentVersionName)
+                if (isLaunchCheck && ignoredTag == release.tagName) {
+                    _state.value = UpdateUiState.Idle
+                } else {
+                    _state.value = UpdateUiState.UpdateAvailable(release, currentVersionName)
+                }
             } else {
                 _state.value = UpdateUiState.NoUpdate(currentVersionName, release)
             }
@@ -74,6 +79,13 @@ class UpdateManager(
                 _state.value = UpdateUiState.Idle
             }
         }
+    }
+
+    fun dismissUpdate(releaseTag: String? = null) {
+        if (!releaseTag.isNullOrBlank()) {
+            prefs.edit().putString(KEY_IGNORED_TAG, releaseTag).apply()
+        }
+        _state.value = UpdateUiState.Idle
     }
 
     suspend fun downloadAndInstall(release: AppRelease) {
@@ -133,5 +145,6 @@ class UpdateManager(
 
     companion object {
         private const val KEY_LAST_CHECK_TIME = "last_update_check_time"
+        private const val KEY_IGNORED_TAG = "last_ignored_release_tag"
     }
 }

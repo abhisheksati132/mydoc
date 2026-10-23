@@ -152,6 +152,8 @@ fun HomeScreen(
                             scope.launch { pagerState.animateScrollToPage(HomeTab.LIBRARY.ordinal) }
                         },
                         onSettingsClick = onSettingsClick,
+                        onToggleTheme = onToggleTheme,
+                        onClearRecent = { viewModel.clearAllRecents() },
                         isDarkTheme = isDarkTheme,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -159,10 +161,11 @@ fun HomeScreen(
                 HomeTab.LIBRARY -> {
                     LibraryTabContent(
                         allItems = uiState.libraryItems,
-                        recentlyAdded = uiState.recentLibraryItems,
+                        recentlyAdded = uiState.recentlyAdded,
                         countsByKind = uiState.countsByKind,
                         onItemClick = onLibraryItemClick,
                         onSettingsClick = onSettingsClick,
+                        onToggleTheme = onToggleTheme,
                         isDarkTheme = isDarkTheme,
                         modifier = Modifier.fillMaxSize()
                     )

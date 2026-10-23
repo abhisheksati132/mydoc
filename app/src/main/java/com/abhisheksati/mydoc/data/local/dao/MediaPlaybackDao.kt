@@ -20,4 +20,8 @@ interface MediaPlaybackDao {
 
     @Query("DELETE FROM media_playback WHERE uri = :uri")
     suspend fun deletePlaybackPosition(uri: String)
+
+    @Query("DELETE FROM media_playback")
+    suspend fun clearAllPlaybacks()
 }
+
