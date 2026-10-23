@@ -328,6 +328,22 @@ fun PdfViewerScreen(
         }
     }
 
+    // Synchronize scroll position when switching between continuous scroll and page-by-page pager
+    LaunchedEffect(state.isContinuousScroll) {
+        if (state.pageCount > 0 && hasRestoredSavedPosition) {
+            val target = state.currentPage.coerceIn(0, state.pageCount - 1)
+            if (state.isContinuousScroll) {
+                if (lazyListState.firstVisibleItemIndex != target) {
+                    lazyListState.scrollToItem(target)
+                }
+            } else {
+                if (pagerState.currentPage != target) {
+                    pagerState.scrollToPage(target)
+                }
+            }
+        }
+    }
+
     val pageBgColor = when (state.readingMode) {
         ReadingMode.INVERTED_DARK -> Color(0xFF000000)
         ReadingMode.SEPIA -> Color(0xFFF4ECD8)

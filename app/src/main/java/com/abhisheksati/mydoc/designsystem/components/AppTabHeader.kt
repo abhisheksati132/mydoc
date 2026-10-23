@@ -129,7 +129,7 @@ fun AppTabHeader(
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onSearchClick()
                         },
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Search,
@@ -146,7 +146,7 @@ fun AppTabHeader(
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onToggleTheme()
                         },
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             imageVector = if (isDarkTheme) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
@@ -164,7 +164,7 @@ fun AppTabHeader(
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 isMenuOpen = true
                             },
-                            modifier = Modifier.size(40.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.MoreVert,
@@ -221,7 +221,7 @@ fun AppTabHeader(
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onSettingsClick()
                         },
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Settings,

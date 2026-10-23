@@ -165,6 +165,7 @@ fun DocumentCoverImage(
     val targetWidthPx = with(density) { 120.dp.roundToPx() }
     val targetHeightPx = with(density) { (120.dp / aspectRatio).roundToPx() }
 
+    @Suppress("ProduceStateDoesNotAssignValue")
     val coverBitmap by produceState<Bitmap?>(initialValue = null, key1 = document.uri) {
         val cached = DocumentCoverCache.getFromMemory("${document.uri.hashCode()}_${targetWidthPx}x${targetHeightPx}")
         if (cached != null) {
