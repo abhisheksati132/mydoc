@@ -7,10 +7,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.abhisheksati.mydoc.data.local.DocumentSortOrder
 import com.abhisheksati.mydoc.data.local.SettingsRepository
-import com.abhisheksati.mydoc.domain.model.DocumentCategory
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.HomeTab
+import com.abhisheksati.mydoc.domain.model.LibraryItem
+import com.abhisheksati.mydoc.domain.model.MediaKind
 import com.abhisheksati.mydoc.domain.repository.DocumentRepository
+import com.abhisheksati.mydoc.domain.repository.LibraryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +26,10 @@ data class HomeUiState(
     val searchQuery: String = "",
     val documents: List<DocumentFile> = emptyList(),
     val recents: List<DocumentFile> = emptyList(),
+    val continueItems: List<LibraryItem> = emptyList(),
+    val libraryItems: List<LibraryItem> = emptyList(),
+    val recentLibraryItems: List<LibraryItem> = emptyList(),
+    val countsByKind: Map<MediaKind, Pair<Int, Long>> = emptyMap(),
     val sortOrder: DocumentSortOrder = DocumentSortOrder.LAST_OPENED,
     val isSearching: Boolean = false,
     val isLoading: Boolean = false
@@ -36,10 +42,11 @@ private data class DocumentFilters(
 
 class HomeViewModel(
     private val repository: DocumentRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val libraryRepository: LibraryRepository
 ) : ViewModel() {
 
-    private val _currentTab = MutableStateFlow(HomeTab.DOCUMENTS)
+    private val _currentTab = MutableStateFlow(HomeTab.HOME)
     val currentTab: StateFlow<HomeTab> = _currentTab.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
@@ -56,27 +63,44 @@ class HomeViewModel(
     val uiState: StateFlow<HomeUiState> = combine(
         repository.getRecents(),
         _documentsSource,
-        _filterFlow
-    ) { recents, allDocs, filters ->
+        _filterFlow,
+        libraryRepository.getAllItems(),
+        libraryRepository.continueItems(10)
+    ) { recents, allDocs, filters, allLibraryItems, continueItems ->
         val (query, sortOrder) = filters
 
-        val filtered = allDocs.filter { doc ->
+        val filteredDocs = allDocs.filter { doc ->
             if (query.isBlank()) true
             else doc.displayName.contains(query.trim(), ignoreCase = true)
         }
 
-        val sorted = when (sortOrder) {
-            DocumentSortOrder.LAST_OPENED -> filtered.sortedByDescending { it.lastOpenedTimestamp }
-            DocumentSortOrder.NAME_ASC -> filtered.sortedBy { it.displayName.lowercase() }
-            DocumentSortOrder.NAME_DESC -> filtered.sortedByDescending { it.displayName.lowercase() }
-            DocumentSortOrder.SIZE_DESC -> filtered.sortedByDescending { it.sizeBytes }
-            DocumentSortOrder.SIZE_ASC -> filtered.sortedBy { it.sizeBytes }
+        val sortedDocs = when (sortOrder) {
+            DocumentSortOrder.LAST_OPENED -> filteredDocs.sortedByDescending { it.lastOpenedTimestamp }
+            DocumentSortOrder.NAME_ASC -> filteredDocs.sortedBy { it.displayName.lowercase() }
+            DocumentSortOrder.NAME_DESC -> filteredDocs.sortedByDescending { it.displayName.lowercase() }
+            DocumentSortOrder.SIZE_DESC -> filteredDocs.sortedByDescending { it.sizeBytes }
+            DocumentSortOrder.SIZE_ASC -> filteredDocs.sortedBy { it.sizeBytes }
+        }
+
+        val filteredLibItems = if (query.isBlank()) {
+            allLibraryItems
+        } else {
+            allLibraryItems.filter { it.name.contains(query.trim(), ignoreCase = true) }
+        }
+
+        val counts = MediaKind.entries.associateWith { kind ->
+            val itemsForKind = allLibraryItems.filter { it.kind == kind }
+            Pair(itemsForKind.size, itemsForKind.sumOf { it.sizeBytes })
         }
 
         HomeUiState(
             searchQuery = query,
-            documents = sorted,
+            documents = sortedDocs,
             recents = recents,
+            continueItems = continueItems,
+            libraryItems = filteredLibItems,
+            recentLibraryItems = allLibraryItems.take(20),
+            countsByKind = counts,
             sortOrder = sortOrder,
             isSearching = query.isNotBlank(),
             isLoading = false
@@ -120,11 +144,12 @@ class HomeViewModel(
 
     class Factory(
         private val repository: DocumentRepository,
-        private val settingsRepository: SettingsRepository
+        private val settingsRepository: SettingsRepository,
+        private val libraryRepository: LibraryRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return HomeViewModel(repository, settingsRepository) as T
+            return HomeViewModel(repository, settingsRepository, libraryRepository) as T
         }
     }
 }

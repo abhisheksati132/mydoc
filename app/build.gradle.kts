@@ -107,8 +107,13 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
 
-    // Coil for document thumbnail loading & caching
+    // LibVLC official VideoLAN engine
+    implementation("org.videolan.android:libvlc-all:3.6.5")
+
+    // Coil for document thumbnail loading & caching + GIF/Video frame decoding
     implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
+    implementation(libs.coil.video)
 
     // Phase 8: ExifInterface for offline EXIF orientation and metadata
     implementation(libs.androidx.exifinterface)

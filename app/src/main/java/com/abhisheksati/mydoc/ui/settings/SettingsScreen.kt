@@ -27,13 +27,15 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Storage
-import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material.icons.outlined.Vibration
+import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -73,6 +75,7 @@ import com.abhisheksati.mydoc.data.local.SettingsRepository
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.domain.model.HomeTab
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.update.UpdateManager
 import com.abhisheksati.mydoc.update.UpdateUiState
@@ -94,17 +97,13 @@ fun SettingsScreen(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val haptic = LocalHapticFeedback.current
-    val isOled = colors.background == DarkAppColors.background
 
-    // General & Appearance
+    // LOOK
     val currentTheme by settingsRepository.themeMode.collectAsState()
     val amoledBlack by settingsRepository.amoledBlack.collectAsState()
     val hapticFeedbackEnabled by settingsRepository.isHapticFeedbackEnabled.collectAsState()
 
-    // Cache
-    var cacheSizeBytes by remember { mutableStateOf(settingsRepository.getCacheSizeBytes(context)) }
-
-    // Documents & Reader
+    // READING
     val currentReadingMode by settingsRepository.defaultReadingMode.collectAsState()
     val highQualityPdf by settingsRepository.highQualityPdf.collectAsState()
     val pdfFitMode by settingsRepository.pdfFitMode.collectAsState()
@@ -112,7 +111,17 @@ fun SettingsScreen(
     val keepScreenOn by settingsRepository.keepScreenOn.collectAsState()
     val volumeKeyTurning by settingsRepository.volumeKeyPageTurning.collectAsState()
 
-    // Security
+    // MEDIA
+    val videoHwAccel by settingsRepository.videoHardwareAcceleration.collectAsState()
+    val autoResumeVideo by settingsRepository.autoResumeVideo.collectAsState()
+    val videoAutoLoop by settingsRepository.videoAutoLoop.collectAsState()
+    val photoQuality by settingsRepository.photoEditorExportQuality.collectAsState()
+
+    // LIBRARY
+    val startupTab by settingsRepository.defaultStartupTab.collectAsState()
+    var cacheSizeBytes by remember { mutableStateOf(settingsRepository.getCacheSizeBytes(context)) }
+
+    // ABOUT & SECURITY
     val biometricLockEnabled by settingsRepository.isBiometricLockEnabled.collectAsState()
 
     Scaffold(
@@ -150,9 +159,8 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. APPEARANCE
-            SettingsCard(title = "APPEARANCE") {
-                // Theme Mode Selector
+            // 1. LOOK
+            SettingsCard(title = "LOOK") {
                 Text(
                     text = "Theme",
                     style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
@@ -208,16 +216,14 @@ fun SettingsScreen(
                     subtitle = "Use pitch black background in dark mode to save battery",
                     icon = Icons.Outlined.Contrast,
                     checked = amoledBlack,
-                    onCheckedChange = {
-                        settingsRepository.setAmoledBlack(it)
-                    }
+                    onCheckedChange = { settingsRepository.setAmoledBlack(it) }
                 )
 
                 SettingsDivider()
 
                 SettingToggleRow(
                     title = "Tactile Vibration Haptics",
-                    subtitle = "Vibration response for navigation and actions",
+                    subtitle = "Vibration response for navigation, gestures, and actions",
                     icon = Icons.Outlined.Vibration,
                     checked = hapticFeedbackEnabled,
                     onCheckedChange = {
@@ -227,9 +233,8 @@ fun SettingsScreen(
                 )
             }
 
-            // 2. DOCUMENT READER
-            SettingsCard(title = "DOCUMENT READER") {
-                // Default Reading Mode
+            // 2. READING
+            SettingsCard(title = "READING") {
                 Text(
                     text = "Default Reading Mode",
                     style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
@@ -262,7 +267,6 @@ fun SettingsScreen(
 
                 SettingsDivider()
 
-                // PDF Page Scaling
                 Text(
                     text = "PDF Page Scaling",
                     style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
@@ -328,8 +332,93 @@ fun SettingsScreen(
                 )
             }
 
-            // 3. STORAGE & CACHE
-            SettingsCard(title = "STORAGE & CACHE") {
+            // 3. MEDIA
+            SettingsCard(title = "MEDIA") {
+                SettingToggleRow(
+                    title = "Hardware Video Acceleration",
+                    subtitle = "Use GPU hardware decoding for ultra-smooth 4K video playback",
+                    icon = Icons.Outlined.Videocam,
+                    checked = videoHwAccel,
+                    onCheckedChange = { settingsRepository.setVideoHardwareAcceleration(it) }
+                )
+
+                SettingsDivider()
+
+                SettingToggleRow(
+                    title = "Auto-Resume Video",
+                    subtitle = "Remember last playback position and resume automatically",
+                    icon = Icons.Outlined.Speed,
+                    checked = autoResumeVideo,
+                    onCheckedChange = { settingsRepository.setAutoResumeVideo(it) }
+                )
+
+                SettingsDivider()
+
+                SettingToggleRow(
+                    title = "Video Auto-Loop",
+                    subtitle = "Automatically replay videos when they reach the end",
+                    icon = Icons.Outlined.Repeat,
+                    checked = videoAutoLoop,
+                    onCheckedChange = { settingsRepository.setVideoAutoLoop(it) }
+                )
+
+                SettingsDivider()
+
+                Text(
+                    text = "Photo Editor Export Quality",
+                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+                    color = colors.textSecondary,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ThemeChip(
+                        label = "95% (Ultra)",
+                        icon = null,
+                        selected = photoQuality == 95,
+                        onClick = { settingsRepository.setPhotoEditorExportQuality(95) }
+                    )
+                    ThemeChip(
+                        label = "90% (High)",
+                        icon = null,
+                        selected = photoQuality == 90,
+                        onClick = { settingsRepository.setPhotoEditorExportQuality(90) }
+                    )
+                    ThemeChip(
+                        label = "85% (Compact)",
+                        icon = null,
+                        selected = photoQuality == 85,
+                        onClick = { settingsRepository.setPhotoEditorExportQuality(85) }
+                    )
+                }
+            }
+
+            // 4. LIBRARY
+            SettingsCard(title = "LIBRARY") {
+                Text(
+                    text = "Default Startup Destination",
+                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+                    color = colors.textSecondary,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    HomeTab.entries.forEach { tab ->
+                        ThemeChip(
+                            label = tab.label,
+                            icon = null,
+                            selected = startupTab == tab,
+                            onClick = { settingsRepository.setDefaultStartupTab(tab) }
+                        )
+                    }
+                }
+
+                SettingsDivider()
+
                 val formattedCache = if (cacheSizeBytes < 1024) {
                     "$cacheSizeBytes B"
                 } else if (cacheSizeBytes < 1024 * 1024) {
@@ -386,11 +475,11 @@ fun SettingsScreen(
                 }
             }
 
-            // 4. PRIVACY & SECURITY
-            SettingsCard(title = "PRIVACY & SECURITY") {
+            // 5. ABOUT
+            SettingsCard(title = "ABOUT") {
                 SettingToggleRow(
                     title = "Biometric App Lock",
-                    subtitle = "Require fingerprint or device PIN to open mydoc",
+                    subtitle = "Require fingerprint or device PIN to open app",
                     icon = Icons.Outlined.Security,
                     checked = biometricLockEnabled,
                     onCheckedChange = { isChecked ->
@@ -406,10 +495,9 @@ fun SettingsScreen(
                         }
                     }
                 )
-            }
 
-            // 5. ABOUT & UPDATES
-            SettingsCard(title = "ABOUT & UPDATES") {
+                SettingsDivider()
+
                 when (val state = updateState) {
                     is UpdateUiState.Idle -> {
                         Row(
@@ -454,7 +542,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = "Checking GitHub Releases…",
+                                text = "Checking for updates…",
                                 style = typography.body.copy(fontSize = 13.5.sp),
                                 color = colors.textSecondary
                             )
@@ -467,33 +555,35 @@ fun SettingsScreen(
                                 Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "mydoc is up to date (v${state.currentVersion})",
+                                    text = "App is up to date (v${state.currentVersion})",
                                     style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
                                     color = colors.textPrimary
                                 )
                             }
-                            Spacer(modifier = Modifier.height(10.dp))
-                            OutlinedButton(
-                                onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
-                                shape = RoundedCornerShape(10.dp),
-                                border = BorderStroke(0.8.dp, colors.divider),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
-                            ) {
-                                Text("Check again", fontSize = 12.sp, maxLines = 1)
-                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Latest release installed.",
+                                style = typography.caption.copy(fontSize = 12.sp),
+                                color = colors.textSecondary
+                            )
                         }
                     }
 
                     is UpdateUiState.UpdateAvailable -> {
                         val release = state.release
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Outlined.SystemUpdate, contentDescription = null, tint = colors.accent)
-                                Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = "New Version Available: v${release.versionName}",
+                                style = typography.body.copy(fontWeight = FontWeight.Bold, fontSize = 14.5.sp),
+                                color = colors.accent
+                            )
+                            if (release.releaseNotes.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Version ${release.versionName} available",
-                                    style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
-                                    color = colors.textPrimary
+                                    text = release.releaseNotes.trim(),
+                                    style = typography.caption.copy(fontSize = 12.sp),
+                                    color = colors.textSecondary,
+                                    maxLines = 4
                                 )
                             }
                             Spacer(modifier = Modifier.height(10.dp))
@@ -575,6 +665,41 @@ fun SettingsScreen(
                                 Text("Retry", fontSize = 12.sp, maxLines = 1)
                             }
                         }
+                    }
+                }
+
+                SettingsDivider()
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable(onClick = onDesignSystemPreviewClick)
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(colors.accent.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Outlined.Palette, contentDescription = null, tint = colors.accent, modifier = Modifier.size(19.dp))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Design System Tokens",
+                            style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
+                            color = colors.textPrimary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Preview color tokens, radii, typography, and elevations",
+                            style = typography.caption.copy(fontSize = 12.sp),
+                            color = colors.textSecondary
+                        )
                     }
                 }
             }

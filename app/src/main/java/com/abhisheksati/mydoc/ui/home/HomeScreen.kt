@@ -1,12 +1,8 @@
 package com.abhisheksati.mydoc.ui.home
 
-import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -27,45 +23,36 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.abhisheksati.mydoc.MainActivity
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
-import com.abhisheksati.mydoc.designsystem.components.HomeBottomBar
+import com.abhisheksati.mydoc.designsystem.components.BottomNavBar
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.HomeTab
+import com.abhisheksati.mydoc.domain.model.LibraryItem
 import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.tools.ui.ToolRunnerSheet
 import com.abhisheksati.mydoc.tools.ui.ToolsScreen
 import com.abhisheksati.mydoc.tools.ui.components.CameraScanSheet
 import com.abhisheksati.mydoc.tools.ui.components.SignPdfSheet
 import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
-import com.abhisheksati.mydoc.ui.documents.DocumentsScreen
+import com.abhisheksati.mydoc.ui.filemanager.FileManagerScreen
+import com.abhisheksati.mydoc.ui.library.LibraryTabContent
+import com.abhisheksati.mydoc.ui.storage.StorageViewModel
+import com.abhisheksati.mydoc.viewmodel.FileManagerViewModel
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import java.io.File
 import kotlinx.coroutines.launch
-
-val SUPPORTED_MIME_TYPES = arrayOf(
-    "application/pdf",
-    "application/x-pdf",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    "application/vnd.ms-powerpoint",
-    "text/plain",
-    "text/csv",
-    "text/comma-separated-values",
-    "application/octet-stream",
-    "*/*"
-)
 
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
     toolsViewModel: ToolsViewModel,
+    fileManagerViewModel: FileManagerViewModel,
+    storageViewModel: StorageViewModel,
     isDarkTheme: Boolean = false,
     onToggleTheme: () -> Unit = {},
+    onLibraryItemClick: (LibraryItem) -> Unit,
     onDocumentClick: (DocumentFile) -> Unit,
-    onOpenFile: ((File) -> Unit)? = null,
+    onOpenFile: (File) -> Unit,
     onSettingsClick: () -> Unit,
     onShareDocument: (DocumentFile) -> Unit,
     modifier: Modifier = Modifier
@@ -83,7 +70,7 @@ fun HomeScreen(
 
     // Synchronize pager swipe to viewModel
     LaunchedEffect(pagerState.currentPage) {
-        val tab = HomeTab.entries.getOrNull(pagerState.currentPage) ?: HomeTab.DOCUMENTS
+        val tab = HomeTab.entries.getOrNull(pagerState.currentPage) ?: HomeTab.HOME
         if (tab != currentTab) {
             viewModel.selectTab(tab)
         }
@@ -108,7 +95,6 @@ fun HomeScreen(
             toolsViewModel.selectTool(PdfTool.SCAN_TO_PDF)
         },
         onError = {
-            // Fallback to built-in camera sheet if GMS scanner is unavailable
             showCameraScanner = true
         }
     )
@@ -120,16 +106,16 @@ fun HomeScreen(
         }
     }
 
-    // Navigate back to Documents tab when pressing Back on Tools tab
+    // Navigate back to Home tab when pressing Back on other tabs
     BackHandler(
-        enabled = currentTab != HomeTab.DOCUMENTS &&
+        enabled = currentTab != HomeTab.HOME &&
             !showCameraScanner &&
             !showSignaturePad &&
             selectedDocForDetails == null &&
             documentToDelete == null
     ) {
-        viewModel.selectTab(HomeTab.DOCUMENTS)
-        scope.launch { pagerState.animateScrollToPage(HomeTab.DOCUMENTS.ordinal) }
+        viewModel.selectTab(HomeTab.HOME)
+        scope.launch { pagerState.animateScrollToPage(HomeTab.HOME.ordinal) }
     }
 
     Scaffold(
@@ -137,7 +123,7 @@ fun HomeScreen(
         containerColor = colors.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            HomeBottomBar(
+            BottomNavBar(
                 currentTab = currentTab,
                 onTabSelected = { tab ->
                     viewModel.selectTab(tab)
@@ -146,7 +132,7 @@ fun HomeScreen(
             )
         }
     ) { innerPadding ->
-        // Edge-to-Edge Two Destination Pager: Documents | Tools
+        // 4-Destination Edge-to-Edge Pager: Home | Library | Files | Tools
         HorizontalPager(
             state = pagerState,
             key = { HomeTab.entries[it].name },
@@ -156,20 +142,40 @@ fun HomeScreen(
                 .padding(bottom = innerPadding.calculateBottomPadding())
         ) { page ->
             when (HomeTab.entries[page]) {
-                HomeTab.DOCUMENTS -> {
-                    DocumentsScreen(
-                        documents = uiState.documents,
-                        recentDocs = uiState.recents,
-                        searchQuery = uiState.searchQuery,
-                        onSearchQueryChange = { viewModel.onSearchQueryChanged(it) },
-                        sortOrder = uiState.sortOrder,
-                        onSetSortOrder = { viewModel.setSortOrder(it) },
-                        onDocumentClick = onDocumentClick,
-                        onShareDocument = onShareDocument,
-                        onShowDetails = { selectedDocForDetails = it },
-                        onDeleteDocument = { documentToDelete = it },
-                        onScanClick = { documentScanner() },
+                HomeTab.HOME -> {
+                    HomeTabContent(
+                        continueItems = uiState.continueItems,
+                        recentItems = uiState.recentLibraryItems,
+                        onItemClick = onLibraryItemClick,
+                        onSearchClick = {
+                            viewModel.selectTab(HomeTab.LIBRARY)
+                            scope.launch { pagerState.animateScrollToPage(HomeTab.LIBRARY.ordinal) }
+                        },
                         onSettingsClick = onSettingsClick,
+                        isDarkTheme = isDarkTheme,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                HomeTab.LIBRARY -> {
+                    LibraryTabContent(
+                        allItems = uiState.libraryItems,
+                        recentlyAdded = uiState.recentLibraryItems,
+                        countsByKind = uiState.countsByKind,
+                        onItemClick = onLibraryItemClick,
+                        onSettingsClick = onSettingsClick,
+                        isDarkTheme = isDarkTheme,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                HomeTab.FILES -> {
+                    FileManagerScreen(
+                        viewModel = fileManagerViewModel,
+                        storageViewModel = storageViewModel,
+                        onOpenFile = onOpenFile,
+                        onSettingsClick = onSettingsClick,
+                        onToggleTheme = onToggleTheme,
+                        isDarkTheme = isDarkTheme,
+                        isActive = currentTab == HomeTab.FILES,
                         modifier = Modifier.fillMaxSize()
                     )
                 }

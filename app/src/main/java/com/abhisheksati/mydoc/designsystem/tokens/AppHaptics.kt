@@ -69,6 +69,14 @@ class AppHaptics(private val view: View) {
             view.performHapticFeedback(HapticFeedbackConstants.TEXT_HANDLE_MOVE)
         }
     }
+
+    fun tap() {
+        tick()
+    }
+
+    fun heavy() {
+        confirm()
+    }
 }
 
 @Composable

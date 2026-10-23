@@ -44,6 +44,10 @@ class MediaRepositoryImpl(
             queryVideos(mediaList)
         }
 
+        if (filter == MediaFilter.ALL || filter == MediaFilter.AUDIO) {
+            queryAudio(mediaList)
+        }
+
         // Sort by date added descending (newest first)
         mediaList.sortByDescending { it.dateAddedSec }
         return mediaList
@@ -193,6 +197,65 @@ class MediaRepositoryImpl(
                             bucketId = bucketId,
                             bucketName = bucketName,
                             isVideo = true,
+                            filePath = dataPath
+                        )
+                    )
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
+    private fun queryAudio(target: MutableList<MediaItem>) {
+        val projection = arrayOf(
+            MediaStore.Audio.Media._ID,
+            MediaStore.Audio.Media.DISPLAY_NAME,
+            MediaStore.Audio.Media.SIZE,
+            MediaStore.Audio.Media.MIME_TYPE,
+            MediaStore.Audio.Media.DATE_ADDED,
+            MediaStore.Audio.Media.DATE_MODIFIED,
+            MediaStore.Audio.Media.DURATION,
+            MediaStore.Audio.Media.DATA
+        )
+
+        try {
+            contentResolver.query(
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                null,
+                null,
+                "${MediaStore.Audio.Media.DATE_ADDED} DESC"
+            )?.use { cursor ->
+                val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+                val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
+                val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
+                val mimeCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.MIME_TYPE)
+                val dateAddedCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
+                val dateModCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED)
+                val durationCol = cursor.getColumnIndex(MediaStore.Audio.Media.DURATION)
+                val dataCol = cursor.getColumnIndex(MediaStore.Audio.Media.DATA)
+
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idCol)
+                    val contentUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
+                    val name = cursor.getString(nameCol) ?: "Audio"
+                    val size = cursor.getLong(sizeCol)
+                    val mime = cursor.getString(mimeCol) ?: "audio/mpeg"
+                    val dateAdded = cursor.getLong(dateAddedCol)
+                    val dateMod = cursor.getLong(dateModCol)
+                    val dur = if (durationCol != -1) cursor.getLong(durationCol) else 0L
+                    val dataPath = if (dataCol != -1) cursor.getString(dataCol) else null
+
+                    target.add(
+                        MediaItem(
+                            id = id,
+                            uri = contentUri,
+                            displayName = name,
+                            sizeBytes = size,
+                            mimeType = mime,
+                            dateAddedSec = dateAdded,
+                            dateModifiedSec = dateMod,
+                            durationMs = dur,
+                            isAudio = true,
                             filePath = dataPath
                         )
                     )

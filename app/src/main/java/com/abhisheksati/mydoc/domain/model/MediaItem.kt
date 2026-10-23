@@ -9,7 +9,8 @@ import java.util.Locale
 enum class MediaFilter {
     ALL,
     PHOTOS,
-    VIDEOS
+    VIDEOS,
+    AUDIO
 }
 
 @Immutable
@@ -28,6 +29,7 @@ data class MediaItem(
     val bucketId: String? = null,
     val bucketName: String? = null,
     val isVideo: Boolean = false,
+    val isAudio: Boolean = false,
     val filePath: String? = null
 ) {
     val isGif: Boolean

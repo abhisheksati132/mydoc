@@ -15,10 +15,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Article
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,7 +28,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -37,10 +38,11 @@ import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.domain.model.HomeTab
 
 /**
- * Solid, premium 2-destination Bottom Bar: Documents and Tools.
+ * Solid, premium 72dp 4-destination Navigation Bar: Home | Library | Files | Tools.
+ * Features clean labels and a distinctive active indicator dot.
  */
 @Composable
-fun HomeBottomBar(
+fun BottomNavBar(
     currentTab: HomeTab,
     onTabSelected: (HomeTab) -> Unit,
     modifier: Modifier = Modifier
@@ -63,12 +65,12 @@ fun HomeBottomBar(
                 .background(colors.line)
         )
 
-        // 64dp bar content
+        // 72dp bar content
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp)
-                .padding(horizontal = 24.dp),
+                .height(72.dp)
+                .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             HomeTab.entries.forEach { tab ->
@@ -76,7 +78,9 @@ fun HomeBottomBar(
                 val interactionSource = remember { MutableInteractionSource() }
 
                 val icon: ImageVector = when (tab) {
-                    HomeTab.DOCUMENTS -> Icons.AutoMirrored.Outlined.Article
+                    HomeTab.HOME -> Icons.Outlined.Home
+                    HomeTab.LIBRARY -> Icons.AutoMirrored.Outlined.MenuBook
+                    HomeTab.FILES -> Icons.Outlined.Folder
                     HomeTab.TOOLS -> Icons.Outlined.Build
                 }
 
@@ -88,18 +92,11 @@ fun HomeBottomBar(
                     targetValue = if (isSelected) colors.ink else colors.inkMuted,
                     label = "tabTextColor"
                 )
-                val containerBg by animateColorAsState(
-                    targetValue = if (isSelected) colors.accent.copy(alpha = 0.12f) else colors.background,
-                    label = "tabContainerBg"
-                )
 
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxSize()
-                        .padding(vertical = 8.dp, horizontal = 12.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(containerBg)
                         .clickable(
                             interactionSource = interactionSource,
                             indication = null,
@@ -112,24 +109,34 @@ fun HomeBottomBar(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Icon(
                             imageVector = icon,
                             contentDescription = tab.label,
                             tint = iconColor,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(22.dp)
                         )
-                        Spacer(modifier = Modifier.size(8.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
                         Text(
                             text = tab.label,
-                            style = typography.body.copy(
+                            style = typography.caption.copy(
                                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                                fontSize = 14.sp
+                                fontSize = 11.sp
                             ),
                             color = textColor
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        // Dot on active item
+                        Box(
+                            modifier = Modifier
+                                .size(4.dp)
+                                .background(
+                                    color = if (isSelected) colors.accent else colors.background,
+                                    shape = CircleShape
+                                )
                         )
                     }
                 }
@@ -139,14 +146,24 @@ fun HomeBottomBar(
 }
 
 /**
- * Backward compatibility alias for ShelvesBottomBar.
+ * Backward compatibility aliases.
  */
-@Deprecated("Use HomeBottomBar instead", ReplaceWith("HomeBottomBar(currentTab, onTabSelected, modifier)"))
+@Deprecated("Use BottomNavBar instead", ReplaceWith("BottomNavBar(currentTab, onTabSelected, modifier)"))
+@Composable
+fun HomeBottomBar(
+    currentTab: HomeTab,
+    onTabSelected: (HomeTab) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    BottomNavBar(currentTab, onTabSelected, modifier)
+}
+
+@Deprecated("Use BottomNavBar instead", ReplaceWith("BottomNavBar(currentTab, onTabSelected, modifier)"))
 @Composable
 fun ShelvesBottomBar(
     currentTab: HomeTab,
     onTabSelected: (HomeTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    HomeBottomBar(currentTab, onTabSelected, modifier)
+    BottomNavBar(currentTab, onTabSelected, modifier)
 }

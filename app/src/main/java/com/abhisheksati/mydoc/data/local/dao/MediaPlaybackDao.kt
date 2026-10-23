@@ -12,6 +12,9 @@ interface MediaPlaybackDao {
     @Query("SELECT * FROM media_playback WHERE uri = :uri LIMIT 1")
     suspend fun getPlaybackPosition(uri: String): MediaPlaybackEntity?
 
+    @Query("SELECT * FROM media_playback ORDER BY updatedTimestamp DESC")
+    fun getAllPlaybackPositions(): kotlinx.coroutines.flow.Flow<List<MediaPlaybackEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun savePlaybackPosition(entity: MediaPlaybackEntity)
 

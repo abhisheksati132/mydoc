@@ -4,11 +4,14 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
+import com.abhisheksati.mydoc.domain.model.MediaKind
+
 /**
- * Single Source of Truth for Design System Colors.
+ * Single Source of Truth for Design System Colors (Stacks Design System).
  *
  * Rules:
  * - Neutral canvas and surfaces.
+ * - Meaningful color by MediaKind: Document (Blue), Photo (Pink), Video (Orange), Audio (Mint).
  * - Flat 1dp hairline lines, no shadows or gradients.
  */
 @Immutable
@@ -22,6 +25,23 @@ data class AppColors(
     val highlight: Color,
     val accent: Color,
     val onAccent: Color,
+
+    // MediaKind Color Tokens
+    val documentKind: Color,
+    val onDocumentKind: Color,
+    val documentContainer: Color,
+
+    val photoKind: Color,
+    val onPhotoKind: Color,
+    val photoContainer: Color,
+
+    val videoKind: Color,
+    val onVideoKind: Color,
+    val videoContainer: Color,
+
+    val audioKind: Color,
+    val onAudioKind: Color,
+    val audioContainer: Color,
 
     // Semantic mappings
     val textPrimary: Color = ink,
@@ -42,7 +62,28 @@ data class AppColors(
     val surfaceContainerLow: Color = surface,
     val outline: Color = line,
     val outlineVariant: Color = line
-)
+) {
+    fun kindColor(kind: MediaKind): Color = when (kind) {
+        MediaKind.DOCUMENT -> documentKind
+        MediaKind.PHOTO -> photoKind
+        MediaKind.VIDEO -> videoKind
+        MediaKind.AUDIO -> audioKind
+    }
+
+    fun kindOnColor(kind: MediaKind): Color = when (kind) {
+        MediaKind.DOCUMENT -> onDocumentKind
+        MediaKind.PHOTO -> onPhotoKind
+        MediaKind.VIDEO -> onVideoKind
+        MediaKind.AUDIO -> onAudioKind
+    }
+
+    fun kindContainer(kind: MediaKind): Color = when (kind) {
+        MediaKind.DOCUMENT -> documentContainer
+        MediaKind.PHOTO -> photoContainer
+        MediaKind.VIDEO -> videoContainer
+        MediaKind.AUDIO -> audioContainer
+    }
+}
 
 val LightAppColors = AppColors(
     background = Color(0xFFF7F7F4),
@@ -53,7 +94,23 @@ val LightAppColors = AppColors(
     inkMuted = Color(0xFF55554F),
     highlight = Color(0xFFD9DCFF),
     accent = Color(0xFF3D4CFF),
-    onAccent = Color(0xFFFFFFFF)
+    onAccent = Color(0xFFFFFFFF),
+
+    documentKind = Color(0xFF3D4CFF),
+    onDocumentKind = Color(0xFFFFFFFF),
+    documentContainer = Color(0xFFE3E6FF),
+
+    photoKind = Color(0xFFFF8AC2),
+    onPhotoKind = Color(0xFF2A0A18),
+    photoContainer = Color(0xFFFFE0EF),
+
+    videoKind = Color(0xFFFF7A3D),
+    onVideoKind = Color(0xFF1A0E05),
+    videoContainer = Color(0xFFFFE3D4),
+
+    audioKind = Color(0xFF86E7B8),
+    onAudioKind = Color(0xFF06210F),
+    audioContainer = Color(0xFFD4F6E5)
 )
 
 val DarkAppColors = AppColors(
@@ -65,22 +122,100 @@ val DarkAppColors = AppColors(
     inkMuted = Color(0xFFA3A29B),
     highlight = Color(0xFF2A2F6B),
     accent = Color(0xFF8A94FF),
-    onAccent = Color(0xFF0E0E0F)
+    onAccent = Color(0xFF0E0E0F),
+
+    documentKind = Color(0xFF8A94FF),
+    onDocumentKind = Color(0xFF0E0E0F),
+    documentContainer = Color(0xFF1B1E3F),
+
+    photoKind = Color(0xFFFF9BCB),
+    onPhotoKind = Color(0xFF0E0E0F),
+    photoContainer = Color(0xFF3B1A2B),
+
+    videoKind = Color(0xFFFF8F5C),
+    onVideoKind = Color(0xFF0E0E0F),
+    videoContainer = Color(0xFF3A2315),
+
+    audioKind = Color(0xFF86E7B8),
+    onAudioKind = Color(0xFF0E0E0F),
+    audioContainer = Color(0xFF12301F)
 )
 
-val BlackAppColors = AppColors(
+val BlackAppColors = DarkAppColors.copy(
     background = Color(0xFF000000), // Pure AMOLED
     surface = Color(0xFF121214),
     surfaceMuted = Color(0xFF1E1E21),
-    line = Color(0xFF252528),
-    ink = Color(0xFFF2F1EC),
-    inkMuted = Color(0xFFA3A29B),
-    highlight = Color(0xFF2A2F6B),
-    accent = Color(0xFF8A94FF),
-    onAccent = Color(0xFF0E0E0F)
+    line = Color(0xFF252528)
 )
 
 val LocalAppColors = staticCompositionLocalOf { LightAppColors }
+
+fun kindColor(kind: MediaKind, isDark: Boolean = false): Color {
+    return if (isDark) {
+        when (kind) {
+            MediaKind.DOCUMENT -> Color(0xFF8A94FF)
+            MediaKind.PHOTO -> Color(0xFFFF9BCB)
+            MediaKind.VIDEO -> Color(0xFFFF8F5C)
+            MediaKind.AUDIO -> Color(0xFF86E7B8)
+        }
+    } else {
+        when (kind) {
+            MediaKind.DOCUMENT -> Color(0xFF3D4CFF)
+            MediaKind.PHOTO -> Color(0xFFFF8AC2)
+            MediaKind.VIDEO -> Color(0xFFFF7A3D)
+            MediaKind.AUDIO -> Color(0xFF86E7B8)
+        }
+    }
+}
+
+fun kindContainer(kind: MediaKind, isDark: Boolean = false): Color {
+    return if (isDark) {
+        when (kind) {
+            MediaKind.DOCUMENT -> Color(0xFF1B1E3F)
+            MediaKind.PHOTO -> Color(0xFF3B1A2B)
+            MediaKind.VIDEO -> Color(0xFF3A2315)
+            MediaKind.AUDIO -> Color(0xFF12301F)
+        }
+    } else {
+        when (kind) {
+            MediaKind.DOCUMENT -> Color(0xFFE3E6FF)
+            MediaKind.PHOTO -> Color(0xFFFFE0EF)
+            MediaKind.VIDEO -> Color(0xFFFFE3D4)
+            MediaKind.AUDIO -> Color(0xFFD4F6E5)
+        }
+    }
+}
+
+fun onKindColor(kind: MediaKind, isDark: Boolean = false): Color {
+    return if (isDark) {
+        Color(0xFF0E0E0F)
+    } else {
+        when (kind) {
+            MediaKind.DOCUMENT -> Color(0xFFFFFFFF)
+            MediaKind.PHOTO -> Color(0xFF2A0A18)
+            MediaKind.VIDEO -> Color(0xFF1A0E05)
+            MediaKind.AUDIO -> Color(0xFF06210F)
+        }
+    }
+}
+
+fun onKindContainer(kind: MediaKind, isDark: Boolean = false): Color {
+    return if (isDark) {
+        when (kind) {
+            MediaKind.DOCUMENT -> Color(0xFF8A94FF)
+            MediaKind.PHOTO -> Color(0xFFFF9BCB)
+            MediaKind.VIDEO -> Color(0xFFFF8F5C)
+            MediaKind.AUDIO -> Color(0xFF86E7B8)
+        }
+    } else {
+        when (kind) {
+            MediaKind.DOCUMENT -> Color(0xFF1B248A)
+            MediaKind.PHOTO -> Color(0xFF5A1538)
+            MediaKind.VIDEO -> Color(0xFF5A2508)
+            MediaKind.AUDIO -> Color(0xFF0D4222)
+        }
+    }
+}
 
 /**
  * File extension badge helper.

@@ -45,6 +45,7 @@ import com.abhisheksati.mydoc.designsystem.preview.DesignSystemPreviewScreen
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
+import com.abhisheksati.mydoc.domain.model.toMediaItem
 import com.abhisheksati.mydoc.security.AppLockScreen
 import com.abhisheksati.mydoc.security.BiometricLockHelper
 import com.abhisheksati.mydoc.tools.model.PdfTool
@@ -66,6 +67,9 @@ class MainActivity : ComponentActivity() {
         data object DesignSystemPreview : ActiveScreen
         data object Settings : ActiveScreen
         data class Document(val document: DocumentFile) : ActiveScreen
+        data class Photo(val item: com.abhisheksati.mydoc.domain.model.MediaItem, val allPhotos: List<com.abhisheksati.mydoc.domain.model.MediaItem>) : ActiveScreen
+        data class Video(val item: com.abhisheksati.mydoc.domain.model.MediaItem) : ActiveScreen
+        data class Audio(val item: com.abhisheksati.mydoc.domain.model.MediaItem) : ActiveScreen
         data object Home : ActiveScreen
     }
 
@@ -77,15 +81,28 @@ class MainActivity : ComponentActivity() {
 
     private val homeViewModel: HomeViewModel by viewModels {
         val app = application as MyDocApp
-        HomeViewModel.Factory(app.documentRepository, app.settingsRepository)
+        HomeViewModel.Factory(app.documentRepository, app.settingsRepository, app.libraryRepository)
     }
 
     private val toolsViewModel: ToolsViewModel by viewModels {
         ToolsViewModel.Factory(application)
     }
 
+    private val fileManagerViewModel: com.abhisheksati.mydoc.viewmodel.FileManagerViewModel by viewModels {
+        val app = application as MyDocApp
+        com.abhisheksati.mydoc.viewmodel.FileManagerViewModel.Factory(app.storageRepository)
+    }
+
+    private val storageViewModel: com.abhisheksati.mydoc.ui.storage.StorageViewModel by viewModels {
+        val app = application as MyDocApp
+        com.abhisheksati.mydoc.ui.storage.StorageViewModel.Factory(this, app.storageRepository)
+    }
+
     private lateinit var updateManager: UpdateManager
     private var currentDocument by mutableStateOf<DocumentFile?>(null)
+    private var currentPhoto by mutableStateOf<Pair<com.abhisheksati.mydoc.domain.model.MediaItem, List<com.abhisheksati.mydoc.domain.model.MediaItem>>?>(null)
+    private var currentVideo by mutableStateOf<com.abhisheksati.mydoc.domain.model.MediaItem?>(null)
+    private var currentAudio by mutableStateOf<com.abhisheksati.mydoc.domain.model.MediaItem?>(null)
     private var isSettingsOpen by mutableStateOf(false)
     private var isDesignSystemPreviewOpen by mutableStateOf(false)
     private var isAppUnlocked by mutableStateOf(true)
@@ -167,6 +184,18 @@ class MainActivity : ComponentActivity() {
                     toolsViewModel.closeTool()
                 }
 
+                BackHandler(enabled = !isDesignSystemPreviewOpen && !isSettingsOpen && currentPhoto != null) {
+                    currentPhoto = null
+                }
+
+                BackHandler(enabled = !isDesignSystemPreviewOpen && !isSettingsOpen && currentVideo != null) {
+                    currentVideo = null
+                }
+
+                BackHandler(enabled = !isDesignSystemPreviewOpen && !isSettingsOpen && currentAudio != null) {
+                    currentAudio = null
+                }
+
                 BackHandler(enabled = !isDesignSystemPreviewOpen && !isSettingsOpen && selectedTool == null && currentDocument != null) {
                     currentDocument = null
                 }
@@ -175,6 +204,9 @@ class MainActivity : ComponentActivity() {
                     !isAppUnlocked && isBiometricLockEnabled -> ActiveScreen.Lock
                     isDesignSystemPreviewOpen -> ActiveScreen.DesignSystemPreview
                     isSettingsOpen -> ActiveScreen.Settings
+                    currentPhoto != null -> ActiveScreen.Photo(currentPhoto!!.first, currentPhoto!!.second)
+                    currentVideo != null -> ActiveScreen.Video(currentVideo!!)
+                    currentAudio != null -> ActiveScreen.Audio(currentAudio!!)
                     currentDocument != null -> ActiveScreen.Document(currentDocument!!)
                     else -> ActiveScreen.Home
                 }
@@ -192,7 +224,7 @@ class MainActivity : ComponentActivity() {
                             val exitOffsetSpring = spring<IntOffset>(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy)
 
                             when {
-                                targetState is ActiveScreen.Document -> {
+                                targetState is ActiveScreen.Document || targetState is ActiveScreen.Photo || targetState is ActiveScreen.Video || targetState is ActiveScreen.Audio -> {
                                     (slideInVertically(animationSpec = enterOffsetSpring) { it / 8 } +
                                      scaleIn(initialScale = 0.94f, animationSpec = enterSpring) +
                                      fadeIn(animationSpec = tween(220)))
@@ -201,7 +233,7 @@ class MainActivity : ComponentActivity() {
                                      scaleOut(targetScale = 0.96f, animationSpec = exitSpring)
                                     )
                                 }
-                                initialState is ActiveScreen.Document -> {
+                                initialState is ActiveScreen.Document || initialState is ActiveScreen.Photo || initialState is ActiveScreen.Video || initialState is ActiveScreen.Audio -> {
                                     (fadeIn(animationSpec = tween(200)) +
                                      scaleIn(initialScale = 0.96f, animationSpec = enterSpring))
                                     .togetherWith(
@@ -253,6 +285,29 @@ class MainActivity : ComponentActivity() {
                                     onDesignSystemPreviewClick = { isDesignSystemPreviewOpen = true }
                                 )
                             }
+                            is ActiveScreen.Photo -> {
+                                com.abhisheksati.mydoc.ui.media.PhotoViewerScreen(
+                                    items = screen.allPhotos.ifEmpty { listOf(screen.item) },
+                                    initialIndex = screen.allPhotos.indexOf(screen.item).coerceAtLeast(0),
+                                    mediaRepository = app.mediaRepository,
+                                    onBackClick = { currentPhoto = null },
+                                    onDeletePhoto = { currentPhoto = null }
+                                )
+                            }
+                            is ActiveScreen.Video -> {
+                                com.abhisheksati.mydoc.ui.media.VideoPlayerScreen(
+                                    item = screen.item,
+                                    mediaRepository = app.mediaRepository,
+                                    onBackClick = { currentVideo = null }
+                                )
+                            }
+                            is ActiveScreen.Audio -> {
+                                com.abhisheksati.mydoc.ui.media.AudioPlayerScreen(
+                                    item = screen.item,
+                                    onBackClick = { currentAudio = null },
+                                    isDarkTheme = isDark
+                                )
+                            }
                             is ActiveScreen.Document -> {
                                 val activeDoc = screen.document
                                 Box(modifier = Modifier.fillMaxSize()) {
@@ -290,10 +345,32 @@ class MainActivity : ComponentActivity() {
                                 HomeScreen(
                                     viewModel = homeViewModel,
                                     toolsViewModel = toolsViewModel,
+                                    fileManagerViewModel = fileManagerViewModel,
+                                    storageViewModel = storageViewModel,
                                     isDarkTheme = isDark,
                                     onToggleTheme = {
                                         val nextTheme = if (isDark) AppThemeMode.LIGHT else AppThemeMode.DARK
                                         app.settingsRepository.setThemeMode(nextTheme)
+                                    },
+                                    onLibraryItemClick = { item ->
+                                        when (item.kind) {
+                                            com.abhisheksati.mydoc.domain.model.MediaKind.DOCUMENT -> {
+                                                lifecycleScope.launch {
+                                                    val res = app.documentRepository.registerOpenedDocument(Uri.parse(item.uri))
+                                                    res.onSuccess { doc -> currentDocument = doc }
+                                                }
+                                            }
+                                            com.abhisheksati.mydoc.domain.model.MediaKind.PHOTO -> {
+                                                val m = item.toMediaItem()
+                                                currentPhoto = Pair(m, listOf(m))
+                                            }
+                                            com.abhisheksati.mydoc.domain.model.MediaKind.VIDEO -> {
+                                                currentVideo = item.toMediaItem()
+                                            }
+                                            com.abhisheksati.mydoc.domain.model.MediaKind.AUDIO -> {
+                                                currentAudio = item.toMediaItem()
+                                            }
+                                        }
                                     },
                                     onDocumentClick = { doc -> currentDocument = doc },
                                     onOpenFile = { file -> handleOpenFile(file) },
@@ -372,48 +449,99 @@ class MainActivity : ComponentActivity() {
         }
 
         if (uri != null) {
-            lifecycleScope.launch {
-                try {
-                    val app = application as MyDocApp
-                    val result = app.documentRepository.registerOpenedDocument(uri)
-                    result.onSuccess { doc ->
-                        currentDocument = doc
-                    }.onFailure { e ->
-                        Toast.makeText(
-                            this@MainActivity,
-                            "Could not open file: ${e.localizedMessage ?: "Unknown error"}",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-                } catch (e: Exception) {
-                    Toast.makeText(
-                        this@MainActivity,
-                        "Unable to access file: ${e.localizedMessage ?: "Permission denied"}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
+            openUriOrFile(uri = uri, mimeType = intent.type)
         }
     }
 
     private fun handleOpenFile(file: File) {
-        val app = application as MyDocApp
         val uri = Uri.fromFile(file)
-        lifecycleScope.launch {
-            val res = app.documentRepository.registerOpenedDocument(uri)
-            res.onSuccess { doc ->
-                currentDocument = doc
-            }.onFailure {
-                // Fallback: Generic Android open chooser
-                try {
-                    val shareUri = FileProvider.getUriForFile(this@MainActivity, "${packageName}.fileprovider", file)
-                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                        setDataAndType(shareUri, "*/*")
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        openUriOrFile(uri = uri, fileName = file.name, file = file)
+    }
+
+    private fun openUriOrFile(uri: Uri, mimeType: String? = null, fileName: String? = null, file: File? = null) {
+        val detectedMime = mimeType ?: contentResolver.getType(uri) ?: when {
+            fileName?.endsWith(".jpg", true) == true || fileName?.endsWith(".jpeg", true) == true -> "image/jpeg"
+            fileName?.endsWith(".png", true) == true -> "image/png"
+            fileName?.endsWith(".webp", true) == true -> "image/webp"
+            fileName?.endsWith(".gif", true) == true -> "image/gif"
+            fileName?.endsWith(".mp4", true) == true -> "video/mp4"
+            fileName?.endsWith(".mkv", true) == true -> "video/x-matroska"
+            fileName?.endsWith(".webm", true) == true -> "video/webm"
+            fileName?.endsWith(".mp3", true) == true -> "audio/mpeg"
+            fileName?.endsWith(".m4a", true) == true -> "audio/mp4"
+            fileName?.endsWith(".aac", true) == true -> "audio/aac"
+            fileName?.endsWith(".flac", true) == true -> "audio/flac"
+            fileName?.endsWith(".wav", true) == true -> "audio/wav"
+            else -> "*/*"
+        }
+
+        val displayName = fileName ?: uri.lastPathSegment ?: "Media"
+
+        when {
+            detectedMime.startsWith("image/") -> {
+                val mediaItem = com.abhisheksati.mydoc.domain.model.MediaItem(
+                    id = uri.hashCode().toLong(),
+                    uri = uri,
+                    displayName = displayName,
+                    sizeBytes = file?.length() ?: 0L,
+                    mimeType = detectedMime,
+                    dateAddedSec = System.currentTimeMillis() / 1000L,
+                    filePath = file?.absolutePath ?: uri.path
+                )
+                currentPhoto = Pair(mediaItem, listOf(mediaItem))
+            }
+            detectedMime.startsWith("video/") -> {
+                val mediaItem = com.abhisheksati.mydoc.domain.model.MediaItem(
+                    id = uri.hashCode().toLong(),
+                    uri = uri,
+                    displayName = displayName,
+                    sizeBytes = file?.length() ?: 0L,
+                    mimeType = detectedMime,
+                    dateAddedSec = System.currentTimeMillis() / 1000L,
+                    isVideo = true,
+                    filePath = file?.absolutePath ?: uri.path
+                )
+                currentVideo = mediaItem
+            }
+            detectedMime.startsWith("audio/") -> {
+                val mediaItem = com.abhisheksati.mydoc.domain.model.MediaItem(
+                    id = uri.hashCode().toLong(),
+                    uri = uri,
+                    displayName = displayName,
+                    sizeBytes = file?.length() ?: 0L,
+                    mimeType = detectedMime,
+                    dateAddedSec = System.currentTimeMillis() / 1000L,
+                    isAudio = true,
+                    filePath = file?.absolutePath ?: uri.path
+                )
+                currentAudio = mediaItem
+            }
+            else -> {
+                lifecycleScope.launch {
+                    try {
+                        val app = application as MyDocApp
+                        val result = app.documentRepository.registerOpenedDocument(uri)
+                        result.onSuccess { doc ->
+                            currentDocument = doc
+                        }.onFailure { e ->
+                            if (file != null) {
+                                try {
+                                    val shareUri = FileProvider.getUriForFile(this@MainActivity, "${packageName}.fileprovider", file)
+                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                        setDataAndType(shareUri, "*/*")
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    startActivity(Intent.createChooser(intent, "Open with"))
+                                } catch (_: Exception) {
+                                    Toast.makeText(this@MainActivity, "Could not open file: ${e.localizedMessage ?: "Unknown error"}", Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                Toast.makeText(this@MainActivity, "Could not open file: ${e.localizedMessage ?: "Unknown error"}", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(this@MainActivity, "Unable to access file: ${e.localizedMessage ?: "Permission denied"}", Toast.LENGTH_SHORT).show()
                     }
-                    startActivity(Intent.createChooser(intent, "Open with"))
-                } catch (e: Exception) {
-                    Toast.makeText(this@MainActivity, "No app available to open this file", Toast.LENGTH_SHORT).show()
                 }
             }
         }

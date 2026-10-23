@@ -1,13 +1,12 @@
 package com.abhisheksati.mydoc.domain.model
 
 enum class HomeTab(val label: String) {
-    DOCUMENTS("Documents"),
+    HOME("Home"),
+    LIBRARY("Library"),
+    FILES("Files"),
     TOOLS("Tools");
 
     companion object {
-        val NOW = DOCUMENTS
-        val LIBRARY = DOCUMENTS
-        val FILES = DOCUMENTS
-        val MEDIA = DOCUMENTS
+        val DOCUMENTS = HOME
     }
 }
