@@ -77,6 +77,8 @@ class MuPdfRenderer(
         }
     }
 
+    private val pageSizeCache = java.util.concurrent.ConcurrentHashMap<Int, Pair<Float, Float>>()
+
     override val pageCount: Int
         get() = lock.withLock {
             try {
@@ -87,7 +89,9 @@ class MuPdfRenderer(
         }
 
     override fun getPageSize(pageIndex: Int): Pair<Float, Float> {
+        pageSizeCache[pageIndex]?.let { return it }
         return lock.withLock {
+            pageSizeCache[pageIndex]?.let { return@withLock it }
             val doc = document ?: return@withLock Pair(595f, 842f)
             if (pageIndex < 0 || pageIndex >= (document?.countPages() ?: 0)) return@withLock Pair(595f, 842f)
 
@@ -97,7 +101,9 @@ class MuPdfRenderer(
                 val width = bounds.x1 - bounds.x0
                 val height = bounds.y1 - bounds.y0
                 page.destroy()
-                Pair(width, height)
+                val size = Pair(width, height)
+                pageSizeCache[pageIndex] = size
+                size
             } catch (_: Throwable) {
                 Pair(595f, 842f)
             }
@@ -186,9 +192,8 @@ class MuPdfRenderer(
             val srcW = (bounds.x1 - bounds.x0).coerceAtLeast(1f)
             val s = pageWidthPx / srcW
             val pageHeightPx = (bounds.y1 - bounds.y0) * s
-
             val matrix = Matrix(s).translate(-region.left * pageWidthPx, -region.top * pageHeightPx)
-            baseBitmap = try {
+            val raw = try {
                 com.artifex.mupdf.fitz.android.AndroidDrawDevice.drawPage(page, matrix)
             } catch (_: Throwable) {
                 val pixmap = page.toPixmap(matrix, ColorSpace.DeviceRGB, true)
@@ -203,6 +208,16 @@ class MuPdfRenderer(
                 b
             }
             page.destroy()
+
+            baseBitmap = if (raw != null && (raw.width != outWidth || raw.height != outHeight)) {
+                val scaled = Bitmap.createScaledBitmap(raw, outWidth, outHeight, true)
+                if (scaled !== raw && !raw.isRecycled) {
+                    raw.recycle()
+                }
+                scaled
+            } else {
+                raw
+            }
 
             val finalBitmap = when (mode) {
                 ReadingMode.INVERTED_DARK -> {
@@ -344,6 +359,7 @@ class MuPdfRenderer(
 
     override fun close() {
         lock.withLock {
+            pageSizeCache.clear()
             tileCache.recycleAll()
             try {
                 document?.destroy()

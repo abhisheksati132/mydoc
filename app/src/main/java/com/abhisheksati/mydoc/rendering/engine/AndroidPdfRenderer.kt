@@ -39,6 +39,8 @@ class AndroidPdfRenderer(
         }
     }
 
+    private val pageSizeCache = java.util.concurrent.ConcurrentHashMap<Int, Pair<Float, Float>>()
+
     override val isPasswordProtected: Boolean
         get() = false
 
@@ -48,7 +50,9 @@ class AndroidPdfRenderer(
         get() = lock.withLock { pdfRenderer?.pageCount ?: 0 }
 
     override fun getPageSize(pageIndex: Int): Pair<Float, Float> {
+        pageSizeCache[pageIndex]?.let { return it }
         return lock.withLock {
+            pageSizeCache[pageIndex]?.let { return@withLock it }
             val renderer = pdfRenderer ?: return@withLock Pair(595f, 842f)
             if (pageIndex < 0 || pageIndex >= (pdfRenderer?.pageCount ?: 0)) return@withLock Pair(595f, 842f)
             try {
@@ -56,7 +60,9 @@ class AndroidPdfRenderer(
                 try {
                     val w = page.width.toFloat()
                     val h = page.height.toFloat()
-                    Pair(w, h)
+                    val size = Pair(w, h)
+                    pageSizeCache[pageIndex] = size
+                    size
                 } finally {
                     page.close()
                 }
@@ -202,6 +208,7 @@ class AndroidPdfRenderer(
 
     override fun close() {
         lock.withLock {
+            pageSizeCache.clear()
             tileCache.recycleAll()
             try {
                 pdfRenderer?.close()

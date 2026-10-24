@@ -83,7 +83,7 @@ fun HomeTabContent(
     var showClearRecentDialog by remember { mutableStateOf(false) }
 
     val topItem = continueItems.firstOrNull()
-    val nextThreeItems = continueItems.drop(1).take(3)
+    val nextThreeItems = remember(continueItems) { continueItems.drop(1).take(3) }
 
     if (showClearRecentDialog) {
         AppDialog(

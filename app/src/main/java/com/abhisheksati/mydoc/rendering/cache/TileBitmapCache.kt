@@ -27,7 +27,16 @@ class TileBitmapCache(maxMemoryBytes: Int = (Runtime.getRuntime().maxMemory() / 
     }
 
     fun recycleAll() {
+        val snapshot = cache.snapshot()
         cache.evictAll()
+        for ((_, bmp) in snapshot) {
+            try {
+                if (bmp != null && !bmp.isRecycled) {
+                    bmp.recycle()
+                }
+            } catch (_: Throwable) {
+            }
+        }
     }
 
     private fun cacheKey(pageIndex: Int, scale: Float, mode: ReadingMode): String {

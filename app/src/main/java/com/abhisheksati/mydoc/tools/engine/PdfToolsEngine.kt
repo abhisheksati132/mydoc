@@ -186,11 +186,16 @@ class PdfToolsEngine(private val context: Context) {
                 warningNote = warningNote,
                 durationMs = System.currentTimeMillis() - startTime
             )
-        } catch (e: Exception) {
+        } catch (t: Throwable) {
+            val msg = if (t is OutOfMemoryError) {
+                "Device ran out of memory while processing document. Try a smaller file or close background apps."
+            } else {
+                t.localizedMessage ?: "Processing error occurred."
+            }
             ToolExecutionResult(
                 success = false,
                 tool = tool,
-                errorMessage = e.localizedMessage ?: "Processing error occurred.",
+                errorMessage = msg,
                 durationMs = System.currentTimeMillis() - startTime
             )
         } finally {
