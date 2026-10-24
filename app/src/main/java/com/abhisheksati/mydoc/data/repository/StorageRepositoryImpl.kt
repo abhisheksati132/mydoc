@@ -142,13 +142,13 @@ class StorageRepositoryImpl(
             }
 
             val cmp = when (sortOrder.field) {
-                FileSortField.NAME -> a.name.lowercase(Locale.ROOT).compareTo(b.name.lowercase(Locale.ROOT))
+                FileSortField.NAME -> a.name.compareTo(b.name, ignoreCase = true)
                 FileSortField.DATE -> a.lastModified.compareTo(b.lastModified)
                 FileSortField.SIZE -> {
                     if (a.isDirectory) a.itemCount.compareTo(b.itemCount)
                     else a.sizeBytes.compareTo(b.sizeBytes)
                 }
-                FileSortField.TYPE -> a.extension.compareTo(b.extension)
+                FileSortField.TYPE -> a.extension.compareTo(b.extension, ignoreCase = true)
             }
 
             if (sortOrder.isAscending) cmp else -cmp

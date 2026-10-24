@@ -77,8 +77,8 @@ class HomeViewModel(
 
         val sortedDocs = when (sortOrder) {
             DocumentSortOrder.LAST_OPENED -> filteredDocs.sortedByDescending { it.lastOpenedTimestamp }
-            DocumentSortOrder.NAME_ASC -> filteredDocs.sortedBy { it.displayName.lowercase() }
-            DocumentSortOrder.NAME_DESC -> filteredDocs.sortedByDescending { it.displayName.lowercase() }
+            DocumentSortOrder.NAME_ASC -> filteredDocs.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.displayName })
+            DocumentSortOrder.NAME_DESC -> filteredDocs.sortedWith(compareByDescending(String.CASE_INSENSITIVE_ORDER) { it.displayName })
             DocumentSortOrder.SIZE_DESC -> filteredDocs.sortedByDescending { it.sizeBytes }
             DocumentSortOrder.SIZE_ASC -> filteredDocs.sortedBy { it.sizeBytes }
         }
@@ -89,10 +89,18 @@ class HomeViewModel(
             allLibraryItems.filter { it.name.contains(query.trim(), ignoreCase = true) }
         }
 
-        val counts = MediaKind.entries.associateWith { kind ->
-            val itemsForKind = allLibraryItems.filter { it.kind == kind }
-            Pair(itemsForKind.size, itemsForKind.sumOf { it.sizeBytes })
+        val countArray = java.util.EnumMap<MediaKind, LongArray>(MediaKind::class.java)
+        for (kind in MediaKind.entries) {
+            countArray[kind] = LongArray(2)
         }
+        for (item in allLibraryItems) {
+            val arr = countArray[item.kind]
+            if (arr != null) {
+                arr[0]++
+                arr[1] += item.sizeBytes
+            }
+        }
+        val counts = countArray.mapValues { Pair(it.value[0].toInt(), it.value[1]) }
 
         val recentDocs = recents.filter { it.lastOpenedTimestamp > 0 }.map { doc ->
             LibraryItem(
