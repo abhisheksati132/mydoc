@@ -285,7 +285,7 @@ class MuPdfRenderer(
         val title = outline.title ?: return null
         val pageNumber = try {
             val loc = doc.resolveLink(outline)
-            if (loc != null) doc.pageNumberFromLocation(loc) else 0
+            if (loc != null) doc.pageNumberFromLocation(loc).coerceAtLeast(0) else 0
         } catch (_: Throwable) {
             0
         }

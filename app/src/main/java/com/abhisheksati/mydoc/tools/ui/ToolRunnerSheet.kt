@@ -229,7 +229,11 @@ fun ToolRunnerSheet(
                     Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
 
                     // Action Button (Min 48dp touch target)
-                    val canRun = inputUris.isNotEmpty()
+                    val canRun = when (tool) {
+                        PdfTool.EXTRACT_PAGES -> inputUris.isNotEmpty() && toolOptions.pageRange.isNotBlank()
+                        PdfTool.MERGE, PdfTool.COMPARE_PDF -> inputUris.size >= 2
+                        else -> inputUris.isNotEmpty()
+                    }
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -847,6 +851,150 @@ private fun ToolOptionsSection(
                             }
                         )
                     }
+                }
+            }
+
+            PdfTool.EXTRACT_PAGES -> {
+                Text(text = "PAGE RANGE TO EXTRACT", style = typography.label, color = colors.textSecondary)
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                OutlinedTextField(
+                    value = options.pageRange,
+                    onValueChange = { r -> onOptionsChange { it.copy(pageRange = r) } },
+                    placeholder = { Text("e.g. 1-3, 5, 8-10") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = colors.accent,
+                        unfocusedBorderColor = colors.divider,
+                        focusedTextColor = colors.textPrimary,
+                        unfocusedTextColor = colors.textPrimary
+                    )
+                )
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Text(
+                    text = "Specify individual pages or page ranges separated by commas.",
+                    style = typography.caption,
+                    color = colors.textSecondary
+                )
+            }
+
+            PdfTool.REMOVE_PAGES -> {
+                Text(text = "PAGES TO REMOVE", style = typography.label, color = colors.textSecondary)
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                OutlinedTextField(
+                    value = options.pageRange,
+                    onValueChange = { r -> onOptionsChange { it.copy(pageRange = r) } },
+                    placeholder = { Text("e.g. 2, 4-6") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = colors.accent,
+                        unfocusedBorderColor = colors.divider,
+                        focusedTextColor = colors.textPrimary,
+                        unfocusedTextColor = colors.textPrimary
+                    )
+                )
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Text(
+                    text = "Specified pages will be pruned while preserving all remaining pages.",
+                    style = typography.caption,
+                    color = colors.textSecondary
+                )
+            }
+
+            PdfTool.SPLIT -> {
+                Text(text = "SPLIT EVERY N PAGES", style = typography.label, color = colors.textSecondary)
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)) {
+                    listOf(1, 2, 5, 10).forEach { n ->
+                        AppFilterChip(
+                            label = "$n ${if (n == 1) "page" else "pages"}",
+                            isSelected = options.splitEveryNPages == n && options.pageRange.isBlank(),
+                            onClick = {
+                                onOptionsChange {
+                                    it.copy(splitEveryNPages = n, pageRange = "")
+                                }
+                            }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
+                Text(text = "OR CUSTOM PAGE RANGE", style = typography.label, color = colors.textSecondary)
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                OutlinedTextField(
+                    value = options.pageRange,
+                    onValueChange = { r -> onOptionsChange { it.copy(pageRange = r) } },
+                    placeholder = { Text("Optional: e.g. 1-4, 5-10") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = colors.accent,
+                        unfocusedBorderColor = colors.divider,
+                        focusedTextColor = colors.textPrimary,
+                        unfocusedTextColor = colors.textPrimary
+                    )
+                )
+            }
+
+            PdfTool.CROP -> {
+                Text(text = "CROP MARGIN (ALL SIDES)", style = typography.label, color = colors.textSecondary)
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)) {
+                    listOf("5%" to 0.05f, "10%" to 0.10f, "15%" to 0.15f, "20%" to 0.20f).forEach { (lbl, frac) ->
+                        AppFilterChip(
+                            label = lbl,
+                            isSelected = kotlin.math.abs(options.cropMarginPercent - frac) < 0.01f,
+                            onClick = { onOptionsChange { it.copy(cropMarginPercent = frac) } }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
+                Text(text = "PAGE RANGE (BLANK FOR ALL)", style = typography.label, color = colors.textSecondary)
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                OutlinedTextField(
+                    value = options.pageRange,
+                    onValueChange = { r -> onOptionsChange { it.copy(pageRange = r) } },
+                    placeholder = { Text("All pages or e.g. 1-5") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = colors.accent,
+                        unfocusedBorderColor = colors.divider,
+                        focusedTextColor = colors.textPrimary,
+                        unfocusedTextColor = colors.textPrimary
+                    )
+                )
+            }
+
+            PdfTool.MERGE -> {
+                if (uris.size < 2) {
+                    Text(
+                        text = "Add at least 2 PDF documents above to combine them into one file.",
+                        style = typography.caption,
+                        color = colors.accent
+                    )
+                } else {
+                    Text(
+                        text = "${uris.size} documents will be combined in the order listed above.",
+                        style = typography.caption,
+                        color = colors.textSecondary
+                    )
+                }
+            }
+
+            PdfTool.COMPARE_PDF -> {
+                if (uris.size < 2) {
+                    Text(
+                        text = "Select 2 documents above to perform a side-by-side comparison.",
+                        style = typography.caption,
+                        color = colors.accent
+                    )
+                } else {
+                    Text(
+                        text = "Documents will be analyzed page-by-page for text differences.",
+                        style = typography.caption,
+                        color = colors.textSecondary
+                    )
                 }
             }
 

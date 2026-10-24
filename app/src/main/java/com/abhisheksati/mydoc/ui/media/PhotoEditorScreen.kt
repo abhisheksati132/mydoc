@@ -787,11 +787,11 @@ private suspend fun saveEditedPhoto(
         }
         canvas.drawBitmap(workingBitmap, 0f, 0f, paint)
 
-        // 4. Save to Pictures/mydoc folder
+        // 4. Save to Pictures/Stacks folder
         val picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-        val myDocDir = File(picturesDir, "mydoc").apply { if (!exists()) mkdirs() }
+        val stacksDir = File(picturesDir, "Stacks").apply { if (!exists()) mkdirs() }
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val targetFile = File(myDocDir, "IMG_EDIT_${timeStamp}.jpg")
+        val targetFile = File(stacksDir, "IMG_EDIT_${timeStamp}.jpg")
 
         val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
         val quality = app?.settingsRepository?.photoEditorExportQuality?.value ?: 95

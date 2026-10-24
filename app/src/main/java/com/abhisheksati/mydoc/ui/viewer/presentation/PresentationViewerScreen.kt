@@ -464,7 +464,7 @@ fun PresentationViewerScreen(
                                                 fontWeight = FontWeight.Bold,
                                                 letterSpacing = 1.sp
                                             ),
-                                            color = MaterialTheme.colorScheme.primary
+                                            color = colors.accent
                                         )
                                         if (effectiveSlideCount > 0) {
                                             Text(
@@ -515,7 +515,7 @@ fun PresentationViewerScreen(
                                     Icon(
                                         imageVector = if (isContinuousVertical) Icons.Outlined.ViewCarousel else Icons.Outlined.SwapVert,
                                         contentDescription = if (isContinuousVertical) "Switch to Horizontal Paging" else "Switch to Continuous Vertical",
-                                        tint = if (isContinuousVertical) MaterialTheme.colorScheme.primary else secondaryTextColor
+                                        tint = if (isContinuousVertical) colors.accent else secondaryTextColor
                                     )
                                 }
 
@@ -524,7 +524,7 @@ fun PresentationViewerScreen(
                                     Icon(
                                         imageVector = Icons.Outlined.PlayArrow,
                                         contentDescription = "Start Slideshow",
-                                        tint = MaterialTheme.colorScheme.primary
+                                        tint = colors.accent
                                     )
                                 }
 
@@ -541,8 +541,8 @@ fun PresentationViewerScreen(
                                         expanded = isMenuOpen,
                                         onDismissRequest = { isMenuOpen = false },
                                         shape = RoundedCornerShape(16.dp),
-                                        containerColor = MaterialTheme.colorScheme.surface,
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+                                        containerColor = colors.surface,
+                                        border = BorderStroke(1.dp, colors.divider),
                                         shadowElevation = 8.dp,
                                         tonalElevation = 4.dp
                                     ) {

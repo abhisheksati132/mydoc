@@ -222,7 +222,7 @@ fun FileManagerScreen(
     val pinnedFoldersManager = remember { com.abhisheksati.mydoc.data.local.PinnedFoldersManager(context) }
     val pinnedFolders by pinnedFoldersManager.pinnedFolders.collectAsState()
 
-    val isHubMode = !uiState.isBrowsingStorage && uiState.activeCategory == null && !isSearchActive && !uiState.isTrashOpen
+    val isHubMode = !uiState.isBrowsingStorage && uiState.activeCategory == null && !isSearchActive
 
     // User message toasts
     LaunchedEffect(uiState.userMessage) {
@@ -468,6 +468,15 @@ fun FileManagerScreen(
                             )
 
                             HorizontalDivider(color = colors.divider.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 4.dp))
+
+                            DropdownMenuItem(
+                                text = { Text(if (uiState.trashItems.isNotEmpty()) "Recycle Bin (${uiState.trashItems.size})" else "Recycle Bin", style = typography.body, color = colors.textPrimary) },
+                                leadingIcon = { Icon(Icons.Outlined.Delete, contentDescription = null, tint = colors.accent) },
+                                onClick = {
+                                    onDismiss()
+                                    viewModel.openTrash()
+                                }
+                            )
 
                             DropdownMenuItem(
                                 text = { Text("Refresh", style = typography.body, color = colors.textPrimary) },
@@ -932,6 +941,24 @@ fun FileManagerScreen(
                 showAppManagerSheet = false
                 viewModel.refreshVolumes()
                 storageViewModel.refresh()
+            }
+        )
+    }
+
+    if (uiState.isTrashOpen) {
+        com.abhisheksati.mydoc.ui.filemanager.TrashBinSheet(
+            trashItems = uiState.trashItems,
+            onRestore = { items ->
+                viewModel.restoreTrashItems(items)
+            },
+            onDeletePermanently = { items ->
+                viewModel.permanentlyDeleteTrashItems(items)
+            },
+            onEmptyTrash = {
+                viewModel.emptyTrash()
+            },
+            onClose = {
+                viewModel.closeTrash()
             }
         )
     }

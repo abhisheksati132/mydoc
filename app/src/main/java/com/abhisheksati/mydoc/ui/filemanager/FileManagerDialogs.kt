@@ -437,18 +437,7 @@ private fun PropertyItem(title: String, value: String) {
     }
 }
 
-private fun formatBytes(bytes: Long): String {
-    if (bytes <= 0) return "0 B"
-    val kb = bytes / 1024.0
-    val mb = kb / 1024.0
-    val gb = mb / 1024.0
-    return when {
-        gb >= 1.0 -> String.format(Locale.US, "%.2f GB", gb)
-        mb >= 1.0 -> String.format(Locale.US, "%.1f MB", mb)
-        kb >= 1.0 -> String.format(Locale.US, "%.1f KB", kb)
-        else -> "$bytes B"
-    }
-}
+private fun formatBytes(bytes: Long): String = com.abhisheksati.mydoc.domain.model.StorageVolume.formatBytes(bytes)
 
 @Composable
 fun SortOrderDropdownMenu(

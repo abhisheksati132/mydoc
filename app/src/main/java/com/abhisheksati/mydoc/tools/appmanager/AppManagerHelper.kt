@@ -94,7 +94,7 @@ class AppManagerHelper(private val context: Context) {
         try {
             val targetDir = File(
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                "MyDoc/ExtractedAPKs"
+                "Stacks/ExtractedAPKs"
             )
             if (!targetDir.exists()) {
                 targetDir.mkdirs()
