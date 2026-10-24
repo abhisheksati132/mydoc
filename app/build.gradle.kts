@@ -5,19 +5,16 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-fun getGitCommitCount(): Int {
-    return try {
-        val process = ProcessBuilder("git", "rev-list", "--count", "HEAD").start()
-        val count = process.inputStream.bufferedReader().readText().trim().toIntOrNull()
-        count ?: 1
-    } catch (_: Exception) {
-        1
-    }
-}
-
-val commitCount = getGitCommitCount()
-// Start version 1.2.x series cleanly for Stacks local media engine
-val patchNumber = (commitCount - 100).coerceAtLeast(0)
+// --- Single Source of Truth for versioning -----------------------------------
+// To release a new version:
+//   1. Bump APP_VERSION_NAME below (e.g. "1.2.1")
+//   2. Increment APP_VERSION_CODE by 1 (must always increase)
+//   3. Build: ./gradlew assembleRelease
+//   4. Tag & push: git tag v1.2.1 && git push origin v1.2.1
+//   5. Create GitHub Release with tag "v1.2.1" — the in-app updater reads this tag
+// -----------------------------------------------------------------------------
+val APP_VERSION_NAME = "1.2.0"
+val APP_VERSION_CODE = 117  // Increment by 1 every release, never decrease
 
 android {
     namespace = "com.abhisheksati.mydoc"
@@ -36,8 +33,8 @@ android {
         applicationId = "com.abhisheksati.mydoc"
         minSdk = 26
         targetSdk = 35
-        versionCode = commitCount
-        versionName = "1.2.$patchNumber"
+        versionCode = APP_VERSION_CODE
+        versionName = APP_VERSION_NAME
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
