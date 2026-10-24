@@ -89,18 +89,6 @@ class HomeViewModel(
             allLibraryItems.filter { it.name.contains(query.trim(), ignoreCase = true) }
         }
 
-        val countArray = java.util.EnumMap<MediaKind, LongArray>(MediaKind::class.java)
-        for (kind in MediaKind.entries) {
-            countArray[kind] = LongArray(2)
-        }
-        for (item in allLibraryItems) {
-            val arr = countArray[item.kind]
-            if (arr != null) {
-                arr[0]++
-                arr[1] += item.sizeBytes
-            }
-        }
-        val counts = countArray.mapValues { Pair(it.value[0].toInt(), it.value[1]) }
 
         val recentDocs = recents.filter { it.lastOpenedTimestamp > 0 }.map { doc ->
             LibraryItem(
@@ -132,7 +120,7 @@ class HomeViewModel(
             libraryItems = filteredLibItems,
             recentLibraryItems = dynamicRecents,
             recentlyAdded = allLibraryItems.take(20),
-            countsByKind = counts,
+            countsByKind = emptyMap(),
             sortOrder = sortOrder,
             isSearching = query.isNotBlank(),
             isLoading = false

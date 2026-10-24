@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Home
@@ -79,7 +78,6 @@ fun BottomNavBar(
 
                 val icon: ImageVector = when (tab) {
                     HomeTab.HOME -> Icons.Outlined.Home
-                    HomeTab.LIBRARY -> Icons.AutoMirrored.Outlined.MenuBook
                     HomeTab.FILES -> Icons.Outlined.Folder
                     HomeTab.TOOLS -> Icons.Outlined.Build
                 }

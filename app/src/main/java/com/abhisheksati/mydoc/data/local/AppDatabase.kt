@@ -17,29 +17,6 @@ import com.abhisheksati.mydoc.data.local.entity.RecentDocumentEntity
 import com.abhisheksati.mydoc.data.local.entity.TrashEntity
 import com.abhisheksati.mydoc.data.local.entity.ViewStateEntity
 
-val MIGRATION_3_4 = object : Migration(3, 4) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("""
-            CREATE TABLE IF NOT EXISTS `shelves` (
-                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                `name` TEXT NOT NULL,
-                `colorIndex` INTEGER NOT NULL,
-                `folderUri` TEXT,
-                `createdAt` INTEGER NOT NULL
-            )
-        """)
-        db.execSQL("""
-            CREATE TABLE IF NOT EXISTS `shelf_assignments` (
-                `documentUri` TEXT NOT NULL,
-                `shelfId` INTEGER NOT NULL,
-                PRIMARY KEY(`documentUri`, `shelfId`),
-                FOREIGN KEY(`shelfId`) REFERENCES `shelves`(`id`) ON DELETE CASCADE
-            )
-        """)
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_shelf_assignments_shelfId` ON `shelf_assignments` (`shelfId`)")
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_shelf_assignments_documentUri` ON `shelf_assignments` (`documentUri`)")
-    }
-}
 
 val MIGRATION_4_5 = object : Migration(4, 5) {
     override fun migrate(db: SupportSQLiteDatabase) {
@@ -84,7 +61,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "mydoc.db"
                 )
-                    .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_3_5)
+                    .addMigrations(MIGRATION_4_5, MIGRATION_3_5)
                     .build()
                 INSTANCE = instance
                 instance

@@ -2,17 +2,8 @@ package com.abhisheksati.mydoc.rendering.engine.word
 
 import android.content.Context
 import android.graphics.pdf.PdfDocument
-import android.os.Bundle
-import android.os.CancellationSignal
 import android.os.Handler
 import android.os.Looper
-import android.os.ParcelFileDescriptor
-import android.print.OpenLayoutResultCallback
-import android.print.OpenWriteResultCallback
-import android.print.PageRange
-import android.print.PrintAttributes
-import android.print.PrintDocumentAdapter
-import android.print.PrintDocumentInfo
 import android.util.Base64
 import android.util.Xml
 import android.view.View
@@ -39,16 +30,6 @@ internal object DocxWebRenderer {
     private const val CssDpi = 96
     private const val MaxSlicedPages = 500
 
-    private val printRouteAvailable: Boolean by lazy {
-        runCatching {
-            object : OpenLayoutResultCallback() {
-                override fun onLayoutFinished(info: PrintDocumentInfo?, changed: Boolean) = Unit
-                override fun onLayoutFailed(error: CharSequence?) = Unit
-                override fun onLayoutCancelled() = Unit
-            }
-            true
-        }.getOrDefault(false)
-    }
 
     private const val A4WidthMils = 8268
     private const val A4HeightMils = 11693
@@ -80,21 +61,10 @@ internal object DocxWebRenderer {
                         @android.webkit.JavascriptInterface
                         fun onRendered() {
                             main.post {
-                                val slice = {
-                                    finish(
-                                        runCatching { sliceToPdf(view, widthMils, heightMils, outFile) }
-                                            .getOrDefault(false)
-                                    )
-                                }
-                                if (!printRouteAvailable) {
-                                    slice()
-                                } else {
-                                    runCatching {
-                                        printToPdf(view, widthMils, heightMils, outFile) { ok ->
-                                            if (ok) finish(true) else slice()
-                                        }
-                                    }.onFailure { slice() }
-                                }
+                                finish(
+                                    runCatching { sliceToPdf(view, widthMils, heightMils, outFile) }
+                                        .getOrDefault(false)
+                                )
                             }
                         }
 
@@ -134,62 +104,6 @@ internal object DocxWebRenderer {
             return false
         }
         return true
-    }
-
-    private fun printToPdf(
-        view: WebView,
-        widthMils: Int,
-        heightMils: Int,
-        outFile: File,
-        done: (Boolean) -> Unit
-    ) {
-        outFile.parentFile?.mkdirs()
-        val adapter: PrintDocumentAdapter = view.createPrintDocumentAdapter(outFile.nameWithoutExtension)
-        val attributes = PrintAttributes.Builder()
-            .setMediaSize(PrintAttributes.MediaSize("docx", "docx", widthMils, heightMils))
-            .setResolution(PrintAttributes.Resolution("pdf", "pdf", 300, 300))
-            .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
-            .build()
-
-        var descriptor: ParcelFileDescriptor? = null
-        val cleanUp = { ok: Boolean ->
-            runCatching { descriptor?.close() }
-            runCatching { adapter.onFinish() }
-            done(ok)
-        }
-
-        adapter.onStart()
-        adapter.onLayout(
-            null,
-            attributes,
-            CancellationSignal(),
-            object : OpenLayoutResultCallback() {
-                override fun onLayoutFinished(info: PrintDocumentInfo?, changed: Boolean) {
-                    runCatching {
-                        descriptor = ParcelFileDescriptor.open(
-                            outFile,
-                            ParcelFileDescriptor.MODE_READ_WRITE or
-                                ParcelFileDescriptor.MODE_CREATE or
-                                ParcelFileDescriptor.MODE_TRUNCATE
-                        )
-                        adapter.onWrite(
-                            arrayOf(PageRange.ALL_PAGES),
-                            descriptor,
-                            CancellationSignal(),
-                            object : OpenWriteResultCallback() {
-                                override fun onWriteFinished(pages: Array<out PageRange>?) = cleanUp(true)
-                                override fun onWriteFailed(error: CharSequence?) = cleanUp(false)
-                                override fun onWriteCancelled() = cleanUp(false)
-                            }
-                        )
-                    }.onFailure { cleanUp(false) }
-                }
-
-                override fun onLayoutFailed(error: CharSequence?) = cleanUp(false)
-                override fun onLayoutCancelled() = cleanUp(false)
-            },
-            Bundle()
-        )
     }
 
     private fun sliceToPdf(view: WebView, widthMils: Int, heightMils: Int, outFile: File): Boolean {

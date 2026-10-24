@@ -35,7 +35,6 @@ import com.abhisheksati.mydoc.tools.ui.components.CameraScanSheet
 import com.abhisheksati.mydoc.tools.ui.components.SignPdfSheet
 import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
 import com.abhisheksati.mydoc.ui.filemanager.FileManagerScreen
-import com.abhisheksati.mydoc.ui.library.LibraryTabContent
 import com.abhisheksati.mydoc.ui.storage.StorageViewModel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -325,24 +324,12 @@ fun HomeScreen(
                         recentItems = uiState.recentLibraryItems,
                         onItemClick = onLibraryItemClick,
                         onSearchClick = {
-                            viewModel.selectTab(HomeTab.LIBRARY)
-                            scope.launch { pagerState.animateScrollToPage(HomeTab.LIBRARY.ordinal) }
+                            viewModel.selectTab(HomeTab.FILES)
+                            scope.launch { pagerState.animateScrollToPage(HomeTab.FILES.ordinal) }
                         },
                         onSettingsClick = onSettingsClick,
                         onToggleTheme = onToggleTheme,
                         onClearRecent = { viewModel.clearAllRecents() },
-                        isDarkTheme = isDarkTheme,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-                HomeTab.LIBRARY -> {
-                    LibraryTabContent(
-                        allItems = uiState.libraryItems,
-                        recentlyAdded = uiState.recentlyAdded,
-                        countsByKind = uiState.countsByKind,
-                        onItemClick = onLibraryItemClick,
-                        onSettingsClick = onSettingsClick,
-                        onToggleTheme = onToggleTheme,
                         isDarkTheme = isDarkTheme,
                         modifier = Modifier.fillMaxSize()
                     )
