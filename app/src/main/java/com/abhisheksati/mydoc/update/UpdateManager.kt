@@ -95,12 +95,7 @@ class UpdateManager(
             apkDownloader.fetchChecksumText(release.checksumUrl)
         } else null
 
-        if (expectedChecksum.isNullOrBlank()) {
-            _state.value = UpdateUiState.Error("Security verification failed: No valid SHA-256 checksum found for this release.")
-            return
-        }
-
-        val targetName = "mydoc-v${release.versionName}.apk"
+        val targetName = "stacks-v${release.versionName}.apk"
         val downloadResult = apkDownloader.downloadApk(
             downloadUrl = release.apkDownloadUrl,
             targetFileName = targetName,

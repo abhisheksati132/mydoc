@@ -147,35 +147,36 @@ class ViewerViewModel(
                     }
 
                     var activeRenderer: DocumentRenderer? = null
+
+                    // 1. Primary attempt: Built-in Android OS PdfRenderer (guaranteed stable, no JNI SIGSEGV)
                     try {
-                        val mupdf = MuPdfRenderer(
-                            filePath = cacheFile.absolutePath,
-                            mimeType = "application/pdf"
-                        )
-                        if (mupdf.isPasswordProtected) {
-                            activeRenderer = mupdf
-                        } else if (mupdf.pageCount > 0) {
-                            // Smoke test rendering first page to verify native Fitz device works
-                            val testBitmap = mupdf.renderPage(0, 0.2f, ReadingMode.NORMAL)
-                            if (testBitmap != null) {
-                                activeRenderer = mupdf
-                            } else {
-                                mupdf.close()
-                            }
+                        val nativeRenderer = com.abhisheksati.mydoc.rendering.engine.AndroidPdfRenderer(cacheFile)
+                        if (nativeRenderer.pageCount > 0) {
+                            activeRenderer = nativeRenderer
                         } else {
-                            mupdf.close()
+                            nativeRenderer.close()
                         }
                     } catch (_: Throwable) {
                     }
 
-                    // 2. Fallback attempt: Built-in Android OS PdfRenderer
+                    // 2. Secondary / Fallback attempt: MuPdfRenderer (for complex or password-protected documents)
                     if (activeRenderer == null) {
                         try {
-                            val nativeRenderer = com.abhisheksati.mydoc.rendering.engine.AndroidPdfRenderer(cacheFile)
-                            if (nativeRenderer.pageCount > 0) {
-                                activeRenderer = nativeRenderer
+                            val mupdf = MuPdfRenderer(
+                                filePath = cacheFile.absolutePath,
+                                mimeType = "application/pdf"
+                            )
+                            if (mupdf.isPasswordProtected) {
+                                activeRenderer = mupdf
+                            } else if (mupdf.pageCount > 0) {
+                                val testBitmap = mupdf.renderPage(0, 0.2f, ReadingMode.NORMAL)
+                                if (testBitmap != null) {
+                                    activeRenderer = mupdf
+                                } else {
+                                    mupdf.close()
+                                }
                             } else {
-                                nativeRenderer.close()
+                                mupdf.close()
                             }
                         } catch (_: Throwable) {
                         }

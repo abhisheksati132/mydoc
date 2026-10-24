@@ -352,6 +352,7 @@ class MainActivity : ComponentActivity() {
                                     toolsViewModel = toolsViewModel,
                                     fileManagerViewModel = fileManagerViewModel,
                                     storageViewModel = storageViewModel,
+                                    updateManager = updateManager,
                                     isDarkTheme = isDark,
                                     onToggleTheme = {
                                         val nextTheme = if (isDark) AppThemeMode.LIGHT else AppThemeMode.DARK
@@ -464,6 +465,9 @@ class MainActivity : ComponentActivity() {
         }
 
         if (uri != null) {
+            // Consume the intent so subsequent launches or crashes do not re-trigger in an infinite loop
+            intent.action = null
+            intent.data = null
             openUriOrFile(uri = uri, mimeType = intent.type)
         }
     }

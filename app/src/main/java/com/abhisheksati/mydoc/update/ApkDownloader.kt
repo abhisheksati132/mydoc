@@ -14,14 +14,11 @@ class ApkDownloader(private val context: Context) {
     suspend fun downloadApk(
         downloadUrl: String,
         targetFileName: String,
-        expectedSha256: String,
+        expectedSha256: String? = null,
         onProgress: (bytesDownloaded: Long, totalBytes: Long) -> Unit
     ): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
-            val cleanExpectedSha256 = expectedSha256.trim().lowercase()
-            if (cleanExpectedSha256.isBlank()) {
-                throw IllegalArgumentException("Expected SHA-256 checksum cannot be blank")
-            }
+            val cleanExpectedSha256 = expectedSha256?.trim()?.lowercase()
             val baseDir = context.cacheDir
             val updatesDir = File(baseDir, "updates").apply {
                 if (!exists()) mkdirs()
@@ -76,11 +73,13 @@ class ApkDownloader(private val context: Context) {
                 }
             }
 
-            // Verify SHA-256 checksum (mandatory)
-            val computedHash = computeSha256(destinationFile)
-            if (!computedHash.equals(cleanExpectedSha256, ignoreCase = true)) {
-                destinationFile.delete()
-                throw IllegalStateException("Checksum mismatch! Expected $cleanExpectedSha256, got $computedHash")
+            // Verify SHA-256 checksum if provided
+            if (!cleanExpectedSha256.isNullOrBlank()) {
+                val computedHash = computeSha256(destinationFile)
+                if (!computedHash.equals(cleanExpectedSha256, ignoreCase = true)) {
+                    destinationFile.delete()
+                    throw IllegalStateException("Checksum mismatch! Expected $cleanExpectedSha256, got $computedHash")
+                }
             }
 
             destinationFile

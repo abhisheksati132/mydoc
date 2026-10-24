@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">mydoc</string>
+    <string name="app_name">Stacks</string>
     <string name="search_placeholder">Search documents…</string>
     <string name="open_document">Open document</string>
     <string name="recents">Recents</string>

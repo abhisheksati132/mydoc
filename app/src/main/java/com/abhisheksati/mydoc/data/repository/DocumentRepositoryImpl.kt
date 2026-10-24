@@ -84,6 +84,7 @@ class DocumentRepositoryImpl(
         withContext(Dispatchers.IO) {
             val deviceDocs = mutableListOf<DocumentFile>()
             val seenPaths = mutableSetOf<String>()
+            val seenUris = mutableSetOf<String>()
 
             try {
                 val uri = MediaStore.Files.getContentUri("external")
@@ -125,8 +126,6 @@ class DocumentRepositoryImpl(
 
                     while (cursor.moveToNext()) {
                         val data = cursor.getString(dataCol) ?: continue
-                        if (!seenPaths.add(data)) continue
-
                         val file = File(data)
                         val docUri = if (file.exists()) {
                             Uri.fromFile(file).toString()
@@ -134,6 +133,8 @@ class DocumentRepositoryImpl(
                             val id = cursor.getLong(idCol)
                             ContentUris.withAppendedId(uri, id).toString()
                         }
+
+                        if (!seenPaths.add(data) || !seenUris.add(docUri)) continue
 
                         val name = cursor.getString(nameCol) ?: file.name
                         val size = cursor.getLong(sizeCol)
@@ -160,7 +161,12 @@ class DocumentRepositoryImpl(
 
             // Also merge any recents that might not be indexed in MediaStore
             recents.forEach { recent ->
-                if (seenPaths.add(recent.uri)) {
+                val recentUri = recent.uri
+                val recentPath = try { Uri.parse(recentUri).path } catch (_: Exception) { null }
+                val isSeen = seenUris.contains(recentUri) || (recentPath != null && seenPaths.contains(recentPath))
+                if (!isSeen) {
+                    seenUris.add(recentUri)
+                    if (recentPath != null) seenPaths.add(recentPath)
                     deviceDocs.add(
                         DocumentFile(
                             uri = recent.uri,
@@ -176,7 +182,7 @@ class DocumentRepositoryImpl(
                 }
             }
 
-            deviceDocs
+            deviceDocs.distinctBy { it.uri }
         }
     }
 

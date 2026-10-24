@@ -16,12 +16,6 @@ object TileBitmapCache {
         override fun sizeOf(key: String, bitmap: Bitmap): Int {
             return bitmap.byteCount
         }
-
-        override fun entryRemoved(evicted: Boolean, key: String, oldValue: Bitmap, newValue: Bitmap?) {
-            if (oldValue !== newValue && !oldValue.isRecycled) {
-                oldValue.recycle()
-            }
-        }
     }
 
     fun makeKey(docUri: String, pageIndex: Int, region: RectF, scale: Float, mode: ReadingMode): String {

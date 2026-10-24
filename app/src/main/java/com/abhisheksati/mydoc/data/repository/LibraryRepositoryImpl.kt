@@ -67,7 +67,9 @@ class LibraryRepositoryImpl(
             )
         }
 
-        (docItems + mediaItems).sortedByDescending { it.lastModified }
+        (docItems + mediaItems)
+            .distinctBy { it.uri }
+            .sortedByDescending { it.lastModified }
     }
 
     override fun getItemsByKind(kind: MediaKind): Flow<List<LibraryItem>> {
@@ -138,6 +140,7 @@ class LibraryRepositoryImpl(
             }
 
         (continueDocs + continueMedia)
+            .distinctBy { it.uri }
             .sortedByDescending { it.lastModified }
             .take(limit)
     }

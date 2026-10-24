@@ -34,5 +34,7 @@
 -dontwarn com.gemalto.jp2.**
 -dontwarn org.bouncycastle.**
 -dontwarn java.awt.**
-
-
+# Keep all native JNI methods
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
