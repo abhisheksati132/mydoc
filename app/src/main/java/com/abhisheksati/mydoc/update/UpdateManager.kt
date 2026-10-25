@@ -1,4 +1,4 @@
-﻿package com.abhisheksati.mydoc.update
+package com.abhisheksati.mydoc.update
 
 import android.content.Context
 import android.content.pm.PackageManager
@@ -33,9 +33,9 @@ class UpdateManager(
     val currentVersionName: String
         get() = try {
             val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            pInfo.versionName ?: "1.2.0"
+            pInfo.versionName ?: "1.2.1"
         } catch (_: PackageManager.NameNotFoundException) {
-            "1.2.0"
+            "1.2.1"
         }
 
     suspend fun checkForUpdates(isLaunchCheck: Boolean = false) {
