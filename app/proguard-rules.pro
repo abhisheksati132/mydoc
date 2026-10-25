@@ -21,9 +21,8 @@
 # Domain models
 -keep class com.abhisheksati.mydoc.domain.model.** { *; }
 
-# LibVLC native bindings
--keep class org.videolan.libvlc.** { *; }
--keepclassmembers class org.videolan.libvlc.** { *; }
+# Media3 ExoPlayer keep rules
+-keep class androidx.media3.** { *; }
 
 # Print Framework programmatic adapter callbacks
 -keep class android.print.OpenLayoutResultCallback { *; }

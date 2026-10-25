@@ -120,7 +120,6 @@ fun SettingsScreen(
     val videoHwAccel by settingsRepository.videoHardwareAcceleration.collectAsState()
     val autoResumeVideo by settingsRepository.autoResumeVideo.collectAsState()
     val videoAutoLoop by settingsRepository.videoAutoLoop.collectAsState()
-    val photoQuality by settingsRepository.photoEditorExportQuality.collectAsState()
 
     // LIBRARY
     val startupTab by settingsRepository.defaultStartupTab.collectAsState()
@@ -366,38 +365,6 @@ fun SettingsScreen(
                     checked = videoAutoLoop,
                     onCheckedChange = { settingsRepository.setVideoAutoLoop(it) }
                 )
-
-                SettingsDivider()
-
-                Text(
-                    text = "Photo Editor Export Quality",
-                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
-                    color = colors.textSecondary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ThemeChip(
-                        label = "95% (Ultra)",
-                        icon = null,
-                        selected = photoQuality == 95,
-                        onClick = { settingsRepository.setPhotoEditorExportQuality(95) }
-                    )
-                    ThemeChip(
-                        label = "90% (High)",
-                        icon = null,
-                        selected = photoQuality == 90,
-                        onClick = { settingsRepository.setPhotoEditorExportQuality(90) }
-                    )
-                    ThemeChip(
-                        label = "85% (Compact)",
-                        icon = null,
-                        selected = photoQuality == 85,
-                        onClick = { settingsRepository.setPhotoEditorExportQuality(85) }
-                    )
-                }
             }
 
             // 4. LIBRARY

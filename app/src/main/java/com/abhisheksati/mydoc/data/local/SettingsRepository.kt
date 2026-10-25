@@ -1,4 +1,4 @@
-package com.abhisheksati.mydoc.data.local
+﻿package com.abhisheksati.mydoc.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -92,9 +92,6 @@ class SettingsRepository(context: Context) {
 
     private val _confirmBeforeDelete = MutableStateFlow(prefs.getBoolean(KEY_CONFIRM_BEFORE_DELETE, true))
     val confirmBeforeDelete: StateFlow<Boolean> = _confirmBeforeDelete.asStateFlow()
-
-    private val _photoEditorExportQuality = MutableStateFlow(prefs.getInt(KEY_PHOTO_EDITOR_QUALITY, 95))
-    val photoEditorExportQuality: StateFlow<Int> = _photoEditorExportQuality.asStateFlow()
 
     private val _videoHardwareAcceleration = MutableStateFlow(prefs.getBoolean(KEY_VIDEO_HW_ACCEL, true))
     val videoHardwareAcceleration: StateFlow<Boolean> = _videoHardwareAcceleration.asStateFlow()
@@ -233,11 +230,6 @@ class SettingsRepository(context: Context) {
     fun setConfirmBeforeDelete(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_CONFIRM_BEFORE_DELETE, enabled).apply()
         _confirmBeforeDelete.value = enabled
-    }
-
-    fun setPhotoEditorExportQuality(quality: Int) {
-        prefs.edit().putInt(KEY_PHOTO_EDITOR_QUALITY, quality).apply()
-        _photoEditorExportQuality.value = quality
     }
 
     fun setVideoHardwareAcceleration(enabled: Boolean) {

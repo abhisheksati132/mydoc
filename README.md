@@ -43,7 +43,7 @@ MyDoc is built around **Shelves** — an intentional, distraction-free document 
 - **Typography**: Bricolage Grotesque (variable font)
 - **PDF Engine**: Artifex MuPDF Fitz
 - **Local Storage**: Room 2.6.1 & Jetpack DataStore
-- **Media Playback**: LibVLC Android 3.6.5
+- **Media Playback**: Google AndroidX Media3 ExoPlayer 1.5.1 (Hardware-accelerated MediaCodec, PiP, gesture seek)
 - **Image Loading**: Coil 2.7.0
 - **Target SDK**: Android 15 (API 35) • **Minimum SDK**: Android 8.0 (API 26)
 

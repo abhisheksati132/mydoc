@@ -1,4 +1,4 @@
-﻿plugins {
+plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
@@ -21,6 +21,29 @@ android {
     compileSdk = 35
 
     signingConfigs {
+        create("release") {
+            val keystorePath = System.getenv("MYDOC_KEYSTORE_PATH")
+                ?: (project.findProperty("mydoc.keystore.path") as? String)
+            val keystorePass = System.getenv("MYDOC_KEYSTORE_PASSWORD")
+                ?: (project.findProperty("mydoc.keystore.password") as? String)
+            val keyAlias = System.getenv("MYDOC_KEY_ALIAS")
+                ?: (project.findProperty("mydoc.key.alias") as? String)
+            val keyPass = System.getenv("MYDOC_KEY_PASSWORD")
+                ?: (project.findProperty("mydoc.key.password") as? String)
+
+            if (keystorePath != null && file(keystorePath).exists()) {
+                storeFile = file(keystorePath)
+                storePassword = keystorePass
+                this.keyAlias = keyAlias
+                keyPassword = keyPass
+            } else {
+                // Fallback to shared dev keystore for reproducible local builds
+                storeFile = file("keystore/debug.keystore")
+                storePassword = "android"
+                this.keyAlias = "mydoc"
+                keyPassword = "android"
+            }
+        }
         create("shared") {
             storeFile = file("keystore/debug.keystore")
             storePassword = "android"
@@ -50,7 +73,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("shared")
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -108,8 +131,11 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
 
-    // LibVLC official VideoLAN engine
-    implementation("org.videolan.android:libvlc-all:3.6.5")
+
+    // Google AndroidX Media3 ExoPlayer multimedia engine (Hardware-accelerated, zero JNI crash risk)
+    implementation("androidx.media3:media3-exoplayer:1.5.1")
+    implementation("androidx.media3:media3-ui:1.5.1")
+    implementation("androidx.media3:media3-common:1.5.1")
 
     // Coil for document thumbnail loading & caching + GIF/Video frame decoding
     implementation(libs.coil.compose)

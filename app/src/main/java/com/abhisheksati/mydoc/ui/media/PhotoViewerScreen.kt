@@ -126,7 +126,6 @@ fun PhotoViewerScreen(
     var isMoreMenuOpen by remember { mutableStateOf(false) }
     var isSlideshowActive by remember { mutableStateOf(false) }
     var slideshowIntervalSec by remember { mutableIntStateOf(3) }
-    var isEditorOpen by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var ocrExtractedText by remember { mutableStateOf<String?>(null) }
     var isOcrRunning by remember { mutableStateOf(false) }
@@ -440,12 +439,15 @@ fun PhotoViewerScreen(
                             modifier = Modifier.weight(1f)
                         )
 
-                        // Edit
+                        // Rotate 90°
                         PhotoViewerPillButton(
-                            icon = Icons.Default.Edit,
-                            label = "Edit",
+                            icon = Icons.AutoMirrored.Filled.RotateRight,
+                            label = "Rotate",
                             tint = contentColor,
-                            onClick = { isEditorOpen = true },
+                            onClick = {
+                                rotationAngle = (rotationAngle + 90f) % 360f
+                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            },
                             modifier = Modifier.weight(1f)
                         )
 
@@ -487,39 +489,7 @@ fun PhotoViewerScreen(
             )
         }
 
-        // Photo Editor Modal
-        if (isEditorOpen) {
-            PhotoEditorScreen(
-                item = currentItem,
-                initialRotation = rotationAngle,
-                initialFlipped = isFlippedHorizontal,
-                onDismiss = { isEditorOpen = false },
-                onPhotoSaved = { savedFile ->
-                    isEditorOpen = false
-                    val newMediaItem = currentItem.copy(
-                        id = System.currentTimeMillis(),
-                        uri = Uri.fromFile(savedFile),
-                        displayName = savedFile.name,
-                        filePath = savedFile.absolutePath,
-                        sizeBytes = savedFile.length(),
-                        dateModifiedSec = System.currentTimeMillis() / 1000L
-                    )
-                    val currentIdx = pagerState.currentPage
-                    photoList.add(currentIdx + 1, newMediaItem)
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(currentIdx + 1)
-                    }
-                }
-            )
-        }
 
-        // Info Bottom Sheet
-        PhotoInfoSheet(
-            item = currentItem,
-            exif = currentExif,
-            isOpen = isInfoSheetOpen,
-            onDismiss = { isInfoSheetOpen = false }
-        )
 
         // Delete Confirmation Dialog
         if (showDeleteConfirmDialog) {
