@@ -52,16 +52,24 @@ data class FileManagerUiState(
 
 
 class FileManagerViewModel(
-    private val storageRepository: StorageRepository
+    private val storageRepository: StorageRepository,
+    baseDir: File? = null
 ) : ViewModel() {
 
     private val backStack = ArrayDeque<File>()
 
-    private val initialDir: File = Environment.getExternalStorageDirectory()
+    private val initialDir: File = baseDir ?: try {
+        Environment.getExternalStorageDirectory() ?: File("/")
+    } catch (_: Exception) {
+        File("/")
+    }
+
+    private var registeredVolumes: List<StorageVolume> = storageRepository.getStorageVolumes()
 
     private val _uiState = MutableStateFlow(
         FileManagerUiState(
             currentDirectory = initialDir,
+            storageVolumes = registeredVolumes,
             breadcrumbTrail = buildBreadcrumb(initialDir)
         )
     )
@@ -79,6 +87,7 @@ class FileManagerViewModel(
 
     fun refreshVolumes() {
         val volumes = storageRepository.getStorageVolumes()
+        registeredVolumes = volumes
         _uiState.update { it.copy(storageVolumes = volumes) }
     }
 
@@ -789,7 +798,7 @@ class FileManagerViewModel(
         return dir.absolutePath == "/storage/emulated/0" ||
                 dir.absolutePath == "/" ||
                 dir.parentFile == null ||
-                _uiState.value.storageVolumes.any { it.path == dir.absolutePath }
+                registeredVolumes.any { it.path == dir.absolutePath }
     }
 
     private fun hasParent(dir: File): Boolean {

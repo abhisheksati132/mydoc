@@ -1,4 +1,4 @@
-package com.abhisheksati.mydoc.viewmodel
+﻿package com.abhisheksati.mydoc.viewmodel
 
 import android.content.Context
 import android.net.Uri
@@ -107,7 +107,10 @@ class SpreadsheetViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return SpreadsheetViewModel(context, documentFile) as T
+            if (modelClass.isAssignableFrom(SpreadsheetViewModel::class.java)) {
+                return SpreadsheetViewModel(context, documentFile) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class: ")
         }
     }
 }

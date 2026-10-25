@@ -1,4 +1,4 @@
-package com.abhisheksati.mydoc.viewmodel
+﻿package com.abhisheksati.mydoc.viewmodel
 
 import android.Manifest
 import android.content.Context
@@ -165,7 +165,10 @@ class MediaViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return MediaViewModel(repository) as T
+            if (modelClass.isAssignableFrom(MediaViewModel::class.java)) {
+                return MediaViewModel(repository) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class: ")
         }
     }
 }

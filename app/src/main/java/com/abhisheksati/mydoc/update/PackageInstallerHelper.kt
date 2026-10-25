@@ -1,5 +1,6 @@
-package com.abhisheksati.mydoc.update
+﻿package com.abhisheksati.mydoc.update
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -41,6 +42,7 @@ class PackageInstallerHelper(private val context: Context) {
             setDataAndType(apkUri, "application/vnd.android.package-archive")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            clipData = ClipData.newRawUri("mydoc_apk", apkUri)
         }
 
         val resInfoList = context.packageManager.queryIntentActivities(installIntent, 0)
@@ -61,8 +63,16 @@ class PackageInstallerHelper(private val context: Context) {
             android.content.pm.PackageManager.GET_SIGNATURES
         }
 
-        val archiveInfo = pm.getPackageArchiveInfo(apkFile.absolutePath, flags)
-            ?: throw SecurityException("Verification failed: Cannot parse package archive info for ${apkFile.name}")
+        var archiveInfo = try {
+            pm.getPackageArchiveInfo(apkFile.absolutePath, flags)
+        } catch (_: Exception) {
+            null
+        }
+
+        if (archiveInfo == null) {
+            archiveInfo = pm.getPackageArchiveInfo(apkFile.absolutePath, 0)
+                ?: throw SecurityException("Verification failed: Cannot parse package archive info for ${apkFile.name}")
+        }
 
         if (archiveInfo.packageName != context.packageName) {
             throw SecurityException(
@@ -70,32 +80,45 @@ class PackageInstallerHelper(private val context: Context) {
             )
         }
 
-        val currentAppInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            pm.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES)
-        } else {
-            @Suppress("DEPRECATION")
-            pm.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_SIGNATURES)
-        }
+        val currentAppInfo = try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                pm.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES)
+            } else {
+                @Suppress("DEPRECATION")
+                pm.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_SIGNATURES)
+            }
+        } catch (_: Exception) {
+            null
+        } ?: return
 
         val currentSignatures: List<ByteArray> = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            currentAppInfo.signingInfo?.signingCertificateHistory?.map { it.toByteArray() }
-                ?: currentAppInfo.signingInfo?.apkContentsSigners?.map { it.toByteArray() }
-                ?: emptyList()
+            val signingInfo = currentAppInfo.signingInfo
+            if (signingInfo?.hasMultipleSigners() == true) {
+                signingInfo.apkContentsSigners?.map { it.toByteArray() } ?: emptyList()
+            } else {
+                signingInfo?.signingCertificateHistory?.map { it.toByteArray() }
+                    ?: signingInfo?.apkContentsSigners?.map { it.toByteArray() }
+                    ?: emptyList()
+            }
         } else {
             @Suppress("DEPRECATION")
             currentAppInfo.signatures?.map { it.toByteArray() } ?: emptyList()
         }
 
         val newSignatures: List<ByteArray> = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            archiveInfo.signingInfo?.signingCertificateHistory?.map { it.toByteArray() }
-                ?: archiveInfo.signingInfo?.apkContentsSigners?.map { it.toByteArray() }
-                ?: emptyList()
+            val signingInfo = archiveInfo.signingInfo
+            if (signingInfo?.hasMultipleSigners() == true) {
+                signingInfo.apkContentsSigners?.map { it.toByteArray() } ?: emptyList()
+            } else {
+                signingInfo?.signingCertificateHistory?.map { it.toByteArray() }
+                    ?: signingInfo?.apkContentsSigners?.map { it.toByteArray() }
+                    ?: emptyList()
+            }
         } else {
             @Suppress("DEPRECATION")
             archiveInfo.signatures?.map { it.toByteArray() } ?: emptyList()
         }
 
-        // If the current app has signatures, ensure the new APK matches at least one signing certificate
         if (currentSignatures.isNotEmpty() && newSignatures.isNotEmpty()) {
             val hasMatch = newSignatures.any { newSig ->
                 currentSignatures.any { currSig -> currSig.contentEquals(newSig) }

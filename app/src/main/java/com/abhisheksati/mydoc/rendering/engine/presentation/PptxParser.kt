@@ -1,4 +1,6 @@
-package com.abhisheksati.mydoc.rendering.engine.presentation
+﻿package com.abhisheksati.mydoc.rendering.engine.presentation
+
+import android.util.Log
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.isSpecified
@@ -602,7 +604,7 @@ class PptxParser {
         if (lower.startsWith("click to edit") || lower.startsWith("click to add")) return true
         if (lower in setOf(
             "second level", "third level", "fourth level", "fifth level", "first level",
-            "root entry", "slide master", "master slide", "<#>", "‹#›", "subtitle", "footer", "header"
+            "root entry", "slide master", "master slide", "<#>", "â€¹#â€º", "subtitle", "footer", "header"
         )) return true
         return false
     }
@@ -1130,7 +1132,7 @@ class PptxParser {
                 eventType = parser.next()
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w("PptxParser", "Non-fatal error parsing presentation element", e)
         }
 
         // Fallback standard colors if missing in theme
@@ -1305,7 +1307,7 @@ class PptxParser {
                 eventType = parser.next()
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w("PptxParser", "Non-fatal error parsing presentation element", e)
         }
 
         return SlideLayoutInfo(placeholders, backgroundFill, backgroundShapes)
@@ -1345,7 +1347,7 @@ class PptxParser {
                 eventType = parser.next()
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w("PptxParser", "Non-fatal error parsing presentation element", e)
         }
 
         return Pair(Pair(w, h), relIds)
@@ -1709,7 +1711,7 @@ class PptxParser {
                             }
 
                             isTag(tagName, "buChar") -> {
-                                curBulletChar = parser.getAttributeValue(null, "char") ?: "•"
+                                curBulletChar = parser.getAttributeValue(null, "char") ?: "â€¢"
                             }
 
                             isTag(tagName, "buAutoNum") -> {
@@ -2018,7 +2020,7 @@ class PptxParser {
                 eventType = parser.next()
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("PptxParser", "Fatal error parsing slide", e)
             throw e
         }
 

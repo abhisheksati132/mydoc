@@ -1,4 +1,4 @@
-package com.abhisheksati.mydoc.viewmodel
+﻿package com.abhisheksati.mydoc.viewmodel
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -478,7 +478,10 @@ class ViewerViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return ViewerViewModel(context, repository, documentFile) as T
+            if (modelClass.isAssignableFrom(ViewerViewModel::class.java)) {
+                return ViewerViewModel(context, repository, documentFile) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class: ")
         }
     }
 }

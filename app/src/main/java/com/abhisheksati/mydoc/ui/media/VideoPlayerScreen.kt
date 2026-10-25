@@ -1,4 +1,4 @@
-package com.abhisheksati.mydoc.ui.media
+﻿package com.abhisheksati.mydoc.ui.media
 
 import android.app.Activity
 import android.app.PictureInPictureParams
@@ -1163,7 +1163,7 @@ fun VideoPlayerScreen(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "Screen Locked • Tap to unlock",
+                            text = "Screen Locked â€¢ Tap to unlock",
                             color = Color.White,
                             style = typography.body.copy(fontWeight = FontWeight.SemiBold)
                         )
@@ -2002,7 +2002,7 @@ private fun takeVideoSnapshot(
                         if (copyResult == PixelCopy.SUCCESS) {
                             saveBitmapToGallery(context, bitmap, title)
                         } else {
-                            (context as? Activity)?.runOnUiThread {
+                            Handler(Looper.getMainLooper()).post {
                                 Toast.makeText(context, "Could not capture frame", Toast.LENGTH_SHORT).show()
                             }
                         }
@@ -2054,12 +2054,12 @@ private fun saveBitmapToGallery(context: Context, bitmap: Bitmap, videoTitle: St
                 contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
                 resolver.update(uri, contentValues, null, null)
             }
-            (context as? Activity)?.runOnUiThread {
+            Handler(Looper.getMainLooper()).post {
                 Toast.makeText(context, "Snapshot saved: Pictures/MyDoc/$filename", Toast.LENGTH_LONG).show()
             }
         } catch (e: Exception) {
             resolver.delete(uri, null, null)
-            (context as? Activity)?.runOnUiThread {
+            Handler(Looper.getMainLooper()).post {
                 Toast.makeText(context, "Failed to save snapshot: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }

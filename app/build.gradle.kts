@@ -1,4 +1,4 @@
-plugins {
+﻿plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
@@ -11,7 +11,7 @@ plugins {
 //   2. Increment APP_VERSION_CODE by 1 (must always increase)
 //   3. Build: ./gradlew assembleRelease
 //   4. Tag & push: git tag v1.2.1 && git push origin v1.2.1
-//   5. Create GitHub Release with tag "v1.2.1" — the in-app updater reads this tag
+//   5. Create GitHub Release with tag "v1.2.1" â€” the in-app updater reads this tag
 // -----------------------------------------------------------------------------
 val APP_VERSION_NAME = "1.2.0"
 val APP_VERSION_CODE = 117  // Increment by 1 every release, never decrease
@@ -27,6 +27,10 @@ android {
             keyAlias = "mydoc"
             keyPassword = "android"
         }
+    }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 
     defaultConfig {
@@ -118,9 +122,6 @@ dependencies {
     // ML Kit On-Device Text Recognition (Offline OCR)
     implementation("com.google.mlkit:text-recognition:16.0.1")
 
-    // ML Kit On-Device Document Scanner (Edge detection, perspective fix, multi-page)
-    implementation("com.google.android.gms:play-services-mlkit-document-scanner:16.0.0-beta1")
-
     // ZXing for Wi-Fi Transfer QR code generation
     implementation("com.google.zxing:core:3.5.3")
 
@@ -139,6 +140,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation("net.sf.kxml:kxml2:2.3.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.compose.bom))

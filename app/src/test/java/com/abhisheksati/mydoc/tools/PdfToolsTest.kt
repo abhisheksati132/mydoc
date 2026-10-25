@@ -129,4 +129,35 @@ class PdfToolsTest {
         assertEquals("APPROVED", options.annotationText)
         assertEquals("STAMP", options.annotationType)
     }
+
+    @Test
+    fun toolExecutionResult_failureState_reportsCorrectly() {
+        val failureResult = ToolExecutionResult(
+            success = false,
+            tool = PdfTool.SPLIT,
+            errorMessage = "Corrupt PDF stream encountered",
+            inputSizeBytes = 50_000L,
+            outputSizeBytes = 0L
+        )
+
+        assertFalse(failureResult.success)
+        assertEquals("Corrupt PDF stream encountered", failureResult.errorMessage)
+        assertEquals(50_000L, failureResult.savingsBytes)
+        assertEquals(100f, failureResult.savingsPercent, 0.01f)
+    }
+
+    @Test
+    fun toolOptions_customSecurityOptions_retainValues() {
+        val options = ToolOptions(
+            userPassword = "UserPass123",
+            ownerPassword = "OwnerPass456",
+            allowPrinting = false,
+            allowCopying = false
+        )
+
+        assertEquals("UserPass123", options.userPassword)
+        assertEquals("OwnerPass456", options.ownerPassword)
+        assertFalse(options.allowPrinting)
+        assertFalse(options.allowCopying)
+    }
 }

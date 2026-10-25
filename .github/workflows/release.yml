@@ -50,10 +50,11 @@ jobs:
           elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             TAG="${GITHUB_REF_NAME}"
           else
-            COUNT=$(git rev-list --count HEAD)
-            PATCH=$((COUNT - 95))
-            if [ $PATCH -lt 0 ]; then PATCH=0; fi
-            TAG="v1.1.${PATCH}"
+            VERSION=$(grep 'val APP_VERSION_NAME' app/build.gradle.kts | head -1 | cut -d '"' -f2)
+            if [ -z "$VERSION" ]; then
+              VERSION="1.2.0"
+            fi
+            TAG="v${VERSION}"
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 

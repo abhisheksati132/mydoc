@@ -1,4 +1,4 @@
-package com.abhisheksati.mydoc.viewmodel
+﻿package com.abhisheksati.mydoc.viewmodel
 
 import android.net.Uri
 import androidx.compose.runtime.Immutable
@@ -169,7 +169,10 @@ class HomeViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return HomeViewModel(repository, settingsRepository, libraryRepository) as T
+            if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
+                return HomeViewModel(repository, settingsRepository, libraryRepository) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class: ")
         }
     }
 }

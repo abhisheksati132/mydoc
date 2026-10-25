@@ -1,4 +1,4 @@
-package com.abhisheksati.mydoc.ui.home
+﻿package com.abhisheksati.mydoc.ui.home
 
 import android.net.Uri
 import android.widget.Toast
@@ -181,7 +181,7 @@ fun HomeScreen(
                                     color = colors.ink
                                 )
                                 Text(
-                                    text = "Tap to update Stacks",
+                                    text = "Tap to update mydoc",
                                     style = AppTheme.typography.caption.copy(fontSize = 12.sp),
                                     color = colors.inkMuted
                                 )
@@ -220,7 +220,7 @@ fun HomeScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Downloading update…",
+                                    text = "Downloading updateâ€¦",
                                     style = AppTheme.typography.body.copy(fontSize = 13.sp, fontWeight = FontWeight.Medium),
                                     color = colors.ink
                                 )

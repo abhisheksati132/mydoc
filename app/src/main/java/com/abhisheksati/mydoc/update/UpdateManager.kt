@@ -95,7 +95,7 @@ class UpdateManager(
             apkDownloader.fetchChecksumText(release.checksumUrl)
         } else null
 
-        val targetName = "stacks-v${release.versionName}.apk"
+        val targetName = "mydoc-v${release.versionName}.apk"
         val downloadResult = apkDownloader.downloadApk(
             downloadUrl = release.apkDownloadUrl,
             targetFileName = targetName,
