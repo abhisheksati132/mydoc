@@ -3,6 +3,11 @@ package com.abhisheksati.mydoc.ui.home
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -151,150 +156,165 @@ fun HomeScreen(
         bottomBar = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 val updateState = updateManager?.state?.collectAsState()?.value
-                if (updateState is UpdateUiState.UpdateAvailable) {
-                    val release = updateState.release
-                    Surface(
-                        color = colors.surface,
-                        shape = RoundedCornerShape(16.dp),
-                        tonalElevation = 6.dp,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.SystemUpdate,
-                                contentDescription = null,
-                                tint = colors.accent,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Update available: v${release.versionName}",
-                                    style = AppTheme.typography.title.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold),
-                                    color = colors.ink
-                                )
-                                Text(
-                                    text = "Tap to update mydoc",
-                                    style = AppTheme.typography.caption.copy(fontSize = 12.sp),
-                                    color = colors.inkMuted
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Button(
-                                onClick = { scope.launch { updateManager.downloadAndInstall(release) } },
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = colors.accent,
-                                    contentColor = colors.onAccent
-                                ),
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-                            ) {
-                                Text("Update", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
-                            }
-                        }
-                    }
-                } else if (updateState is UpdateUiState.Downloading) {
-                    Surface(
-                        color = colors.surface,
-                        shape = RoundedCornerShape(16.dp),
-                        tonalElevation = 6.dp,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 10.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Downloading updateâ€¦",
-                                    style = AppTheme.typography.body.copy(fontSize = 13.sp, fontWeight = FontWeight.Medium),
-                                    color = colors.ink
-                                )
-                                Text(
-                                    text = "${updateState.progressPercent}%",
-                                    style = AppTheme.typography.caption.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold),
-                                    color = colors.accent
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            LinearProgressIndicator(
-                                progress = { updateState.progressPercent / 100f },
+                val isUpdateActive = updateState is UpdateUiState.UpdateAvailable ||
+                        updateState is UpdateUiState.Downloading ||
+                        updateState is UpdateUiState.ReadyToInstall
+
+                AnimatedVisibility(
+                    visible = isUpdateActive,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    when (updateState) {
+                        is UpdateUiState.UpdateAvailable -> {
+                            val release = updateState.release
+                            Surface(
+                                color = colors.surface,
+                                shape = RoundedCornerShape(16.dp),
+                                tonalElevation = 6.dp,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(4.dp),
-                                color = colors.accent,
-                                trackColor = colors.surfaceMuted
-                            )
-                        }
-                    }
-                } else if (updateState is UpdateUiState.ReadyToInstall) {
-                    Surface(
-                        color = colors.surface,
-                        shape = RoundedCornerShape(16.dp),
-                        tonalElevation = 6.dp,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.CheckCircle,
-                                contentDescription = null,
-                                tint = colors.accent,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Update downloaded!",
-                                    style = AppTheme.typography.title.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold),
-                                    color = colors.ink
-                                )
-                                Text(
-                                    text = "Ready to install v${updateState.release.versionName}",
-                                    style = AppTheme.typography.caption.copy(fontSize = 12.sp),
-                                    color = colors.inkMuted
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Button(
-                                onClick = {
-                                    if (!updateManager.installerHelper.canInstallUnknownApps()) {
-                                        val intent = updateManager.installerHelper.createManageUnknownAppSourcesIntent()
-                                        context.startActivity(intent)
-                                    } else {
-                                        updateManager.installerHelper.installApk(updateState.apkFile)
-                                    }
-                                },
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = colors.accent,
-                                    contentColor = colors.onAccent
-                                ),
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                    .padding(horizontal = 16.dp, vertical = 6.dp)
                             ) {
-                                Text("Install", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.SystemUpdate,
+                                        contentDescription = null,
+                                        tint = colors.accent,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Update available: v${release.versionName}",
+                                            style = AppTheme.typography.title.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold),
+                                            color = colors.ink
+                                        )
+                                        Text(
+                                            text = "Tap to update mydoc",
+                                            style = AppTheme.typography.caption.copy(fontSize = 12.sp),
+                                            color = colors.inkMuted
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Button(
+                                        onClick = { scope.launch { updateManager.downloadAndInstall(release) } },
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = colors.accent,
+                                            contentColor = colors.onAccent
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                    ) {
+                                        Text("Update", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                                    }
+                                }
                             }
                         }
+                        is UpdateUiState.Downloading -> {
+                            Surface(
+                                color = colors.surface,
+                                shape = RoundedCornerShape(16.dp),
+                                tonalElevation = 6.dp,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Downloading update...",
+                                            style = AppTheme.typography.body.copy(fontSize = 13.sp, fontWeight = FontWeight.Medium),
+                                            color = colors.ink
+                                        )
+                                        Text(
+                                            text = "${updateState.progressPercent}%",
+                                            style = AppTheme.typography.caption.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                                            color = colors.accent
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    LinearProgressIndicator(
+                                        progress = { updateState.progressPercent / 100f },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(4.dp),
+                                        color = colors.accent,
+                                        trackColor = colors.surfaceMuted
+                                    )
+                                }
+                            }
+                        }
+                        is UpdateUiState.ReadyToInstall -> {
+                            Surface(
+                                color = colors.surface,
+                                shape = RoundedCornerShape(16.dp),
+                                tonalElevation = 6.dp,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.CheckCircle,
+                                        contentDescription = null,
+                                        tint = colors.accent,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Update downloaded!",
+                                            style = AppTheme.typography.title.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold),
+                                            color = colors.ink
+                                        )
+                                        Text(
+                                            text = "Ready to install v${updateState.release.versionName}",
+                                            style = AppTheme.typography.caption.copy(fontSize = 12.sp),
+                                            color = colors.inkMuted
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Button(
+                                        onClick = {
+                                            if (!updateManager.installerHelper.canInstallUnknownApps()) {
+                                                val intent = updateManager.installerHelper.createManageUnknownAppSourcesIntent()
+                                                context.startActivity(intent)
+                                            } else {
+                                                updateManager.installerHelper.installApk(updateState.apkFile)
+                                            }
+                                        },
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = colors.accent,
+                                            contentColor = colors.onAccent
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                    ) {
+                                        Text("Install", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                                    }
+                                }
+                            }
+                        }
+                        else -> Unit
                     }
                 }
 

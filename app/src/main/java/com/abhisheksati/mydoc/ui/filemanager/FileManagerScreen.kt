@@ -120,6 +120,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -221,6 +224,23 @@ fun FileManagerScreen(
     var showAppManagerSheet by remember { mutableStateOf(false) }
     val pinnedFoldersManager = remember { com.abhisheksati.mydoc.data.local.PinnedFoldersManager(context) }
     val pinnedFolders by pinnedFoldersManager.pinnedFolders.collectAsState()
+
+    var docSubCategoryFilter by remember { mutableStateOf("All") }
+
+    val displayedItems = remember(uiState.filteredItems, uiState.activeCategory, docSubCategoryFilter) {
+        if (uiState.activeCategory == FileCategory.DOCUMENTS) {
+            when (docSubCategoryFilter) {
+                "PDF" -> uiState.filteredItems.filter { it.extension == "pdf" }
+                "Word" -> uiState.filteredItems.filter { it.extension in setOf("doc", "docx", "dot", "dotx", "odt", "rtf") }
+                "Excel" -> uiState.filteredItems.filter { it.extension in setOf("xls", "xlsx", "xlsm", "csv", "ods") }
+                "PPT" -> uiState.filteredItems.filter { it.extension in setOf("ppt", "pptx", "pps", "odp") }
+                "Text" -> uiState.filteredItems.filter { it.extension in setOf("txt", "log", "md", "json", "xml") }
+                else -> uiState.filteredItems
+            }
+        } else {
+            uiState.filteredItems
+        }
+    }
 
     val isHubMode = !uiState.isBrowsingStorage && uiState.activeCategory == null && !isSearchActive
 
@@ -495,6 +515,7 @@ fun FileManagerScreen(
                                     FileManagerCategoryChips(
                                         activeCategory = uiState.activeCategory,
                                         onCategorySelected = { category ->
+                                            docSubCategoryFilter = "All"
                                             if (uiState.activeCategory == category) {
                                                 viewModel.selectCategory(null)
                                             } else {
@@ -520,13 +541,16 @@ fun FileManagerScreen(
                                                 )
                                                 Spacer(modifier = Modifier.width(6.dp))
                                                 Text(
-                                                    text = "(${uiState.filteredItems.size} items)",
+                                                    text = "(${displayedItems.size} items)",
                                                     style = typography.caption.copy(fontSize = 12.sp),
                                                     color = colors.textSecondary
                                                 )
                                             }
                                             IconButton(
-                                                onClick = { viewModel.selectCategory(null) },
+                                                onClick = {
+                                                    docSubCategoryFilter = "All"
+                                                    viewModel.selectCategory(null)
+                                                },
                                                 modifier = Modifier.size(40.dp)
                                             ) {
                                                 Icon(
@@ -535,6 +559,50 @@ fun FileManagerScreen(
                                                     tint = colors.textSecondary,
                                                     modifier = Modifier.size(18.dp)
                                                 )
+                                            }
+                                        }
+
+                                        // Sub-category filters for documents (PDF, Word, Excel, PPT, Text)
+                                        if (uiState.activeCategory == FileCategory.DOCUMENTS) {
+                                            val docFilters = listOf("All", "PDF", "Word", "Excel", "PPT", "Text")
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .horizontalScroll(rememberScrollState())
+                                                    .padding(horizontal = 14.dp, vertical = 4.dp),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                docFilters.forEach { label ->
+                                                    val isSelected = docSubCategoryFilter == label
+                                                    val chipBg by animateColorAsState(
+                                                        targetValue = if (isSelected) colors.accent.copy(alpha = 0.16f) else colors.surfaceContainer,
+                                                        animationSpec = tween(durationMillis = 200),
+                                                        label = "fileFilterBg"
+                                                    )
+                                                    val chipText by animateColorAsState(
+                                                        targetValue = if (isSelected) colors.accent else colors.textSecondary,
+                                                        animationSpec = tween(durationMillis = 200),
+                                                        label = "fileFilterText"
+                                                    )
+
+                                                    Surface(
+                                                        shape = RoundedCornerShape(12.dp),
+                                                        color = chipBg,
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(12.dp))
+                                                            .pressScaleEffect(onClick = { docSubCategoryFilter = label })
+                                                    ) {
+                                                        Text(
+                                                            text = label,
+                                                            style = typography.caption.copy(
+                                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                                fontSize = 12.sp
+                                                            ),
+                                                            color = chipText,
+                                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                                        )
+                                                    }
+                                                }
                                             }
                                         }
                                     } else {
@@ -659,7 +727,7 @@ fun FileManagerScreen(
                     ) {
                         CircularProgressIndicator(color = colors.accent)
                     }
-                } else if (uiState.filteredItems.isEmpty()) {
+                } else if (displayedItems.isEmpty()) {
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -668,11 +736,21 @@ fun FileManagerScreen(
                     ) {
                         AppEmptyState(
                             title = if (uiState.searchQuery.isNotEmpty()) "No matches found"
-                                    else if (uiState.activeCategory != null) "No files found"
-                                    else "This folder is empty",
+                                    else if (uiState.activeCategory != null) {
+                                        if (uiState.activeCategory == FileCategory.DOCUMENTS && docSubCategoryFilter != "All") {
+                                            "No $docSubCategoryFilter documents"
+                                        } else {
+                                            "No files found"
+                                        }
+                                    } else "This folder is empty",
                             message = if (uiState.searchQuery.isNotEmpty()) "Try a different search term"
-                                      else if (uiState.activeCategory != null) "No ${uiState.activeCategory?.displayName?.lowercase()} files on this device"
-                                      else "Tap '+' to create a new folder or file"
+                                      else if (uiState.activeCategory != null) {
+                                        if (uiState.activeCategory == FileCategory.DOCUMENTS && docSubCategoryFilter != "All") {
+                                            "No $docSubCategoryFilter files found on this device"
+                                        } else {
+                                            "No ${uiState.activeCategory?.displayName?.lowercase()} files on this device"
+                                        }
+                                      } else "Tap '+' to create a new folder or file"
                         )
                     }
                 } else {
@@ -687,13 +765,14 @@ fun FileManagerScreen(
                                 .weight(1f)
                         ) {
                             items(
-                                items = uiState.filteredItems,
+                                items = displayedItems,
                                 key = { it.path },
                                 contentType = { if (it.isDirectory) "dir_grid" else "file_grid" }
                             ) { item ->
                                 val isSelected = uiState.selectedFiles.contains(item.file)
                                 StorageItemGrid(
                                     item = item,
+                                    modifier = Modifier.animateItem(),
                                     isSelected = isSelected,
                                     isSelectionMode = uiState.isSelectionMode,
                                     onClick = {
@@ -726,13 +805,14 @@ fun FileManagerScreen(
                                 .weight(1f)
                         ) {
                             items(
-                                items = uiState.filteredItems,
+                                items = displayedItems,
                                 key = { it.path },
                                 contentType = { if (it.isDirectory) "dir_row" else "file_row" }
                             ) { item ->
                                 val isSelected = uiState.selectedFiles.contains(item.file)
                                 StorageItemRow(
                                     item = item,
+                                    modifier = Modifier.animateItem(),
                                     isSelected = isSelected,
                                     isSelectionMode = uiState.isSelectionMode,
                                     onClick = {

@@ -202,15 +202,7 @@ fun SettingsScreen(
                             settingsRepository.setThemeMode(AppThemeMode.BLACK)
                         }
                     )
-                    ThemeChip(
-                        label = "System",
-                        icon = null,
-                        selected = currentTheme == AppThemeMode.SYSTEM,
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            settingsRepository.setThemeMode(AppThemeMode.SYSTEM)
-                        }
-                    )
+
                 }
 
                 SettingsDivider()
@@ -556,17 +548,22 @@ fun SettingsScreen(
                     }
 
                     is UpdateUiState.Checking -> {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(20.dp),
                                 strokeWidth = 2.dp,
                                 color = colors.accent
                             )
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = "Checking for updates…",
-                                style = typography.body.copy(fontSize = 13.5.sp),
-                                color = colors.textSecondary
+                                text = "Checking for updates...",
+                                style = typography.body.copy(fontWeight = FontWeight.Medium, fontSize = 14.sp),
+                                color = colors.textPrimary
                             )
                         }
                     }

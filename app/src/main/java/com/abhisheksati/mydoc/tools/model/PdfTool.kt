@@ -43,13 +43,13 @@ import androidx.compose.material.icons.outlined.WaterDrop
 import androidx.compose.ui.graphics.vector.ImageVector
 
 enum class ToolGroup(val title: String) {
-    ORGANIZE("ORGANIZE"),
-    OPTIMIZE("OPTIMIZE"),
-    CONVERT_TO("CONVERT TO PDF"),
-    CONVERT_FROM("CONVERT FROM PDF"),
-    EDIT("EDIT"),
-    SECURITY("SECURITY"),
-    SCAN("SCAN & OCR")
+    ORGANIZE("Organize"),
+    OPTIMIZE("Optimize"),
+    CONVERT_TO("Convert to PDF"),
+    CONVERT_FROM("Convert from PDF"),
+    EDIT("Edit"),
+    SECURITY("Security"),
+    SCAN("Scan & OCR")
 }
 
 enum class PdfTool(
@@ -68,7 +68,7 @@ enum class PdfTool(
     MERGE(
         id = "merge",
         title = "Merge PDF",
-        description = "Combine multiple PDF documents into a single file with page range selection.",
+        description = "Combine multiple PDFs into a single file",
         group = ToolGroup.ORGANIZE,
         icon = Icons.AutoMirrored.Outlined.MergeType,
         defaultSuffix = "merged",
@@ -77,7 +77,7 @@ enum class PdfTool(
     SPLIT(
         id = "split",
         title = "Split PDF",
-        description = "Divide a document by page ranges, every N pages, or into a ZIP archive.",
+        description = "Divide a document into separate files",
         group = ToolGroup.ORGANIZE,
         icon = Icons.AutoMirrored.Outlined.CallSplit,
         defaultSuffix = "split"
@@ -85,15 +85,15 @@ enum class PdfTool(
     REMOVE_PAGES(
         id = "remove_pages",
         title = "Remove pages",
-        description = "Delete unwanted pages and save a clean copy.",
+        description = "Delete unwanted pages from PDF",
         group = ToolGroup.ORGANIZE,
         icon = Icons.Outlined.Delete,
         defaultSuffix = "trimmed"
     ),
     REORDER_PAGES(
         id = "reorder_pages",
-        title = "Reorder & organize pages",
-        description = "Drag to reorder, rotate, duplicate, or insert pages visually.",
+        title = "Reorder pages",
+        description = "Rearrange or rotate pages visually",
         group = ToolGroup.ORGANIZE,
         icon = Icons.Outlined.GridOn,
         defaultSuffix = "organized"
@@ -101,7 +101,7 @@ enum class PdfTool(
     EXTRACT_PAGES(
         id = "extract_pages",
         title = "Extract pages",
-        description = "Pull out specific pages into an independent document.",
+        description = "Save selected pages as a new file",
         group = ToolGroup.ORGANIZE,
         icon = Icons.Outlined.Extension,
         defaultSuffix = "extracted"
@@ -109,7 +109,7 @@ enum class PdfTool(
     ROTATE(
         id = "rotate",
         title = "Rotate PDF",
-        description = "Permanently rotate all or selected pages in 90 degree increments.",
+        description = "Rotate pages 90° or 180°",
         group = ToolGroup.ORGANIZE,
         icon = Icons.AutoMirrored.Outlined.RotateRight,
         defaultSuffix = "rotated"
@@ -117,7 +117,7 @@ enum class PdfTool(
     CROP(
         id = "crop",
         title = "Crop PDF",
-        description = "Set visual crop margins and apply to selected or all pages.",
+        description = "Trim page margins",
         group = ToolGroup.ORGANIZE,
         icon = Icons.Outlined.Crop,
         defaultSuffix = "cropped"
@@ -127,7 +127,7 @@ enum class PdfTool(
     COMPRESS(
         id = "compress",
         title = "Compress PDF",
-        description = "Reduce file size with Light, Balanced, or Strong image downsampling.",
+        description = "Reduce file size",
         group = ToolGroup.OPTIMIZE,
         icon = Icons.Outlined.Compress,
         defaultSuffix = "compressed"
@@ -135,7 +135,7 @@ enum class PdfTool(
     REPAIR(
         id = "repair",
         title = "Repair PDF",
-        description = "Rebuild damaged xref tables and clean corrupted object streams.",
+        description = "Fix damaged PDF structure",
         group = ToolGroup.OPTIMIZE,
         icon = Icons.Outlined.Build,
         defaultSuffix = "repaired"
@@ -145,7 +145,7 @@ enum class PdfTool(
     IMAGE_TO_PDF(
         id = "image_to_pdf",
         title = "Image to PDF",
-        description = "Convert photos and graphics into standard A4, Letter, or fit-size PDF.",
+        description = "Convert photos into a PDF",
         group = ToolGroup.CONVERT_TO,
         icon = Icons.Outlined.Image,
         defaultSuffix = "from_image",
@@ -154,7 +154,7 @@ enum class PdfTool(
     OFFICE_TO_PDF(
         id = "office_to_pdf",
         title = "Office to PDF",
-        description = "Best-effort conversion of DOCX, XLSX, and PPTX to paginated PDF.",
+        description = "Convert Word, Excel, or slides to PDF",
         group = ToolGroup.CONVERT_TO,
         icon = Icons.Outlined.Description,
         defaultSuffix = "converted",
@@ -163,7 +163,7 @@ enum class PdfTool(
     TEXT_TO_PDF(
         id = "text_to_pdf",
         title = "Text / CSV to PDF",
-        description = "Format plain text or spreadsheet CSV files into a readable PDF.",
+        description = "Convert plain text or CSV into PDF",
         group = ToolGroup.CONVERT_TO,
         icon = Icons.Outlined.TextFields,
         defaultSuffix = "from_text",
@@ -174,7 +174,7 @@ enum class PdfTool(
     PDF_TO_IMAGES(
         id = "pdf_to_images",
         title = "PDF to JPG / PNG",
-        description = "Render document pages to high-resolution JPEG or PNG images in a ZIP.",
+        description = "Export pages as JPG or PNG images",
         group = ToolGroup.CONVERT_FROM,
         icon = Icons.Outlined.Image,
         defaultSuffix = "images",
@@ -184,7 +184,7 @@ enum class PdfTool(
     PDF_TO_TEXT_MD(
         id = "pdf_to_text_md",
         title = "PDF to Text / Markdown",
-        description = "Extract structured plain text or formatted Markdown with headings.",
+        description = "Extract text and markdown",
         group = ToolGroup.CONVERT_FROM,
         icon = Icons.Outlined.FormatColorText,
         defaultSuffix = "text",
@@ -193,8 +193,8 @@ enum class PdfTool(
     ),
     PDF_TO_OFFICE(
         id = "pdf_to_office",
-        title = "PDF to Word / Excel / PPT",
-        description = "Best-effort offline reconstruction into DOCX paragraphs, XLSX tables, or slides.",
+        title = "PDF to Word / Excel",
+        description = "Export to Word, Excel, or PowerPoint",
         group = ToolGroup.CONVERT_FROM,
         icon = Icons.Outlined.TableChart,
         defaultSuffix = "office",
@@ -204,15 +204,15 @@ enum class PdfTool(
     PDF_TO_PDFA(
         id = "pdf_to_pdfa",
         title = "PDF to PDF/A",
-        description = "Embed archival color intent descriptors (PDF/A-style, not validated).",
+        description = "Convert for long-term archiving",
         group = ToolGroup.CONVERT_FROM,
         icon = Icons.Outlined.Shield,
         defaultSuffix = "pdfa"
     ),
     EXTRACT_ASSETS(
         id = "extract_assets",
-        title = "Extract text & images",
-        description = "Save all embedded images and full body text packaged in a ZIP.",
+        title = "Extract images & text",
+        description = "Save all embedded images and text",
         group = ToolGroup.CONVERT_FROM,
         icon = Icons.Outlined.FolderZip,
         defaultSuffix = "assets",
@@ -220,11 +220,11 @@ enum class PdfTool(
         outputMimeType = "application/zip"
     ),
 
-    // 5. Edit (non-destructive)
+    // 5. Edit
     ANNOTATE(
         id = "annotate",
         title = "Annotate PDF",
-        description = "Add highlights, underlines, freehand drawings, stamps, or text notes.",
+        description = "Add highlights, drawings, and notes",
         group = ToolGroup.EDIT,
         icon = Icons.Outlined.Highlight,
         defaultSuffix = "annotated"
@@ -232,7 +232,7 @@ enum class PdfTool(
     ADD_PAGE_NUMBERS(
         id = "add_page_numbers",
         title = "Add page numbers",
-        description = "Stamp formatted page counters at chosen positions and margins.",
+        description = "Number pages at chosen positions",
         group = ToolGroup.EDIT,
         icon = Icons.Outlined.FormatListNumbered,
         defaultSuffix = "numbered"
@@ -240,15 +240,15 @@ enum class PdfTool(
     ADD_WATERMARK(
         id = "add_watermark",
         title = "Add watermark",
-        description = "Apply customized text or logo watermark with adjustable opacity and rotation.",
+        description = "Add text or image watermark",
         group = ToolGroup.EDIT,
         icon = Icons.Outlined.WaterDrop,
         defaultSuffix = "watermarked"
     ),
     FILL_FORM(
         id = "fill_form",
-        title = "Fill PDF forms",
-        description = "Populate AcroForm text fields, checkboxes, and dropdowns, with optional flattening.",
+        title = "Fill forms",
+        description = "Fill and save PDF form fields",
         group = ToolGroup.EDIT,
         icon = Icons.Outlined.Edit,
         defaultSuffix = "filled"
@@ -256,7 +256,7 @@ enum class PdfTool(
     SIGN_PDF(
         id = "sign_pdf",
         title = "Sign PDF",
-        description = "Draw or import a Keystore-encrypted signature and place on pages.",
+        description = "Add your saved signature",
         group = ToolGroup.EDIT,
         icon = Icons.Outlined.Draw,
         defaultSuffix = "signed"
@@ -264,7 +264,7 @@ enum class PdfTool(
     COMPARE_PDF(
         id = "compare_pdf",
         title = "Compare PDF",
-        description = "Side-by-side visual difference highlighting and textual diff summary.",
+        description = "Compare differences between two PDFs",
         group = ToolGroup.EDIT,
         icon = Icons.AutoMirrored.Outlined.CompareArrows,
         defaultSuffix = "diff",
@@ -275,7 +275,7 @@ enum class PdfTool(
     PROTECT(
         id = "protect",
         title = "Protect PDF",
-        description = "Encrypt with AES-256 password and restrict print/copy permissions.",
+        description = "Set password to lock document",
         group = ToolGroup.SECURITY,
         icon = Icons.Outlined.Lock,
         defaultSuffix = "protected"
@@ -283,7 +283,7 @@ enum class PdfTool(
     UNLOCK(
         id = "unlock",
         title = "Unlock PDF",
-        description = "Remove password encryption permanently when valid password is provided.",
+        description = "Remove document password",
         group = ToolGroup.SECURITY,
         icon = Icons.Outlined.LockOpen,
         defaultSuffix = "unlocked"
@@ -291,7 +291,7 @@ enum class PdfTool(
     REDACT(
         id = "redact",
         title = "Redact PDF",
-        description = "Permanently remove sensitive text and graphics with re-extraction verification.",
+        description = "Black out sensitive information",
         group = ToolGroup.SECURITY,
         icon = Icons.Outlined.VisibilityOff,
         defaultSuffix = "redacted"
@@ -299,7 +299,7 @@ enum class PdfTool(
     STRIP_METADATA(
         id = "strip_metadata",
         title = "Strip metadata",
-        description = "Erase author, title, producer, and private tracking tags from the file.",
+        description = "Remove author and tracking details",
         group = ToolGroup.SECURITY,
         icon = Icons.AutoMirrored.Outlined.Grading,
         defaultSuffix = "cleaned"
@@ -309,7 +309,7 @@ enum class PdfTool(
     SCAN_TO_PDF(
         id = "scan_to_pdf",
         title = "Scan to PDF",
-        description = "Capture multi-page paper documents with edge detection and B&W filters.",
+        description = "Scan paper documents with camera",
         group = ToolGroup.SCAN,
         icon = Icons.Outlined.CameraAlt,
         defaultSuffix = "scanned",
@@ -318,7 +318,7 @@ enum class PdfTool(
     OCR_PDF(
         id = "ocr_pdf",
         title = "OCR PDF",
-        description = "Make scanned pages searchable (English, Hindi, Tamil, Telugu, Bengali).",
+        description = "Make scanned text searchable",
         group = ToolGroup.SCAN,
         icon = Icons.Outlined.Transform,
         defaultSuffix = "ocr"

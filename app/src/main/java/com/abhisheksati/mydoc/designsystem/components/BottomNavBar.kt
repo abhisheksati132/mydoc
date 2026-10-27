@@ -1,6 +1,11 @@
 package com.abhisheksati.mydoc.designsystem.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -23,25 +28,30 @@ import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.domain.model.HomeTab
 
 /**
- * Solid, premium 72dp 4-destination Navigation Bar: Home | Library | Files | Tools.
- * Features clean labels and a distinctive active indicator dot.
+ * Material 3 Expressive Navigation Bar: Home | Files | Tools.
+ * Features:
+ * - Fluid spring-animated indicator pill.
+ * - Icon micro-bounce on tab transition.
+ * - Native ripple touch feedback so every tap is acknowledged.
  */
 @Composable
 fun BottomNavBar(
@@ -59,7 +69,7 @@ fun BottomNavBar(
             .background(colors.background)
             .navigationBarsPadding()
     ) {
-        // Top hairline divider
+        // Subtle top divider
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -72,7 +82,7 @@ fun BottomNavBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(72.dp)
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             HomeTab.entries.forEach { tab ->
@@ -85,51 +95,79 @@ fun BottomNavBar(
                     HomeTab.TOOLS -> Icons.Outlined.Build
                 }
 
+                val pillWidth by animateDpAsState(
+                    targetValue = if (isSelected) 60.dp else 0.dp,
+                    animationSpec = spring(
+                        dampingRatio = 0.75f,
+                        stiffness = Spring.StiffnessMediumLow
+                    ),
+                    label = "pillWidth"
+                )
+
+                val pillColor by animateColorAsState(
+                    targetValue = if (isSelected) colors.accent.copy(alpha = 0.16f) else Color.Transparent,
+                    animationSpec = tween(durationMillis = 200),
+                    label = "pillColor"
+                )
+
                 val iconColor by animateColorAsState(
                     targetValue = if (isSelected) colors.accent else colors.inkMuted,
+                    animationSpec = tween(durationMillis = 180),
                     label = "tabIconColor"
                 )
+
                 val textColor by animateColorAsState(
                     targetValue = if (isSelected) colors.ink else colors.inkMuted,
+                    animationSpec = tween(durationMillis = 180),
                     label = "tabTextColor"
+                )
+
+                val iconScale by animateFloatAsState(
+                    targetValue = if (isSelected) 1.08f else 1.0f,
+                    animationSpec = spring(
+                        dampingRatio = 0.55f,
+                        stiffness = Spring.StiffnessMedium
+                    ),
+                    label = "iconScale"
                 )
 
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxSize()
+                        .clip(CircleShape)
                         .clickable(
                             interactionSource = interactionSource,
-                            indication = null,
+                            indication = ripple(bounded = false, radius = 36.dp),
                             onClick = {
                                 if (!isSelected) {
-                                    haptics.select()
+                                    haptics.tick()
                                     onTabSelected(tab)
                                 }
                             }
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                                        Column(
+                    Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        // Material 3 Expressive pill indicator
+                        // Fluid Material 3 pill
                         Box(
                             modifier = Modifier
-                                .width(56.dp)
+                                .width(if (isSelected) pillWidth else 48.dp)
                                 .height(32.dp)
                                 .clip(CircleShape)
-                                .background(
-                                    if (isSelected) colors.accent.copy(alpha = 0.16f) else Color.Transparent
-                                ),
+                                .background(pillColor),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = icon,
                                 contentDescription = tab.label,
                                 tint = iconColor,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .scale(iconScale)
                             )
                         }
                         Spacer(modifier = Modifier.height(4.dp))
@@ -146,27 +184,4 @@ fun BottomNavBar(
             }
         }
     }
-}
-
-/**
- * Backward compatibility aliases.
- */
-@Deprecated("Use BottomNavBar instead", ReplaceWith("BottomNavBar(currentTab, onTabSelected, modifier)"))
-@Composable
-fun HomeBottomBar(
-    currentTab: HomeTab,
-    onTabSelected: (HomeTab) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    BottomNavBar(currentTab, onTabSelected, modifier)
-}
-
-@Deprecated("Use BottomNavBar instead", ReplaceWith("BottomNavBar(currentTab, onTabSelected, modifier)"))
-@Composable
-fun ShelvesBottomBar(
-    currentTab: HomeTab,
-    onTabSelected: (HomeTab) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    BottomNavBar(currentTab, onTabSelected, modifier)
 }
