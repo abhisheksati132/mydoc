@@ -572,22 +572,40 @@ fun SettingsScreen(
                     }
 
                     is UpdateUiState.NoUpdate -> {
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "App is up to date (v${state.currentVersion})",
+                                        style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
+                                        color = colors.textPrimary
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "App is up to date (v${state.currentVersion})",
-                                    style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
-                                    color = colors.textPrimary
+                                    text = "Latest release installed.",
+                                    style = typography.caption.copy(fontSize = 12.sp),
+                                    color = colors.textSecondary
                                 )
                             }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Latest release installed.",
-                                style = typography.caption.copy(fontSize = 12.sp),
-                                color = colors.textSecondary
-                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colors.accent,
+                                    contentColor = Color.Black
+                                )
+                            ) {
+                                Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Check", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+                            }
                         }
                     }
 

@@ -34,7 +34,10 @@ import androidx.compose.material.icons.outlined.GridOn
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
@@ -88,6 +91,7 @@ fun HomeTabContent(
     onScanClick: () -> Unit,
     onCategoryClick: (FileCategory) -> Unit,
     onToolClick: (PdfTool) -> Unit,
+    onCheckForUpdatesClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onToggleTheme: () -> Unit = {},
     onClearRecent: () -> Unit = {},
@@ -155,7 +159,29 @@ fun HomeTabContent(
             onSearchClick = onSearchClick,
             isDarkTheme = isDarkTheme,
             onToggleTheme = onToggleTheme,
-            onSettingsClick = onSettingsClick
+            onSettingsClick = onSettingsClick,
+            moreMenuContent = { onDismiss ->
+                DropdownMenuItem(
+                    text = { Text("Check for updates", style = typography.body) },
+                    leadingIcon = {
+                        Icon(Icons.Outlined.SystemUpdate, contentDescription = null, tint = colors.accent)
+                    },
+                    onClick = {
+                        onDismiss()
+                        onCheckForUpdatesClick()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Settings", style = typography.body) },
+                    leadingIcon = {
+                        Icon(Icons.Outlined.Settings, contentDescription = null, tint = colors.inkMuted)
+                    },
+                    onClick = {
+                        onDismiss()
+                        onSettingsClick()
+                    }
+                )
+            }
         )
 
         LazyColumn(
@@ -580,6 +606,46 @@ fun HomeTabContent(
                             onItemClick(item)
                         }
                     )
+                }
+            }
+
+            // 7. Footer: Check for Updates Button
+            item(key = "footer_check_updates") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 20.dp, bottom = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = if (isDarkTheme) Color(0xFF18181B) else Color(0xFFF1F1F4),
+                        border = BorderStroke(1.dp, colors.line.copy(alpha = 0.5f)),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable {
+                                haptics.tap()
+                                onCheckForUpdatesClick()
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.SystemUpdate,
+                                contentDescription = null,
+                                tint = colors.accent,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Check for updates",
+                                style = typography.caption.copy(fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold),
+                                color = colors.ink
+                            )
+                        }
+                    }
                 }
             }
         }
