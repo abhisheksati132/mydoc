@@ -233,6 +233,18 @@ fun CameraScanSheet(
             }
         }
 
+        // Animated laser scanline
+        val infiniteTransition = rememberInfiniteTransition(label = "scannerLaser")
+        val laserProgress by infiniteTransition.animateFloat(
+            initialValue = 0.05f,
+            targetValue = 0.95f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 2400, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "laserY"
+        )
+
         if (!hasCameraPermission) {
             Box(
                 modifier = modifier
@@ -336,9 +348,9 @@ fun CameraScanSheet(
                     drawPath(scrimPath, color = Color(0x99000000))
 
                     // Document Corner Guides
-                    val stroke = 3.dp.toPx()
-                    val cornerLen = 28.dp.toPx()
-                    val cornerColor = Color.White.copy(alpha = 0.90f)
+                    val stroke = 3.5.dp.toPx()
+                    val cornerLen = 30.dp.toPx()
+                    val cornerColor = Color(0xFF00E676) // High-contrast scanner green/accent
 
                     // Top-Left corner
                     drawLine(cornerColor, Offset(frameLeft, frameTop + cornerLen), Offset(frameLeft, frameTop), stroke, cap = StrokeCap.Round)
@@ -355,6 +367,24 @@ fun CameraScanSheet(
                     // Bottom-Right corner
                     drawLine(cornerColor, Offset(frameRight - cornerLen, frameBottom), Offset(frameRight, frameBottom), stroke, cap = StrokeCap.Round)
                     drawLine(cornerColor, Offset(frameRight, frameBottom), Offset(frameRight, frameBottom - cornerLen), stroke, cap = StrokeCap.Round)
+
+                    // Animated Laser Guide
+                    val laserY = frameTop + (frameBottom - frameTop) * laserProgress
+                    drawLine(
+                        brush = Brush.horizontalGradient(
+                            listOf(
+                                Color.Transparent,
+                                Color(0xCC00E676),
+                                Color(0xFF69F0AE),
+                                Color(0xCC00E676),
+                                Color.Transparent
+                            )
+                        ),
+                        start = Offset(frameLeft + 4.dp.toPx(), laserY),
+                        end = Offset(frameRight - 4.dp.toPx(), laserY),
+                        strokeWidth = 2.5.dp.toPx(),
+                        cap = StrokeCap.Round
+                    )
                 }
 
                 // Helper Hint text above or below frame
@@ -365,7 +395,8 @@ fun CameraScanSheet(
                 ) {
                     Surface(
                         color = Color(0x99000000),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(0.6.dp, Color(0x33FFFFFF))
                     ) {
                         Text(
                             text = "Align document inside frame",
@@ -388,6 +419,7 @@ fun CameraScanSheet(
                 Surface(
                     color = Color(0xB3121212),
                     shape = RoundedCornerShape(22.dp),
+                    border = BorderStroke(0.7.dp, Color(0x33FFFFFF)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -404,24 +436,16 @@ fun CameraScanSheet(
                             Icon(Icons.Outlined.Close, contentDescription = "Close Scanner", tint = Color.White)
                         }
 
-                        // Scanned Page Count Pill or Title
-                        if (capturedFiles.isNotEmpty()) {
-                            Surface(
-                                color = colors.accent.copy(alpha = 0.25f),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text(
-                                    text = "${capturedFiles.size} ${if (capturedFiles.size == 1) "page" else "pages"}",
-                                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
-                                    color = colors.accent,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
-                                )
-                            }
-                        } else {
+                        // Scanned Page Count Pill
+                        Surface(
+                            color = if (capturedFiles.isEmpty()) Color(0x33FFFFFF) else colors.accent.copy(alpha = 0.25f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
                             Text(
-                                text = "Scan Document",
-                                style = typography.body.copy(fontWeight = FontWeight.SemiBold),
-                                color = Color.White
+                                text = if (capturedFiles.isEmpty()) "0 pages scanned" else "${capturedFiles.size} ${if (capturedFiles.size == 1) "page" else "pages"}",
+                                style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
+                                color = if (capturedFiles.isEmpty()) Color.White else colors.accent,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
                             )
                         }
 
@@ -470,7 +494,8 @@ fun CameraScanSheet(
                 ) {
                     Surface(
                         color = Color(0x991E1E1E),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(0.6.dp, Color(0x22FFFFFF))
                     ) {
                         Row(
                             modifier = Modifier.padding(3.dp),
@@ -483,6 +508,7 @@ fun CameraScanSheet(
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(if (isSelected) Color(0x40FFFFFF) else Color.Transparent)
                                         .clickable {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             selectedMode = mode
                                         }
                                         .padding(horizontal = 12.dp, vertical = 5.dp)
@@ -623,7 +649,9 @@ fun CameraScanSheet(
                             Surface(
                                 color = if (isSelected) colors.accent else Color(0x6618181C),
                                 shape = RoundedCornerShape(16.dp),
+                                border = BorderStroke(1.dp, if (isSelected) colors.accent else Color(0x33FFFFFF)),
                                 modifier = Modifier.clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     selectedScanFilter = filter
                                 }
                             ) {
@@ -642,6 +670,7 @@ fun CameraScanSheet(
                 Surface(
                     color = Color(0xF20D0D0D),
                     shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                    border = BorderStroke(0.6.dp, Color(0x22FFFFFF)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(

@@ -8,62 +8,70 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalView
 
 /**
- * Clean, subtle haptic feedback engine.
- * Only triggers tactile pulses on physical milestones (taking a photo, corner snapping, drag finish).
- * Does not vibrate on ordinary passive taps.
+ * Curated haptic feedback engine inspired by Apple Taptic Engine and Google Pixel Haptics.
+ * Provides distinct physical signatures for ticks, corner snaps, confirmations, and rejections.
  */
 class AppHaptics(private val view: View) {
 
     /**
-     * Subtle tick when scrubbing through sliders or page numbers.
+     * Ultra-light mechanical tick when scrubbing through pages, sliders, or rulers.
      */
     fun tick() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             view.performHapticFeedback(HapticFeedbackConstants.SEGMENT_TICK)
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+        } else {
+            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         }
     }
 
     /**
-     * Snap feel when a crop corner or guide locks into place.
+     * Magnetic snap feel when a cropper point or slider locks onto a grid/corner guide.
      */
     fun snap() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             view.performHapticFeedback(HapticFeedbackConstants.GESTURE_END)
+        } else {
+            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         }
     }
 
     /**
-     * Confirmation feedback when completing a major action (e.g. shutter snap, PDF created).
+     * Satisfying spring pop when completing an action (Favorite, Pin, PDF tool success).
      */
     fun confirm() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+        } else {
+            view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
         }
     }
 
     /**
-     * Reject buzz on error or denied permission.
+     * Double reject buzz when a password is wrong or an action is denied.
      */
     fun reject() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             view.performHapticFeedback(HapticFeedbackConstants.REJECT)
-        }
-    }
-
-    fun select() {
-        // Reserved for deliberate long-press selection
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            view.performHapticFeedback(HapticFeedbackConstants.SEGMENT_TICK)
+        } else {
+            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
         }
     }
 
     /**
-     * Regular taps use visual touch ripple and do not vibrate the motor.
+     * Crisp touch selection feedback.
      */
+    fun select() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            view.performHapticFeedback(HapticFeedbackConstants.SEGMENT_FREQUENT_TICK)
+        } else {
+            view.performHapticFeedback(HapticFeedbackConstants.TEXT_HANDLE_MOVE)
+        }
+    }
+
     fun tap() {
-        // Quiet by design
+        tick()
     }
 
     fun heavy() {

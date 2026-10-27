@@ -222,23 +222,6 @@ fun FileManagerScreen(
     val pinnedFoldersManager = remember { com.abhisheksati.mydoc.data.local.PinnedFoldersManager(context) }
     val pinnedFolders by pinnedFoldersManager.pinnedFolders.collectAsState()
 
-    var docSubCategoryFilter by remember { mutableStateOf("All") }
-
-    val displayedItems = remember(uiState.filteredItems, uiState.activeCategory, docSubCategoryFilter) {
-        if (uiState.activeCategory == FileCategory.DOCUMENTS) {
-            when (docSubCategoryFilter) {
-                "PDF" -> uiState.filteredItems.filter { it.extension == "pdf" }
-                "Word" -> uiState.filteredItems.filter { it.extension in setOf("doc", "docx", "dot", "dotx", "odt", "rtf") }
-                "Excel" -> uiState.filteredItems.filter { it.extension in setOf("xls", "xlsx", "xlsm", "csv", "ods") }
-                "PPT" -> uiState.filteredItems.filter { it.extension in setOf("ppt", "pptx", "pps", "odp") }
-                "Text" -> uiState.filteredItems.filter { it.extension in setOf("txt", "log", "md", "json", "xml") }
-                else -> uiState.filteredItems
-            }
-        } else {
-            uiState.filteredItems
-        }
-    }
-
     val isHubMode = !uiState.isBrowsingStorage && uiState.activeCategory == null && !isSearchActive
 
     // User message toasts
@@ -512,7 +495,6 @@ fun FileManagerScreen(
                                     FileManagerCategoryChips(
                                         activeCategory = uiState.activeCategory,
                                         onCategorySelected = { category ->
-                                            docSubCategoryFilter = "All"
                                             if (uiState.activeCategory == category) {
                                                 viewModel.selectCategory(null)
                                             } else {
@@ -538,16 +520,13 @@ fun FileManagerScreen(
                                                 )
                                                 Spacer(modifier = Modifier.width(6.dp))
                                                 Text(
-                                                    text = "(${displayedItems.size} items)",
+                                                    text = "(${uiState.filteredItems.size} items)",
                                                     style = typography.caption.copy(fontSize = 12.sp),
                                                     color = colors.textSecondary
                                                 )
                                             }
                                             IconButton(
-                                                onClick = {
-                                                    docSubCategoryFilter = "All"
-                                                    viewModel.selectCategory(null)
-                                                },
+                                                onClick = { viewModel.selectCategory(null) },
                                                 modifier = Modifier.size(40.dp)
                                             ) {
                                                 Icon(
@@ -556,46 +535,6 @@ fun FileManagerScreen(
                                                     tint = colors.textSecondary,
                                                     modifier = Modifier.size(18.dp)
                                                 )
-                                            }
-                                        }
-
-                                        // Sub-category filters for documents (PDF, Word, Excel, PPT, Text)
-                                        if (uiState.activeCategory == FileCategory.DOCUMENTS) {
-                                            val docFilters = listOf(
-                                                "All" to colors.accent,
-                                                "PDF" to Color(0xFF2563EB),
-                                                "Word" to Color(0xFF1D4ED8),
-                                                "Excel" to Color(0xFF059669),
-                                                "PPT" to Color(0xFFD97706),
-                                                "Text" to Color(0xFF0284C7)
-                                            )
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .horizontalScroll(rememberScrollState())
-                                                    .padding(horizontal = 14.dp, vertical = 4.dp),
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                            ) {
-                                                docFilters.forEach { (label, filterColor) ->
-                                                    val isSelected = docSubCategoryFilter == label
-                                                    Surface(
-                                                        shape = RoundedCornerShape(12.dp),
-                                                        color = if (isSelected) filterColor.copy(alpha = 0.16f) else colors.surfaceContainer,
-                                                        modifier = Modifier
-                                                            .clip(RoundedCornerShape(12.dp))
-                                                            .clickable { docSubCategoryFilter = label }
-                                                    ) {
-                                                        Text(
-                                                            text = label,
-                                                            style = typography.caption.copy(
-                                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                                fontSize = 12.sp
-                                                            ),
-                                                            color = if (isSelected) filterColor else colors.textSecondary,
-                                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                                        )
-                                                    }
-                                                }
                                             }
                                         }
                                     } else {
@@ -720,7 +659,7 @@ fun FileManagerScreen(
                     ) {
                         CircularProgressIndicator(color = colors.accent)
                     }
-                } else if (displayedItems.isEmpty()) {
+                } else if (uiState.filteredItems.isEmpty()) {
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -729,21 +668,11 @@ fun FileManagerScreen(
                     ) {
                         AppEmptyState(
                             title = if (uiState.searchQuery.isNotEmpty()) "No matches found"
-                                    else if (uiState.activeCategory != null) {
-                                        if (uiState.activeCategory == FileCategory.DOCUMENTS && docSubCategoryFilter != "All") {
-                                            "No $docSubCategoryFilter documents"
-                                        } else {
-                                            "No files found"
-                                        }
-                                    } else "This folder is empty",
+                                    else if (uiState.activeCategory != null) "No files found"
+                                    else "This folder is empty",
                             message = if (uiState.searchQuery.isNotEmpty()) "Try a different search term"
-                                      else if (uiState.activeCategory != null) {
-                                        if (uiState.activeCategory == FileCategory.DOCUMENTS && docSubCategoryFilter != "All") {
-                                            "No $docSubCategoryFilter files found on this device"
-                                        } else {
-                                            "No ${uiState.activeCategory?.displayName?.lowercase()} files on this device"
-                                        }
-                                      } else "Tap '+' to create a new folder or file"
+                                      else if (uiState.activeCategory != null) "No ${uiState.activeCategory?.displayName?.lowercase()} files on this device"
+                                      else "Tap '+' to create a new folder or file"
                         )
                     }
                 } else {
@@ -758,7 +687,7 @@ fun FileManagerScreen(
                                 .weight(1f)
                         ) {
                             items(
-                                items = displayedItems,
+                                items = uiState.filteredItems,
                                 key = { it.path },
                                 contentType = { if (it.isDirectory) "dir_grid" else "file_grid" }
                             ) { item ->
@@ -797,7 +726,7 @@ fun FileManagerScreen(
                                 .weight(1f)
                         ) {
                             items(
-                                items = displayedItems,
+                                items = uiState.filteredItems,
                                 key = { it.path },
                                 contentType = { if (it.isDirectory) "dir_row" else "file_row" }
                             ) { item ->

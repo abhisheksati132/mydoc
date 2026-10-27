@@ -126,7 +126,7 @@ fun AppTabHeader(
                 if (onSearchClick != null) {
                     IconButton(
                         onClick = {
-
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onSearchClick()
                         },
                         modifier = Modifier.size(48.dp)
@@ -143,7 +143,7 @@ fun AppTabHeader(
                 if (onToggleTheme != null) {
                     IconButton(
                         onClick = {
-
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onToggleTheme()
                         },
                         modifier = Modifier.size(48.dp)
@@ -161,7 +161,7 @@ fun AppTabHeader(
                     Box {
                         IconButton(
                             onClick = {
-    
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 isMenuOpen = true
                             },
                             modifier = Modifier.size(48.dp)
@@ -208,7 +208,7 @@ fun AppTabHeader(
                                     },
                                     onClick = {
                                         isMenuOpen = false
-            
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         onSettingsClick()
                                     }
                                 )
@@ -218,7 +218,7 @@ fun AppTabHeader(
                 } else if (onSettingsClick != null) {
                     IconButton(
                         onClick = {
-
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onSettingsClick()
                         },
                         modifier = Modifier.size(48.dp)

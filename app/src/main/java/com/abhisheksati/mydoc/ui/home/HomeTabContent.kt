@@ -1,9 +1,9 @@
 package com.abhisheksati.mydoc.ui.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,14 +18,23 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
+import androidx.compose.material.icons.automirrored.outlined.MergeType
 import androidx.compose.material.icons.outlined.Audiotrack
 import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.Compress
+import androidx.compose.material.icons.outlined.Draw
+import androidx.compose.material.icons.outlined.FolderZip
+import androidx.compose.material.icons.outlined.GridOn
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -50,16 +59,26 @@ import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
 import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
-import com.abhisheksati.mydoc.designsystem.tokens.InterFontFamily
+import com.abhisheksati.mydoc.designsystem.tokens.BricolageFontFamily
+import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.LibraryItem
+import com.abhisheksati.mydoc.domain.model.MediaKind
 import com.abhisheksati.mydoc.tools.model.PdfTool
 import java.util.Calendar
 
 /**
- * Clean, calm native Home Dashboard.
- * Focused on the two things users need most: Quick Camera Scan and Recent Files.
+ * Material 3 Expressive Home Dashboard for mydoc.
+ *
+ * Designed for everyday human users:
+ * 1. Warm, time-of-day conversational greeting with expressive typography.
+ * 2. Instant Search pill.
+ * 3. Primary Hero Action: One-tap Camera Document Scanner (28dp squircle).
+ * 4. 4 High-touch Expressive Category Cards: Documents, Photos, Videos, Audio.
+ * 5. Everyday Popular Tools: Merge, Compress, Sign, Reorder, Protect.
+ * 6. "Jump Back In" Recent Documents with clear document format badges.
  */
 @Composable
 fun HomeTabContent(
@@ -69,7 +88,7 @@ fun HomeTabContent(
     onSearchClick: () -> Unit,
     onScanClick: () -> Unit,
     onCategoryClick: (FileCategory) -> Unit,
-    onToolClick: (PdfTool) -> Unit = {},
+    onToolClick: (PdfTool) -> Unit,
     onSettingsClick: () -> Unit,
     onToggleTheme: () -> Unit = {},
     onClearRecent: () -> Unit = {},
@@ -78,19 +97,8 @@ fun HomeTabContent(
 ) {
     val colors = AppTheme.colors
     val typography = AppTheme.typography
+    val haptics = rememberAppHaptics()
     var showClearRecentDialog by remember { mutableStateOf(false) }
-    var selectedDocumentFilter by remember { mutableStateOf("All") }
-
-    val filteredRecentItems = remember(recentItems, selectedDocumentFilter) {
-        when (selectedDocumentFilter) {
-            "PDF" -> recentItems.filter { it.extension == "pdf" }
-            "Word" -> recentItems.filter { it.extension in setOf("doc", "docx", "dot", "dotx", "odt", "rtf") }
-            "Excel" -> recentItems.filter { it.extension in setOf("xls", "xlsx", "xlsm", "csv", "ods") }
-            "PPT" -> recentItems.filter { it.extension in setOf("ppt", "pptx", "pps", "odp") }
-            "Text" -> recentItems.filter { it.extension in setOf("txt", "log", "md", "json", "xml") }
-            else -> recentItems
-        }
-    }
 
     val greeting = remember {
         when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
@@ -110,6 +118,7 @@ fun HomeTabContent(
             dismissLabel = "Cancel",
             onConfirm = {
                 showClearRecentDialog = false
+                haptics.tap()
                 onClearRecent()
             },
             onDismiss = { showClearRecentDialog = false }
@@ -121,17 +130,17 @@ fun HomeTabContent(
             .fillMaxSize()
             .background(colors.background)
     ) {
-        // 1. Native Header
+        // 1. Material 3 Expressive Header
         AppTabHeader(
-            title = "MyDoc",
+            title = "mydoc",
             titleContent = {
                 Text(
-                    text = "MyDoc",
-                    fontFamily = InterFontFamily,
-                    style = typography.title.copy(
-                        fontSize = 24.sp,
+                    text = "mydoc",
+                    fontFamily = BricolageFontFamily,
+                    style = typography.headline.copy(
+                        fontSize = 26.sp,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.2).sp
+                        letterSpacing = (-0.8).sp
                     ),
                     color = colors.ink
                 )
@@ -144,9 +153,9 @@ fun HomeTabContent(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 96.dp)
+            contentPadding = PaddingValues(bottom = 104.dp)
         ) {
-            // 2. Calm Human Greeting
+            // 2. Greeting & Search Pill
             item(key = "greeting_section") {
                 Column(
                     modifier = Modifier
@@ -155,63 +164,133 @@ fun HomeTabContent(
                 ) {
                     Text(
                         text = greeting,
-                        style = typography.title.copy(fontSize = 22.sp, fontWeight = FontWeight.Bold),
+                        fontFamily = BricolageFontFamily,
+                        style = typography.title.copy(fontSize = 24.sp, fontWeight = FontWeight.Bold),
                         color = colors.ink
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Your documents and files",
+                        text = "What would you like to open today?",
                         style = typography.body.copy(fontSize = 13.5.sp),
                         color = colors.inkMuted
                     )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Expressive Search Pill
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = if (isDarkTheme) Color(0xFF18181B) else Color(0xFFF1F1F4),
+                        border = BorderStroke(1.dp, colors.line.copy(alpha = 0.6f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(24.dp))
+                            .clickable {
+                                haptics.tap()
+                                onSearchClick()
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Search,
+                                contentDescription = "Search",
+                                tint = colors.inkMuted,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "Search documents, photos, notes...",
+                                style = typography.body.copy(fontSize = 13.5.sp),
+                                color = colors.inkMuted
+                            )
+                        }
+                    }
                 }
                 Spacer(modifier = Modifier.height(14.dp))
             }
 
-            // 3. Primary Action: Scan Document
+            // 3. Primary Hero Action: Scan Document (28dp Squircle)
             item(key = "hero_scan_card") {
+                val scanBgColor = if (isDarkTheme) Color(0xFF1E2235) else Color(0xFFEEF2FF)
+                val scanAccent = if (isDarkTheme) Color(0xFF93A4FF) else Color(0xFF3B52F5)
+                val scanInk = if (isDarkTheme) Color(0xFFF4F6FF) else Color(0xFF1E293B)
+
                 Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = colors.surfaceContainer,
+                    shape = RoundedCornerShape(28.dp),
+                    color = scanBgColor,
+                    border = BorderStroke(1.dp, scanAccent.copy(alpha = if (isDarkTheme) 0.25f else 0.15f)),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .clickable { onScanClick() }
+                        .clip(RoundedCornerShape(28.dp))
+                        .clickable {
+                            haptics.heavy()
+                            onScanClick()
+                        }
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(18.dp),
+                            .padding(20.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = scanAccent.copy(alpha = 0.16f)
+                            ) {
+                                Text(
+                                    text = "CAMERA SCANNER",
+                                    style = typography.caption.copy(
+                                        fontSize = 10.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.6.sp
+                                    ),
+                                    color = scanAccent,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
                             Text(
-                                text = "Scan document",
-                                style = typography.title.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
-                                color = colors.ink
+                                text = "Scan Document",
+                                fontFamily = BricolageFontFamily,
+                                style = typography.title.copy(fontSize = 20.sp, fontWeight = FontWeight.Bold),
+                                color = scanInk
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
+
+                            Spacer(modifier = Modifier.height(3.dp))
+
                             Text(
-                                text = "Create a PDF using your camera",
-                                style = typography.body.copy(fontSize = 13.sp),
-                                color = colors.inkMuted
+                                text = "Snap photos of receipts, notes or forms into a PDF",
+                                style = typography.caption.copy(fontSize = 12.5.sp),
+                                color = scanInk.copy(alpha = 0.75f)
                             )
                         }
 
                         Spacer(modifier = Modifier.width(16.dp))
 
+                        // Expressive 54dp Round Action Button
                         Surface(
                             shape = CircleShape,
-                            color = colors.accent,
-                            modifier = Modifier.size(48.dp)
+                            color = scanAccent,
+                            modifier = Modifier
+                                .size(54.dp)
+                                .clip(CircleShape)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = Icons.Outlined.CameraAlt,
                                     contentDescription = "Scan Now",
-                                    tint = colors.onAccent,
-                                    modifier = Modifier.size(22.dp)
+                                    tint = Color.White,
+                                    modifier = Modifier.size(26.dp)
                                 )
                             }
                         }
@@ -220,71 +299,189 @@ fun HomeTabContent(
                 Spacer(modifier = Modifier.height(20.dp))
             }
 
-            // 4. Quick Categories (Unified Surface Tiles)
+            // 4. Quick Categories (2x2 Expressive Grid)
             item(key = "categories_section") {
                 Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                     Text(
                         text = "Categories",
-                        style = typography.heading.copy(fontSize = 17.sp, fontWeight = FontWeight.Bold),
+                        fontFamily = BricolageFontFamily,
+                        style = typography.title.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
                         color = colors.ink
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     // Row 1: Documents & Photos
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        CategoryTile(
+                        M3CategoryCard(
                             title = "Documents",
                             subtitle = "PDF, Word, Excel",
                             icon = Icons.AutoMirrored.Outlined.InsertDriveFile,
-                            color = Color(0xFF2563EB),
-                            onClick = { onCategoryClick(FileCategory.DOCUMENTS) },
+                            accentColor = Color(0xFF2563EB),
+                            containerColor = if (isDarkTheme) Color(0xFF132038) else Color(0xFFEFF6FF),
+                            isDarkTheme = isDarkTheme,
+                            onClick = {
+                                haptics.tap()
+                                onCategoryClick(FileCategory.DOCUMENTS)
+                            },
                             modifier = Modifier.weight(1f)
                         )
 
-                        CategoryTile(
+                        M3CategoryCard(
                             title = "Photos",
                             subtitle = "Images & Gallery",
                             icon = Icons.Outlined.Image,
-                            color = Color(0xFFE11D48),
-                            onClick = { onCategoryClick(FileCategory.IMAGES) },
+                            accentColor = Color(0xFFE11D48),
+                            containerColor = if (isDarkTheme) Color(0xFF2B1420) else Color(0xFFFFF1F2),
+                            isDarkTheme = isDarkTheme,
+                            onClick = {
+                                haptics.tap()
+                                onCategoryClick(FileCategory.IMAGES)
+                            },
                             modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Row 2: Videos & Audio
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        M3CategoryCard(
+                            title = "Videos",
+                            subtitle = "Clips & Movies",
+                            icon = Icons.Outlined.Videocam,
+                            accentColor = Color(0xFFD97706),
+                            containerColor = if (isDarkTheme) Color(0xFF2C1E10) else Color(0xFFFFFBEB),
+                            isDarkTheme = isDarkTheme,
+                            onClick = {
+                                haptics.tap()
+                                onCategoryClick(FileCategory.VIDEOS)
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        M3CategoryCard(
+                            title = "Audio",
+                            subtitle = "Voice & Music",
+                            icon = Icons.Outlined.Audiotrack,
+                            accentColor = Color(0xFF059669),
+                            containerColor = if (isDarkTheme) Color(0xFF0F261C) else Color(0xFFECFDF5),
+                            isDarkTheme = isDarkTheme,
+                            onClick = {
+                                haptics.tap()
+                                onCategoryClick(FileCategory.AUDIO)
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            // 5. Everyday Popular Tools (Expressive Horizontal Chips)
+            item(key = "popular_tools_section") {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Popular Tools",
+                            fontFamily = BricolageFontFamily,
+                            style = typography.title.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
+                            color = colors.ink
+                        )
+                        Text(
+                            text = "Easy to use",
+                            style = typography.caption.copy(fontSize = 12.sp),
+                            color = colors.inkMuted
                         )
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Row 2: Videos & Audio
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        CategoryTile(
-                            title = "Videos",
-                            subtitle = "Clips & Movies",
-                            icon = Icons.Outlined.Videocam,
-                            color = Color(0xFF7C3AED),
-                            onClick = { onCategoryClick(FileCategory.VIDEOS) },
-                            modifier = Modifier.weight(1f)
+                        M3ToolPill(
+                            label = "Combine PDFs",
+                            icon = Icons.AutoMirrored.Outlined.MergeType,
+                            color = Color(0xFF3B82F6),
+                            isDarkTheme = isDarkTheme,
+                            onClick = {
+                                haptics.tap()
+                                onToolClick(PdfTool.MERGE)
+                            }
                         )
-
-                        CategoryTile(
-                            title = "Audio",
-                            subtitle = "Recordings & Music",
-                            icon = Icons.Outlined.Audiotrack,
-                            color = Color(0xFF059669),
-                            onClick = { onCategoryClick(FileCategory.AUDIO) },
-                            modifier = Modifier.weight(1f)
+                        M3ToolPill(
+                            label = "Make Smaller",
+                            icon = Icons.Outlined.Compress,
+                            color = Color(0xFF10B981),
+                            isDarkTheme = isDarkTheme,
+                            onClick = {
+                                haptics.tap()
+                                onToolClick(PdfTool.COMPRESS)
+                            }
+                        )
+                        M3ToolPill(
+                            label = "Sign PDF",
+                            icon = Icons.Outlined.Draw,
+                            color = Color(0xFFF59E0B),
+                            isDarkTheme = isDarkTheme,
+                            onClick = {
+                                haptics.tap()
+                                onToolClick(PdfTool.SIGN_PDF)
+                            }
+                        )
+                        M3ToolPill(
+                            label = "Pick Pages",
+                            icon = Icons.Outlined.GridOn,
+                            color = Color(0xFF8B5CF6),
+                            isDarkTheme = isDarkTheme,
+                            onClick = {
+                                haptics.tap()
+                                onToolClick(PdfTool.REORDER_PAGES)
+                            }
+                        )
+                        M3ToolPill(
+                            label = "Lock PDF",
+                            icon = Icons.Outlined.Lock,
+                            color = Color(0xFFEF4444),
+                            isDarkTheme = isDarkTheme,
+                            onClick = {
+                                haptics.tap()
+                                onToolClick(PdfTool.PROTECT)
+                            }
+                        )
+                        M3ToolPill(
+                            label = "Photos to PDF",
+                            icon = Icons.Outlined.Image,
+                            color = Color(0xFF06B6D4),
+                            isDarkTheme = isDarkTheme,
+                            onClick = {
+                                haptics.tap()
+                                onToolClick(PdfTool.IMAGE_TO_PDF)
+                            }
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(22.dp))
+                Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // 5. Section: Recent Documents
+            // 6. Section: Recent Documents
             item(key = "recent_header") {
                 Row(
                     modifier = Modifier
@@ -295,12 +492,16 @@ fun HomeTabContent(
                 ) {
                     Text(
                         text = "Recent",
-                        style = typography.heading.copy(fontSize = 17.sp, fontWeight = FontWeight.Bold),
+                        fontFamily = BricolageFontFamily,
+                        style = typography.title.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
                         color = colors.ink
                     )
                     if (recentItems.isNotEmpty() || continueItems.isNotEmpty()) {
                         TextButton(
-                            onClick = { showClearRecentDialog = true }
+                            onClick = {
+                                haptics.tap()
+                                showClearRecentDialog = true
+                            }
                         ) {
                             Text(
                                 text = "Clear",
@@ -313,56 +514,15 @@ fun HomeTabContent(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(6.dp))
             }
 
-            // Sub-category filters for documents
-            item(key = "document_filter_chips") {
-                val docFilters = listOf(
-                    "All" to colors.accent,
-                    "PDF" to Color(0xFF2563EB),
-                    "Word" to Color(0xFF1D4ED8),
-                    "Excel" to Color(0xFF059669),
-                    "PPT" to Color(0xFFD97706),
-                    "Text" to Color(0xFF0D9488)
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    docFilters.forEach { (label, filterColor) ->
-                        val isSelected = selectedDocumentFilter == label
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) filterColor.copy(alpha = 0.16f) else colors.surfaceContainer,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable { selectedDocumentFilter = label }
-                        ) {
-                            Text(
-                                text = label,
-                                style = typography.caption.copy(
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    fontSize = 12.sp
-                                ),
-                                color = if (isSelected) filterColor else colors.inkMuted,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-
-            if (filteredRecentItems.isEmpty()) {
+            if (recentItems.isEmpty() && continueItems.isEmpty()) {
                 item(key = "empty_recents") {
                     Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = colors.surfaceContainer,
+                        shape = RoundedCornerShape(20.dp),
+                        color = if (isDarkTheme) Color(0xFF18181B) else Color(0xFFF8F8FA),
+                        border = BorderStroke(1.dp, colors.line.copy(alpha = 0.5f)),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp, vertical = 6.dp)
@@ -370,44 +530,48 @@ fun HomeTabContent(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(22.dp),
+                                .padding(24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Surface(
                                 shape = CircleShape,
                                 color = colors.accent.copy(alpha = 0.12f),
-                                modifier = Modifier.size(46.dp)
+                                modifier = Modifier.size(52.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Outlined.InsertDriveFile,
                                         contentDescription = null,
                                         tint = colors.accent,
-                                        modifier = Modifier.size(22.dp)
+                                        modifier = Modifier.size(24.dp)
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = if (selectedDocumentFilter == "All") "No recent files" else "No $selectedDocumentFilter files found",
-                                style = typography.body.copy(fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold),
+                                text = "No recent files yet",
+                                fontFamily = BricolageFontFamily,
+                                style = typography.body.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
                                 color = colors.ink
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = if (selectedDocumentFilter == "All") "Files you open or scan will appear here" else "Open a $selectedDocumentFilter file to see it here",
-                                style = typography.caption.copy(fontSize = 12.sp),
+                                text = "Scan a page or tap any category above to get started",
+                                style = typography.caption.copy(fontSize = 12.5.sp),
                                 color = colors.inkMuted
                             )
                         }
                     }
                 }
             } else {
-                items(filteredRecentItems, key = { "recent_${it.uri}" }) { item ->
-                    RecentItemRow(
+                items(recentItems, key = { "recent_${it.uri}" }) { item ->
+                    M3RecentItemCard(
                         item = item,
                         isDarkTheme = isDarkTheme,
-                        onClick = { onItemClick(item) }
+                        onClick = {
+                            haptics.tap()
+                            onItemClick(item)
+                        }
                     )
                 }
             }
@@ -416,72 +580,123 @@ fun HomeTabContent(
 }
 
 /**
- * Clean, consistent category tile with vibrant identity colors.
+ * 24dp Rounded Material 3 Expressive Category Card.
  */
 @Composable
-private fun CategoryTile(
+private fun M3CategoryCard(
     title: String,
     subtitle: String,
     icon: ImageVector,
-    color: Color = Color.Unspecified,
+    accentColor: Color,
+    containerColor: Color,
+    isDarkTheme: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = AppTheme.colors
     val typography = AppTheme.typography
-    val tileColor = if (color != Color.Unspecified) color else colors.accent
 
     Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = colors.surfaceContainer,
+        shape = RoundedCornerShape(24.dp),
+        color = containerColor,
+        border = BorderStroke(1.dp, accentColor.copy(alpha = if (isDarkTheme) 0.22f else 0.12f)),
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(24.dp))
             .clickable(onClick = onClick)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(16.dp)
         ) {
             Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = tileColor.copy(alpha = 0.14f),
-                modifier = Modifier.size(36.dp)
+                shape = RoundedCornerShape(14.dp),
+                color = accentColor.copy(alpha = if (isDarkTheme) 0.28f else 0.15f),
+                modifier = Modifier.size(42.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = tileColor,
-                        modifier = Modifier.size(20.dp)
+                        tint = accentColor,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             Text(
                 text = title,
-                style = typography.body.copy(fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold),
-                color = colors.ink
+                fontFamily = BricolageFontFamily,
+                style = typography.body.copy(fontSize = 15.5.sp, fontWeight = FontWeight.Bold),
+                color = if (isDarkTheme) Color(0xFFF1F5F9) else Color(0xFF0F172A)
             )
 
-            Spacer(modifier = Modifier.height(1.dp))
+            Spacer(modifier = Modifier.height(2.dp))
 
             Text(
                 text = subtitle,
                 style = typography.caption.copy(fontSize = 11.5.sp),
-                color = colors.inkMuted
+                color = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
             )
         }
     }
 }
 
 /**
- * Clean Recent Document Row with format-specific color badge.
+ * Material 3 Expressive Tool Pill with clean icon and label.
  */
 @Composable
-private fun RecentItemRow(
+private fun M3ToolPill(
+    label: String,
+    icon: ImageVector,
+    color: Color,
+    isDarkTheme: Boolean,
+    onClick: () -> Unit
+) {
+    val typography = AppTheme.typography
+
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = if (isDarkTheme) Color(0xFF18181B) else Color(0xFFF4F4F7),
+        border = BorderStroke(1.dp, color.copy(alpha = if (isDarkTheme) 0.35f else 0.25f)),
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = color.copy(alpha = 0.16f),
+                modifier = Modifier.size(28.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = color,
+                        modifier = Modifier.size(15.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = label,
+                style = typography.body.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
+                color = if (isDarkTheme) Color(0xFFF1F5F9) else Color(0xFF1E293B)
+            )
+        }
+    }
+}
+
+/**
+ * Material 3 Expressive Recent Item Card.
+ */
+@Composable
+private fun M3RecentItemCard(
     item: LibraryItem,
     isDarkTheme: Boolean,
     onClick: () -> Unit
@@ -489,63 +704,65 @@ private fun RecentItemRow(
     val colors = AppTheme.colors
     val typography = AppTheme.typography
 
-    val badgeColor = when (item.typeBadge.uppercase()) {
-        "PDF" -> Color(0xFF2563EB)
-        "DOC", "WORD", "DOCX" -> Color(0xFF1D4ED8)
-        "XLS", "EXCEL", "XLSX", "CSV" -> Color(0xFF059669)
-        "PPT", "PPTX" -> Color(0xFFD97706)
-        "IMG" -> Color(0xFFE11D48)
-        "VID" -> Color(0xFF7C3AED)
-        "AUD" -> Color(0xFF0D9488)
-        else -> colors.accent
+    val (badgeBg, badgeText) = when (item.typeBadge) {
+        "PDF" -> (if (isDarkTheme) Color(0xFF351515) else Color(0xFFFEE2E2)) to Color(0xFFEF4444)
+        "WORD", "DOC", "DOCX" -> (if (isDarkTheme) Color(0xFF14223A) else Color(0xFFDBEAFE)) to Color(0xFF3B82F6)
+        "EXCEL", "XLS", "XLSX", "CSV" -> (if (isDarkTheme) Color(0xFF10281D) else Color(0xFFDCFCE7)) to Color(0xFF10B981)
+        "PPT", "PPTX" -> (if (isDarkTheme) Color(0xFF332010) else Color(0xFFFEF3C7)) to Color(0xFFF59E0B)
+        "VID", "MP4", "MKV" -> (if (isDarkTheme) Color(0xFF2B1638) else Color(0xFFF3E8FF)) to Color(0xFF8B5CF6)
+        "AUD", "MP3", "M4A" -> (if (isDarkTheme) Color(0xFF0E2822) else Color(0xFFCCFBF1)) to Color(0xFF14B8A6)
+        "IMG", "JPG", "PNG" -> (if (isDarkTheme) Color(0xFF311525) else Color(0xFFFCE7F3)) to Color(0xFFEC4899)
+        else -> (if (isDarkTheme) Color(0xFF202024) else Color(0xFFF1F1F4)) to colors.inkMuted
     }
 
     Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = colors.surfaceContainer,
+        shape = RoundedCornerShape(18.dp),
+        color = if (isDarkTheme) Color(0xFF151518) else Color(0xFFFFFFFF),
+        border = BorderStroke(1.dp, colors.line.copy(alpha = 0.6f)),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 3.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .padding(horizontal = 20.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(18.dp))
             .clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Type badge
+            // Material 3 Expressive Document Type Badge
             Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = badgeColor.copy(alpha = 0.14f),
-                modifier = Modifier.size(40.dp)
+                shape = RoundedCornerShape(12.dp),
+                color = badgeBg,
+                modifier = Modifier.size(44.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
-                        text = item.typeBadge.take(4),
+                        text = item.typeBadge,
                         style = typography.caption.copy(
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
                         ),
-                        color = badgeColor
+                        color = badgeText
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
-            // File Details
+            // File Info
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = item.name,
-                    style = typography.body.copy(fontSize = 14.sp, fontWeight = FontWeight.Medium),
+                    style = typography.body.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
                     color = colors.ink,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(3.dp))
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -569,26 +786,29 @@ private fun RecentItemRow(
                             color = colors.inkMuted
                         )
                     }
-                }
 
-                if (item.progressFraction > 0f) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    LinearProgressIndicator(
-                        progress = { item.progressFraction.coerceIn(0f, 1f) },
-                        modifier = Modifier
-                            .fillMaxWidth(0.6f)
-                            .height(2.5.dp)
-                            .clip(CircleShape),
-                        color = colors.accent,
-                        trackColor = colors.surfaceMuted
-                    )
+                    if (item.formattedProgress.isNotEmpty()) {
+                        Text(
+                            text = "•",
+                            style = typography.caption.copy(fontSize = 12.sp),
+                            color = colors.inkMuted
+                        )
+                        Text(
+                            text = item.formattedProgress,
+                            style = typography.caption.copy(
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = badgeText
+                        )
+                    }
                 }
             }
 
             Icon(
                 imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                 contentDescription = null,
-                tint = colors.inkMuted.copy(alpha = 0.4f),
+                tint = colors.inkMuted.copy(alpha = 0.5f),
                 modifier = Modifier.size(16.dp)
             )
         }
