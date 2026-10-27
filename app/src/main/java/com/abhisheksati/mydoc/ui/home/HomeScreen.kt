@@ -318,7 +318,7 @@ fun HomeScreen(
                 .padding(bottom = innerPadding.calculateBottomPadding())
         ) { page ->
             when (HomeTab.entries[page]) {
-                HomeTab.HOME -> {
+                                HomeTab.HOME -> {
                     HomeTabContent(
                         continueItems = uiState.continueItems,
                         recentItems = uiState.recentLibraryItems,
@@ -326,6 +326,17 @@ fun HomeScreen(
                         onSearchClick = {
                             viewModel.selectTab(HomeTab.FILES)
                             scope.launch { pagerState.animateScrollToPage(HomeTab.FILES.ordinal) }
+                        },
+                        onScanClick = {
+                            documentScanner()
+                        },
+                        onCategoryClick = { category ->
+                            fileManagerViewModel.selectCategory(category)
+                            viewModel.selectTab(HomeTab.FILES)
+                            scope.launch { pagerState.animateScrollToPage(HomeTab.FILES.ordinal) }
+                        },
+                        onToolClick = { tool ->
+                            toolsViewModel.selectTool(tool)
                         },
                         onSettingsClick = onSettingsClick,
                         onToggleTheme = onToggleTheme,

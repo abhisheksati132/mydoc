@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Build
@@ -26,7 +27,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -107,34 +110,36 @@ fun BottomNavBar(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(
+                                        Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = tab.label,
-                            tint = iconColor,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.height(3.dp))
+                        // Material 3 Expressive pill indicator
+                        Box(
+                            modifier = Modifier
+                                .width(56.dp)
+                                .height(32.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isSelected) colors.accent.copy(alpha = 0.16f) else Color.Transparent
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = tab.label,
+                                tint = iconColor,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = tab.label,
                             style = typography.caption.copy(
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                                fontSize = 11.sp
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 11.5.sp
                             ),
                             color = textColor
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        // Dot on active item
-                        Box(
-                            modifier = Modifier
-                                .size(4.dp)
-                                .background(
-                                    color = if (isSelected) colors.accent else colors.background,
-                                    shape = CircleShape
-                                )
                         )
                     }
                 }

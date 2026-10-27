@@ -164,7 +164,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // 1. LOOK
-            SettingsCard(title = "LOOK") {
+            SettingsCard(title = "APPEARANCE") {
                 Text(
                     text = "Theme",
                     style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
@@ -238,7 +238,7 @@ fun SettingsScreen(
             }
 
             // 2. READING
-            SettingsCard(title = "READING") {
+            SettingsCard(title = "READING & DOCUMENTS") {
                 Text(
                     text = "Default Reading Mode",
                     style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
@@ -337,7 +337,7 @@ fun SettingsScreen(
             }
 
             // 3. MEDIA
-            SettingsCard(title = "MEDIA") {
+            SettingsCard(title = "VIDEO & AUDIO") {
                 SettingToggleRow(
                     title = "Hardware Video Acceleration",
                     subtitle = "Use GPU hardware decoding for ultra-smooth 4K video playback",
@@ -368,7 +368,7 @@ fun SettingsScreen(
             }
 
             // 4. LIBRARY
-            SettingsCard(title = "LIBRARY") {
+            SettingsCard(title = "STORAGE & FILES") {
                 Text(
                     text = "Default Startup Destination",
                     style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
@@ -495,8 +495,8 @@ fun SettingsScreen(
                 }
             }
 
-            // 5. ABOUT
-            SettingsCard(title = "ABOUT") {
+            // 5. PRIVACY & SECURITY
+            SettingsCard(title = "PRIVACY & SECURITY") {
                 SettingToggleRow(
                     title = "Biometric App Lock",
                     subtitle = "Require fingerprint or device PIN to open app",
@@ -515,8 +515,10 @@ fun SettingsScreen(
                         }
                     }
                 )
+            }
 
-                SettingsDivider()
+            // 6. ABOUT & UPDATES
+            SettingsCard(title = "ABOUT & UPDATES") {
 
                 when (val state = updateState) {
                     is UpdateUiState.Idle -> {
