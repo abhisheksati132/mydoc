@@ -1,82 +1,91 @@
+<div align="center">
+
+<img src="app/src/main/res/ic_launcher-web.png" width="96" height="96" alt="MyDoc Logo" />
+
 # MyDoc
 
-A clean, offline-first document reader and PDF toolkit for Android, built with Jetpack Compose.
+**Fast. Private. Beautiful.**  
+A modern, distraction-free document reader & PDF toolkit for Android.
+
+[![Latest Release](https://img.shields.io/github/v/release/abhisheksati132/mydoc?style=for-the-badge&color=2563EB)](https://github.com/abhisheksati132/mydoc/releases/latest)
+[![Android](https://img.shields.io/badge/Android-15%20%7C%20API%2026%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![Compose](https://img.shields.io/badge/Jetpack%20Compose-M3-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
+[![Offline](https://img.shields.io/badge/Privacy-100%25%20Offline-success?style=for-the-badge&logo=shield)](https://github.com/abhisheksati132/mydoc)
+
+<br/>
+
+[**Download Latest APK**](https://github.com/abhisheksati132/mydoc/releases/latest) • [**Features**](#-features) • [**Tech Stack**](#-built-with) • [**License**](#-license)
+
+</div>
 
 ---
 
-## Overview
+## ✨ Features
 
-MyDoc is built around **Shelves** — an intentional, distraction-free document hub designed for studying, reading, and working with files. It trades generic templates for a calm editorial aesthetic: neutral off-white or deep OLED surfaces, clean flat color for course shelves, distinct Bricolage Grotesque typography, and an immediate three-tab workflow:
+### 📖 Universal Reader
+- **High-Performance PDF Engine**: Powered by Artifex MuPDF Fitz with sub-pixel vector rendering, continuous scroll, and up to 500% zoom.
+- **Office & Books**: Native readers for `.docx`, `.xlsx`, `.pptx`, `.epub`, and plain text.
+- **Reading Continuity**: Remembers your exact page, scroll position, and reading progress.
 
-- **Now**: Your current document hero card, active course shelves, and recent files.
-- **Library**: A unified, date-grouped list of all your documents, books, and media with quick shelf and type filters.
-- **Tools**: Essential PDF utilities organized into clean groups with one-tap actions.
+### 🛠️ On-Device PDF Toolkit
+- **Organize**: Merge multiple documents, split ranges, extract, and rotate pages.
+- **Optimize**: Compress file size with smart image downsampling and repair broken PDF streams.
+- **Convert**: Images to PDF, PDF to image bundles (ZIP), and text extraction.
+- **Security & Sign**: Draw digital signatures, add/remove AES-256 passwords, and strip metadata.
+- **Camera Scanner**: Auto-edge detection, perspective crop, and crisp B&W document enhancements.
 
----
+### ⚡ Tactile & Expressive Design
+- **Fluid Physics**: Spring damping press physics, smooth animated list transitions, and interactive ripples.
+- **Smart Organization**: Instant sub-category filtering (`PDF`, `Word`, `Excel`, `PPT`, `Text`).
+- **OLED Ready**: Clean Light, Dark, and Pure AMOLED Black (`#000000`) modes.
 
-## Key Features
-
-### Document Reader
-- **High-Performance PDF Engine**: Powered by Artifex MuPDF Fitz with sub-pixel vector rendering, smooth zoom up to 500%, vertical continuous scroll, page-jump slider, and table of contents outline drawer.
-- **Office & E-Books**: Native rendering for `.docx`, `.pptx`, `.xlsx`, `.epub`, and plain text files.
-- **Reading Comfort**: Neutral light canvas, soft dark mode, and pure AMOLED black (`#000000`) for OLED battery savings.
-- **Reading Continuity**: Remembers exact reading page and position across all sessions.
-
-### PDF Toolkit
-- **Organize**: Merge multiple documents, split by page ranges, reorder or rotate pages.
-- **Optimize**: Compress files with image downsampling, repair damaged streams, standardize to PDF/A.
-- **Convert**: Image to PDF, PDF to Images (ZIP), extract text and markdown.
-- **Security & Sign**: Sign documents, AES password encryption, password removal, and metadata stripping.
-- **Scanner**: Camera-assisted document capture with auto-edge detection and black-and-white filters.
-
-### Shelves Organization
-- **Color-Coded Shelves**: Group course notes, research papers, and assignments into distinct shelves.
-- **Folder Sync**: Link a shelf directly to any folder on your device storage with automatic file indexing.
-- **Unified Library**: Switch between Docs, Photos, Videos, and Audio with date grouping (Today, Yesterday, This Month, Earlier).
+### 🔒 100% Private & Offline
+- **Zero Telemetry**: No analytics, no user tracking, no third-party network pings.
+- **Zero Cloud Dependence**: 100% of processing happens locally on your device.
+- **Zero Ads**: Free and open for everyone.
 
 ---
 
-## Tech Stack
+## 🚀 Quick Look
 
-- **Language**: Kotlin 2.1.0
-- **UI Framework**: Jetpack Compose (BOM 2024.12.01) with Material 3
-- **Typography**: Bricolage Grotesque (variable font)
-- **PDF Engine**: Artifex MuPDF Fitz
-- **Local Storage**: Room 2.6.1 & Jetpack DataStore
-- **Media Playback**: Google AndroidX Media3 ExoPlayer 1.5.1 (Hardware-accelerated MediaCodec, PiP, gesture seek)
-- **Image Loading**: Coil 2.7.0
-- **Target SDK**: Android 15 (API 35) • **Minimum SDK**: Android 8.0 (API 26)
-
----
-
-## Privacy & Offline
-
-- **100% Offline**: All rendering, conversions, and tool operations execute entirely on your device.
-- **Zero Telemetry**: No tracking, analytics SDKs, or cloud dependencies.
-- **Zero Ads**: Free, open, and private.
+| Capability | Supported Formats / Tools |
+|---|---|
+| **Documents** | `PDF`, `DOCX`, `XLSX`, `PPTX`, `EPUB`, `TXT` |
+| **Media Player** | Hardware-accelerated `MP4`, `MKV`, `MP3`, `FLAC` with gesture seek & PiP |
+| **Tools** | Merge, Split, Compress, Sign, Encrypt, Decrypt, Convert, Rotate |
+| **Scanner** | Real-time camera capture, perspective crop, multi-page PDF generation |
+| **Updates** | Seamless built-in in-app updater connected to GitHub Releases |
 
 ---
 
-## Building from Source
+## 🛠️ Built With
 
-### Prerequisites
-- Android Studio Ladybug (2024.2.1) or newer
-- JDK 21
+- **Language**: [Kotlin 2.1.0](https://kotlinlang.org/)
+- **UI Toolkit**: [Jetpack Compose](https://developer.android.com/jetpack/compose) with Material 3
+- **Rendering Engine**: [Artifex MuPDF Fitz](https://mupdf.com/)
+- **Media Engine**: [AndroidX Media3 ExoPlayer](https://developer.android.com/media/media3)
+- **Local Storage**: Jetpack Room & DataStore
+- **Async & Reactive**: Kotlin Coroutines & Flow
 
-### Build APK
+---
+
+## 📦 Building from Source
+
 ```bash
-# Compile Kotlin sources
-./gradlew compileDebugKotlin
+# Clone the repository
+git clone https://github.com/abhisheksati132/mydoc.git
+cd mydoc
 
-# Run unit tests
+# Run tests
 ./gradlew testDebugUnitTest
 
-# Assemble debug APK
-./gradlew assembleDebug
+# Assemble Release APK
+./gradlew assembleRelease
 ```
 
 ---
 
-## License
+## 📄 License
 
-This project is licensed under the GNU Affero General Public License v3.0 (AGPLv3) / LGPL v2.1. See `LICENSE` for details.
+MyDoc is licensed under the **GNU Affero General Public License v3.0 (AGPLv3)**. See [LICENSE](LICENSE) for details.
