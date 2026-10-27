@@ -28,42 +28,28 @@ data class LibraryItem(
     val durationMs: Long = 0L,
     val progressFraction: Float = 0f
 ) {
-    val extension: String
-        get() {
-            val dot = name.lastIndexOf('.')
-            return if (dot != -1 && dot < name.length - 1) name.substring(dot + 1).lowercase(Locale.ROOT) else ""
-        }
+    val extension: String = run {
+        val dot = name.lastIndexOf('.')
+        if (dot != -1 && dot < name.length - 1) name.substring(dot + 1).lowercase(Locale.ROOT) else ""
+    }
 
-    val typeBadge: String
-        get() = when (kind) {
-            MediaKind.DOCUMENT -> when (extension) {
-                "pdf" -> "PDF"
-                "epub" -> "EPUB"
-                "docx", "doc" -> "WORD"
-                "xlsx", "xls" -> "EXCEL"
-                "pptx", "ppt" -> "PPT"
-                "txt" -> "TXT"
-                "csv" -> "CSV"
-                else -> extension.uppercase(Locale.ROOT).take(5).ifEmpty { "DOC" }
-            }
-            MediaKind.PHOTO -> extension.uppercase(Locale.ROOT).take(4).ifEmpty { "IMG" }
-            MediaKind.VIDEO -> extension.uppercase(Locale.ROOT).take(4).ifEmpty { "VID" }
-            MediaKind.AUDIO -> extension.uppercase(Locale.ROOT).take(4).ifEmpty { "AUD" }
+    val typeBadge: String = when (kind) {
+        MediaKind.DOCUMENT -> when (extension) {
+            "pdf" -> "PDF"
+            "epub" -> "EPUB"
+            "docx", "doc" -> "WORD"
+            "xlsx", "xls" -> "EXCEL"
+            "pptx", "ppt" -> "PPT"
+            "txt" -> "TXT"
+            "csv" -> "CSV"
+            else -> extension.uppercase(Locale.ROOT).take(5).ifEmpty { "DOC" }
         }
+        MediaKind.PHOTO -> extension.uppercase(Locale.ROOT).take(4).ifEmpty { "IMG" }
+        MediaKind.VIDEO -> extension.uppercase(Locale.ROOT).take(4).ifEmpty { "VID" }
+        MediaKind.AUDIO -> extension.uppercase(Locale.ROOT).take(4).ifEmpty { "AUD" }
+    }
 
-    val formattedSize: String
-        get() {
-            if (sizeBytes <= 0) return "Unknown size"
-            val kb = sizeBytes / 1024.0
-            val mb = kb / 1024.0
-            val gb = mb / 1024.0
-            return when {
-                gb >= 1.0 -> String.format(Locale.US, "%.1f GB", gb)
-                mb >= 1.0 -> String.format(Locale.US, "%.1f MB", mb)
-                kb >= 1.0 -> String.format(Locale.US, "%.1f KB", kb)
-                else -> "$sizeBytes B"
-            }
-        }
+    val formattedSize: String = formatBytesPrecise(sizeBytes)
 
     val formattedProgress: String
         get() = when (kind) {
@@ -71,9 +57,9 @@ data class LibraryItem(
             MediaKind.VIDEO, MediaKind.AUDIO -> {
                 val posSec = (lastPositionMs / 1000).coerceAtLeast(0)
                 val durSec = (durationMs / 1000).coerceAtLeast(0)
-                val posStr = String.format(Locale.US, "%02d:%02d", posSec / 60, posSec % 60)
+                val posStr = "${(posSec / 60).toString().padStart(2, '0')}:${(posSec % 60).toString().padStart(2, '0')}"
                 if (durSec > 0) {
-                    val durStr = String.format(Locale.US, "%02d:%02d", durSec / 60, durSec % 60)
+                    val durStr = "${(durSec / 60).toString().padStart(2, '0')}:${(durSec % 60).toString().padStart(2, '0')}"
                     "$posStr / $durStr"
                 } else {
                     posStr
@@ -82,23 +68,7 @@ data class LibraryItem(
             MediaKind.PHOTO -> DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(lastModified))
         }
 
-    val formattedLastModified: String
-        get() {
-            if (lastModified <= 0) return ""
-            val now = System.currentTimeMillis()
-            val diff = now - lastModified
-            val oneMinute = 60 * 1000L
-            val oneHour = 60 * oneMinute
-            val oneDay = 24 * oneHour
-
-            return when {
-                diff < oneMinute -> "Just now"
-                diff < oneHour -> "${diff / oneMinute}m ago"
-                diff < oneDay -> "${diff / oneHour}h ago"
-                diff < 2 * oneDay -> "Yesterday"
-                else -> DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(lastModified))
-            }
-        }
+    val formattedLastModified: String = formatRelativeTimestamp(lastModified)
 }
 
 fun LibraryItem.toMediaItem(): MediaItem {
@@ -117,4 +87,35 @@ fun LibraryItem.toMediaItem(): MediaItem {
         isAudio = kind == MediaKind.AUDIO,
         filePath = parsedUri.path
     )
+}
+
+
+fun formatBytesPrecise(sizeBytes: Long): String {
+    if (sizeBytes <= 0) return "Unknown size"
+    val kb = sizeBytes / 1024.0
+    val mb = kb / 1024.0
+    val gb = mb / 1024.0
+    return when {
+        gb >= 1.0 -> String.format(Locale.US, "%.1f GB", gb)
+        mb >= 1.0 -> String.format(Locale.US, "%.1f MB", mb)
+        kb >= 1.0 -> String.format(Locale.US, "%.1f KB", kb)
+        else -> "$sizeBytes B"
+    }
+}
+
+fun formatRelativeTimestamp(lastModified: Long): String {
+    if (lastModified <= 0) return ""
+    val now = System.currentTimeMillis()
+    val diff = now - lastModified
+    val oneMinute = 60 * 1000L
+    val oneHour = 60 * oneMinute
+    val oneDay = 24 * oneHour
+
+    return when {
+        diff < oneMinute -> "Just now"
+        diff < oneHour -> "${diff / oneMinute}m ago"
+        diff < oneDay -> "${diff / oneHour}h ago"
+        diff < 2 * oneDay -> "Yesterday"
+        else -> DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(lastModified))
+    }
 }

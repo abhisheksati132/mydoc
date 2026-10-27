@@ -1,9 +1,4 @@
 # Add project specific ProGuard rules here.
-# By default, the flags in this file are appended to flags specified
-# in C:\Users\abhis\AppData\Local\Android\Sdk/tools/proguard/proguard-android.txt
-# You can edit the include path and order by changing the proguardFiles
-# directive in build.gradle.
-
 # Room
 -keepclassmembers class * extends androidx.room.RoomDatabase {
     <init>();
@@ -13,10 +8,6 @@
 # MuPDF Fitz JNI native bindings
 -keep class com.artifex.mupdf.fitz.** { *; }
 -keepclassmembers class com.artifex.mupdf.fitz.** { *; }
-
-# LibreOfficeKit JNI native bindings
--keep class org.libreoffice.kit.** { *; }
--keepclassmembers class org.libreoffice.kit.** { *; }
 
 # Domain models
 -keep class com.abhisheksati.mydoc.domain.model.** { *; }
@@ -33,7 +24,15 @@
 -dontwarn com.gemalto.jp2.**
 -dontwarn org.bouncycastle.**
 -dontwarn java.awt.**
+
 # Keep all native JNI methods
 -keepclasseswithmembernames class * {
     native <methods>;
+}
+
+# Release APK optimization: strip verbose and debug logging
+-assumenosideeffects class android.util.Log {
+    public static boolean isLoggable(java.lang.String, int);
+    public static int v(...);
+    public static int d(...);
 }

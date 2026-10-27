@@ -39,6 +39,14 @@ object TileBitmapCache {
     }
 
     fun clear() = synchronized(cache) {
+        val snapshot = cache.snapshot()
         cache.evictAll()
+        for ((_, bmp) in snapshot) {
+            try {
+                if (bmp != null && !bmp.isRecycled) {
+                    bmp.recycle()
+                }
+            } catch (_: Throwable) {}
+        }
     }
 }

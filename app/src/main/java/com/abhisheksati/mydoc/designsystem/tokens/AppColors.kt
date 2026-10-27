@@ -144,10 +144,15 @@ val DarkAppColors = AppColors(
 )
 
 val BlackAppColors = DarkAppColors.copy(
-    background = Color(0xFF000000), // Pure AMOLED
-    surface = Color(0xFF121214),
-    surfaceMuted = Color(0xFF1E1E21),
-    line = Color(0xFF252528)
+    background = Color(0xFF000000), // Pure AMOLED zero-nit background
+    surface = Color(0xFF0A0A0C),     // Deep obsidian card surface
+    surfaceMuted = Color(0xFF141416),
+    line = Color(0xFF1E1E22),
+    surfaceContainer = Color(0xFF0A0A0C),
+    surfaceContainerHigh = Color(0xFF141416),
+    surfaceContainerLow = Color(0xFF000000),
+    primaryContainer = Color(0xFF141416),
+    secondaryContainer = Color(0xFF141416)
 )
 
 val LocalAppColors = staticCompositionLocalOf { LightAppColors }

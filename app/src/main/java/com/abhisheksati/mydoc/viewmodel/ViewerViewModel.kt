@@ -127,11 +127,22 @@ class ViewerViewModel(
                         )
 
                         if (resolveResult.isFailure) {
+                            val exception = resolveResult.exceptionOrNull()
+                            val isZeroByte = exception?.message?.contains("0 bytes", ignoreCase = true) == true ||
+                                             exception?.message?.contains("empty", ignoreCase = true) == true
+                            val isPerm = exception is SecurityException || (exception?.localizedMessage?.contains("Permission Denial", ignoreCase = true) == true)
+
+                            val errorMsg = when {
+                                isZeroByte -> "This document is empty (0 bytes) or corrupted and cannot be opened."
+                                isPerm -> "Access permission has expired or file could not be found. Tap below to select it."
+                                else -> "Unable to load document. The file may be damaged or unavailable."
+                            }
+
                             _uiState.update {
                                 it.copy(
                                     isLoading = false,
-                                    isPermissionExpired = true,
-                                    errorMessage = "Access permission has expired or file could not be found. Tap below to select it."
+                                    isPermissionExpired = isPerm,
+                                    errorMessage = errorMsg
                                 )
                             }
                             return@withContext
@@ -191,8 +202,8 @@ class ViewerViewModel(
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
-                                isPermissionExpired = true,
-                                errorMessage = "Unable to display document pages. Please select the file again."
+                                isPermissionExpired = false,
+                                errorMessage = "This document format is damaged or could not be rendered."
                             )
                         }
                         return@withContext
