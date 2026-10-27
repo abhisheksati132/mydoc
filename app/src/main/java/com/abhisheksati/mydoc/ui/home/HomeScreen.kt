@@ -42,6 +42,7 @@ import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
 import com.abhisheksati.mydoc.ui.filemanager.FileManagerScreen
 import com.abhisheksati.mydoc.ui.storage.StorageViewModel
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -94,25 +95,6 @@ fun HomeScreen(
     val context = LocalContext.current
 
     val currentTab by viewModel.currentTab.collectAsStateWithLifecycle()
-    val pagerState = rememberPagerState(
-        initialPage = currentTab.ordinal,
-        pageCount = { HomeTab.entries.size }
-    )
-
-    // Synchronize pager swipe to viewModel
-    LaunchedEffect(pagerState.currentPage) {
-        val tab = HomeTab.entries.getOrNull(pagerState.currentPage) ?: HomeTab.HOME
-        if (tab != currentTab) {
-            viewModel.selectTab(tab)
-        }
-    }
-
-    // Synchronize viewModel tab changes to pager
-    LaunchedEffect(currentTab) {
-        if (pagerState.currentPage != currentTab.ordinal) {
-            pagerState.animateScrollToPage(currentTab.ordinal)
-        }
-    }
 
     var showCameraScanner by remember { mutableStateOf(false) }
     var showSignaturePad by remember { mutableStateOf(false) }
@@ -146,7 +128,6 @@ fun HomeScreen(
             documentToDelete == null
     ) {
         viewModel.selectTab(HomeTab.HOME)
-        scope.launch { pagerState.animateScrollToPage(HomeTab.HOME.ordinal) }
     }
 
     Scaffold(
@@ -322,30 +303,24 @@ fun HomeScreen(
                     currentTab = currentTab,
                     onTabSelected = { tab ->
                         viewModel.selectTab(tab)
-                        scope.launch { pagerState.animateScrollToPage(tab.ordinal) }
                     }
                 )
             }
         }
     ) { innerPadding ->
-        // 4-Destination Edge-to-Edge Pager: Home | Library | Files | Tools
-        HorizontalPager(
-            state = pagerState,
-            key = { HomeTab.entries[it].name },
-            beyondViewportPageCount = 1,
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(bottom = innerPadding.calculateBottomPadding())
-        ) { page ->
-            when (HomeTab.entries[page]) {
-                                HomeTab.HOME -> {
+        ) {
+            when (currentTab) {
+                HomeTab.HOME -> {
                     HomeTabContent(
                         continueItems = uiState.continueItems,
                         recentItems = uiState.recentLibraryItems,
                         onItemClick = onLibraryItemClick,
                         onSearchClick = {
                             viewModel.selectTab(HomeTab.FILES)
-                            scope.launch { pagerState.animateScrollToPage(HomeTab.FILES.ordinal) }
                         },
                         onScanClick = {
                             documentScanner()
@@ -353,7 +328,6 @@ fun HomeScreen(
                         onCategoryClick = { category ->
                             fileManagerViewModel.selectCategory(category)
                             viewModel.selectTab(HomeTab.FILES)
-                            scope.launch { pagerState.animateScrollToPage(HomeTab.FILES.ordinal) }
                         },
                         onToolClick = { tool ->
                             toolsViewModel.selectTool(tool)

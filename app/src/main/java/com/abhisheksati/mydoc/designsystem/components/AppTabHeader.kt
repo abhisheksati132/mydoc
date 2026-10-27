@@ -138,25 +138,7 @@ fun AppTabHeader(
                         )
                     }
                 }
-
-                // 2. Theme Toggle (Sun / Moon)
-                if (onToggleTheme != null) {
-                    IconButton(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onToggleTheme()
-                        },
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isDarkTheme) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
-                            contentDescription = if (isDarkTheme) "Light mode" else "Dark mode",
-                            tint = colors.textPrimary
-                        )
-                    }
-                }
-
-                // 3. Action 3: Contextual Overflow Menu (with nested Settings) OR Standalone Settings Icon
+// 3. Action 3: Contextual Overflow Menu (with nested Settings) OR Standalone Settings Icon
                 if (moreMenuContent != null) {
                     Box {
                         IconButton(

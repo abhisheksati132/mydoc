@@ -13,4 +13,5 @@ captures/
 *.jks
 release-keystore.properties
 context.md
+.kotlin/
 

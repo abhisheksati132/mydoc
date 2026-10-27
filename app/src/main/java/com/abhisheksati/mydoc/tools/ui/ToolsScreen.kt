@@ -1,6 +1,7 @@
 package com.abhisheksati.mydoc.tools.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -48,6 +49,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
+import com.abhisheksati.mydoc.designsystem.components.LiquidGlassTokens
+import com.abhisheksati.mydoc.designsystem.components.liquidGlass
+
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
@@ -234,7 +238,7 @@ fun ToolsScreen(
                             )
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            // 2-Column Grid of 6 Featured Tools
+                            // 2-Column Grid of 6 Featured Tools (Apple Liquid Glass)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -243,6 +247,9 @@ fun ToolsScreen(
                                     title = "Scan to PDF",
                                     subtitle = "Camera to document",
                                     icon = Icons.Outlined.CameraAlt,
+                                    tintColor = Color(0xFF00C853),
+                                    gradient = LiquidGlassTokens.AuroraLiquid,
+                                    isDarkTheme = isDarkTheme,
                                     onClick = { onToolClick(PdfTool.SCAN_TO_PDF) },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -250,6 +257,9 @@ fun ToolsScreen(
                                     title = "Combine PDFs",
                                     subtitle = "Merge files together",
                                     icon = Icons.AutoMirrored.Outlined.MergeType,
+                                    tintColor = Color(0xFF007AFF),
+                                    gradient = LiquidGlassTokens.AzureLiquid,
+                                    isDarkTheme = isDarkTheme,
                                     onClick = { onToolClick(PdfTool.MERGE) },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -265,6 +275,9 @@ fun ToolsScreen(
                                     title = "Make Smaller",
                                     subtitle = "Reduce PDF file size",
                                     icon = Icons.Outlined.Compress,
+                                    tintColor = Color(0xFFFF9500),
+                                    gradient = LiquidGlassTokens.AmberLiquid,
+                                    isDarkTheme = isDarkTheme,
                                     onClick = { onToolClick(PdfTool.COMPRESS) },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -272,6 +285,9 @@ fun ToolsScreen(
                                     title = "Sign PDF",
                                     subtitle = "Add your signature",
                                     icon = Icons.Outlined.Draw,
+                                    tintColor = Color(0xFFFF2D55),
+                                    gradient = LiquidGlassTokens.SunsetLiquid,
+                                    isDarkTheme = isDarkTheme,
                                     onClick = { onToolClick(PdfTool.SIGN_PDF) },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -287,6 +303,9 @@ fun ToolsScreen(
                                     title = "Pick Pages",
                                     subtitle = "Reorder & rotate",
                                     icon = Icons.Outlined.GridOn,
+                                    tintColor = Color(0xFF5856D6),
+                                    gradient = LiquidGlassTokens.IndigoLiquid,
+                                    isDarkTheme = isDarkTheme,
                                     onClick = { onToolClick(PdfTool.REORDER_PAGES) },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -294,6 +313,9 @@ fun ToolsScreen(
                                     title = "Lock PDF",
                                     subtitle = "Protect with password",
                                     icon = Icons.Outlined.Lock,
+                                    tintColor = Color(0xFFAF52DE),
+                                    gradient = LiquidGlassTokens.VioletLiquid,
+                                    isDarkTheme = isDarkTheme,
                                     onClick = { onToolClick(PdfTool.PROTECT) },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -371,44 +393,50 @@ private fun FeaturedToolCard(
     title: String,
     subtitle: String,
     icon: ImageVector,
+    tintColor: Color,
+    gradient: androidx.compose.ui.graphics.Brush,
+    isDarkTheme: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
 
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = colors.surfaceContainer,
+    Box(
         modifier = modifier
             .pressScaleEffect(onClick = onClick)
-            .clip(RoundedCornerShape(16.dp))
+            .liquidGlass(
+                isDarkTheme = isDarkTheme,
+                tintColor = tintColor,
+                shape = RoundedCornerShape(20.dp),
+                elevation = 4.dp
+            )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = colors.accent.copy(alpha = 0.14f),
-                modifier = Modifier.size(40.dp)
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(13.dp))
+                    .background(gradient),
+                contentAlignment = Alignment.Center
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = colors.accent,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(13.dp))
 
             Text(
                 text = title,
-                style = typography.body.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
+                style = typography.body.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
                 color = colors.textPrimary
             )
 
@@ -439,17 +467,26 @@ private fun ToolListRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        val toolGradient = when (tool.group) {
+            ToolGroup.SCAN -> LiquidGlassTokens.AuroraLiquid
+            ToolGroup.ORGANIZE -> LiquidGlassTokens.AzureLiquid
+            ToolGroup.OPTIMIZE -> LiquidGlassTokens.AmberLiquid
+            ToolGroup.EDIT -> LiquidGlassTokens.SunsetLiquid
+            ToolGroup.SECURITY -> LiquidGlassTokens.VioletLiquid
+            ToolGroup.CONVERT_TO, ToolGroup.CONVERT_FROM -> LiquidGlassTokens.IndigoLiquid
+        }
+
         Box(
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(colors.accent.copy(alpha = 0.12f)),
+                .background(toolGradient),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = tool.icon,
                 contentDescription = null,
-                tint = colors.accent,
+                tint = Color.White,
                 modifier = Modifier.size(20.dp)
             )
         }

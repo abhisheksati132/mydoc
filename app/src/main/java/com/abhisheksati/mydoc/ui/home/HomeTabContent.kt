@@ -51,6 +51,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
+import com.abhisheksati.mydoc.designsystem.components.LiquidGlassTokens
+import com.abhisheksati.mydoc.designsystem.components.liquidGlass
+
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
 import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
@@ -171,32 +174,35 @@ fun HomeTabContent(
                 Spacer(modifier = Modifier.height(14.dp))
             }
 
-            // 3. Primary Action: Scan Document (Tactile Spring Bounce)
+            // 3. Primary Action: Scan Document (Apple Liquid Glass Hero Card)
             item(key = "hero_scan_card") {
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = colors.surfaceContainer,
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp)
                         .pressScaleEffect(onClick = onScanClick)
-                        .clip(RoundedCornerShape(20.dp))
+                        .liquidGlass(
+                            isDarkTheme = isDarkTheme,
+                            tintColor = Color(0xFF007AFF),
+                            shape = RoundedCornerShape(24.dp),
+                            elevation = 6.dp
+                        )
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(18.dp),
+                            .padding(20.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Scan document",
-                                style = typography.title.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
+                                text = "Scan Document",
+                                style = typography.title.copy(fontSize = 19.sp, fontWeight = FontWeight.Bold),
                                 color = colors.ink
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.height(3.dp))
                             Text(
-                                text = "Create a PDF using your camera",
+                                text = "Create a crisp PDF with your camera",
                                 style = typography.body.copy(fontSize = 13.sp),
                                 color = colors.inkMuted
                             )
@@ -204,19 +210,19 @@ fun HomeTabContent(
 
                         Spacer(modifier = Modifier.width(16.dp))
 
-                        Surface(
-                            shape = CircleShape,
-                            color = colors.accent,
-                            modifier = Modifier.size(48.dp)
+                        Box(
+                            modifier = Modifier
+                                .size(50.dp)
+                                .clip(CircleShape)
+                                .background(LiquidGlassTokens.AzureLiquid),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Outlined.CameraAlt,
-                                    contentDescription = "Scan Now",
-                                    tint = colors.onAccent,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Outlined.CameraAlt,
+                                contentDescription = "Scan Now",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
                         }
                     }
                 }
@@ -234,7 +240,7 @@ fun HomeTabContent(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Row 1: Documents & Photos
+                    // Row 1: Documents & Photos (Liquid Glass)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -243,6 +249,9 @@ fun HomeTabContent(
                             title = "Documents",
                             subtitle = "PDF, Word, Excel",
                             icon = Icons.AutoMirrored.Outlined.InsertDriveFile,
+                            tintColor = Color(0xFF007AFF),
+                            gradient = LiquidGlassTokens.AzureLiquid,
+                            isDarkTheme = isDarkTheme,
                             onClick = { onCategoryClick(FileCategory.DOCUMENTS) },
                             modifier = Modifier.weight(1f)
                         )
@@ -251,6 +260,9 @@ fun HomeTabContent(
                             title = "Photos",
                             subtitle = "Images & Gallery",
                             icon = Icons.Outlined.Image,
+                            tintColor = Color(0xFFFF2D55),
+                            gradient = LiquidGlassTokens.SunsetLiquid,
+                            isDarkTheme = isDarkTheme,
                             onClick = { onCategoryClick(FileCategory.IMAGES) },
                             modifier = Modifier.weight(1f)
                         )
@@ -258,7 +270,7 @@ fun HomeTabContent(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Row 2: Videos & Audio
+                    // Row 2: Videos & Audio (Liquid Glass)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -267,6 +279,9 @@ fun HomeTabContent(
                             title = "Videos",
                             subtitle = "Clips & Movies",
                             icon = Icons.Outlined.Videocam,
+                            tintColor = Color(0xFFFF9500),
+                            gradient = LiquidGlassTokens.AmberLiquid,
+                            isDarkTheme = isDarkTheme,
                             onClick = { onCategoryClick(FileCategory.VIDEOS) },
                             modifier = Modifier.weight(1f)
                         )
@@ -275,6 +290,9 @@ fun HomeTabContent(
                             title = "Audio",
                             subtitle = "Recordings & Music",
                             icon = Icons.Outlined.Audiotrack,
+                            tintColor = Color(0xFFAF52DE),
+                            gradient = LiquidGlassTokens.VioletLiquid,
+                            isDarkTheme = isDarkTheme,
                             onClick = { onCategoryClick(FileCategory.AUDIO) },
                             modifier = Modifier.weight(1f)
                         )
@@ -422,44 +440,50 @@ private fun CategoryTile(
     title: String,
     subtitle: String,
     icon: ImageVector,
+    tintColor: Color,
+    gradient: androidx.compose.ui.graphics.Brush,
+    isDarkTheme: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
     val typography = AppTheme.typography
 
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = colors.surfaceContainer,
+    Box(
         modifier = modifier
             .pressScaleEffect(onClick = onClick)
-            .clip(RoundedCornerShape(16.dp))
+            .liquidGlass(
+                isDarkTheme = isDarkTheme,
+                tintColor = tintColor,
+                shape = RoundedCornerShape(20.dp),
+                elevation = 4.dp
+            )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(15.dp)
         ) {
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = colors.accent.copy(alpha = 0.12f),
-                modifier = Modifier.size(38.dp)
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(13.dp))
+                    .background(gradient),
+                contentAlignment = Alignment.Center
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = colors.accent,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(21.dp)
+                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(13.dp))
 
             Text(
                 text = title,
-                style = typography.body.copy(fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold),
+                style = typography.body.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
                 color = colors.ink
             )
 
@@ -487,14 +511,26 @@ private fun RecentItemRow(
     val colors = AppTheme.colors
     val typography = AppTheme.typography
 
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = colors.surfaceContainer,
+    val itemGradient = when (item.extension.lowercase()) {
+        "pdf" -> LiquidGlassTokens.AzureLiquid
+        "docx", "doc" -> LiquidGlassTokens.IndigoLiquid
+        "xlsx", "xls", "csv" -> LiquidGlassTokens.AuroraLiquid
+        "pptx", "ppt" -> LiquidGlassTokens.AmberLiquid
+        "mp4", "mkv", "mov" -> LiquidGlassTokens.SunsetLiquid
+        "mp3", "flac", "wav" -> LiquidGlassTokens.VioletLiquid
+        else -> LiquidGlassTokens.AzureLiquid
+    }
+
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
             .pressScaleEffect(onClick = onClick)
-            .clip(RoundedCornerShape(16.dp))
+            .liquidGlass(
+                isDarkTheme = isDarkTheme,
+                shape = RoundedCornerShape(18.dp),
+                elevation = 3.dp
+            )
     ) {
         Row(
             modifier = Modifier
@@ -502,20 +538,20 @@ private fun RecentItemRow(
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icon container
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = colors.accent.copy(alpha = 0.12f),
-                modifier = Modifier.size(40.dp)
+            // Colorful liquid glass icon container
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(itemGradient),
+                contentAlignment = Alignment.Center
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.InsertDriveFile,
-                        contentDescription = null,
-                        tint = colors.accent,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.InsertDriveFile,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
             }
 
             Spacer(modifier = Modifier.width(12.dp))

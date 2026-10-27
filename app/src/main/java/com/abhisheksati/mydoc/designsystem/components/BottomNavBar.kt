@@ -7,6 +7,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +25,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Folder
@@ -63,25 +68,31 @@ fun BottomNavBar(
     val typography = AppTheme.typography
     val haptics = rememberAppHaptics()
 
+    val isDark = colors.background != Color(0xFFF7F7F4)
+    val glassBg = if (isDark) Color(0xEE161822) else Color(0xF4FFFFFF)
+    val rimColor = if (isDark) Color.White.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.90f)
+
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(colors.background)
+            .background(glassBg)
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    listOf(
+                        rimColor,
+                        Color.Transparent
+                    )
+                ),
+                shape = RectangleShape
+            )
             .navigationBarsPadding()
     ) {
-        // Subtle top divider
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(AppSpacing.hairline)
-                .background(colors.line)
-        )
-
-        // 72dp bar content
+        // 70dp Apple Liquid Glass Dock content
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(72.dp)
+                .height(70.dp)
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -96,36 +107,34 @@ fun BottomNavBar(
                 }
 
                 val pillWidth by animateDpAsState(
-                    targetValue = if (isSelected) 60.dp else 0.dp,
+                    targetValue = if (isSelected) 64.dp else 0.dp,
                     animationSpec = spring(
-                        dampingRatio = 0.75f,
+                        dampingRatio = 0.72f,
                         stiffness = Spring.StiffnessMediumLow
                     ),
                     label = "pillWidth"
                 )
 
-                val pillColor by animateColorAsState(
-                    targetValue = if (isSelected) colors.accent.copy(alpha = 0.16f) else Color.Transparent,
-                    animationSpec = tween(durationMillis = 200),
-                    label = "pillColor"
-                )
+                val pillBg = if (isSelected) {
+                    if (isDark) Color(0x33007AFF) else Color(0x1E007AFF)
+                } else Color.Transparent
 
                 val iconColor by animateColorAsState(
-                    targetValue = if (isSelected) colors.accent else colors.inkMuted,
+                    targetValue = if (isSelected) Color(0xFF007AFF) else colors.inkMuted,
                     animationSpec = tween(durationMillis = 180),
                     label = "tabIconColor"
                 )
 
                 val textColor by animateColorAsState(
-                    targetValue = if (isSelected) colors.ink else colors.inkMuted,
+                    targetValue = if (isSelected) Color(0xFF007AFF) else colors.inkMuted,
                     animationSpec = tween(durationMillis = 180),
                     label = "tabTextColor"
                 )
 
                 val iconScale by animateFloatAsState(
-                    targetValue = if (isSelected) 1.08f else 1.0f,
+                    targetValue = if (isSelected) 1.12f else 1.0f,
                     animationSpec = spring(
-                        dampingRatio = 0.55f,
+                        dampingRatio = 0.52f,
                         stiffness = Spring.StiffnessMedium
                     ),
                     label = "iconScale"
@@ -152,13 +161,27 @@ fun BottomNavBar(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        // Fluid Material 3 pill
+                        // Liquid Glass Active Pill
                         Box(
                             modifier = Modifier
                                 .width(if (isSelected) pillWidth else 48.dp)
                                 .height(32.dp)
-                                .clip(CircleShape)
-                                .background(pillColor),
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(pillBg)
+                                .then(
+                                    if (isSelected) {
+                                        Modifier.border(
+                                            width = 1.dp,
+                                            brush = Brush.verticalGradient(
+                                                listOf(
+                                                    if (isDark) Color(0x6600C6FF) else Color(0x55007AFF),
+                                                    Color.Transparent
+                                                )
+                                            ),
+                                            shape = RoundedCornerShape(16.dp)
+                                        )
+                                    } else Modifier
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(

@@ -222,6 +222,7 @@ fun FileManagerScreen(
     var isSearchActive by remember { mutableStateOf(false) }
     var showStorageCleanerSheet by remember { mutableStateOf(false) }
     var showAppManagerSheet by remember { mutableStateOf(false) }
+    var isSelectionMenuOpen by remember { mutableStateOf(false) }
     val pinnedFoldersManager = remember { com.abhisheksati.mydoc.data.local.PinnedFoldersManager(context) }
     val pinnedFolders by pinnedFoldersManager.pinnedFolders.collectAsState()
 
@@ -352,32 +353,68 @@ fun FileManagerScreen(
                         }
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { viewModel.selectAll() }) {
-                                Icon(Icons.Outlined.SelectAll, contentDescription = "Select All", tint = colors.textPrimary)
-                            }
-                            IconButton(onClick = { viewModel.copySelected() }) {
-                                Icon(Icons.Outlined.ContentCopy, contentDescription = "Copy", tint = colors.textPrimary)
-                            }
-                            IconButton(onClick = { viewModel.cutSelected() }) {
-                                Icon(Icons.Outlined.ContentCut, contentDescription = "Move", tint = colors.textPrimary)
-                            }
-                            IconButton(onClick = { showDeleteConfirmDialog = true }) {
-                                Icon(Icons.Outlined.Delete, contentDescription = "Delete", tint = colors.error)
-                            }
-                            IconButton(onClick = { showCompressDialog = true }) {
-                                Icon(Icons.Outlined.FolderZip, contentDescription = "Compress to ZIP", tint = colors.textPrimary)
-                            }
-                            if (uiState.selectedFiles.size == 1) {
-                                IconButton(onClick = {
-                                    showRenameDialogForFile = uiState.selectedFiles.first()
-                                }) {
-                                    Icon(Icons.Outlined.DriveFileRenameOutline, contentDescription = "Rename", tint = colors.textPrimary)
-                                }
-                            }
+                            // 1. Share
                             IconButton(onClick = {
                                 shareFiles(context, uiState.selectedFiles.toList())
                             }) {
                                 Icon(Icons.Outlined.Share, contentDescription = "Share", tint = colors.textPrimary)
+                            }
+
+                            // 2. Move (Cut)
+                            IconButton(onClick = { viewModel.cutSelected() }) {
+                                Icon(Icons.Outlined.ContentCut, contentDescription = "Move", tint = colors.textPrimary)
+                            }
+
+                            // 3. Delete
+                            IconButton(onClick = { showDeleteConfirmDialog = true }) {
+                                Icon(Icons.Outlined.Delete, contentDescription = "Delete", tint = colors.error)
+                            }
+
+                            // 4. Overflow Menu (Safe 48dp touch targets)
+                            Box {
+                                IconButton(onClick = { isSelectionMenuOpen = true }) {
+                                    Icon(Icons.Outlined.MoreVert, contentDescription = "More actions", tint = colors.textPrimary)
+                                }
+
+                                DropdownMenu(
+                                    expanded = isSelectionMenuOpen,
+                                    onDismissRequest = { isSelectionMenuOpen = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Select All", style = typography.body) },
+                                        leadingIcon = { Icon(Icons.Outlined.SelectAll, contentDescription = null, tint = colors.accent) },
+                                        onClick = {
+                                            isSelectionMenuOpen = false
+                                            viewModel.selectAll()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Copy", style = typography.body) },
+                                        leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null, tint = colors.accent) },
+                                        onClick = {
+                                            isSelectionMenuOpen = false
+                                            viewModel.copySelected()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Compress to ZIP", style = typography.body) },
+                                        leadingIcon = { Icon(Icons.Outlined.FolderZip, contentDescription = null, tint = colors.accent) },
+                                        onClick = {
+                                            isSelectionMenuOpen = false
+                                            showCompressDialog = true
+                                        }
+                                    )
+                                    if (uiState.selectedFiles.size == 1) {
+                                        DropdownMenuItem(
+                                            text = { Text("Rename", style = typography.body) },
+                                            leadingIcon = { Icon(Icons.Outlined.DriveFileRenameOutline, contentDescription = null, tint = colors.accent) },
+                                            onClick = {
+                                                isSelectionMenuOpen = false
+                                                showRenameDialogForFile = uiState.selectedFiles.first()
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
