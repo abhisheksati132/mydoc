@@ -357,6 +357,58 @@ class MuPdfRenderer(
         sb.toString()
     }
 
+    override fun selectTextAt(pageIndex: Int, point: android.graphics.PointF): TextSelectionResult? = lock.withLock {
+        val doc = document ?: return@withLock null
+        if (pageIndex < 0 || pageIndex >= (document?.countPages() ?: 0)) return@withLock null
+        try {
+            val page = doc.loadPage(pageIndex)
+            val st = page.toStructuredText()
+            val pt = com.artifex.mupdf.fitz.Point(point.x, point.y)
+            val quad = st.snapSelection(pt, pt, com.artifex.mupdf.fitz.StructuredText.SELECT_WORDS)
+            val result = if (quad != null) {
+                val r = quad.toRect()
+                val p0 = com.artifex.mupdf.fitz.Point(r.x0, r.y0)
+                val p1 = com.artifex.mupdf.fitz.Point(r.x1, r.y1)
+                val copied = st.copy(p0, p1)?.trim() ?: ""
+                if (copied.isNotEmpty()) {
+                    TextSelectionResult(
+                        selectedText = copied,
+                        highlightRects = listOf(RectF(r.x0, r.y0, r.x1, r.y1))
+                    )
+                } else null
+            } else null
+            st.destroy()
+            page.destroy()
+            result
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    override fun selectTextBetween(pageIndex: Int, start: android.graphics.PointF, end: android.graphics.PointF): TextSelectionResult? = lock.withLock {
+        val doc = document ?: return@withLock null
+        if (pageIndex < 0 || pageIndex >= (document?.countPages() ?: 0)) return@withLock null
+        try {
+            val page = doc.loadPage(pageIndex)
+            val st = page.toStructuredText()
+            val p1 = com.artifex.mupdf.fitz.Point(start.x, start.y)
+            val p2 = com.artifex.mupdf.fitz.Point(end.x, end.y)
+            val quads = st.highlight(p1, p2)
+            val text = st.copy(p1, p2)?.trim() ?: ""
+            val rects = quads?.map { q ->
+                val r = q.toRect()
+                RectF(r.x0, r.y0, r.x1, r.y1)
+            } ?: emptyList()
+            st.destroy()
+            page.destroy()
+            if (text.isNotEmpty() && rects.isNotEmpty()) {
+                TextSelectionResult(selectedText = text, highlightRects = rects)
+            } else null
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
     override fun close() {
         lock.withLock {
             pageSizeCache.clear()

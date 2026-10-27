@@ -14,6 +14,7 @@ import com.abhisheksati.mydoc.rendering.engine.DocumentRenderer
 import com.abhisheksati.mydoc.rendering.engine.MuPdfRenderer
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import com.abhisheksati.mydoc.rendering.engine.SearchMatch
+import com.abhisheksati.mydoc.rendering.engine.TextSelectionResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -148,35 +149,39 @@ class ViewerViewModel(
 
                     var activeRenderer: DocumentRenderer? = null
 
-                    // 1. Primary attempt: Built-in Android OS PdfRenderer (guaranteed stable, no JNI SIGSEGV)
+                    // 1. Primary Engine: MuPDF Fitz Native Vector Engine
+                    // Unlocks sub-pixel vector rendering, structured text extraction, fast quad search, and TOC outlines
                     try {
-                        val nativeRenderer = com.abhisheksati.mydoc.rendering.engine.AndroidPdfRenderer(cacheFile)
-                        if (nativeRenderer.pageCount > 0) {
-                            activeRenderer = nativeRenderer
+                        val mupdf = MuPdfRenderer(
+                            filePath = cacheFile.absolutePath,
+                            mimeType = "application/pdf"
+                        )
+                        if (mupdf.isPasswordProtected) {
+                            activeRenderer = mupdf
+                        } else if (mupdf.pageCount > 0) {
+                            val size = mupdf.getPageSize(0)
+                            if (size.first > 0 && size.second > 0) {
+                                activeRenderer = mupdf
+                            } else {
+                                mupdf.close()
+                            }
                         } else {
-                            nativeRenderer.close()
+                            mupdf.close()
                         }
                     } catch (_: Throwable) {
                     }
 
-                    // 2. Secondary / Fallback attempt: MuPdfRenderer (for complex or password-protected documents)
+                    // 2. Resilient Fallback Engine: Android OS Native PdfRenderer with PDFBox text stripper & outline
                     if (activeRenderer == null) {
                         try {
-                            val mupdf = MuPdfRenderer(
-                                filePath = cacheFile.absolutePath,
-                                mimeType = "application/pdf"
+                            val nativeRenderer = com.abhisheksati.mydoc.rendering.engine.AndroidPdfRenderer(
+                                file = cacheFile,
+                                context = context
                             )
-                            if (mupdf.isPasswordProtected) {
-                                activeRenderer = mupdf
-                            } else if (mupdf.pageCount > 0) {
-                                val testBitmap = mupdf.renderPage(0, 0.2f, ReadingMode.NORMAL)
-                                if (testBitmap != null) {
-                                    activeRenderer = mupdf
-                                } else {
-                                    mupdf.close()
-                                }
+                            if (nativeRenderer.pageCount > 0) {
+                                activeRenderer = nativeRenderer
                             } else {
-                                mupdf.close()
+                                nativeRenderer.close()
                             }
                         } catch (_: Throwable) {
                         }
@@ -453,6 +458,14 @@ class ViewerViewModel(
                 )
             )
         }
+    }
+
+    suspend fun selectTextAt(pageIndex: Int, point: android.graphics.PointF): TextSelectionResult? = withContext(Dispatchers.IO) {
+        renderer?.selectTextAt(pageIndex, point)
+    }
+
+    suspend fun selectTextBetween(pageIndex: Int, start: android.graphics.PointF, end: android.graphics.PointF): TextSelectionResult? = withContext(Dispatchers.IO) {
+        renderer?.selectTextBetween(pageIndex, start, end)
     }
 
     suspend fun getPageText(pageIndex: Int): String = withContext(Dispatchers.IO) {

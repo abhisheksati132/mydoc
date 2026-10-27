@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.rendering.engine
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -10,16 +11,22 @@ import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.rendering.cache.TileBitmapCache
+import com.abhisheksati.mydoc.tools.pdf.internal.PdfBoxHelper
+import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.outline.PDOutlineItem
+import com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.outline.PDOutlineNode
+import com.tom_roush.pdfbox.text.PDFTextStripper
 import java.io.File
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 /**
- * Standard Android OS built-in PDF Renderer.
- * Zero native library dependencies, guaranteed to work on all Android devices (API 21+).
+ * Standard Android OS built-in PDF Renderer with PDFBox textual intelligence fallback.
+ * Guaranteed to work on all Android devices (API 21+).
  */
 class AndroidPdfRenderer(
     private val file: File,
+    private val context: Context? = null,
     private val tileCache: TileBitmapCache = TileBitmapCache()
 ) : DocumentRenderer {
 
@@ -202,9 +209,105 @@ class AndroidPdfRenderer(
         }
     }
 
-    override fun search(query: String): List<SearchMatch> = emptyList()
+    override fun getPageText(pageIndex: Int): String = lock.withLock {
+        if (pageIndex < 0 || pageIndex >= pageCount) return@withLock ""
+        try {
+            if (context != null) {
+                PdfBoxHelper.ensureInitialized(context)
+            }
+            PDDocument.load(file).use { doc ->
+                val stripper = PDFTextStripper()
+                stripper.startPage = pageIndex + 1
+                stripper.endPage = pageIndex + 1
+                stripper.getText(doc)?.trim() ?: ""
+            }
+        } catch (_: Throwable) {
+            ""
+        }
+    }
 
-    override fun getOutline(): List<OutlineItem> = emptyList()
+    override fun getDocumentText(): String = lock.withLock {
+        try {
+            if (context != null) {
+                PdfBoxHelper.ensureInitialized(context)
+            }
+            PDDocument.load(file).use { doc ->
+                val stripper = PDFTextStripper()
+                stripper.getText(doc)?.trim() ?: ""
+            }
+        } catch (_: Throwable) {
+            ""
+        }
+    }
+
+    override fun search(query: String): List<SearchMatch> = lock.withLock {
+        if (query.isBlank()) return@withLock emptyList()
+        val total = pageCount
+        val results = mutableListOf<SearchMatch>()
+        try {
+            if (context != null) {
+                PdfBoxHelper.ensureInitialized(context)
+            }
+            PDDocument.load(file).use { doc ->
+                val stripper = PDFTextStripper()
+                for (p in 0 until total) {
+                    stripper.startPage = p + 1
+                    stripper.endPage = p + 1
+                    val text = stripper.getText(doc) ?: ""
+                    if (text.contains(query, ignoreCase = true)) {
+                        val size = getPageSize(p)
+                        results.add(
+                            SearchMatch(
+                                pageIndex = p,
+                                bounds = android.graphics.RectF(0f, 0f, size.first, size.second),
+                                textSnippet = query
+                            )
+                        )
+                    }
+                }
+            }
+        } catch (_: Throwable) {}
+        results
+    }
+
+    override fun getOutline(): List<OutlineItem> = lock.withLock {
+        try {
+            if (context != null) {
+                PdfBoxHelper.ensureInitialized(context)
+            }
+            PDDocument.load(file).use { doc ->
+                val outline = doc.documentCatalog.documentOutline ?: return@withLock emptyList()
+                parsePdfBoxOutline(doc, outline)
+            }
+        } catch (_: Throwable) {
+            emptyList()
+        }
+    }
+
+    private fun parsePdfBoxOutline(doc: PDDocument, node: PDOutlineNode): List<OutlineItem> {
+        val items = mutableListOf<OutlineItem>()
+        var current: PDOutlineItem? = node.firstChild
+        while (current != null) {
+            val title = current.title ?: ""
+            val pageNumber = try {
+                val destPage = current.findDestinationPage(doc)
+                if (destPage != null) doc.pages.indexOf(destPage).coerceAtLeast(0) else 0
+            } catch (_: Throwable) {
+                0
+            }
+            val children = parsePdfBoxOutline(doc, current)
+            items.add(
+                OutlineItem(
+                    title = title,
+                    pageIndex = pageNumber,
+                    level = 0,
+                    children = children
+                )
+            )
+            current = current.nextSibling
+        }
+        return items
+    }
 
     override fun close() {
         lock.withLock {

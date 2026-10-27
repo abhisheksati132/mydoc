@@ -164,6 +164,25 @@ fun PdfViewerScreen(
     var isTtsVisible by remember { mutableStateOf(false) }
     var currentTtsText by remember { mutableStateOf("") }
     var selectedPageForActions by remember { mutableStateOf<Int?>(null) }
+    var selectedTextState by remember { mutableStateOf<Pair<Int, com.abhisheksati.mydoc.rendering.engine.TextSelectionResult>?>(null) }
+
+    val handleLongPressOffset: (Int, Offset, Size) -> Unit = { pIdx, offset, itemSize ->
+        coroutineScope.launch {
+            val (w, h) = viewModel.getPageSize(pIdx)
+            if (w > 0 && h > 0 && itemSize.width > 0 && itemSize.height > 0) {
+                val pdfX = (offset.x / itemSize.width) * w
+                val pdfY = (offset.y / itemSize.height) * h
+                val sel = viewModel.selectTextAt(pIdx, android.graphics.PointF(pdfX, pdfY))
+                if (sel != null && sel.selectedText.isNotBlank()) {
+                    selectedTextState = Pair(pIdx, sel)
+                    selectedPageForActions = pIdx
+                    return@launch
+                }
+            }
+            selectedTextState = null
+            selectedPageForActions = pIdx
+        }
+    }
 
     val reopenLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -453,7 +472,9 @@ fun PdfViewerScreen(
                                         zoomScale = zoomScale,
                                         searchMatches = searchMatchesByPage[leftPage] ?: emptyList(),
                                         activeMatch = activeMatch,
-                                        onLongPressPage = { selectedPageForActions = it }
+                                        selection = if (selectedTextState?.first == leftPage) selectedTextState?.second else null,
+                                        onLongPressPage = { selectedPageForActions = it },
+                                        onLongPressOffset = handleLongPressOffset
                                     )
                                 }
                                 Box(modifier = Modifier.weight(1f)) {
@@ -465,7 +486,9 @@ fun PdfViewerScreen(
                                             zoomScale = zoomScale,
                                             searchMatches = searchMatchesByPage[rightPage] ?: emptyList(),
                                             activeMatch = activeMatch,
-                                            onLongPressPage = { selectedPageForActions = it }
+                                            selection = if (selectedTextState?.first == rightPage) selectedTextState?.second else null,
+                                            onLongPressPage = { selectedPageForActions = it },
+                                            onLongPressOffset = handleLongPressOffset
                                         )
                                     }
                                 }
@@ -487,7 +510,9 @@ fun PdfViewerScreen(
                                 zoomScale = zoomScale,
                                 searchMatches = searchMatchesByPage[pageIndex] ?: emptyList(),
                                 activeMatch = activeMatch,
-                                onLongPressPage = { selectedPageForActions = it }
+                                selection = if (selectedTextState?.first == pageIndex) selectedTextState?.second else null,
+                                onLongPressPage = { selectedPageForActions = it },
+                                onLongPressOffset = handleLongPressOffset
                             )
                             Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                         }
@@ -510,7 +535,9 @@ fun PdfViewerScreen(
                                 zoomScale = zoomScale,
                                 searchMatches = searchMatchesByPage[pageIndex] ?: emptyList(),
                                 activeMatch = activeMatch,
-                                onLongPressPage = { selectedPageForActions = it }
+                                selection = if (selectedTextState?.first == pageIndex) selectedTextState?.second else null,
+                                onLongPressPage = { selectedPageForActions = it },
+                                onLongPressOffset = handleLongPressOffset
                             )
                         }
                     }
@@ -816,6 +843,7 @@ fun PdfViewerScreen(
         // Floating Contextual Action Pill (Copy, Share, Web Search, Read Aloud)
         if (selectedPageForActions != null) {
             val pageNum = selectedPageForActions!!
+            val activeSelectionText = if (selectedTextState?.first == pageNum) selectedTextState?.second?.selectedText else null
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -839,19 +867,20 @@ fun PdfViewerScreen(
                         // 1. Copy
                         FloatingPillItem(
                             icon = Icons.Outlined.ContentCopy,
-                            label = "Copy",
+                            label = if (activeSelectionText != null) "Copy" else "Copy Page",
                             tint = colors.accent
                         ) {
                             coroutineScope.launch {
-                                val text = viewModel.getPageText(pageNum)
+                                val text = activeSelectionText ?: viewModel.getPageText(pageNum)
                                 if (text.isNotBlank()) {
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    clipboard.setPrimaryClip(ClipData.newPlainText("Page ${pageNum + 1}", text))
-                                    Toast.makeText(context, "Page ${pageNum + 1} text copied", Toast.LENGTH_SHORT).show()
+                                    clipboard.setPrimaryClip(ClipData.newPlainText("PDF Text", text))
+                                    Toast.makeText(context, if (activeSelectionText != null) "Text copied to clipboard" else "Page ${pageNum + 1} text copied", Toast.LENGTH_SHORT).show()
                                 } else {
                                     Toast.makeText(context, "No text detected on this page", Toast.LENGTH_SHORT).show()
                                 }
                                 selectedPageForActions = null
+                                selectedTextState = null
                             }
                         }
 
@@ -862,28 +891,29 @@ fun PdfViewerScreen(
                             tint = Color(0xFF10B981)
                         ) {
                             coroutineScope.launch {
-                                val text = viewModel.getPageText(pageNum)
+                                val text = activeSelectionText ?: viewModel.getPageText(pageNum)
                                 if (text.isNotBlank()) {
                                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                         type = "text/plain"
                                         putExtra(Intent.EXTRA_TEXT, text)
                                     }
-                                    context.startActivity(Intent.createChooser(shareIntent, "Share Page ${pageNum + 1}"))
+                                    context.startActivity(Intent.createChooser(shareIntent, "Share Text"))
                                 } else {
                                     Toast.makeText(context, "No text to share", Toast.LENGTH_SHORT).show()
                                 }
                                 selectedPageForActions = null
+                                selectedTextState = null
                             }
                         }
 
                         // 3. Web Search
                         FloatingPillItem(
                             icon = Icons.Outlined.TextFields,
-                            label = "Web Search",
+                            label = "Search",
                             tint = Color(0xFF5B4FE8)
                         ) {
                             coroutineScope.launch {
-                                val text = viewModel.getPageText(pageNum)
+                                val text = activeSelectionText ?: viewModel.getPageText(pageNum)
                                 if (text.isNotBlank()) {
                                     val searchIntent = Intent(Intent.ACTION_WEB_SEARCH).apply {
                                         putExtra(SearchManager.QUERY, text.take(150))
@@ -897,6 +927,7 @@ fun PdfViewerScreen(
                                     Toast.makeText(context, "No text to search", Toast.LENGTH_SHORT).show()
                                 }
                                 selectedPageForActions = null
+                                selectedTextState = null
                             }
                         }
 
@@ -907,14 +938,16 @@ fun PdfViewerScreen(
                             tint = Color(0xFFAF52DE)
                         ) {
                             coroutineScope.launch {
-                                val text = viewModel.getPageText(pageNum)
+                                val text = activeSelectionText ?: viewModel.getPageText(pageNum)
                                 if (text.isNotBlank()) {
                                     currentTtsText = text
                                     isTtsVisible = true
+                                    ttsManager.startReading(text)
                                 } else {
                                     Toast.makeText(context, "No text to read", Toast.LENGTH_SHORT).show()
                                 }
                                 selectedPageForActions = null
+                                selectedTextState = null
                             }
                         }
 
@@ -923,7 +956,10 @@ fun PdfViewerScreen(
                             modifier = Modifier
                                 .size(30.dp)
                                 .clip(CircleShape)
-                                .clickable { selectedPageForActions = null },
+                                .clickable {
+                                    selectedPageForActions = null
+                                    selectedTextState = null
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             Text("✕", style = typography.caption.copy(fontWeight = FontWeight.Bold), color = colors.textSecondary)
@@ -1087,7 +1123,9 @@ private fun PageItemView(
     zoomScale: Float = 1f,
     searchMatches: List<com.abhisheksati.mydoc.rendering.engine.SearchMatch>,
     activeMatch: com.abhisheksati.mydoc.rendering.engine.SearchMatch? = null,
-    onLongPressPage: ((Int) -> Unit)? = null
+    selection: com.abhisheksati.mydoc.rendering.engine.TextSelectionResult? = null,
+    onLongPressPage: ((Int) -> Unit)? = null,
+    onLongPressOffset: ((Int, Offset, Size) -> Unit)? = null
 ) {
     val haptic = LocalHapticFeedback.current
     val (origWidth, origHeight) = remember(pageIndex) { viewModel.getPageSize(pageIndex) }
@@ -1243,9 +1281,13 @@ private fun PageItemView(
             }
             .pointerInput(pageIndex) {
                 detectTapGestures(
-                    onLongPress = {
+                    onLongPress = { offset ->
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onLongPressPage?.invoke(pageIndex)
+                        if (onLongPressOffset != null) {
+                            onLongPressOffset.invoke(pageIndex, offset, Size(size.width.toFloat(), size.height.toFloat()))
+                        } else {
+                            onLongPressPage?.invoke(pageIndex)
+                        }
                     }
                 )
             }
@@ -1313,6 +1355,26 @@ private fun PageItemView(
                                 size = Size(right - left, bottom - top)
                             )
                         }
+                    }
+                }
+            }
+
+            // Draw text selection highlight quads with brand violet
+            val sel = selection
+            if (sel != null && sel.highlightRects.isNotEmpty()) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val scaleX = size.width / origWidth
+                    val scaleY = size.height / origHeight
+                    for (rect in sel.highlightRects) {
+                        val left = rect.left * scaleX
+                        val top = rect.top * scaleY
+                        val right = rect.right * scaleX
+                        val bottom = rect.bottom * scaleY
+                        drawRect(
+                            color = Color(0x555B4FE8),
+                            topLeft = Offset(left, top),
+                            size = Size((right - left).coerceAtLeast(4f), (bottom - top).coerceAtLeast(4f))
+                        )
                     }
                 }
             }

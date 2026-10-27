@@ -17,6 +17,11 @@ data class OutlineItem(
     val children: List<OutlineItem> = emptyList()
 )
 
+data class TextSelectionResult(
+    val selectedText: String,
+    val highlightRects: List<RectF>
+)
+
 interface DocumentRenderer {
     val pageCount: Int
     val isPasswordProtected: Boolean
@@ -35,5 +40,7 @@ interface DocumentRenderer {
     fun getOutline(): List<OutlineItem>
     fun getPageText(pageIndex: Int): String = ""
     fun getDocumentText(): String = ""
+    fun selectTextAt(pageIndex: Int, point: android.graphics.PointF): TextSelectionResult? = null
+    fun selectTextBetween(pageIndex: Int, start: android.graphics.PointF, end: android.graphics.PointF): TextSelectionResult? = null
     fun close()
 }
