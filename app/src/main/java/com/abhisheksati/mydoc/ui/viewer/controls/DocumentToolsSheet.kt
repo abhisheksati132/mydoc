@@ -69,7 +69,6 @@ import com.abhisheksati.mydoc.tools.model.ToolGroup
 private data class FilterCategory(
     val group: ToolGroup?,
     val icon: ImageVector,
-    val color: Color,
     val label: String
 )
 
@@ -226,12 +225,12 @@ fun DocumentToolsSheet(
 
             // Category Filter Pills
             val categories = listOf(
-                FilterCategory(null, Icons.Outlined.AllInclusive, colors.accent, "All"),
-                FilterCategory(ToolGroup.EDIT, Icons.Outlined.Edit, Color(0xFFF59E0B), "Edit & Sign"),
-                FilterCategory(ToolGroup.ORGANIZE, Icons.AutoMirrored.Outlined.CallSplit, Color(0xFF3B82F6), "Organize"),
-                FilterCategory(ToolGroup.OPTIMIZE, Icons.Outlined.Compress, Color(0xFF10B981), "Optimize"),
-                FilterCategory(ToolGroup.CONVERT_FROM, Icons.Outlined.Difference, Color(0xFF6366F1), "Export"),
-                FilterCategory(ToolGroup.SECURITY, Icons.Outlined.Security, Color(0xFFEF4444), "Security")
+                FilterCategory(null, Icons.Outlined.AllInclusive, "All"),
+                FilterCategory(ToolGroup.EDIT, Icons.Outlined.Edit, "Edit & Sign"),
+                FilterCategory(ToolGroup.ORGANIZE, Icons.AutoMirrored.Outlined.CallSplit, "Organize"),
+                FilterCategory(ToolGroup.OPTIMIZE, Icons.Outlined.Compress, "Optimize"),
+                FilterCategory(ToolGroup.CONVERT_FROM, Icons.Outlined.Difference, "Export"),
+                FilterCategory(ToolGroup.SECURITY, Icons.Outlined.Security, "Security")
             )
 
             Row(
@@ -243,28 +242,26 @@ fun DocumentToolsSheet(
             ) {
                 for (cat in categories) {
                     val isSelected = selectedGroup == cat.group
-                    val chipBg = if (isSelected) cat.color.copy(alpha = 0.18f) else colors.surfaceContainer
-                    val chipBorder = if (isSelected) cat.color else colors.cardBorder
+                    val chipBg = if (isSelected) colors.accent.copy(alpha = 0.16f) else colors.surfaceContainer
+                    val contentColor = if (isSelected) colors.accent else colors.textSecondary
 
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = chipBg,
-                        border = BorderStroke(if (isSelected) 1.5.dp else 1.dp, chipBorder),
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
                             .clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                selectedGroup = cat.group
+                                selectedGroup = if (isSelected) null else cat.group
                             }
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
                             Icon(
                                 imageVector = cat.icon,
                                 contentDescription = cat.label,
-                                tint = if (isSelected) cat.color else cat.color.copy(alpha = 0.85f),
+                                tint = contentColor,
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -274,7 +271,7 @@ fun DocumentToolsSheet(
                                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                     fontSize = 12.sp
                                 ),
-                                color = if (isSelected) colors.textPrimary else colors.textSecondary
+                                color = if (isSelected) colors.accent else colors.textPrimary
                             )
                         }
                     }
@@ -297,7 +294,6 @@ fun DocumentToolsSheet(
                         tool = tool,
                         isDark = isDark,
                         onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onDismiss()
                             onSelectTool(tool)
                         }
@@ -318,20 +314,9 @@ private fun DocumentToolCard(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
 
-    val (groupTint, groupContainer) = when (tool.group) {
-        ToolGroup.ORGANIZE -> Color(0xFF3B82F6) to if (isDark) Color(0x283B82F6) else Color(0xFFDBEAFE)
-        ToolGroup.OPTIMIZE -> Color(0xFF10B981) to if (isDark) Color(0x2810B981) else Color(0xFFD1FAE5)
-        ToolGroup.CONVERT_TO -> Color(0xFF8B5CF6) to if (isDark) Color(0x288B5CF6) else Color(0xFFEDE9FE)
-        ToolGroup.CONVERT_FROM -> Color(0xFF6366F1) to if (isDark) Color(0x286366F1) else Color(0xFFE0E7FF)
-        ToolGroup.EDIT -> Color(0xFFF59E0B) to if (isDark) Color(0x28F59E0B) else Color(0xFFFEF3C7)
-        ToolGroup.SECURITY -> Color(0xFFEF4444) to if (isDark) Color(0x28EF4444) else Color(0xFFFEE2E2)
-        ToolGroup.SCAN -> Color(0xFF14B8A6) to if (isDark) Color(0x2814B8A6) else Color(0xFFCCFBF1)
-    }
-
     Surface(
         shape = RoundedCornerShape(14.dp),
         color = if (isDark) colors.surfaceContainer else colors.surface,
-        border = BorderStroke(1.dp, colors.cardBorder),
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
@@ -345,16 +330,16 @@ private fun DocumentToolCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(40.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(groupContainer),
+                    .background(colors.accent.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = tool.icon,
                     contentDescription = null,
-                    tint = groupTint,
-                    modifier = Modifier.size(22.dp)
+                    tint = colors.accent,
+                    modifier = Modifier.size(20.dp)
                 )
             }
 

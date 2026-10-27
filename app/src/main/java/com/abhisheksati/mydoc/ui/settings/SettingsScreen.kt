@@ -164,7 +164,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // 1. LOOK
-            SettingsCard(title = "APPEARANCE") {
+            SettingsCard(title = "Appearance") {
                 Text(
                     text = "Theme",
                     style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
@@ -179,44 +179,32 @@ fun SettingsScreen(
                         label = "Light",
                         icon = Icons.Outlined.LightMode,
                         selected = currentTheme == AppThemeMode.LIGHT,
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            settingsRepository.setThemeMode(AppThemeMode.LIGHT)
-                        }
+                        onClick = { settingsRepository.setThemeMode(AppThemeMode.LIGHT) }
                     )
                     ThemeChip(
                         label = "Dark",
                         icon = Icons.Outlined.DarkMode,
                         selected = currentTheme == AppThemeMode.DARK,
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            settingsRepository.setThemeMode(AppThemeMode.DARK)
-                        }
+                        onClick = { settingsRepository.setThemeMode(AppThemeMode.DARK) }
                     )
                     ThemeChip(
                         label = "Black",
                         icon = Icons.Outlined.Contrast,
                         selected = currentTheme == AppThemeMode.BLACK,
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            settingsRepository.setThemeMode(AppThemeMode.BLACK)
-                        }
+                        onClick = { settingsRepository.setThemeMode(AppThemeMode.BLACK) }
                     )
                     ThemeChip(
                         label = "System",
                         icon = null,
                         selected = currentTheme == AppThemeMode.SYSTEM,
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            settingsRepository.setThemeMode(AppThemeMode.SYSTEM)
-                        }
+                        onClick = { settingsRepository.setThemeMode(AppThemeMode.SYSTEM) }
                     )
                 }
 
                 SettingsDivider()
 
                 SettingToggleRow(
-                    title = "Pure AMOLED Black",
+                    title = "Pure black dark theme",
                     subtitle = "Use pitch black background in dark mode to save battery",
                     icon = Icons.Outlined.Contrast,
                     checked = amoledBlack,
@@ -226,21 +214,18 @@ fun SettingsScreen(
                 SettingsDivider()
 
                 SettingToggleRow(
-                    title = "Tactile Vibration Haptics",
-                    subtitle = "Vibration response for navigation, gestures, and actions",
+                    title = "Haptic feedback",
+                    subtitle = "Vibrate on button taps and actions",
                     icon = Icons.Outlined.Vibration,
                     checked = hapticFeedbackEnabled,
-                    onCheckedChange = {
-                        if (it) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        settingsRepository.setHapticFeedbackEnabled(it)
-                    }
+                    onCheckedChange = { settingsRepository.setHapticFeedbackEnabled(it) }
                 )
             }
 
             // 2. READING
-            SettingsCard(title = "READING & DOCUMENTS") {
+            SettingsCard(title = "Reading & documents") {
                 Text(
-                    text = "Default Reading Mode",
+                    text = "Default reading mode",
                     style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
                     color = colors.textSecondary,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -272,7 +257,7 @@ fun SettingsScreen(
                 SettingsDivider()
 
                 Text(
-                    text = "PDF Page Scaling",
+                    text = "PDF page scaling",
                     style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
                     color = colors.textSecondary,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -298,8 +283,8 @@ fun SettingsScreen(
                 SettingsDivider()
 
                 SettingToggleRow(
-                    title = "High-Quality Vector PDF",
-                    subtitle = "Supersample text and vectors for ultra-crisp reading",
+                    title = "High resolution rendering",
+                    subtitle = "Sharper text and detail in documents",
                     icon = Icons.Outlined.PictureAsPdf,
                     checked = highQualityPdf,
                     onCheckedChange = { settingsRepository.setHighQualityPdf(it) }
@@ -308,8 +293,8 @@ fun SettingsScreen(
                 SettingsDivider()
 
                 SettingToggleRow(
-                    title = "Double-Tap Quick Zoom",
-                    subtitle = "Double tap document page to jump to 2.5x zoom",
+                    title = "Double-tap to zoom",
+                    subtitle = "Double-tap a page to quickly zoom in or out",
                     icon = Icons.Outlined.Speed,
                     checked = doubleTapZoom,
                     onCheckedChange = { settingsRepository.setDoubleTapZoom(it) }
@@ -318,8 +303,8 @@ fun SettingsScreen(
                 SettingsDivider()
 
                 SettingToggleRow(
-                    title = "Keep Screen Awake While Reading",
-                    subtitle = "Prevents display timeout while reading documents",
+                    title = "Keep screen awake",
+                    subtitle = "Prevent display from sleeping while reading",
                     icon = Icons.Outlined.LightMode,
                     checked = keepScreenOn,
                     onCheckedChange = { settingsRepository.setKeepScreenOn(it) }
@@ -328,8 +313,8 @@ fun SettingsScreen(
                 SettingsDivider()
 
                 SettingToggleRow(
-                    title = "Volume Button Page Turning",
-                    subtitle = "Use volume keys to flip pages in book view",
+                    title = "Turn pages with volume buttons",
+                    subtitle = "Use volume buttons to flip pages in reader",
                     icon = Icons.Outlined.Vibration,
                     checked = volumeKeyTurning,
                     onCheckedChange = { settingsRepository.setVolumeKeyPageTurning(it) }
@@ -337,10 +322,10 @@ fun SettingsScreen(
             }
 
             // 3. MEDIA
-            SettingsCard(title = "VIDEO & AUDIO") {
+            SettingsCard(title = "Media playback") {
                 SettingToggleRow(
-                    title = "Hardware Video Acceleration",
-                    subtitle = "Use GPU hardware decoding for ultra-smooth 4K video playback",
+                    title = "Hardware acceleration",
+                    subtitle = "Use hardware decoding for smoother video",
                     icon = Icons.Outlined.Videocam,
                     checked = videoHwAccel,
                     onCheckedChange = { settingsRepository.setVideoHardwareAcceleration(it) }
@@ -349,7 +334,7 @@ fun SettingsScreen(
                 SettingsDivider()
 
                 SettingToggleRow(
-                    title = "Auto-Resume Video",
+                    title = "Resume video playback",
                     subtitle = "Remember last playback position and resume automatically",
                     icon = Icons.Outlined.Speed,
                     checked = autoResumeVideo,
@@ -359,8 +344,8 @@ fun SettingsScreen(
                 SettingsDivider()
 
                 SettingToggleRow(
-                    title = "Video Auto-Loop",
-                    subtitle = "Automatically replay videos when they reach the end",
+                    title = "Loop videos",
+                    subtitle = "Continuously replay videos automatically",
                     icon = Icons.Outlined.Repeat,
                     checked = videoAutoLoop,
                     onCheckedChange = { settingsRepository.setVideoAutoLoop(it) }
@@ -368,9 +353,9 @@ fun SettingsScreen(
             }
 
             // 4. LIBRARY
-            SettingsCard(title = "STORAGE & FILES") {
+            SettingsCard(title = "Storage & defaults") {
                 Text(
-                    text = "Default Startup Destination",
+                    text = "Default startup tab",
                     style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
                     color = colors.textSecondary,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -415,7 +400,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Thumbnail & Render Cache",
+                            text = "Cache files",
                             style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
                             color = colors.textPrimary
                         )
@@ -429,7 +414,6 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             val freed = settingsRepository.clearCache(context)
                             cacheSizeBytes = settingsRepository.getCacheSizeBytes(context)
                             val freedMb = freed / (1024.0 * 1024.0)
@@ -465,13 +449,13 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Recent History & Progress",
+                                text = "Clear history",
                                 style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
                                 color = colors.textPrimary
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Clear recent documents and continue reading/watching progress",
+                                text = "Clear recent opened files and progress",
                                 style = typography.caption.copy(fontSize = 12.sp),
                                 color = colors.textSecondary
                             )
@@ -479,7 +463,6 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(
                             onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onClearRecent()
                                 Toast.makeText(context, context.getString(R.string.recent_history_cleared), Toast.LENGTH_SHORT).show()
                             },
@@ -496,10 +479,10 @@ fun SettingsScreen(
             }
 
             // 5. PRIVACY & SECURITY
-            SettingsCard(title = "PRIVACY & SECURITY") {
+            SettingsCard(title = "Security") {
                 SettingToggleRow(
-                    title = "Biometric App Lock",
-                    subtitle = "Require fingerprint or device PIN to open app",
+                    title = "Biometric app lock",
+                    subtitle = "Require fingerprint or PIN to open app",
                     icon = Icons.Outlined.Security,
                     checked = biometricLockEnabled,
                     onCheckedChange = { isChecked ->
@@ -518,7 +501,7 @@ fun SettingsScreen(
             }
 
             // 6. ABOUT & UPDATES
-            SettingsCard(title = "ABOUT & UPDATES") {
+            SettingsCard(title = "Updates & about") {
 
                 when (val state = updateState) {
                     is UpdateUiState.Idle -> {
@@ -737,9 +720,8 @@ private fun SettingsCard(
         Text(
             text = title,
             style = typography.caption.copy(
-                fontWeight = FontWeight.Bold,
-                fontSize = 11.5.sp,
-                letterSpacing = 1.1.sp
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp
             ),
             color = colors.accent,
             modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
@@ -747,8 +729,7 @@ private fun SettingsCard(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            color = colors.surfaceContainer,
-            border = BorderStroke(1.dp, colors.cardBorder)
+            color = colors.surfaceContainer
         ) {
             Column(
                 modifier = Modifier
@@ -842,17 +823,13 @@ private fun ThemeChip(
 
     Surface(
         modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(10.dp),
-        color = if (selected) colors.accent.copy(alpha = 0.16f) else Color.Transparent,
-        border = BorderStroke(
-            width = if (selected) 1.5.dp else 1.dp,
-            color = if (selected) colors.accent else colors.divider
-        )
+        shape = RoundedCornerShape(12.dp),
+        color = if (selected) colors.accent.copy(alpha = 0.16f) else colors.surfaceContainerHigh
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (icon != null) {
@@ -868,7 +845,7 @@ private fun ThemeChip(
                 text = label,
                 style = typography.body.copy(
                     fontSize = 12.5.sp,
-                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
                 ),
                 color = if (selected) colors.accent else colors.textPrimary
             )

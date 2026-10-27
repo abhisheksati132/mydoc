@@ -1,6 +1,5 @@
 package com.abhisheksati.mydoc.tools.ui
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -18,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.CallSplit
@@ -26,13 +24,11 @@ import androidx.compose.material.icons.automirrored.outlined.MergeType
 import androidx.compose.material.icons.outlined.AllInclusive
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Compress
-import androidx.compose.material.icons.outlined.Difference
 import androidx.compose.material.icons.outlined.Draw
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.GridOn
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Security
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Transform
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -47,10 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -59,7 +52,6 @@ import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
 import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.BricolageFontFamily
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
@@ -70,14 +62,13 @@ import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
 private data class ToolNavCategory(
     val group: ToolGroup?,
     val icon: ImageVector,
-    val color: Color,
     val label: String
 )
 
 /**
  * Material 3 Expressive Tools Dashboard.
  *
- * User-friendly, plain English, zero developer jargon:
+ * User-friendly, plain English, unified cohesive palette:
  * 1. Prominent "Popular Essentials" 2-column cards on top (Scan, Merge, Compress, Sign, Organize, Protect).
  * 2. Intuitive Category Filter Chips.
  * 3. Clear, friendly list of all tools with plain human benefits.
@@ -93,7 +84,6 @@ fun ToolsScreen(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val haptic = LocalHapticFeedback.current
 
     var searchQuery by remember { mutableStateOf("") }
 
@@ -126,18 +116,6 @@ fun ToolsScreen(
         // App Header
         AppTabHeader(
             title = "Tools",
-            titleContent = {
-                Text(
-                    text = "Tools",
-                    fontFamily = BricolageFontFamily,
-                    style = typography.headline.copy(
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.8).sp
-                    ),
-                    color = colors.ink
-                )
-            },
             onSearchClick = { isSearchActive = !isSearchActive },
             isSearchActive = isSearchActive || searchQuery.isNotEmpty(),
             searchContent = {
@@ -153,13 +131,13 @@ fun ToolsScreen(
             onSettingsClick = onSettingsClick,
             bottomContent = {
                 val toolCategories = listOf(
-                    ToolNavCategory(null, Icons.Outlined.AllInclusive, colors.accent, "All"),
-                    ToolNavCategory(ToolGroup.ORGANIZE, Icons.AutoMirrored.Outlined.CallSplit, Color(0xFF3B82F6), "Organize"),
-                    ToolNavCategory(ToolGroup.OPTIMIZE, Icons.Outlined.Compress, Color(0xFF10B981), "Compress"),
-                    ToolNavCategory(ToolGroup.CONVERT_TO, Icons.Outlined.Transform, Color(0xFF8B5CF6), "Convert"),
-                    ToolNavCategory(ToolGroup.EDIT, Icons.Outlined.Edit, Color(0xFFF59E0B), "Sign & Edit"),
-                    ToolNavCategory(ToolGroup.SECURITY, Icons.Outlined.Security, Color(0xFFEF4444), "Security"),
-                    ToolNavCategory(ToolGroup.SCAN, Icons.Outlined.CameraAlt, Color(0xFF14B8A6), "Scan")
+                    ToolNavCategory(null, Icons.Outlined.AllInclusive, "All"),
+                    ToolNavCategory(ToolGroup.ORGANIZE, Icons.AutoMirrored.Outlined.CallSplit, "Organize"),
+                    ToolNavCategory(ToolGroup.OPTIMIZE, Icons.Outlined.Compress, "Compress"),
+                    ToolNavCategory(ToolGroup.CONVERT_TO, Icons.Outlined.Transform, "Convert"),
+                    ToolNavCategory(ToolGroup.EDIT, Icons.Outlined.Edit, "Sign & Edit"),
+                    ToolNavCategory(ToolGroup.SECURITY, Icons.Outlined.Security, "Security"),
+                    ToolNavCategory(ToolGroup.SCAN, Icons.Outlined.CameraAlt, "Scan")
                 )
 
                 Row(
@@ -171,17 +149,15 @@ fun ToolsScreen(
                 ) {
                     for (item in toolCategories) {
                         val isSelected = selectedToolGroup == item.group
-                        val chipBg = if (isSelected) item.color.copy(alpha = 0.16f) else colors.surfaceContainer
-                        val chipBorderColor = if (isSelected) item.color else colors.cardBorder
+                        val chipBg = if (isSelected) colors.accent.copy(alpha = 0.16f) else colors.surfaceContainer
+                        val contentColor = if (isSelected) colors.accent else colors.textSecondary
 
                         Surface(
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(14.dp),
                             color = chipBg,
-                            border = BorderStroke(1.dp, chipBorderColor),
                             modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
+                                .clip(RoundedCornerShape(14.dp))
                                 .clickable {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     selectedToolGroup = if (isSelected) null else item.group
                                 }
                         ) {
@@ -192,7 +168,7 @@ fun ToolsScreen(
                                 Icon(
                                     imageVector = item.icon,
                                     contentDescription = null,
-                                    tint = if (isSelected) item.color else colors.textSecondary,
+                                    tint = contentColor,
                                     modifier = Modifier.size(15.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
@@ -200,9 +176,9 @@ fun ToolsScreen(
                                     text = item.label,
                                     style = typography.caption.copy(
                                         fontSize = 12.5.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
                                     ),
-                                    color = if (isSelected) item.color else colors.textPrimary
+                                    color = if (isSelected) colors.accent else colors.textPrimary
                                 )
                             }
                         }
@@ -213,7 +189,7 @@ fun ToolsScreen(
                 DropdownMenuItem(
                     text = { Text("Scan Document", style = typography.body) },
                     leadingIcon = {
-                        Icon(Icons.Outlined.CameraAlt, contentDescription = null, tint = Color(0xFF14B8A6))
+                        Icon(Icons.Outlined.CameraAlt, contentDescription = null, tint = colors.accent)
                     },
                     onClick = {
                         onDismiss()
@@ -246,15 +222,14 @@ fun ToolsScreen(
                         Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
                             Text(
                                 text = "Popular Essentials",
-                                fontFamily = BricolageFontFamily,
-                                style = typography.title.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
-                                color = colors.ink
+                                style = typography.title.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
+                                color = colors.textPrimary
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = "Frequently used actions",
                                 style = typography.caption.copy(fontSize = 12.sp),
-                                color = colors.inkMuted
+                                color = colors.textSecondary
                             )
                             Spacer(modifier = Modifier.height(12.dp))
 
@@ -267,24 +242,14 @@ fun ToolsScreen(
                                     title = "Scan to PDF",
                                     subtitle = "Camera to document",
                                     icon = Icons.Outlined.CameraAlt,
-                                    color = Color(0xFF14B8A6),
-                                    isDark = isDarkTheme,
-                                    onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        onToolClick(PdfTool.SCAN_TO_PDF)
-                                    },
+                                    onClick = { onToolClick(PdfTool.SCAN_TO_PDF) },
                                     modifier = Modifier.weight(1f)
                                 )
                                 FeaturedToolCard(
                                     title = "Combine PDFs",
                                     subtitle = "Merge files together",
                                     icon = Icons.AutoMirrored.Outlined.MergeType,
-                                    color = Color(0xFF3B82F6),
-                                    isDark = isDarkTheme,
-                                    onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        onToolClick(PdfTool.MERGE)
-                                    },
+                                    onClick = { onToolClick(PdfTool.MERGE) },
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -299,24 +264,14 @@ fun ToolsScreen(
                                     title = "Make Smaller",
                                     subtitle = "Reduce PDF file size",
                                     icon = Icons.Outlined.Compress,
-                                    color = Color(0xFF10B981),
-                                    isDark = isDarkTheme,
-                                    onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        onToolClick(PdfTool.COMPRESS)
-                                    },
+                                    onClick = { onToolClick(PdfTool.COMPRESS) },
                                     modifier = Modifier.weight(1f)
                                 )
                                 FeaturedToolCard(
                                     title = "Sign PDF",
                                     subtitle = "Add your signature",
                                     icon = Icons.Outlined.Draw,
-                                    color = Color(0xFFF59E0B),
-                                    isDark = isDarkTheme,
-                                    onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        onToolClick(PdfTool.SIGN_PDF)
-                                    },
+                                    onClick = { onToolClick(PdfTool.SIGN_PDF) },
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -331,24 +286,14 @@ fun ToolsScreen(
                                     title = "Pick Pages",
                                     subtitle = "Reorder & rotate",
                                     icon = Icons.Outlined.GridOn,
-                                    color = Color(0xFF8B5CF6),
-                                    isDark = isDarkTheme,
-                                    onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        onToolClick(PdfTool.REORDER_PAGES)
-                                    },
+                                    onClick = { onToolClick(PdfTool.REORDER_PAGES) },
                                     modifier = Modifier.weight(1f)
                                 )
                                 FeaturedToolCard(
                                     title = "Lock PDF",
                                     subtitle = "Protect with password",
                                     icon = Icons.Outlined.Lock,
-                                    color = Color(0xFFEF4444),
-                                    isDark = isDarkTheme,
-                                    onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        onToolClick(PdfTool.PROTECT)
-                                    },
+                                    onClick = { onToolClick(PdfTool.PROTECT) },
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -387,9 +332,8 @@ fun ToolsScreen(
                         item(key = "card_${group.name}") {
                             val isOled = colors.background == DarkAppColors.background
                             Surface(
-                                shape = RoundedCornerShape(20.dp),
+                                shape = RoundedCornerShape(18.dp),
                                 color = if (isOled) colors.surface else colors.surfaceContainer,
-                                border = BorderStroke(1.dp, colors.cardBorder),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 20.dp)
@@ -398,10 +342,7 @@ fun ToolsScreen(
                                     toolsInGroup.forEachIndexed { index, tool ->
                                         ToolListRow(
                                             tool = tool,
-                                            onClick = {
-                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                onToolClick(tool)
-                                            }
+                                            onClick = { onToolClick(tool) }
                                         )
                                         if (index < toolsInGroup.size - 1) {
                                             HorizontalDivider(
@@ -422,27 +363,24 @@ fun ToolsScreen(
 }
 
 /**
- * 22dp Rounded Material 3 Expressive Featured Tool Card.
+ * Clean Material 3 Expressive Featured Tool Card.
  */
 @Composable
 private fun FeaturedToolCard(
     title: String,
     subtitle: String,
     icon: ImageVector,
-    color: Color,
-    isDark: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val containerColor = if (isDark) color.copy(alpha = 0.14f) else color.copy(alpha = 0.08f)
 
     Surface(
-        shape = RoundedCornerShape(22.dp),
-        color = containerColor,
-        border = BorderStroke(1.dp, color.copy(alpha = if (isDark) 0.3f else 0.18f)),
+        shape = RoundedCornerShape(16.dp),
+        color = colors.surfaceContainer,
         modifier = modifier
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
     ) {
         Column(
@@ -451,15 +389,15 @@ private fun FeaturedToolCard(
                 .padding(16.dp)
         ) {
             Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = color.copy(alpha = if (isDark) 0.35f else 0.2f),
+                shape = RoundedCornerShape(12.dp),
+                color = colors.accent.copy(alpha = 0.14f),
                 modifier = Modifier.size(40.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = color,
+                        tint = colors.accent,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -469,17 +407,16 @@ private fun FeaturedToolCard(
 
             Text(
                 text = title,
-                fontFamily = BricolageFontFamily,
-                style = typography.body.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
-                color = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+                style = typography.body.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
+                color = colors.textPrimary
             )
 
             Spacer(modifier = Modifier.height(2.dp))
 
             Text(
                 text = subtitle,
-                style = typography.caption.copy(fontSize = 11.5.sp),
-                color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                style = typography.caption.copy(fontSize = 12.sp),
+                color = colors.textSecondary
             )
         }
     }
@@ -493,30 +430,6 @@ private fun ToolListRow(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val isDark = colors.background == DarkAppColors.background
-
-    val (groupTint, groupContainer) = when (tool.group) {
-        ToolGroup.ORGANIZE -> Color(0xFF3B82F6) to if (isDark) Color(0x283B82F6) else Color(0xFFDBEAFE)
-        ToolGroup.OPTIMIZE -> Color(0xFF10B981) to if (isDark) Color(0x2810B981) else Color(0xFFD1FAE5)
-        ToolGroup.CONVERT_TO -> Color(0xFF8B5CF6) to if (isDark) Color(0x288B5CF6) else Color(0xFFEDE9FE)
-        ToolGroup.CONVERT_FROM -> Color(0xFF6366F1) to if (isDark) Color(0x286366F1) else Color(0xFFE0E7FF)
-        ToolGroup.EDIT -> Color(0xFFF59E0B) to if (isDark) Color(0x28F59E0B) else Color(0xFFFEF3C7)
-        ToolGroup.SECURITY -> Color(0xFFEF4444) to if (isDark) Color(0x28EF4444) else Color(0xFFFEE2E2)
-        ToolGroup.SCAN -> Color(0xFF14B8A6) to if (isDark) Color(0x2814B8A6) else Color(0xFFCCFBF1)
-    }
-
-    // Friendly, user-oriented badges (no developer jargon)
-    val friendlyBadge: String? = when (tool) {
-        PdfTool.SCAN_TO_PDF -> "Camera"
-        PdfTool.COMPRESS -> "Popular"
-        PdfTool.PROTECT -> "Lock"
-        PdfTool.UNLOCK -> "Unlock"
-        PdfTool.MERGE -> "Popular"
-        PdfTool.SIGN_PDF -> "Signature"
-        PdfTool.REORDER_PAGES -> "Visual"
-        PdfTool.IMAGE_TO_PDF -> "Easy"
-        else -> null
-    }
 
     Row(
         modifier = modifier
@@ -525,18 +438,17 @@ private fun ToolListRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Expressive Squircle container
         Box(
             modifier = Modifier
-                .size(42.dp)
-                .clip(RoundedCornerShape(13.dp))
-                .background(groupContainer),
+                .size(40.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(colors.accent.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = tool.icon,
                 contentDescription = null,
-                tint = groupTint,
+                tint = colors.accent,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -558,22 +470,6 @@ private fun ToolListRow(
                 color = colors.textSecondary,
                 maxLines = 1
             )
-        }
-
-        if (friendlyBadge != null) {
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = groupTint.copy(alpha = 0.12f),
-                border = BorderStroke(1.dp, groupTint.copy(alpha = 0.25f)),
-                modifier = Modifier.padding(start = 8.dp)
-            ) {
-                Text(
-                    text = friendlyBadge,
-                    style = typography.caption.copy(fontSize = 10.5.sp, fontWeight = FontWeight.Bold),
-                    color = groupTint,
-                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp)
-                )
-            }
         }
     }
 }
