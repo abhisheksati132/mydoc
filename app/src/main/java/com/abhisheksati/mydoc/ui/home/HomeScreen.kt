@@ -40,6 +40,7 @@ import com.abhisheksati.mydoc.tools.ui.components.CameraScanSheet
 import com.abhisheksati.mydoc.tools.ui.components.SignPdfSheet
 import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
 import com.abhisheksati.mydoc.ui.filemanager.FileManagerScreen
+import com.abhisheksati.mydoc.ui.search.SpotlightSearchSheet
 import com.abhisheksati.mydoc.ui.storage.StorageViewModel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -100,14 +101,10 @@ fun HomeScreen(
     var showSignaturePad by remember { mutableStateOf(false) }
     var selectedDocForDetails by remember { mutableStateOf<DocumentFile?>(null) }
     var documentToDelete by remember { mutableStateOf<DocumentFile?>(null) }
+    var showSpotlightSearch by remember { mutableStateOf(false) }
 
     val documentScanner = com.abhisheksati.mydoc.tools.scan.rememberDocumentScanner(
-        onPages = { uris ->
-            showCameraScanner = false
-            toolsViewModel.setInputUris(uris)
-            toolsViewModel.selectTool(PdfTool.SCAN_TO_PDF)
-        },
-        onError = {
+        onLaunchScanner = {
             showCameraScanner = true
         }
     )
@@ -320,7 +317,7 @@ fun HomeScreen(
                         recentItems = uiState.recentLibraryItems,
                         onItemClick = onLibraryItemClick,
                         onSearchClick = {
-                            viewModel.selectTab(HomeTab.FILES)
+                            showSpotlightSearch = true
                         },
                         onScanClick = {
                             documentScanner()
@@ -449,6 +446,19 @@ fun HomeScreen(
                 showSignaturePad = false
                 Toast.makeText(context, "Signature encrypted and saved.", Toast.LENGTH_SHORT).show()
             }
+        )
+    }
+
+    // Unified Apple Spotlight Search Sheet
+    if (showSpotlightSearch) {
+        SpotlightSearchSheet(
+            items = uiState.libraryItems.ifEmpty { uiState.recentLibraryItems },
+            onItemClick = { item ->
+                showSpotlightSearch = false
+                onLibraryItemClick(item)
+            },
+            onDismiss = { showSpotlightSearch = false },
+            isDarkTheme = isDarkTheme
         )
     }
 }

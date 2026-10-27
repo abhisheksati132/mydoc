@@ -503,13 +503,11 @@ fun CameraScanSheet(
             }
 
             // Bottom Section: Multi-page Thumbnails Carousel & Shutter Bar
-            val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-            val safeBottomPadding = maxOf(navBarBottom, 20.dp)
-
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
+                    .navigationBarsPadding()
             ) {
                 // Scanned Pages Horizontal Strip (collapsible if empty)
                 AnimatedVisibility(
@@ -641,14 +639,14 @@ fun CameraScanSheet(
                 // Shutter Controls Container - safely padded above navigation bars
                 Surface(
                     color = Color(0xF20D0D0D),
-                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 28.dp, vertical = 12.dp)
-                            .padding(bottom = safeBottomPadding),
+                            .padding(horizontal = 28.dp)
+                            .padding(top = 16.dp, bottom = 32.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {

@@ -893,7 +893,7 @@ fun FileManagerScreen(
                     Card(
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(containerColor = colors.surface),
-                        border = BorderStroke(1.dp, colors.cardBorder),
+                        
                         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -1297,7 +1297,7 @@ fun StorageVolumeSummary(
             Surface(
                 shape = RoundedCornerShape(18.dp),
                 color = colors.surface,
-                border = BorderStroke(1.dp, colors.cardBorder),
+                
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp)

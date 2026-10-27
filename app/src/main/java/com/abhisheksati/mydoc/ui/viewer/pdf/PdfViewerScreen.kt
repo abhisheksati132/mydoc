@@ -1,6 +1,9 @@
 package com.abhisheksati.mydoc.ui.viewer.pdf
 
 import android.app.Activity
+import android.app.SearchManager
+import com.abhisheksati.mydoc.designsystem.components.liquidGlass
+import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.ClipData
@@ -23,6 +26,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.size
 import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.ui.viewer.controls.DocumentToolsSheet
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
@@ -250,12 +256,14 @@ fun PdfViewerScreen(
         }
     }
 
-    // Auto-hide controls after 3 seconds of active scrolling
+    // Auto-hide controls quickly when user starts active scrolling for maximum reading immersion
     val isScrolling = lazyListState.isScrollInProgress || pagerState.isScrollInProgress
     LaunchedEffect(isScrolling) {
         if (isScrolling && state.areControlsVisible) {
-            kotlinx.coroutines.delay(3000L)
-            viewModel.setControlsVisible(false)
+            kotlinx.coroutines.delay(350L)
+            if (lazyListState.isScrollInProgress || pagerState.isScrollInProgress) {
+                viewModel.setControlsVisible(false)
+            }
         }
     }
 
@@ -805,6 +813,126 @@ fun PdfViewerScreen(
             modifier = Modifier.align(Alignment.BottomCenter)
         )
 
+        // Floating Contextual Action Pill (Copy, Share, Web Search, Read Aloud)
+        if (selectedPageForActions != null) {
+            val pageNum = selectedPageForActions!!
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(top = 64.dp, start = 20.dp, end = 20.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                Box(
+                    modifier = Modifier
+                        .liquidGlass(
+                            isDarkTheme = state.readingMode == ReadingMode.INVERTED_DARK,
+                            shape = RoundedCornerShape(28.dp),
+                            elevation = 8.dp
+                        )
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        // 1. Copy
+                        FloatingPillItem(
+                            icon = Icons.Outlined.ContentCopy,
+                            label = "Copy",
+                            tint = colors.accent
+                        ) {
+                            coroutineScope.launch {
+                                val text = viewModel.getPageText(pageNum)
+                                if (text.isNotBlank()) {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    clipboard.setPrimaryClip(ClipData.newPlainText("Page ${pageNum + 1}", text))
+                                    Toast.makeText(context, "Page ${pageNum + 1} text copied", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "No text detected on this page", Toast.LENGTH_SHORT).show()
+                                }
+                                selectedPageForActions = null
+                            }
+                        }
+
+                        // 2. Share
+                        FloatingPillItem(
+                            icon = Icons.Outlined.Share,
+                            label = "Share",
+                            tint = Color(0xFF10B981)
+                        ) {
+                            coroutineScope.launch {
+                                val text = viewModel.getPageText(pageNum)
+                                if (text.isNotBlank()) {
+                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT, text)
+                                    }
+                                    context.startActivity(Intent.createChooser(shareIntent, "Share Page ${pageNum + 1}"))
+                                } else {
+                                    Toast.makeText(context, "No text to share", Toast.LENGTH_SHORT).show()
+                                }
+                                selectedPageForActions = null
+                            }
+                        }
+
+                        // 3. Web Search
+                        FloatingPillItem(
+                            icon = Icons.Outlined.TextFields,
+                            label = "Web Search",
+                            tint = Color(0xFF007AFF)
+                        ) {
+                            coroutineScope.launch {
+                                val text = viewModel.getPageText(pageNum)
+                                if (text.isNotBlank()) {
+                                    val searchIntent = Intent(Intent.ACTION_WEB_SEARCH).apply {
+                                        putExtra(SearchManager.QUERY, text.take(150))
+                                    }
+                                    try {
+                                        context.startActivity(searchIntent)
+                                    } catch (_: Exception) {
+                                        Toast.makeText(context, "No browser found", Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    Toast.makeText(context, "No text to search", Toast.LENGTH_SHORT).show()
+                                }
+                                selectedPageForActions = null
+                            }
+                        }
+
+                        // 4. Read Aloud
+                        FloatingPillItem(
+                            icon = Icons.AutoMirrored.Outlined.VolumeUp,
+                            label = "Speak",
+                            tint = Color(0xFFAF52DE)
+                        ) {
+                            coroutineScope.launch {
+                                val text = viewModel.getPageText(pageNum)
+                                if (text.isNotBlank()) {
+                                    currentTtsText = text
+                                    isTtsVisible = true
+                                } else {
+                                    Toast.makeText(context, "No text to read", Toast.LENGTH_SHORT).show()
+                                }
+                                selectedPageForActions = null
+                            }
+                        }
+
+                        // Close button
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .clickable { selectedPageForActions = null },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("✕", style = typography.caption.copy(fontWeight = FontWeight.Bold), color = colors.textSecondary)
+                        }
+                    }
+                }
+            }
+        }
+
         // Page Contextual Action Sheet (Copy, Read, Share, OCR)
         if (selectedPageForActions != null) {
             val pageNum = selectedPageForActions!!
@@ -1193,5 +1321,29 @@ private fun PageItemView(
                 AppProgressIndicator()
             }
         }
+    }
+}
+
+
+@Composable
+private fun FloatingPillItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    val typography = LocalAppTypography.current
+    val colors = LocalAppColors.current
+
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(imageVector = icon, contentDescription = label, tint = tint, modifier = Modifier.size(16.dp))
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(text = label, style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp), color = colors.textPrimary)
     }
 }

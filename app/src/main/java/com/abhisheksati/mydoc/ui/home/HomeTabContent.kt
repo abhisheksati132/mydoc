@@ -25,6 +25,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
+import androidx.compose.material.icons.outlined.AutoStories
+import androidx.compose.material.icons.outlined.PictureAsPdf
+import androidx.compose.material.icons.outlined.Draw
+import androidx.compose.material.icons.outlined.Compress
+import androidx.compose.material.icons.automirrored.outlined.MergeType
 import androidx.compose.material.icons.outlined.Audiotrack
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Image
@@ -229,76 +234,182 @@ fun HomeTabContent(
                 Spacer(modifier = Modifier.height(20.dp))
             }
 
-            // 4. Quick Categories (Tactile Spring Tiles)
-            item(key = "categories_section") {
+            // 4. Jump Back In (Continue Reading Hero Card)
+            val continueItem = continueItems.firstOrNull()
+            if (continueItem != null) {
+                item(key = "continue_reading_hero") {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp)
+                            .pressScaleEffect(onClick = { onItemClick(continueItem) })
+                            .liquidGlass(
+                                isDarkTheme = isDarkTheme,
+                                tintColor = Color(0xFFAF52DE),
+                                shape = RoundedCornerShape(22.dp),
+                                elevation = 5.dp
+                            )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(18.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(26.dp)
+                                            .clip(CircleShape)
+                                            .background(LiquidGlassTokens.VioletLiquid),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.AutoStories,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Jump Back In",
+                                        style = typography.caption.copy(fontSize = 12.5.sp, fontWeight = FontWeight.Bold),
+                                        color = colors.accent
+                                    )
+                                }
+
+                                if (continueItem.progressFraction > 0f) {
+                                    val pct = (continueItem.progressFraction * 100).toInt()
+                                    Text(
+                                        text = "$pct% completed",
+                                        style = typography.caption.copy(fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold),
+                                        color = colors.inkMuted
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = continueItem.name,
+                                        style = typography.title.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
+                                        color = colors.ink,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "${continueItem.extension.uppercase()} • ${continueItem.formattedSize}",
+                                        style = typography.caption.copy(fontSize = 12.sp),
+                                        color = colors.inkMuted
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = colors.accent,
+                                    modifier = Modifier.clickable { onItemClick(continueItem) }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Resume",
+                                            style = typography.caption.copy(
+                                                color = colors.onAccent,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.5.sp
+                                            )
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
+                                            contentDescription = null,
+                                            tint = colors.onAccent,
+                                            modifier = Modifier.size(13.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (continueItem.progressFraction > 0f) {
+                                Spacer(modifier = Modifier.height(10.dp))
+                                LinearProgressIndicator(
+                                    progress = { continueItem.progressFraction },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(4.dp)
+                                        .clip(RoundedCornerShape(2.dp)),
+                                    color = colors.accent,
+                                    trackColor = colors.surfaceMuted
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(18.dp))
+                }
+            }
+
+            // 5. Quick Tools Strip (1-tap shortcuts)
+            item(key = "quick_tools_section") {
                 Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                     Text(
-                        text = "Categories",
+                        text = "Quick Tools",
                         style = typography.heading.copy(fontSize = 17.sp, fontWeight = FontWeight.Bold),
                         color = colors.ink
                     )
-
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Row 1: Documents & Photos (Liquid Glass)
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        CategoryTile(
-                            title = "Documents",
-                            subtitle = "PDF, Word, Excel",
-                            icon = Icons.AutoMirrored.Outlined.InsertDriveFile,
-                            tintColor = Color(0xFF007AFF),
+                        QuickToolPill(
+                            title = "Combine PDF",
+                            icon = Icons.AutoMirrored.Outlined.MergeType,
                             gradient = LiquidGlassTokens.AzureLiquid,
                             isDarkTheme = isDarkTheme,
-                            onClick = { onCategoryClick(FileCategory.DOCUMENTS) },
-                            modifier = Modifier.weight(1f)
+                            onClick = { onToolClick(PdfTool.MERGE) }
                         )
-
-                        CategoryTile(
-                            title = "Photos",
-                            subtitle = "Images & Gallery",
-                            icon = Icons.Outlined.Image,
-                            tintColor = Color(0xFFFF2D55),
+                        QuickToolPill(
+                            title = "Compress",
+                            icon = Icons.Outlined.Compress,
+                            gradient = LiquidGlassTokens.AuroraLiquid,
+                            isDarkTheme = isDarkTheme,
+                            onClick = { onToolClick(PdfTool.COMPRESS) }
+                        )
+                        QuickToolPill(
+                            title = "Sign Doc",
+                            icon = Icons.Outlined.Draw,
                             gradient = LiquidGlassTokens.SunsetLiquid,
                             isDarkTheme = isDarkTheme,
-                            onClick = { onCategoryClick(FileCategory.IMAGES) },
-                            modifier = Modifier.weight(1f)
+                            onClick = { onToolClick(PdfTool.SIGN_PDF) }
                         )
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Row 2: Videos & Audio (Liquid Glass)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        CategoryTile(
-                            title = "Videos",
-                            subtitle = "Clips & Movies",
-                            icon = Icons.Outlined.Videocam,
-                            tintColor = Color(0xFFFF9500),
+                        QuickToolPill(
+                            title = "Img to PDF",
+                            icon = Icons.Outlined.PictureAsPdf,
                             gradient = LiquidGlassTokens.AmberLiquid,
                             isDarkTheme = isDarkTheme,
-                            onClick = { onCategoryClick(FileCategory.VIDEOS) },
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        CategoryTile(
-                            title = "Audio",
-                            subtitle = "Recordings & Music",
-                            icon = Icons.Outlined.Audiotrack,
-                            tintColor = Color(0xFFAF52DE),
-                            gradient = LiquidGlassTokens.VioletLiquid,
-                            isDarkTheme = isDarkTheme,
-                            onClick = { onCategoryClick(FileCategory.AUDIO) },
-                            modifier = Modifier.weight(1f)
+                            onClick = { onToolClick(PdfTool.IMAGE_TO_PDF) }
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(22.dp))
+                Spacer(modifier = Modifier.height(20.dp))
             }
 
             // 5. Section: Recent Documents Header
@@ -608,6 +719,58 @@ private fun RecentItemRow(
                 contentDescription = null,
                 tint = colors.inkMuted.copy(alpha = 0.4f),
                 modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
+
+/**
+ * 1-Tap Quick Tool Shortcut Pill
+ */
+@Composable
+private fun QuickToolPill(
+    title: String,
+    icon: ImageVector,
+    gradient: androidx.compose.ui.graphics.Brush,
+    isDarkTheme: Boolean,
+    onClick: () -> Unit
+) {
+    val colors = AppTheme.colors
+    val typography = AppTheme.typography
+
+    Box(
+        modifier = Modifier
+            .pressScaleEffect(onClick = onClick)
+            .liquidGlass(
+                isDarkTheme = isDarkTheme,
+                shape = RoundedCornerShape(16.dp),
+                elevation = 3.dp
+            )
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(gradient),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(9.dp))
+            Text(
+                text = title,
+                style = typography.caption.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
+                color = colors.ink
             )
         }
     }
