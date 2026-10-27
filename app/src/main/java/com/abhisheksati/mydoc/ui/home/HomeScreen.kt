@@ -1,4 +1,4 @@
-﻿package com.abhisheksati.mydoc.ui.home
+package com.abhisheksati.mydoc.ui.home
 
 import android.net.Uri
 import android.widget.Toast
@@ -337,20 +337,6 @@ fun HomeScreen(
                         },
                         onToolClick = { tool ->
                             toolsViewModel.selectTool(tool)
-                        },
-                        onCheckForUpdatesClick = {
-                            if (updateManager != null) {
-                                scope.launch {
-                                    Toast.makeText(context, "Checking for updates…", Toast.LENGTH_SHORT).show()
-                                    updateManager.checkForUpdates(isLaunchCheck = false)
-                                    val resultState = updateManager.state.value
-                                    if (resultState is UpdateUiState.NoUpdate) {
-                                        Toast.makeText(context, "mydoc is up to date (v${resultState.currentVersion})", Toast.LENGTH_SHORT).show()
-                                    } else if (resultState is UpdateUiState.Error) {
-                                        Toast.makeText(context, "Update check: ${resultState.message}", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            }
                         },
                         onSettingsClick = onSettingsClick,
                         onToggleTheme = onToggleTheme,

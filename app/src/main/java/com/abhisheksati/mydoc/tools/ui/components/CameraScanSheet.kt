@@ -49,15 +49,22 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -133,6 +140,16 @@ fun CameraScanSheet(
         )
     ) {
         BackHandler(onBack = onDismiss)
+
+        val view = LocalView.current
+        DisposableEffect(view) {
+            val window = (view.parent as? DialogWindowProvider)?.window
+            if (window != null) {
+                window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                WindowCompat.setDecorFitsSystemWindows(window, false)
+            }
+            onDispose {}
+        }
 
         val context = LocalContext.current
         val lifecycleOwner = LocalLifecycleOwner.current
@@ -295,10 +312,10 @@ fun CameraScanSheet(
                 val screenW = maxWidth
                 val screenH = maxHeight
 
-                // Calculate viewfinder frame size based on aspect ratio
+                // Calculate viewfinder frame size based on aspect ratio with generous clearance
                 val targetAspect = selectedMode.ratio
-                val maxFrameWidth = screenW * 0.88f
-                val maxFrameHeight = screenH * 0.58f
+                val maxFrameWidth = screenW * 0.86f
+                val maxFrameHeight = screenH * 0.46f
 
                 val (frameWidth, frameHeight) = if (maxFrameWidth / maxFrameHeight > targetAspect) {
                     Pair(maxFrameHeight * targetAspect, maxFrameHeight)
@@ -309,7 +326,7 @@ fun CameraScanSheet(
                 // Semi-transparent Scrim Mask with punched-out frame
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val frameLeft = (size.width - frameWidth.toPx()) / 2f
-                    val frameTop = (size.height - frameHeight.toPx()) / 2f - 24.dp.toPx()
+                    val frameTop = (size.height - frameHeight.toPx()) / 2f - 38.dp.toPx()
                     val frameRight = frameLeft + frameWidth.toPx()
                     val frameBottom = frameTop + frameHeight.toPx()
                     val cornerRadius = CornerRadius(16.dp.toPx(), 16.dp.toPx())
@@ -370,23 +387,22 @@ fun CameraScanSheet(
                     )
                 }
 
-                // Helper Hint text below frame
+                // Helper Hint text above or below frame
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 180.dp),
-                    contentAlignment = Alignment.Center
+                        .align(Alignment.TopCenter)
+                        .padding(top = 114.dp)
                 ) {
                     Surface(
                         color = Color(0x99000000),
                         shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.padding(top = frameHeight + 16.dp)
+                        border = BorderStroke(0.6.dp, Color(0x33FFFFFF))
                     ) {
                         Text(
                             text = "Align document inside frame",
-                            style = typography.caption.copy(fontSize = 12.sp, fontWeight = FontWeight.Medium),
+                            style = typography.caption.copy(fontSize = 11.5.sp, fontWeight = FontWeight.Medium),
                             color = Color.White.copy(alpha = 0.9f),
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp)
                         )
                     }
                 }
@@ -513,11 +529,13 @@ fun CameraScanSheet(
             }
 
             // Bottom Section: Multi-page Thumbnails Carousel & Shutter Bar
+            val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            val safeBottomPadding = maxOf(navBarBottom, 20.dp)
+
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .navigationBarsPadding()
             ) {
                 // Scanned Pages Horizontal Strip (collapsible if empty)
                 AnimatedVisibility(
@@ -528,8 +546,8 @@ fun CameraScanSheet(
                     LazyRow(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(horizontal = 4.dp)
                     ) {
                         itemsIndexed(
@@ -538,7 +556,7 @@ fun CameraScanSheet(
                         ) { idx, file ->
                             Box(
                                 modifier = Modifier
-                                    .size(width = 54.dp, height = 72.dp)
+                                    .size(width = 46.dp, height = 62.dp)
                                     .clip(RoundedCornerShape(8.dp))
                                     .border(1.5.dp, colors.accent, RoundedCornerShape(8.dp))
                                     .background(Color(0xFF212121))
@@ -648,17 +666,18 @@ fun CameraScanSheet(
                     }
                 }
 
-                // Shutter Controls Container
+                // Shutter Controls Container - safely padded above navigation bars
                 Surface(
-                    color = Color(0xCC0D0D0D),
-                    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                    color = Color(0xF20D0D0D),
+                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                     border = BorderStroke(0.6.dp, Color(0x22FFFFFF)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 32.dp, vertical = 18.dp),
+                            .padding(horizontal = 28.dp, vertical = 12.dp)
+                            .padding(bottom = safeBottomPadding),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -669,7 +688,7 @@ fun CameraScanSheet(
                                 galleryLauncher.launch("image/*")
                             },
                             modifier = Modifier
-                                .size(50.dp)
+                                .size(48.dp)
                                 .clip(CircleShape)
                                 .background(Color(0x33FFFFFF))
                         ) {
@@ -677,17 +696,17 @@ fun CameraScanSheet(
                                 imageVector = Icons.Outlined.PhotoLibrary,
                                 contentDescription = "Import from gallery",
                                 tint = Color.White,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(22.dp)
                             )
                         }
 
-                        // Premium Shutter Trigger
+                        // Premium Tactile Shutter Trigger
                         Box(
                             modifier = Modifier
-                                .size(78.dp)
+                                .size(68.dp)
                                 .clip(CircleShape)
-                                .border(3.5.dp, Color.White, CircleShape)
-                                .padding(5.dp),
+                                .border(3.dp, Color.White, CircleShape)
+                                .padding(4.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Box(
@@ -728,7 +747,7 @@ fun CameraScanSheet(
 
                         // Right slot: Finalize Checkmark or spacer
                         Box(
-                            modifier = Modifier.size(50.dp),
+                            modifier = Modifier.size(48.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             if (capturedFiles.isNotEmpty()) {

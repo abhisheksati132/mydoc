@@ -33,7 +33,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Audiotrack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Slider
+import com.abhisheksati.mydoc.designsystem.components.AppSlider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -288,7 +288,7 @@ fun AudioPlayerScreen(
                 (p.toFloat() / totalDurationMs).coerceIn(0f, 1f)
             } else 0f
 
-            Slider(
+            AppSlider(
                 value = progressFrac,
                 onValueChange = { frac ->
                     isSeeking = true

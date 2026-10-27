@@ -718,41 +718,6 @@ fun SettingsScreen(
                         }
                     }
                 }
-
-                SettingsDivider()
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .clickable(onClick = onDesignSystemPreviewClick)
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(colors.accent.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Outlined.Palette, contentDescription = null, tint = colors.accent, modifier = Modifier.size(19.dp))
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Design System Tokens",
-                            style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
-                            color = colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Preview color tokens, radii, typography, and elevations",
-                            style = typography.caption.copy(fontSize = 12.sp),
-                            color = colors.textSecondary
-                        )
-                    }
-                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))

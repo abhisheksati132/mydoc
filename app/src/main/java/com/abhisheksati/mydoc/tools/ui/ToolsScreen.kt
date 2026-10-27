@@ -127,24 +127,16 @@ fun ToolsScreen(
         AppTabHeader(
             title = "Tools",
             titleContent = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Tools",
-                        fontFamily = BricolageFontFamily,
-                        style = typography.headline.copy(
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = (-0.8).sp
-                        ),
-                        color = colors.ink
-                    )
-                    Spacer(modifier = Modifier.width(3.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(7.dp)
-                            .background(Color(0xFF3B82F6), CircleShape)
-                    )
-                }
+                Text(
+                    text = "Tools",
+                    fontFamily = BricolageFontFamily,
+                    style = typography.headline.copy(
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.8).sp
+                    ),
+                    color = colors.ink
+                )
             },
             onSearchClick = { isSearchActive = !isSearchActive },
             isSearchActive = isSearchActive || searchQuery.isNotEmpty(),
@@ -228,18 +220,6 @@ fun ToolsScreen(
                         onToolClick(PdfTool.SCAN_TO_PDF)
                     }
                 )
-                if (onSettingsClick != null) {
-                    DropdownMenuItem(
-                        text = { Text("Settings", style = typography.body) },
-                        leadingIcon = {
-                            Icon(Icons.Outlined.Settings, contentDescription = null, tint = colors.textSecondary)
-                        },
-                        onClick = {
-                            onDismiss()
-                            onSettingsClick()
-                        }
-                    )
-                }
             }
         )
 
