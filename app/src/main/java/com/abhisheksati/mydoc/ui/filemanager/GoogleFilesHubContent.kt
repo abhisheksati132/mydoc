@@ -258,15 +258,13 @@ fun GoogleFilesHubContent(
             )
             Spacer(modifier = Modifier.height(10.dp))
 
-            Box(
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = if (isOled) colors.surface else colors.surfaceContainer,
+                border = BorderStroke(0.5.dp, colors.divider.copy(alpha = 0.4f)),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .liquidGlass(
-                        isDarkTheme = isOled,
-                        shape = RoundedCornerShape(22.dp),
-                        elevation = 3.dp
-                    )
             ) {
                 Column {
                     // Recycle Bin Item
@@ -423,18 +421,16 @@ private fun GoogleFilesCategoryCard(
         label = "cardScale"
     )
 
-    Box(
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = if (isOled) colors.surface else colors.surfaceContainer,
+        border = BorderStroke(0.5.dp, colors.divider.copy(alpha = 0.4f)),
         modifier = modifier
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
             }
-            .liquidGlass(
-                isDarkTheme = isOled,
-                tintColor = tint,
-                shape = RoundedCornerShape(20.dp),
-                elevation = 3.dp
-            )
+            .clip(RoundedCornerShape(14.dp))
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -509,7 +505,10 @@ private fun InternalStorageCard(
         label = "internalStorageScale"
     )
 
-    Box(
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = if (isOled) colors.surface else colors.surfaceContainer,
+        border = BorderStroke(0.5.dp, colors.divider.copy(alpha = 0.4f)),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
@@ -517,11 +516,7 @@ private fun InternalStorageCard(
                 scaleX = scale
                 scaleY = scale
             }
-            .liquidGlass(
-                isDarkTheme = isOled,
-                shape = RoundedCornerShape(20.dp),
-                elevation = 3.dp
-            )
+            .clip(RoundedCornerShape(16.dp))
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
     ) {
         Row(
@@ -781,15 +776,13 @@ private fun MasterStorageGaugeCard(
     val appsWeight = (appsBytes.toFloat() / totalBytes).coerceIn(0f, 1f)
     val otherUsedWeight = ((usedBytes - (docsBytes + imagesBytes + videosBytes + audioBytes + appsBytes)).coerceAtLeast(0L).toFloat() / totalBytes).coerceIn(0f, 1f)
 
-    Box(
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = if (isDarkTheme) colors.surface else colors.surfaceContainer,
+        border = BorderStroke(0.5.dp, colors.divider.copy(alpha = 0.4f)),
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .liquidGlass(
-                isDarkTheme = isDarkTheme,
-                shape = RoundedCornerShape(24.dp),
-                elevation = 4.dp
-            )
     ) {
         Column(
             modifier = Modifier
@@ -863,12 +856,12 @@ private fun MasterStorageGaugeCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Multi-segment Liquid Storage Bar
+            // Precision Solid Segment Bar (8dp height)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(14.dp)
-                    .clip(RoundedCornerShape(7.dp))
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp))
                     .background(if (isDarkTheme) Color(0x33FFFFFF) else Color(0x18000000))
             ) {
                 Row(modifier = Modifier.fillMaxSize()) {
@@ -877,7 +870,7 @@ private fun MasterStorageGaugeCard(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .weight(docsWeight.coerceAtLeast(0.01f))
-                                .background(LiquidGlassTokens.AzureLiquid)
+                                .background(Color(0xFF007AFF))
                         )
                     }
                     if (imagesWeight > 0.005f) {
@@ -885,7 +878,7 @@ private fun MasterStorageGaugeCard(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .weight(imagesWeight.coerceAtLeast(0.01f))
-                                .background(LiquidGlassTokens.SunsetLiquid)
+                                .background(Color(0xFFFF2D55))
                         )
                     }
                     if (videosWeight > 0.005f) {
@@ -893,7 +886,7 @@ private fun MasterStorageGaugeCard(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .weight(videosWeight.coerceAtLeast(0.01f))
-                                .background(LiquidGlassTokens.AmberLiquid)
+                                .background(Color(0xFFFF9500))
                         )
                     }
                     if (audioWeight > 0.005f) {
@@ -901,7 +894,7 @@ private fun MasterStorageGaugeCard(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .weight(audioWeight.coerceAtLeast(0.01f))
-                                .background(LiquidGlassTokens.VioletLiquid)
+                                .background(Color(0xFFAF52DE))
                         )
                     }
                     if (appsWeight > 0.005f) {

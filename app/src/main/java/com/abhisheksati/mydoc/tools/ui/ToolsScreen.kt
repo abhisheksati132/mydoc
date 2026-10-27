@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.tools.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
@@ -357,9 +358,10 @@ fun ToolsScreen(
                             Surface(
                                 shape = RoundedCornerShape(18.dp),
                                 color = if (isOled) colors.surface else colors.surfaceContainer,
+                                border = BorderStroke(0.5.dp, colors.divider.copy(alpha = 0.4f)),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 20.dp)
+                                    .padding(horizontal = 16.dp)
                             ) {
                                 Column {
                                     toolsInGroup.forEachIndexed { index, tool ->
@@ -394,7 +396,7 @@ private fun FeaturedToolCard(
     subtitle: String,
     icon: ImageVector,
     tintColor: Color,
-    gradient: androidx.compose.ui.graphics.Brush,
+    gradient: androidx.compose.ui.graphics.Brush? = null,
     isDarkTheme: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -402,41 +404,38 @@ private fun FeaturedToolCard(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
 
-    Box(
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = colors.surface,
+        border = BorderStroke(0.5.dp, colors.divider.copy(alpha = 0.4f)),
         modifier = modifier
             .pressScaleEffect(onClick = onClick)
-            .liquidGlass(
-                isDarkTheme = isDarkTheme,
-                tintColor = tintColor,
-                shape = RoundedCornerShape(20.dp),
-                elevation = 4.dp
-            )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(15.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(42.dp)
-                    .clip(RoundedCornerShape(13.dp))
-                    .background(gradient),
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(tintColor.copy(alpha = if (isDarkTheme) 0.16f else 0.10f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(22.dp)
+                    tint = tintColor,
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(13.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Text(
                 text = title,
-                style = typography.body.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
+                style = typography.body.copy(fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold),
                 color = colors.textPrimary
             )
 
@@ -444,7 +443,7 @@ private fun FeaturedToolCard(
 
             Text(
                 text = subtitle,
-                style = typography.caption.copy(fontSize = 12.sp),
+                style = typography.caption.copy(fontSize = 11.5.sp),
                 color = colors.textSecondary
             )
         }
