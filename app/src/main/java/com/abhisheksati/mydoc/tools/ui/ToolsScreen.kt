@@ -258,7 +258,7 @@ fun ToolsScreen(
                                     title = "Combine PDFs",
                                     subtitle = "Merge files together",
                                     icon = Icons.AutoMirrored.Outlined.MergeType,
-                                    tintColor = Color(0xFF007AFF),
+                                    tintColor = Color(0xFF5B4FE8),
                                     gradient = LiquidGlassTokens.AzureLiquid,
                                     isDarkTheme = isDarkTheme,
                                     onClick = { onToolClick(PdfTool.MERGE) },

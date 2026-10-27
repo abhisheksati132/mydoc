@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 object LiquidGlassTokens {
     // Vibrant Apple-inspired liquid gradients
     val AzureLiquid = Brush.linearGradient(
-        colors = listOf(Color(0xFF007AFF), Color(0xFF00C6FF))
+        colors = listOf(Color(0xFF5B4FE8), Color(0xFF9B93FF))
     )
 
     val SunsetLiquid = Brush.linearGradient(
@@ -41,7 +41,7 @@ object LiquidGlassTokens {
     )
 
     val IndigoLiquid = Brush.linearGradient(
-        colors = listOf(Color(0xFF5856D6), Color(0xFF007AFF))
+        colors = listOf(Color(0xFF7C6FF5), Color(0xFF5B4FE8))
     )
 }
 

@@ -870,7 +870,7 @@ private fun MasterStorageGaugeCard(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .weight(docsWeight.coerceAtLeast(0.01f))
-                                .background(Color(0xFF007AFF))
+                                .background(Color(0xFF5B4FE8))
                         )
                     }
                     if (imagesWeight > 0.005f) {
@@ -933,7 +933,7 @@ private fun MasterStorageGaugeCard(
                 StorageLegendChip(
                     label = "Docs",
                     sizeText = StorageVolume.formatBytes(docsBytes),
-                    dotColor = Color(0xFF007AFF),
+                    dotColor = Color(0xFF5B4FE8),
                     onClick = { onCategoryClick(FileCategory.DOCUMENTS) }
                 )
                 StorageLegendChip(

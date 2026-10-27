@@ -101,6 +101,28 @@ fun AppTabHeader(
                 }
                 if (titleContent != null) {
                     titleContent()
+                } else if (title == "MyDoc") {
+                    // Split-weight brand wordmark: "My" (light, muted) + "Doc" (ExtraBold, accent)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "My",
+                            style = typography.title.copy(
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 22.sp,
+                                letterSpacing = (-0.5).sp
+                            ),
+                            color = colors.inkMuted
+                        )
+                        Text(
+                            text = "Doc",
+                            style = typography.title.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 22.sp,
+                                letterSpacing = (-0.5).sp
+                            ),
+                            color = colors.accent
+                        )
+                    }
                 } else {
                     Text(
                         text = title,

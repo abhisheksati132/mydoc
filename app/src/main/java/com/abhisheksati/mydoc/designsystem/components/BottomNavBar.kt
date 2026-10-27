@@ -28,6 +28,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Home
@@ -100,7 +103,11 @@ fun BottomNavBar(
                 val isSelected = currentTab == tab
                 val interactionSource = remember { MutableInteractionSource() }
 
-                val icon: ImageVector = when (tab) {
+                val icon: ImageVector = if (isSelected) when (tab) {
+                    HomeTab.HOME -> Icons.Filled.Home
+                    HomeTab.FILES -> Icons.Filled.Folder
+                    HomeTab.TOOLS -> Icons.Filled.Build
+                } else when (tab) {
                     HomeTab.HOME -> Icons.Outlined.Home
                     HomeTab.FILES -> Icons.Outlined.Folder
                     HomeTab.TOOLS -> Icons.Outlined.Build
@@ -116,17 +123,17 @@ fun BottomNavBar(
                 )
 
                 val pillBg = if (isSelected) {
-                    if (isDark) Color(0x33007AFF) else Color(0x1E007AFF)
+                    if (isDark) Color(0x335B4FE8) else Color(0x1A5B4FE8)
                 } else Color.Transparent
 
                 val iconColor by animateColorAsState(
-                    targetValue = if (isSelected) Color(0xFF007AFF) else colors.inkMuted,
+                    targetValue = if (isSelected) colors.accent else colors.inkMuted,
                     animationSpec = tween(durationMillis = 180),
                     label = "tabIconColor"
                 )
 
                 val textColor by animateColorAsState(
-                    targetValue = if (isSelected) Color(0xFF007AFF) else colors.inkMuted,
+                    targetValue = if (isSelected) colors.accent else colors.inkMuted,
                     animationSpec = tween(durationMillis = 180),
                     label = "tabTextColor"
                 )
@@ -174,7 +181,7 @@ fun BottomNavBar(
                                             width = 1.dp,
                                             brush = Brush.verticalGradient(
                                                 listOf(
-                                                    if (isDark) Color(0x6600C6FF) else Color(0x55007AFF),
+                                                    if (isDark) Color(0x669B93FF) else Color(0x555B4FE8),
                                                     Color.Transparent
                                                 )
                                             ),

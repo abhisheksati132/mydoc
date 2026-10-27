@@ -46,6 +46,13 @@ val InterFontFamily: FontFamily = runCatching {
             variationSettings = FontVariation.Settings(
                 FontVariation.weight(700)
             )
+        ),
+        Font(
+            resId = R.font.inter,
+            weight = FontWeight.ExtraBold,
+            variationSettings = FontVariation.Settings(
+                FontVariation.weight(800)
+            )
         )
     )
 }.getOrElse { FontFamily.SansSerif }
@@ -57,10 +64,10 @@ val BricolageFontFamily: FontFamily = InterFontFamily
 data class AppTypography(
     val display: TextStyle = TextStyle(
         fontFamily = InterFontFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 32.sp,
-        lineHeight = 38.sp,
-        letterSpacing = (-0.2).sp
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 34.sp,
+        lineHeight = 40.sp,
+        letterSpacing = (-1.0).sp
     ),
     val title: TextStyle = TextStyle(
         fontFamily = InterFontFamily,

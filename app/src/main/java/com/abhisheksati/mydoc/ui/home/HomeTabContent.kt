@@ -318,7 +318,11 @@ fun HomeTabContent(
                 ) {
                     Text(
                         text = "Recent Documents",
-                        style = typography.title.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold),
+                        style = typography.heading.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 17.sp,
+                            letterSpacing = (-0.3).sp
+                        ),
                         color = colors.ink
                     )
                     if (recentItems.isNotEmpty()) {

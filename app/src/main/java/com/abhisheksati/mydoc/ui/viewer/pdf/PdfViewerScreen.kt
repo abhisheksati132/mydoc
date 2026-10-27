@@ -880,7 +880,7 @@ fun PdfViewerScreen(
                         FloatingPillItem(
                             icon = Icons.Outlined.TextFields,
                             label = "Web Search",
-                            tint = Color(0xFF007AFF)
+                            tint = Color(0xFF5B4FE8)
                         ) {
                             coroutineScope.launch {
                                 val text = viewModel.getPageText(pageNum)

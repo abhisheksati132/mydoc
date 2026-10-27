@@ -92,13 +92,14 @@ val LightAppColors = AppColors(
     line = Color(0xFFE2E2DD),
     ink = Color(0xFF121212),
     inkMuted = Color(0xFF55554F),
-    highlight = Color(0xFFD9DCFF),
-    accent = Color(0xFF3D4CFF),
+    highlight = Color(0xFFE5E3FF),
+    // MyDoc brand violet — not Apple blue. Ours.
+    accent = Color(0xFF5B4FE8),
     onAccent = Color(0xFFFFFFFF),
 
-    documentKind = Color(0xFF3D4CFF),
+    documentKind = Color(0xFF5B4FE8),
     onDocumentKind = Color(0xFFFFFFFF),
-    documentContainer = Color(0xFFE3E6FF),
+    documentContainer = Color(0xFFEDEBFF),
 
     photoKind = Color(0xFFFF8AC2),
     onPhotoKind = Color(0xFF2A0A18),
@@ -120,13 +121,14 @@ val DarkAppColors = AppColors(
     line = Color(0xFF2A2A2D),
     ink = Color(0xFFF2F1EC),
     inkMuted = Color(0xFFA3A29B),
-    highlight = Color(0xFF2A2F6B),
-    accent = Color(0xFF8A94FF),
+    highlight = Color(0xFF2A2660),
+    // MyDoc brand violet dark variant
+    accent = Color(0xFF9B93FF),
     onAccent = Color(0xFF0E0E0F),
 
-    documentKind = Color(0xFF8A94FF),
+    documentKind = Color(0xFF9B93FF),
     onDocumentKind = Color(0xFF0E0E0F),
-    documentContainer = Color(0xFF1B1E3F),
+    documentContainer = Color(0xFF1D1A42),
 
     photoKind = Color(0xFFFF9BCB),
     onPhotoKind = Color(0xFF0E0E0F),
@@ -153,14 +155,14 @@ val LocalAppColors = staticCompositionLocalOf { LightAppColors }
 fun kindColor(kind: MediaKind, isDark: Boolean = false): Color {
     return if (isDark) {
         when (kind) {
-            MediaKind.DOCUMENT -> Color(0xFF8A94FF)
+            MediaKind.DOCUMENT -> Color(0xFF9B93FF)
             MediaKind.PHOTO -> Color(0xFFFF9BCB)
             MediaKind.VIDEO -> Color(0xFFFF8F5C)
             MediaKind.AUDIO -> Color(0xFF86E7B8)
         }
     } else {
         when (kind) {
-            MediaKind.DOCUMENT -> Color(0xFF3D4CFF)
+            MediaKind.DOCUMENT -> Color(0xFF5B4FE8)
             MediaKind.PHOTO -> Color(0xFFFF8AC2)
             MediaKind.VIDEO -> Color(0xFFFF7A3D)
             MediaKind.AUDIO -> Color(0xFF86E7B8)
@@ -171,7 +173,7 @@ fun kindColor(kind: MediaKind, isDark: Boolean = false): Color {
 fun kindContainer(kind: MediaKind, isDark: Boolean = false): Color {
     return if (isDark) {
         when (kind) {
-            MediaKind.DOCUMENT -> Color(0xFF1B1E3F)
+            MediaKind.DOCUMENT -> Color(0xFF1D1A42)
             MediaKind.PHOTO -> Color(0xFF3B1A2B)
             MediaKind.VIDEO -> Color(0xFF3A2315)
             MediaKind.AUDIO -> Color(0xFF12301F)
@@ -202,14 +204,14 @@ fun onKindColor(kind: MediaKind, isDark: Boolean = false): Color {
 fun onKindContainer(kind: MediaKind, isDark: Boolean = false): Color {
     return if (isDark) {
         when (kind) {
-            MediaKind.DOCUMENT -> Color(0xFF8A94FF)
+            MediaKind.DOCUMENT -> Color(0xFF9B93FF)
             MediaKind.PHOTO -> Color(0xFFFF9BCB)
             MediaKind.VIDEO -> Color(0xFFFF8F5C)
             MediaKind.AUDIO -> Color(0xFF86E7B8)
         }
     } else {
         when (kind) {
-            MediaKind.DOCUMENT -> Color(0xFF1B248A)
+            MediaKind.DOCUMENT -> Color(0xFF2B2590)
             MediaKind.PHOTO -> Color(0xFF5A1538)
             MediaKind.VIDEO -> Color(0xFF5A2508)
             MediaKind.AUDIO -> Color(0xFF0D4222)
