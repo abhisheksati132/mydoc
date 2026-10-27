@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Environment
 import android.widget.Toast
 import androidx.core.content.FileProvider
@@ -17,7 +16,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.Locale
 
 sealed class LibreOfficeStatus {
     object NotInstalled : LibreOfficeStatus()
@@ -31,7 +29,7 @@ sealed class LibreOfficeStatus {
  *
  * Provides:
  * - Real-time status detection (Installed / Downloaded / Downloading / Not Installed).
- * - Background APK downloading with live progress.
+ * - Background APK downloading with live progress from verified official mirrors.
  * - System package installation intent invocation.
  * - APK deletion to reclaim storage.
  * - Secure Intent dispatch to view Word, Excel, PowerPoint, and OpenDocument files.
@@ -43,16 +41,18 @@ object LibreOfficeEngineManager {
         "com.collabora.libreoffice"
     )
 
-    // Official LibreOffice Viewer direct APK download URL (F-Droid mirror)
-    private const val DEFAULT_DOWNLOAD_URL =
-        "https://f-droid.org/repo/org.documentfoundation.libreoffice_240200.apk"
+    // Verified official LibreOffice Viewer direct APK mirrors (F-Droid builds)
+    private val DOWNLOAD_CANDIDATES = listOf(
+        "https://f-droid.org/repo/org.documentfoundation.libreoffice_131.apk",
+        "https://f-droid.org/repo/org.documentfoundation.libreoffice_130.apk",
+        "https://f-droid.org/repo/org.documentfoundation.libreoffice_129.apk",
+        "https://f-droid.org/repo/org.documentfoundation.libreoffice_128.apk"
+    )
 
     private const val APK_FILE_NAME = "libreoffice-engine.apk"
 
     private val _status = MutableStateFlow<LibreOfficeStatus>(LibreOfficeStatus.NotInstalled)
     val status: StateFlow<LibreOfficeStatus> = _status.asStateFlow()
-
-    private var activeDownloadJob: kotlinx.coroutines.Job? = null
 
     /**
      * Refresh the current status of the engine.
@@ -108,7 +108,7 @@ object LibreOfficeEngineManager {
     }
 
     /**
-     * Downloads the official LibreOffice APK with live progress reporting.
+     * Downloads the official LibreOffice APK with live progress reporting across candidate mirrors.
      */
     suspend fun startDownload(
         context: Context,
@@ -119,64 +119,82 @@ object LibreOfficeEngineManager {
         val targetFile = File(targetDir, APK_FILE_NAME)
         val tempFile = File(targetDir, "$APK_FILE_NAME.tmp")
 
-        try {
-            _status.value = LibreOfficeStatus.Downloading(0, 0L, 0L)
+        _status.value = LibreOfficeStatus.Downloading(0, 0L, 0L)
 
-            val url = URL(DEFAULT_DOWNLOAD_URL)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 15000
-            connection.readTimeout = 30000
-            connection.instanceFollowRedirects = true
-            connection.connect()
+        var lastError: String? = null
+        var downloadSucceeded = false
 
-            if (connection.responseCode !in 200..299) {
-                throw Exception("Server returned HTTP ${connection.responseCode}")
-            }
-
-            val totalBytes = connection.contentLength.toLong()
-            var bytesDownloaded = 0L
-
-            connection.inputStream.use { input ->
-                FileOutputStream(tempFile).use { output ->
-                    val buffer = ByteArray(8192)
-                    var bytesRead: Int
-                    var lastReportedPercent = 0
-
-                    while (input.read(buffer).also { bytesRead = it } != -1) {
-                        output.write(buffer, 0, bytesRead)
-                        bytesDownloaded += bytesRead
-
-                        val percent = if (totalBytes > 0) {
-                            ((bytesDownloaded * 100) / totalBytes).toInt().coerceIn(0, 100)
-                        } else {
-                            0
-                        }
-
-                        if (percent != lastReportedPercent) {
-                            lastReportedPercent = percent
-                            _status.value = LibreOfficeStatus.Downloading(percent, bytesDownloaded, totalBytes)
-                        }
-                    }
-                    output.flush()
+        for (candidateUrl in DOWNLOAD_CANDIDATES) {
+            var connection: HttpURLConnection? = null
+            try {
+                val url = URL(candidateUrl)
+                connection = (url.openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 15000
+                    readTimeout = 30000
+                    instanceFollowRedirects = true
+                    setRequestProperty("User-Agent", "Mozilla/5.0 MyDoc-Android")
                 }
-            }
+                connection.connect()
 
-            if (tempFile.exists()) {
-                if (targetFile.exists()) targetFile.delete()
-                tempFile.renameTo(targetFile)
-            }
+                val code = connection.responseCode
+                if (code !in 200..299) {
+                    lastError = "HTTP $code from mirror"
+                    continue
+                }
 
+                val totalBytes = connection.contentLength.toLong()
+                var bytesDownloaded = 0L
+
+                connection.inputStream.use { input ->
+                    FileOutputStream(tempFile).use { output ->
+                        val buffer = ByteArray(16384)
+                        var bytesRead: Int
+                        var lastReportedPercent = 0
+
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                            output.write(buffer, 0, bytesRead)
+                            bytesDownloaded += bytesRead
+
+                            val percent = if (totalBytes > 0) {
+                                ((bytesDownloaded * 100) / totalBytes).toInt().coerceIn(0, 100)
+                            } else {
+                                0
+                            }
+
+                            if (percent != lastReportedPercent) {
+                                lastReportedPercent = percent
+                                _status.value = LibreOfficeStatus.Downloading(percent, bytesDownloaded, totalBytes)
+                            }
+                        }
+                        output.flush()
+                    }
+                }
+
+                if (tempFile.exists() && tempFile.length() > 5 * 1024 * 1024) {
+                    if (targetFile.exists()) targetFile.delete()
+                    tempFile.renameTo(targetFile)
+                    downloadSucceeded = true
+                    break
+                }
+            } catch (e: Exception) {
+                lastError = e.message
+            } finally {
+                connection?.disconnect()
+            }
+        }
+
+        if (downloadSucceeded && targetFile.exists()) {
             val sizeMb = targetFile.length() / (1024f * 1024f)
             _status.value = LibreOfficeStatus.Downloaded(targetFile, sizeMb)
 
             withContext(Dispatchers.Main) {
                 onComplete?.invoke(targetFile)
             }
-        } catch (e: Exception) {
+        } else {
             tempFile.delete()
             _status.value = LibreOfficeStatus.NotInstalled
             withContext(Dispatchers.Main) {
-                onError?.invoke(e.message ?: "Failed to download LibreOffice")
+                onError?.invoke(lastError ?: "Failed to download LibreOffice engine")
             }
         }
     }

@@ -2,6 +2,8 @@ package com.abhisheksati.mydoc.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -77,6 +79,18 @@ fun HomeTabContent(
     val colors = AppTheme.colors
     val typography = AppTheme.typography
     var showClearRecentDialog by remember { mutableStateOf(false) }
+    var selectedDocumentFilter by remember { mutableStateOf("All") }
+
+    val filteredRecentItems = remember(recentItems, selectedDocumentFilter) {
+        when (selectedDocumentFilter) {
+            "PDF" -> recentItems.filter { it.extension == "pdf" }
+            "Word" -> recentItems.filter { it.extension in setOf("doc", "docx", "dot", "dotx", "odt", "rtf") }
+            "Excel" -> recentItems.filter { it.extension in setOf("xls", "xlsx", "xlsm", "csv", "ods") }
+            "PPT" -> recentItems.filter { it.extension in setOf("ppt", "pptx", "pps", "odp") }
+            "Text" -> recentItems.filter { it.extension in setOf("txt", "log", "md", "json", "xml") }
+            else -> recentItems
+        }
+    }
 
     val greeting = remember {
         when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
@@ -226,6 +240,7 @@ fun HomeTabContent(
                             title = "Documents",
                             subtitle = "PDF, Word, Excel",
                             icon = Icons.AutoMirrored.Outlined.InsertDriveFile,
+                            color = Color(0xFF2563EB),
                             onClick = { onCategoryClick(FileCategory.DOCUMENTS) },
                             modifier = Modifier.weight(1f)
                         )
@@ -234,6 +249,7 @@ fun HomeTabContent(
                             title = "Photos",
                             subtitle = "Images & Gallery",
                             icon = Icons.Outlined.Image,
+                            color = Color(0xFFE11D48),
                             onClick = { onCategoryClick(FileCategory.IMAGES) },
                             modifier = Modifier.weight(1f)
                         )
@@ -250,6 +266,7 @@ fun HomeTabContent(
                             title = "Videos",
                             subtitle = "Clips & Movies",
                             icon = Icons.Outlined.Videocam,
+                            color = Color(0xFF7C3AED),
                             onClick = { onCategoryClick(FileCategory.VIDEOS) },
                             modifier = Modifier.weight(1f)
                         )
@@ -258,6 +275,7 @@ fun HomeTabContent(
                             title = "Audio",
                             subtitle = "Recordings & Music",
                             icon = Icons.Outlined.Audiotrack,
+                            color = Color(0xFF059669),
                             onClick = { onCategoryClick(FileCategory.AUDIO) },
                             modifier = Modifier.weight(1f)
                         )
@@ -295,10 +313,52 @@ fun HomeTabContent(
                         }
                     }
                 }
+                Spacer(modifier = Modifier.height(2.dp))
+            }
+
+            // Sub-category filters for documents
+            item(key = "document_filter_chips") {
+                val docFilters = listOf(
+                    "All" to colors.accent,
+                    "PDF" to Color(0xFF2563EB),
+                    "Word" to Color(0xFF1D4ED8),
+                    "Excel" to Color(0xFF059669),
+                    "PPT" to Color(0xFFD97706),
+                    "Text" to Color(0xFF0D9488)
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    docFilters.forEach { (label, filterColor) ->
+                        val isSelected = selectedDocumentFilter == label
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) filterColor.copy(alpha = 0.16f) else colors.surfaceContainer,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { selectedDocumentFilter = label }
+                        ) {
+                            Text(
+                                text = label,
+                                style = typography.caption.copy(
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    fontSize = 12.sp
+                                ),
+                                color = if (isSelected) filterColor else colors.inkMuted,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(4.dp))
             }
 
-            if (recentItems.isEmpty() && continueItems.isEmpty()) {
+            if (filteredRecentItems.isEmpty()) {
                 item(key = "empty_recents") {
                     Surface(
                         shape = RoundedCornerShape(16.dp),
@@ -329,13 +389,13 @@ fun HomeTabContent(
                             }
                             Spacer(modifier = Modifier.height(10.dp))
                             Text(
-                                text = "No recent files",
+                                text = if (selectedDocumentFilter == "All") "No recent files" else "No $selectedDocumentFilter files found",
                                 style = typography.body.copy(fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold),
                                 color = colors.ink
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Files you open or scan will appear here",
+                                text = if (selectedDocumentFilter == "All") "Files you open or scan will appear here" else "Open a $selectedDocumentFilter file to see it here",
                                 style = typography.caption.copy(fontSize = 12.sp),
                                 color = colors.inkMuted
                             )
@@ -343,7 +403,7 @@ fun HomeTabContent(
                     }
                 }
             } else {
-                items(recentItems, key = { "recent_${it.uri}" }) { item ->
+                items(filteredRecentItems, key = { "recent_${it.uri}" }) { item ->
                     RecentItemRow(
                         item = item,
                         isDarkTheme = isDarkTheme,
@@ -356,18 +416,20 @@ fun HomeTabContent(
 }
 
 /**
- * Clean, consistent category tile with unified Material 3 surface styling.
+ * Clean, consistent category tile with vibrant identity colors.
  */
 @Composable
 private fun CategoryTile(
     title: String,
     subtitle: String,
     icon: ImageVector,
+    color: Color = Color.Unspecified,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
     val typography = AppTheme.typography
+    val tileColor = if (color != Color.Unspecified) color else colors.accent
 
     Surface(
         shape = RoundedCornerShape(16.dp),
@@ -383,14 +445,14 @@ private fun CategoryTile(
         ) {
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = colors.accent.copy(alpha = 0.12f),
+                color = tileColor.copy(alpha = 0.14f),
                 modifier = Modifier.size(36.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = colors.accent,
+                        tint = tileColor,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -416,7 +478,7 @@ private fun CategoryTile(
 }
 
 /**
- * Clean Recent Document Row with standard format badge.
+ * Clean Recent Document Row with format-specific color badge.
  */
 @Composable
 private fun RecentItemRow(
@@ -426,6 +488,17 @@ private fun RecentItemRow(
 ) {
     val colors = AppTheme.colors
     val typography = AppTheme.typography
+
+    val badgeColor = when (item.typeBadge.uppercase()) {
+        "PDF" -> Color(0xFF2563EB)
+        "DOC", "WORD", "DOCX" -> Color(0xFF1D4ED8)
+        "XLS", "EXCEL", "XLSX", "CSV" -> Color(0xFF059669)
+        "PPT", "PPTX" -> Color(0xFFD97706)
+        "IMG" -> Color(0xFFE11D48)
+        "VID" -> Color(0xFF7C3AED)
+        "AUD" -> Color(0xFF0D9488)
+        else -> colors.accent
+    }
 
     Surface(
         shape = RoundedCornerShape(14.dp),
@@ -445,7 +518,7 @@ private fun RecentItemRow(
             // Type badge
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = colors.accent.copy(alpha = 0.12f),
+                color = badgeColor.copy(alpha = 0.14f),
                 modifier = Modifier.size(40.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -455,7 +528,7 @@ private fun RecentItemRow(
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         ),
-                        color = colors.accent
+                        color = badgeColor
                     )
                 }
             }

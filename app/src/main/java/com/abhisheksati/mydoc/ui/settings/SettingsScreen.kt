@@ -1,8 +1,12 @@
-﻿package com.abhisheksati.mydoc.ui.settings
+package com.abhisheksati.mydoc.ui.settings
 
 import android.app.KeyguardManager
 import android.content.Context
+import android.net.Uri
 import android.widget.Toast
+import androidx.compose.runtime.LaunchedEffect
+import com.abhisheksati.mydoc.engine.LibreOfficeEngineManager
+import com.abhisheksati.mydoc.engine.LibreOfficeStatus
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -193,12 +197,6 @@ fun SettingsScreen(
                         selected = currentTheme == AppThemeMode.BLACK,
                         onClick = { settingsRepository.setThemeMode(AppThemeMode.BLACK) }
                     )
-                    ThemeChip(
-                        label = "System",
-                        icon = null,
-                        selected = currentTheme == AppThemeMode.SYSTEM,
-                        onClick = { settingsRepository.setThemeMode(AppThemeMode.SYSTEM) }
-                    )
                 }
 
                 SettingsDivider()
@@ -321,7 +319,235 @@ fun SettingsScreen(
                 )
             }
 
-            // 3. MEDIA
+            // 3. LIBREOFFICE ENGINE
+            val libreOfficeStatus by LibreOfficeEngineManager.status.collectAsState()
+            LaunchedEffect(Unit) {
+                LibreOfficeEngineManager.refreshStatus(context)
+            }
+
+            SettingsCard(title = "LibreOffice engine") {
+                Text(
+                    text = "Office Document Engine",
+                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+                    color = colors.textSecondary,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+
+                when (val loState = libreOfficeStatus) {
+                    is LibreOfficeStatus.Installed -> {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(colors.accent.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent, modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Installed & Active",
+                                    style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
+                                    color = colors.textPrimary
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Version: ${loState.versionName} • Powers Word, Excel, PPT & ODF",
+                                    style = typography.caption.copy(fontSize = 12.sp),
+                                    color = colors.textSecondary
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = { LibreOfficeEngineManager.launchOfficeDocument(context, Uri.EMPTY, "") },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colors.accent,
+                                    contentColor = Color.Black
+                                ),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Open", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                            }
+                            OutlinedButton(
+                                onClick = { LibreOfficeEngineManager.openAppDetails(context) },
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Manage / Uninstall", fontSize = 12.sp)
+                            }
+                        }
+                    }
+
+                    is LibreOfficeStatus.Downloaded -> {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(colors.accent.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Outlined.Storage, contentDescription = null, tint = colors.accent, modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Installer Downloaded",
+                                    style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
+                                    color = colors.textPrimary
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "${String.format(java.util.Locale.US, "%.1f", loState.sizeMb)} MB package ready to install",
+                                    style = typography.caption.copy(fontSize = 12.sp),
+                                    color = colors.textSecondary
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = { LibreOfficeEngineManager.installDownloadedApk(context) },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colors.accent,
+                                    contentColor = Color.Black
+                                ),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Install Engine", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    val deleted = LibreOfficeEngineManager.deleteDownloadedApk(context)
+                                    if (deleted) Toast.makeText(context, "Installer deleted", Toast.LENGTH_SHORT).show()
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Delete Installer", fontSize = 12.sp)
+                            }
+                        }
+                    }
+
+                    is LibreOfficeStatus.Downloading -> {
+                        Text(
+                            text = "Downloading LibreOffice Engine (${loState.progressPercent}%)",
+                            style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
+                            color = colors.textPrimary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress = { loState.progressPercent / 100f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                            color = colors.accent,
+                            trackColor = colors.surface
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "${loState.bytesDownloaded / (1024 * 1024)} MB of ${loState.totalBytes / (1024 * 1024)} MB",
+                            style = typography.caption.copy(fontSize = 12.sp),
+                            color = colors.textSecondary
+                        )
+                    }
+
+                    LibreOfficeStatus.NotInstalled -> {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(colors.accent.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Outlined.Storage, contentDescription = null, tint = colors.accent, modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Not Installed",
+                                    style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
+                                    color = colors.textPrimary
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Download on-demand (~83 MB) to view Word, Excel, and PowerPoint files",
+                                    style = typography.caption.copy(fontSize = 12.sp),
+                                    color = colors.textSecondary
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        Toast.makeText(context, "Starting download…", Toast.LENGTH_SHORT).show()
+                                        LibreOfficeEngineManager.startDownload(
+                                            context = context,
+                                            onComplete = {
+                                                LibreOfficeEngineManager.installDownloadedApk(context)
+                                            },
+                                            onError = { err ->
+                                                Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+                                            }
+                                        )
+                                    }
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colors.accent,
+                                    contentColor = Color.Black
+                                ),
+                                modifier = Modifier.weight(1.2f)
+                            ) {
+                                Text("Download Engine", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                            }
+                            OutlinedButton(
+                                onClick = { LibreOfficeEngineManager.openStorePage(context) },
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Get on Store", fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 4. MEDIA
             SettingsCard(title = "Media playback") {
                 SettingToggleRow(
                     title = "Hardware acceleration",

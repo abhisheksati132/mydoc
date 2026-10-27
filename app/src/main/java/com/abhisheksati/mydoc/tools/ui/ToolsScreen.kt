@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -62,7 +63,8 @@ import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
 private data class ToolNavCategory(
     val group: ToolGroup?,
     val icon: ImageVector,
-    val label: String
+    val label: String,
+    val color: Color? = null
 )
 
 /**
@@ -131,13 +133,13 @@ fun ToolsScreen(
             onSettingsClick = onSettingsClick,
             bottomContent = {
                 val toolCategories = listOf(
-                    ToolNavCategory(null, Icons.Outlined.AllInclusive, "All"),
-                    ToolNavCategory(ToolGroup.ORGANIZE, Icons.AutoMirrored.Outlined.CallSplit, "Organize"),
-                    ToolNavCategory(ToolGroup.OPTIMIZE, Icons.Outlined.Compress, "Compress"),
-                    ToolNavCategory(ToolGroup.CONVERT_TO, Icons.Outlined.Transform, "Convert"),
-                    ToolNavCategory(ToolGroup.EDIT, Icons.Outlined.Edit, "Sign & Edit"),
-                    ToolNavCategory(ToolGroup.SECURITY, Icons.Outlined.Security, "Security"),
-                    ToolNavCategory(ToolGroup.SCAN, Icons.Outlined.CameraAlt, "Scan")
+                    ToolNavCategory(null, Icons.Outlined.AllInclusive, "All", colors.accent),
+                    ToolNavCategory(ToolGroup.ORGANIZE, Icons.AutoMirrored.Outlined.CallSplit, "Organize", Color(0xFF3B82F6)),
+                    ToolNavCategory(ToolGroup.OPTIMIZE, Icons.Outlined.Compress, "Compress", Color(0xFF10B981)),
+                    ToolNavCategory(ToolGroup.CONVERT_TO, Icons.Outlined.Transform, "Convert", Color(0xFF8B5CF6)),
+                    ToolNavCategory(ToolGroup.EDIT, Icons.Outlined.Edit, "Sign & Edit", Color(0xFFF59E0B)),
+                    ToolNavCategory(ToolGroup.SECURITY, Icons.Outlined.Security, "Security", Color(0xFFEF4444)),
+                    ToolNavCategory(ToolGroup.SCAN, Icons.Outlined.CameraAlt, "Scan", Color(0xFF14B8A6))
                 )
 
                 Row(
@@ -149,8 +151,9 @@ fun ToolsScreen(
                 ) {
                     for (item in toolCategories) {
                         val isSelected = selectedToolGroup == item.group
-                        val chipBg = if (isSelected) colors.accent.copy(alpha = 0.16f) else colors.surfaceContainer
-                        val contentColor = if (isSelected) colors.accent else colors.textSecondary
+                        val itemColor = item.color ?: colors.accent
+                        val chipBg = if (isSelected) itemColor.copy(alpha = 0.16f) else colors.surfaceContainer
+                        val contentColor = if (isSelected) itemColor else colors.textSecondary
 
                         Surface(
                             shape = RoundedCornerShape(14.dp),
@@ -178,7 +181,7 @@ fun ToolsScreen(
                                         fontSize = 12.5.sp,
                                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
                                     ),
-                                    color = if (isSelected) colors.accent else colors.textPrimary
+                                    color = if (isSelected) itemColor else colors.textPrimary
                                 )
                             }
                         }
@@ -242,6 +245,7 @@ fun ToolsScreen(
                                     title = "Scan to PDF",
                                     subtitle = "Camera to document",
                                     icon = Icons.Outlined.CameraAlt,
+                                    accentColor = Color(0xFF14B8A6),
                                     onClick = { onToolClick(PdfTool.SCAN_TO_PDF) },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -249,6 +253,7 @@ fun ToolsScreen(
                                     title = "Combine PDFs",
                                     subtitle = "Merge files together",
                                     icon = Icons.AutoMirrored.Outlined.MergeType,
+                                    accentColor = Color(0xFF3B82F6),
                                     onClick = { onToolClick(PdfTool.MERGE) },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -264,6 +269,7 @@ fun ToolsScreen(
                                     title = "Make Smaller",
                                     subtitle = "Reduce PDF file size",
                                     icon = Icons.Outlined.Compress,
+                                    accentColor = Color(0xFF10B981),
                                     onClick = { onToolClick(PdfTool.COMPRESS) },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -271,6 +277,7 @@ fun ToolsScreen(
                                     title = "Sign PDF",
                                     subtitle = "Add your signature",
                                     icon = Icons.Outlined.Draw,
+                                    accentColor = Color(0xFFF59E0B),
                                     onClick = { onToolClick(PdfTool.SIGN_PDF) },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -286,6 +293,7 @@ fun ToolsScreen(
                                     title = "Pick Pages",
                                     subtitle = "Reorder & rotate",
                                     icon = Icons.Outlined.GridOn,
+                                    accentColor = Color(0xFF6366F1),
                                     onClick = { onToolClick(PdfTool.REORDER_PAGES) },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -293,6 +301,7 @@ fun ToolsScreen(
                                     title = "Lock PDF",
                                     subtitle = "Protect with password",
                                     icon = Icons.Outlined.Lock,
+                                    accentColor = Color(0xFFEF4444),
                                     onClick = { onToolClick(PdfTool.PROTECT) },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -370,6 +379,7 @@ private fun FeaturedToolCard(
     title: String,
     subtitle: String,
     icon: ImageVector,
+    accentColor: Color = LocalAppColors.current.accent,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -390,14 +400,14 @@ private fun FeaturedToolCard(
         ) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = colors.accent.copy(alpha = 0.14f),
+                color = accentColor.copy(alpha = 0.14f),
                 modifier = Modifier.size(40.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = colors.accent,
+                        tint = accentColor,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -431,6 +441,15 @@ private fun ToolListRow(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
 
+    val toolTint = when (tool.group) {
+        ToolGroup.ORGANIZE -> Color(0xFF3B82F6)
+        ToolGroup.OPTIMIZE -> Color(0xFF10B981)
+        ToolGroup.CONVERT_TO, ToolGroup.CONVERT_FROM -> Color(0xFF8B5CF6)
+        ToolGroup.EDIT -> Color(0xFFF59E0B)
+        ToolGroup.SECURITY -> Color(0xFFEF4444)
+        ToolGroup.SCAN -> Color(0xFF14B8A6)
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -442,13 +461,13 @@ private fun ToolListRow(
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(colors.accent.copy(alpha = 0.12f)),
+                .background(toolTint.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = tool.icon,
                 contentDescription = null,
-                tint = colors.accent,
+                tint = toolTint,
                 modifier = Modifier.size(20.dp)
             )
         }
