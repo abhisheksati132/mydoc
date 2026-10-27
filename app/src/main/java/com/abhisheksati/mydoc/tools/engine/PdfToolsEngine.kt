@@ -1,4 +1,4 @@
-package com.abhisheksati.mydoc.tools.engine
+﻿package com.abhisheksati.mydoc.tools.engine
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -12,10 +12,6 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument as AndroidPdfDocument
 import android.net.Uri
-import com.abhisheksati.mydoc.rendering.engine.presentation.PptxParser
-import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SpreadsheetParser
-import com.abhisheksati.mydoc.rendering.engine.word.DocxBlock
-import com.abhisheksati.mydoc.rendering.engine.word.DocxParser
 import com.abhisheksati.mydoc.tools.model.CompressionLevel
 import com.abhisheksati.mydoc.tools.model.PageMargin
 import com.abhisheksati.mydoc.tools.model.PageNumberFormat
@@ -698,49 +694,26 @@ class PdfToolsEngine(private val context: Context) {
         return outFile
     }
 
-    private suspend fun officeToPdf(file: File, onProgress: (ToolProgress) -> Unit): File {
+        private suspend fun officeToPdf(file: File, onProgress: (ToolProgress) -> Unit): File {
         onProgress(ToolProgress(1, 100, 20, "Extracting document content...", false))
-        val ext = file.extension.lowercase()
-
         val textBlocks = mutableListOf<String>()
-        if (ext == "docx") {
-            val parsed = FileInputStream(file).use { DocxParser().parse(it) }
-            for (b in parsed.blocks) {
-                when (b) {
-                    is DocxBlock.Heading -> textBlocks.add("## ${b.text}")
-                    is DocxBlock.Paragraph -> textBlocks.add(b.runs.joinToString("") { it.text })
-                    is DocxBlock.Bullet -> textBlocks.add("• " + b.runs.joinToString("") { it.text })
-                    is DocxBlock.Table -> {
-                        for (r in b.rows) textBlocks.add(r.joinToString(" | "))
+        try {
+            java.util.zip.ZipFile(file).use { zip ->
+                val entries = zip.entries()
+                while (entries.hasMoreElements()) {
+                    val entry = entries.nextElement()
+                    val name = entry.name
+                    if (name.startsWith("word/document") || name.startsWith("ppt/slides/slide") || name.contains("sharedStrings") || name.startsWith("xl/worksheets/sheet")) {
+                        val text = zip.getInputStream(entry).bufferedReader().use { it.readText() }
+                        val cleaned = text.replace("</w:p>", "\n").replace("</a:p>", "\n").replace("</row>", "\n")
+                        val pure = Regex("<[^>]+>").replace(cleaned, "")
+                        pure.lines().map { it.trim() }.filter { it.isNotBlank() }.forEach { textBlocks.add(it) }
                     }
                 }
             }
-        } else if (ext == "xlsx" || ext == "xls") {
-            val parsed = FileInputStream(file).use { SpreadsheetParser().parse(it, ext) }
-            for (sheet in parsed.sheets) {
-                textBlocks.add("[Sheet: ${sheet.name}]")
-                val maxR = sheet.maxRow.coerceAtMost(200)
-                val maxC = sheet.maxCol.coerceAtMost(25)
-                for (r in 0..maxR) {
-                    val rowCells = mutableListOf<String>()
-                    for (c in 0..maxC) {
-                        val v = sheet.getCellValue(r, c)
-                        if (v.isNotBlank()) rowCells.add(v)
-                    }
-                    if (rowCells.isNotEmpty()) {
-                        textBlocks.add(rowCells.joinToString(" | "))
-                    }
-                }
-            }
-        } else if (ext == "pptx") {
-            val parsed = FileInputStream(file).use { PptxParser().parse(it) }
-            for (slide in parsed.slides) {
-                textBlocks.add("[Slide ${slide.slideNumber}: ${slide.title}]")
-                textBlocks.addAll(slide.content)
-            }
+        } catch (_: Exception) {
+            textBlocks.add(file.nameWithoutExtension)
         }
-
-        // Layout extracted blocks into standard paginated PDF
         return renderTextToPdf(textBlocks, onProgress)
     }
 

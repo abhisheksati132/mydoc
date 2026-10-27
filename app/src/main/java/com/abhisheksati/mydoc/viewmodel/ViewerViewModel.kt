@@ -97,24 +97,7 @@ class ViewerViewModel(
                     val uri = Uri.parse(activeDocumentFile.uri)
                     val ext = activeDocumentFile.extension.lowercase().ifEmpty { "pdf" }
 
-                    val convertedPdfFile: java.io.File? = when (ext) {
-                        "pptx" -> com.abhisheksati.mydoc.rendering.engine.presentation.PptxConverter.convertPptxToPdf(
-                            context = context,
-                            uri = uri,
-                            displayName = activeDocumentFile.displayName
-                        )
-                        "docx" -> com.abhisheksati.mydoc.rendering.engine.word.DocxConverter.convertDocxToPdf(
-                            context = context,
-                            uri = uri,
-                            displayName = activeDocumentFile.displayName
-                        )
-                        "xlsx", "xls" -> com.abhisheksati.mydoc.rendering.engine.spreadsheet.XlsxConverter.convertXlsxToPdf(
-                            context = context,
-                            uri = uri,
-                            displayName = activeDocumentFile.displayName
-                        )
-                        else -> null
-                    }
+                    val convertedPdfFile: java.io.File? = null
 
                     val cacheFile: java.io.File = convertedPdfFile ?: run {
                         val temp = java.io.File(context.cacheDir, "temp_view_${System.currentTimeMillis()}.$ext")
@@ -209,12 +192,7 @@ class ViewerViewModel(
                         val outline = if (rawOutline.isNotEmpty()) {
                             rawOutline
                         } else {
-                            val xlsx = com.abhisheksati.mydoc.rendering.engine.spreadsheet.XlsxConverter.getSheetOutlines(cacheFile.absolutePath)
-                            if (xlsx.isNotEmpty()) {
-                                xlsx
-                            } else {
-                                com.abhisheksati.mydoc.rendering.engine.presentation.PptxConverter.getSlideOutlines(cacheFile.absolutePath)
-                            }
+                            emptyList()
                         }
                         val initialPage = savedState?.lastPage?.coerceIn(0, maxOf(0, totalPages - 1)) ?: 0
                         val defaultMode = (context.applicationContext as? com.abhisheksati.mydoc.MyDocApp)?.settingsRepository?.defaultReadingMode?.value ?: ReadingMode.NORMAL

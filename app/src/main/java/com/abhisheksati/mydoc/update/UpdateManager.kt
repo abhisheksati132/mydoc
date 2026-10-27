@@ -33,9 +33,9 @@ class UpdateManager(
     val currentVersionName: String
         get() = try {
             val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            pInfo.versionName ?: "1.2.4"
+            pInfo.versionName ?: "1.3.0"
         } catch (_: PackageManager.NameNotFoundException) {
-            "1.2.4"
+            "1.3.0"
         }
 
     suspend fun checkForUpdates(isLaunchCheck: Boolean = false) {

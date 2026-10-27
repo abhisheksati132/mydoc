@@ -1,4 +1,4 @@
-package com.abhisheksati.mydoc.ui.settings
+﻿package com.abhisheksati.mydoc.ui.settings
 
 import android.app.KeyguardManager
 import android.content.Context
@@ -547,7 +547,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = "Checking for updates…",
+                                text = "Checking for updatesâ€¦",
                                 style = typography.body.copy(fontSize = 13.5.sp),
                                 color = colors.textSecondary
                             )
