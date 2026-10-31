@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release tag (optional, e.g. v1.2.0)'
+        description: 'Release tag (optional, e.g. v1.4.0)'
         required: false
 
 permissions:
@@ -41,24 +41,65 @@ jobs:
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest --stacktrace
 
-      - name: Determine Version Tag
+      - name: Determine & Verify Version Tag
         id: vars
         run: |
+          APP_VERSION=$(grep 'val APP_VERSION_NAME' app/build.gradle.kts | head -1 | cut -d '"' -f2)
+          if [ -z "$APP_VERSION" ]; then
+            echo "ERROR: Could not parse APP_VERSION_NAME from app/build.gradle.kts"
+            exit 1
+          fi
+
           if [ -n "${{ github.event.inputs.tag_name }}" ]; then
             TAG="${{ github.event.inputs.tag_name }}"
           elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             TAG="${GITHUB_REF_NAME}"
           else
-            VERSION=$(grep 'val APP_VERSION_NAME' app/build.gradle.kts | head -1 | cut -d '"' -f2)
-            if [ -z "$VERSION" ]; then
-              VERSION="1.2.0"
-            fi
-            TAG="v${VERSION}"
+            TAG="v${APP_VERSION}"
           fi
+
+          TAG_VERSION="${TAG#v}"
+          echo "Comparing tag version '$TAG_VERSION' with gradle APP_VERSION_NAME '$APP_VERSION'..."
+          if [ "$TAG_VERSION" != "$APP_VERSION" ]; then
+            echo "ERROR: Version tag mismatch! Tag version is '$TAG_VERSION' but APP_VERSION_NAME in app/build.gradle.kts is '$APP_VERSION'."
+            exit 1
+          fi
+
           echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "version=$APP_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Decode Release Keystore
+        run: |
+          if [ -z "${{ secrets.MYDOC_KEYSTORE_BASE64 }}" ]; then
+            echo "ERROR: MYDOC_KEYSTORE_BASE64 secret is missing!"
+            exit 1
+          fi
+          echo "${{ secrets.MYDOC_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+          if [ ! -s "$RUNNER_TEMP/release.jks" ]; then
+            echo "ERROR: Decoded release.jks is empty or failed to decode."
+            exit 1
+          fi
 
       - name: Build Signed Release APK
+        env:
+          MYDOC_KEYSTORE_PATH: ${{ runner.temp }}/release.jks
+          MYDOC_KEYSTORE_PASSWORD: ${{ secrets.MYDOC_KEYSTORE_PASSWORD }}
+          MYDOC_KEY_ALIAS: ${{ secrets.MYDOC_KEY_ALIAS }}
+          MYDOC_KEY_PASSWORD: ${{ secrets.MYDOC_KEY_PASSWORD }}
         run: ./gradlew assembleRelease --stacktrace
+
+      - name: Verify Universal APK Signing Certificate
+        run: |
+          echo "### Release APK Signing Certificate Verification" >> $GITHUB_STEP_SUMMARY
+          UNIVERSAL_APK="app/build/outputs/apk/release/app-universal-release.apk"
+          if [ -f "$UNIVERSAL_APK" ]; then
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            apksigner verify --print-certs "$UNIVERSAL_APK" | tee -a $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Universal release APK not found at $UNIVERSAL_APK" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
 
       - name: Prepare Release Assets
         run: |
@@ -88,3 +129,9 @@ jobs:
             release-assets/mydoc-*.apk.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cleanup Release Keystore
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/release.jks"
+          echo "Cleaned up temporary release keystore file."

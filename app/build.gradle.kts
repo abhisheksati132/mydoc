@@ -11,7 +11,7 @@ plugins {
 //   2. Increment APP_VERSION_CODE by 1 (must always increase)
 //   3. Build: ./gradlew assembleRelease
 //   4. Tag & push: git tag v1.2.1 && git push origin v1.2.1
-//   5. Create GitHub Release with tag "v1.2.1" â€” the in-app updater reads this tag
+//   5. Create GitHub Release with tag "v1.2.1" — the in-app updater reads this tag
 // -----------------------------------------------------------------------------
 val APP_VERSION_NAME = "1.4.0"
 val APP_VERSION_CODE = 140  // Increment by 1 every release, never decrease
@@ -25,26 +25,21 @@ android {
             val keystorePath = System.getenv("MYDOC_KEYSTORE_PATH")
                 ?: (project.findProperty("mydoc.keystore.path") as? String)
             val keystorePass = System.getenv("MYDOC_KEYSTORE_PASSWORD")
-                ?: (project.findProperty("mydoc.keystore.password") as? String)
+                ?: (project.findProperty("mydoc.key.password") as? String)
             val keyAlias = System.getenv("MYDOC_KEY_ALIAS")
                 ?: (project.findProperty("mydoc.key.alias") as? String)
             val keyPass = System.getenv("MYDOC_KEY_PASSWORD")
                 ?: (project.findProperty("mydoc.key.password") as? String)
 
-            if (keystorePath != null && file(keystorePath).exists()) {
+            if (!keystorePath.isNullOrBlank() && file(keystorePath).exists()) {
                 storeFile = file(keystorePath)
                 storePassword = keystorePass
                 this.keyAlias = keyAlias
                 keyPassword = keyPass
-            } else {
-                // Fallback to shared dev keystore for reproducible local builds
-                storeFile = file("keystore/debug.keystore")
-                storePassword = "android"
-                this.keyAlias = "mydoc"
-                keyPassword = "android"
             }
         }
         create("shared") {
+            // Public debug keystore strictly for local/debug builds only. Never signs releases.
             storeFile = file("keystore/debug.keystore")
             storePassword = "android"
             keyAlias = "mydoc"
@@ -175,4 +170,41 @@ dependencies {
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+gradle.taskGraph.whenReady {
+    val isReleaseBuildRequested = allTasks.any { task ->
+        task.name.contains("Release", ignoreCase = true) &&
+                (task.name.startsWith("assemble") || task.name.startsWith("bundle"))
+    }
+    if (isReleaseBuildRequested) {
+        val keystorePath = System.getenv("MYDOC_KEYSTORE_PATH")
+            ?: (project.findProperty("mydoc.keystore.path") as? String)
+        val keystorePass = System.getenv("MYDOC_KEYSTORE_PASSWORD")
+            ?: (project.findProperty("mydoc.keystore.password") as? String)
+        val keyAlias = System.getenv("MYDOC_KEY_ALIAS")
+            ?: (project.findProperty("mydoc.key.alias") as? String)
+        val keyPass = System.getenv("MYDOC_KEY_PASSWORD")
+            ?: (project.findProperty("mydoc.key.password") as? String)
+
+        val missing = mutableListOf<String>()
+        if (keystorePath.isNullOrBlank()) missing.add("MYDOC_KEYSTORE_PATH (or mydoc.keystore.path)")
+        if (keystorePass.isNullOrBlank()) missing.add("MYDOC_KEYSTORE_PASSWORD (or mydoc.keystore.password)")
+        if (keyAlias.isNullOrBlank()) missing.add("MYDOC_KEY_ALIAS (or mydoc.key.alias)")
+        if (keyPass.isNullOrBlank()) missing.add("MYDOC_KEY_PASSWORD (or mydoc.key.password)")
+
+        if (missing.isNotEmpty()) {
+            throw GradleException(
+                "Release signing failed: missing required release keystore credentials: ${missing.joinToString(", ")}. " +
+                        "Release builds must never fall back to the public debug keystore."
+            )
+        }
+
+        val keystoreFile = file(keystorePath!!)
+        if (!keystoreFile.exists()) {
+            throw GradleException(
+                "Release signing failed: keystore file does not exist at '${keystoreFile.absolutePath}'."
+            )
+        }
+    }
 }

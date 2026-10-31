@@ -105,6 +105,7 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.abs
 
+@androidx.annotation.OptIn(UnstableApi::class)
 enum class VideoResizeMode(val label: String, val mode: Int) {
     FIT("Fit", AspectRatioFrameLayout.RESIZE_MODE_FIT),
     ZOOM("Zoom", AspectRatioFrameLayout.RESIZE_MODE_ZOOM),
