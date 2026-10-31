@@ -15,3 +15,9 @@ release-keystore.properties
 context.md
 .kotlin/
 
+# Agent and tooling artifacts
+.agents/
+skills-lock.json
+coverage-ui.json
+.coverage
+.playwright/

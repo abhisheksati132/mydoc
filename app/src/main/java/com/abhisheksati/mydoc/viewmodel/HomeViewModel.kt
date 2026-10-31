@@ -1,4 +1,4 @@
-﻿package com.abhisheksati.mydoc.viewmodel
+package com.abhisheksati.mydoc.viewmodel
 
 import android.net.Uri
 import androidx.compose.runtime.Immutable

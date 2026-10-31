@@ -1,4 +1,4 @@
-﻿package com.abhisheksati.mydoc.viewmodel
+package com.abhisheksati.mydoc.viewmodel
 
 import android.Manifest
 import android.content.Context

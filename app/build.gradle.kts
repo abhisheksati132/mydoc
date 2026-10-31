@@ -134,9 +134,9 @@ dependencies {
 
 
     // Google AndroidX Media3 ExoPlayer multimedia engine (Hardware-accelerated, zero JNI crash risk)
-    implementation("androidx.media3:media3-exoplayer:1.5.1")
-    implementation("androidx.media3:media3-ui:1.5.1")
-    implementation("androidx.media3:media3-common:1.5.1")
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.ui)
+    implementation(libs.media3.common)
 
     // Coil for document thumbnail loading & caching + GIF/Video frame decoding
     implementation(libs.coil.compose)
@@ -147,10 +147,10 @@ dependencies {
     implementation(libs.androidx.exifinterface)
 
     // ML Kit On-Device Text Recognition (Offline OCR)
-    implementation("com.google.mlkit:text-recognition:16.0.1")
+    implementation(libs.mlkit.text.recognition)
 
     // ZXing for Wi-Fi Transfer QR code generation
-    implementation("com.google.zxing:core:3.5.3")
+    implementation(libs.zxing.core)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

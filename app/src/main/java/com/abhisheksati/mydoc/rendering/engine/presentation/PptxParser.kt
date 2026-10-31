@@ -1,4 +1,4 @@
-﻿package com.abhisheksati.mydoc.rendering.engine.presentation
+package com.abhisheksati.mydoc.rendering.engine.presentation
 
 import android.util.Log
 

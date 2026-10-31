@@ -1,4 +1,4 @@
-﻿package com.abhisheksati.mydoc.data.local
+package com.abhisheksati.mydoc.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
