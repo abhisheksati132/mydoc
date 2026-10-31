@@ -111,6 +111,14 @@ class SettingsRepository(context: Context) {
     private val _amoledBlack = MutableStateFlow(prefs.getBoolean(KEY_AMOLED_BLACK, true))
     val amoledBlack: StateFlow<Boolean> = _amoledBlack.asStateFlow()
 
+    private val _checkUpdatesOnLaunch = MutableStateFlow(prefs.getBoolean(KEY_CHECK_UPDATES_ON_LAUNCH, true))
+    val checkUpdatesOnLaunch: StateFlow<Boolean> = _checkUpdatesOnLaunch.asStateFlow()
+
+    fun setCheckUpdatesOnLaunch(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_CHECK_UPDATES_ON_LAUNCH, enabled).apply()
+        _checkUpdatesOnLaunch.value = enabled
+    }
+
     fun setDynamicColor(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_DYNAMIC_COLOR, enabled).apply()
         _dynamicColor.value = enabled
@@ -368,6 +376,7 @@ class SettingsRepository(context: Context) {
         private const val KEY_DOUBLE_TAP_ZOOM = "double_tap_zoom"
         private const val KEY_DYNAMIC_COLOR = "dynamic_color_enabled"
         private const val KEY_AMOLED_BLACK = "amoled_black_enabled"
+        private const val KEY_CHECK_UPDATES_ON_LAUNCH = "check_updates_on_launch"
         private const val KEY_SCAN_FULL_DEVICE = "scan_full_device_storage"
         private const val KEY_READING_BRIGHTNESS = "reading_brightness"
         private const val KEY_READING_FONT_SCALE = "reading_font_scale"

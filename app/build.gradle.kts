@@ -62,6 +62,11 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        val releaseCertSha256 = (project.findProperty("mydoc.release.cert.sha256") as? String)
+            ?: System.getenv("MYDOC_RELEASE_CERT_SHA256")
+            ?: ""
+        buildConfigField("String", "RELEASE_CERT_SHA256", "\"$releaseCertSha256\"")
     }
 
     buildTypes {
@@ -91,6 +96,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {
@@ -161,6 +167,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation("net.sf.kxml:kxml2:2.3.0")
+    testImplementation("org.json:json:20240303")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

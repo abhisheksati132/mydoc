@@ -127,6 +127,7 @@ fun SettingsScreen(
 
     // ABOUT & SECURITY
     val biometricLockEnabled by settingsRepository.isBiometricLockEnabled.collectAsState()
+    val checkUpdatesOnLaunch by settingsRepository.checkUpdatesOnLaunch.collectAsState()
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -511,6 +512,21 @@ fun SettingsScreen(
 
             // 6. ABOUT & UPDATES
             SettingsCard(title = "ABOUT & UPDATES") {
+                SettingToggleRow(
+                    title = "Check for updates on launch",
+                    subtitle = "Automatically check for new versions on GitHub when the app starts",
+                    icon = Icons.Outlined.Refresh,
+                    checked = checkUpdatesOnLaunch,
+                    onCheckedChange = { isChecked ->
+                        settingsRepository.setCheckUpdatesOnLaunch(isChecked)
+                    }
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 10.dp),
+                    color = colors.divider.copy(alpha = 0.5f),
+                    thickness = 0.5.dp
+                )
 
                 when (val state = updateState) {
                     is UpdateUiState.Idle -> {

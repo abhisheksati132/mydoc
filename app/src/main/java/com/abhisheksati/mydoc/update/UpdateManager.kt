@@ -2,6 +2,7 @@ package com.abhisheksati.mydoc.update
 
 import android.content.Context
 import android.content.pm.PackageManager
+import com.abhisheksati.mydoc.BuildConfig
 import com.abhisheksati.mydoc.domain.model.AppRelease
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,10 +34,19 @@ class UpdateManager(
     val currentVersionName: String
         get() = try {
             val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            pInfo.versionName ?: "1.3.5"
+            pInfo.versionName ?: BuildConfig.VERSION_NAME
         } catch (_: PackageManager.NameNotFoundException) {
-            "1.3.5"
+            BuildConfig.VERSION_NAME
         }
+
+    fun cleanUpdatesCache() {
+        val updatesDir = File(context.cacheDir, "updates")
+        if (updatesDir.exists()) {
+            updatesDir.listFiles()?.forEach { file ->
+                runCatching { file.delete() }
+            }
+        }
+    }
 
     suspend fun checkForUpdates(isLaunchCheck: Boolean = false) {
         if (isLaunchCheck) {
@@ -91,9 +101,19 @@ class UpdateManager(
     suspend fun downloadAndInstall(release: AppRelease) {
         _state.value = UpdateUiState.Downloading(0, 0, release.apkSizeBytes)
 
-        val expectedChecksum = if (!release.checksumUrl.isNullOrBlank()) {
+        // Delete old APK files before attempt
+        cleanUpdatesCache()
+
+        val expectedChecksum = runCatching {
+            if (release.checksumUrl.isNullOrBlank()) {
+                throw IllegalStateException("Checksum URL is missing for release ${release.tagName}")
+            }
             apkDownloader.fetchChecksumText(release.checksumUrl)
-        } else null
+        }.getOrElse { ex ->
+            cleanUpdatesCache()
+            _state.value = UpdateUiState.Error("Checksum verification failed: ${ex.message}")
+            return
+        }
 
         val targetName = "mydoc-v${release.versionName}.apk"
         val downloadResult = apkDownloader.downloadApk(
@@ -112,10 +132,12 @@ class UpdateManager(
                 runCatching {
                     installerHelper.installApk(file)
                 }.onFailure { ex ->
+                    cleanUpdatesCache()
                     _state.value = UpdateUiState.Error(ex.localizedMessage ?: "Installation verification failed")
                 }
             }
         }.onFailure { err ->
+            cleanUpdatesCache()
             _state.value = UpdateUiState.Error(err.localizedMessage ?: "Download failed")
         }
     }

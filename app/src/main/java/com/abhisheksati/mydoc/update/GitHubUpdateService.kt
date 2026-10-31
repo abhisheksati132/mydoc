@@ -5,7 +5,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -13,6 +12,12 @@ class GitHubUpdateService(
     private val owner: String = "abhisheksati132",
     private val repo: String = "mydoc"
 ) {
+
+    companion object {
+        private val VALID_TAG_REGEX = Regex("""^v?\d+(\.\d+){1,3}$""")
+
+        fun isValidTag(tag: String): Boolean = VALID_TAG_REGEX.matches(tag.trim())
+    }
 
     suspend fun fetchLatestRelease(): Result<AppRelease?> = withContext(Dispatchers.IO) {
         runCatching {
@@ -41,30 +46,40 @@ class GitHubUpdateService(
         }
     }
 
-    private fun parseReleaseJson(jsonString: String): AppRelease? {
+    fun parseReleaseJson(jsonString: String): AppRelease? {
         val root = JSONObject(jsonString)
-        val tagName = root.optString("tag_name", "")
-        if (tagName.isBlank()) return null
+
+        val isDraft = root.optBoolean("draft", false)
+        val isPrerelease = root.optBoolean("prerelease", false)
+        if (isDraft || isPrerelease) {
+            return null
+        }
+
+        val tagName = root.optString("tag_name", "") ?: ""
+        if (tagName.isBlank() || !isValidTag(tagName)) {
+            return null
+        }
 
         val versionName = tagName.removePrefix("v").removePrefix("V")
-        val body = root.optString("body", "No release notes provided.")
-        val publishedAt = root.optString("published_at", "")
+        val body = root.optString("body", "No release notes provided.") ?: "No release notes provided."
+        val publishedAt = root.optString("published_at", "") ?: ""
 
         val assets = root.optJSONArray("assets") ?: return null
         val apkAssets = mutableListOf<Triple<String, String, Long>>()
         val checksumMap = mutableMapOf<String, String>()
 
         for (i in 0 until assets.length()) {
-            val asset = assets.getJSONObject(i)
-            val name = asset.optString("name", "")
-            val downloadUrl = asset.optString("browser_download_url", "")
+            val asset = assets.optJSONObject(i) ?: continue
+            val name = asset.optString("name", "") ?: ""
+            val downloadUrl = asset.optString("browser_download_url", "") ?: ""
             val size = asset.optLong("size", 0)
 
             if (name.endsWith(".apk", ignoreCase = true)) {
                 apkAssets.add(Triple(name, downloadUrl, size))
-            } else if (name.endsWith(".sha256", ignoreCase = true) || name.endsWith(".sha256.txt", ignoreCase = true)) {
-                val baseApkName = name.removeSuffix(".sha256").removeSuffix(".txt")
-                checksumMap[baseApkName] = downloadUrl
+            } else if (name.endsWith(".sha256", ignoreCase = true)) {
+                // Strict match: <apk name>.sha256
+                val exactBaseApkName = name.removeSuffix(".sha256")
+                checksumMap[exactBaseApkName] = downloadUrl
             }
         }
 
@@ -72,7 +87,7 @@ class GitHubUpdateService(
             return null
         }
 
-        val supportedAbis = android.os.Build.SUPPORTED_ABIS.toList()
+        val supportedAbis = runCatching { android.os.Build.SUPPORTED_ABIS?.toList() }.getOrNull() ?: emptyList()
         var selectedApk = apkAssets.firstOrNull { apk ->
             supportedAbis.any { abi -> apk.first.contains(abi, ignoreCase = true) }
         }
@@ -83,9 +98,13 @@ class GitHubUpdateService(
             selectedApk = apkAssets.first()
         }
 
+        val apkName = selectedApk.first
         val apkUrl = selectedApk.second
         val apkSize = selectedApk.third
-        val checksumUrl = checksumMap[selectedApk.first] ?: checksumMap.values.firstOrNull()
+
+        // Strict: only match <apk name>.sha256 for the selected APK. No fallback to other APKs' checksums!
+        val checksumUrl = checksumMap[apkName]
+            ?: throw IllegalStateException("Release asset $apkName does not have a matching checksum asset ($apkName.sha256)")
 
         return AppRelease(
             tagName = tagName,

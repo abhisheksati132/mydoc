@@ -118,9 +118,11 @@ class MainActivity : ComponentActivity() {
 
         updateManager = UpdateManager(this)
 
-        // Silent launch update check (throttled to max once every 24h)
-        lifecycleScope.launch {
-            updateManager.checkForUpdates(isLaunchCheck = true)
+        // Silent launch update check (throttled to max once every 24h, respecting user setting)
+        if (app.settingsRepository.checkUpdatesOnLaunch.value) {
+            lifecycleScope.launch {
+                updateManager.checkForUpdates(isLaunchCheck = true)
+            }
         }
 
         handleIncomingIntent(intent)

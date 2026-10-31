@@ -1,8 +1,12 @@
 package com.abhisheksati.mydoc.update
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -22,7 +26,6 @@ class ApkDownloaderTest {
 
         val computed = ApkDownloader.computeSha256(testFile)
 
-        // Compute reference hash using standard MessageDigest
         val expected = MessageDigest.getInstance("SHA-256")
             .digest(content.toByteArray())
             .joinToString("") { "%02x".format(it) }
@@ -59,5 +62,66 @@ class ApkDownloaderTest {
 
         // Format 4: empty or whitespace
         assertNull(ApkDownloader.parseChecksumContent("   \n\t  "))
+    }
+
+    @Test
+    fun `validateDownloadUrl accepts valid https GitHub hosts`() {
+        val validUrls = listOf(
+            "https://github.com/abhisheksati132/mydoc/releases/download/v1.0.0/app-universal.apk",
+            "https://api.github.com/repos/abhisheksati132/mydoc/releases/assets/12345",
+            "https://objects.githubusercontent.com/github-production-release-asset-2e65be/123/456",
+            "https://release-assets.githubusercontent.com/download/app.apk"
+        )
+
+        for (urlString in validUrls) {
+            val url = ApkDownloader.validateDownloadUrl(urlString)
+            assertNotNull(url)
+            assertEquals("https", url.protocol)
+        }
+    }
+
+    @Test
+    fun `validateDownloadUrl rejects insecure http protocol`() {
+        val httpUrl = "http://github.com/abhisheksati132/mydoc/releases/download/v1.0.0/app.apk"
+        val ex = assertThrows(SecurityException::class.java) {
+            ApkDownloader.validateDownloadUrl(httpUrl)
+        }
+        assertTrue(ex.message!!.contains("Insecure protocol", ignoreCase = true))
+    }
+
+    @Test
+    fun `validateDownloadUrl rejects disallowed external hosts (redirect attack)`() {
+        val rogueUrls = listOf(
+            "https://malicious-server.com/fake-mydoc.apk",
+            "https://github.evil.com/app.apk",
+            "https://notgithubusercontent.com/asset.apk",
+            "https://api.github.com.attacker.com/payload.apk"
+        )
+
+        for (urlString in rogueUrls) {
+            val ex = assertThrows(SecurityException::class.java) {
+                ApkDownloader.validateDownloadUrl(urlString)
+            }
+            assertTrue(ex.message!!.contains("Disallowed host", ignoreCase = true))
+        }
+    }
+
+    @Test
+    fun `isHostAllowed correctly filters domains`() {
+        assertTrue(ApkDownloader.isHostAllowed("github.com"))
+        assertTrue(ApkDownloader.isHostAllowed("api.github.com"))
+        assertTrue(ApkDownloader.isHostAllowed("objects.githubusercontent.com"))
+        assertTrue(ApkDownloader.isHostAllowed("release-assets.githubusercontent.com"))
+        assertTrue(ApkDownloader.isHostAllowed("any-subdomain.githubusercontent.com"))
+
+        assertFalse(ApkDownloader.isHostAllowed(null))
+        assertFalse(ApkDownloader.isHostAllowed(""))
+        assertFalse(ApkDownloader.isHostAllowed("fakegithub.com"))
+        assertFalse(ApkDownloader.isHostAllowed("github.com.hacker.com"))
+    }
+
+    @Test
+    fun `max download size is capped at 200MB`() {
+        assertEquals(200L * 1024 * 1024, ApkDownloader.MAX_DOWNLOAD_SIZE_BYTES)
     }
 }
