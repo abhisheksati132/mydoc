@@ -376,10 +376,18 @@ private fun AppListItem(
 
 private fun shareApk(context: Context, apkFile: File) {
     try {
+        val sharedDir = File(context.cacheDir, "shared").apply { if (!exists()) mkdirs() }
+        val shareFile = if (apkFile.parentFile?.absolutePath == sharedDir.absolutePath) {
+            apkFile
+        } else {
+            val dest = File(sharedDir, apkFile.name)
+            apkFile.copyTo(dest, overwrite = true)
+            dest
+        }
         val uri = FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",
-            apkFile
+            shareFile
         )
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "application/vnd.android.package-archive"

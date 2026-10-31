@@ -1482,8 +1482,16 @@ fun StoragePermissionBanner(
 private fun shareFiles(context: Context, files: List<File>) {
     if (files.isEmpty()) return
     try {
+        val sharedDir = File(context.cacheDir, "shared").apply { if (!exists()) mkdirs() }
         val uris = files.map { file ->
-            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            val shareFile = if (file.parentFile?.absolutePath == sharedDir.absolutePath) {
+                file
+            } else {
+                val dest = File(sharedDir, file.name)
+                file.copyTo(dest, overwrite = true)
+                dest
+            }
+            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", shareFile)
         }
 
         val intent = if (uris.size == 1) {

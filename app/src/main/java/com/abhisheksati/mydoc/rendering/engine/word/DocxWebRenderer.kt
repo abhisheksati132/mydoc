@@ -54,7 +54,7 @@ internal object DocxWebRenderer {
                 webView = view
                 view.settings.javaScriptEnabled = true
                 view.settings.blockNetworkLoads = true
-                view.settings.allowFileAccess = true
+                view.settings.allowFileAccess = false
 
                 view.addJavascriptInterface(
                     object {

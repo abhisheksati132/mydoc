@@ -1692,7 +1692,8 @@ class PdfToolsEngine(private val context: Context) {
     }
 
     private fun createTempOutputFile(prefix: String, ext: String): File {
-        return File.createTempFile("mydoc_${prefix}_", ".$ext", context.cacheDir)
+        val toolsDir = File(context.cacheDir, "tools_output").apply { if (!exists()) mkdirs() }
+        return File.createTempFile("mydoc_${prefix}_", ".$ext", toolsDir)
     }
 
     private fun countDocumentPages(file: File): Int {

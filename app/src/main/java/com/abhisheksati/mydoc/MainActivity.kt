@@ -547,7 +547,15 @@ class MainActivity : ComponentActivity() {
                         }.onFailure { e ->
                             if (file != null) {
                                 try {
-                                    val shareUri = FileProvider.getUriForFile(this@MainActivity, "${packageName}.fileprovider", file)
+                                    val sharedDir = File(cacheDir, "shared").apply { if (!exists()) mkdirs() }
+                                    val shareFile = if (file.parentFile?.absolutePath == sharedDir.absolutePath) {
+                                        file
+                                    } else {
+                                        val dest = File(sharedDir, file.name)
+                                        file.copyTo(dest, overwrite = true)
+                                        dest
+                                    }
+                                    val shareUri = FileProvider.getUriForFile(this@MainActivity, "${packageName}.fileprovider", shareFile)
                                     val intent = Intent(Intent.ACTION_VIEW).apply {
                                         setDataAndType(shareUri, "*/*")
                                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)

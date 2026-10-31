@@ -1,11 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <include domain="database" path="mydoc.db" />
-        <include domain="sharedpref" path="app_prefs.xml" />
+        <!-- Exclude user preferences: contains sensitive biometric app lock state and device-specific configs -->
+        <exclude domain="sharedpref" path="mydoc_settings.xml" />
+
+        <!-- Exclude updater state: contains update check timestamps and dismissed release tags -->
+        <exclude domain="sharedpref" path="mydoc_updater.xml" />
+
+        <!-- Exclude cache: temporary render caches, updates, and shared files should not persist in cloud backup -->
+        <exclude domain="root" path="cache" />
+
+        <!-- Exclude hardware-backed encrypted signature file: key in Android Keystore cannot be migrated -->
+        <exclude domain="file" path="user_signature.enc" />
     </cloud-backup>
+
     <device-transfer>
-        <include domain="database" path="mydoc.db" />
-        <include domain="sharedpref" path="app_prefs.xml" />
+        <!-- Exclude user preferences: contains sensitive biometric app lock state and device-specific configs -->
+        <exclude domain="sharedpref" path="mydoc_settings.xml" />
+
+        <!-- Exclude updater state: contains update check timestamps and dismissed release tags -->
+        <exclude domain="sharedpref" path="mydoc_updater.xml" />
+
+        <!-- Exclude cache: temporary render caches, updates, and shared files should not persist during device transfer -->
+        <exclude domain="root" path="cache" />
+
+        <!-- Exclude hardware-backed encrypted signature file: key in Android Keystore cannot be migrated -->
+        <exclude domain="file" path="user_signature.enc" />
     </device-transfer>
 </data-extraction-rules>

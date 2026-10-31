@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <include domain="database" path="mydoc.db" />
-    <include domain="sharedpref" path="app_prefs.xml" />
+    <!-- Exclude user preferences: contains sensitive biometric app lock state and device-specific configs -->
+    <exclude domain="sharedpref" path="mydoc_settings.xml" />
+
+    <!-- Exclude updater state: contains update check timestamps and dismissed release tags -->
+    <exclude domain="sharedpref" path="mydoc_updater.xml" />
+
+    <!-- Exclude cache: temporary render caches, updates, and shared files should not persist across devices -->
+    <exclude domain="root" path="cache" />
+
+    <!-- Exclude hardware-backed encrypted signature file: key in Android Keystore cannot be migrated -->
+    <exclude domain="file" path="user_signature.enc" />
 </full-backup-content>

@@ -143,7 +143,7 @@ fun openPresentationInOfficeApp(context: Context, document: DocumentFile) {
             else -> document.mimeType ?: "application/vnd.ms-powerpoint"
         }
 
-        val sharedDir = File(context.cacheDir, "shared_presentations").apply { mkdirs() }
+        val sharedDir = File(context.cacheDir, "shared").apply { mkdirs() }
         val targetFile = File(sharedDir, document.displayName)
 
         if (!targetFile.exists() || targetFile.length() == 0L) {

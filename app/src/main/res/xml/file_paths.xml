@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Storage for downloaded update APKs across internal and external cache -->
-    <cache-path name="cache" path="." />
-    <external-cache-path name="external_cache" path="." />
-    <files-path name="files" path="." />
-    <external-path name="external_files" path="." />
+    <!-- Pinned private cache subdirectories for APK updates and transient file sharing -->
+    <cache-path name="updates" path="updates/" />
+    <cache-path name="shared" path="shared/" />
+    <cache-path name="tools_output" path="tools_output/" />
 </paths>
