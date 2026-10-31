@@ -86,7 +86,13 @@ jobs:
           MYDOC_KEYSTORE_PASSWORD: ${{ secrets.MYDOC_KEYSTORE_PASSWORD }}
           MYDOC_KEY_ALIAS: ${{ secrets.MYDOC_KEY_ALIAS }}
           MYDOC_KEY_PASSWORD: ${{ secrets.MYDOC_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --stacktrace
+          MYDOC_RELEASE_CERT_SHA256: ${{ secrets.MYDOC_RELEASE_CERT_SHA256 }}
+        run: |
+          if [ -z "$MYDOC_RELEASE_CERT_SHA256" ]; then
+            echo "ERROR: Secret MYDOC_RELEASE_CERT_SHA256 is missing or empty! Release builds require a pinned certificate fingerprint to prevent updater failure."
+            exit 1
+          fi
+          ./gradlew assembleRelease --stacktrace
 
       - name: Verify Universal APK Signing Certificate
         run: |
