@@ -83,6 +83,8 @@ class PackageInstallerHelper(private val context: Context) {
                 @Suppress("DEPRECATION")
                 pm.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_SIGNATURES)
             }
+        } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
+            throw SecurityException("Verification failed: Installed package info not found for '${context.packageName}'", e)
         } catch (e: Exception) {
             throw SecurityException("Verification failed: Cannot read installed package info for '${context.packageName}'", e)
         } ?: throw SecurityException("Verification failed: Installed package info is null for '${context.packageName}'")

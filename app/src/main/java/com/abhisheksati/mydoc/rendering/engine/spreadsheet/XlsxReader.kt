@@ -67,7 +67,7 @@ object XlsxReader {
         val sheets = ordered.map { (name, path, hidden) ->
             XlsxSheet(name, path).also { s ->
                 s.hidden = hidden
-                runCatching { parseWorksheet(entries[path]!!, s) }
+                entries[path]?.let { entry -> runCatching { parseWorksheet(entry, s) } }
             }
         }
         return XlsxWorkbook(sheets, styles, shared, editable = entries.containsKey("xl/workbook.xml"))
@@ -128,11 +128,17 @@ object XlsxReader {
                     "dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink", "folHlink" ->
                         if (inScheme) current = n
                     "srgbClr" -> if (inScheme && current != null) {
-                        p.attr("val")?.let { XlsxColors.parseHex(it) }?.let { byName[current!!] = it }; current = null
+                        p.attr("val")?.let { XlsxColors.parseHex(it) }?.let { color ->
+                            current?.let { byName[it] = color }
+                        }
+                        current = null
                     }
                     "sysClr" -> if (inScheme && current != null) {
                         (p.attr("lastClr") ?: if (p.attr("val") == "window") "FFFFFF" else "000000")
-                            .let { XlsxColors.parseHex(it) }?.let { byName[current!!] = it }; current = null
+                            .let { XlsxColors.parseHex(it) }?.let { color ->
+                                current?.let { byName[it] = color }
+                            }
+                        current = null
                     }
                 }
             } else if (ev == XmlPullParser.END_TAG && p.local == "clrScheme") break

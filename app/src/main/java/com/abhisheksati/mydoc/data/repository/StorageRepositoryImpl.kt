@@ -62,7 +62,11 @@ class StorageRepositoryImpl(
                     )
                 )
             }
-        } catch (_: Exception) {}
+        } catch (e: SecurityException) {
+            android.util.Log.w("StorageRepository", "Permission denied accessing primary storage volume", e)
+        } catch (e: Exception) {
+            android.util.Log.w("StorageRepository", "Error resolving primary storage volume", e)
+        }
 
         // 2. Secondary SD Card / USB OTG
         try {
@@ -89,7 +93,11 @@ class StorageRepositoryImpl(
                     }
                 }
             }
-        } catch (_: Exception) {}
+        } catch (e: SecurityException) {
+            android.util.Log.w("StorageRepository", "Permission denied accessing external secondary volumes", e)
+        } catch (e: Exception) {
+            android.util.Log.w("StorageRepository", "Error resolving secondary storage volumes", e)
+        }
 
         return volumes
     }
@@ -624,7 +632,11 @@ class StorageRepositoryImpl(
                     }
                 }
             }
-        } catch (_: Exception) {}
+        } catch (e: SecurityException) {
+            android.util.Log.w("StorageRepository", "Permission denied discovering recent files", e)
+        } catch (e: Exception) {
+            android.util.Log.w("StorageRepository", "Error discovering recent files", e)
+        }
         items
     }
 
@@ -653,7 +665,11 @@ class StorageRepositoryImpl(
                             if (count >= 200) return@forEach
                         }
                     }
-            } catch (_: Exception) {}
+            } catch (e: SecurityException) {
+                android.util.Log.w("StorageRepository", "Permission denied walking directory for search", e)
+            } catch (e: Exception) {
+                android.util.Log.w("StorageRepository", "Error walking directory for search", e)
+            }
         }
         results
     }

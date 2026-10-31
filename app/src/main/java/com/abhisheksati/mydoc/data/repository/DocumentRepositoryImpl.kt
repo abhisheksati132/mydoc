@@ -157,7 +157,11 @@ class DocumentRepositoryImpl(
                         )
                     }
                 }
-            } catch (_: Exception) {}
+                        } catch (e: SecurityException) {
+                android.util.Log.w("DocumentRepository", "Permission denied reading MediaStore documents", e)
+            } catch (e: Exception) {
+                android.util.Log.w("DocumentRepository", "Error querying MediaStore documents", e)
+            }
 
             // Also merge any recents that might not be indexed in MediaStore
             recents.forEach { recent ->
@@ -214,7 +218,11 @@ class DocumentRepositoryImpl(
                         }
                     }
                 }
-            } catch (_: Exception) {}
+                        } catch (e: java.io.IOException) {
+                android.util.Log.w("DocumentRepository", "Failed caching local document copy", e)
+            } catch (e: Exception) {
+                android.util.Log.w("DocumentRepository", "Unexpected error caching local document", e)
+            }
 
             val existing = recentDao.getRecentByUri(uri.toString())
             val recentEntity = RecentDocumentEntity(
@@ -381,7 +389,10 @@ class DocumentRepositoryImpl(
                         }
                     }
                 }
-            } catch (_: Exception) {
+                        } catch (e: SecurityException) {
+                android.util.Log.w("DocumentRepository", "Permission denied querying document metadata for $uri", e)
+            } catch (e: Exception) {
+                android.util.Log.w("DocumentRepository", "Error querying document metadata for $uri", e)
             }
         } else if (uri.scheme == "file") {
             val file = File(uri.path ?: "")
@@ -398,12 +409,15 @@ class DocumentRepositoryImpl(
                 contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
                     sizeBytes = pfd.statSize
                 }
-            } catch (_: Exception) {
+                        } catch (e: java.io.FileNotFoundException) {
+                android.util.Log.w("DocumentRepository", "File not found when inspecting size for $uri", e)
+            } catch (e: Exception) {
+                android.util.Log.w("DocumentRepository", "Error opening file descriptor for size calculation", e)
             }
         }
 
         if (mimeType.isNullOrBlank()) {
-            val ext = displayName!!.substringAfterLast('.', "").lowercase()
+            val ext = displayName?.substringAfterLast('.', "")?.lowercase().orEmpty()
             mimeType = when (ext) {
                 "pdf" -> "application/pdf"
                 "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"

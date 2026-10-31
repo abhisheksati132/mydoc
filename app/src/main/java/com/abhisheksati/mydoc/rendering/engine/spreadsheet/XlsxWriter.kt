@@ -488,7 +488,7 @@ internal class SheetXml(text: String) {
 
     private data class ColX(var min: Int, var max: Int, val attrs: Attrs)
 
-    private fun readCols(xml: String): Triple<IntRange?, List<ColX>, String>? {
+    private fun readCols(xml: String): Triple<IntRange, List<ColX>, String>? {
         val m = Regex("<((?:\\w+:)?)cols\\b[^>]*>(.*?)</\\1cols>", RegexOption.DOT_MATCHES_ALL).find(xml) ?: return null
         val list = Regex("<(?:\\w+:)?col\\b([^>]*?)/>").findAll(m.groupValues[2]).map { c ->
             val a = Attrs.parse(c.groupValues[1])
@@ -513,7 +513,7 @@ internal class SheetXml(text: String) {
             val nr = XlsxRefs.shiftRange(CellRange(0, c.min - 1, 0, c.max - 1), Axis.COL, at, count) ?: return@mapNotNull null
             c.min = nr.c1 + 1; c.max = nr.c2 + 1; c
         }
-        return xml.replaceRange(range!!, writeCols(p, out))
+        return xml.replaceRange(range, writeCols(p, out))
     }
 
     fun setColWidth(col: Int, widthChars: Float?) {
@@ -535,7 +535,7 @@ internal class SheetXml(text: String) {
         }
         if (target.attrs["width"] != null || target.attrs.map.size > 2) cols.add(target)
         val newCols = writeCols(p, cols)
-        headText = if (existing != null) headText.replaceRange(existing.first!!, newCols) else headText + newCols
+        headText = if (existing != null) headText.replaceRange(existing.first, newCols) else headText + newCols
     }
 
     private fun dimensionRef(): String {

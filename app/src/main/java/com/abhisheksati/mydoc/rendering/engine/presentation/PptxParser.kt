@@ -366,7 +366,7 @@ class PptxParser {
                                         if (notesBuilder.isNotEmpty()) notesBuilder.append("\n")
                                         notesBuilder.append(rawText)
                                     } else if (!inTable) {
-                                        val isHeading = inH || (curFrameBounds != null && curFrameBounds!!.top < 0.22f && slideTitle.isEmpty())
+                                        val isHeading = inH || ((curFrameBounds?.top ?: 1f) < 0.22f && slideTitle.isEmpty())
                                         if (isHeading && slideTitle.isEmpty()) {
                                             slideTitle = rawText
                                         } else {
@@ -1293,12 +1293,12 @@ class PptxParser {
                                     defAlign = curDefAlign
                                 )
 
-                                if (curPhType != null) {
-                                    placeholders[curPhType!!] = layout
-                                    if (curPhIdx != null) placeholders["${curPhType!!}:$curPhIdx"] = layout
+                                curPhType?.let { type ->
+                                    placeholders[type] = layout
+                                    if (curPhIdx != null) placeholders["$type:$curPhIdx"] = layout
                                 }
-                                if (curPhIdx != null) {
-                                    placeholders[curPhIdx!!] = layout
+                                curPhIdx?.let { idx ->
+                                    placeholders[idx] = layout
                                 }
                             }
                         }
@@ -1944,14 +1944,15 @@ class PptxParser {
                                     val hasVisibleText = cleanParagraphs.isNotEmpty()
                                     val hasVisibleFill = curFillColor != null && curFillColor != Color.Transparent
                                     val hasVisibleBorder = curBorderColor != null && curBorderWidth > 0f
-                                    val hasVisiblePreset = curShapePreset != null && (
-                                        curShapePreset!!.contains("arrow", ignoreCase = true) ||
-                                        curShapePreset!!.contains("triangle", ignoreCase = true) ||
-                                        curShapePreset!!.contains("diamond", ignoreCase = true) ||
-                                        curShapePreset!!.contains("star", ignoreCase = true) ||
-                                        curShapePreset!!.contains("chevron", ignoreCase = true) ||
-                                        curShapePreset!!.contains("callout", ignoreCase = true) ||
-                                        curShapePreset!!.contains("line", ignoreCase = true)
+                                    val preset = curShapePreset.orEmpty()
+                                    val hasVisiblePreset = preset.isNotEmpty() && (
+                                        preset.contains("arrow", ignoreCase = true) ||
+                                        preset.contains("triangle", ignoreCase = true) ||
+                                        preset.contains("diamond", ignoreCase = true) ||
+                                        preset.contains("star", ignoreCase = true) ||
+                                        preset.contains("chevron", ignoreCase = true) ||
+                                        preset.contains("callout", ignoreCase = true) ||
+                                        preset.contains("line", ignoreCase = true)
                                     )
 
                                     if (hasVisibleText || hasVisibleFill || hasVisibleBorder || hasVisiblePreset) {

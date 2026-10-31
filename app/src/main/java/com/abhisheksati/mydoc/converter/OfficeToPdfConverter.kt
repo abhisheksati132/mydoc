@@ -105,7 +105,14 @@ object OfficeToPdfConverter {
             } finally {
                 tempFile.delete()
             }
+        } catch (e: java.io.IOException) {
+            android.util.Log.e("OfficeToPdfConverter", "IO error during office conversion for $fileName", e)
+            Result.failure(e)
+        } catch (e: SecurityException) {
+            android.util.Log.e("OfficeToPdfConverter", "Permission error during office conversion for $fileName", e)
+            Result.failure(e)
         } catch (e: Exception) {
+            android.util.Log.e("OfficeToPdfConverter", "Unexpected error during office conversion for $fileName", e)
             Result.failure(e)
         }
     }
@@ -138,7 +145,9 @@ object OfficeToPdfConverter {
         return try {
             val md = MessageDigest.getInstance("MD5")
             md.digest(raw.toByteArray()).joinToString("") { "%02x".format(it) }
-        } catch (_: Exception) {
+        } catch (e: java.security.NoSuchAlgorithmException) {
+            raw.replace("[^a-zA-Z0-9]".toRegex(), "_")
+        } catch (e: Exception) {
             raw.replace("[^a-zA-Z0-9]".toRegex(), "_")
         }
     }

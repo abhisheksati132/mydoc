@@ -42,10 +42,13 @@ data class ColorSpec(
 
         fun fromAttrs(a: Map<String, String>): ColorSpec? {
             val tint = a["tint"]?.toDoubleOrNull() ?: 0.0
+            val rgb = a["rgb"]
+            val theme = a["theme"]
+            val indexed = a["indexed"]
             return when {
-                a["rgb"] != null -> XlsxColors.parseHex(a["rgb"]!!)?.let { ColorSpec(rgb = it, tint = tint) }
-                a["theme"] != null -> a["theme"]!!.toIntOrNull()?.let { ColorSpec(theme = it, tint = tint) }
-                a["indexed"] != null -> a["indexed"]!!.toIntOrNull()?.let { ColorSpec(indexed = it, tint = tint) }
+                rgb != null -> XlsxColors.parseHex(rgb)?.let { ColorSpec(rgb = it, tint = tint) }
+                theme != null -> theme.toIntOrNull()?.let { ColorSpec(theme = it, tint = tint) }
+                indexed != null -> indexed.toIntOrNull()?.let { ColorSpec(indexed = it, tint = tint) }
                 a["auto"] == "1" || a["auto"] == "true" -> ColorSpec(auto = true)
                 else -> null
             }

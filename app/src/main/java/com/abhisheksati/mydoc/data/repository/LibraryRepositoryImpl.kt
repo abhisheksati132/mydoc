@@ -50,7 +50,8 @@ class LibraryRepositoryImpl(
             }
             val pb = playbackMap[m.uri.toString()]
             val lastPos = pb?.positionMs ?: 0L
-            val dur = if ((pb?.durationMs ?: 0L) > 0L) pb!!.durationMs else m.durationMs
+            val pbDur = pb?.durationMs ?: 0L
+            val dur = if (pbDur > 0L) pbDur else m.durationMs
             val progress = if (dur > 0L) (lastPos.toFloat() / dur).coerceIn(0f, 1f) else 0f
 
             LibraryItem(

@@ -101,6 +101,9 @@ class PdfToolsEngine(private val context: Context) {
             }
 
             val primaryFile = inputFiles.firstOrNull()
+            fun requirePrimaryFile(): File = primaryFile
+                ?: throw IllegalArgumentException("Primary input file is required for ${tool.title}")
+
             val initialSizeBytes = inputFiles.sumOf { it.length() }
             val initialPages = primaryFile?.let { countDocumentPages(it) } ?: 0
 
@@ -109,46 +112,46 @@ class PdfToolsEngine(private val context: Context) {
             val resultFile: File = when (tool) {
                 // 1. Organize
                 PdfTool.MERGE -> mergePdfs(inputFiles, options, onProgress)
-                PdfTool.SPLIT -> splitPdf(primaryFile!!, options, onProgress)
-                PdfTool.REMOVE_PAGES -> removePages(primaryFile!!, options, onProgress)
-                PdfTool.REORDER_PAGES -> reorderPages(primaryFile!!, options, onProgress)
-                PdfTool.EXTRACT_PAGES -> extractPages(primaryFile!!, options, onProgress)
-                PdfTool.ROTATE -> rotatePdf(primaryFile!!, options, onProgress)
-                PdfTool.CROP -> cropPdf(primaryFile!!, options, onProgress)
+                PdfTool.SPLIT -> splitPdf(requirePrimaryFile(), options, onProgress)
+                PdfTool.REMOVE_PAGES -> removePages(requirePrimaryFile(), options, onProgress)
+                PdfTool.REORDER_PAGES -> reorderPages(requirePrimaryFile(), options, onProgress)
+                PdfTool.EXTRACT_PAGES -> extractPages(requirePrimaryFile(), options, onProgress)
+                PdfTool.ROTATE -> rotatePdf(requirePrimaryFile(), options, onProgress)
+                PdfTool.CROP -> cropPdf(requirePrimaryFile(), options, onProgress)
 
                 // 2. Optimize
-                PdfTool.COMPRESS -> compressPdf(primaryFile!!, options, onProgress)
-                PdfTool.REPAIR -> repairPdf(primaryFile!!, onProgress)
+                PdfTool.COMPRESS -> compressPdf(requirePrimaryFile(), options, onProgress)
+                PdfTool.REPAIR -> repairPdf(requirePrimaryFile(), onProgress)
 
                 // 3. Convert (to PDF)
                 PdfTool.IMAGE_TO_PDF -> imagesToPdf(inputFiles, options, onProgress)
-                PdfTool.OFFICE_TO_PDF -> officeToPdf(primaryFile!!, onProgress)
-                PdfTool.TEXT_TO_PDF -> textOrCsvToPdf(primaryFile!!, onProgress)
+                PdfTool.OFFICE_TO_PDF -> officeToPdf(requirePrimaryFile(), onProgress)
+                PdfTool.TEXT_TO_PDF -> textOrCsvToPdf(requirePrimaryFile(), onProgress)
 
                 // 4. Convert (from PDF)
-                PdfTool.PDF_TO_IMAGES -> pdfToImagesZip(primaryFile!!, options, onProgress)
-                PdfTool.PDF_TO_TEXT_MD -> pdfToTextOrMarkdown(primaryFile!!, onProgress)
-                PdfTool.PDF_TO_OFFICE -> pdfToOfficeDocument(primaryFile!!, onProgress)
-                PdfTool.PDF_TO_PDFA -> pdfToPdfA(primaryFile!!, onProgress)
-                PdfTool.EXTRACT_ASSETS -> extractAssetsZip(primaryFile!!, onProgress)
+                PdfTool.PDF_TO_IMAGES -> pdfToImagesZip(requirePrimaryFile(), options, onProgress)
+                PdfTool.PDF_TO_TEXT_MD -> pdfToTextOrMarkdown(requirePrimaryFile(), onProgress)
+                PdfTool.PDF_TO_OFFICE -> pdfToOfficeDocument(requirePrimaryFile(), onProgress)
+                PdfTool.PDF_TO_PDFA -> pdfToPdfA(requirePrimaryFile(), onProgress)
+                PdfTool.EXTRACT_ASSETS -> extractAssetsZip(requirePrimaryFile(), onProgress)
 
                 // 5. Edit
-                PdfTool.ANNOTATE -> annotatePdf(primaryFile!!, options, onProgress)
-                PdfTool.ADD_PAGE_NUMBERS -> addPageNumbers(primaryFile!!, options, onProgress)
-                PdfTool.ADD_WATERMARK -> addWatermark(primaryFile!!, options, onProgress)
-                PdfTool.FILL_FORM -> fillFormFields(primaryFile!!, options, onProgress)
-                PdfTool.SIGN_PDF -> signPdf(primaryFile!!, options, onProgress)
+                PdfTool.ANNOTATE -> annotatePdf(requirePrimaryFile(), options, onProgress)
+                PdfTool.ADD_PAGE_NUMBERS -> addPageNumbers(requirePrimaryFile(), options, onProgress)
+                PdfTool.ADD_WATERMARK -> addWatermark(requirePrimaryFile(), options, onProgress)
+                PdfTool.FILL_FORM -> fillFormFields(requirePrimaryFile(), options, onProgress)
+                PdfTool.SIGN_PDF -> signPdf(requirePrimaryFile(), options, onProgress)
                 PdfTool.COMPARE_PDF -> comparePdfs(inputFiles, onProgress)
 
                 // 6. Security
-                PdfTool.PROTECT -> protectPdf(primaryFile!!, options, onProgress)
-                PdfTool.UNLOCK -> unlockPdf(primaryFile!!, options, onProgress)
-                PdfTool.REDACT -> redactPdf(primaryFile!!, options, onProgress)
-                PdfTool.STRIP_METADATA -> stripMetadata(primaryFile!!, onProgress)
+                PdfTool.PROTECT -> protectPdf(requirePrimaryFile(), options, onProgress)
+                PdfTool.UNLOCK -> unlockPdf(requirePrimaryFile(), options, onProgress)
+                PdfTool.REDACT -> redactPdf(requirePrimaryFile(), options, onProgress)
+                PdfTool.STRIP_METADATA -> stripMetadata(requirePrimaryFile(), onProgress)
 
                 // 7. Scan & OCR
                 PdfTool.SCAN_TO_PDF -> imagesToPdf(inputFiles, options, onProgress)
-                PdfTool.OCR_PDF -> ocrPdf(primaryFile!!, onProgress)
+                PdfTool.OCR_PDF -> ocrPdf(requirePrimaryFile(), onProgress)
             }
 
             currentCoroutineContext().ensureActive()
