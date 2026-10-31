@@ -1,3 +1,8 @@
+> [!NOTE]
+> **Historical Audit Snapshot (October 2026)**
+> This document is a historical audit report representing an earlier state of the codebase.
+> Current security policies, architecture, updater hardening, and privacy guarantees are documented in [README.md](../../README.md), [SECURITY.md](../../SECURITY.md), and [improvement.md](../../improvement.md).
+
 # Dead Code, Redundant Assets & Deprecated Logic Audit
 
 **Target Application:** `com.abhisheksati.mydoc`  
