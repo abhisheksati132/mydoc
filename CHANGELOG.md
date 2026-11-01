@@ -3,6 +3,48 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [Unreleased]
+
+### Changed
+
+- **Editorial reading surface.** Home, Files, Tools, Settings and the reader chrome now share one
+  printed-page grammar instead of separate card systems. New primitives in
+  `designsystem/components/EditorialRules.kt` (`EditorialRule`, `EditorialMasthead`,
+  `AppSectionHeader` with folios, `EditorialAction`) and `EditorialRow.kt` replace the surface,
+  1dp-border and accent-overline cards. Section breaks are 2dp ink rules, dividers are 0.5dp
+  hairlines, lists are ruled rows with no card, and the only filled shapes are ink chips.
+- **Home.** The horizontal quick-action scroller is a fixed four-cell action band (Scan, Merge,
+  Compress, Sign) that shows every action without scrolling. "Continue reading" carries progress as
+  a 2dp accent rule; recent documents are ruled rows with format and size meta.
+- **Files.** The storage card, category tile grid and volume cards are replaced by a single index:
+  a tappable storage readout with a 2dp gauge, then numbered Collections, Devices, Pinned and
+  Utilities rows. Empty categories read "Empty"; app counts are singularised. Removes
+  `EditorialStorageOverviewCard`, `EditorialCategoryGrid` and `StorageVolumeCards`; file rows and
+  grid tiles drop their cards for paper rows with an ink-stamp selection.
+- **Tools.** The duplicated "Featured essentials" cards are gone; tools are a numbered index of
+  ruled rows per group, with the category chips as the only filter.
+- **Settings.** Sections are numbered folio headings (01–06) with hairline rows instead of cards;
+  switches and progress gauges are ink, clearing actions are accent text links, and toggle
+  subtitles were shortened so rows hold one or two lines on a phone width.
+- **Reader chrome.** Top and bottom bars are paper-coloured ink chrome closed by hairlines; the
+  title is `titleSmall` with a tabular `PAGE 01 / 02` folio, glyphs are outlined, the overflow menu
+  uses the editorial menu shape, sheet tabs are rule-underlined entries, and the scrubber is ink
+  with a floating folio above the thumb.
+- **Tokens.** `AppColors.track` (ink at 16% alpha) is the unfilled gauge and scrubber track, because
+  the hairline colour disappeared against the dark surface. `AppSpacing` now documents two strokes
+  only (`hairline`, `rule`) and sets `listRowHeight` to 56dp.
+- **Press physics.** `pressScaleEffect` is critically damped; nothing overshoots 1.0x.
+
+### Verification
+
+- `./gradlew :app:testDebugUnitTest` — 125 tests, 0 failures.
+- `./gradlew :app:assembleDebug` — debug APK builds.
+- `./gradlew :app:lintDebug` — 0 errors, 146 warnings, unchanged from 1.4.5.
+- Visual pass on `mydoc_api35` in light and dark: Home, Files, Tools, Settings and the PDF reader.
+  Confirmed the action band shows all four actions, storage gauges and the reader scrubber are
+  visible in both themes, and the reader's folio, three-action footer and ink selection read
+  correctly. AMOLED, rotation, larger font scales and motion remain unverified.
+
 ## [1.4.5] — 2026-11-01
 
 Range: `v1.4.4..v1.4.5`.
