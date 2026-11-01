@@ -7,9 +7,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -26,7 +24,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Folder
@@ -45,21 +42,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.domain.model.HomeTab
 
 /**
- * Material 3 Expressive Navigation Bar: Home | Files | Tools.
+ * Editorial Studio Navigation Bar: Home | Files | Tools.
  * Features:
- * - Fluid spring-animated indicator pill.
- * - Icon micro-bounce on tab transition.
- * - Native ripple touch feedback so every tap is acknowledged.
+ * - Crisp 0.5dp hairline top divider.
+ * - Restrained brand ink-violet active indicator pill.
+ * - Filled vs outlined iconography for instant visual distinction.
+ * - Subtle spring animations with tactile haptic feedback.
  */
 @Composable
 fun BottomNavBar(
@@ -72,31 +70,23 @@ fun BottomNavBar(
     val haptics = rememberAppHaptics()
 
     val isDark = colors.background != Color(0xFFF7F7F4)
-    val glassBg = if (isDark) Color(0xEE161822) else Color(0xF4FFFFFF)
-    val rimColor = if (isDark) Color.White.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.90f)
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(glassBg)
+            .background(colors.surface)
             .border(
-                width = 1.dp,
-                brush = Brush.verticalGradient(
-                    listOf(
-                        rimColor,
-                        Color.Transparent
-                    )
-                ),
+                width = 0.5.dp,
+                color = colors.line,
                 shape = RectangleShape
             )
             .navigationBarsPadding()
     ) {
-        // 70dp Apple Liquid Glass Dock content
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(70.dp)
-                .padding(horizontal = 12.dp),
+                .height(64.dp)
+                .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             HomeTab.entries.forEach { tab ->
@@ -114,16 +104,16 @@ fun BottomNavBar(
                 }
 
                 val pillWidth by animateDpAsState(
-                    targetValue = if (isSelected) 64.dp else 0.dp,
+                    targetValue = if (isSelected) 60.dp else 0.dp,
                     animationSpec = spring(
-                        dampingRatio = 0.72f,
+                        dampingRatio = 0.76f,
                         stiffness = Spring.StiffnessMediumLow
                     ),
                     label = "pillWidth"
                 )
 
                 val pillBg = if (isSelected) {
-                    if (isDark) Color(0x335B4FE8) else Color(0x1A5B4FE8)
+                    colors.accent.copy(alpha = if (isDark) 0.16f else 0.10f)
                 } else Color.Transparent
 
                 val iconColor by animateColorAsState(
@@ -139,9 +129,9 @@ fun BottomNavBar(
                 )
 
                 val iconScale by animateFloatAsState(
-                    targetValue = if (isSelected) 1.12f else 1.0f,
+                    targetValue = if (isSelected) 1.08f else 1.0f,
                     animationSpec = spring(
-                        dampingRatio = 0.52f,
+                        dampingRatio = 0.55f,
                         stiffness = Spring.StiffnessMedium
                     ),
                     label = "iconScale"
@@ -154,7 +144,7 @@ fun BottomNavBar(
                         .clip(CircleShape)
                         .clickable(
                             interactionSource = interactionSource,
-                            indication = ripple(bounded = false, radius = 36.dp),
+                            indication = ripple(bounded = false, radius = 32.dp),
                             onClick = {
                                 if (!isSelected) {
                                     haptics.tick()
@@ -168,24 +158,19 @@ fun BottomNavBar(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        // Liquid Glass Active Pill
+                        // Editorial Active Pill
                         Box(
                             modifier = Modifier
-                                .width(if (isSelected) pillWidth else 48.dp)
-                                .height(32.dp)
-                                .clip(RoundedCornerShape(16.dp))
+                                .width(if (isSelected) pillWidth else 44.dp)
+                                .height(30.dp)
+                                .clip(RoundedCornerShape(15.dp))
                                 .background(pillBg)
                                 .then(
                                     if (isSelected) {
                                         Modifier.border(
-                                            width = 1.dp,
-                                            brush = Brush.verticalGradient(
-                                                listOf(
-                                                    if (isDark) Color(0x669B93FF) else Color(0x555B4FE8),
-                                                    Color.Transparent
-                                                )
-                                            ),
-                                            shape = RoundedCornerShape(16.dp)
+                                            width = 0.5.dp,
+                                            color = colors.accent.copy(alpha = if (isDark) 0.35f else 0.20f),
+                                            shape = RoundedCornerShape(15.dp)
                                         )
                                     } else Modifier
                                 ),
@@ -196,16 +181,16 @@ fun BottomNavBar(
                                 contentDescription = tab.label,
                                 tint = iconColor,
                                 modifier = Modifier
-                                    .size(22.dp)
+                                    .size(20.dp)
                                     .scale(iconScale)
                             )
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
                         Text(
                             text = tab.label,
                             style = typography.caption.copy(
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 11.5.sp
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                                fontSize = 11.sp
                             ),
                             color = textColor
                         )

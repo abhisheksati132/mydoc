@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -24,17 +25,24 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
+import androidx.compose.material.icons.outlined.AudioFile
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.FolderZip
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Slideshow
+import androidx.compose.material.icons.outlined.TableChart
+import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,8 +56,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -58,15 +66,16 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
-import com.abhisheksati.mydoc.designsystem.components.LiquidGlassTokens
-import com.abhisheksati.mydoc.designsystem.components.liquidGlass
+import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
+import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.LibraryItem
 
 /**
- * Apple Spotlight-style Instant Search Overlay.
- * Searches across all indexed documents, photos, and media with live query filtering,
- * format category chips, and tactile liquid glass cards.
+ * Editorial Search Overlay:
+ * Clean, distraction-free document search with authentic format badging and tabular metadata.
  */
 @Composable
 fun SpotlightSearchSheet(
@@ -99,32 +108,34 @@ fun SpotlightSearchSheet(
         val filteredItems = remember(items, query, selectedFilter) {
             val q = query.trim().lowercase()
             items.filter { item ->
-                val matchesQuery = q.isEmpty() ||
-                        item.name.lowercase().contains(q) ||
-                        item.extension.lowercase().contains(q) ||
-                        (item.folder != null && item.folder.lowercase().contains(q))
-
                 val matchesFilter = when (selectedFilter) {
-                    "PDF" -> item.extension.lowercase() == "pdf"
-                    "Word" -> item.extension.lowercase() in setOf("doc", "docx", "odt", "rtf")
-                    "Excel" -> item.extension.lowercase() in setOf("xls", "xlsx", "csv", "ods")
-                    "PPT" -> item.extension.lowercase() in setOf("ppt", "pptx", "odp")
-                    "Media" -> item.extension.lowercase() in setOf("jpg", "jpeg", "png", "mp4", "mkv", "mp3", "flac")
+                    "PDF" -> item.extension.equals("pdf", ignoreCase = true)
+                    "Word" -> item.extension.lowercase() in setOf("doc", "docx", "dot", "dotx", "odt", "rtf")
+                    "Excel" -> item.extension.lowercase() in setOf("xls", "xlsx", "xlsm", "csv", "ods")
+                    "PPT" -> item.extension.lowercase() in setOf("ppt", "pptx", "pps", "odp")
+                    "Media" -> item.extension.lowercase() in setOf("jpg", "jpeg", "png", "webp", "mp4", "mp3", "mkv", "mov", "wav", "flac")
                     else -> true
                 }
-
-                matchesQuery && matchesFilter
+                val matchesQuery = if (q.isEmpty()) true else {
+                    item.name.lowercase().contains(q) ||
+                    item.extension.lowercase().contains(q)
+                }
+                matchesFilter && matchesQuery
             }
         }
 
-        Box(
-            modifier = modifier
-                .fillMaxSize()
-                .background(if (isDarkTheme) Color(0xF20E1015) else Color(0xF2F8F9FB))
-                .statusBarsPadding()
-                .navigationBarsPadding()
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn() + slideInVertically { it / 8 },
+            exit = fadeOut() + slideOutVertically { it / 8 }
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = modifier
+                    .fillMaxSize()
+                    .background(colors.background)
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
+            ) {
                 // Top Search Bar
                 Row(
                     modifier = Modifier
@@ -134,7 +145,7 @@ fun SpotlightSearchSheet(
                 ) {
                     IconButton(
                         onClick = onDismiss,
-                        modifier = Modifier.size(42.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
@@ -145,22 +156,19 @@ fun SpotlightSearchSheet(
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    // Liquid Glass Input Box
-                    Box(
+                    Surface(
+                        shape = AppRadius.cardShape,
+                        color = colors.surface,
+                        border = BorderStroke(0.5.dp, colors.line),
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp)
-                            .liquidGlass(
-                                isDarkTheme = isDarkTheme,
-                                shape = RoundedCornerShape(24.dp),
-                                elevation = 2.dp
-                            )
-                            .padding(horizontal = 14.dp),
-                        contentAlignment = Alignment.CenterStart
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 12.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Search,
@@ -186,7 +194,7 @@ fun SpotlightSearchSheet(
                                         .fillMaxWidth()
                                         .focusRequester(focusRequester),
                                     textStyle = typography.body.copy(
-                                        fontSize = 15.sp,
+                                        fontSize = 14.5.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = colors.ink
                                     ),
@@ -218,16 +226,17 @@ fun SpotlightSearchSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp, vertical = 6.dp),
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     filterPills.forEach { label ->
                         val isSelected = selectedFilter == label
                         Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = if (isSelected) colors.accent.copy(alpha = 0.18f) else (if (isDarkTheme) Color(0x33252836) else Color(0x1F000000)),
+                            shape = AppRadius.pillShape,
+                            color = if (isSelected) colors.ink else colors.surfaceContainer,
+                            border = BorderStroke(0.5.dp, if (isSelected) colors.ink else colors.line),
                             modifier = Modifier
-                                .clip(RoundedCornerShape(14.dp))
+                                .clip(AppRadius.pillShape)
                                 .clickable { selectedFilter = label }
                         ) {
                             Text(
@@ -236,8 +245,8 @@ fun SpotlightSearchSheet(
                                     fontSize = 12.5.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                 ),
-                                color = if (isSelected) colors.accent else colors.inkMuted,
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                                color = if (isSelected) colors.background else colors.inkMuted,
+                                modifier = Modifier.padding(horizontal = 13.dp, vertical = 6.dp)
                             )
                         }
                     }
@@ -245,7 +254,33 @@ fun SpotlightSearchSheet(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // Search Results or Empty State
+                // Results Counter
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (query.isEmpty()) "ALL DOCUMENTS" else "SEARCH RESULTS",
+                        style = typography.caption.copy(
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp
+                        ),
+                        color = colors.inkMuted
+                    )
+                    Text(
+                        text = "${filteredItems.size} items",
+                        style = typography.caption.withTabularFigures().copy(fontSize = 11.5.sp),
+                        color = colors.inkMuted
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Results List
                 if (filteredItems.isEmpty()) {
                     Box(
                         modifier = Modifier
@@ -255,75 +290,66 @@ fun SpotlightSearchSheet(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
-                                imageVector = Icons.Outlined.Search,
+                                imageVector = Icons.AutoMirrored.Outlined.InsertDriveFile,
                                 contentDescription = null,
                                 tint = colors.inkMuted.copy(alpha = 0.4f),
-                                modifier = Modifier.size(56.dp)
+                                modifier = Modifier.size(48.dp)
                             )
                             Spacer(modifier = Modifier.height(14.dp))
                             Text(
-                                text = if (query.isEmpty()) "Type to search files" else "No matching files found",
-                                style = typography.title.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
+                                text = if (query.isEmpty()) "No documents found" else "No matches for \"$query\"",
+                                style = typography.body.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
                                 color = colors.ink
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = if (query.isEmpty()) "Search by document title, format, or folder" else "Try checking for typos or searching a different term",
-                                style = typography.caption.copy(fontSize = 13.sp),
+                                text = if (query.isEmpty()) "Documents in your storage will appear here" else "Check for typos or try searching a different term",
+                                style = typography.caption.copy(fontSize = 12.5.sp),
                                 color = colors.inkMuted
                             )
                         }
                     }
                 } else {
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp, vertical = 8.dp)
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)
                     ) {
                         items(
                             items = filteredItems,
                             key = { it.uri }
                         ) { item ->
-                            val itemGradient = when (item.extension.lowercase()) {
-                                "pdf" -> LiquidGlassTokens.AzureLiquid
-                                "docx", "doc" -> LiquidGlassTokens.IndigoLiquid
-                                "xlsx", "xls", "csv" -> LiquidGlassTokens.AuroraLiquid
-                                "pptx", "ppt" -> LiquidGlassTokens.AmberLiquid
-                                "mp4", "mkv", "mov" -> LiquidGlassTokens.SunsetLiquid
-                                "mp3", "flac", "wav" -> LiquidGlassTokens.VioletLiquid
-                                else -> LiquidGlassTokens.AzureLiquid
-                            }
-
-                            Box(
+                            val formatTint = DocumentFormatColors.getTint(item.extension)
+                            Surface(
+                                shape = AppRadius.cardShape,
+                                color = colors.surface,
+                                border = BorderStroke(0.5.dp, colors.line),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .pressScaleEffect(onClick = {
                                         onDismiss()
                                         onItemClick(item)
                                     })
-                                    .liquidGlass(
-                                        isDarkTheme = isDarkTheme,
-                                        shape = RoundedCornerShape(16.dp),
-                                        elevation = 2.dp
-                                    )
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                        .padding(horizontal = 14.dp, vertical = 11.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(RoundedCornerShape(11.dp))
-                                            .background(itemGradient),
+                                            .size(38.dp)
+                                            .clip(AppRadius.microShape)
+                                            .background(formatTint.copy(alpha = if (isDarkTheme) 0.16f else 0.10f)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
-                                            imageVector = Icons.AutoMirrored.Outlined.InsertDriveFile,
+                                            imageVector = getSearchFormatIcon(item.extension),
                                             contentDescription = null,
-                                            tint = Color.White,
+                                            tint = formatTint,
                                             modifier = Modifier.size(19.dp)
                                         )
                                     }
@@ -332,7 +358,7 @@ fun SpotlightSearchSheet(
 
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = item.name,
+                                            text = formatMiddleTruncated(item.name, 36),
                                             style = typography.body.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
                                             color = colors.ink,
                                             maxLines = 1,
@@ -343,14 +369,14 @@ fun SpotlightSearchSheet(
                                             Text(
                                                 text = item.extension.uppercase(),
                                                 style = typography.caption.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
-                                                color = colors.accent
+                                                color = formatTint
                                             )
                                             Spacer(modifier = Modifier.width(6.dp))
                                             Text(text = "•", color = colors.inkMuted, fontSize = 11.sp)
                                             Spacer(modifier = Modifier.width(6.dp))
                                             Text(
                                                 text = item.formattedSize,
-                                                style = typography.caption.copy(fontSize = 11.sp),
+                                                style = typography.caption.withTabularFigures().copy(fontSize = 11.5.sp),
                                                 color = colors.inkMuted
                                             )
                                         }
@@ -362,5 +388,20 @@ fun SpotlightSearchSheet(
                 }
             }
         }
+    }
+}
+
+private fun getSearchFormatIcon(extension: String): ImageVector {
+    return when (extension.lowercase()) {
+        "pdf" -> Icons.Outlined.PictureAsPdf
+        "doc", "docx", "dot", "dotx", "odt", "rtf" -> Icons.Outlined.Description
+        "xls", "xlsx", "xlsm", "csv", "ods" -> Icons.Outlined.TableChart
+        "ppt", "pptx", "pps", "odp" -> Icons.Outlined.Slideshow
+        "txt", "log", "md", "json", "xml" -> Icons.AutoMirrored.Outlined.Article
+        "jpg", "jpeg", "png", "webp", "gif", "svg" -> Icons.Outlined.Image
+        "mp4", "mkv", "mov", "avi" -> Icons.Outlined.Videocam
+        "mp3", "flac", "wav", "m4a", "ogg" -> Icons.Outlined.AudioFile
+        "zip", "rar", "7z", "tar", "gz" -> Icons.Outlined.FolderZip
+        else -> Icons.AutoMirrored.Outlined.InsertDriveFile
     }
 }

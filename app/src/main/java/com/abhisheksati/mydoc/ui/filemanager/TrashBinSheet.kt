@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -257,11 +258,11 @@ fun TrashBinSheet(
     if (showEmptyConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showEmptyConfirmDialog = false },
-            shape = RoundedCornerShape(22.dp),
+            shape = AppRadius.modalShape,
             containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
             modifier = Modifier.border(
                 BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
-                RoundedCornerShape(22.dp)
+                AppRadius.modalShape
             ),
             title = { Text("Empty Recycle Bin?", color = colors.textPrimary) },
             text = { Text("This will permanently delete all ${trashItems.size} items. This action cannot be undone.", color = colors.textSecondary) },
@@ -287,11 +288,11 @@ fun TrashBinSheet(
     if (showDeleteConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
-            shape = RoundedCornerShape(22.dp),
+            shape = AppRadius.modalShape,
             containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
             modifier = Modifier.border(
                 BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
-                RoundedCornerShape(22.dp)
+                AppRadius.modalShape
             ),
             title = { Text("Delete Permanently?", color = colors.textPrimary) },
             text = { Text("Permanently delete ${selectedItems.size} items? This cannot be undone.", color = colors.textSecondary) },

@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -623,10 +624,11 @@ fun FileManagerScreen(
                                                     )
 
                                                     Surface(
-                                                        shape = RoundedCornerShape(12.dp),
+                                                        shape = AppRadius.pillShape,
                                                         color = chipBg,
+                                                        border = BorderStroke(0.5.dp, if (isSelected) colors.accent.copy(alpha = 0.35f) else colors.line),
                                                         modifier = Modifier
-                                                            .clip(RoundedCornerShape(12.dp))
+                                                            .clip(AppRadius.pillShape)
                                                             .pressScaleEffect(onClick = { docSubCategoryFilter = label })
                                                     ) {
                                                         Text(
@@ -1545,15 +1547,15 @@ fun FileManagerCategoryChips(
     ) {
         for ((cat, icon, color) in categories) {
             val isSelected = activeCategory == cat
-            val chipBg = if (isSelected) color.copy(alpha = 0.16f) else colors.surface
-            val chipBorderColor = if (isSelected) color else colors.cardBorder
+            val chipBg = if (isSelected) color.copy(alpha = 0.16f) else colors.surfaceContainer
+            val chipBorderColor = if (isSelected) color.copy(alpha = 0.4f) else colors.line
 
             Surface(
-                shape = RoundedCornerShape(16.dp),
+                shape = AppRadius.pillShape,
                 color = chipBg,
-                border = androidx.compose.foundation.BorderStroke(if (isSelected) 1.5.dp else 1.dp, chipBorderColor),
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, chipBorderColor),
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(AppRadius.pillShape)
                     .clickable {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onCategorySelected(cat)
@@ -1624,11 +1626,10 @@ fun PinnedFoldersStrip(
             for (folder in folders) {
                 Surface(
                     color = colors.surface,
-                    shape = RoundedCornerShape(10.dp),
-                    tonalElevation = 1.dp,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.divider),
+                    shape = AppRadius.pillShape,
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, colors.line),
                     modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(AppRadius.pillShape)
                         .clickable { onFolderClick(folder) }
                 ) {
                     Row(

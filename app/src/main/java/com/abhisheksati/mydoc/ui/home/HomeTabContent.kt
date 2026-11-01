@@ -27,7 +27,6 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.automirrored.outlined.MergeType
-import androidx.compose.material.icons.outlined.Article
 import androidx.compose.material.icons.outlined.AudioFile
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.ChevronRight
@@ -54,7 +53,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -64,6 +62,8 @@ import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
 import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
+import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
 import com.abhisheksati.mydoc.designsystem.tokens.InterFontFamily
@@ -73,11 +73,11 @@ import com.abhisheksati.mydoc.domain.model.LibraryItem
 import com.abhisheksati.mydoc.tools.model.PdfTool
 
 /**
- * Swiss & Apple Precision Home Dashboard:
- * 1. Persistent Top Chrome (Frosted Glass).
- * 2. High-Density Compact Action Strip (Scan, Merge, Compress, Sign, Img to PDF).
- * 3. Content-First: Recents visible in top 20% of the display.
- * 4. Apple Inset-Grouped list with hairline dividers, zero candy gradients, and authentic document badges.
+ * Editorial Document Studio Home Dashboard:
+ * 1. Confident typography: Split wordmark `My` (light) + `Doc` (ExtraBold Ink-Violet).
+ * 2. High-density Quick Actions strip (Scan, Merge, Compress, Sign, Img to PDF).
+ * 3. Editorial "Jump Back In / Now Reading" card with authentic document badging.
+ * 4. Inset-grouped document feed with 0.5dp hairline borders and middle-truncated filenames.
  */
 @Composable
 fun HomeTabContent(
@@ -101,11 +101,11 @@ fun HomeTabContent(
 
     val filteredRecentItems = remember(recentItems, selectedDocumentFilter) {
         when (selectedDocumentFilter) {
-            "PDF" -> recentItems.filter { it.extension == "pdf" }
-            "Word" -> recentItems.filter { it.extension in setOf("doc", "docx", "dot", "dotx", "odt", "rtf") }
-            "Excel" -> recentItems.filter { it.extension in setOf("xls", "xlsx", "xlsm", "csv", "ods") }
-            "PPT" -> recentItems.filter { it.extension in setOf("ppt", "pptx", "pps", "odp") }
-            "Text" -> recentItems.filter { it.extension in setOf("txt", "log", "md", "json", "xml") }
+            "PDF" -> recentItems.filter { it.extension.equals("pdf", ignoreCase = true) }
+            "Word" -> recentItems.filter { it.extension.lowercase() in setOf("doc", "docx", "dot", "dotx", "odt", "rtf") }
+            "Excel" -> recentItems.filter { it.extension.lowercase() in setOf("xls", "xlsx", "xlsm", "csv", "ods") }
+            "PPT" -> recentItems.filter { it.extension.lowercase() in setOf("ppt", "pptx", "pps", "odp") }
+            "Text" -> recentItems.filter { it.extension.lowercase() in setOf("txt", "log", "md", "json", "xml") }
             else -> recentItems
         }
     }
@@ -130,20 +130,32 @@ fun HomeTabContent(
             .fillMaxSize()
             .background(colors.background)
     ) {
-        // 1. Persistent Top Bar
+        // 1. Persistent Editorial Top Bar
         AppTabHeader(
             title = "MyDoc",
             titleContent = {
-                Text(
-                    text = "MyDoc",
-                    fontFamily = InterFontFamily,
-                    style = typography.title.copy(
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.3).sp
-                    ),
-                    color = colors.ink
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "My",
+                        fontFamily = InterFontFamily,
+                        style = typography.title.copy(
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Normal,
+                            letterSpacing = (-0.5).sp
+                        ),
+                        color = colors.inkMuted
+                    )
+                    Text(
+                        text = "Doc",
+                        fontFamily = InterFontFamily,
+                        style = typography.title.copy(
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = (-0.5).sp
+                        ),
+                        color = colors.accent
+                    )
+                }
             },
             onSearchClick = onSearchClick,
             isDarkTheme = isDarkTheme,
@@ -153,21 +165,21 @@ fun HomeTabContent(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 104.dp)
+            contentPadding = PaddingValues(bottom = 96.dp)
         ) {
-            // 2. High-Density Quick Actions Strip (48dp height)
+            // 2. High-Density Quick Actions Strip
             item(key = "quick_actions_bar") {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Primary Action: Scan Document
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
+                        shape = AppRadius.pillShape,
                         color = colors.accent,
                         modifier = Modifier.clickable { onScanClick() }
                     ) {
@@ -184,32 +196,32 @@ fun HomeTabContent(
                             Spacer(modifier = Modifier.width(7.dp))
                             Text(
                                 text = "Scan Document",
-                                style = typography.body.copy(fontWeight = FontWeight.Bold, fontSize = 13.sp),
+                                style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 13.sp),
                                 color = colors.onAccent
                             )
                         }
                     }
 
-                    // Secondary Precision Action Pills
-                    PrecisionActionPill(
+                    // Secondary Editorial Action Pills
+                    EditorialActionPill(
                         title = "Merge",
                         icon = Icons.AutoMirrored.Outlined.MergeType,
                         onClick = { onToolClick(PdfTool.MERGE) }
                     )
 
-                    PrecisionActionPill(
+                    EditorialActionPill(
                         title = "Compress",
                         icon = Icons.Outlined.Compress,
                         onClick = { onToolClick(PdfTool.COMPRESS) }
                     )
 
-                    PrecisionActionPill(
+                    EditorialActionPill(
                         title = "Sign",
                         icon = Icons.Outlined.Draw,
                         onClick = { onToolClick(PdfTool.SIGN_PDF) }
                     )
 
-                    PrecisionActionPill(
+                    EditorialActionPill(
                         title = "Img to PDF",
                         icon = Icons.Outlined.PictureAsPdf,
                         onClick = { onToolClick(PdfTool.IMAGE_TO_PDF) }
@@ -217,14 +229,14 @@ fun HomeTabContent(
                 }
             }
 
-            // 3. Compact "Resume Reading" Inset Row (if user has active reading session)
+            // 3. Editorial "Jump Back In / Now Reading" Card
             val continueItem = continueItems.firstOrNull()
             if (continueItem != null) {
                 item(key = "resume_reading_card") {
                     Surface(
-                        shape = RoundedCornerShape(14.dp),
+                        shape = AppRadius.cardShape,
                         color = colors.surface,
-                        border = BorderStroke(0.5.dp, colors.divider.copy(alpha = 0.5f)),
+                        border = BorderStroke(0.5.dp, colors.line),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -233,22 +245,22 @@ fun HomeTabContent(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             val tint = DocumentFormatColors.getTint(continueItem.extension)
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(tint.copy(alpha = if (isDarkTheme) 0.18f else 0.12f)),
+                                    .size(40.dp)
+                                    .clip(AppRadius.microShape)
+                                    .background(tint.copy(alpha = if (isDarkTheme) 0.16f else 0.10f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = getDocumentFormatIcon(continueItem.extension),
                                     contentDescription = null,
                                     tint = tint,
-                                    modifier = Modifier.size(19.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
 
@@ -257,8 +269,12 @@ fun HomeTabContent(
                             Column(modifier = Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        text = "Resume Reading",
-                                        style = typography.caption.copy(fontSize = 11.5.sp, fontWeight = FontWeight.Bold),
+                                        text = "NOW READING",
+                                        style = typography.caption.copy(
+                                            fontSize = 10.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = 0.8.sp
+                                        ),
                                         color = colors.accent
                                     )
                                     if (continueItem.progressFraction > 0f) {
@@ -266,15 +282,15 @@ fun HomeTabContent(
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
                                             text = "• $pct%",
-                                            style = typography.caption.withTabularFigures().copy(fontSize = 11.sp),
+                                            style = typography.caption.withTabularFigures().copy(fontSize = 10.5.sp),
                                             color = colors.inkMuted
                                         )
                                     }
                                 }
-                                Spacer(modifier = Modifier.height(1.dp))
+                                Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = continueItem.name,
-                                    style = typography.body.copy(fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold),
+                                    text = formatMiddleTruncated(continueItem.name, 34),
+                                    style = typography.body.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
                                     color = colors.ink,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
@@ -367,10 +383,10 @@ fun HomeTabContent(
                         )
 
                         Surface(
-                            shape = RoundedCornerShape(10.dp),
+                            shape = AppRadius.pillShape,
                             color = chipBg,
                             modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(AppRadius.pillShape)
                                 .clickable { selectedDocumentFilter = label }
                         ) {
                             Text(
@@ -380,7 +396,7 @@ fun HomeTabContent(
                                     fontSize = 12.sp
                                 ),
                                 color = chipText,
-                                modifier = Modifier.padding(horizontal = 13.dp, vertical = 6.dp)
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                             )
                         }
                     }
@@ -388,13 +404,13 @@ fun HomeTabContent(
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // 6. Content-First: Apple Inset-Grouped List
+            // 6. Content-First: Inset-Grouped List
             if (filteredRecentItems.isEmpty()) {
                 item(key = "empty_recents") {
                     Surface(
-                        shape = RoundedCornerShape(16.dp),
+                        shape = AppRadius.cardShape,
                         color = colors.surface,
-                        border = BorderStroke(0.5.dp, colors.divider.copy(alpha = 0.5f)),
+                        border = BorderStroke(0.5.dp, colors.line),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -429,9 +445,9 @@ fun HomeTabContent(
             } else {
                 item(key = "recent_items_group") {
                     Surface(
-                        shape = RoundedCornerShape(16.dp),
+                        shape = AppRadius.cardShape,
                         color = colors.surface,
-                        border = BorderStroke(0.5.dp, colors.divider.copy(alpha = 0.5f)),
+                        border = BorderStroke(0.5.dp, colors.line),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -442,7 +458,7 @@ fun HomeTabContent(
                                     HorizontalDivider(
                                         modifier = Modifier.padding(start = 58.dp),
                                         thickness = 0.5.dp,
-                                        color = colors.divider.copy(alpha = 0.35f)
+                                        color = colors.line
                                     )
                                 }
                                 RecentItemRow(
@@ -460,10 +476,10 @@ fun HomeTabContent(
 }
 
 /**
- * Precision Action Pill for compact action strip.
+ * Editorial Action Pill for compact action strip.
  */
 @Composable
-private fun PrecisionActionPill(
+private fun EditorialActionPill(
     title: String,
     icon: ImageVector,
     onClick: () -> Unit
@@ -472,12 +488,13 @@ private fun PrecisionActionPill(
     val typography = AppTheme.typography
 
     Surface(
-        shape = RoundedCornerShape(12.dp),
+        shape = AppRadius.pillShape,
         color = colors.surfaceContainer,
+        border = BorderStroke(0.5.dp, colors.line),
         modifier = Modifier.clickable(onClick = onClick)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -498,7 +515,7 @@ private fun PrecisionActionPill(
 
 /**
  * Clean Inset-Grouped Document Row:
- * Uses authentic format color, tabular figures, and zero candy gradients.
+ * Uses authentic format color, tabular figures, and middle-truncated titles.
  */
 @Composable
 private fun RecentItemRow(
@@ -514,14 +531,14 @@ private fun RecentItemRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 11.dp),
+            .padding(horizontal = 14.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Authentic format badge (crisp solid tint with subtle surface tint)
         Box(
             modifier = Modifier
                 .size(38.dp)
-                .clip(RoundedCornerShape(9.dp))
+                .clip(AppRadius.microShape)
                 .background(formatTint.copy(alpha = if (isDarkTheme) 0.16f else 0.10f)),
             contentAlignment = Alignment.Center
         ) {
@@ -537,8 +554,8 @@ private fun RecentItemRow(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = item.name,
-                style = typography.body.copy(fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold),
+                text = formatMiddleTruncated(item.name, 36),
+                style = typography.body.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
                 color = colors.ink,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

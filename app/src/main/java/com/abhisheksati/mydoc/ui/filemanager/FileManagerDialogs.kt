@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
@@ -75,11 +76,11 @@ fun NewFolderDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(22.dp),
+        shape = AppRadius.modalShape,
         containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
         modifier = Modifier.border(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
-            RoundedCornerShape(22.dp)
+            AppRadius.modalShape
         ),
         title = { Text("New Folder", color = colors.textPrimary) },
         text = {
@@ -133,11 +134,11 @@ fun NewFileDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(22.dp),
+        shape = AppRadius.modalShape,
         containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
         modifier = Modifier.border(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
-            RoundedCornerShape(22.dp)
+            AppRadius.modalShape
         ),
         title = { Text("New File", color = colors.textPrimary) },
         text = {
@@ -192,11 +193,11 @@ fun RenameDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(22.dp),
+        shape = AppRadius.modalShape,
         containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
         modifier = Modifier.border(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
-            RoundedCornerShape(22.dp)
+            AppRadius.modalShape
         ),
         title = { Text("Rename", color = colors.textPrimary) },
         text = {
@@ -248,11 +249,11 @@ fun DeleteConfirmationDialog(
     val isOled = colors.background == DarkAppColors.background
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(22.dp),
+        shape = AppRadius.modalShape,
         containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
         modifier = Modifier.border(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
-            RoundedCornerShape(22.dp)
+            AppRadius.modalShape
         ),
         title = { Text("Delete", color = colors.textPrimary) },
         text = {
@@ -297,11 +298,11 @@ fun FilePropertiesDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(22.dp),
+        shape = AppRadius.modalShape,
         containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
         modifier = Modifier.border(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
-            RoundedCornerShape(22.dp)
+            AppRadius.modalShape
         ),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -518,11 +519,11 @@ fun CompressDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(22.dp),
+        shape = AppRadius.modalShape,
         containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
         modifier = Modifier.border(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
-            RoundedCornerShape(22.dp)
+            AppRadius.modalShape
         ),
         title = { Text("Compress to ZIP", color = colors.textPrimary) },
         text = {
@@ -580,11 +581,11 @@ fun ExtractConfirmDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(22.dp),
+        shape = AppRadius.modalShape,
         containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
         modifier = Modifier.border(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
-            RoundedCornerShape(22.dp)
+            AppRadius.modalShape
         ),
         title = { Text("Extract Archive", color = colors.textPrimary) },
         text = {

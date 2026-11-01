@@ -2,7 +2,9 @@ package com.abhisheksati.mydoc.ui.viewer.pdf
 
 import android.app.Activity
 import android.app.SearchManager
-import com.abhisheksati.mydoc.designsystem.components.liquidGlass
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.Surface
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
 import android.content.Intent
 import android.content.pm.ActivityInfo
@@ -851,16 +853,15 @@ fun PdfViewerScreen(
                     .padding(top = 64.dp, start = 20.dp, end = 20.dp),
                 contentAlignment = Alignment.TopCenter
             ) {
-                Box(
-                    modifier = Modifier
-                        .liquidGlass(
-                            isDarkTheme = state.readingMode == ReadingMode.INVERTED_DARK,
-                            shape = RoundedCornerShape(28.dp),
-                            elevation = 8.dp
-                        )
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                Surface(
+                    shape = AppRadius.roundShape,
+                    color = if (state.readingMode == ReadingMode.INVERTED_DARK) Color(0xF218181A) else Color(0xF8FFFFFF),
+                    border = BorderStroke(0.5.dp, if (state.readingMode == ReadingMode.INVERTED_DARK) Color(0xFF2A2A2E) else Color(0xFFE2E2DD)),
+                    shadowElevation = 4.dp,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
                 ) {
                     Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {

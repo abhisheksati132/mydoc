@@ -1,8 +1,9 @@
 package com.abhisheksati.mydoc.tools.ui
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -19,7 +20,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.CallSplit
 import androidx.compose.material.icons.automirrored.outlined.MergeType
@@ -45,19 +45,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
-import com.abhisheksati.mydoc.designsystem.components.LiquidGlassTokens
-import com.abhisheksati.mydoc.designsystem.components.liquidGlass
-
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
 import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
@@ -72,12 +70,10 @@ private data class ToolNavCategory(
 )
 
 /**
- * Material 3 Expressive Tools Dashboard.
- *
- * User-friendly, plain English, unified cohesive palette:
- * 1. Prominent "Popular Essentials" 2-column cards on top (Scan, Merge, Compress, Sign, Organize, Protect).
- * 2. Intuitive Category Filter Chips.
- * 3. Clear, friendly list of all tools with plain human benefits.
+ * Editorial Document Studio Toolkit:
+ * 1. Clear, restrained monochrome hierarchy with brand ink-violet accents.
+ * 2. 6 Featured Essentials in 12dp editorial cards.
+ * 3. Grouped suites with 0.5dp hairline dividers and tabular clarity.
  */
 @Composable
 fun ToolsScreen(
@@ -155,20 +151,29 @@ fun ToolsScreen(
                 ) {
                     for (item in toolCategories) {
                         val isSelected = selectedToolGroup == item.group
-                        val chipBg = if (isSelected) colors.accent.copy(alpha = 0.16f) else colors.surfaceContainer
-                        val contentColor = if (isSelected) colors.accent else colors.textSecondary
+                        val chipBg by animateColorAsState(
+                            targetValue = if (isSelected) colors.accent.copy(alpha = 0.16f) else colors.surfaceContainer,
+                            animationSpec = tween(durationMillis = 150),
+                            label = "toolChipBg"
+                        )
+                        val contentColor by animateColorAsState(
+                            targetValue = if (isSelected) colors.accent else colors.textSecondary,
+                            animationSpec = tween(durationMillis = 150),
+                            label = "toolChipContent"
+                        )
 
                         Surface(
-                            shape = RoundedCornerShape(14.dp),
+                            shape = AppRadius.pillShape,
                             color = chipBg,
+                            border = BorderStroke(0.5.dp, if (isSelected) colors.accent.copy(alpha = 0.35f) else colors.line),
                             modifier = Modifier
-                                .clip(RoundedCornerShape(14.dp))
+                                .clip(AppRadius.pillShape)
                                 .clickable {
                                     selectedToolGroup = if (isSelected) null else item.group
                                 }
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                modifier = Modifier.padding(horizontal = 13.dp, vertical = 7.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
@@ -202,54 +207,61 @@ fun ToolsScreen(
                         onToolClick(PdfTool.SCAN_TO_PDF)
                     }
                 )
+                DropdownMenuItem(
+                    text = { Text("Merge Documents", style = typography.body) },
+                    leadingIcon = {
+                        Icon(Icons.AutoMirrored.Outlined.MergeType, contentDescription = null, tint = colors.accent)
+                    },
+                    onClick = {
+                        onDismiss()
+                        onToolClick(PdfTool.MERGE)
+                    }
+                )
             }
         )
 
-        if (filteredTools.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(AppSpacing.paddingLarge),
-                contentAlignment = Alignment.Center
-            ) {
-                AppEmptyState(
-                    title = "No tools found",
-                    message = "No tools matched \"$searchQuery\"."
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 104.dp)
-            ) {
-                // When not searching and no filter active: show Featured Everyday Essentials
-                if (searchQuery.isBlank() && selectedToolGroup == null) {
-                    item(key = "featured_tools_header") {
-                        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
-                            Text(
-                                text = "Popular Essentials",
-                                style = typography.title.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
-                                color = colors.textPrimary
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 96.dp)
+        ) {
+            if (filteredTools.isEmpty()) {
+                item {
+                    AppEmptyState(
+                        title = "No tools found",
+                        message = "Try searching for a different action or clear the filter.",
+                        actionLabel = "Clear Filter",
+                        onAction = {
+                            searchQuery = ""
+                            selectedToolGroup = null
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 48.dp)
+                    )
+                }
+            } else {
+                // Featured Essentials (only shown if not actively filtering by specific group or search)
+                if (selectedToolGroup == null && searchQuery.isBlank()) {
+                    item(key = "featured_tools") {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            AppSectionHeader(
+                                title = "Popular Essentials",
+                                modifier = Modifier.padding(bottom = 10.dp)
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Frequently used actions",
-                                style = typography.caption.copy(fontSize = 12.sp),
-                                color = colors.textSecondary
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
 
-                            // 2-Column Grid of 6 Featured Tools (Apple Liquid Glass)
+                            // 2-Column Grid of 6 Featured Tools
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 FeaturedToolCard(
                                     title = "Scan to PDF",
                                     subtitle = "Camera to document",
                                     icon = Icons.Outlined.CameraAlt,
-                                    tintColor = Color(0xFF00C853),
-                                    gradient = LiquidGlassTokens.AuroraLiquid,
                                     isDarkTheme = isDarkTheme,
                                     onClick = { onToolClick(PdfTool.SCAN_TO_PDF) },
                                     modifier = Modifier.weight(1f)
@@ -258,26 +270,22 @@ fun ToolsScreen(
                                     title = "Combine PDFs",
                                     subtitle = "Merge files together",
                                     icon = Icons.AutoMirrored.Outlined.MergeType,
-                                    tintColor = Color(0xFF5B4FE8),
-                                    gradient = LiquidGlassTokens.AzureLiquid,
                                     isDarkTheme = isDarkTheme,
                                     onClick = { onToolClick(PdfTool.MERGE) },
                                     modifier = Modifier.weight(1f)
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 FeaturedToolCard(
                                     title = "Make Smaller",
                                     subtitle = "Reduce PDF file size",
                                     icon = Icons.Outlined.Compress,
-                                    tintColor = Color(0xFFFF9500),
-                                    gradient = LiquidGlassTokens.AmberLiquid,
                                     isDarkTheme = isDarkTheme,
                                     onClick = { onToolClick(PdfTool.COMPRESS) },
                                     modifier = Modifier.weight(1f)
@@ -286,26 +294,22 @@ fun ToolsScreen(
                                     title = "Sign PDF",
                                     subtitle = "Add your signature",
                                     icon = Icons.Outlined.Draw,
-                                    tintColor = Color(0xFFFF2D55),
-                                    gradient = LiquidGlassTokens.SunsetLiquid,
                                     isDarkTheme = isDarkTheme,
                                     onClick = { onToolClick(PdfTool.SIGN_PDF) },
                                     modifier = Modifier.weight(1f)
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 FeaturedToolCard(
                                     title = "Pick Pages",
                                     subtitle = "Reorder & rotate",
                                     icon = Icons.Outlined.GridOn,
-                                    tintColor = Color(0xFF5856D6),
-                                    gradient = LiquidGlassTokens.IndigoLiquid,
                                     isDarkTheme = isDarkTheme,
                                     onClick = { onToolClick(PdfTool.REORDER_PAGES) },
                                     modifier = Modifier.weight(1f)
@@ -314,15 +318,13 @@ fun ToolsScreen(
                                     title = "Lock PDF",
                                     subtitle = "Protect with password",
                                     icon = Icons.Outlined.Lock,
-                                    tintColor = Color(0xFFAF52DE),
-                                    gradient = LiquidGlassTokens.VioletLiquid,
                                     isDarkTheme = isDarkTheme,
                                     onClick = { onToolClick(PdfTool.PROTECT) },
                                     modifier = Modifier.weight(1f)
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
 
@@ -356,9 +358,9 @@ fun ToolsScreen(
                         item(key = "card_${group.name}") {
                             val isOled = colors.background == DarkAppColors.background
                             Surface(
-                                shape = RoundedCornerShape(18.dp),
+                                shape = AppRadius.cardShape,
                                 color = if (isOled) colors.surface else colors.surfaceContainer,
-                                border = BorderStroke(0.5.dp, colors.divider.copy(alpha = 0.4f)),
+                                border = BorderStroke(0.5.dp, colors.line),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
@@ -367,12 +369,14 @@ fun ToolsScreen(
                                     toolsInGroup.forEachIndexed { index, tool ->
                                         ToolListRow(
                                             tool = tool,
+                                            isDarkTheme = isDarkTheme,
                                             onClick = { onToolClick(tool) }
                                         )
                                         if (index < toolsInGroup.size - 1) {
                                             HorizontalDivider(
-                                                color = colors.divider.copy(alpha = 0.5f),
-                                                modifier = Modifier.padding(start = 68.dp, end = 16.dp)
+                                                color = colors.line,
+                                                thickness = 0.5.dp,
+                                                modifier = Modifier.padding(start = 64.dp, end = 16.dp)
                                             )
                                         }
                                     }
@@ -388,15 +392,14 @@ fun ToolsScreen(
 }
 
 /**
- * Clean Material 3 Expressive Featured Tool Card.
+ * Editorial Studio Featured Tool Card:
+ * Clean 12dp card with subtle ink-violet icon container, high-contrast type, and 0.5dp border.
  */
 @Composable
 private fun FeaturedToolCard(
     title: String,
     subtitle: String,
     icon: ImageVector,
-    tintColor: Color,
-    gradient: androidx.compose.ui.graphics.Brush? = null,
     isDarkTheme: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -405,28 +408,27 @@ private fun FeaturedToolCard(
     val typography = LocalAppTypography.current
 
     Surface(
-        shape = RoundedCornerShape(14.dp),
+        shape = AppRadius.cardShape,
         color = colors.surface,
-        border = BorderStroke(0.5.dp, colors.divider.copy(alpha = 0.4f)),
-        modifier = modifier
-            .pressScaleEffect(onClick = onClick)
+        border = BorderStroke(0.5.dp, colors.line),
+        modifier = modifier.pressScaleEffect(onClick = onClick)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(15.dp)
+                .padding(14.dp)
         ) {
             Box(
                 modifier = Modifier
                     .size(38.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(tintColor.copy(alpha = if (isDarkTheme) 0.16f else 0.10f)),
+                    .clip(AppRadius.microShape)
+                    .background(colors.accent.copy(alpha = if (isDarkTheme) 0.16f else 0.10f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = tintColor,
+                    tint = colors.accent,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -435,7 +437,7 @@ private fun FeaturedToolCard(
 
             Text(
                 text = title,
-                style = typography.body.copy(fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold),
+                style = typography.body.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
                 color = colors.textPrimary
             )
 
@@ -453,6 +455,7 @@ private fun FeaturedToolCard(
 @Composable
 private fun ToolListRow(
     tool: PdfTool,
+    isDarkTheme: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -463,36 +466,26 @@ private fun ToolListRow(
         modifier = modifier
             .fillMaxWidth()
             .pressScaleEffect(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val toolGradient = when (tool.group) {
-            ToolGroup.SCAN -> LiquidGlassTokens.AuroraLiquid
-            ToolGroup.ORGANIZE -> LiquidGlassTokens.AzureLiquid
-            ToolGroup.OPTIMIZE -> LiquidGlassTokens.AmberLiquid
-            ToolGroup.EDIT -> LiquidGlassTokens.SunsetLiquid
-            ToolGroup.SECURITY -> LiquidGlassTokens.VioletLiquid
-            ToolGroup.CONVERT_TO, ToolGroup.CONVERT_FROM -> LiquidGlassTokens.IndigoLiquid
-        }
-
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(toolGradient),
+                .size(38.dp)
+                .clip(AppRadius.microShape)
+                .background(colors.accent.copy(alpha = if (isDarkTheme) 0.16f else 0.08f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = tool.icon,
                 contentDescription = null,
-                tint = Color.White,
+                tint = colors.accent,
                 modifier = Modifier.size(20.dp)
             )
         }
 
         Spacer(modifier = Modifier.width(14.dp))
 
-        // Title and description
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = tool.title,

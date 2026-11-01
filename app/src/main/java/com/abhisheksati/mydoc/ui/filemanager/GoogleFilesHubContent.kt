@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,11 +36,9 @@ import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.SdCard
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Videocam
-import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -52,25 +51,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
-import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
-import com.abhisheksati.mydoc.designsystem.components.LiquidGlassTokens
-import com.abhisheksati.mydoc.designsystem.components.liquidGlass
-import androidx.compose.foundation.layout.fillMaxHeight
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.StorageVolume
 import com.abhisheksati.mydoc.ui.storage.StorageAnalysisUiState
@@ -79,11 +75,11 @@ import com.abhisheksati.mydoc.ui.storage.StorageCategoryType
 import java.io.File
 
 /**
- * Files by Google inspired unified Hub View:
- * 1. Master Storage Analysis card with multi-color segmented bar & quick clean button.
- * 2. 6 core categories split in a sleek 2-column grid.
- * 3. Storage Devices section with Internal Storage (and SD card if present).
- * 4. Tools & Protection section (Recycle Bin with badge).
+ * Editorial Document Library & Storage Hub:
+ * 1. Storage Overview with clean progress bar and quick cleaner action.
+ * 2. 6 Core Document Collections in disciplined 12dp editorial cards.
+ * 3. Physical Storage Volumes (Internal & SD Card) with breadcrumb access.
+ * 4. Pinned Quick Access folders and Recycle Bin utility.
  */
 @Composable
 fun GoogleFilesHubContent(
@@ -105,30 +101,30 @@ fun GoogleFilesHubContent(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 8.dp, bottom = 104.dp)
+        contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp)
     ) {
-        // 0. Apple Liquid Glass Master Storage Breakdown Gauge
+        // 0. Storage Overview Card
         item {
-            MasterStorageGaugeCard(
+            EditorialStorageOverviewCard(
                 storageUiState = storageUiState,
                 isDarkTheme = isOled,
                 onCleanClick = onCleanClick,
                 onCategoryClick = onCategoryClick
             )
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.dp))
         }
 
-        // 1. Categories Section Header
+        // 1. Collections Header
         item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
+                    .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Categories",
+                    text = "Collections",
                     style = typography.title.copy(fontSize = 17.sp, fontWeight = FontWeight.Bold),
                     color = colors.textPrimary
                 )
@@ -141,9 +137,9 @@ fun GoogleFilesHubContent(
             Spacer(modifier = Modifier.height(10.dp))
         }
 
-        // 3. 2-Columns Categories Grid (Downloads, Images, Videos, Audio, Documents, Apps)
+        // 2. 2-Column Collections Grid
         item {
-            GoogleFilesCategoryGrid(
+            EditorialCategoryGrid(
                 storageUiState = storageUiState,
                 isOled = isOled,
                 onCategoryClick = onCategoryClick,
@@ -151,17 +147,17 @@ fun GoogleFilesHubContent(
             )
         }
 
-        // 4. Storage Devices Section
+        // 3. Storage Devices Section
         item {
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(22.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
+                    .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Storage devices",
+                    text = "Storage Devices",
                     style = typography.title.copy(fontSize = 17.sp, fontWeight = FontWeight.Bold),
                     color = colors.textPrimary
                 )
@@ -178,7 +174,7 @@ fun GoogleFilesHubContent(
             )
         }
 
-        // External Storage Card (if SD card or second volume available)
+        // External Storage Card (if SD card available)
         val secondaryVolumes = storageUiState.volumes.drop(1)
         if (secondaryVolumes.isNotEmpty()) {
             items(secondaryVolumes.size) { index ->
@@ -200,7 +196,7 @@ fun GoogleFilesHubContent(
                     text = "Pinned Folders",
                     style = typography.title.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
                     color = colors.textPrimary,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(
@@ -212,17 +208,14 @@ fun GoogleFilesHubContent(
                 ) {
                     pinnedFolders.forEach { folder ->
                         val haptic = LocalHapticFeedback.current
-                        Box(
-                            modifier = Modifier
-                                .liquidGlass(
-                                    isDarkTheme = isOled,
-                                    shape = RoundedCornerShape(14.dp),
-                                    elevation = 2.dp
-                                )
-                                .clickable {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    onFolderClick(folder)
-                                }
+                        Surface(
+                            shape = AppRadius.pillShape,
+                            color = colors.surface,
+                            border = BorderStroke(0.5.dp, colors.line),
+                            modifier = Modifier.clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onFolderClick(folder)
+                            }
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -233,7 +226,7 @@ fun GoogleFilesHubContent(
                                     imageVector = Icons.Outlined.Folder,
                                     contentDescription = null,
                                     tint = colors.accent,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(16.dp)
                                 )
                                 Text(
                                     text = folder.name,
@@ -247,31 +240,30 @@ fun GoogleFilesHubContent(
             }
         }
 
-        // 5. Tools & Protection Section (Recycle Bin)
+        // 4. Utility Section (Recycle Bin)
         item {
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(22.dp))
             Text(
-                text = "Tools & Protection",
+                text = "Utilities",
                 style = typography.title.copy(fontSize = 17.sp, fontWeight = FontWeight.Bold),
                 color = colors.textPrimary,
-                modifier = Modifier.padding(horizontal = 20.dp)
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
             Spacer(modifier = Modifier.height(10.dp))
 
             Surface(
-                shape = RoundedCornerShape(16.dp),
+                shape = AppRadius.cardShape,
                 color = if (isOled) colors.surface else colors.surfaceContainer,
-                border = BorderStroke(0.5.dp, colors.divider.copy(alpha = 0.4f)),
+                border = BorderStroke(0.5.dp, colors.line),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
             ) {
                 Column {
-                    // Recycle Bin Item
                     HubUtilityRow(
                         icon = Icons.Outlined.DeleteSweep,
-                        iconTint = Color(0xFFFF9800),
-                        iconBackground = Color(0xFFFF9800).copy(alpha = 0.14f),
+                        iconTint = Color(0xFFD97706),
+                        iconBackground = Color(0xFFD97706).copy(alpha = 0.12f),
                         title = "Recycle Bin",
                         subtitle = "Recently deleted items kept for 30 days",
                         badgeText = if (trashCount > 0) "$trashCount items" else null,
@@ -284,13 +276,11 @@ fun GoogleFilesHubContent(
     }
 }
 
-
 /**
- * 2-Columns Grid of 6 Core Categories:
- * Downloads, Images, Videos, Audio, Documents, Apps
+ * 2-Columns Grid of 6 Core Collections
  */
 @Composable
-private fun GoogleFilesCategoryGrid(
+private fun EditorialCategoryGrid(
     storageUiState: StorageAnalysisUiState,
     isOled: Boolean,
     onCategoryClick: (FileCategory) -> Unit,
@@ -312,66 +302,12 @@ private fun GoogleFilesCategoryGrid(
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Row 1: Downloads & Images
+        // Row 1: Downloads & Documents
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            GoogleFilesCategoryCard(
-                title = "Downloads",
-                countText = downloadsStat?.let { "${it.fileCount} files" } ?: "Scanning...",
-                sizeText = downloadsStat?.formattedSize ?: "",
-                icon = Icons.Outlined.Download,
-                tint = Color(0xFF38BDF8),
-                isOled = isOled,
-                modifier = Modifier.weight(1f),
-                onClick = { onCategoryClick(FileCategory.DOWNLOADS) }
-            )
-            GoogleFilesCategoryCard(
-                title = "Images",
-                countText = imagesStat?.let { "${it.fileCount} files" } ?: "Scanning...",
-                sizeText = imagesStat?.formattedSize ?: "",
-                icon = Icons.Outlined.Image,
-                tint = Color(0xFF10B981),
-                isOled = isOled,
-                modifier = Modifier.weight(1f),
-                onClick = { onCategoryClick(FileCategory.IMAGES) }
-            )
-        }
-
-        // Row 2: Videos & Audio
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            GoogleFilesCategoryCard(
-                title = "Videos",
-                countText = videosStat?.let { "${it.fileCount} files" } ?: "Scanning...",
-                sizeText = videosStat?.formattedSize ?: "",
-                icon = Icons.Outlined.Videocam,
-                tint = DocumentFormatColors.mediaTint,
-                isOled = isOled,
-                modifier = Modifier.weight(1f),
-                onClick = { onCategoryClick(FileCategory.VIDEOS) }
-            )
-            GoogleFilesCategoryCard(
-                title = "Audio",
-                countText = audioStat?.let { "${it.fileCount} files" } ?: "Scanning...",
-                sizeText = audioStat?.formattedSize ?: "",
-                icon = Icons.Outlined.AudioFile,
-                tint = DocumentFormatColors.zipTint,
-                isOled = isOled,
-                modifier = Modifier.weight(1f),
-                onClick = { onCategoryClick(FileCategory.AUDIO) }
-            )
-        }
-
-        // Row 3: Documents & Apps
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            GoogleFilesCategoryCard(
+            EditorialCategoryCard(
                 title = "Documents",
                 countText = docsStat?.let { "${it.fileCount} files" } ?: "Scanning...",
                 sizeText = docsStat?.formattedSize ?: "",
@@ -381,7 +317,61 @@ private fun GoogleFilesCategoryGrid(
                 modifier = Modifier.weight(1f),
                 onClick = { onCategoryClick(FileCategory.DOCUMENTS) }
             )
-            GoogleFilesCategoryCard(
+            EditorialCategoryCard(
+                title = "Downloads",
+                countText = downloadsStat?.let { "${it.fileCount} files" } ?: "Scanning...",
+                sizeText = downloadsStat?.formattedSize ?: "",
+                icon = Icons.Outlined.Download,
+                tint = Color(0xFF38BDF8),
+                isOled = isOled,
+                modifier = Modifier.weight(1f),
+                onClick = { onCategoryClick(FileCategory.DOWNLOADS) }
+            )
+        }
+
+        // Row 2: Images & Videos
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            EditorialCategoryCard(
+                title = "Images",
+                countText = imagesStat?.let { "${it.fileCount} files" } ?: "Scanning...",
+                sizeText = imagesStat?.formattedSize ?: "",
+                icon = Icons.Outlined.Image,
+                tint = Color(0xFF10B981),
+                isOled = isOled,
+                modifier = Modifier.weight(1f),
+                onClick = { onCategoryClick(FileCategory.IMAGES) }
+            )
+            EditorialCategoryCard(
+                title = "Videos",
+                countText = videosStat?.let { "${it.fileCount} files" } ?: "Scanning...",
+                sizeText = videosStat?.formattedSize ?: "",
+                icon = Icons.Outlined.Videocam,
+                tint = DocumentFormatColors.mediaTint,
+                isOled = isOled,
+                modifier = Modifier.weight(1f),
+                onClick = { onCategoryClick(FileCategory.VIDEOS) }
+            )
+        }
+
+        // Row 3: Audio & Apps
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            EditorialCategoryCard(
+                title = "Audio",
+                countText = audioStat?.let { "${it.fileCount} files" } ?: "Scanning...",
+                sizeText = audioStat?.formattedSize ?: "",
+                icon = Icons.Outlined.AudioFile,
+                tint = DocumentFormatColors.zipTint,
+                isOled = isOled,
+                modifier = Modifier.weight(1f),
+                onClick = { onCategoryClick(FileCategory.AUDIO) }
+            )
+            EditorialCategoryCard(
                 title = "Apps",
                 countText = if (storageUiState.userAppCount > 0) "${storageUiState.userAppCount} apps" else "Scanning...",
                 sizeText = if (storageUiState.userAppBytes > 0) StorageVolume.formatBytes(storageUiState.userAppBytes) else "",
@@ -399,7 +389,7 @@ private fun GoogleFilesCategoryGrid(
  * Individual Category Card in the 2-Column Grid
  */
 @Composable
-private fun GoogleFilesCategoryCard(
+private fun EditorialCategoryCard(
     title: String,
     countText: String,
     sizeText: String,
@@ -416,21 +406,21 @@ private fun GoogleFilesCategoryCard(
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1f,
+        targetValue = if (isPressed) 0.98f else 1f,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "cardScale"
     )
 
     Surface(
-        shape = RoundedCornerShape(14.dp),
+        shape = AppRadius.cardShape,
         color = if (isOled) colors.surface else colors.surfaceContainer,
-        border = BorderStroke(0.5.dp, colors.divider.copy(alpha = 0.4f)),
+        border = BorderStroke(0.5.dp, colors.line),
         modifier = modifier
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
             }
-            .clip(RoundedCornerShape(14.dp))
+            .clip(AppRadius.cardShape)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -443,21 +433,21 @@ private fun GoogleFilesCategoryCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(13.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(42.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(tint.copy(alpha = 0.14f)),
+                    .size(40.dp)
+                    .clip(AppRadius.microShape)
+                    .background(tint.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = tint,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
@@ -506,9 +496,9 @@ private fun InternalStorageCard(
     )
 
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = AppRadius.cardShape,
         color = if (isOled) colors.surface else colors.surfaceContainer,
-        border = BorderStroke(0.5.dp, colors.divider.copy(alpha = 0.4f)),
+        border = BorderStroke(0.5.dp, colors.line),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
@@ -516,7 +506,7 @@ private fun InternalStorageCard(
                 scaleX = scale
                 scaleY = scale
             }
-            .clip(RoundedCornerShape(16.dp))
+            .clip(AppRadius.cardShape)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
     ) {
         Row(
@@ -527,16 +517,16 @@ private fun InternalStorageCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(46.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(colors.accent.copy(alpha = 0.14f)),
+                    .size(44.dp)
+                    .clip(AppRadius.microShape)
+                    .background(colors.accent.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Storage,
                     contentDescription = null,
                     tint = colors.accent,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
@@ -544,7 +534,7 @@ private fun InternalStorageCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Internal storage",
+                    text = "Internal Storage",
                     style = typography.body.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
                     color = colors.textPrimary
                 )
@@ -559,10 +549,10 @@ private fun InternalStorageCard(
                     progress = { uiState.usedRatio.coerceIn(0f, 1f) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(5.dp)
-                        .clip(RoundedCornerShape(3.dp)),
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp)),
                     color = colors.accent,
-                    trackColor = colors.divider.copy(alpha = 0.4f)
+                    trackColor = colors.line
                 )
             }
 
@@ -572,7 +562,7 @@ private fun InternalStorageCard(
                 imageVector = Icons.Outlined.ChevronRight,
                 contentDescription = "Open Storage",
                 tint = colors.textSecondary,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp)
             )
         }
     }
@@ -590,16 +580,14 @@ private fun SecondaryStorageCard(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
 
-    Box(
+    Surface(
+        shape = AppRadius.cardShape,
+        color = if (isOled) colors.surface else colors.surfaceContainer,
+        border = BorderStroke(0.5.dp, colors.line),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .pressScaleEffect(onClick = onClick)
-            .liquidGlass(
-                isDarkTheme = isOled,
-                shape = RoundedCornerShape(20.dp),
-                elevation = 3.dp
-            )
     ) {
         Row(
             modifier = Modifier
@@ -609,16 +597,16 @@ private fun SecondaryStorageCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(46.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Color(0xFF009688).copy(alpha = 0.14f)),
+                    .size(44.dp)
+                    .clip(AppRadius.microShape)
+                    .background(Color(0xFF009688).copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Outlined.SdCard,
                     contentDescription = null,
                     tint = Color(0xFF009688),
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
@@ -641,10 +629,10 @@ private fun SecondaryStorageCard(
                     progress = { volume.usedRatio.coerceIn(0f, 1f) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(5.dp)
-                        .clip(RoundedCornerShape(3.dp)),
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp)),
                     color = Color(0xFF009688),
-                    trackColor = colors.divider.copy(alpha = 0.4f)
+                    trackColor = colors.line
                 )
             }
 
@@ -654,7 +642,7 @@ private fun SecondaryStorageCard(
                 imageVector = Icons.Outlined.ChevronRight,
                 contentDescription = null,
                 tint = colors.textSecondary,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp)
             )
         }
     }
@@ -686,8 +674,8 @@ private fun HubUtilityRow(
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
+                .size(38.dp)
+                .clip(AppRadius.microShape)
                 .background(iconBackground),
             contentAlignment = Alignment.Center
         ) {
@@ -709,7 +697,7 @@ private fun HubUtilityRow(
             )
             Text(
                 text = subtitle,
-                style = typography.caption.copy(fontSize = 11.sp),
+                style = typography.caption.copy(fontSize = 11.5.sp),
                 color = colors.textSecondary
             )
         }
@@ -717,8 +705,8 @@ private fun HubUtilityRow(
         if (badgeText != null) {
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(badgeColor.copy(alpha = 0.16f))
+                    .clip(AppRadius.pillShape)
+                    .background(badgeColor.copy(alpha = 0.14f))
             ) {
                 Text(
                     text = badgeText,
@@ -734,19 +722,17 @@ private fun HubUtilityRow(
             imageVector = Icons.Outlined.ChevronRight,
             contentDescription = null,
             tint = colors.divider,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(16.dp)
         )
     }
 }
 
-
 /**
- * Apple Liquid Glass Master Storage Breakdown Gauge.
- * Multi-colored liquid segmented progress bar with real-time category sizes
- * and 1-tap quick cleaner trigger.
+ * Editorial Storage Overview Card:
+ * Clean, restrained storage overview with 1-tap cleaner trigger and tabular breakdown.
  */
 @Composable
-private fun MasterStorageGaugeCard(
+private fun EditorialStorageOverviewCard(
     storageUiState: StorageAnalysisUiState,
     isDarkTheme: Boolean,
     onCleanClick: () -> Unit,
@@ -777,9 +763,9 @@ private fun MasterStorageGaugeCard(
     val otherUsedWeight = ((usedBytes - (docsBytes + imagesBytes + videosBytes + audioBytes + appsBytes)).coerceAtLeast(0L).toFloat() / totalBytes).coerceIn(0f, 1f)
 
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = AppRadius.cardShape,
         color = if (isDarkTheme) colors.surface else colors.surfaceContainer,
-        border = BorderStroke(0.5.dp, colors.divider.copy(alpha = 0.4f)),
+        border = BorderStroke(0.5.dp, colors.line),
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
@@ -787,7 +773,7 @@ private fun MasterStorageGaugeCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp)
+                .padding(18.dp)
         ) {
             // Header: Total used readout and Clean button
             Row(
@@ -799,22 +785,22 @@ private fun MasterStorageGaugeCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(28.dp)
+                                .size(26.dp)
                                 .clip(CircleShape)
-                                .background(colors.accent.copy(alpha = 0.15f)),
+                                .background(colors.accent.copy(alpha = 0.12f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Storage,
                                 contentDescription = null,
                                 tint = colors.accent,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(15.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Device Storage",
-                            style = typography.caption.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
+                            style = typography.caption.copy(fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold),
                             color = colors.textSecondary
                         )
                     }
@@ -825,7 +811,7 @@ private fun MasterStorageGaugeCard(
                         } else {
                             "Calculating storage..."
                         },
-                        style = typography.title.withTabularFigures().copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
+                        style = typography.title.withTabularFigures().copy(fontSize = 17.sp, fontWeight = FontWeight.Bold),
                         color = colors.textPrimary
                     )
                 }
@@ -834,35 +820,36 @@ private fun MasterStorageGaugeCard(
                 val reclaimable = storageUiState.cleanSummary.totalReclaimableBytes
                 Button(
                     onClick = onCleanClick,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = AppRadius.pillShape,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (reclaimable > 0) colors.accent else colors.surfaceContainer,
+                        containerColor = if (reclaimable > 0) colors.accent else colors.surface,
                         contentColor = if (reclaimable > 0) colors.onAccent else colors.textPrimary
                     ),
+                    border = if (reclaimable <= 0) BorderStroke(0.5.dp, colors.line) else null,
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.AutoAwesome,
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = if (reclaimable > 0) "Clean ${StorageVolume.formatBytes(reclaimable)}" else "Clean",
-                        style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Precision Solid Segment Bar (8dp height)
+            // Multi-segment clean progress bar (6dp height)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(if (isDarkTheme) Color(0x33FFFFFF) else Color(0x18000000))
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(if (isDarkTheme) Color(0x22FFFFFF) else Color(0x12000000))
             ) {
                 Row(modifier = Modifier.fillMaxSize()) {
                     if (docsWeight > 0.005f) {
@@ -878,7 +865,7 @@ private fun MasterStorageGaugeCard(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .weight(imagesWeight.coerceAtLeast(0.01f))
-                                .background(Color(0xFFFF2D55))
+                                .background(Color(0xFF10B981))
                         )
                     }
                     if (videosWeight > 0.005f) {
@@ -886,7 +873,7 @@ private fun MasterStorageGaugeCard(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .weight(videosWeight.coerceAtLeast(0.01f))
-                                .background(Color(0xFFFF9500))
+                                .background(Color(0xFFFF7A3D))
                         )
                     }
                     if (audioWeight > 0.005f) {
@@ -894,7 +881,7 @@ private fun MasterStorageGaugeCard(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .weight(audioWeight.coerceAtLeast(0.01f))
-                                .background(Color(0xFFAF52DE))
+                                .background(Color(0xFF86E7B8))
                         )
                     }
                     if (appsWeight > 0.005f) {
@@ -902,7 +889,7 @@ private fun MasterStorageGaugeCard(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .weight(appsWeight.coerceAtLeast(0.01f))
-                                .background(Color(0xFF5856D6))
+                                .background(Color(0xFF7C6FF5))
                         )
                     }
                     if (otherUsedWeight > 0.005f) {
@@ -920,7 +907,7 @@ private fun MasterStorageGaugeCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Legend Strip
             Row(
@@ -939,19 +926,19 @@ private fun MasterStorageGaugeCard(
                 StorageLegendChip(
                     label = "Photos",
                     sizeText = StorageVolume.formatBytes(imagesBytes),
-                    dotColor = Color(0xFFFF2D55),
+                    dotColor = Color(0xFF10B981),
                     onClick = { onCategoryClick(FileCategory.IMAGES) }
                 )
                 StorageLegendChip(
                     label = "Videos",
                     sizeText = StorageVolume.formatBytes(videosBytes),
-                    dotColor = Color(0xFFFF9500),
+                    dotColor = Color(0xFFFF7A3D),
                     onClick = { onCategoryClick(FileCategory.VIDEOS) }
                 )
                 StorageLegendChip(
                     label = "Audio",
                     sizeText = StorageVolume.formatBytes(audioBytes),
-                    dotColor = Color(0xFFAF52DE),
+                    dotColor = Color(0xFF86E7B8),
                     onClick = { onCategoryClick(FileCategory.AUDIO) }
                 )
                 StorageLegendChip(
@@ -978,13 +965,13 @@ private fun StorageLegendChip(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(AppRadius.microShape)
             .clickable(onClick = onClick)
             .padding(vertical = 4.dp, horizontal = 2.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(8.dp)
+                .size(7.dp)
                 .clip(CircleShape)
                 .background(dotColor)
         )

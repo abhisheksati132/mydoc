@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
@@ -51,14 +52,14 @@ fun AppDialog(
 
     AlertDialog(
         onDismissRequest = effectiveDismiss,
-        shape = RoundedCornerShape(24.dp),
-        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surfaceContainerHigh,
+        shape = AppRadius.modalShape,
+        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
         modifier = Modifier.border(
             BorderStroke(
-                0.8.dp,
-                if (isOled) Color.White.copy(alpha = 0.08f) else colors.cardBorder
+                0.5.dp,
+                if (isOled) Color.White.copy(alpha = 0.08f) else colors.line
             ),
-            shape = RoundedCornerShape(24.dp)
+            shape = AppRadius.modalShape
         ),
         title = {
             Text(
@@ -88,10 +89,8 @@ fun AppDialog(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(0.6.dp)
-                        .background(
-                            if (isOled) Color.White.copy(alpha = 0.06f) else colors.divider.copy(alpha = 0.5f)
-                        )
+                        .height(0.5.dp)
+                        .background(colors.line)
                 )
             }
         },
@@ -99,16 +98,16 @@ fun AppDialog(
             if (confirmLabel != null && onConfirm != null) {
                 Button(
                     onClick = onConfirm,
-                    shape = RoundedCornerShape(999.dp),
+                    shape = AppRadius.pillShape,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isDestructive) colors.error else colors.accent,
                         contentColor = if (isDestructive || !isOled) Color.White else Color.Black
                     ),
-                    modifier = Modifier.defaultMinSize(minHeight = 40.dp)
+                    modifier = Modifier.defaultMinSize(minHeight = 38.dp)
                 ) {
                     Text(
                         text = confirmLabel,
-                        style = typography.label.copy(fontWeight = FontWeight.Bold)
+                        style = typography.label.copy(fontWeight = FontWeight.SemiBold)
                     )
                 }
             }
@@ -117,12 +116,12 @@ fun AppDialog(
             if (dismissLabel != null && onDismiss != null) {
                 OutlinedButton(
                     onClick = onDismiss,
-                    shape = RoundedCornerShape(999.dp),
+                    shape = AppRadius.pillShape,
                     border = BorderStroke(
-                        0.8.dp,
-                        if (isOled) Color.White.copy(alpha = 0.12f) else colors.cardBorder
+                        0.5.dp,
+                        if (isOled) Color.White.copy(alpha = 0.12f) else colors.line
                     ),
-                    modifier = Modifier.defaultMinSize(minHeight = 40.dp)
+                    modifier = Modifier.defaultMinSize(minHeight = 38.dp)
                 ) {
                     Text(
                         text = dismissLabel,

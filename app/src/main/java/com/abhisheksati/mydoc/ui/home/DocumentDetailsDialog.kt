@@ -48,6 +48,7 @@ import java.text.NumberFormat
 import java.util.Locale
 
 import androidx.compose.foundation.BorderStroke
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 
 @Composable
@@ -67,14 +68,14 @@ fun DocumentDetailsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(22.dp),
+        shape = AppRadius.modalShape,
         containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
         modifier = Modifier.border(
             BorderStroke(
-                0.8.dp,
-                if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)
+                0.5.dp,
+                if (isOled) Color.White.copy(alpha = 0.08f) else colors.line
             ),
-            shape = RoundedCornerShape(22.dp)
+            shape = AppRadius.modalShape
         ),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {

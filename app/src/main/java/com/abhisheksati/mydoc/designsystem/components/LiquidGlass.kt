@@ -3,113 +3,75 @@ package com.abhisheksati.mydoc.designsystem.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 
 /**
- * Apple-style Liquid Glass design system foundation.
- * Provides translucent layered glass surfaces, gradient specular rim borders,
- * playful vibrant liquid gradients, and iOS-style rounded squircles.
+ * Editorial Studio Surface System (formerly LiquidGlass).
+ * Replaces fake specular reflections and rainbow gradients with clean,
+ * tactile matte surfaces and crisp hairline borders.
  */
 object LiquidGlassTokens {
-    // Vibrant Apple-inspired liquid gradients
+    // Restrained, editorial monochromatic tints (brand ink-violet and calm neutrals)
     val AzureLiquid = Brush.linearGradient(
-        colors = listOf(Color(0xFF5B4FE8), Color(0xFF9B93FF))
+        colors = listOf(Color(0xFF5B4FE8), Color(0xFF6E64EE))
     )
 
     val SunsetLiquid = Brush.linearGradient(
-        colors = listOf(Color(0xFFFF2D55), Color(0xFFFF9500))
+        colors = listOf(Color(0xFFE25547), Color(0xFFEA6B5E))
     )
 
     val AuroraLiquid = Brush.linearGradient(
-        colors = listOf(Color(0xFF00C853), Color(0xFF69F0AE))
+        colors = listOf(Color(0xFF2E9461), Color(0xFF38A56E))
     )
 
     val VioletLiquid = Brush.linearGradient(
-        colors = listOf(Color(0xFFAF52DE), Color(0xFF5856D6))
+        colors = listOf(Color(0xFF6C5CE7), Color(0xFF7E70ED))
     )
 
     val AmberLiquid = Brush.linearGradient(
-        colors = listOf(Color(0xFFFF9500), Color(0xFFFFCC00))
+        colors = listOf(Color(0xFFD97706), Color(0xFFE5881E))
     )
 
     val IndigoLiquid = Brush.linearGradient(
-        colors = listOf(Color(0xFF7C6FF5), Color(0xFF5B4FE8))
+        colors = listOf(Color(0xFF5B4FE8), Color(0xFF7367F0))
     )
 }
 
 /**
- * Applies a frosted translucent liquid glass effect with a specular gradient border.
+ * Applies a clean, tactile editorial surface with a hairline border.
+ * Eliminates artificial glossy glare and heavy drop shadows.
  */
 fun Modifier.liquidGlass(
     isDarkTheme: Boolean = false,
-    shape: Shape = RoundedCornerShape(22.dp),
-    elevation: Dp = 4.dp,
+    shape: Shape = AppRadius.cardShape,
+    elevation: Dp = 0.dp,
     tintColor: Color? = null
 ): Modifier {
-    val backgroundBrush = if (tintColor != null) {
-        val topAlpha = if (isDarkTheme) 0.35f else 0.22f
-        val botAlpha = if (isDarkTheme) 0.18f else 0.10f
-        Brush.verticalGradient(
-            listOf(
-                tintColor.copy(alpha = topAlpha),
-                tintColor.copy(alpha = botAlpha)
-            )
-        )
+    val backgroundColor = if (tintColor != null) {
+        tintColor.copy(alpha = if (isDarkTheme) 0.14f else 0.08f)
     } else if (isDarkTheme) {
-        Brush.verticalGradient(
-            listOf(
-                Color(0xDD222530),
-                Color(0xBB171922)
-            )
-        )
+        Color(0xFF18181A)
     } else {
-        Brush.verticalGradient(
-            listOf(
-                Color(0xF2FFFFFF),
-                Color(0xD0F8F9FA)
-            )
-        )
+        Color(0xFFFFFFFF)
     }
 
-    val borderBrush = if (tintColor != null) {
-        Brush.verticalGradient(
-            listOf(
-                tintColor.copy(alpha = 0.55f),
-                tintColor.copy(alpha = 0.15f)
-            )
-        )
+    val borderColor = if (tintColor != null) {
+        tintColor.copy(alpha = if (isDarkTheme) 0.35f else 0.20f)
     } else if (isDarkTheme) {
-        Brush.verticalGradient(
-            listOf(
-                Color.White.copy(alpha = 0.22f),
-                Color.White.copy(alpha = 0.04f)
-            )
-        )
+        Color(0xFF26262A)
     } else {
-        Brush.verticalGradient(
-            listOf(
-                Color.White.copy(alpha = 0.85f),
-                Color(0x33B0B8C4)
-            )
-        )
+        Color(0xFFE5E5DF)
     }
 
     return this
-        .shadow(
-            elevation = elevation,
-            shape = shape,
-            ambientColor = if (isDarkTheme) Color(0x66000000) else Color(0x18000000),
-            spotColor = if (isDarkTheme) Color(0x88000000) else Color(0x22000000)
-        )
         .clip(shape)
-        .background(brush = backgroundBrush, shape = shape)
-        .border(width = 1.dp, brush = borderBrush, shape = shape)
+        .background(color = backgroundColor, shape = shape)
+        .border(width = 0.5.dp, color = borderColor, shape = shape)
 }
