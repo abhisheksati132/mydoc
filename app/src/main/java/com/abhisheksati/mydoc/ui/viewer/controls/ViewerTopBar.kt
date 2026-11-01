@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,13 +21,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Slideshow
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.Slideshow
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -40,20 +41,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.components.AppDivider
+import com.abhisheksati.mydoc.designsystem.components.EditorialRule
 import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 
 /**
- * Clean, uncluttered, and ergonomic top bar for document viewers.
- * Strictly presents: Back, Title with Page Subtitle, Search, Bookmark, and Overflow Menu.
- * Complies with 48dp minimum touch targets and eliminates horizontal crowding.
+ * The reader's masthead: back, document title with a tabular page folio, search,
+ * bookmark, and the overflow index. Chrome is ink on paper, closed by a hairline rule
+ * so the document below reads as the page and this as its header.
  */
 @Composable
 fun ViewerTopBar(
@@ -93,105 +97,80 @@ fun ViewerTopBar(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(colors.surfaceContainer)
+                .background(colors.background)
                 .statusBarsPadding()
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = 4.dp),
+                    .height(AppSpacing.listRowHeight)
+                    .padding(horizontal = AppSpacing.xSmall),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Back button (48dp touch target)
-                IconButton(
-                    onClick = {
-                        onBackClick()
-                    },
-                    modifier = Modifier.size(AppSpacing.minTouchTarget)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                        contentDescription = "Navigate back",
-                        tint = colors.textPrimary
-                    )
-                }
+                BarIconAction(
+                    icon = Icons.AutoMirrored.Outlined.ArrowBack,
+                    contentDescription = "Navigate back",
+                    tint = colors.ink,
+                    onClick = onBackClick
+                )
 
-                // Title and Page Subtitle
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(horizontal = 8.dp)
+                        .padding(horizontal = AppSpacing.small)
                 ) {
                     Text(
-                        text = formatMiddleTruncated(title, maxChars = 28),
-                        style = typography.title,
-                        color = colors.textPrimary,
+                        text = formatMiddleTruncated(title, maxChars = 30),
+                        style = typography.titleSmall,
+                        color = colors.ink,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     if (pageCount > 0) {
                         Text(
-                            text = "Page ${currentPage + 1} of $pageCount",
-                            style = typography.caption.withTabularFigures(),
-                            color = colors.textSecondary,
+                            text = "PAGE ${(currentPage + 1).toString().padStart(2, '0')} / " +
+                                pageCount.toString().padStart(2, '0'),
+                            style = typography.overline.withTabularFigures(),
+                            color = colors.inkMuted,
                             maxLines = 1
                         )
                     }
                 }
 
-                // In-Viewer Search
-                IconButton(
-                    onClick = {
-                        onSearchClick()
-                    },
-                    modifier = Modifier.size(AppSpacing.minTouchTarget)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Search,
-                        contentDescription = "Search text in document",
-                        tint = colors.textSecondary
-                    )
-                }
+                BarIconAction(
+                    icon = Icons.Outlined.Search,
+                    contentDescription = "Search text in document",
+                    tint = colors.inkMuted,
+                    onClick = onSearchClick
+                )
 
-                // Bookmark Toggle
-                IconButton(
-                    onClick = {
-                        onToggleBookmark()
-                    },
-                    modifier = Modifier.size(AppSpacing.minTouchTarget)
-                ) {
-                    Icon(
-                        imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                        contentDescription = if (isBookmarked) "Remove page bookmark" else "Add page bookmark",
-                        tint = if (isBookmarked) colors.accent else colors.textSecondary
-                    )
-                }
+                BarIconAction(
+                    icon = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                    contentDescription = if (isBookmarked) "Remove page bookmark" else "Add page bookmark",
+                    tint = if (isBookmarked) colors.ink else colors.inkMuted,
+                    onClick = onToggleBookmark
+                )
 
-                // Three-dot Overflow Menu
                 Box {
-                    IconButton(
-                        onClick = {
-                            isMoreMenuOpen = true
-                        },
-                        modifier = Modifier.size(AppSpacing.minTouchTarget)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.MoreVert,
-                            contentDescription = "More options",
-                            tint = colors.textSecondary
-                        )
-                    }
+                    BarIconAction(
+                        icon = Icons.Outlined.MoreVert,
+                        contentDescription = "More options",
+                        tint = colors.inkMuted,
+                        onClick = { isMoreMenuOpen = true }
+                    )
 
                     DropdownMenu(
                         expanded = isMoreMenuOpen,
-                        onDismissRequest = { isMoreMenuOpen = false }
+                        onDismissRequest = { isMoreMenuOpen = false },
+                        shape = AppRadius.pillShape,
+                        containerColor = colors.surface,
+                        border = BorderStroke(AppSpacing.hairline, colors.line),
+                        shadowElevation = 0.dp,
+                        tonalElevation = 0.dp
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("Share document", style = typography.body) },
-                            leadingIcon = {
-                                Icon(Icons.Outlined.Share, contentDescription = null, tint = colors.textSecondary)
-                            },
+                        OverflowAction(
+                            label = "Share document",
+                            icon = Icons.Outlined.Share,
                             onClick = {
                                 isMoreMenuOpen = false
                                 onShareClick()
@@ -199,11 +178,9 @@ fun ViewerTopBar(
                         )
 
                         if (onTtsClick != null) {
-                            DropdownMenuItem(
-                                text = { Text("Read aloud (TTS)", style = typography.body) },
-                                leadingIcon = {
-                                    Icon(Icons.AutoMirrored.Outlined.VolumeUp, contentDescription = null, tint = colors.textSecondary)
-                                },
+                            OverflowAction(
+                                label = "Read aloud",
+                                icon = Icons.AutoMirrored.Outlined.VolumeUp,
                                 onClick = {
                                     isMoreMenuOpen = false
                                     onTtsClick()
@@ -212,11 +189,9 @@ fun ViewerTopBar(
                         }
 
                         if (onOcrClick != null) {
-                            DropdownMenuItem(
-                                text = { Text("Extract text (OCR)", style = typography.body) },
-                                leadingIcon = {
-                                    Icon(Icons.Outlined.TextFields, contentDescription = null, tint = colors.textSecondary)
-                                },
+                            OverflowAction(
+                                label = "Extract text",
+                                icon = Icons.Outlined.TextFields,
                                 onClick = {
                                     isMoreMenuOpen = false
                                     onOcrClick()
@@ -225,11 +200,9 @@ fun ViewerTopBar(
                         }
 
                         if (onToolsClick != null) {
-                            DropdownMenuItem(
-                                text = { Text("PDF tools", style = typography.body) },
-                                leadingIcon = {
-                                    Icon(Icons.Outlined.Build, contentDescription = null, tint = colors.accent)
-                                },
+                            OverflowAction(
+                                label = "PDF tools",
+                                icon = Icons.Outlined.Build,
                                 onClick = {
                                     isMoreMenuOpen = false
                                     onToolsClick()
@@ -238,11 +211,9 @@ fun ViewerTopBar(
                         }
 
                         if (onSlideshowClick != null) {
-                            DropdownMenuItem(
-                                text = { Text("Start slideshow", style = typography.body) },
-                                leadingIcon = {
-                                    Icon(Icons.Filled.Slideshow, contentDescription = null, tint = colors.textSecondary)
-                                },
+                            OverflowAction(
+                                label = "Start slideshow",
+                                icon = Icons.Outlined.Slideshow,
                                 onClick = {
                                     isMoreMenuOpen = false
                                     onSlideshowClick()
@@ -251,11 +222,9 @@ fun ViewerTopBar(
                         }
 
                         if (onReflowClick != null) {
-                            DropdownMenuItem(
-                                text = { Text("Reflow reading mode", style = typography.body) },
-                                leadingIcon = {
-                                    Icon(Icons.Outlined.TextFields, contentDescription = null, tint = colors.textSecondary)
-                                },
+                            OverflowAction(
+                                label = "Reflow reading mode",
+                                icon = Icons.Outlined.TextFields,
                                 onClick = {
                                     isMoreMenuOpen = false
                                     onReflowClick()
@@ -264,11 +233,9 @@ fun ViewerTopBar(
                         }
 
                         if (onDocumentDetailsClick != null) {
-                            DropdownMenuItem(
-                                text = { Text("Document details", style = typography.body) },
-                                leadingIcon = {
-                                    Icon(Icons.Outlined.Info, contentDescription = null, tint = colors.textSecondary)
-                                },
+                            OverflowAction(
+                                label = "Document details",
+                                icon = Icons.Outlined.Info,
                                 onClick = {
                                     isMoreMenuOpen = false
                                     onDocumentDetailsClick()
@@ -279,9 +246,52 @@ fun ViewerTopBar(
                 }
             }
 
-            AppDivider()
+            EditorialRule(thickness = AppSpacing.hairline, color = colors.line)
         }
     }
+}
+
+@Composable
+private fun BarIconAction(
+    icon: ImageVector,
+    contentDescription: String,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.size(AppSpacing.minTouchTarget)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun OverflowAction(
+    label: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    val colors = LocalAppColors.current
+    val typography = LocalAppTypography.current
+
+    DropdownMenuItem(
+        text = { Text(label, style = typography.body, color = colors.ink) },
+        leadingIcon = {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = colors.inkMuted,
+                modifier = Modifier.size(18.dp)
+            )
+        },
+        onClick = onClick
+    )
 }
 
 @Preview(name = "ViewerTopBar - Light")

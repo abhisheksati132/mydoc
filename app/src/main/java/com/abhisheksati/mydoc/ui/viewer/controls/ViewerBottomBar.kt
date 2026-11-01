@@ -5,14 +5,9 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,13 +18,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.TextFormat
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -41,18 +35,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
-import com.abhisheksati.mydoc.designsystem.components.AppDivider
+import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
 import com.abhisheksati.mydoc.designsystem.components.AppSlider
-import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
+import com.abhisheksati.mydoc.designsystem.components.EditorialRule
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
@@ -62,11 +53,10 @@ import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import kotlin.math.roundToInt
 
 /**
- * Modern, ergonomic bottom control bar for document viewing.
- * Features:
- * 1. Interactive page scrubber with floating bubble displaying target page number.
- * 2. Three labeled primary actions: Contents (outline), Pages (grid overview), and Appearance (Aa).
- * 3. Theme-token-driven colors and 48dp+ touch targets.
+ * The reader's footer: sheet tabs as rule-underlined entries, an ink page scrubber
+ * with a tabular folio above the thumb, and three labelled actions set in ink.
+ * Same two strokes as the rest of the app — 2dp under the active tab, hairlines
+ * around the chrome.
  */
 @Composable
 fun ViewerBottomBar(
@@ -103,75 +93,67 @@ fun ViewerBottomBar(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(colors.surfaceContainer)
+                .background(colors.background)
                 .navigationBarsPadding()
         ) {
-            // Optional spreadsheet/section tabs
+            EditorialRule(thickness = AppSpacing.hairline, color = colors.line)
+
             if (sheetItems.size > 1 && onSheetSelect != null) {
                 LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = AppSpacing.paddingSmall, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        .padding(horizontal = AppSpacing.small),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.xSmall)
                 ) {
                     items(sheetItems.size) { idx ->
                         val item = sheetItems[idx]
                         val nextItemPage = sheetItems.getOrNull(idx + 1)?.pageIndex ?: Int.MAX_VALUE
                         val isSelected = currentPage >= item.pageIndex && currentPage < nextItemPage
-                        FilterChip(
+                        SheetTab(
+                            label = item.title,
                             selected = isSelected,
-                            onClick = {
-                                onSheetSelect(item.pageIndex)
-                            },
-                            label = { Text(item.title, style = AppTheme.typography.caption) },
-                            shape = AppRadius.roundShape,
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = colors.accent,
-                                selectedLabelColor = colors.surface
-                            )
+                            onClick = { onSheetSelect(item.pageIndex) }
                         )
                     }
                 }
-                AppDivider()
+                EditorialRule(
+                    modifier = Modifier.padding(horizontal = AppSpacing.screenPadding),
+                    thickness = AppSpacing.hairline,
+                    color = colors.line
+                )
             }
 
-            // Scrubber area with floating target page bubble
             if (pageCount > 1) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = AppSpacing.paddingMedium)
-                        .padding(top = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .padding(horizontal = AppSpacing.screenPadding)
+                        .padding(top = AppSpacing.small, bottom = AppSpacing.xSmall)
                 ) {
-                    // Floating page bubble during dragging
                     AnimatedVisibility(
                         visible = isDragging,
-                        enter = fadeIn(spring(stiffness = Spring.StiffnessHigh)) + scaleIn(spring(stiffness = Spring.StiffnessHigh)),
-                        exit = fadeOut(spring(stiffness = Spring.StiffnessHigh)) + scaleOut(spring(stiffness = Spring.StiffnessHigh))
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(16.dp),
+                        enter = fadeIn(spring(stiffness = Spring.StiffnessMedium)),
+                        exit = fadeOut(spring(stiffness = Spring.StiffnessMedium))
                     ) {
-                        val targetDisplayPage = (scrubPage.roundToInt() + 1).coerceIn(1, pageCount)
                         Box(
                             modifier = Modifier
-                                .clip(AppRadius.roundShape)
-                                .background(colors.surfaceVariant)
-                                .border(
-                                    width = AppSpacing.dividerThickness,
-                                    color = colors.accent,
-                                    shape = AppRadius.roundShape
-                                )
-                                .padding(horizontal = AppSpacing.paddingMedium, vertical = 2.dp)
+                                .fillMaxWidth()
+                                .height(16.dp),
+                            contentAlignment = Alignment.Center
                         ) {
+                            val target = (scrubPage.roundToInt() + 1).coerceIn(1, pageCount)
                             Text(
-                                text = "Page $targetDisplayPage of $pageCount",
-                                style = typography.caption.withTabularFigures(),
-                                color = colors.accent,
-                                fontWeight = FontWeight.SemiBold
+                                text = "PAGE ${target.toString().padStart(2, '0')} / " +
+                                    pageCount.toString().padStart(2, '0'),
+                                style = typography.overline.withTabularFigures(),
+                                color = colors.ink
                             )
                         }
                     }
 
-                    // Scrubber slider
                     AppSlider(
                         value = if (isDragging) scrubPage else currentPage.toFloat(),
                         onValueChange = { newVal ->
@@ -186,26 +168,26 @@ fun ViewerBottomBar(
                         valueRange = 0f..(pageCount - 1).toFloat(),
                         steps = if (pageCount in 2..60) pageCount - 2 else 0,
                         colors = SliderDefaults.colors(
-                            thumbColor = colors.accent,
-                            activeTrackColor = colors.accent,
-                            inactiveTrackColor = colors.divider
+                            thumbColor = colors.ink,
+                            activeTrackColor = colors.ink,
+                            inactiveTrackColor = colors.track
                         ),
-                        thumbSize = 14.dp,
+                        thumbSize = 12.dp,
+                        trackHeight = AppSpacing.rule,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(30.dp)
+                            .height(28.dp)
                     )
                 }
             }
 
-            AppDivider()
+            EditorialRule(thickness = AppSpacing.hairline, color = colors.line)
 
-            // Primary labeled actions: Contents, Pages, Appearance
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = AppSpacing.paddingSmall),
+                    .height(AppSpacing.listRowHeight)
+                    .padding(horizontal = AppSpacing.small),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
@@ -239,6 +221,37 @@ fun ViewerBottomBar(
 }
 
 @Composable
+private fun SheetTab(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val colors = LocalAppColors.current
+    val typography = LocalAppTypography.current
+
+    Column(
+        modifier = Modifier
+            .pressScaleEffect(onClick = onClick)
+            .padding(horizontal = AppSpacing.small, vertical = AppSpacing.xSmall),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = label,
+            style = typography.captionStrong,
+            color = if (selected) colors.ink else colors.inkMuted,
+            maxLines = 1
+        )
+        Spacer(modifier = Modifier.height(AppSpacing.xSmall))
+        Box(
+            modifier = Modifier
+                .width(AppSpacing.large)
+                .height(AppSpacing.rule)
+                .background(if (selected) colors.ink else Color.Transparent)
+        )
+    }
+}
+
+@Composable
 private fun BottomBarActionButton(
     icon: ImageVector,
     label: String,
@@ -250,48 +263,35 @@ private fun BottomBarActionButton(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
 
-    val contentColor = if (enabled) colors.textPrimary else colors.textSecondary.copy(alpha = 0.38f)
+    val contentColor = if (enabled) colors.ink else colors.inkMuted.copy(alpha = 0.38f)
 
-    Box(
+    Column(
         modifier = modifier
-            .height(52.dp)
-            .clip(AppRadius.roundShape)
-            .clickable(
-                enabled = enabled,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = {
-                    onClick()
-                }
-            )
+            .height(AppSpacing.minTouchTarget)
+            .then(if (enabled) Modifier.pressScaleEffect(onClick = onClick) else Modifier)
             .semantics { this.contentDescription = contentDescription },
-        contentAlignment = Alignment.Center
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = label,
-                style = typography.caption,
-                color = contentColor,
-                fontWeight = FontWeight.Medium
-            )
-        }
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = contentColor,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.height(AppSpacing.xSmall))
+        Text(
+            text = label,
+            style = typography.captionStrong,
+            color = contentColor
+        )
     }
 }
 
 @Preview(name = "ViewerBottomBar - Light")
 @Composable
 private fun ViewerBottomBarLightPreview() {
-    AppDesignSystemTheme(darkTheme = false, amoledBlack = false) {
+    com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme(darkTheme = false, amoledBlack = false) {
         ViewerBottomBar(
             currentPage = 3,
             pageCount = 24,
@@ -308,7 +308,7 @@ private fun ViewerBottomBarLightPreview() {
 @Preview(name = "ViewerBottomBar - Dark")
 @Composable
 private fun ViewerBottomBarDarkPreview() {
-    AppDesignSystemTheme(darkTheme = true, amoledBlack = false) {
+    com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme(darkTheme = true, amoledBlack = false) {
         ViewerBottomBar(
             currentPage = 3,
             pageCount = 24,
@@ -325,7 +325,7 @@ private fun ViewerBottomBarDarkPreview() {
 @Preview(name = "ViewerBottomBar - AMOLED")
 @Composable
 private fun ViewerBottomBarAmoledPreview() {
-    AppDesignSystemTheme(darkTheme = true, amoledBlack = true) {
+    com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme(darkTheme = true, amoledBlack = true) {
         ViewerBottomBar(
             currentPage = 3,
             pageCount = 24,
