@@ -78,4 +78,21 @@ class PdfToolUtilsTest {
         val sanitized = PdfToolUtils.sanitizeXml(input)
         assertEquals("HelloWorld!\nTab:\t", sanitized)
     }
+
+    @Test
+    fun createTempOutputFile_createsExpectedDirectoryAndFile() {
+        val tempDir = java.io.File.createTempFile("cache_test", "dir").apply {
+            delete()
+            mkdirs()
+        }
+        try {
+            val file = PdfToolUtils.createTempOutputFile(tempDir, "sample", "pdf")
+            org.junit.Assert.assertTrue(file.parentFile?.exists() == true)
+            org.junit.Assert.assertEquals("tools_output", file.parentFile?.name)
+            org.junit.Assert.assertTrue(file.name.startsWith("mydoc_sample_"))
+            org.junit.Assert.assertTrue(file.name.endsWith(".pdf"))
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }
 }

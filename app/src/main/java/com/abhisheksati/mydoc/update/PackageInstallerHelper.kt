@@ -66,8 +66,13 @@ class PackageInstallerHelper(private val context: Context) {
             android.content.pm.PackageManager.GET_SIGNATURES
         }
 
-        val archiveInfo = pm.getPackageArchiveInfo(apkFile.absolutePath, flags)
-            ?: pm.getPackageArchiveInfo(apkFile.absolutePath, 0)
+        val archiveInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pm.getPackageArchiveInfo(apkFile.absolutePath, android.content.pm.PackageManager.PackageInfoFlags.of(flags.toLong()))
+                ?: pm.getPackageArchiveInfo(apkFile.absolutePath, android.content.pm.PackageManager.PackageInfoFlags.of(0L))
+        } else {
+            pm.getPackageArchiveInfo(apkFile.absolutePath, flags)
+                ?: pm.getPackageArchiveInfo(apkFile.absolutePath, 0)
+        }
             ?: throw SecurityException("Verification failed: Cannot parse package archive info for ${apkFile.name}")
 
         if (archiveInfo.packageName != context.packageName) {
@@ -77,7 +82,9 @@ class PackageInstallerHelper(private val context: Context) {
         }
 
         val currentAppInfo = try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                pm.getPackageInfo(context.packageName, android.content.pm.PackageManager.PackageInfoFlags.of(android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES.toLong()))
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 pm.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES)
             } else {
                 @Suppress("DEPRECATION")
