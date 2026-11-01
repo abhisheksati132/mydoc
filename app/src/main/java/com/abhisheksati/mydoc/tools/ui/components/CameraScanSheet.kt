@@ -71,6 +71,7 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -89,14 +90,16 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.abhisheksati.mydoc.designsystem.animation.pressScale
-import com.abhisheksati.mydoc.designsystem.components.EditorialRule
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
+import com.abhisheksati.mydoc.designsystem.components.VividRule
 import com.abhisheksati.mydoc.designsystem.components.horizontalScrollWithFade
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.CaptureChromeColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
+import com.abhisheksati.mydoc.designsystem.tokens.glow
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.tools.scan.cropper.FreeCornersCropperDialog
@@ -385,9 +388,8 @@ fun CameraScanSheet(
                 }
             }
 
-            // Page head: kicker, title, page folio, and the masthead rule. Mode selection is a
-            // ruled tab row rather than a floating pill group, so the head reads like every
-            // other screen instead of an iOS camera sheet.
+            // Page head: kicker, title, page-count pill, and the spectrum rule. Mode
+            // selection is a gradient-underlined tab row, matching the reader's sheet tabs.
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -430,12 +432,19 @@ fun CameraScanSheet(
                     }
 
                     if (capturedFiles.isNotEmpty()) {
-                        Text(
-                            text = "${capturedFiles.size.toString().padStart(2, '0')} ${if (capturedFiles.size == 1) "PAGE" else "PAGES"}",
-                            style = typography.overline.withTabularFigures(),
-                            color = CaptureChromeColors.onChromeMuted,
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .clip(AppRadius.pillShape)
+                                .background(VividGradients.brand)
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "${capturedFiles.size} ${if (capturedFiles.size == 1) "PAGE" else "PAGES"}",
+                                style = typography.overline.withTabularFigures(),
+                                color = Color.White
+                            )
+                        }
                     }
 
                     IconButton(
@@ -454,7 +463,7 @@ fun CameraScanSheet(
                     }
                 }
 
-                EditorialRule(color = Color.White)
+                VividRule()
 
                 Row(
                     modifier = Modifier
@@ -481,8 +490,9 @@ fun CameraScanSheet(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(AppSpacing.rule)
-                                    .background(if (isSelected) Color.White else Color.Transparent)
+                                    .height(3.dp)
+                                    .clip(AppRadius.pillShape)
+                                    .background(if (isSelected) VividGradients.brand else SolidColor(Color.Transparent))
                             )
                         }
                     }
@@ -499,8 +509,8 @@ fun CameraScanSheet(
                 )
             }
 
-            // Bottom band: contact sheet, filter tabs and shutter. One ruled block, not a
-            // rounded sheet, so the chrome belongs to the same print system as the page head.
+            // Bottom band: contact sheet, filter tabs and shutter, closed by the same
+            // spectrum rule as the page head so the two chrome bands read as one system.
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -508,7 +518,7 @@ fun CameraScanSheet(
                     .background(CaptureChromeColors.sheetScrim)
                     .onGloballyPositioned { bottomChromePx = it.size.height }
             ) {
-                EditorialRule(color = Color.White)
+                VividRule()
 
                 // Scanned Pages Horizontal Strip (collapsible if empty)
                 AnimatedVisibility(
@@ -632,8 +642,9 @@ fun CameraScanSheet(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(AppSpacing.hairline)
-                                        .background(if (isSelected) Color.White else Color.Transparent)
+                                        .height(AppSpacing.rule)
+                                        .clip(AppRadius.pillShape)
+                                        .background(if (isSelected) VividGradients.brand else SolidColor(Color.Transparent))
                                 )
                             }
                         }
@@ -721,8 +732,19 @@ fun CameraScanSheet(
                             Box(
                                 modifier = Modifier
                                     .size(46.dp)
+                                    .glow(
+                                        VividGradients.glowColor(VividGradients.Family.BRAND),
+                                        AppRadius.microShape,
+                                        elevation = 10.dp
+                                    )
                                     .clip(AppRadius.microShape)
-                                    .background(if (isApplyingFilterAndSaving) CaptureChromeColors.panel else colors.accent)
+                                    .background(
+                                        if (isApplyingFilterAndSaving) {
+                                            SolidColor(CaptureChromeColors.panel)
+                                        } else {
+                                            VividGradients.brand
+                                        }
+                                    )
                                     .clickable(
                                         interactionSource = commitInteraction,
                                         indication = ripple(),
@@ -775,7 +797,7 @@ fun CameraScanSheet(
                                     Icon(
                                         imageVector = Icons.Outlined.Check,
                                         contentDescription = "Done scanning",
-                                        tint = Color.Black,
+                                        tint = Color.White,
                                         modifier = Modifier.size(22.dp)
                                     )
                                 }

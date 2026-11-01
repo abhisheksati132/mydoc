@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Vibration
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +21,7 @@ import com.abhisheksati.mydoc.data.local.AppThemeMode
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
 
 @Composable
 fun SettingsAppearanceSection(
@@ -29,9 +31,7 @@ fun SettingsAppearanceSection(
     onThemeChange: (AppThemeMode) -> Unit,
     onAmoledBlackChange: (Boolean) -> Unit,
     onHapticFeedbackChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-    index: String? = null,
-    showRule: Boolean = true
+    modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
@@ -39,9 +39,9 @@ fun SettingsAppearanceSection(
 
     SettingsCard(
         title = "Appearance",
-        modifier = modifier,
-        index = index,
-        showRule = showRule
+        icon = Icons.Outlined.Palette,
+        family = VividGradients.Family.GRAPE,
+        modifier = modifier
     ) {
         Text(
             text = "Theme",

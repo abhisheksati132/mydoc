@@ -192,10 +192,7 @@ fun ToolsScreen(
                         if (toolsInGroup.isEmpty()) return@forEach
 
                         item(key = "header_${group.name}_$paletteKey") {
-                            AppSectionHeader(
-                                title = friendlyHeader(group),
-                                showRule = false
-                            )
+                            AppSectionHeader(title = friendlyHeader(group))
                         }
 
                         items(

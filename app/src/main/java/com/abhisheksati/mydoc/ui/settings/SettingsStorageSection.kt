@@ -23,6 +23,7 @@ import com.abhisheksati.mydoc.designsystem.components.EditorialAction
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.HomeTab
 import java.util.Locale
@@ -34,18 +35,16 @@ fun SettingsStorageSection(
     onStartupTabChange: (HomeTab) -> Unit,
     onClearCacheClick: () -> Unit,
     onClearRecentClick: (() -> Unit)?,
-    modifier: Modifier = Modifier,
-    index: String? = null,
-    showRule: Boolean = true
+    modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
 
     SettingsCard(
         title = "Storage & files",
-        modifier = modifier,
-        index = index,
-        showRule = showRule
+        icon = Icons.Outlined.Storage,
+        family = VividGradients.Family.FOREST,
+        modifier = modifier
     ) {
         Text(
             text = "Default startup destination",

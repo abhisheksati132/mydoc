@@ -15,11 +15,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
@@ -113,28 +115,19 @@ fun EditorialMasthead(
 }
 
 /**
- * A numbered section header. The folio is not decoration: it is the running order of
- * the page, so a section break always reads as a break and never as another card.
+ * A section header in the vivid language: the title, an optional trailing action,
+ * and a short 3dp spectrum underline — the signature stroke, in miniature.
  */
 @Composable
 fun AppSectionHeader(
     title: String,
     modifier: Modifier = Modifier,
-    index: String? = null,
-    action: (@Composable () -> Unit)? = null,
-    showRule: Boolean = true
+    action: (@Composable () -> Unit)? = null
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
 
     Column(modifier = modifier.fillMaxWidth()) {
-        if (showRule) {
-            EditorialRule(
-                modifier = Modifier.padding(horizontal = AppSpacing.screenPadding),
-                thickness = AppSpacing.hairline,
-                color = colors.inkMuted
-            )
-        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -142,18 +135,11 @@ fun AppSectionHeader(
                     start = AppSpacing.screenPadding,
                     end = AppSpacing.screenPadding,
                     top = AppSpacing.medium,
-                    bottom = AppSpacing.small
+                    bottom = AppSpacing.xSmall
                 ),
-            verticalAlignment = Alignment.Bottom,
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
         ) {
-            if (index != null) {
-                Text(
-                    text = index,
-                    style = typography.overline.withTabularFigures(),
-                    color = colors.inkMuted
-                )
-            }
             Text(
                 text = title,
                 style = typography.heading,
@@ -162,10 +148,15 @@ fun AppSectionHeader(
             )
             action?.invoke()
         }
+        VividRule(
+            modifier = Modifier
+                .padding(start = AppSpacing.screenPadding, bottom = AppSpacing.small)
+                .width(40.dp)
+        )
     }
 }
 
-/** A text link in the editorial voice: ink under a hairline, accent only for the word. */
+/** A soft accent pill for inline actions — the vivid replacement for the bare text link. */
 @Composable
 fun EditorialAction(
     label: String,
@@ -175,12 +166,17 @@ fun EditorialAction(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
 
-    Text(
-        text = label,
-        style = typography.captionStrong,
-        color = colors.accent,
+    Box(
         modifier = modifier
-            .padding(vertical = AppSpacing.xSmall)
+            .clip(AppRadius.pillShape)
+            .background(colors.accent.copy(alpha = 0.14f))
             .pressScaleEffect(onClick = onClick)
-    )
+            .padding(horizontal = AppSpacing.small + 2.dp, vertical = AppSpacing.xSmall)
+    ) {
+        Text(
+            text = label,
+            style = typography.captionStrong,
+            color = colors.accent
+        )
+    }
 }

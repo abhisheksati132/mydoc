@@ -46,7 +46,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.components.EditorialRule
+import com.abhisheksati.mydoc.designsystem.components.VividRule
 import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
@@ -55,9 +55,9 @@ import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 
 /**
- * The reader's masthead: back, document title with a tabular page folio, search,
- * bookmark, and the overflow index. Chrome is ink on paper, closed by a hairline rule
- * so the document below reads as the page and this as its header.
+ * The reader's masthead: back, document title with a tabular page counter, search,
+ * bookmark, and the overflow index. Closed by the 3dp spectrum rule — the same
+ * signature stroke as every other header in the app.
  */
 @Composable
 fun ViewerTopBar(
@@ -147,7 +147,7 @@ fun ViewerTopBar(
                 BarIconAction(
                     icon = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
                     contentDescription = if (isBookmarked) "Remove page bookmark" else "Add page bookmark",
-                    tint = if (isBookmarked) colors.ink else colors.inkMuted,
+                    tint = if (isBookmarked) colors.accent else colors.inkMuted,
                     onClick = onToggleBookmark
                 )
 
@@ -246,7 +246,7 @@ fun ViewerTopBar(
                 }
             }
 
-            EditorialRule(thickness = AppSpacing.hairline, color = colors.line)
+            VividRule()
         }
     }
 }

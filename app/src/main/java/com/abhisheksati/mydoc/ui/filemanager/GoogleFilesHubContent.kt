@@ -142,7 +142,7 @@ fun GoogleFilesHubContent(
         contentPadding = PaddingValues(bottom = 96.dp)
     ) {
         item(key = "storage_header_$paletteKey") {
-            AppSectionHeader(title = "Storage", showRule = false)
+            AppSectionHeader(title = "Storage")
         }
         item(key = "storage_readout_$paletteKey") {
             StorageReadout(
@@ -153,7 +153,7 @@ fun GoogleFilesHubContent(
         }
 
         item(key = "collections_header_$paletteKey") {
-            AppSectionHeader(title = "Collections", showRule = false)
+            AppSectionHeader(title = "Collections")
         }
         items(
             count = collections.size,
@@ -171,7 +171,7 @@ fun GoogleFilesHubContent(
 
         if (hasDevices) {
             item(key = "devices_header_$paletteKey") {
-                AppSectionHeader(title = "Devices", showRule = false)
+                AppSectionHeader(title = "Devices")
             }
             items(
                 count = devices.size,
@@ -190,7 +190,7 @@ fun GoogleFilesHubContent(
 
         if (pinnedFolders.isNotEmpty()) {
             item(key = "pinned_header_$paletteKey") {
-                AppSectionHeader(title = "Pinned", showRule = false)
+                AppSectionHeader(title = "Pinned")
             }
             items(
                 count = pinnedFolders.size,
@@ -208,7 +208,7 @@ fun GoogleFilesHubContent(
         }
 
         item(key = "utilities_header_$paletteKey") {
-            AppSectionHeader(title = "Utilities", showRule = false)
+            AppSectionHeader(title = "Utilities")
         }
         item(key = "utilities_rows_$paletteKey") {
             VividEntryCard(

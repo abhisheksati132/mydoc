@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.PictureAsPdf
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 
 @Composable
@@ -34,18 +36,16 @@ fun SettingsReadingSection(
     onDoubleTapZoomChange: (Boolean) -> Unit,
     onKeepScreenOnChange: (Boolean) -> Unit,
     onVolumeKeyTurningChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-    index: String? = null,
-    showRule: Boolean = true
+    modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
 
     SettingsCard(
         title = "Reading & documents",
-        modifier = modifier,
-        index = index,
-        showRule = showRule
+        icon = Icons.AutoMirrored.Outlined.MenuBook,
+        family = VividGradients.Family.OCEAN,
+        modifier = modifier
     ) {
         Text(
             text = "Default reading mode",

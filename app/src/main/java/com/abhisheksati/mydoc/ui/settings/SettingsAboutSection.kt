@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -20,13 +21,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
 import com.abhisheksati.mydoc.designsystem.components.EditorialAction
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.update.UpdateManager
 import com.abhisheksati.mydoc.update.UpdateUiState
@@ -39,9 +43,7 @@ fun SettingsAboutSection(
     updateState: UpdateUiState,
     checkUpdatesOnLaunch: Boolean,
     onCheckUpdatesOnLaunchChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-    index: String? = null,
-    showRule: Boolean = true
+    modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
@@ -50,9 +52,9 @@ fun SettingsAboutSection(
 
     SettingsCard(
         title = "About & updates",
-        modifier = modifier,
-        index = index,
-        showRule = showRule
+        icon = Icons.Outlined.Info,
+        family = VividGradients.Family.BRAND,
+        modifier = modifier
     ) {
         SettingToggleRow(
             title = "Check for updates on launch",
@@ -154,7 +156,8 @@ fun SettingsAboutSection(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(AppSpacing.rule)
+                            .height(6.dp)
+                            .clip(AppRadius.pillShape)
                             .background(colors.track)
                     ) {
                         Box(
@@ -167,7 +170,7 @@ fun SettingsAboutSection(
                                         0f
                                     }
                                 )
-                                .background(colors.ink)
+                                .background(VividGradients.brand)
                         )
                     }
                 }

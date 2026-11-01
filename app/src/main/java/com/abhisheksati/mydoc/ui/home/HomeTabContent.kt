@@ -153,7 +153,7 @@ fun HomeTabContent(
 
                 if (continueItem != null) {
                     item(key = "continue_header_$paletteKey") {
-                        AppSectionHeader(title = "Continue reading", showRule = false)
+                        AppSectionHeader(title = "Continue reading")
                     }
                     item(key = "continue_row_$paletteKey") {
                         ContinueReadingCard(
@@ -166,7 +166,6 @@ fun HomeTabContent(
                 item(key = "recent_header_$paletteKey") {
                     AppSectionHeader(
                         title = "Recent documents",
-                        showRule = false,
                         action = if (recentItems.isNotEmpty()) {
                             {
                                 EditorialAction(

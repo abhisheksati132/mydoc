@@ -35,7 +35,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -44,19 +46,20 @@ import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
 import com.abhisheksati.mydoc.designsystem.components.AppSlider
 import com.abhisheksati.mydoc.designsystem.components.EditorialRule
+import com.abhisheksati.mydoc.designsystem.components.VividRule
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import kotlin.math.roundToInt
 
 /**
- * The reader's footer: sheet tabs as rule-underlined entries, an ink page scrubber
- * with a tabular folio above the thumb, and three labelled actions set in ink.
- * Same two strokes as the rest of the app — 2dp under the active tab, hairlines
- * around the chrome.
+ * The reader's footer: sheet tabs with a gradient underline on the active entry,
+ * an accent page scrubber with a tabular counter above the thumb, and three
+ * labelled actions. Closed at the top by the 3dp spectrum rule.
  */
 @Composable
 fun ViewerBottomBar(
@@ -96,7 +99,7 @@ fun ViewerBottomBar(
                 .background(colors.background)
                 .navigationBarsPadding()
         ) {
-            EditorialRule(thickness = AppSpacing.hairline, color = colors.line)
+            VividRule()
 
             if (sheetItems.size > 1 && onSheetSelect != null) {
                 LazyRow(
@@ -116,11 +119,6 @@ fun ViewerBottomBar(
                         )
                     }
                 }
-                EditorialRule(
-                    modifier = Modifier.padding(horizontal = AppSpacing.screenPadding),
-                    thickness = AppSpacing.hairline,
-                    color = colors.line
-                )
             }
 
             if (pageCount > 1) {
@@ -149,7 +147,7 @@ fun ViewerBottomBar(
                                 text = "PAGE ${target.toString().padStart(2, '0')} / " +
                                     pageCount.toString().padStart(2, '0'),
                                 style = typography.overline.withTabularFigures(),
-                                color = colors.ink
+                                color = colors.accent
                             )
                         }
                     }
@@ -168,8 +166,8 @@ fun ViewerBottomBar(
                         valueRange = 0f..(pageCount - 1).toFloat(),
                         steps = if (pageCount in 2..60) pageCount - 2 else 0,
                         colors = SliderDefaults.colors(
-                            thumbColor = colors.ink,
-                            activeTrackColor = colors.ink,
+                            thumbColor = colors.accent,
+                            activeTrackColor = colors.accent,
                             inactiveTrackColor = colors.track
                         ),
                         thumbSize = 12.dp,
@@ -238,15 +236,16 @@ private fun SheetTab(
         Text(
             text = label,
             style = typography.captionStrong,
-            color = if (selected) colors.ink else colors.inkMuted,
+            color = if (selected) colors.accent else colors.inkMuted,
             maxLines = 1
         )
         Spacer(modifier = Modifier.height(AppSpacing.xSmall))
         Box(
             modifier = Modifier
                 .width(AppSpacing.large)
-                .height(AppSpacing.rule)
-                .background(if (selected) colors.ink else Color.Transparent)
+                .height(3.dp)
+                .clip(AppRadius.pillShape)
+                .background(if (selected) VividGradients.brand else SolidColor(Color.Transparent))
         )
     }
 }

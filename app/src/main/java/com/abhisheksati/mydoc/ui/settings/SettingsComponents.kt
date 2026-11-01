@@ -1,6 +1,9 @@
 package com.abhisheksati.mydoc.ui.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -16,36 +19,63 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
+import com.abhisheksati.mydoc.designsystem.components.VividIconTile
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
 
 /**
- * A settings section: a numbered heading and its rows on the page margin. There is
- * no card, so the section is separated by the rule above the heading and by white
- * space, exactly like a section in a printed manual.
+ * A settings section as a soft vivid card: gradient icon plaque, heading, and the
+ * section's rows inside one surface. Same card recipe as the Files hub entries.
  */
 @Composable
 fun SettingsCard(
     title: String,
+    icon: ImageVector,
+    family: VividGradients.Family,
     modifier: Modifier = Modifier,
-    index: String? = null,
-    showRule: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        AppSectionHeader(
-            title = title,
-            index = index,
-            showRule = showRule
-        )
+    val colors = LocalAppColors.current
+    val typography = LocalAppTypography.current
+    val shape = AppRadius.cardShape
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = AppSpacing.screenPadding)
+            .clip(shape)
+            .background(colors.surface)
+            .border(1.dp, colors.line, shape)
+            .padding(AppSpacing.medium)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
+        ) {
+            VividIconTile(
+                icon = icon,
+                family = family,
+                size = 36.dp,
+                iconSize = 20.dp,
+                shape = shape
+            )
+            Text(
+                text = title,
+                style = typography.bodyLargeStrong,
+                color = colors.ink
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = AppSpacing.screenPadding),
+                .padding(top = AppSpacing.xSmall),
             content = content
         )
     }
@@ -86,7 +116,7 @@ fun SettingToggleRow(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = colors.inkMuted,
+            tint = colors.accent,
             modifier = Modifier
                 .padding(end = AppSpacing.medium)
                 .size(20.dp)
@@ -112,11 +142,11 @@ fun SettingToggleRow(
             checked = checked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = colors.background,
-                checkedTrackColor = colors.ink,
-                checkedBorderColor = colors.ink,
+                checkedThumbColor = Color.White,
+                checkedTrackColor = colors.accent,
+                checkedBorderColor = colors.accent,
                 uncheckedThumbColor = colors.inkMuted,
-                uncheckedTrackColor = colors.surface,
+                uncheckedTrackColor = colors.background,
                 uncheckedBorderColor = colors.line
             )
         )

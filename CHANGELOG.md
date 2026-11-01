@@ -27,6 +27,17 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ### Changed
 
+- **Vivid sweep across Settings, reader chrome and scanner.** The last editorial surfaces join
+  the vivid language. Settings sections are soft cards with gradient icon plaques (grape
+  Appearance, ocean Reading, sunset Media, forest Storage, fire Privacy, brand About) on an
+  aurora backdrop; folio numbering is gone; toggles, row icons and the update progress bar run
+  on the accent and brand gradient; inline actions are soft accent pills. The reader's top and
+  bottom bars close on the 3dp spectrum rule, the page scrubber and active sheet tab are accent /
+  gradient, and the bookmark fills with accent. The scanner's chrome bands close on spectrum
+  rules, mode and filter tabs carry gradient underlines, the page count is a gradient pill, and
+  the commit stamp is a glowing brand-gradient tile. `AppSectionHeader` is now title plus a short
+  spectrum underline everywhere (Home, Files, Tools, sheets), so section breaks read identically
+  across the app.
 - **Vivid premium redesign.** The editorial print grammar is replaced by a saturated, glowing
   design language on Home, Files, Tools and the root nav. New tokens in
   `designsystem/tokens/VividGradients.kt` define seven fixed gradient families (brand, sunset,

@@ -1,11 +1,13 @@
 package com.abhisheksati.mydoc.ui.settings
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
 
 @Composable
 fun SettingsMediaSection(
@@ -15,15 +17,13 @@ fun SettingsMediaSection(
     onVideoHwAccelChange: (Boolean) -> Unit,
     onAutoResumeVideoChange: (Boolean) -> Unit,
     onVideoAutoLoopChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-    index: String? = null,
-    showRule: Boolean = true
+    modifier: Modifier = Modifier
 ) {
     SettingsCard(
         title = "Video & audio",
-        modifier = modifier,
-        index = index,
-        showRule = showRule
+        icon = Icons.Outlined.PlayCircle,
+        family = VividGradients.Family.SUNSET,
+        modifier = modifier
     ) {
         SettingToggleRow(
             title = "Hardware Video Acceleration",
