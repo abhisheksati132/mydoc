@@ -994,11 +994,7 @@ class PdfToolsEngine(private val context: Context) {
         }
     }
 
-    private fun sanitizeXml(text: String): String {
-        return text.filter { ch ->
-            ch == '\t' || ch == '\n' || ch == '\r' || (ch.code in 0x20..0xD7FF) || (ch.code in 0xE000..0xFFFD)
-        }.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&apos;")
-    }
+    private fun sanitizeXml(text: String): String = PdfToolUtils.sanitizeXml(text)
 
     private suspend fun pdfToOfficeDocument(file: File, onProgress: (ToolProgress) -> Unit): File {
         // Generates an offline valid OOXML .docx with structured paragraphs
@@ -1710,26 +1706,6 @@ class PdfToolsEngine(private val context: Context) {
         }
     }
 
-    private fun parsePageRanges(rangeStr: String, maxPages: Int): List<Int> {
-        if (rangeStr.isBlank()) return (0 until maxPages).toList()
-        val result = mutableSetOf<Int>()
-        val parts = rangeStr.split(",")
-        for (part in parts) {
-            val clean = part.trim()
-            if (clean.contains("-")) {
-                val bounds = clean.split("-")
-                val start = (bounds.getOrNull(0)?.toIntOrNull() ?: 1) - 1
-                val end = (bounds.getOrNull(1)?.toIntOrNull() ?: maxPages) - 1
-                for (i in start.coerceAtLeast(0)..end.coerceAtMost(maxPages - 1)) {
-                    result.add(i)
-                }
-            } else {
-                val num = clean.toIntOrNull()
-                if (num != null && num in 1..maxPages) {
-                    result.add(num - 1)
-                }
-            }
-        }
-        return result.sorted()
-    }
+    private fun parsePageRanges(rangeStr: String, maxPages: Int): List<Int> =
+        PdfToolUtils.parsePageRanges(rangeStr, maxPages)
 }
