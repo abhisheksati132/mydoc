@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
@@ -34,9 +33,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxSlide
 
 /**
@@ -60,6 +60,8 @@ fun PresentationBottomBar(
     secondaryTextColor: Color,
     modifier: Modifier = Modifier
 ) {
+    val typography = AppTheme.typography
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -87,12 +89,12 @@ fun PresentationBottomBar(
                             modifier = Modifier
                                 .width(96.dp)
                                 .height(58.dp)
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(AppRadius.cardShape)
                                 .background(cardBgColor)
                                 .border(
                                     width = if (isSelected) 2.dp else 1.dp,
                                     color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.1f),
-                                    shape = RoundedCornerShape(10.dp)
+                                    shape = AppRadius.cardShape
                                 )
                                 .clickable { onSelectSlide(index) }
                                 .padding(4.dp),
@@ -104,13 +106,12 @@ fun PresentationBottomBar(
                             ) {
                                 Text(
                                     text = "${index + 1}",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
+                                    style = typography.captionStrong,
                                     color = if (isSelected) MaterialTheme.colorScheme.primary else textColor
                                 )
                                 Text(
                                     text = slide?.title ?: "Slide ${index + 1}",
-                                    fontSize = 9.sp,
+                                    style = typography.micro,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     color = secondaryTextColor
@@ -153,9 +154,9 @@ fun PresentationBottomBar(
 
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(100.dp))
+                    .clip(AppRadius.roundShape)
                     .background(cardBgColor)
-                    .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(100.dp))
+                    .border(1.dp, Color.White.copy(alpha = 0.08f), AppRadius.roundShape)
                     .clickable { onOpenJumpDialog() }
                     .padding(horizontal = 14.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center

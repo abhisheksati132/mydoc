@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
@@ -22,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.DocumentFilterChips
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
@@ -111,7 +111,7 @@ fun FileManagerBreadcrumbBar(
                         style = if (isLast) typography.bodyStrong else typography.label,
                         color = if (isLast) colors.accent else colors.textSecondary,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(AppRadius.microShape)
                             .clickable { onNavigateToCrumb(crumb) }
                             .padding(horizontal = 6.dp, vertical = 4.dp)
                     )

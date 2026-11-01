@@ -1,14 +1,11 @@
 package com.abhisheksati.mydoc.ui.cleaner
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -23,14 +20,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
-import com.abhisheksati.mydoc.tools.cleaner.DuplicateGroup
 import com.abhisheksati.mydoc.tools.cleaner.StorageCleanScanResult
 import com.abhisheksati.mydoc.tools.cleaner.StorageCleanerManager
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
-import kotlinx.coroutines.launch
 import java.io.File
-import java.text.DecimalFormat
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -211,7 +208,7 @@ fun StorageCleanerSheet(
                         Button(
                             onClick = onDismiss,
                             colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = AppRadius.cardShape
                         ) {
                             Text("Done", color = Color.White)
                         }
@@ -236,7 +233,7 @@ fun StorageCleanerSheet(
                     item {
                         Surface(
                             color = colors.accent.copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(16.dp),
+                            shape = AppRadius.largeShape,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
@@ -284,7 +281,7 @@ fun StorageCleanerSheet(
                                 icon = Icons.Outlined.Android,
                                 checked = cleanApks,
                                 onCheckedChange = { cleanApks = it },
-                                badgeColor = Color(0xFF4CAF50)
+                                badgeColor = DocumentFormatColors.excelTint
                             )
                         }
                     }
@@ -295,7 +292,7 @@ fun StorageCleanerSheet(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(AppRadius.cardShape)
                                     .background(colors.surface)
                                     .animateContentSize()
                             ) {
@@ -305,7 +302,7 @@ fun StorageCleanerSheet(
                                     icon = Icons.Outlined.CopyAll,
                                     checked = cleanDuplicates,
                                     onCheckedChange = { cleanDuplicates = it },
-                                    badgeColor = Color(0xFFFF9800),
+                                    badgeColor = colors.warning,
                                     canExpand = true,
                                     isExpanded = expandDuplicates,
                                     onToggleExpand = { expandDuplicates = !expandDuplicates }
@@ -344,7 +341,7 @@ fun StorageCleanerSheet(
                                                 Text(
                                                     text = formatSize(group.wastedBytes),
                                                     style = typography.captionStrong,
-                                                    color = Color(0xFFFF9800)
+                                                    color = colors.warning
                                                 )
                                             }
                                         }
@@ -381,7 +378,7 @@ fun StorageCleanerSheet(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(AppRadius.cardShape)
                                     .background(colors.surface)
                                     .animateContentSize()
                             ) {
@@ -518,27 +515,26 @@ fun StorageCleanerSheet(
                             },
                             enabled = !isCleaning,
                             colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
-                            shape = RoundedCornerShape(14.dp),
+                            shape = AppRadius.cardShape,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(52.dp)
                         ) {
                             if (isCleaning) {
                                 CircularProgressIndicator(
-                                    color = Color.White,
+                                    color = colors.onAccent,
                                     strokeWidth = 2.dp,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
-                                Text("Cleaning...", color = Color.White, fontWeight = FontWeight.Bold)
+                                Text("Cleaning...", style = typography.bodyStrong, color = colors.onAccent)
                             } else {
-                                Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = Color.White)
+                                Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.onAccent)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Clean Selected (${formatSize(selectedBytesToFree)})",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp
+                                    style = typography.bodyStrong,
+                                    color = colors.onAccent
                                 )
                             }
                         }
@@ -567,7 +563,7 @@ private fun CleanerCategoryCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(AppRadius.cardShape)
             .background(colors.surface)
             .clickable { onCheckedChange(!checked) }
             .padding(14.dp),

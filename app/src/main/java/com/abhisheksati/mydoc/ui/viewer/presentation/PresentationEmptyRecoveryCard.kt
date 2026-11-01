@@ -1,6 +1,5 @@
 package com.abhisheksati.mydoc.ui.viewer.presentation
 
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Description
@@ -27,10 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 
 @Composable
 fun PresentationEmptyRecoveryCard(
@@ -44,18 +43,18 @@ fun PresentationEmptyRecoveryCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp)
-            .clip(RoundedCornerShape(32.dp))
+            .clip(AppRadius.xLargeShape)
             .background(Color.White.copy(alpha = 0.04f))
-            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(32.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.08f), AppRadius.xLargeShape)
             .padding(8.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(26.dp))
+                .clip(AppRadius.xLargeShape)
                 .background(cardBgColor)
-                .border(0.5.dp, Color.Black.copy(alpha = 0.06f), RoundedCornerShape(26.dp))
+                .border(0.5.dp, Color.Black.copy(alpha = 0.06f), AppRadius.xLargeShape)
                 .padding(28.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -65,7 +64,7 @@ fun PresentationEmptyRecoveryCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(100.dp))
+                        .clip(AppRadius.roundShape)
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
                         .padding(horizontal = 12.dp, vertical = 5.dp)
                 ) {
@@ -125,7 +124,7 @@ fun ButtonInButtonCta(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(100.dp))
+            .clip(AppRadius.roundShape)
             .background(MaterialTheme.colorScheme.primary)
             .clickable(onClick = onClick)
             .padding(start = 22.dp, end = 8.dp, top = 8.dp, bottom = 8.dp)

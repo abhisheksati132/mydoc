@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
@@ -176,7 +175,7 @@ fun FillFormSheet(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(AppRadius.round))
+                                .clip(AppRadius.roundShape)
                                 .background(colors.surfaceVariant)
                                 .padding(AppSpacing.paddingMedium),
                             verticalAlignment = Alignment.CenterVertically
@@ -228,7 +227,7 @@ fun FillFormSheet(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clip(RoundedCornerShape(8.dp))
+                                            .clip(AppRadius.pillShape)
                                             .background(colors.surfaceVariant)
                                             .clickable {
                                                 fieldValues[field.name] = if (isChecked) "false" else "true"
@@ -276,8 +275,8 @@ fun FillFormSheet(
                                         DropdownMenu(
                                             expanded = expanded,
                                             onDismissRequest = { expanded = false },
-                                            shape = RoundedCornerShape(16.dp),
-                                            containerColor = if (isOled) androidx.compose.ui.graphics.Color(0xFF141720) else colors.surface,
+                                            shape = AppRadius.largeShape,
+                                            containerColor = colors.surface,
                                             border = androidx.compose.foundation.BorderStroke(1.dp, if (isOled) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.10f) else colors.divider.copy(alpha = 0.7f)),
                                             shadowElevation = 8.dp,
                                             tonalElevation = 4.dp
@@ -328,7 +327,7 @@ fun FillFormSheet(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(AppRadius.round))
+                            .clip(AppRadius.roundShape)
                             .background(colors.accent)
                             .clickable {
                                 onSaveValues(fieldValues.toMap(), flattenForm)

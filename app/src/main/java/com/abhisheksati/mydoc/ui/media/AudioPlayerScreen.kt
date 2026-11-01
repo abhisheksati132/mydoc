@@ -2,7 +2,6 @@ package com.abhisheksati.mydoc.ui.media
 
 import android.content.Intent
 import android.media.MediaPlayer
-import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -21,7 +20,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FastForward
@@ -33,8 +31,6 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Audiotrack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
-import com.abhisheksati.mydoc.designsystem.components.AppSlider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,7 +39,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,14 +47,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.data.local.entity.MediaPlaybackEntity
+import com.abhisheksati.mydoc.designsystem.components.AppSlider
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.kindColor
@@ -67,17 +61,17 @@ import com.abhisheksati.mydoc.designsystem.tokens.kindContainer
 import com.abhisheksati.mydoc.designsystem.tokens.onKindColor
 import com.abhisheksati.mydoc.designsystem.tokens.onKindContainer
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
+import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.MediaItem
 import com.abhisheksati.mydoc.domain.model.MediaKind
+import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 @Composable
 fun AudioPlayerScreen(
     item: MediaItem,
     onBackClick: () -> Unit,
-    isDarkTheme: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -86,10 +80,10 @@ fun AudioPlayerScreen(
     val haptics = rememberAppHaptics()
     val scope = rememberCoroutineScope()
 
-    val mintAccent = kindColor(MediaKind.AUDIO, isDarkTheme)
-    val onMint = onKindColor(MediaKind.AUDIO, isDarkTheme)
-    val mintContainer = kindContainer(MediaKind.AUDIO, isDarkTheme)
-    val onMintContainer = onKindContainer(MediaKind.AUDIO, isDarkTheme)
+    val mintAccent = kindColor(MediaKind.AUDIO, AppTheme.isDark)
+    val onMint = onKindColor(MediaKind.AUDIO, AppTheme.isDark)
+    val mintContainer = kindContainer(MediaKind.AUDIO, AppTheme.isDark)
+    val onMintContainer = onKindContainer(MediaKind.AUDIO, AppTheme.isDark)
 
     var isPlaying by remember { mutableStateOf(false) }
     var currentPositionMs by remember { mutableLongStateOf(0L) }
@@ -230,11 +224,11 @@ fun AudioPlayerScreen(
             contentAlignment = Alignment.Center
         ) {
             Surface(
-                shape = RoundedCornerShape(28.dp),
+                shape = AppRadius.xLargeShape,
                 color = mintContainer,
                 modifier = Modifier
                     .size(220.dp)
-                    .clip(RoundedCornerShape(28.dp))
+                    .clip(AppRadius.xLargeShape)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
@@ -436,10 +430,10 @@ fun AudioPlayerScreen(
         ) {
             // Speed Chip
             Surface(
-                shape = RoundedCornerShape(12.dp),
+                shape = AppRadius.cardShape,
                 color = if (playbackSpeed != 1.0f) mintContainer else colors.surfaceMuted,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(AppRadius.cardShape)
                     .clickable {
                         haptics.tap()
                         val speeds = listOf(1.0f, 1.25f, 1.5f, 2.0f, 0.75f)
@@ -462,10 +456,10 @@ fun AudioPlayerScreen(
 
             // Loop Toggle
             Surface(
-                shape = RoundedCornerShape(12.dp),
+                shape = AppRadius.cardShape,
                 color = if (isLooping) mintContainer else colors.surfaceMuted,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(AppRadius.cardShape)
                     .clickable {
                         haptics.tap()
                         isLooping = !isLooping

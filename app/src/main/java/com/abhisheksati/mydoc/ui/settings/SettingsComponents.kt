@@ -23,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
@@ -132,49 +131,5 @@ fun SettingToggleRow(
                 uncheckedTrackColor = colors.surface
             )
         )
-    }
-}
-
-@Composable
-fun ThemeChip(
-    label: String,
-    icon: ImageVector?,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
-
-    Surface(
-        modifier = modifier
-            .clip(AppRadius.pillShape)
-            .clickable(onClick = onClick),
-        shape = AppRadius.pillShape,
-        color = if (selected) colors.accent.copy(alpha = 0.16f) else Color.Transparent,
-        border = BorderStroke(
-            width = if (selected) 1.5.dp else 1.dp,
-            color = if (selected) colors.accent else colors.divider
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (icon != null) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = if (selected) colors.accent else colors.textSecondary,
-                    modifier = Modifier.size(15.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-            }
-            Text(
-                text = label,
-                style = if (selected) typography.captionStrong else typography.caption,
-                color = if (selected) colors.accent else colors.textPrimary
-            )
-        }
     }
 }

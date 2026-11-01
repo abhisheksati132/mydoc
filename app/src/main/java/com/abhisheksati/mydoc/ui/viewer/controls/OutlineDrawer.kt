@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.Bookmark
@@ -34,10 +33,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import com.abhisheksati.mydoc.ui.common.AppDivider
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
 
 private enum class DrawerTab {
     OUTLINE,
@@ -87,7 +87,7 @@ fun OutlineDrawer(
                             modifier = Modifier.size(16.dp)
                         )
                     },
-                    shape = RoundedCornerShape(6.dp)
+                    shape = AppRadius.microShape
                 )
 
                 FilterChip(
@@ -101,7 +101,7 @@ fun OutlineDrawer(
                             modifier = Modifier.size(16.dp)
                         )
                     },
-                    shape = RoundedCornerShape(6.dp)
+                    shape = AppRadius.microShape
                 )
             }
 

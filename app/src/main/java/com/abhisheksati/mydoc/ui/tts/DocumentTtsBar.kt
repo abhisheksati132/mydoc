@@ -9,8 +9,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -18,16 +18,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.tools.tts.DocumentTtsManager
 import com.abhisheksati.mydoc.tools.tts.TtsPlaybackState
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
 
 @Composable
 fun DocumentTtsBar(
@@ -54,7 +52,7 @@ fun DocumentTtsBar(
     ) {
         Surface(
             color = colors.surface,
-            shape = RoundedCornerShape(20.dp),
+            shape = AppRadius.sheetShape,
             tonalElevation = 6.dp,
             shadowElevation = 8.dp,
             modifier = Modifier
@@ -142,7 +140,7 @@ fun DocumentTtsBar(
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = AppRadius.cardShape,
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
                     ) {
                         Icon(
@@ -162,7 +160,7 @@ fun DocumentTtsBar(
                     // Stop
                     OutlinedButton(
                         onClick = { ttsManager.stop() },
-                        shape = RoundedCornerShape(12.dp),
+                        shape = AppRadius.cardShape,
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Icon(Icons.Default.Stop, contentDescription = null, tint = colors.error, modifier = Modifier.size(16.dp))
@@ -173,9 +171,9 @@ fun DocumentTtsBar(
                     // Speed toggle pill
                     Surface(
                         color = colors.background,
-                        shape = RoundedCornerShape(10.dp),
+                        shape = AppRadius.cardShape,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(AppRadius.cardShape)
                             .clickable {
                                 val nextIdx = (speeds.indexOf(speed) + 1) % speeds.size
                                 ttsManager.setSpeed(speeds[nextIdx])

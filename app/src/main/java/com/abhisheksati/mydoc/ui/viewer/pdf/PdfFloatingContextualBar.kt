@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -28,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
@@ -61,8 +61,8 @@ fun PdfFloatingContextualBar(
     ) {
         Surface(
             shape = AppRadius.roundShape,
-            color = if (readingMode == ReadingMode.INVERTED_DARK) Color(0xF218181A) else Color(0xF8FFFFFF),
-            border = BorderStroke(0.5.dp, if (readingMode == ReadingMode.INVERTED_DARK) Color(0xFF2A2A2E) else Color(0xFFE2E2DD)),
+            color = colors.surface.copy(alpha = 0.95f),
+            border = BorderStroke(0.5.dp, colors.line),
             shadowElevation = 4.dp,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
@@ -83,7 +83,7 @@ fun PdfFloatingContextualBar(
                 FloatingPillItem(
                     icon = Icons.Outlined.Share,
                     label = "Share",
-                    tint = Color(0xFF10B981),
+                    tint = DocumentFormatColors.excelTint,
                     onClick = onShare
                 )
 
@@ -91,7 +91,7 @@ fun PdfFloatingContextualBar(
                 FloatingPillItem(
                     icon = Icons.Outlined.TextFields,
                     label = "Search",
-                    tint = Color(0xFF5B4FE8),
+                    tint = colors.accent,
                     onClick = onSearch
                 )
 
@@ -99,7 +99,7 @@ fun PdfFloatingContextualBar(
                 FloatingPillItem(
                     icon = Icons.AutoMirrored.Outlined.VolumeUp,
                     label = "Speak",
-                    tint = Color(0xFFAF52DE),
+                    tint = DocumentFormatColors.zipTint,
                     onClick = onSpeak
                 )
 
@@ -130,7 +130,7 @@ private fun FloatingPillItem(
 
     Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(AppRadius.sheetShape)
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically

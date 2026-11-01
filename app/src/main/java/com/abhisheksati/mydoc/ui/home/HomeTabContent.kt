@@ -2,7 +2,6 @@ package com.abhisheksati.mydoc.ui.home
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,8 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.Article
@@ -53,7 +50,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -95,7 +91,6 @@ fun HomeTabContent(
     onSettingsClick: () -> Unit,
     onToggleTheme: () -> Unit = {},
     onClearRecent: () -> Unit = {},
-    isDarkTheme: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
@@ -240,7 +235,7 @@ fun HomeTabContent(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .clip(AppRadius.microShape)
-                                    .background(tint.copy(alpha = if (isDarkTheme) 0.16f else 0.10f)),
+                                    .background(tint.copy(alpha = if (AppTheme.isDark) 0.16f else 0.10f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -285,7 +280,7 @@ fun HomeTabContent(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .height(2.5.dp)
-                                            .clip(RoundedCornerShape(1.5.dp)),
+                                            .clip(AppRadius.roundShape),
                                         color = colors.accent,
                                         trackColor = colors.surfaceMuted
                                     )
@@ -403,7 +398,6 @@ fun HomeTabContent(
                                 }
                                 RecentItemRow(
                                     item = item,
-                                    isDarkTheme = isDarkTheme,
                                     isHero = item.kind == MediaKind.DOCUMENT && item.uri != continueItem?.uri,
                                     onClick = { onItemClick(item) }
                                 )
@@ -461,7 +455,6 @@ private fun EditorialActionPill(
 @Composable
 private fun RecentItemRow(
     item: LibraryItem,
-    isDarkTheme: Boolean,
     isHero: Boolean,
     onClick: () -> Unit
 ) {
@@ -482,7 +475,7 @@ private fun RecentItemRow(
             modifier = Modifier
                 .size(38.dp)
                 .clip(AppRadius.microShape)
-                .background(formatTint.copy(alpha = if (isDarkTheme) 0.16f else 0.10f)),
+                .background(formatTint.copy(alpha = if (AppTheme.isDark) 0.16f else 0.10f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -533,7 +526,7 @@ private fun RecentItemRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(2.5.dp)
-                        .clip(RoundedCornerShape(1.5.dp)),
+                        .clip(AppRadius.roundShape),
                     color = colors.accent,
                     trackColor = colors.surfaceMuted
                 )

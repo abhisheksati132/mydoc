@@ -22,7 +22,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.outlined.Close
@@ -48,7 +47,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
@@ -104,7 +102,7 @@ fun PageGridSheet(
                 modifier = Modifier
                     .padding(vertical = AppSpacing.paddingSmall)
                     .size(width = 36.dp, height = 4.dp)
-                    .background(colors.divider, RoundedCornerShape(2.dp))
+                    .background(colors.divider, AppRadius.roundShape)
             )
         },
         modifier = modifier
@@ -220,7 +218,7 @@ fun PageGridSheet(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(AppRadius.cardShape)
                             .clickable {
                                 onPageSelected(pageIndex)
                                 onDismiss()
@@ -231,12 +229,12 @@ fun PageGridSheet(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(0.707f)
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(AppRadius.pillShape)
                                 .background(colors.surface)
                                 .border(
                                     width = if (isCurrent) 2.5.dp else 1.dp,
                                     color = if (isCurrent) colors.accent else colors.divider.copy(alpha = 0.6f),
-                                    shape = RoundedCornerShape(8.dp)
+                                    shape = AppRadius.pillShape
                                 ),
                             contentAlignment = Alignment.Center
                         ) {

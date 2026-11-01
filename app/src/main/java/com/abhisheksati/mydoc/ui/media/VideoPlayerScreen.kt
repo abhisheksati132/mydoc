@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.media.AudioManager
-import android.net.Uri
 import android.os.Build
 import android.util.Rational
 import android.view.ViewGroup
@@ -17,13 +16,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,7 +34,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -54,7 +49,6 @@ import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.outlined.AspectRatio
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -62,10 +56,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
-import com.abhisheksati.mydoc.designsystem.components.AppSlider
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -97,14 +88,18 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import com.abhisheksati.mydoc.designsystem.components.AppSlider
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.MediaItem
 import com.abhisheksati.mydoc.domain.repository.MediaRepository
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.abs
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @androidx.annotation.OptIn(UnstableApi::class)
 enum class VideoResizeMode(val label: String, val mode: Int) {
@@ -348,7 +343,7 @@ fun VideoPlayerScreen(
         if (gestureOverlayText != null) {
             Surface(
                 color = Color.Black.copy(alpha = 0.75f),
-                shape = RoundedCornerShape(16.dp),
+                shape = AppRadius.largeShape,
                 modifier = Modifier.align(Alignment.Center)
             ) {
                 Row(
@@ -578,7 +573,7 @@ fun VideoPlayerScreen(
 
                         // Playback Speed Button
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
+                            shape = AppRadius.pillShape,
                             color = Color.White.copy(alpha = 0.15f),
                             modifier = Modifier.clickable { isSpeedSheetOpen = true }
                         ) {
@@ -605,7 +600,7 @@ fun VideoPlayerScreen(
         val speeds = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
         ModalBottomSheet(
             onDismissRequest = { isSpeedSheetOpen = false },
-            containerColor = Color(0xFF141414),
+            containerColor = DarkAppColors.surface,
             contentColor = Color.White
         ) {
             Column(
@@ -623,7 +618,7 @@ fun VideoPlayerScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(AppRadius.cardShape)
                             .clickable {
                                 playbackSpeed = spd
                                 exoPlayer.playbackParameters = PlaybackParameters(spd)

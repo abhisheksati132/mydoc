@@ -21,9 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Undo
@@ -60,6 +58,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.components.AppBottomSheet
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
@@ -93,9 +92,9 @@ fun SignPdfSheet(
     var typedName by remember { mutableStateOf("") }
 
     val inkColors = listOf(
-        Color(0xFF000000), // Pure Black
-        Color(0xFF1565C0), // Legal Navy Blue
-        Color(0xFFD32F2F)  // Crimson Red
+        DocumentCanvasColors.inkBlack, // Pure Black
+        DocumentCanvasColors.inkNavy, // Legal Navy Blue
+        DocumentCanvasColors.inkCrimson  // Crimson Red
     )
     var selectedColorIndex by remember { mutableIntStateOf(0) }
     val activeInkColor = inkColors[selectedColorIndex]
@@ -130,13 +129,13 @@ fun SignPdfSheet(
                     // Mode toggle pill
                     Surface(
                         color = colors.surfaceVariant,
-                        shape = RoundedCornerShape(16.dp),
+                        shape = AppRadius.largeShape,
                         modifier = Modifier.padding(end = 4.dp)
                     ) {
                         Row(modifier = Modifier.padding(2.dp)) {
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(14.dp))
+                                    .clip(AppRadius.cardShape)
                                     .background(if (isDrawMode) colors.accent else Color.Transparent)
                                     .clickable { isDrawMode = true }
                                     .padding(horizontal = 10.dp, vertical = 4.dp)
@@ -150,7 +149,7 @@ fun SignPdfSheet(
                             }
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(14.dp))
+                                    .clip(AppRadius.cardShape)
                                     .background(if (!isDrawMode) colors.accent else Color.Transparent)
                                     .clickable { isDrawMode = false }
                                     .padding(horizontal = 10.dp, vertical = 4.dp)
@@ -231,9 +230,9 @@ fun SignPdfSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
-                    .clip(RoundedCornerShape(AppRadius.round))
+                    .clip(AppRadius.roundShape)
                     .background(Color.White)
-                    .border(1.dp, colors.divider, RoundedCornerShape(AppRadius.round))
+                    .border(1.dp, colors.divider, AppRadius.roundShape)
             ) {
                 if (isDrawMode) {
                     Canvas(
@@ -309,7 +308,7 @@ fun SignPdfSheet(
                     modifier = Modifier
                         .weight(1f)
                         .height(AppSpacing.minTouchTarget)
-                        .border(1.dp, colors.divider, RoundedCornerShape(AppRadius.round))
+                        .border(1.dp, colors.divider, AppRadius.roundShape)
                         .clickable {
                             strokes.clear()
                             currentPoints = emptyList()
@@ -324,7 +323,7 @@ fun SignPdfSheet(
                     modifier = Modifier
                         .weight(1f)
                         .height(AppSpacing.minTouchTarget)
-                        .clip(RoundedCornerShape(AppRadius.round))
+                        .clip(AppRadius.roundShape)
                         .background(if (hasContent) colors.accent else colors.surfaceVariant)
                         .clickable(enabled = hasContent) {
                             haptics.confirm()

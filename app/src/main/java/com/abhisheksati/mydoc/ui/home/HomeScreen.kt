@@ -10,12 +10,29 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.SystemUpdate
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -25,14 +42,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.abhisheksati.mydoc.MainActivity
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.designsystem.animation.AppMotion
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
 import com.abhisheksati.mydoc.designsystem.components.BottomNavBar
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.HomeTab
@@ -46,31 +66,6 @@ import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
 import com.abhisheksati.mydoc.ui.filemanager.FileManagerScreen
 import com.abhisheksati.mydoc.ui.search.SpotlightSearchSheet
 import com.abhisheksati.mydoc.ui.storage.StorageViewModel
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.SystemUpdate
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.update.UpdateManager
 import com.abhisheksati.mydoc.update.UpdateUiState
 import com.abhisheksati.mydoc.viewmodel.FileManagerViewModel
@@ -85,7 +80,6 @@ fun HomeScreen(
     fileManagerViewModel: FileManagerViewModel,
     storageViewModel: StorageViewModel,
     updateManager: UpdateManager? = null,
-    isDarkTheme: Boolean = false,
     onToggleTheme: () -> Unit = {},
     onLibraryItemClick: (LibraryItem) -> Unit,
     onDocumentClick: (DocumentFile) -> Unit,
@@ -152,7 +146,7 @@ fun HomeScreen(
                             val release = updateState.release
                             Surface(
                                 color = colors.surface,
-                                shape = RoundedCornerShape(16.dp),
+                                shape = AppRadius.largeShape,
                                 tonalElevation = 6.dp,
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -186,7 +180,7 @@ fun HomeScreen(
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Button(
                                         onClick = { scope.launch { updateManager.downloadAndInstall(release) } },
-                                        shape = RoundedCornerShape(10.dp),
+                                        shape = AppRadius.cardShape,
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = colors.accent,
                                             contentColor = colors.onAccent
@@ -201,7 +195,7 @@ fun HomeScreen(
                         is UpdateUiState.Downloading -> {
                             Surface(
                                 color = colors.surface,
-                                shape = RoundedCornerShape(16.dp),
+                                shape = AppRadius.largeShape,
                                 tonalElevation = 6.dp,
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -243,7 +237,7 @@ fun HomeScreen(
                         is UpdateUiState.ReadyToInstall -> {
                             Surface(
                                 color = colors.surface,
-                                shape = RoundedCornerShape(16.dp),
+                                shape = AppRadius.largeShape,
                                 tonalElevation = 6.dp,
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -284,7 +278,7 @@ fun HomeScreen(
                                                 updateManager.installerHelper.installApk(updateState.apkFile)
                                             }
                                         },
-                                        shape = RoundedCornerShape(10.dp),
+                                        shape = AppRadius.cardShape,
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = colors.accent,
                                             contentColor = colors.onAccent
@@ -349,7 +343,6 @@ fun HomeScreen(
                                 onSettingsClick = onSettingsClick,
                                 onToggleTheme = onToggleTheme,
                                 onClearRecent = { viewModel.clearAllRecents() },
-                                isDarkTheme = isDarkTheme,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
@@ -376,7 +369,6 @@ fun HomeScreen(
                                 },
                                 onSettingsClick = onSettingsClick,
                                 onToggleTheme = onToggleTheme,
-                                isDarkTheme = isDarkTheme,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
@@ -476,7 +468,6 @@ fun HomeScreen(
                 onLibraryItemClick(item)
             },
             onDismiss = { showSpotlightSearch = false },
-            isDarkTheme = isDarkTheme
         )
     }
 }

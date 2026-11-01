@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Storage
@@ -42,7 +41,6 @@ import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.StorageVolume
 import com.abhisheksati.mydoc.ui.storage.StorageAnalysisUiState
-import com.abhisheksati.mydoc.ui.storage.StorageCategoryStat
 import com.abhisheksati.mydoc.ui.storage.StorageCategoryType
 
 /**
@@ -52,7 +50,6 @@ import com.abhisheksati.mydoc.ui.storage.StorageCategoryType
 @Composable
 fun EditorialStorageOverviewCard(
     storageUiState: StorageAnalysisUiState,
-    isOled: Boolean,
     onCleanClick: () -> Unit,
     onCategoryClick: (FileCategory) -> Unit,
     modifier: Modifier = Modifier
@@ -82,7 +79,7 @@ fun EditorialStorageOverviewCard(
 
     Surface(
         shape = AppRadius.cardShape,
-        color = if (isOled) colors.surface else colors.surfaceContainer,
+        color = colors.surfaceContainer,
         border = BorderStroke(0.5.dp, colors.line),
         modifier = modifier
             .fillMaxWidth()
@@ -166,7 +163,7 @@ fun EditorialStorageOverviewCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp))
+                    .clip(AppRadius.roundShape)
                     .background(colors.line)
             ) {
                 Row(modifier = Modifier.fillMaxSize()) {
@@ -260,10 +257,24 @@ fun EditorialStorageOverviewCard(
                     onClick = { onCategoryClick(FileCategory.AUDIO) }
                 )
                 StorageLegendChip(
+                    label = "Apps",
+                    sizeText = StorageVolume.formatBytes(appsBytes),
+                    dotColor = StorageChartColors.apps,
+                    onClick = null
+                )
+                StorageLegendChip(
+                    label = "Other",
+                    sizeText = StorageVolume.formatBytes(
+                        (usedBytes - (docsBytes + imagesBytes + videosBytes + audioBytes + appsBytes)).coerceAtLeast(0L)
+                    ),
+                    dotColor = StorageChartColors.other,
+                    onClick = null
+                )
+                StorageLegendChip(
                     label = "Free",
                     sizeText = storageUiState.formattedFree,
                     dotColor = colors.line,
-                    onClick = {}
+                    onClick = null
                 )
             }
         }
@@ -275,7 +286,7 @@ private fun StorageLegendChip(
     label: String,
     sizeText: String,
     dotColor: Color,
-    onClick: () -> Unit
+    onClick: (() -> Unit)?
 ) {
     val typography = LocalAppTypography.current
     val colors = LocalAppColors.current
@@ -284,7 +295,7 @@ private fun StorageLegendChip(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .clip(AppRadius.microShape)
-            .clickable(onClick = onClick)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(vertical = 4.dp, horizontal = 2.dp)
     ) {
         Box(

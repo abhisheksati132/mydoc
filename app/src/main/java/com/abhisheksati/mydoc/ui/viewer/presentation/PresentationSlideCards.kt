@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -49,8 +48,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxSlide
 import com.abhisheksati.mydoc.rendering.engine.presentation.VisualElementType
 
@@ -66,7 +67,7 @@ fun VisualSlideCard(
 ) {
     val slideBg = slide.backgroundColor ?: cardBgColor
     val isBgDark = slideBg.isColorDark()
-    val baseContentColor = if (isBgDark) Color(0xFFF1F5F9) else Color(0xFF1E293B)
+    val baseContentColor = if (isBgDark) DocumentCanvasColors.onDarkInk else DocumentCanvasColors.onLightInk
 
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize(),
@@ -88,18 +89,18 @@ fun VisualSlideCard(
 
         Box(
             modifier = cardModifier
-                .clip(RoundedCornerShape(24.dp))
+                .clip(AppRadius.xLargeShape)
                 .background(cardBgColor.copy(alpha = 0.5f))
-                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(24.dp))
+                .border(1.dp, Color.White.copy(alpha = 0.08f), AppRadius.xLargeShape)
                 .padding(6.dp),
             contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(slideBg, RoundedCornerShape(18.dp))
-                    .border(0.5.dp, Color.Black.copy(alpha = 0.06f), RoundedCornerShape(18.dp))
-                    .clip(RoundedCornerShape(18.dp))
+                    .background(slideBg, AppRadius.largeShape)
+                    .border(0.5.dp, Color.Black.copy(alpha = 0.06f), AppRadius.largeShape)
+                    .clip(AppRadius.largeShape)
             ) {
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                     val totalWidth = maxWidth
@@ -199,8 +200,8 @@ fun VisualSlideCard(
 
                                         if (preset != null && isVectorPreset) {
                                             Canvas(modifier = Modifier.fillMaxSize()) {
-                                                val bg = element.backgroundColor ?: Color(0x22888888)
-                                                val border = element.borderColor ?: Color(0x44888888)
+                                                val bg = element.backgroundColor ?: DocumentCanvasColors.elementFill
+                                                val border = element.borderColor ?: DocumentCanvasColors.elementBorder
                                                 drawPresetShape(preset, bg, border)
                                             }
                                         }
@@ -210,7 +211,7 @@ fun VisualSlideCard(
                                                 if (!isVectorPreset && element.backgroundColor != null && element.backgroundColor != Color.Transparent) {
                                                     Modifier.background(
                                                         color = element.backgroundColor,
-                                                        shape = if (element.isRounded) RoundedCornerShape(8.dp) else if (element.isEllipse) CircleShape else RectangleShape
+                                                        shape = if (element.isRounded) AppRadius.pillShape else if (element.isEllipse) CircleShape else RectangleShape
                                                     )
                                                 } else Modifier
                                             )
@@ -219,7 +220,7 @@ fun VisualSlideCard(
                                                     Modifier.border(
                                                         width = (element.borderWidthDp.takeIf { it > 0f } ?: 1f).dp,
                                                         color = element.borderColor,
-                                                        shape = if (element.isRounded) RoundedCornerShape(8.dp) else if (element.isEllipse) CircleShape else RectangleShape
+                                                        shape = if (element.isRounded) AppRadius.pillShape else if (element.isEllipse) CircleShape else RectangleShape
                                                     )
                                                 } else Modifier
                                             )
@@ -287,7 +288,7 @@ fun VisualSlideCard(
                                                                     fontStyle = if (run.isItalic) FontStyle.Italic else FontStyle.Normal,
                                                                     fontFamily = mapFontFamily(run.fontFamily),
                                                                     textDecoration = textDec,
-                                                                    background = if (isMatch) Color(0x66FFEB3B) else Color.Transparent
+                                                                    background = if (isMatch) DocumentCanvasColors.searchHighlight else Color.Transparent
                                                                 )
                                                             ) {
                                                                 append(run.text)
@@ -315,8 +316,8 @@ fun VisualSlideCard(
                                         Column(
                                             modifier = Modifier
                                                 .fillMaxSize()
-                                                .background(Color(0x11000000), RoundedCornerShape(4.dp))
-                                                .border(1.dp, Color(0x33888888), RoundedCornerShape(4.dp))
+                                                .background(DocumentCanvasColors.elementShadow, AppRadius.microShape)
+                                                .border(1.dp, DocumentCanvasColors.elementHairline, AppRadius.microShape)
                                                 .padding(4.dp)
                                         ) {
                                             for (row in element.tableRows) {
@@ -328,7 +329,7 @@ fun VisualSlideCard(
                                                         Box(
                                                             modifier = Modifier
                                                                 .weight(1f)
-                                                                .border(0.5.dp, Color(0x22888888))
+                                                                .border(0.5.dp, DocumentCanvasColors.elementFill)
                                                                 .padding(2.dp)
                                                         ) {
                                                             HighlightableText(
@@ -383,18 +384,18 @@ fun OutlineSlideCard(
 
         Box(
             modifier = cardModifier
-                .clip(RoundedCornerShape(24.dp))
+                .clip(AppRadius.xLargeShape)
                 .background(cardBgColor.copy(alpha = 0.5f))
-                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(24.dp))
+                .border(1.dp, Color.White.copy(alpha = 0.08f), AppRadius.xLargeShape)
                 .padding(6.dp),
             contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(cardBgColor, RoundedCornerShape(18.dp))
-                    .border(0.5.dp, Color.Black.copy(alpha = 0.06f), RoundedCornerShape(18.dp))
-                    .clip(RoundedCornerShape(18.dp))
+                    .background(cardBgColor, AppRadius.largeShape)
+                    .border(0.5.dp, Color.Black.copy(alpha = 0.06f), AppRadius.largeShape)
+                    .clip(AppRadius.largeShape)
                     .padding(AppSpacing.paddingLarge)
             ) {
                 Column(
@@ -486,8 +487,8 @@ fun HighlightableText(
                 val endIdx = minOf(matchIdx + query.length, text.length)
                 withStyle(
                     SpanStyle(
-                        background = Color(0x99FFEB3B),
-                        color = Color(0xFF1E293B),
+                        background = DocumentCanvasColors.activeHighlight,
+                        color = DocumentCanvasColors.onLightInk,
                         fontWeight = fontWeight,
                         fontStyle = fontStyle,
                         fontFamily = fontFamily,
@@ -679,13 +680,13 @@ private fun ensureTextLegibility(rawColor: Color?, containerBg: Color): Color {
     val safeBg = if (containerBg.isSpecified) containerBg else Color.White
     val isContainerDark = safeBg.isColorDark()
     if (rawColor == null || !rawColor.isSpecified || rawColor == Color.Transparent) {
-        return if (isContainerDark) Color(0xFFF8FAFC) else Color(0xFF0F172A)
+        return if (isContainerDark) DocumentCanvasColors.onDarkInk else DocumentCanvasColors.onLightInk
     }
     val bgLum = (0.299f * safeBg.red + 0.587f * safeBg.green + 0.114f * safeBg.blue)
     val textLum = (0.299f * rawColor.red + 0.587f * rawColor.green + 0.114f * rawColor.blue)
     val contrastRatio = (maxOf(bgLum, textLum) + 0.05f) / (minOf(bgLum, textLum) + 0.05f)
     if (contrastRatio < 2.5f) {
-        return if (isContainerDark) Color(0xFFF8FAFC) else Color(0xFF0F172A)
+        return if (isContainerDark) DocumentCanvasColors.onDarkInk else DocumentCanvasColors.onLightInk
     }
     return rawColor
 }

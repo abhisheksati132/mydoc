@@ -1,12 +1,11 @@
 package com.abhisheksati.mydoc.tools.ui.components
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.view.ViewGroup
 import android.widget.Toast
-import android.graphics.BitmapFactory
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,31 +17,15 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
-import com.abhisheksati.mydoc.tools.scan.cropper.FreeCornersCropperDialog
-import com.abhisheksati.mydoc.tools.scan.filters.ScanFilter
-import com.abhisheksati.mydoc.tools.scan.filters.ScanFilterEngine
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.FileOutputStream
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -50,9 +33,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -62,12 +42,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.window.DialogWindowProvider
-import androidx.core.view.WindowCompat
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -83,6 +60,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -95,8 +73,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
@@ -105,20 +81,32 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.tokens.CaptureChromeColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
+import com.abhisheksati.mydoc.tools.scan.cropper.FreeCornersCropperDialog
+import com.abhisheksati.mydoc.tools.scan.filters.ScanFilter
+import com.abhisheksati.mydoc.tools.scan.filters.ScanFilterEngine
 import java.io.File
+import java.io.FileOutputStream
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class ScanAspectMode(val label: String, val ratio: Float) {
     DOCUMENT("Document", 0.71f),
@@ -336,7 +324,7 @@ fun CameraScanSheet(
                             )
                         )
                     }
-                    drawPath(scrimPath, color = Color(0x99000000))
+                    drawPath(scrimPath, color = CaptureChromeColors.scrim)
 
                     // Document Corner Guides
                     val stroke = 3.dp.toPx()
@@ -367,8 +355,8 @@ fun CameraScanSheet(
                         .padding(top = 114.dp)
                 ) {
                     Surface(
-                        color = Color(0x99000000),
-                        shape = RoundedCornerShape(12.dp)
+                        color = CaptureChromeColors.scrim,
+                        shape = AppRadius.cardShape
                     ) {
                         Text(
                             text = "Align document inside frame",
@@ -389,8 +377,8 @@ fun CameraScanSheet(
             ) {
                 // Top control bar
                 Surface(
-                    color = Color(0xB3121212),
-                    shape = RoundedCornerShape(22.dp),
+                    color = CaptureChromeColors.controlsScrim,
+                    shape = AppRadius.xLargeShape,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -411,7 +399,7 @@ fun CameraScanSheet(
                         if (capturedFiles.isNotEmpty()) {
                             Surface(
                                 color = colors.accent.copy(alpha = 0.25f),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = AppRadius.cardShape
                             ) {
                                 Text(
                                     text = "${capturedFiles.size} ${if (capturedFiles.size == 1) "page" else "pages"}",
@@ -440,7 +428,7 @@ fun CameraScanSheet(
                                 Icon(
                                     imageVector = if (isTorchOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
                                     contentDescription = "Toggle Torch",
-                                    tint = if (isTorchOn) Color(0xFFFFD54F) else Color.White
+                                    tint = if (isTorchOn) CaptureChromeColors.torchOn else Color.White
                                 )
                             }
 
@@ -451,7 +439,7 @@ fun CameraScanSheet(
                                         val uris = capturedFiles.map { Uri.fromFile(it) }
                                         onScannedUris(uris)
                                     },
-                                    shape = RoundedCornerShape(14.dp),
+                                    shape = AppRadius.cardShape,
                                     colors = ButtonDefaults.buttonColors(containerColor = colors.accent, contentColor = Color.Black),
                                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
                                     modifier = Modifier.height(34.dp)
@@ -471,8 +459,8 @@ fun CameraScanSheet(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Surface(
-                        color = Color(0x991E1E1E),
-                        shape = RoundedCornerShape(16.dp)
+                        color = CaptureChromeColors.panelVeil,
+                        shape = AppRadius.largeShape
                     ) {
                         Row(
                             modifier = Modifier.padding(3.dp),
@@ -482,8 +470,8 @@ fun CameraScanSheet(
                                 val isSelected = selectedMode == mode
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(if (isSelected) Color(0x40FFFFFF) else Color.Transparent)
+                                        .clip(AppRadius.cardShape)
+                                        .background(if (isSelected) CaptureChromeColors.onChromeFaint else Color.Transparent)
                                         .clickable {
                                             selectedMode = mode
                                         }
@@ -492,7 +480,7 @@ fun CameraScanSheet(
                                     Text(
                                         text = mode.label,
                                         style = if (isSelected) typography.captionStrong else typography.micro,
-                                        color = if (isSelected) Color.White else Color(0xAAFFFFFF)
+                                        color = if (isSelected) Color.White else CaptureChromeColors.onChromeMuted
                                     )
                                 }
                             }
@@ -528,9 +516,9 @@ fun CameraScanSheet(
                             Box(
                                 modifier = Modifier
                                     .size(width = 46.dp, height = 62.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .border(1.5.dp, colors.accent, RoundedCornerShape(8.dp))
-                                    .background(Color(0xFF212121))
+                                    .clip(AppRadius.pillShape)
+                                    .border(1.5.dp, colors.accent, AppRadius.pillShape)
+                                    .background(CaptureChromeColors.surface)
                                     .clickable {
                                         scope.launch(Dispatchers.IO) {
                                             try {
@@ -563,8 +551,8 @@ fun CameraScanSheet(
 
                                 // Page Number badge
                                 Surface(
-                                    color = Color(0xCC000000),
-                                    shape = RoundedCornerShape(bottomEnd = 6.dp),
+                                    color = CaptureChromeColors.scrimStrong,
+                                    shape = RoundedCornerShape(bottomEnd = AppRadius.micro),
                                     modifier = Modifier.align(Alignment.TopStart)
                                 ) {
                                     Text(
@@ -581,7 +569,7 @@ fun CameraScanSheet(
                                         .align(Alignment.TopEnd)
                                         .size(20.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xCCFF5252))
+                                        .background(CaptureChromeColors.capture)
                                         .clickable {
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             capturedFiles.removeAt(idx)
@@ -617,8 +605,8 @@ fun CameraScanSheet(
                         ScanFilter.entries.forEach { filter ->
                             val isSelected = selectedScanFilter == filter
                             Surface(
-                                color = if (isSelected) colors.accent else Color(0x6618181C),
-                                shape = RoundedCornerShape(16.dp),
+                                color = if (isSelected) colors.accent else CaptureChromeColors.thumbInactive,
+                                shape = AppRadius.largeShape,
                                 modifier = Modifier.clickable {
                                     selectedScanFilter = filter
                                 }
@@ -636,8 +624,8 @@ fun CameraScanSheet(
 
                 // Shutter Controls Container - safely padded above navigation bars
                 Surface(
-                    color = Color(0xF20D0D0D),
-                    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                    color = CaptureChromeColors.sheetScrim,
+                    shape = AppRadius.sheetShape,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -656,7 +644,7 @@ fun CameraScanSheet(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(CircleShape)
-                                .background(Color(0x33FFFFFF))
+                                .background(CaptureChromeColors.onChromeGhost)
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.PhotoLibrary,

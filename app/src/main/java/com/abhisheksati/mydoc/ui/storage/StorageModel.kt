@@ -11,27 +11,25 @@ import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.SettingsSuggest
 import androidx.compose.material.icons.outlined.Videocam
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.StorageVolume
 
 enum class StorageCategoryType(
     val title: String,
-    val color: Color,
     val icon: ImageVector,
     val fileCategory: FileCategory?
 ) {
-    DOWNLOADS("Downloads", Color(0xFF00ACC1), Icons.Outlined.Download, FileCategory.DOWNLOADS),
-    IMAGES("Images", Color(0xFF4CAF50), Icons.Outlined.Image, FileCategory.IMAGES),
-    VIDEOS("Videos", Color(0xFFE91E63), Icons.Outlined.Videocam, FileCategory.VIDEOS),
-    AUDIO("Audio", Color(0xFF9C27B0), Icons.Outlined.AudioFile, FileCategory.AUDIO),
-    DOCUMENTS("Documents", Color(0xFF3F51B5), Icons.Outlined.Description, FileCategory.DOCUMENTS),
-    APKS("APKs", Color(0xFF009688), Icons.Outlined.Android, FileCategory.APKS),
-    ARCHIVES("Archives", Color(0xFFFFA000), Icons.Outlined.FolderZip, FileCategory.ARCHIVES),
-    APPS("Apps & Data", Color(0xFF2196F3), Icons.Outlined.Apps, null),
-    LARGE_FILES("Large Files (>50MB)", Color(0xFFFF5722), Icons.Outlined.DataUsage, FileCategory.LARGE_FILES),
-    SYSTEM_OTHER("System & Other", Color(0xFF78909C), Icons.Outlined.SettingsSuggest, null)
+    DOWNLOADS("Downloads", Icons.Outlined.Download, FileCategory.DOWNLOADS),
+    IMAGES("Images", Icons.Outlined.Image, FileCategory.IMAGES),
+    VIDEOS("Videos", Icons.Outlined.Videocam, FileCategory.VIDEOS),
+    AUDIO("Audio", Icons.Outlined.AudioFile, FileCategory.AUDIO),
+    DOCUMENTS("Documents", Icons.Outlined.Description, FileCategory.DOCUMENTS),
+    APKS("APKs", Icons.Outlined.Android, FileCategory.APKS),
+    ARCHIVES("Archives", Icons.Outlined.FolderZip, FileCategory.ARCHIVES),
+    APPS("Apps & Data", Icons.Outlined.Apps, null),
+    LARGE_FILES("Large Files (>50MB)", Icons.Outlined.DataUsage, FileCategory.LARGE_FILES),
+    SYSTEM_OTHER("System & Other", Icons.Outlined.SettingsSuggest, null)
 }
 
 data class StorageCategoryStat(

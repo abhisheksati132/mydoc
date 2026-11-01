@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
@@ -110,7 +109,7 @@ fun ReadingControlsBottomSheet(
                 modifier = Modifier
                     .padding(top = AppSpacing.paddingSmall, bottom = AppSpacing.paddingSmall)
                     .size(width = 32.dp, height = 4.dp)
-                    .background(colors.divider, RoundedCornerShape(2.dp))
+                    .background(colors.divider, AppRadius.roundShape)
             )
         },
         modifier = modifier
@@ -436,12 +435,12 @@ private fun ThemeOptionButton(
     Box(
         modifier = modifier
             .height(AppSpacing.minTouchTarget)
-            .clip(RoundedCornerShape(AppRadius.round))
+            .clip(AppRadius.roundShape)
             .background(if (isSelected) colors.surfaceVariant else colors.surface)
             .border(
                 width = AppSpacing.dividerThickness,
                 color = if (isSelected) colors.accent else colors.divider,
-                shape = RoundedCornerShape(AppRadius.round)
+                shape = AppRadius.roundShape
             )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
@@ -482,12 +481,12 @@ private fun ActionCardButton(
     Box(
         modifier = modifier
             .height(AppSpacing.minTouchTarget)
-            .clip(RoundedCornerShape(AppRadius.round))
+            .clip(AppRadius.roundShape)
             .background(colors.surfaceVariant)
             .border(
                 width = AppSpacing.dividerThickness,
                 color = colors.divider,
-                shape = RoundedCornerShape(AppRadius.round)
+                shape = AppRadius.roundShape
             )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center

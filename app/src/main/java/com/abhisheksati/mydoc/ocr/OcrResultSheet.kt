@@ -11,7 +11,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -27,10 +26,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -116,7 +116,7 @@ fun OcrResultSheet(
                         Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = AppRadius.pillShape,
                     colors = ButtonDefaults.buttonColors(containerColor = colors.accent, contentColor = Color.Black)
                 ) {
                     Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -133,7 +133,7 @@ fun OcrResultSheet(
                         context.startActivity(Intent.createChooser(sendIntent, "Share Extracted Text"))
                     },
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = AppRadius.pillShape,
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
                 ) {
                     Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -155,7 +155,7 @@ fun OcrResultSheet(
                         }
                     },
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = AppRadius.pillShape,
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
                 ) {
                     Icon(Icons.Outlined.SaveAlt, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -168,8 +168,8 @@ fun OcrResultSheet(
 
             // Extracted text box
             Surface(
-                color = Color(0xFF000000),
-                shape = RoundedCornerShape(8.dp),
+                color = DocumentCanvasColors.blackPage,
+                shape = AppRadius.pillShape,
                 border = androidx.compose.foundation.BorderStroke(1.dp, colors.divider),
                 modifier = Modifier
                     .fillMaxWidth()

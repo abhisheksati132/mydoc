@@ -1,6 +1,5 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
-import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.CallSplit
@@ -30,7 +28,6 @@ import androidx.compose.material.icons.outlined.Compress
 import androidx.compose.material.icons.outlined.Difference
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Security
-import androidx.compose.material.icons.outlined.Transform
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,19 +45,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.abhisheksati.mydoc.designsystem.tokens.LocalIsDark
-import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsDark
+import com.abhisheksati.mydoc.designsystem.tokens.ToolGroupColors
 import com.abhisheksati.mydoc.domain.model.DocumentCategory
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.tools.model.PdfTool
@@ -129,7 +125,7 @@ fun DocumentToolsSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        shape = AppRadius.sheetShape,
         containerColor = colors.surfaceContainerLow,
         tonalElevation = AppSpacing.elevation,
         scrimColor = colors.background.copy(alpha = 0.6f),
@@ -139,7 +135,7 @@ fun DocumentToolsSheet(
                     .padding(top = 10.dp, bottom = 6.dp)
                     .width(38.dp)
                     .height(4.dp)
-                    .background(colors.divider, RoundedCornerShape(2.dp))
+                    .background(colors.divider, AppRadius.roundShape)
             )
         },
         modifier = modifier
@@ -225,11 +221,11 @@ fun DocumentToolsSheet(
             // Category Filter Pills
             val categories = listOf(
                 FilterCategory(null, Icons.Outlined.AllInclusive, colors.accent, "All"),
-                FilterCategory(ToolGroup.EDIT, Icons.Outlined.Edit, Color(0xFFF59E0B), "Edit & Sign"),
-                FilterCategory(ToolGroup.ORGANIZE, Icons.AutoMirrored.Outlined.CallSplit, Color(0xFF3B82F6), "Organize"),
-                FilterCategory(ToolGroup.OPTIMIZE, Icons.Outlined.Compress, Color(0xFF10B981), "Optimize"),
-                FilterCategory(ToolGroup.CONVERT_FROM, Icons.Outlined.Difference, Color(0xFF6366F1), "Export"),
-                FilterCategory(ToolGroup.SECURITY, Icons.Outlined.Security, Color(0xFFEF4444), "Security")
+                FilterCategory(ToolGroup.EDIT, Icons.Outlined.Edit, ToolGroupColors.edit.tint, "Edit & Sign"),
+                FilterCategory(ToolGroup.ORGANIZE, Icons.AutoMirrored.Outlined.CallSplit, ToolGroupColors.organize.tint, "Organize"),
+                FilterCategory(ToolGroup.OPTIMIZE, Icons.Outlined.Compress, ToolGroupColors.optimize.tint, "Optimize"),
+                FilterCategory(ToolGroup.CONVERT_FROM, Icons.Outlined.Difference, ToolGroupColors.convertFrom.tint, "Export"),
+                FilterCategory(ToolGroup.SECURITY, Icons.Outlined.Security, ToolGroupColors.security.tint, "Security")
             )
 
             Row(
@@ -245,11 +241,11 @@ fun DocumentToolsSheet(
                     val chipBorder = if (isSelected) cat.color else colors.cardBorder
 
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
+                        shape = AppRadius.cardShape,
                         color = chipBg,
                         border = BorderStroke(if (isSelected) 1.5.dp else 1.dp, chipBorder),
                         modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(AppRadius.cardShape)
                             .clickable {
                                 selectedGroup = cat.group
                             }
@@ -312,22 +308,22 @@ private fun DocumentToolCard(
     val typography = LocalAppTypography.current
 
     val (groupTint, groupContainer) = when (tool.group) {
-        ToolGroup.ORGANIZE -> Color(0xFF3B82F6) to if (isDark) Color(0x283B82F6) else Color(0xFFDBEAFE)
-        ToolGroup.OPTIMIZE -> Color(0xFF10B981) to if (isDark) Color(0x2810B981) else Color(0xFFD1FAE5)
-        ToolGroup.CONVERT_TO -> Color(0xFF8B5CF6) to if (isDark) Color(0x288B5CF6) else Color(0xFFEDE9FE)
-        ToolGroup.CONVERT_FROM -> Color(0xFF6366F1) to if (isDark) Color(0x286366F1) else Color(0xFFE0E7FF)
-        ToolGroup.EDIT -> Color(0xFFF59E0B) to if (isDark) Color(0x28F59E0B) else Color(0xFFFEF3C7)
-        ToolGroup.SECURITY -> Color(0xFFEF4444) to if (isDark) Color(0x28EF4444) else Color(0xFFFEE2E2)
-        ToolGroup.SCAN -> Color(0xFF14B8A6) to if (isDark) Color(0x2814B8A6) else Color(0xFFCCFBF1)
+        ToolGroup.ORGANIZE -> ToolGroupColors.organize.tint to ToolGroupColors.container(ToolGroupColors.organize, isDark)
+        ToolGroup.OPTIMIZE -> ToolGroupColors.optimize.tint to ToolGroupColors.container(ToolGroupColors.optimize, isDark)
+        ToolGroup.CONVERT_TO -> ToolGroupColors.convertTo.tint to ToolGroupColors.container(ToolGroupColors.convertTo, isDark)
+        ToolGroup.CONVERT_FROM -> ToolGroupColors.convertFrom.tint to ToolGroupColors.container(ToolGroupColors.convertFrom, isDark)
+        ToolGroup.EDIT -> ToolGroupColors.edit.tint to ToolGroupColors.container(ToolGroupColors.edit, isDark)
+        ToolGroup.SECURITY -> ToolGroupColors.security.tint to ToolGroupColors.container(ToolGroupColors.security, isDark)
+        ToolGroup.SCAN -> ToolGroupColors.scan.tint to ToolGroupColors.container(ToolGroupColors.scan, isDark)
     }
 
     Surface(
-        shape = RoundedCornerShape(14.dp),
+        shape = AppRadius.cardShape,
         color = if (isDark) colors.surfaceContainer else colors.surface,
         border = BorderStroke(1.dp, colors.cardBorder),
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(AppRadius.cardShape)
             .clickable(onClick = onClick)
     ) {
         Row(
@@ -339,7 +335,7 @@ private fun DocumentToolCard(
             Box(
                 modifier = Modifier
                     .size(42.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(AppRadius.cardShape)
                     .background(groupContainer),
                 contentAlignment = Alignment.Center
             ) {

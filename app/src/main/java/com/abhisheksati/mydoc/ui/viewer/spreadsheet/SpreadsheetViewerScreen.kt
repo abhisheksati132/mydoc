@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,8 +37,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.MyDocApp
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingPrefs
@@ -118,7 +119,7 @@ fun SpreadsheetViewerScreen(
                     onValueChange = viewModel::onSearchQueryChanged,
                     placeholder = { Text("Search sheet cells…") },
                     singleLine = true,
-                    shape = RoundedCornerShape(8.dp),
+                    shape = AppRadius.pillShape,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -233,7 +234,7 @@ fun SpreadsheetViewerScreen(
 
                                                     val cellBg = when {
                                                         isSelected -> colors.accent.copy(alpha = 0.25f)
-                                                        isMatch -> Color(0x66FFEB3B)
+                                                        isMatch -> DocumentCanvasColors.searchHighlight
                                                         else -> Color.Transparent
                                                     }
 

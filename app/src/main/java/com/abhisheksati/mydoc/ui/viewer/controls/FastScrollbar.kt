@@ -1,20 +1,24 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
+import android.graphics.Bitmap
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,26 +31,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
-import kotlinx.coroutines.delay
-import android.graphics.Bitmap
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
+import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 
 /**
  * Draggable fast scrollbar positioned on the right edge of the viewer.
@@ -159,7 +156,7 @@ fun FastScrollbar(
                     .offset { IntOffset(x = 0, y = thumbYOffsetPx.roundToInt()) }
                     .padding(end = 2.dp)
                     .size(width = 6.dp, height = thumbHeightDp)
-                    .clip(RoundedCornerShape(3.dp))
+                    .clip(AppRadius.roundShape)
                     .background(if (isDragging) colors.accent else colors.textSecondary.copy(alpha = 0.6f))
             )
 
@@ -180,12 +177,12 @@ fun FastScrollbar(
             ) {
                 Column(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(AppRadius.cardShape)
                         .background(colors.surface)
                         .border(
                             width = 1.dp,
                             color = colors.divider,
-                            shape = RoundedCornerShape(12.dp)
+                            shape = AppRadius.cardShape
                         )
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -196,8 +193,8 @@ fun FastScrollbar(
                             contentDescription = "Page ${lastHapticPage + 1}",
                             modifier = Modifier
                                 .size(width = 68.dp, height = 90.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                                .border(0.5.dp, colors.divider.copy(alpha = 0.5f), RoundedCornerShape(6.dp)),
+                                .clip(AppRadius.microShape)
+                                .border(0.5.dp, colors.divider.copy(alpha = 0.5f), AppRadius.microShape),
                             contentScale = ContentScale.Fit
                         )
                         Spacer(modifier = Modifier.height(4.dp))

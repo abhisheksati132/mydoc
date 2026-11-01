@@ -3,11 +3,7 @@ package com.abhisheksati.mydoc.tools.ui.components
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,8 +26,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
@@ -53,7 +47,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,18 +54,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
@@ -80,11 +72,11 @@ import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.artifex.mupdf.fitz.ColorSpace
 import com.artifex.mupdf.fitz.Document
 import com.artifex.mupdf.fitz.Matrix
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 data class OrganizedPageItem(
     val uniqueId: String = UUID.randomUUID().toString(),
@@ -277,7 +269,7 @@ fun ReorderPagesSheet(
                                     Icon(
                                         imageVector = Icons.Outlined.Delete,
                                         contentDescription = "Delete Selected",
-                                        tint = Color(0xFFFF5252)
+                                        tint = colors.error
                                     )
                                 }
                             }
@@ -308,7 +300,7 @@ fun ReorderPagesSheet(
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text(text = errorMessage!!, style = typography.body, color = Color(0xFFFF5252))
+                            Text(text = errorMessage!!, style = typography.body, color = colors.error)
                         }
                     } else if (pages.isEmpty()) {
                         Column(
@@ -334,11 +326,11 @@ fun ReorderPagesSheet(
                                 Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(10.dp))
+                                        .clip(AppRadius.cardShape)
                                         .border(
                                             width = if (isSelected) 2.dp else 0.8.dp,
                                             color = if (isSelected) colors.accent else colors.divider,
-                                            shape = RoundedCornerShape(10.dp)
+                                            shape = AppRadius.cardShape
                                         )
                                         .clickable {
                                             if (isSelected) selectedIds.remove(item.uniqueId)
@@ -359,7 +351,7 @@ fun ReorderPagesSheet(
                                         ) {
                                             Surface(
                                                 color = colors.background,
-                                                shape = RoundedCornerShape(6.dp)
+                                                shape = AppRadius.microShape
                                             ) {
                                                 Text(
                                                     text = "${index + 1}",
@@ -384,7 +376,7 @@ fun ReorderPagesSheet(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .aspectRatio(0.72f)
-                                                .clip(RoundedCornerShape(4.dp))
+                                                .clip(AppRadius.microShape)
                                                 .background(Color.White),
                                             contentAlignment = Alignment.Center
                                         ) {
@@ -482,7 +474,7 @@ fun ReorderPagesSheet(
                                                 Icon(
                                                     imageVector = Icons.Outlined.Close,
                                                     contentDescription = "Remove page",
-                                                    tint = Color(0xFFFF5252),
+                                                    tint = colors.error,
                                                     modifier = Modifier.size(14.dp)
                                                 )
                                             }
@@ -520,7 +512,7 @@ fun ReorderPagesSheet(
                                 onApplyOrder(finalOrder)
                             },
                             enabled = pages.isNotEmpty() && !isLoading,
-                            shape = RoundedCornerShape(12.dp),
+                            shape = AppRadius.cardShape,
                             colors = ButtonDefaults.buttonColors(containerColor = colors.accent, contentColor = Color.Black),
                             modifier = Modifier.height(42.dp)
                         ) {

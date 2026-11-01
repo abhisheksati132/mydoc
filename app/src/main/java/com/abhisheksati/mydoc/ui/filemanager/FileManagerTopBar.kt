@@ -1,6 +1,5 @@
 package com.abhisheksati.mydoc.ui.filemanager
 
-import android.content.Context
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -38,7 +37,6 @@ import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.DocumentFilter
-import com.abhisheksati.mydoc.domain.model.StorageItem
 import com.abhisheksati.mydoc.viewmodel.FileManagerUiState
 import com.abhisheksati.mydoc.viewmodel.FileManagerViewModel
 import java.io.File

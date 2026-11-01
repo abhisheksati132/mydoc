@@ -44,6 +44,7 @@ import com.abhisheksati.mydoc.viewmodel.ViewerViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 
 /**
  * High-performance PDF page renderer with debounced progressive rendering,
@@ -168,10 +169,10 @@ internal fun PageItemView(
     }
 
     val itemBg = when (readingMode) {
-        ReadingMode.INVERTED_DARK -> Color(0xFF000000) // True AMOLED Black
-        ReadingMode.SEPIA -> Color(0xFFF4ECD8)
-        ReadingMode.EYE_COMFORT -> Color(0xFFF7F3E9)
-        ReadingMode.NORMAL -> Color(0xFFFAFAFC)
+        ReadingMode.INVERTED_DARK -> DocumentCanvasColors.blackPage // True AMOLED Black
+        ReadingMode.SEPIA -> DocumentCanvasColors.sepiaPage
+        ReadingMode.EYE_COMFORT -> DocumentCanvasColors.eyeComfortPage
+        ReadingMode.NORMAL -> DocumentCanvasColors.pdfPage
     }
 
     val pageColorFilter = when (readingMode) {
@@ -277,19 +278,19 @@ internal fun PageItemView(
 
                         if (isCurrent) {
                             drawRect(
-                                color = Color(0xCCFF9800),
+                                color = DocumentCanvasColors.annotationOrange,
                                 topLeft = Offset(left, top),
                                 size = Size(right - left, bottom - top)
                             )
                             drawRect(
-                                color = Color(0xFFFF5722),
+                                color = DocumentCanvasColors.annotationRed,
                                 topLeft = Offset(left, top),
                                 size = Size(right - left, bottom - top),
                                 style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
                             )
                         } else {
                             drawRect(
-                                color = Color(0x66FFEB3B),
+                                color = DocumentCanvasColors.searchHighlight,
                                 topLeft = Offset(left, top),
                                 size = Size(right - left, bottom - top)
                             )
@@ -309,7 +310,7 @@ internal fun PageItemView(
                         val right = rect.right * scaleX
                         val bottom = rect.bottom * scaleY
                         drawRect(
-                            color = Color(0x555B4FE8),
+                            color = DocumentCanvasColors.annotationAccent,
                             topLeft = Offset(left, top),
                             size = Size((right - left).coerceAtLeast(4f), (bottom - top).coerceAtLeast(4f))
                         )

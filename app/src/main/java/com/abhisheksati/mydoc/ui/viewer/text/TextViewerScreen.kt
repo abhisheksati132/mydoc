@@ -26,7 +26,6 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -34,6 +33,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.MainActivity
 import com.abhisheksati.mydoc.MyDocApp
@@ -273,7 +273,7 @@ fun TextViewerScreen(
                                     val matchIndex = lowerLine.indexOf(lowerQuery, startIndex)
                                     if (matchIndex != -1) {
                                         append(line.substring(startIndex, matchIndex))
-                                        withStyle(SpanStyle(background = Color(0x66FFEB3B), color = textColor)) {
+                                        withStyle(SpanStyle(background = DocumentCanvasColors.searchHighlight, color = textColor)) {
                                             append(line.substring(matchIndex, matchIndex + query.length))
                                         }
                                         startIndex = matchIndex + query.length

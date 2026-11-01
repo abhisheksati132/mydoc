@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.RotateRight
@@ -29,7 +28,6 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.RestartAlt
-import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -65,6 +63,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.tokens.CaptureChromeColors
+import com.abhisheksati.mydoc.designsystem.tokens.LightAppColors
+import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.roundToInt
@@ -87,7 +90,7 @@ fun FreeCornersCropperDialog(
     bitmap: Bitmap,
     onDismiss: () -> Unit,
     onCropped: (Bitmap) -> Unit,
-    accentColor: Color = Color(0xFF4A90E2),
+    accentColor: Color = LightAppColors.accent,
     modifier: Modifier = Modifier
 ) {
     Dialog(
@@ -103,7 +106,7 @@ fun FreeCornersCropperDialog(
 
         Surface(
             modifier = modifier.fillMaxSize(),
-            color = Color(0xFF0F0F12)
+            color = CaptureChromeColors.backdrop
         ) {
             Column(
                 modifier = Modifier
@@ -130,9 +133,8 @@ fun FreeCornersCropperDialog(
 
                     Text(
                         text = "Perspective Deskew",
-                        color = Color.White,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold
+                        style = AppTheme.typography.bodyLargeStrong,
+                        color = Color.White
                     )
 
                     IconButton(
@@ -601,7 +603,7 @@ private fun FreeCornersCropperCanvas(
                     modifier = Modifier
                         .size(46.dp)
                         .clip(CircleShape)
-                        .background(Color(0x28FFFFFF))
+                        .background(CaptureChromeColors.onChromeWash)
                 ) {
                     Icon(
                         imageVector = Icons.Default.RestartAlt,
@@ -632,12 +634,12 @@ private fun FreeCornersCropperCanvas(
                     modifier = Modifier
                         .size(46.dp)
                         .clip(CircleShape)
-                        .background(Color(0x28FFFFFF))
+                        .background(CaptureChromeColors.onChromeWash)
                 ) {
                     Icon(
                         imageVector = Icons.Default.AutoAwesome,
                         contentDescription = "Smart Edge Auto-Detect",
-                        tint = Color(0xFF69F0AE)
+                        tint = CaptureChromeColors.gridLine
                     )
                 }
             }
@@ -658,7 +660,7 @@ private fun FreeCornersCropperCanvas(
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = accentColor),
-                shape = RoundedCornerShape(24.dp),
+                shape = AppRadius.xLargeShape,
                 modifier = Modifier.height(46.dp)
             ) {
                 Icon(
@@ -670,9 +672,8 @@ private fun FreeCornersCropperCanvas(
                 Spacer(modifier = Modifier.size(8.dp))
                 Text(
                     text = "Apply Deskew",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
+                    style = AppTheme.typography.bodyStrong,
+                    color = Color.White
                 )
             }
         }

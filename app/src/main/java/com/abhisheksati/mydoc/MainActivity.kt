@@ -302,8 +302,7 @@ class MainActivity : ComponentActivity() {
                                     is ActiveScreen.Audio -> {
                                         com.abhisheksati.mydoc.ui.media.AudioPlayerScreen(
                                             item = screen.item,
-                                            onBackClick = { currentAudio = null },
-                                            isDarkTheme = isDark
+                                            onBackClick = { currentAudio = null }
                                         )
                                     }
                                     is ActiveScreen.Document -> {
@@ -347,7 +346,6 @@ class MainActivity : ComponentActivity() {
                                             fileManagerViewModel = fileManagerViewModel,
                                             storageViewModel = storageViewModel,
                                             updateManager = updateManager,
-                                            isDarkTheme = isDark,
                                             onToggleTheme = {
                                                 val nextTheme = if (isDark) AppThemeMode.LIGHT else AppThemeMode.DARK
                                                 app.settingsRepository.setThemeMode(nextTheme)

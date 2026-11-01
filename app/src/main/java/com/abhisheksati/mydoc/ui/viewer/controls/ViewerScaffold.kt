@@ -1,7 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
 import android.app.Activity
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -21,10 +20,9 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsDark
-import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.MyDocApp
-import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
@@ -53,26 +51,26 @@ object ViewerThemeTokens {
     fun getBackgroundColor(readingMode: ReadingMode, isDarkTheme: Boolean, baseSurface: Color): Color {
         return when (readingMode) {
             ReadingMode.INVERTED_DARK -> Color.Black
-            ReadingMode.SEPIA -> Color(0xFFF4ECD8)
-            ReadingMode.EYE_COMFORT -> Color(0xFFF7F3E9)
-            ReadingMode.NORMAL -> if (isDarkTheme) Color(0xFF000000) else baseSurface
+            ReadingMode.SEPIA -> DocumentCanvasColors.sepiaPage
+            ReadingMode.EYE_COMFORT -> DocumentCanvasColors.eyeComfortPage
+            ReadingMode.NORMAL -> if (isDarkTheme) DocumentCanvasColors.blackPage else baseSurface
         }
     }
 
     fun getTextColor(readingMode: ReadingMode, defaultPrimary: Color): Color {
         return when (readingMode) {
             ReadingMode.INVERTED_DARK -> Color.White
-            ReadingMode.SEPIA -> Color(0xFF3A3125)
-            ReadingMode.EYE_COMFORT -> Color(0xFF2C261F)
+            ReadingMode.SEPIA -> DocumentCanvasColors.sepiaInk
+            ReadingMode.EYE_COMFORT -> DocumentCanvasColors.eyeComfortInk
             ReadingMode.NORMAL -> defaultPrimary
         }
     }
 
     fun getSecondaryTextColor(readingMode: ReadingMode, defaultSecondary: Color): Color {
         return when (readingMode) {
-            ReadingMode.INVERTED_DARK -> Color(0xFFAAAAAA)
-            ReadingMode.SEPIA -> Color(0xFF5A4E3A)
-            ReadingMode.EYE_COMFORT -> Color(0xFF5C5245)
+            ReadingMode.INVERTED_DARK -> DocumentCanvasColors.invertedMuted
+            ReadingMode.SEPIA -> DocumentCanvasColors.sepiaMuted
+            ReadingMode.EYE_COMFORT -> DocumentCanvasColors.eyeComfortMuted
             ReadingMode.NORMAL -> defaultSecondary
         }
     }

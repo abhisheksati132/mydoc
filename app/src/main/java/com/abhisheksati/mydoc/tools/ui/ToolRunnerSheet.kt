@@ -10,7 +10,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,27 +21,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FileOpen
-import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Save
-import androidx.compose.material.icons.outlined.Draw
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Warning
-import com.abhisheksati.mydoc.tools.security.SignatureStorage
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -58,7 +48,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.abhisheksati.mydoc.designsystem.components.AppBottomSheet
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
-import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
 import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
@@ -66,11 +55,6 @@ import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.tools.model.formatByteSize
-import com.abhisheksati.mydoc.tools.model.CompressionLevel
-import com.abhisheksati.mydoc.tools.model.PageMargin
-import com.abhisheksati.mydoc.tools.model.PageNumberFormat
-import com.abhisheksati.mydoc.tools.model.PageNumberPosition
-import com.abhisheksati.mydoc.tools.model.PageSizeFormat
 import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.tools.ui.components.ToolOptionsSection
 import com.abhisheksati.mydoc.tools.model.ToolExecutionResult
@@ -238,7 +222,7 @@ fun ToolRunnerSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(AppSpacing.minTouchTarget)
-                            .clip(RoundedCornerShape(AppRadius.round))
+                            .clip(AppRadius.roundShape)
                             .background(if (canRun) colors.accent else colors.surfaceVariant)
                             .clickable(enabled = canRun) {
                                 haptics.confirm()
@@ -325,7 +309,7 @@ fun ToolRunnerSheet(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(AppSpacing.minTouchTarget)
-                                .clip(RoundedCornerShape(AppRadius.round))
+                                .clip(AppRadius.roundShape)
                                 .background(colors.accent)
                                 .clickable {
                                     viewModel.selectTool(tool)
@@ -409,7 +393,7 @@ private fun InputFilesSection(
                     .border(
                         width = 1.dp,
                         color = colors.divider,
-                        shape = RoundedCornerShape(AppRadius.round)
+                        shape = AppRadius.roundShape
                     )
                     .clickable {
                         if (tool.requiresMultipleInputFiles) onPickMultiple() else onPickSingle()
@@ -439,7 +423,7 @@ private fun InputFilesSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(AppSpacing.minTouchTarget)
-                        .background(colors.surfaceVariant, RoundedCornerShape(AppRadius.round))
+                        .background(colors.surfaceVariant, AppRadius.roundShape)
                         .padding(horizontal = AppSpacing.paddingMedium),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -469,7 +453,7 @@ private fun InputFilesSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(AppSpacing.minTouchTarget)
-                        .border(1.dp, colors.divider, RoundedCornerShape(AppRadius.round))
+                        .border(1.dp, colors.divider, AppRadius.roundShape)
                         .clickable { onPickMultiple() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -525,7 +509,7 @@ private fun RunningProgressSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(AppSpacing.minTouchTarget)
-                .border(1.dp, colors.divider, RoundedCornerShape(AppRadius.round))
+                .border(1.dp, colors.divider, AppRadius.roundShape)
                 .clickable { onCancel() },
             contentAlignment = Alignment.Center
         ) {
@@ -568,7 +552,7 @@ private fun SuccessVerificationSection(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(colors.surfaceVariant, RoundedCornerShape(AppRadius.round))
+                .background(colors.surfaceVariant, AppRadius.roundShape)
                 .padding(AppSpacing.paddingMedium)
         ) {
             Text(text = "VERIFICATION", style = typography.label, color = colors.textSecondary)
@@ -630,7 +614,7 @@ private fun SuccessVerificationSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(AppSpacing.minTouchTarget)
-                .clip(RoundedCornerShape(AppRadius.round))
+                .clip(AppRadius.roundShape)
                 .background(colors.accent)
                 .clickable { onSaveSaf() },
             contentAlignment = Alignment.Center
@@ -653,7 +637,7 @@ private fun SuccessVerificationSection(
                 modifier = Modifier
                     .weight(1f)
                     .height(AppSpacing.minTouchTarget)
-                    .border(1.dp, colors.divider, RoundedCornerShape(AppRadius.round))
+                    .border(1.dp, colors.divider, AppRadius.roundShape)
                     .clickable { onOpen() },
                 contentAlignment = Alignment.Center
             ) {
@@ -668,7 +652,7 @@ private fun SuccessVerificationSection(
                 modifier = Modifier
                     .weight(1f)
                     .height(AppSpacing.minTouchTarget)
-                    .border(1.dp, colors.divider, RoundedCornerShape(AppRadius.round))
+                    .border(1.dp, colors.divider, AppRadius.roundShape)
                     .clickable { onShare() },
                 contentAlignment = Alignment.Center
             ) {

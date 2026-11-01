@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.PhotoLibrary
@@ -125,7 +124,7 @@ fun ViewerBottomBar(
                                 onSheetSelect(item.pageIndex)
                             },
                             label = { Text(item.title, style = AppTheme.typography.caption) },
-                            shape = RoundedCornerShape(AppRadius.round),
+                            shape = AppRadius.roundShape,
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = colors.accent,
                                 selectedLabelColor = colors.surface
@@ -154,12 +153,12 @@ fun ViewerBottomBar(
                         val targetDisplayPage = (scrubPage.roundToInt() + 1).coerceIn(1, pageCount)
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(AppRadius.round))
+                                .clip(AppRadius.roundShape)
                                 .background(colors.surfaceVariant)
                                 .border(
                                     width = AppSpacing.dividerThickness,
                                     color = colors.accent,
-                                    shape = RoundedCornerShape(AppRadius.round)
+                                    shape = AppRadius.roundShape
                                 )
                                 .padding(horizontal = AppSpacing.paddingMedium, vertical = 2.dp)
                         ) {
@@ -256,7 +255,7 @@ private fun BottomBarActionButton(
     Box(
         modifier = modifier
             .height(52.dp)
-            .clip(RoundedCornerShape(AppRadius.round))
+            .clip(AppRadius.roundShape)
             .clickable(
                 enabled = enabled,
                 interactionSource = remember { MutableInteractionSource() },

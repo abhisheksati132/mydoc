@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import androidx.compose.material.icons.Icons
@@ -38,7 +37,6 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -60,7 +58,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -144,7 +141,7 @@ fun TrashBinSheet(
                                     Icon(
                                         imageVector = Icons.Outlined.DeleteSweep,
                                         contentDescription = "Empty Recycle Bin",
-                                        tint = Color(0xFFEF5350)
+                                        tint = colors.error
                                     )
                                 }
                             } else {
@@ -174,7 +171,7 @@ fun TrashBinSheet(
             bottomBar = {
                 if (isSelectionMode) {
                     Surface(
-                        color = if (isOled) Color(0xFF0F1015) else colors.surface,
+                        color = colors.surface,
                         border = BorderStroke(1.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider),
                         tonalElevation = 8.dp,
                         modifier = Modifier
@@ -190,7 +187,7 @@ fun TrashBinSheet(
                         OutlinedButton(
                             onClick = { showDeleteConfirmDialog = true },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFEF5350))
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.error)
                         ) {
                             Icon(imageVector = Icons.Outlined.DeleteForever, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
@@ -273,7 +270,7 @@ fun TrashBinSheet(
                         showEmptyConfirmDialog = false
                         onEmptyTrash()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350))
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.error)
                 ) {
                     Text("Empty")
                 }
@@ -304,7 +301,7 @@ fun TrashBinSheet(
                         onDeletePermanently(selectedItems)
                         selectedIds = emptySet()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350))
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.error)
                 ) {
                     Text("Delete Forever")
                 }
@@ -333,9 +330,9 @@ private fun TrashItemCard(
     val isOled = LocalIsOled.current
 
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = AppRadius.cardShape,
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) colors.accent.copy(alpha = 0.12f) else if (isOled) Color(0xFF0F1015) else colors.surface
+            containerColor = if (isSelected) colors.accent.copy(alpha = 0.12f) else colors.surface
         ),
         border = BorderStroke(
             1.dp,
@@ -343,7 +340,7 @@ private fun TrashItemCard(
         ),
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(AppRadius.cardShape)
             .clickable { onToggleSelect() }
     ) {
         Row(
@@ -364,14 +361,14 @@ private fun TrashItemCard(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (item.isDirectory) Color(0xFFFFB300).copy(alpha = 0.15f) else Color(0xFF9E9E9E).copy(alpha = 0.15f)),
+                    .clip(AppRadius.pillShape)
+                    .background(if (item.isDirectory) colors.warning.copy(alpha = 0.15f) else colors.textSecondary.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (item.isDirectory) Icons.Outlined.Folder else Icons.AutoMirrored.Outlined.InsertDriveFile,
                     contentDescription = null,
-                    tint = if (item.isDirectory) Color(0xFFFFB300) else Color(0xFF9E9E9E),
+                    tint = if (item.isDirectory) colors.warning else colors.textSecondary,
                     modifier = Modifier.size(24.dp)
                 )
             }

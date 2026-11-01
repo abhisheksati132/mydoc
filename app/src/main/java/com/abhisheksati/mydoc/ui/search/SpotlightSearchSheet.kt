@@ -40,7 +40,6 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Slideshow
 import androidx.compose.material.icons.outlined.TableChart
 import androidx.compose.material.icons.outlined.Videocam
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -59,7 +58,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -82,7 +80,6 @@ fun SpotlightSearchSheet(
     items: List<LibraryItem>,
     onItemClick: (LibraryItem) -> Unit,
     onDismiss: () -> Unit,
-    isDarkTheme: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Dialog(
@@ -332,7 +329,7 @@ fun SpotlightSearchSheet(
                                         modifier = Modifier
                                             .size(38.dp)
                                             .clip(AppRadius.microShape)
-                                            .background(formatTint.copy(alpha = if (isDarkTheme) 0.16f else 0.10f)),
+                                            .background(formatTint.copy(alpha = if (AppTheme.isDark) 0.16f else 0.10f)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(

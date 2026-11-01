@@ -1,7 +1,6 @@
 package com.abhisheksati.mydoc.ui.media
 
 import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -12,7 +11,6 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,23 +23,20 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.RotateRight
-import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Flip
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.TextFields
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -65,25 +60,26 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
-import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
+import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.ExifMetadata
 import com.abhisheksati.mydoc.domain.model.MediaItem
 import com.abhisheksati.mydoc.domain.repository.MediaRepository
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 
 @Composable
 fun PhotoViewerScreen(
@@ -269,8 +265,8 @@ fun PhotoViewerScreen(
                         DropdownMenu(
                             expanded = isMoreMenuOpen,
                             onDismissRequest = { isMoreMenuOpen = false },
-                            shape = RoundedCornerShape(16.dp),
-                            containerColor = if (isDarkMode) Color(0xFF1E2129) else colors.surface,
+                            shape = AppRadius.largeShape,
+                            containerColor = if (isDarkMode) DarkAppColors.surface else colors.surface,
                             border = BorderStroke(1.dp, if (isDarkMode) Color.White.copy(alpha = 0.12f) else colors.cardBorder),
                             shadowElevation = 8.dp,
                             tonalElevation = 4.dp
@@ -391,12 +387,12 @@ fun PhotoViewerScreen(
                                 val p = photoList[idx]
                                 val isSelected = idx == pagerState.currentPage
                                 Surface(
-                                    shape = RoundedCornerShape(10.dp),
+                                    shape = AppRadius.cardShape,
                                     border = if (isSelected) BorderStroke(2.dp, colors.accent) else null,
                                     color = colors.surfaceMuted,
                                     modifier = Modifier
                                         .size(46.dp)
-                                        .clip(RoundedCornerShape(10.dp))
+                                        .clip(AppRadius.cardShape)
                                         .clickable {
                                             coroutineScope.launch {
                                                 pagerState.animateScrollToPage(idx)
@@ -549,11 +545,11 @@ private fun PhotoViewerPillButton(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        shape = RoundedCornerShape(28.dp),
+        shape = AppRadius.xLargeShape,
         color = LocalAppColors.current.surfaceMuted,
         modifier = modifier
             .height(56.dp)
-            .clip(RoundedCornerShape(28.dp))
+            .clip(AppRadius.xLargeShape)
             .clickable(onClick = {
                 onClick()
             })

@@ -1,7 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.pdf
 
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.net.Uri
@@ -43,7 +42,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
@@ -51,6 +49,7 @@ import com.abhisheksati.mydoc.MainActivity
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
@@ -309,9 +308,9 @@ fun PdfViewerScreen(
     }
 
     val pageBgColor = when (state.readingMode) {
-        ReadingMode.INVERTED_DARK -> Color(0xFF000000)
-        ReadingMode.SEPIA -> Color(0xFFF4ECD8)
-        ReadingMode.EYE_COMFORT -> Color(0xFFF7F3E9)
+        ReadingMode.INVERTED_DARK -> DocumentCanvasColors.blackPage
+        ReadingMode.SEPIA -> DocumentCanvasColors.sepiaPage
+        ReadingMode.EYE_COMFORT -> DocumentCanvasColors.eyeComfortPage
         ReadingMode.NORMAL -> colors.background
     }
 

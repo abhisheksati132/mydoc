@@ -2,30 +2,19 @@ package com.abhisheksati.mydoc.ui.viewer.presentation
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -33,52 +22,27 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
-import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Slideshow
-import androidx.compose.material.icons.outlined.Brightness4
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material.icons.outlined.Print
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.SwapVert
-import androidx.compose.material.icons.outlined.ViewCarousel
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.material3.DropdownMenu
 import androidx.core.content.FileProvider
 import java.io.File
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -90,47 +54,27 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.isSpecified
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
-import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxParser
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxPresentation
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxSlide
-import com.abhisheksati.mydoc.rendering.engine.presentation.VisualElement
 import com.abhisheksati.mydoc.rendering.engine.presentation.VisualElementType
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.ui.viewer.controls.PageJumpDialog
 import com.abhisheksati.mydoc.ui.viewer.controls.PrintHelper
-import com.abhisheksati.mydoc.ui.viewer.controls.SearchOverlay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -381,30 +325,30 @@ fun PresentationViewerScreen(
     val isAppDark = LocalIsOled.current
 
     val bgColor = when (readingMode) {
-        ReadingMode.INVERTED_DARK -> Color(0xFF000000)
-        ReadingMode.SEPIA -> Color(0xFFF4ECD8)
-        ReadingMode.EYE_COMFORT -> Color(0xFFF7F3E9)
-        ReadingMode.NORMAL -> if (isAppDark) Color(0xFF000000) else colors.background
+        ReadingMode.INVERTED_DARK -> DocumentCanvasColors.blackPage
+        ReadingMode.SEPIA -> DocumentCanvasColors.sepiaPage
+        ReadingMode.EYE_COMFORT -> DocumentCanvasColors.eyeComfortPage
+        ReadingMode.NORMAL -> if (isAppDark) DocumentCanvasColors.blackPage else colors.background
     }
 
     val cardBgColor = when (readingMode) {
-        ReadingMode.INVERTED_DARK -> Color(0xFF0A0A0C)
-        ReadingMode.SEPIA -> Color(0xFFEADBBE)
-        ReadingMode.EYE_COMFORT -> Color(0xFFECE4D0)
-        ReadingMode.NORMAL -> if (isAppDark) Color(0xFF0A0A0C) else Color.White
+        ReadingMode.INVERTED_DARK -> DocumentCanvasColors.invertedPage
+        ReadingMode.SEPIA -> DocumentCanvasColors.sepiaSpreadPage
+        ReadingMode.EYE_COMFORT -> DocumentCanvasColors.eyeComfortSpreadPage
+        ReadingMode.NORMAL -> if (isAppDark) DocumentCanvasColors.invertedPage else Color.White
     }
 
     val textColor = when (readingMode) {
-        ReadingMode.INVERTED_DARK -> Color(0xFFEDEDED)
-        ReadingMode.SEPIA -> Color(0xFF3A3125)
-        ReadingMode.EYE_COMFORT -> Color(0xFF2C261F)
+        ReadingMode.INVERTED_DARK -> DocumentCanvasColors.invertedInk
+        ReadingMode.SEPIA -> DocumentCanvasColors.sepiaInk
+        ReadingMode.EYE_COMFORT -> DocumentCanvasColors.eyeComfortInk
         ReadingMode.NORMAL -> colors.textPrimary
     }
 
     val secondaryTextColor = when (readingMode) {
-        ReadingMode.INVERTED_DARK -> Color(0xFFA0A0A5)
-        ReadingMode.SEPIA -> Color(0xFF5A4E3A)
-        ReadingMode.EYE_COMFORT -> Color(0xFF5C5245)
+        ReadingMode.INVERTED_DARK -> DocumentCanvasColors.invertedMuted
+        ReadingMode.SEPIA -> DocumentCanvasColors.sepiaMuted
+        ReadingMode.EYE_COMFORT -> DocumentCanvasColors.eyeComfortMuted
         ReadingMode.NORMAL -> colors.textSecondary
     }
 
@@ -591,7 +535,7 @@ fun PresentationViewerScreen(
                                     OutlineSlideCard(
                                         slide = slide,
                                         cardBgColor = cardBgColor,
-                                        textColor = if (cardBgColor.isColorDark()) Color(0xFFEDEDED) else Color(0xFF1E293B),
+                                        textColor = if (cardBgColor.isColorDark()) DocumentCanvasColors.invertedInk else DocumentCanvasColors.onLightInk,
                                         highlightQuery = if (isSearchOpen) searchQuery else ""
                                     )
                                 }
@@ -675,7 +619,7 @@ fun PresentationViewerScreen(
                                 OutlineSlideCard(
                                     slide = slide,
                                     cardBgColor = cardBgColor,
-                                    textColor = if (cardBgColor.isColorDark()) Color(0xFFEDEDED) else Color(0xFF1E293B),
+                                    textColor = if (cardBgColor.isColorDark()) DocumentCanvasColors.invertedInk else DocumentCanvasColors.onLightInk,
                                     highlightQuery = if (isSearchOpen) searchQuery else ""
                                 )
                             }
@@ -691,7 +635,7 @@ fun PresentationViewerScreen(
                             .align(Alignment.TopEnd)
                             .statusBarsPadding()
                             .padding(AppSpacing.paddingMedium)
-                            .background(Color(0x88000000), CircleShape)
+                            .background(colors.scrim, CircleShape)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Close,

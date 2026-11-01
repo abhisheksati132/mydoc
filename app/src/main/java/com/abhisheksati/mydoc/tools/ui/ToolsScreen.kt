@@ -4,7 +4,6 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,9 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
@@ -58,7 +55,7 @@ import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
 import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.tools.model.PdfTool
@@ -83,7 +80,6 @@ fun ToolsScreen(
     onToolClick: (PdfTool) -> Unit,
     onSettingsClick: (() -> Unit)? = null,
     onToggleTheme: (() -> Unit)? = null,
-    isDarkTheme: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
@@ -260,7 +256,6 @@ fun ToolsScreen(
                                     title = "Scan to PDF",
                                     subtitle = "Camera to document",
                                     icon = Icons.Outlined.CameraAlt,
-                                    isDarkTheme = isDarkTheme,
                                     onClick = { onToolClick(PdfTool.SCAN_TO_PDF) },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -268,7 +263,6 @@ fun ToolsScreen(
                                     title = "Combine PDFs",
                                     subtitle = "Merge files together",
                                     icon = Icons.AutoMirrored.Outlined.MergeType,
-                                    isDarkTheme = isDarkTheme,
                                     onClick = { onToolClick(PdfTool.MERGE) },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -284,7 +278,6 @@ fun ToolsScreen(
                                     title = "Make Smaller",
                                     subtitle = "Reduce PDF file size",
                                     icon = Icons.Outlined.Compress,
-                                    isDarkTheme = isDarkTheme,
                                     onClick = { onToolClick(PdfTool.COMPRESS) },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -292,7 +285,6 @@ fun ToolsScreen(
                                     title = "Sign PDF",
                                     subtitle = "Add your signature",
                                     icon = Icons.Outlined.Draw,
-                                    isDarkTheme = isDarkTheme,
                                     onClick = { onToolClick(PdfTool.SIGN_PDF) },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -308,7 +300,6 @@ fun ToolsScreen(
                                     title = "Pick Pages",
                                     subtitle = "Reorder & rotate",
                                     icon = Icons.Outlined.GridOn,
-                                    isDarkTheme = isDarkTheme,
                                     onClick = { onToolClick(PdfTool.REORDER_PAGES) },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -316,7 +307,6 @@ fun ToolsScreen(
                                     title = "Lock PDF",
                                     subtitle = "Protect with password",
                                     icon = Icons.Outlined.Lock,
-                                    isDarkTheme = isDarkTheme,
                                     onClick = { onToolClick(PdfTool.PROTECT) },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -367,8 +357,7 @@ fun ToolsScreen(
                                     toolsInGroup.forEachIndexed { index, tool ->
                                         ToolListRow(
                                             tool = tool,
-                                            isDarkTheme = isDarkTheme,
-                                            onClick = { onToolClick(tool) }
+                                                    onClick = { onToolClick(tool) }
                                         )
                                         if (index < toolsInGroup.size - 1) {
                                             HorizontalDivider(
@@ -398,7 +387,6 @@ private fun FeaturedToolCard(
     title: String,
     subtitle: String,
     icon: ImageVector,
-    isDarkTheme: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -420,7 +408,7 @@ private fun FeaturedToolCard(
                 modifier = Modifier
                     .size(38.dp)
                     .clip(AppRadius.microShape)
-                    .background(colors.accent.copy(alpha = if (isDarkTheme) 0.16f else 0.10f)),
+                    .background(colors.accent.copy(alpha = if (AppTheme.isDark) 0.16f else 0.10f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -453,7 +441,6 @@ private fun FeaturedToolCard(
 @Composable
 private fun ToolListRow(
     tool: PdfTool,
-    isDarkTheme: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -471,7 +458,7 @@ private fun ToolListRow(
             modifier = Modifier
                 .size(38.dp)
                 .clip(AppRadius.microShape)
-                .background(colors.accent.copy(alpha = if (isDarkTheme) 0.16f else 0.08f)),
+                .background(colors.accent.copy(alpha = if (AppTheme.isDark) 0.16f else 0.08f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
