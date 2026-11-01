@@ -16,8 +16,9 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -43,6 +44,7 @@ import com.abhisheksati.mydoc.data.local.PinnedFoldersManager
 import com.abhisheksati.mydoc.data.local.StoragePermissionHelper
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.DocumentFilter
@@ -265,16 +267,20 @@ fun FileManagerScreen(
 
                     if (uiState.isLoading) {
                         Box(
-                            contentAlignment = Alignment.Center,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
                         ) {
-                            CircularProgressIndicator(color = colors.accent)
+                            LinearProgressIndicator(
+                                color = colors.ink,
+                                trackColor = colors.track,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(AppSpacing.rule)
+                            )
                         }
                     } else if (displayedItems.isEmpty()) {
                         Box(
-                            contentAlignment = Alignment.Center,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)

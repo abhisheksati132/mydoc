@@ -94,7 +94,7 @@ fun FileManagerBreadcrumbBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 14.dp, vertical = 6.dp)
+                    .padding(horizontal = AppSpacing.screenPadding, vertical = AppSpacing.xSmall)
             ) {
                 breadcrumbTrail.forEachIndexed { index, crumb ->
                     val isLast = index == breadcrumbTrail.size - 1
@@ -108,8 +108,8 @@ fun FileManagerBreadcrumbBar(
 
                     Text(
                         text = crumbName,
-                        style = if (isLast) typography.bodyStrong else typography.label,
-                        color = if (isLast) colors.accent else colors.textSecondary,
+                        style = if (isLast) typography.bodyLargeStrong else typography.body,
+                        color = if (isLast) colors.ink else colors.inkMuted,
                         modifier = Modifier
                             .clip(AppRadius.microShape)
                             .clickable { onNavigateToCrumb(crumb) }

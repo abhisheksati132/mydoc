@@ -38,6 +38,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.abhisheksati.mydoc.designsystem.components.AppChip
+import com.abhisheksati.mydoc.designsystem.components.EditorialAction
+import com.abhisheksati.mydoc.designsystem.components.EditorialRule
 import com.abhisheksati.mydoc.designsystem.components.horizontalScrollWithFade
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
@@ -55,66 +57,59 @@ fun StoragePermissionBanner(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val isOled = LocalIsOled.current
 
-    Surface(
-        shape = AppRadius.largeShape,
-        color = colors.surface,
-        border = BorderStroke(1.dp, colors.accent.copy(alpha = 0.25f)),
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .padding(top = AppSpacing.small)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.FolderOpen,
-                    contentDescription = null,
-                    tint = colors.accent,
-                    modifier = Modifier.size(22.dp)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = "Storage Access Required",
-                    style = typography.bodyStrong,
-                    color = colors.textPrimary
-                )
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "Grant All Files Access to browse and manage files across internal storage and SD cards without restrictions.",
-                style = typography.caption,
-                color = colors.textSecondary
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = AppSpacing.screenPadding)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.FolderOpen,
+                contentDescription = null,
+                tint = colors.accent,
+                modifier = Modifier.size(20.dp)
             )
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Button(
-                onClick = onRequestPermission,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = colors.accent,
-                    contentColor = if (isOled) Color.Black else Color.White
-                ),
-                shape = AppRadius.roundShape,
-                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "Grant Storage Access",
-                        style = AppTheme.typography.captionStrong
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Icon(
-                        Icons.Outlined.ChevronRight,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.width(AppSpacing.small))
+            Text(
+                text = "Storage access required",
+                style = typography.bodyLargeStrong,
+                color = colors.ink
+            )
         }
+
+        Text(
+            text = "Grant All Files Access to browse and manage files across internal storage and SD cards.",
+            style = typography.caption,
+            color = colors.inkMuted,
+            modifier = Modifier.padding(
+                start = AppSpacing.screenPadding,
+                end = AppSpacing.screenPadding,
+                top = AppSpacing.xSmall,
+                bottom = AppSpacing.small
+            )
+        )
+
+        EditorialAction(
+            label = "Grant access",
+            onClick = onRequestPermission,
+            modifier = Modifier.padding(
+                start = AppSpacing.screenPadding,
+                end = AppSpacing.screenPadding,
+                bottom = AppSpacing.small
+            )
+        )
+
+        EditorialRule(
+            modifier = Modifier.padding(horizontal = AppSpacing.screenPadding),
+            thickness = AppSpacing.hairline,
+            color = colors.line
+        )
     }
 }
 
@@ -159,33 +154,30 @@ fun FileManagerCategoryChips(
     onCategorySelected: (FileCategory) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = LocalAppColors.current
-
     val categories = listOf(
-        Triple(FileCategory.DOWNLOADS, Icons.Outlined.Download, colors.accent),
-        Triple(FileCategory.DOCUMENTS, Icons.Outlined.Description, DocumentFormatColors.wordTint),
-        Triple(FileCategory.IMAGES, Icons.Outlined.Image, DocumentFormatColors.mediaTint),
-        Triple(FileCategory.VIDEOS, Icons.Outlined.Videocam, DocumentFormatColors.pptTint),
-        Triple(FileCategory.AUDIO, Icons.Outlined.AudioFile, DocumentFormatColors.excelTint),
-        Triple(FileCategory.APKS, Icons.Outlined.Android, colors.accent),
-        Triple(FileCategory.ARCHIVES, Icons.Outlined.FolderZip, DocumentFormatColors.zipTint),
-        Triple(FileCategory.LARGE_FILES, Icons.Outlined.DataUsage, DocumentFormatColors.pdfTint)
+        FileCategory.DOWNLOADS to Icons.Outlined.Download,
+        FileCategory.DOCUMENTS to Icons.Outlined.Description,
+        FileCategory.IMAGES to Icons.Outlined.Image,
+        FileCategory.VIDEOS to Icons.Outlined.Videocam,
+        FileCategory.AUDIO to Icons.Outlined.AudioFile,
+        FileCategory.APKS to Icons.Outlined.Android,
+        FileCategory.ARCHIVES to Icons.Outlined.FolderZip,
+        FileCategory.LARGE_FILES to Icons.Outlined.DataUsage
     )
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .horizontalScrollWithFade(rememberScrollState())
-            .padding(horizontal = AppSpacing.medium, vertical = AppSpacing.small),
+            .padding(horizontal = AppSpacing.screenPadding, vertical = AppSpacing.small),
         horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
     ) {
-        for ((cat, icon, tint) in categories) {
+        for ((cat, icon) in categories) {
             AppChip(
                 label = cat.displayName,
                 selected = activeCategory == cat,
                 onClick = { onCategorySelected(cat) },
-                leadingIcon = icon,
-                accentTint = tint
+                leadingIcon = icon
             )
         }
     }

@@ -2,6 +2,7 @@ package com.abhisheksati.mydoc.ui.filemanager
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.StorageItem
@@ -80,30 +82,28 @@ fun SingleItemActionBottomSheet(
                 .padding(horizontal = 20.dp, vertical = 10.dp)
         ) {
             // Header
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val (icon, tint) = getFileTypeIcon(item.fileType)
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(AppRadius.pillShape)
-                        .background(tint.copy(alpha = 0.15f))
-                ) {
-                    Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium)
+            ) {
+                Icon(
+                    imageVector = getFileTypeIcon(item.fileType),
+                    contentDescription = null,
+                    tint = colors.ink,
+                    modifier = Modifier.size(20.dp)
+                )
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = item.name,
-                        style = typography.bodyStrong,
-                        color = colors.textPrimary,
+                        style = typography.bodyLargeStrong,
+                        color = colors.ink,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = item.formattedSize,
-                        style = typography.micro,
-                        color = colors.textSecondary
+                        style = typography.caption,
+                        color = colors.inkMuted
                     )
                 }
             }
