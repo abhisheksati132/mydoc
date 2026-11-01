@@ -482,129 +482,19 @@ fun FileManagerScreen(
                                     )
 
                                     // Breadcrumb Trail or Category Banner
-                                    if (uiState.activeCategory != null) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 14.dp, vertical = 6.dp)
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(
-                                                    text = "Category: ${uiState.activeCategory?.displayName}",
-                                                    style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 14.sp),
-                                                    color = colors.accent
-                                                )
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Text(
-                                                    text = "(${displayedItems.size} items)",
-                                                    style = typography.caption.copy(fontSize = 12.sp),
-                                                    color = colors.textSecondary
-                                                )
-                                            }
-                                            IconButton(
-                                                onClick = {
-                                                    docSubCategoryFilter = "All"
-                                                    viewModel.selectCategory(null)
-                                                },
-                                                modifier = Modifier.size(40.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Outlined.Close,
-                                                    contentDescription = "Exit Category",
-                                                    tint = colors.textSecondary,
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                            }
-                                        }
-
-                                        // Sub-category filters for documents (PDF, Word, Excel, PPT, Text)
-                                        if (uiState.activeCategory == FileCategory.DOCUMENTS) {
-                                            val docFilters = listOf("All", "PDF", "Word", "Excel", "PPT", "Text")
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .horizontalScroll(rememberScrollState())
-                                                    .padding(horizontal = 14.dp, vertical = 4.dp),
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                            ) {
-                                                docFilters.forEach { label ->
-                                                    val isSelected = docSubCategoryFilter == label
-                                                    val chipBg by animateColorAsState(
-                                                        targetValue = if (isSelected) colors.accent.copy(alpha = 0.16f) else colors.surfaceContainer,
-                                                        animationSpec = tween(durationMillis = 200),
-                                                        label = "fileFilterBg"
-                                                    )
-                                                    val chipText by animateColorAsState(
-                                                        targetValue = if (isSelected) colors.accent else colors.textSecondary,
-                                                        animationSpec = tween(durationMillis = 200),
-                                                        label = "fileFilterText"
-                                                    )
-
-                                                    Surface(
-                                                        shape = AppRadius.pillShape,
-                                                        color = chipBg,
-                                                        border = BorderStroke(0.5.dp, if (isSelected) colors.accent.copy(alpha = 0.35f) else colors.line),
-                                                        modifier = Modifier
-                                                            .clip(AppRadius.pillShape)
-                                                            .pressScaleEffect(onClick = { docSubCategoryFilter = label })
-                                                    ) {
-                                                        Text(
-                                                            text = label,
-                                                            style = typography.caption.copy(
-                                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                                fontSize = 12.sp
-                                                            ),
-                                                            color = chipText,
-                                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    } else {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .horizontalScroll(rememberScrollState())
-                                                .padding(horizontal = 14.dp, vertical = 6.dp)
-                                        ) {
-                                            uiState.breadcrumbTrail.forEachIndexed { index, crumb ->
-                                                val isLast = index == uiState.breadcrumbTrail.size - 1
-                                                val volumeForCrumb = uiState.storageVolumes.firstOrNull { it.path == crumb.absolutePath }
-                                                val crumbName = when {
-                                                    volumeForCrumb != null -> volumeForCrumb.title
-                                                    crumb.absolutePath == "/storage/emulated/0" -> "Internal Storage"
-                                                    index == 0 -> "Storage"
-                                                    else -> crumb.name
-                                                }
-
-                                                Text(
-                                                    text = crumbName,
-                                                    style = typography.body.copy(
-                                                        fontWeight = if (isLast) FontWeight.Bold else FontWeight.Normal,
-                                                        fontSize = 13.sp
-                                                    ),
-                                                    color = if (isLast) colors.accent else colors.textSecondary,
-                                                    modifier = Modifier
-                                                        .clip(RoundedCornerShape(6.dp))
-                                                        .clickable { viewModel.navigateToCrumb(crumb) }
-                                                        .padding(horizontal = 6.dp, vertical = 4.dp)
-                                                )
-
-                                                if (!isLast) {
-                                                    Icon(
-                                                        imageVector = Icons.Outlined.ChevronRight,
-                                                        contentDescription = null,
-                                                        tint = colors.divider,
-                                                        modifier = Modifier.size(14.dp)
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
+                                    FileManagerBreadcrumbBar(
+                                        activeCategory = uiState.activeCategory,
+                                        displayedItemsCount = displayedItems.size,
+                                        onClearCategory = {
+                                            docSubCategoryFilter = "All"
+                                            viewModel.selectCategory(null)
+                                        },
+                                        docSubCategoryFilter = docSubCategoryFilter,
+                                        onDocSubCategoryFilterSelected = { docSubCategoryFilter = it },
+                                        breadcrumbTrail = uiState.breadcrumbTrail,
+                                        storageVolumes = uiState.storageVolumes,
+                                        onNavigateToCrumb = { viewModel.navigateToCrumb(it) }
+                                    )
                                 }
                             }
                         } else null
