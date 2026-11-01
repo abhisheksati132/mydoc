@@ -1,13 +1,15 @@
 package com.abhisheksati.mydoc.ui.home
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,9 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.automirrored.outlined.MergeType
@@ -33,12 +33,8 @@ import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Slideshow
 import androidx.compose.material.icons.outlined.TableChart
 import androidx.compose.material.icons.outlined.Videocam
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,38 +42,36 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.animation.documentHero
 import com.abhisheksati.mydoc.designsystem.animation.documentHeroKey
 import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
+import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
+import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
 import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
 import com.abhisheksati.mydoc.designsystem.components.DocumentFilterChips
-import com.abhisheksati.mydoc.designsystem.components.horizontalScrollWithFade
+import com.abhisheksati.mydoc.designsystem.components.EditorialAction
+import com.abhisheksati.mydoc.designsystem.components.EditorialRow
+import com.abhisheksati.mydoc.designsystem.components.EditorialRule
 import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
-import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.DocumentFilter
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.LibraryItem
-import com.abhisheksati.mydoc.domain.model.MediaKind
 import com.abhisheksati.mydoc.tools.model.PdfTool
 
 /**
- * Editorial Document Studio Home Dashboard:
- * 1. Confident typography: Split wordmark `My` (light) + `Doc` (ExtraBold Ink-Violet).
- * 2. High-density Quick Actions strip (Scan, Merge, Compress, Sign, Img to PDF).
- * 3. Editorial "Jump Back In / Now Reading" card with authentic document badging.
- * 4. Inset-grouped document feed with 0.5dp hairline borders and middle-truncated filenames.
+ * The home page, set like a printed index:
+ * masthead and rule, a four-cell action band, folio 01 for the document in progress,
+ * folio 02 for the recent list. Everything below the masthead is rules, type and
+ * white space; there are no cards, tiles or coloured containers on this page.
  */
 @Composable
 fun HomeTabContent(
@@ -101,6 +95,7 @@ fun HomeTabContent(
     val filteredRecentItems = remember(recentItems, selectedDocumentFilter) {
         recentItems.filter { selectedDocumentFilter.matches(it.extension) }
     }
+    val continueItem = continueItems.firstOrNull()
 
     if (showClearRecentDialog) {
         AppDialog(
@@ -122,7 +117,6 @@ fun HomeTabContent(
             .fillMaxSize()
             .background(colors.background)
     ) {
-        // 1. Persistent Editorial Top Bar
         AppTabHeader(
             title = "MyDoc",
             titleContent = {
@@ -148,262 +142,108 @@ fun HomeTabContent(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = AppSpacing.large)
         ) {
-            // 2. High-Density Quick Actions Strip
-            item(key = "quick_actions_bar") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScrollWithFade(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Primary Action: Scan Document
-                    Surface(
-                        shape = AppRadius.pillShape,
-                        color = colors.accent,
-                        modifier = Modifier.pressScaleEffect(onClick = onScanClick)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.CameraAlt,
-                                contentDescription = null,
-                                tint = colors.onAccent,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(7.dp))
-                            Text(
-                                text = "Scan Document",
-                                style = typography.bodyStrong,
-                                color = colors.onAccent
-                            )
-                        }
-                    }
-
-                    // Secondary Editorial Action Pills
-                    EditorialActionPill(
-                        title = "Merge",
-                        icon = Icons.AutoMirrored.Outlined.MergeType,
-                        onClick = { onToolClick(PdfTool.MERGE) }
-                    )
-
-                    EditorialActionPill(
-                        title = "Compress",
-                        icon = Icons.Outlined.Compress,
-                        onClick = { onToolClick(PdfTool.COMPRESS) }
-                    )
-
-                    EditorialActionPill(
-                        title = "Sign",
-                        icon = Icons.Outlined.Draw,
-                        onClick = { onToolClick(PdfTool.SIGN_PDF) }
-                    )
-
-                    EditorialActionPill(
-                        title = "Img to PDF",
-                        icon = Icons.Outlined.PictureAsPdf,
-                        onClick = { onToolClick(PdfTool.IMAGE_TO_PDF) }
-                    )
-                }
+            item(key = "action_band") {
+                ActionBand(
+                    onScanClick = onScanClick,
+                    onToolClick = onToolClick
+                )
             }
 
-            // 3. Editorial "Jump Back In / Now Reading" Card
-            val continueItem = continueItems.firstOrNull()
             if (continueItem != null) {
-                item(key = "resume_reading_card") {
-                    Surface(
-                        shape = AppRadius.cardShape,
-                        color = colors.surface,
-                        border = BorderStroke(0.5.dp, colors.line),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                            .documentHero(documentHeroKey(continueItem.uri))
-                            .pressScaleEffect(onClick = { onItemClick(continueItem) })
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            val tint = DocumentFormatColors.getTint(continueItem.extension)
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(AppRadius.microShape)
-                                    .background(tint.copy(alpha = if (AppTheme.isDark) 0.16f else 0.10f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = getDocumentFormatIcon(continueItem.extension),
-                                    contentDescription = null,
-                                    tint = tint,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "NOW READING",
-                                        style = typography.overline,
-                                        color = colors.accent
-                                    )
-                                    if (continueItem.progressFraction > 0f) {
-                                        val pct = (continueItem.progressFraction * 100).toInt()
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = "• $pct%",
-                                            style = typography.caption.withTabularFigures(),
-                                            color = colors.inkMuted
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = formatMiddleTruncated(continueItem.name, 34),
-                                    style = typography.bodyStrong,
-                                    color = colors.ink,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                if (continueItem.progressFraction > 0f) {
-                                    Spacer(modifier = Modifier.height(5.dp))
-                                    LinearProgressIndicator(
-                                        progress = { continueItem.progressFraction },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(2.5.dp)
-                                            .clip(AppRadius.roundShape),
-                                        color = colors.accent,
-                                        trackColor = colors.surfaceMuted
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.width(10.dp))
-
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
-                                contentDescription = null,
-                                tint = colors.accent,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(6.dp))
-                }
-            }
-
-            // 4. Recents Header
-            item(key = "recents_header") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Recent documents",
-                        style = typography.heading,
-                        color = colors.ink
+                item(key = "continue_header") {
+                    AppSectionHeader(
+                        title = "Continue reading",
+                        index = "01",
+                        showRule = false
                     )
-                    if (recentItems.isNotEmpty()) {
-                        TextButton(
-                            onClick = { showClearRecentDialog = true },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                        ) {
-                            Text(
-                                text = "Clear",
-                                style = typography.captionStrong.copy(color = colors.accent)
-                            )
-                        }
-                    }
+                }
+                item(key = "continue_row") {
+                    ContinueReadingRow(
+                        item = continueItem,
+                        onClick = { onItemClick(continueItem) }
+                    )
                 }
             }
 
-            // 5. Document Format Filters
+            item(key = "recent_header") {
+                AppSectionHeader(
+                    title = "Recent documents",
+                    index = if (continueItem != null) "02" else "01",
+                    showRule = false,
+                    action = if (recentItems.isNotEmpty()) {
+                        {
+                            EditorialAction(
+                                label = "Clear",
+                                onClick = { showClearRecentDialog = true }
+                            )
+                        }
+                    } else null
+                )
+            }
+
             item(key = "filter_chips") {
                 DocumentFilterChips(
                     selected = selectedDocumentFilter,
                     onSelected = { selectedDocumentFilter = it },
-                    modifier = Modifier.padding(horizontal = AppSpacing.medium)
+                    modifier = Modifier.padding(
+                        start = AppSpacing.screenPadding,
+                        end = AppSpacing.screenPadding,
+                        bottom = AppSpacing.small
+                    )
                 )
-                Spacer(modifier = Modifier.height(AppSpacing.small))
             }
 
-            // 6. Content-First: Inset-Grouped List
             if (filteredRecentItems.isEmpty()) {
                 item(key = "empty_recents") {
-                    Surface(
-                        shape = AppRadius.cardShape,
-                        color = colors.surface,
-                        border = BorderStroke(0.5.dp, colors.line),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 36.dp, horizontal = 24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.InsertDriveFile,
-                                contentDescription = null,
-                                tint = colors.inkMuted.copy(alpha = 0.35f),
-                                modifier = Modifier.size(36.dp)
-                            )
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Text(
-                                text = if (selectedDocumentFilter == DocumentFilter.ALL) "No recent documents" else "No ${selectedDocumentFilter.label} files found",
-                                style = typography.bodyStrong,
-                                color = colors.ink
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = if (selectedDocumentFilter == DocumentFilter.ALL) "Documents you open or scan will appear here" else "Open a ${selectedDocumentFilter.label} file to view it here",
-                                style = typography.caption,
-                                color = colors.inkMuted
-                            )
-                        }
+                    if (selectedDocumentFilter == DocumentFilter.ALL) {
+                        AppEmptyState(
+                            title = "Nothing here yet",
+                            message = "Scan a page or open a file and it will be listed here.",
+                            actionLabel = "Scan a document",
+                            onActionClick = onScanClick
+                        )
+                    } else {
+                        AppEmptyState(
+                            title = "No ${selectedDocumentFilter.label} files",
+                            message = "This page of the index is empty.",
+                            actionLabel = "Show all",
+                            onActionClick = { selectedDocumentFilter = DocumentFilter.ALL }
+                        )
                     }
                 }
             } else {
-                item(key = "recent_items_group") {
-                    Surface(
-                        shape = AppRadius.cardShape,
-                        color = colors.surface,
-                        border = BorderStroke(0.5.dp, colors.line),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    ) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            filteredRecentItems.forEachIndexed { index, item ->
-                                if (index > 0) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(start = 58.dp),
-                                        thickness = 0.5.dp,
-                                        color = colors.line
-                                    )
-                                }
-                                RecentItemRow(
-                                    item = item,
-                                    isHero = item.kind == MediaKind.DOCUMENT && item.uri != continueItem?.uri,
-                                    onClick = { onItemClick(item) }
-                                )
-                            }
+                items(
+                    count = filteredRecentItems.size,
+                    key = { index -> filteredRecentItems[index].uri }
+                ) { index ->
+                    val item = filteredRecentItems[index]
+                    EditorialRow(
+                        title = formatMiddleTruncated(item.name, 40),
+                        meta = itemMeta(item),
+                        leading = {
+                            Icon(
+                                imageVector = getDocumentFormatIcon(item.extension),
+                                contentDescription = null,
+                                tint = colors.inkMuted,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        trailing = {
+                            Icon(
+                                imageVector = Icons.Outlined.ChevronRight,
+                                contentDescription = null,
+                                tint = colors.inkMuted,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        },
+                        onClick = { onItemClick(item) },
+                        divider = index < filteredRecentItems.lastIndex,
+                        modifier = if (item.uri != continueItem?.uri) {
+                            Modifier.documentHero(documentHeroKey(item.uri))
+                        } else {
+                            Modifier
                         }
-                    }
+                    )
                 }
             }
         }
@@ -411,136 +251,209 @@ fun HomeTabContent(
 }
 
 /**
- * Editorial Action Pill for compact action strip.
+ * Four fixed cells, divided by hairlines and closed by a full-bleed rule.
+ * Every action is visible at once: nothing scrolls sideways and nothing is clipped.
  */
 @Composable
-private fun EditorialActionPill(
-    title: String,
-    icon: ImageVector,
-    onClick: () -> Unit
+private fun ActionBand(
+    onScanClick: () -> Unit,
+    onToolClick: (PdfTool) -> Unit
 ) {
     val colors = AppTheme.colors
-    val typography = AppTheme.typography
 
-    Surface(
-        shape = AppRadius.pillShape,
-        color = colors.surfaceContainer,
-        border = BorderStroke(AppSpacing.hairline, colors.line),
-        modifier = Modifier.pressScaleEffect(onClick = onClick)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = AppSpacing.small)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(AppSpacing.objectRowHeight + 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = colors.ink,
-                modifier = Modifier.size(15.dp)
+            ActionCell(
+                label = "Scan",
+                icon = Icons.Outlined.CameraAlt,
+                primary = true,
+                onClick = onScanClick
             )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = title,
-                style = typography.captionStrong,
-                color = colors.ink
+            ActionDivider()
+            ActionCell(
+                label = "Merge",
+                icon = Icons.AutoMirrored.Outlined.MergeType,
+                onClick = { onToolClick(PdfTool.MERGE) }
+            )
+            ActionDivider()
+            ActionCell(
+                label = "Compress",
+                icon = Icons.Outlined.Compress,
+                onClick = { onToolClick(PdfTool.COMPRESS) }
+            )
+            ActionDivider()
+            ActionCell(
+                label = "Sign",
+                icon = Icons.Outlined.Draw,
+                onClick = { onToolClick(PdfTool.SIGN_PDF) }
             )
         }
+        EditorialRule(thickness = AppSpacing.hairline, color = colors.line)
     }
 }
 
+@Composable
+private fun RowScope.ActionCell(
+    label: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    primary: Boolean = false
+) {
+    val colors = AppTheme.colors
+    val typography = AppTheme.typography
+
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .fillMaxHeight()
+            .pressScaleEffect(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (primary) colors.accent else colors.ink,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.height(AppSpacing.small))
+        Text(
+            text = label,
+            style = typography.captionStrong,
+            color = colors.ink,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun ActionDivider() {
+    val colors = AppTheme.colors
+    Box(
+        modifier = Modifier
+            .width(AppSpacing.hairline)
+            .height(AppSpacing.large)
+            .background(colors.line)
+    )
+}
+
 /**
- * Clean Inset-Grouped Document Row:
- * Uses authentic format color, tabular figures, and middle-truncated titles.
+ * The document in progress: one ruled row, a hanging glyph, and a two-stroke gauge
+ * that shows how much is left. The gauge is the only accent on the page.
  */
 @Composable
-private fun RecentItemRow(
+private fun ContinueReadingRow(
     item: LibraryItem,
-    isHero: Boolean,
     onClick: () -> Unit
 ) {
     val colors = AppTheme.colors
     val typography = AppTheme.typography
-    val formatTint = DocumentFormatColors.getTint(item.extension)
+    val geometryModifier = Modifier.documentHero(documentHeroKey(item.uri))
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (isHero) Modifier.documentHero(documentHeroKey(item.uri)) else Modifier)
+            .then(geometryModifier)
             .pressScaleEffect(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 11.dp),
-        verticalAlignment = Alignment.CenterVertically
     ) {
-        // Authentic format badge (crisp solid tint with subtle surface tint)
-        Box(
+        Row(
             modifier = Modifier
-                .size(38.dp)
-                .clip(AppRadius.microShape)
-                .background(formatTint.copy(alpha = if (AppTheme.isDark) 0.16f else 0.10f)),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = AppSpacing.objectRowHeight)
+                .padding(horizontal = AppSpacing.screenPadding, vertical = AppSpacing.small),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium)
         ) {
             Icon(
                 imageVector = getDocumentFormatIcon(item.extension),
                 contentDescription = null,
-                tint = formatTint,
+                tint = colors.ink,
                 modifier = Modifier.size(20.dp)
             )
-        }
 
-        Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = formatMiddleTruncated(item.name, 40),
+                    style = typography.bodyLargeStrong,
+                    color = colors.ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = itemMeta(item),
+                    style = typography.caption.withTabularFigures(),
+                    color = colors.inkMuted,
+                    maxLines = 1
+                )
+            }
 
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = formatMiddleTruncated(item.name, 36),
-                style = typography.bodyStrong,
-                color = colors.ink,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+            Icon(
+                imageVector = Icons.Outlined.ChevronRight,
+                contentDescription = null,
+                tint = colors.inkMuted,
+                modifier = Modifier.size(16.dp)
             )
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = item.extension.uppercase(),
-                    style = typography.micro,
-                    color = formatTint
-                )
-                Spacer(modifier = Modifier.width(5.dp))
-                Text(
-                    text = "•",
-                    style = typography.micro,
-                    color = colors.inkMuted
-                )
-                Spacer(modifier = Modifier.width(5.dp))
-                Text(
-                    text = item.formattedSize,
-                    style = typography.micro.withTabularFigures(),
-                    color = colors.inkMuted
-                )
-            }
-
-            if (item.progressFraction > 0f) {
-                Spacer(modifier = Modifier.height(5.dp))
-                LinearProgressIndicator(
-                    progress = { item.progressFraction },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(2.5.dp)
-                        .clip(AppRadius.roundShape),
-                    color = colors.accent,
-                    trackColor = colors.surfaceMuted
-                )
-            }
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Icon(
-            imageVector = Icons.Outlined.ChevronRight,
-            contentDescription = null,
-            tint = colors.inkMuted.copy(alpha = 0.3f),
-            modifier = Modifier.size(16.dp)
+        ProgressGauge(
+            fraction = item.progressFraction,
+            modifier = Modifier.padding(
+                start = AppSpacing.screenPadding,
+                end = AppSpacing.screenPadding,
+                top = AppSpacing.small
+            )
         )
+
+        Spacer(modifier = Modifier.height(AppSpacing.small))
+        EditorialRule(
+            modifier = Modifier.padding(horizontal = AppSpacing.screenPadding),
+            thickness = AppSpacing.hairline,
+            color = colors.line
+        )
+    }
+}
+
+@Composable
+private fun ProgressGauge(
+    fraction: Float,
+    modifier: Modifier = Modifier
+) {
+    val colors = AppTheme.colors
+
+    if (fraction <= 0f) return
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(AppSpacing.rule)
+            .background(colors.track)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(fraction.coerceIn(0f, 1f))
+                .background(colors.accent)
+        )
+    }
+}
+
+private fun itemMeta(item: LibraryItem): String {
+    val extension = item.extension.uppercase()
+    val percent = (item.progressFraction * 100).toInt()
+    return if (percent > 0) {
+        "$extension · ${item.formattedSize} · $percent%"
+    } else {
+        "$extension · ${item.formattedSize}"
     }
 }
 
