@@ -1,0 +1,720 @@
+package com.abhisheksati.mydoc.ui.viewer.presentation
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import com.abhisheksati.mydoc.rendering.engine.presentation.PptxSlide
+import com.abhisheksati.mydoc.rendering.engine.presentation.VisualElementType
+
+/**
+ * Renders the slide canvas with all its visual elements: images, shapes, diagrams, and tables.
+ */
+@Composable
+fun VisualSlideCard(
+    slide: PptxSlide,
+    cardBgColor: Color,
+    defaultTextColor: Color,
+    highlightQuery: String = ""
+) {
+    val slideBg = slide.backgroundColor ?: cardBgColor
+    val isBgDark = slideBg.isColorDark()
+    val baseContentColor = if (isBgDark) Color(0xFFF1F5F9) else Color(0xFF1E293B)
+
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        val containerAspect = if (maxHeight.value > 0f && maxWidth.value.isFinite() && maxHeight.value.isFinite()) {
+            maxWidth / maxHeight
+        } else (16f / 9f)
+        val slideAspect = if (slide.aspectRatio.isFinite() && slide.aspectRatio > 0.1f) slide.aspectRatio else (16f / 9f)
+        val cardModifier = if (containerAspect > slideAspect) {
+            Modifier
+                .fillMaxHeight()
+                .aspectRatio(slideAspect)
+        } else {
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(slideAspect)
+        }
+
+        Box(
+            modifier = cardModifier
+                .clip(RoundedCornerShape(24.dp))
+                .background(cardBgColor.copy(alpha = 0.5f))
+                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(24.dp))
+                .padding(6.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(slideBg, RoundedCornerShape(18.dp))
+                    .border(0.5.dp, Color.Black.copy(alpha = 0.06f), RoundedCornerShape(18.dp))
+                    .clip(RoundedCornerShape(18.dp))
+            ) {
+                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                    val totalWidth = maxWidth
+                    val totalHeight = maxHeight
+                    val referenceHeight = 540f
+                    val rawScale = if (totalHeight.value.isFinite() && totalHeight.value > 0f) totalHeight.value / referenceHeight else 1f
+                    val scaleFactor = rawScale.coerceIn(0.55f, 2.5f)
+
+                    if (slide.visualElements.isEmpty()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(AppSpacing.paddingLarge),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            if (slide.title.isNotEmpty()) {
+                                Text(
+                                    text = slide.title,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = defaultTextColor,
+                                    textAlign = TextAlign.Center,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+                            for (line in slide.content) {
+                                Text(
+                                    text = line,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = defaultTextColor,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                        }
+                    } else {
+                        for (element in slide.visualElements) {
+                            val bLeft = if (element.bounds.left.isFinite()) element.bounds.left.coerceIn(0f, 1f) else 0f
+                            val bTop = if (element.bounds.top.isFinite()) element.bounds.top.coerceIn(0f, 1f) else 0f
+                            val bWidth = if (element.bounds.width.isFinite()) element.bounds.width.coerceIn(0.001f, 1f) else 0.5f
+                            val bHeight = if (element.bounds.height.isFinite()) element.bounds.height.coerceIn(0.001f, 1f) else 0.5f
+
+                            val elementWidth = (totalWidth * bWidth).coerceAtLeast(1.dp)
+                            val elementHeight = (totalHeight * bHeight).coerceAtLeast(1.dp)
+                            val offsetX = totalWidth * bLeft
+                            val offsetY = totalHeight * bTop
+                            val isText = element.type == VisualElementType.TEXT_BOX || (element.type == VisualElementType.SHAPE && element.paragraphs.isNotEmpty())
+
+                            Box(
+                                modifier = Modifier
+                                    .offset(x = offsetX, y = offsetY)
+                                    .then(
+                                        if (isText) {
+                                            Modifier.width(elementWidth).heightIn(min = elementHeight)
+                                        } else {
+                                            Modifier.size(width = elementWidth, height = elementHeight).clipToBounds()
+                                        }
+                                    )
+                            ) {
+                                when (element.type) {
+                                    VisualElementType.IMAGE -> {
+                                        val bytes = element.imageBytes
+                                        if (bytes != null && bytes.isNotEmpty()) {
+                                            AsyncImage(
+                                                model = ImageRequest.Builder(LocalContext.current)
+                                                    .data(bytes)
+                                                    .crossfade(true)
+                                                    .build(),
+                                                contentDescription = "Slide Image",
+                                                contentScale = ContentScale.Fit,
+                                                modifier = Modifier.fillMaxSize()
+                                            )
+                                        }
+                                    }
+
+                                    VisualElementType.SHAPE, VisualElementType.TEXT_BOX -> {
+                                        val preset = element.shapePreset
+                                        val isVectorPreset = preset != null && (
+                                            preset.contains("Arrow", ignoreCase = true) ||
+                                            preset.contains("triangle", ignoreCase = true) ||
+                                            preset.contains("diamond", ignoreCase = true) ||
+                                            preset.contains("star", ignoreCase = true) ||
+                                            preset.contains("chevron", ignoreCase = true) ||
+                                            preset.contains("pentagon", ignoreCase = true) ||
+                                            preset.contains("hexagon", ignoreCase = true) ||
+                                            preset.contains("callout", ignoreCase = true) ||
+                                            preset.contains("line", ignoreCase = true) ||
+                                            preset.contains("connector", ignoreCase = true)
+                                        )
+
+                                        val containerBg = if (element.backgroundColor != null && element.backgroundColor != Color.Transparent) {
+                                            element.backgroundColor!!
+                                        } else {
+                                            slideBg
+                                        }
+
+                                        if (preset != null && isVectorPreset) {
+                                            Canvas(modifier = Modifier.fillMaxSize()) {
+                                                val bg = element.backgroundColor ?: Color(0x22888888)
+                                                val border = element.borderColor ?: Color(0x44888888)
+                                                drawPresetShape(preset, bg, border)
+                                            }
+                                        }
+
+                                        val shapeModifier = (if (isText) Modifier.fillMaxWidth().heightIn(min = elementHeight) else Modifier.fillMaxSize())
+                                            .then(
+                                                if (!isVectorPreset && element.backgroundColor != null && element.backgroundColor != Color.Transparent) {
+                                                    Modifier.background(
+                                                        color = element.backgroundColor,
+                                                        shape = if (element.isRounded) RoundedCornerShape(8.dp) else if (element.isEllipse) CircleShape else RectangleShape
+                                                    )
+                                                } else Modifier
+                                            )
+                                            .then(
+                                                if (!isVectorPreset && element.borderColor != null) {
+                                                    Modifier.border(
+                                                        width = (element.borderWidthDp.takeIf { it > 0f } ?: 1f).dp,
+                                                        color = element.borderColor,
+                                                        shape = if (element.isRounded) RoundedCornerShape(8.dp) else if (element.isEllipse) CircleShape else RectangleShape
+                                                    )
+                                                } else Modifier
+                                            )
+                                            .padding(horizontal = 4.dp, vertical = 2.dp)
+
+                                        val paraCount = element.paragraphs.size
+                                        val autoFitScale = if (paraCount >= 4 && element.bounds.height < 0.35f) 0.85f else 1.0f
+                                        val elementScale = scaleFactor * autoFitScale
+                                        val isSingleTitle = paraCount == 1 && element.bounds.height < 0.22f
+
+                                        Box(
+                                            modifier = shapeModifier,
+                                            contentAlignment = if (isSingleTitle) Alignment.Center else Alignment.TopStart
+                                        ) {
+                                            Column(
+                                                modifier = if (isText) Modifier.fillMaxWidth() else Modifier.fillMaxSize(),
+                                                verticalArrangement = if (isSingleTitle) Arrangement.Center else Arrangement.Top
+                                            ) {
+                                                for ((pIdx, para) in element.paragraphs.withIndex()) {
+                                                    val indentSpaces = "   ".repeat(para.indentLevel.coerceIn(0, 5))
+                                                    val bulletStr = when {
+                                                        para.isBullet || para.bulletChar != null -> {
+                                                            val symbol = para.bulletChar ?: "•"
+                                                            "$indentSpaces$symbol "
+                                                        }
+                                                        para.indentLevel > 0 -> indentSpaces
+                                                        else -> ""
+                                                    }
+
+                                                    val firstRun = para.runs.firstOrNull()
+                                                    val bulletColor = ensureTextLegibility(firstRun?.color, containerBg)
+                                                    val bulletSize = ((firstRun?.fontSizeSp ?: 14f) * elementScale).coerceIn(8f, 44f).sp
+
+                                                    val annotated = buildAnnotatedString {
+                                                        if (bulletStr.isNotEmpty()) {
+                                                            withStyle(
+                                                                SpanStyle(
+                                                                    color = bulletColor,
+                                                                    fontSize = bulletSize,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    fontFamily = mapFontFamily(firstRun?.fontFamily)
+                                                                )
+                                                            ) {
+                                                                append(bulletStr)
+                                                            }
+                                                        }
+
+                                                        for (run in para.runs) {
+                                                            val runColor = ensureTextLegibility(run.color, containerBg)
+                                                            val isMatch = highlightQuery.length >= 2 && run.text.contains(highlightQuery, ignoreCase = true)
+                                                            val scaledSp = (run.fontSizeSp * elementScale).coerceIn(8f, 44f).sp
+
+                                                            val textDec = when {
+                                                                run.isUnderline && run.isStrikeThrough -> TextDecoration.combine(listOf(TextDecoration.Underline, TextDecoration.LineThrough))
+                                                                run.isUnderline -> TextDecoration.Underline
+                                                                run.isStrikeThrough -> TextDecoration.LineThrough
+                                                                else -> TextDecoration.None
+                                                            }
+
+                                                            withStyle(
+                                                                SpanStyle(
+                                                                    color = runColor,
+                                                                    fontSize = scaledSp,
+                                                                    fontWeight = if (run.isBold) FontWeight.Bold else FontWeight.Normal,
+                                                                    fontStyle = if (run.isItalic) FontStyle.Italic else FontStyle.Normal,
+                                                                    fontFamily = mapFontFamily(run.fontFamily),
+                                                                    textDecoration = textDec,
+                                                                    background = if (isMatch) Color(0x66FFEB3B) else Color.Transparent
+                                                                )
+                                                            ) {
+                                                                append(run.text)
+                                                            }
+                                                        }
+                                                    }
+
+                                                    if (annotated.isNotEmpty()) {
+                                                        val baseSp = ((firstRun?.fontSizeSp ?: 14f) * elementScale).coerceIn(8f, 44f)
+                                                        Text(
+                                                            text = annotated,
+                                                            textAlign = para.alignment,
+                                                            lineHeight = (baseSp * 1.25f).sp,
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .padding(bottom = if (pIdx < element.paragraphs.size - 1) 3.dp else 0.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    VisualElementType.TABLE -> {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(Color(0x11000000), RoundedCornerShape(4.dp))
+                                                .border(1.dp, Color(0x33888888), RoundedCornerShape(4.dp))
+                                                .padding(4.dp)
+                                        ) {
+                                            for (row in element.tableRows) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    for (cellText in row) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .weight(1f)
+                                                                .border(0.5.dp, Color(0x22888888))
+                                                                .padding(2.dp)
+                                                        ) {
+                                                            HighlightableText(
+                                                                text = cellText,
+                                                                query = highlightQuery,
+                                                                fontSize = (10f * scaleFactor).coerceIn(7f, 16f).sp,
+                                                                color = ensureTextLegibility(defaultTextColor, slideBg)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Outline mode: Clean bullet-point summary of slide text with keyword highlighting.
+ */
+@Composable
+fun OutlineSlideCard(
+    slide: PptxSlide,
+    cardBgColor: Color,
+    textColor: Color,
+    highlightQuery: String = ""
+) {
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        val containerAspect = if (maxHeight.value > 0f && maxWidth.value.isFinite() && maxHeight.value.isFinite()) {
+            maxWidth / maxHeight
+        } else (16f / 9f)
+        val slideAspect = if (slide.aspectRatio.isFinite() && slide.aspectRatio > 0.1f) slide.aspectRatio else (16f / 9f)
+        val cardModifier = if (containerAspect > slideAspect) {
+            Modifier
+                .fillMaxHeight()
+                .aspectRatio(slideAspect)
+        } else {
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(slideAspect)
+        }
+
+        Box(
+            modifier = cardModifier
+                .clip(RoundedCornerShape(24.dp))
+                .background(cardBgColor.copy(alpha = 0.5f))
+                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(24.dp))
+                .padding(6.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(cardBgColor, RoundedCornerShape(18.dp))
+                    .border(0.5.dp, Color.Black.copy(alpha = 0.06f), RoundedCornerShape(18.dp))
+                    .clip(RoundedCornerShape(18.dp))
+                    .padding(AppSpacing.paddingLarge)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    HighlightableText(
+                        text = slide.title,
+                        query = highlightQuery,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textColor,
+                        modifier = Modifier.padding(bottom = AppSpacing.paddingMedium)
+                    )
+
+                    val allPoints = if (slide.content.isNotEmpty()) {
+                        slide.content
+                    } else {
+                        slide.visualElements
+                            .flatMap { it.paragraphs }
+                            .map { it.plainText.trim() }
+                            .filter { it.isNotBlank() && it != slide.title }
+                    }
+
+                    if (allPoints.isEmpty()) {
+                        Text(
+                            text = "No additional bullet points on this slide.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = textColor.copy(alpha = 0.5f),
+                            fontStyle = FontStyle.Italic,
+                            modifier = Modifier.padding(top = AppSpacing.paddingSmall)
+                        )
+                    } else {
+                        for (item in allPoints) {
+                            Row(modifier = Modifier.padding(vertical = 2.dp)) {
+                                Text(
+                                    text = "• ",
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontSize = 15.sp
+                                )
+                                HighlightableText(
+                                    text = item,
+                                    query = highlightQuery,
+                                    fontSize = 15.sp,
+                                    color = textColor
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Text composable that highlights matched search keywords in yellow.
+ */
+@Composable
+fun HighlightableText(
+    text: String,
+    query: String,
+    fontSize: androidx.compose.ui.unit.TextUnit,
+    fontWeight: FontWeight = FontWeight.Normal,
+    fontStyle: FontStyle = FontStyle.Normal,
+    fontFamily: FontFamily = FontFamily.Default,
+    textDecoration: TextDecoration = TextDecoration.None,
+    color: Color,
+    textAlign: TextAlign = TextAlign.Start,
+    modifier: Modifier = Modifier
+) {
+    if (query.isNotBlank() && query.length >= 2 && text.contains(query, ignoreCase = true)) {
+        val annotated = buildAnnotatedString {
+            var searchStart = 0
+            val lowerText = text.lowercase()
+            val lowerQuery = query.lowercase()
+
+            while (searchStart < text.length) {
+                val matchIdx = lowerText.indexOf(lowerQuery, searchStart)
+                if (matchIdx == -1) {
+                    append(text.substring(searchStart))
+                    break
+                }
+                if (matchIdx > searchStart) {
+                    append(text.substring(searchStart, matchIdx))
+                }
+                val endIdx = minOf(matchIdx + query.length, text.length)
+                withStyle(
+                    SpanStyle(
+                        background = Color(0x99FFEB3B),
+                        color = Color(0xFF1E293B),
+                        fontWeight = fontWeight,
+                        fontStyle = fontStyle,
+                        fontFamily = fontFamily,
+                        textDecoration = textDecoration
+                    )
+                ) {
+                    append(text.substring(matchIdx, endIdx))
+                }
+                searchStart = endIdx
+            }
+        }
+        Text(
+            text = annotated,
+            fontSize = fontSize,
+            fontWeight = fontWeight,
+            fontStyle = fontStyle,
+            fontFamily = fontFamily,
+            textDecoration = textDecoration,
+            textAlign = textAlign,
+            modifier = modifier
+        )
+    } else {
+        Text(
+            text = text,
+            fontSize = fontSize,
+            fontWeight = fontWeight,
+            fontStyle = fontStyle,
+            fontFamily = fontFamily,
+            textDecoration = textDecoration,
+            color = color,
+            textAlign = textAlign,
+            modifier = modifier
+        )
+    }
+}
+
+/**
+ * Helper to draw Microsoft preset vector shapes using Canvas & Path.
+ */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPresetShape(
+    preset: String,
+    bg: Color,
+    border: Color
+) {
+    val path = Path()
+    val w = size.width
+    val h = size.height
+
+    when {
+        preset.contains("rightArrow", ignoreCase = true) -> {
+            path.moveTo(0f, h * 0.25f)
+            path.lineTo(w * 0.6f, h * 0.25f)
+            path.lineTo(w * 0.6f, 0f)
+            path.lineTo(w, h * 0.5f)
+            path.lineTo(w * 0.6f, h)
+            path.lineTo(w * 0.6f, h * 0.75f)
+            path.lineTo(0f, h * 0.75f)
+            path.close()
+        }
+        preset.contains("leftArrow", ignoreCase = true) -> {
+            path.moveTo(w, h * 0.25f)
+            path.lineTo(w * 0.4f, h * 0.25f)
+            path.lineTo(w * 0.4f, 0f)
+            path.lineTo(0f, h * 0.5f)
+            path.lineTo(w * 0.4f, h)
+            path.lineTo(w * 0.4f, h * 0.75f)
+            path.lineTo(w, h * 0.75f)
+            path.close()
+        }
+        preset.contains("leftRightArrow", ignoreCase = true) -> {
+            path.moveTo(w * 0.3f, 0f)
+            path.lineTo(0f, h * 0.5f)
+            path.lineTo(w * 0.3f, h)
+            path.lineTo(w * 0.3f, h * 0.7f)
+            path.lineTo(w * 0.7f, h * 0.7f)
+            path.lineTo(w * 0.7f, h)
+            path.lineTo(w, h * 0.5f)
+            path.lineTo(w * 0.7f, 0f)
+            path.lineTo(w * 0.7f, h * 0.3f)
+            path.lineTo(w * 0.3f, h * 0.3f)
+            path.close()
+        }
+        preset.contains("upArrow", ignoreCase = true) -> {
+            path.moveTo(w * 0.5f, 0f)
+            path.lineTo(w, h * 0.4f)
+            path.lineTo(w * 0.75f, h * 0.4f)
+            path.lineTo(w * 0.75f, h)
+            path.lineTo(w * 0.25f, h)
+            path.lineTo(w * 0.25f, h * 0.4f)
+            path.lineTo(0f, h * 0.4f)
+            path.close()
+        }
+        preset.contains("downArrow", ignoreCase = true) -> {
+            path.moveTo(w * 0.25f, 0f)
+            path.lineTo(w * 0.75f, 0f)
+            path.lineTo(w * 0.75f, h * 0.6f)
+            path.lineTo(w, h * 0.6f)
+            path.lineTo(w * 0.5f, h)
+            path.lineTo(0f, h * 0.6f)
+            path.lineTo(w * 0.25f, h * 0.6f)
+            path.close()
+        }
+        preset.contains("chevron", ignoreCase = true) -> {
+            path.moveTo(0f, 0f)
+            path.lineTo(w * 0.75f, 0f)
+            path.lineTo(w, h * 0.5f)
+            path.lineTo(w * 0.75f, h)
+            path.lineTo(0f, h)
+            path.lineTo(w * 0.25f, h * 0.5f)
+            path.close()
+        }
+        preset.contains("pentagon", ignoreCase = true) -> {
+            path.moveTo(0f, 0f)
+            path.lineTo(w * 0.8f, 0f)
+            path.lineTo(w, h * 0.5f)
+            path.lineTo(w * 0.8f, h)
+            path.lineTo(0f, h)
+            path.close()
+        }
+        preset.contains("hexagon", ignoreCase = true) -> {
+            path.moveTo(w * 0.25f, 0f)
+            path.lineTo(w * 0.75f, 0f)
+            path.lineTo(w, h * 0.5f)
+            path.lineTo(w * 0.75f, h)
+            path.lineTo(w * 0.25f, h)
+            path.lineTo(0f, h * 0.5f)
+            path.close()
+        }
+        preset.contains("triangle", ignoreCase = true) -> {
+            path.moveTo(w * 0.5f, 0f)
+            path.lineTo(w, h)
+            path.lineTo(0f, h)
+            path.close()
+        }
+        preset.contains("diamond", ignoreCase = true) -> {
+            path.moveTo(w * 0.5f, 0f)
+            path.lineTo(w, h * 0.5f)
+            path.lineTo(w * 0.5f, h)
+            path.lineTo(0f, h * 0.5f)
+            path.close()
+        }
+        preset.contains("callout", ignoreCase = true) -> {
+            path.moveTo(0f, 0f)
+            path.lineTo(w, 0f)
+            path.lineTo(w, h * 0.75f)
+            path.lineTo(w * 0.45f, h * 0.75f)
+            path.lineTo(w * 0.25f, h)
+            path.lineTo(w * 0.30f, h * 0.75f)
+            path.lineTo(0f, h * 0.75f)
+            path.close()
+        }
+        preset.contains("star", ignoreCase = true) -> {
+            val cx = w / 2f
+            val cy = h / 2f
+            val rOuter = minOf(w, h) / 2f
+            val rInner = rOuter * 0.4f
+            for (i in 0 until 10) {
+                val angle = (i * Math.PI / 5.0 - Math.PI / 2.0).toFloat()
+                val r = if (i % 2 == 0) rOuter else rInner
+                val x = cx + r * kotlin.math.cos(angle)
+                val y = cy + r * kotlin.math.sin(angle)
+                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            }
+            path.close()
+        }
+        preset.contains("line", ignoreCase = true) || preset.contains("connector", ignoreCase = true) -> {
+            path.moveTo(0f, h * 0.5f)
+            path.lineTo(w, h * 0.5f)
+            drawPath(path, color = if (border != Color.Transparent) border else bg, style = Stroke(width = 2.dp.toPx()))
+            return
+        }
+        else -> return
+    }
+
+    drawPath(path, color = bg)
+    if (border != Color.Transparent) {
+        drawPath(
+            path,
+            color = border,
+            style = Stroke(width = 1.5.dp.toPx())
+        )
+    }
+}
+
+/**
+ * Ensures text has high contrast and readability against its immediate background.
+ */
+private fun ensureTextLegibility(rawColor: Color?, containerBg: Color): Color {
+    val safeBg = if (containerBg.isSpecified) containerBg else Color.White
+    val isContainerDark = safeBg.isColorDark()
+    if (rawColor == null || !rawColor.isSpecified || rawColor == Color.Transparent) {
+        return if (isContainerDark) Color(0xFFF8FAFC) else Color(0xFF0F172A)
+    }
+    val bgLum = (0.299f * safeBg.red + 0.587f * safeBg.green + 0.114f * safeBg.blue)
+    val textLum = (0.299f * rawColor.red + 0.587f * rawColor.green + 0.114f * rawColor.blue)
+    val contrastRatio = (maxOf(bgLum, textLum) + 0.05f) / (minOf(bgLum, textLum) + 0.05f)
+    if (contrastRatio < 2.5f) {
+        return if (isContainerDark) Color(0xFFF8FAFC) else Color(0xFF0F172A)
+    }
+    return rawColor
+}
+
+/**
+ * Maps PowerPoint / font face names to Jetpack Compose FontFamilies.
+ */
+private fun mapFontFamily(name: String?): FontFamily {
+    if (name.isNullOrBlank()) return FontFamily.Default
+    val lower = name.lowercase().trim()
+    return when {
+        lower.contains("times") || lower.contains("georgia") || lower.contains("garamond") ||
+        lower.contains("palatino") || lower.contains("serif") || lower.contains("cambria") ||
+        lower.contains("baskerville") || lower.contains("didot") || lower.contains("minion") ||
+        lower.contains("bookman") || lower.contains("century") -> FontFamily.Serif
+
+        lower.contains("courier") || lower.contains("consolas") || lower.contains("mono") ||
+        lower.contains("menlo") || lower.contains("inconsolata") || lower.contains("source code") ||
+        lower.contains("fira code") || lower.contains("jetbrains") -> FontFamily.Monospace
+
+        lower.contains("comic") || lower.contains("script") || lower.contains("handwriting") ||
+        lower.contains("chalkboard") || lower.contains("brush") || lower.contains("lucida handwriting") ||
+        lower.contains("kalam") || lower.contains("caveat") -> FontFamily.Cursive
+
+        else -> FontFamily.SansSerif
+    }
+}
+
+fun Color.isColorDark(): Boolean {
+    if (!this.isSpecified) return false
+    val lum = 0.299f * red + 0.587f * green + 0.114f * blue
+    return lum < 0.5f
+}
