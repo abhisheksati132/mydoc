@@ -330,69 +330,10 @@ class PdfToolsEngine(private val context: Context) {
     // 7. Scan & OCR
     // -------------------------------------------------------------
 
-    private suspend fun ocrPdf(file: File, onProgress: (ToolProgress) -> Unit): File {
-        PdfBoxHelper.ensureInitialized(context)
-        val ocrEngine = OcrEngine(context)
-        val srcDoc = Document.openDocument(file.absolutePath) as? PDFDocument
-            ?: throw IllegalArgumentException("Cannot open document")
+    private val scanOcrEngine by lazy { PdfScanOcrEngine(context) }
 
-        val outFile = createTempOutputFile("ocr_searchable", "pdf")
-
-        try {
-            val totalPages = srcDoc.countPages()
-            FileInputStream(file).use { fis ->
-                PDDocument.load(fis).use { doc ->
-                    val font = PDType1Font.HELVETICA
-                    for (p in 0 until totalPages) {
-                        currentCoroutineContext().ensureActive()
-                        val page = srcDoc.loadPage(p)
-                        val pixmap = page.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, false)
-                        val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
-                        pixmap.destroy()
-                        page.destroy()
-
-                        val recognizedText = runCatching { ocrEngine.recognizeText(bmp) }.getOrDefault("")
-                        bmp.recycle()
-
-                        if (recognizedText.isNotBlank() && p < doc.numberOfPages) {
-                            val pdPage = doc.getPage(p)
-                            val box = pdPage.cropBox ?: pdPage.mediaBox ?: continue
-                            val margin = 36f
-                            var curY = box.upperRightY - margin
-
-                            PDPageContentStream(doc, pdPage, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
-                                cs.saveGraphicsState()
-                                val gs = PDExtendedGraphicsState().apply { nonStrokingAlphaConstant = 0.01f }
-                                cs.setGraphicsStateParameters(gs)
-                                cs.beginText()
-                                cs.setFont(font, 8f)
-
-                                for (line in recognizedText.lines()) {
-                                    val clean = line.replace("\t", " ").trim()
-                                    if (clean.isNotBlank() && curY > box.lowerLeftY + margin) {
-                                        cs.newLineAtOffset(box.lowerLeftX + margin, curY)
-                                        runCatching { cs.showText(clean.take(120)) }
-                                        cs.newLineAtOffset(-(box.lowerLeftX + margin), -curY)
-                                        curY -= 12f
-                                    }
-                                }
-                                cs.endText()
-                                cs.restoreGraphicsState()
-                            }
-                        }
-
-                        val pct = 10 + (((p + 1).toFloat() / totalPages) * 80).toInt()
-                        onProgress(ToolProgress(p + 1, totalPages, pct, "OCR processing page ${p + 1} of $totalPages...", false))
-                    }
-
-                    FileOutputStream(outFile).use { fos -> doc.save(fos) }
-                }
-            }
-            return outFile
-        } finally {
-            srcDoc.destroy()
-        }
-    }
+    private suspend fun ocrPdf(file: File, onProgress: (ToolProgress) -> Unit): File =
+        scanOcrEngine.ocrPdf(file, onProgress)
 
     // -------------------------------------------------------------
     // Helper Methods
