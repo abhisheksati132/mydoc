@@ -15,7 +15,6 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 
 /**
@@ -59,7 +59,7 @@ fun PresentationSpeakerNotesSheet(
             ) {
                 Text(
                     text = "Speaker Notes — Slide ${currentSlideIndex + 1}",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = AppTheme.typography.bodyLargeStrong,
                     fontWeight = FontWeight.Bold,
                     color = textColor
                 )
@@ -70,7 +70,7 @@ fun PresentationSpeakerNotesSheet(
             Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
             Text(
                 text = notes.ifBlank { "No speaker notes for this slide." },
-                style = MaterialTheme.typography.bodyLarge,
+                style = AppTheme.typography.bodyLarge,
                 color = textColor,
                 lineHeight = 24.sp,
                 modifier = Modifier

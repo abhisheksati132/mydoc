@@ -15,32 +15,28 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.IntOffset
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.abhisheksati.mydoc.data.local.AppThemeMode
+import com.abhisheksati.mydoc.designsystem.animation.AppMotion
+import com.abhisheksati.mydoc.designsystem.animation.LocalAnimatedVisibilityScope
+import com.abhisheksati.mydoc.designsystem.animation.LocalSharedTransitionScope
+import com.abhisheksati.mydoc.designsystem.animation.documentHero
+import com.abhisheksati.mydoc.designsystem.animation.documentHeroKey
 import com.abhisheksati.mydoc.designsystem.preview.DesignSystemPreviewScreen
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
@@ -60,6 +56,7 @@ import java.io.File
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 class MainActivity : ComponentActivity() {
 
     private sealed interface ActiveScreen {
@@ -72,6 +69,13 @@ class MainActivity : ComponentActivity() {
         data class Audio(val item: com.abhisheksati.mydoc.domain.model.MediaItem) : ActiveScreen
         data object Home : ActiveScreen
     }
+
+    private fun ActiveScreen.isViewer(): Boolean =
+        this is ActiveScreen.Document || this is ActiveScreen.Photo ||
+            this is ActiveScreen.Video || this is ActiveScreen.Audio
+
+    private fun ActiveScreen.isSettings(): Boolean =
+        this is ActiveScreen.Settings || this is ActiveScreen.DesignSystemPreview
 
     companion object {
         const val ACTION_QUICK_SCAN = "com.abhisheksati.mydoc.action.QUICK_SCAN"
@@ -217,184 +221,174 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = LocalAppColors.current.background
                 ) {
-                    AnimatedContent(
-                        targetState = activeScreen,
-                        transitionSpec = {
-                            val enterSpring = spring<Float>(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy)
-                            val exitSpring = spring<Float>(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy)
-                            val enterOffsetSpring = spring<IntOffset>(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy)
-                            val exitOffsetSpring = spring<IntOffset>(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy)
+                    // One shared-element host for the whole app: the row you tapped
+                    // becomes the document you are reading.
+                    SharedTransitionLayout(modifier = Modifier.fillMaxSize()) {
+                        val sharedScope = this
+                        AnimatedContent(
+                            targetState = activeScreen,
+                            transitionSpec = {
+                                val targetIsDetail = targetState.isViewer()
+                                val initialIsDetail = initialState.isViewer()
+                                val targetIsPeer = targetState.isSettings()
+                                val initialIsPeer = initialState.isSettings()
+                                val targetIsDocument = targetState is ActiveScreen.Document
+                                val initialIsDocument = initialState is ActiveScreen.Document
 
-                            when {
-                                targetState is ActiveScreen.Document || targetState is ActiveScreen.Photo || targetState is ActiveScreen.Video || targetState is ActiveScreen.Audio -> {
-                                    (slideInVertically(animationSpec = enterOffsetSpring) { it / 8 } +
-                                     scaleIn(initialScale = 0.94f, animationSpec = enterSpring) +
-                                     fadeIn(animationSpec = tween(220)))
-                                    .togetherWith(
-                                     fadeOut(animationSpec = tween(160)) +
-                                     scaleOut(targetScale = 0.96f, animationSpec = exitSpring)
-                                    )
+                                when {
+                                    // Home list -> document viewer (and back): the hero carries it.
+                                    targetIsDocument && initialState is ActiveScreen.Home ->
+                                        AppMotion.heroEnter() togetherWith AppMotion.heroExit()
+                                    initialIsDocument && targetState is ActiveScreen.Home ->
+                                        AppMotion.heroEnter() togetherWith AppMotion.heroExit()
+                                    // Opening a document / photo / video / audio.
+                                    targetIsDetail -> AppMotion.detailEnter() togetherWith AppMotion.detailExit()
+                                    // Coming back from one.
+                                    initialIsDetail -> AppMotion.detailReturnEnter() togetherWith AppMotion.detailReturnExit()
+                                    // Pushing Settings / Design System to the right.
+                                    targetIsPeer -> AppMotion.peerEnter(forward = true) togetherWith AppMotion.peerExit(forward = true)
+                                    // Popping back to the left.
+                                    initialIsPeer -> AppMotion.peerEnter(forward = false) togetherWith AppMotion.peerExit(forward = false)
+                                    else -> AppMotion.neutralEnter() togetherWith AppMotion.neutralExit()
                                 }
-                                initialState is ActiveScreen.Document || initialState is ActiveScreen.Photo || initialState is ActiveScreen.Video || initialState is ActiveScreen.Audio -> {
-                                    (fadeIn(animationSpec = tween(200)) +
-                                     scaleIn(initialScale = 0.96f, animationSpec = enterSpring))
-                                    .togetherWith(
-                                     slideOutVertically(animationSpec = exitOffsetSpring) { it / 8 } +
-                                     scaleOut(targetScale = 0.94f, animationSpec = exitSpring) +
-                                     fadeOut(animationSpec = tween(180))
-                                    )
-                                }
-                                targetState is ActiveScreen.Settings || targetState is ActiveScreen.DesignSystemPreview -> {
-                                    (slideInHorizontally(animationSpec = enterOffsetSpring) { it / 4 } +
-                                     fadeIn(animationSpec = tween(220)))
-                                    .togetherWith(
-                                     slideOutHorizontally(animationSpec = exitOffsetSpring) { -it / 6 } +
-                                     fadeOut(animationSpec = tween(180))
-                                    )
-                                }
-                                initialState is ActiveScreen.Settings || initialState is ActiveScreen.DesignSystemPreview -> {
-                                    (slideInHorizontally(animationSpec = enterOffsetSpring) { -it / 6 } +
-                                     fadeIn(animationSpec = tween(220)))
-                                    .togetherWith(
-                                     slideOutHorizontally(animationSpec = exitOffsetSpring) { it / 4 } +
-                                     fadeOut(animationSpec = tween(180))
-                                    )
-                                }
-                                else -> {
-                                    (fadeIn(animationSpec = tween(240)) + scaleIn(initialScale = 0.97f, animationSpec = enterSpring))
-                                    .togetherWith(fadeOut(animationSpec = tween(180)) + scaleOut(targetScale = 1.02f, animationSpec = exitSpring))
-                                }
-                            }
-                        },
-                        label = "screenTransition"
-                    ) { screen ->
-                        when (screen) {
-                            ActiveScreen.Lock -> {
-                                AppLockScreen(
-                                    onUnlockClick = { attemptUnlock() }
-                                )
-                            }
-                            ActiveScreen.DesignSystemPreview -> {
-                                DesignSystemPreviewScreen(
-                                    onBackClick = { isDesignSystemPreviewOpen = false }
-                                )
-                            }
-                            ActiveScreen.Settings -> {
-                                SettingsScreen(
-                                    updateManager = updateManager,
-                                    settingsRepository = app.settingsRepository,
-                                    onBackClick = { isSettingsOpen = false },
-                                    onDesignSystemPreviewClick = { isDesignSystemPreviewOpen = true },
-                                    onClearRecent = {
-                                        lifecycleScope.launch {
-                                            app.libraryRepository.clearAllRecents()
-                                        }
+                            },
+                            label = "screenTransition"
+                        ) { screen ->
+                            val visibilityScope = this
+                            CompositionLocalProvider(
+                                LocalSharedTransitionScope provides sharedScope,
+                                LocalAnimatedVisibilityScope provides visibilityScope
+                            ) {
+                                when (screen) {
+                                    ActiveScreen.Lock -> {
+                                        AppLockScreen(
+                                            onUnlockClick = { attemptUnlock() }
+                                        )
                                     }
-                                )
-                            }
-                            is ActiveScreen.Photo -> {
-                                com.abhisheksati.mydoc.ui.media.PhotoViewerScreen(
-                                    items = screen.allPhotos.ifEmpty { listOf(screen.item) },
-                                    initialIndex = screen.allPhotos.indexOf(screen.item).coerceAtLeast(0),
-                                    mediaRepository = app.mediaRepository,
-                                    onBackClick = { currentPhoto = null },
-                                    onDeletePhoto = { currentPhoto = null }
-                                )
-                            }
-                            is ActiveScreen.Video -> {
-                                com.abhisheksati.mydoc.ui.media.VideoPlayerScreen(
-                                    item = screen.item,
-                                    mediaRepository = app.mediaRepository,
-                                    onBackClick = { currentVideo = null }
-                                )
-                            }
-                            is ActiveScreen.Audio -> {
-                                com.abhisheksati.mydoc.ui.media.AudioPlayerScreen(
-                                    item = screen.item,
-                                    onBackClick = { currentAudio = null },
-                                    isDarkTheme = isDark
-                                )
-                            }
-                            is ActiveScreen.Document -> {
-                                val activeDoc = screen.document
-                                Box(modifier = Modifier.fillMaxSize()) {
-                                    DocumentViewerScreen(
-                                        document = activeDoc,
-                                        onBackClick = { currentDocument = null },
-                                        onShareClick = { shareDocument(activeDoc) },
-                                        onDocumentUpdated = { newDoc ->
-                                            currentDocument = newDoc
-                                        },
-                                        onSelectTool = { tool ->
-                                            toolsViewModel.selectTool(tool, preselectedUri = Uri.parse(activeDoc.uri))
-                                        }
-                                    )
-
-                                    if (selectedTool != null) {
-                                        ToolRunnerSheet(
-                                            viewModel = toolsViewModel,
-                                            onOpenResultFile = { file, _ ->
-                                                val uri = Uri.fromFile(file)
+                                    ActiveScreen.DesignSystemPreview -> {
+                                        DesignSystemPreviewScreen(
+                                            onBackClick = { isDesignSystemPreviewOpen = false }
+                                        )
+                                    }
+                                    ActiveScreen.Settings -> {
+                                        SettingsScreen(
+                                            updateManager = updateManager,
+                                            settingsRepository = app.settingsRepository,
+                                            onBackClick = { isSettingsOpen = false },
+                                            onDesignSystemPreviewClick = { isDesignSystemPreviewOpen = true },
+                                            onClearRecent = {
                                                 lifecycleScope.launch {
-                                                    val myApp = application as MyDocApp
-                                                    val res = myApp.documentRepository.registerOpenedDocument(uri)
-                                                    res.onSuccess { doc ->
-                                                        toolsViewModel.closeTool()
-                                                        currentDocument = doc
-                                                    }
+                                                    app.libraryRepository.clearAllRecents()
                                                 }
                                             }
                                         )
                                     }
-                                }
-                            }
-                            ActiveScreen.Home -> {
-                                HomeScreen(
-                                    viewModel = homeViewModel,
-                                    toolsViewModel = toolsViewModel,
-                                    fileManagerViewModel = fileManagerViewModel,
-                                    storageViewModel = storageViewModel,
-                                    updateManager = updateManager,
-                                    isDarkTheme = isDark,
-                                    onToggleTheme = {
-                                        val nextTheme = if (isDark) AppThemeMode.LIGHT else AppThemeMode.DARK
-                                        app.settingsRepository.setThemeMode(nextTheme)
-                                    },
-                                    onLibraryItemClick = { item ->
-                                        when (item.kind) {
-                                            com.abhisheksati.mydoc.domain.model.MediaKind.DOCUMENT -> {
-                                                lifecycleScope.launch {
-                                                    val res = app.documentRepository.registerOpenedDocument(Uri.parse(item.uri))
-                                                    res.onSuccess { doc ->
-                                                        currentDocument = doc
-                                                    }.onFailure {
-                                                        currentDocument = DocumentFile(
-                                                            uri = item.uri,
-                                                            displayName = item.name,
-                                                            sizeBytes = item.sizeBytes,
-                                                            mimeType = item.mimeType,
-                                                            lastOpenedTimestamp = System.currentTimeMillis()
-                                                        )
+                                    is ActiveScreen.Photo -> {
+                                        com.abhisheksati.mydoc.ui.media.PhotoViewerScreen(
+                                            items = screen.allPhotos.ifEmpty { listOf(screen.item) },
+                                            initialIndex = screen.allPhotos.indexOf(screen.item).coerceAtLeast(0),
+                                            mediaRepository = app.mediaRepository,
+                                            onBackClick = { currentPhoto = null },
+                                            onDeletePhoto = { currentPhoto = null }
+                                        )
+                                    }
+                                    is ActiveScreen.Video -> {
+                                        com.abhisheksati.mydoc.ui.media.VideoPlayerScreen(
+                                            item = screen.item,
+                                            mediaRepository = app.mediaRepository,
+                                            onBackClick = { currentVideo = null }
+                                        )
+                                    }
+                                    is ActiveScreen.Audio -> {
+                                        com.abhisheksati.mydoc.ui.media.AudioPlayerScreen(
+                                            item = screen.item,
+                                            onBackClick = { currentAudio = null },
+                                            isDarkTheme = isDark
+                                        )
+                                    }
+                                    is ActiveScreen.Document -> {
+                                        val activeDoc = screen.document
+                                        Box(modifier = Modifier.fillMaxSize()) {
+                                            DocumentViewerScreen(
+                                                document = activeDoc,
+                                                onBackClick = { currentDocument = null },
+                                                onShareClick = { shareDocument(activeDoc) },
+                                                onDocumentUpdated = { newDoc ->
+                                                    currentDocument = newDoc
+                                                },
+                                                onSelectTool = { tool ->
+                                                    toolsViewModel.selectTool(tool, preselectedUri = Uri.parse(activeDoc.uri))
+                                                },
+                                                modifier = Modifier.documentHero(documentHeroKey(activeDoc.uri))
+                                            )
+
+                                            if (selectedTool != null) {
+                                                ToolRunnerSheet(
+                                                    viewModel = toolsViewModel,
+                                                    onOpenResultFile = { file, _ ->
+                                                        val uri = Uri.fromFile(file)
+                                                        lifecycleScope.launch {
+                                                            val myApp = application as MyDocApp
+                                                            val res = myApp.documentRepository.registerOpenedDocument(uri)
+                                                            res.onSuccess { doc ->
+                                                                toolsViewModel.closeTool()
+                                                                currentDocument = doc
+                                                            }
+                                                        }
                                                     }
-                                                }
-                                            }
-                                            com.abhisheksati.mydoc.domain.model.MediaKind.PHOTO -> {
-                                                val m = item.toMediaItem()
-                                                currentPhoto = Pair(m, listOf(m))
-                                            }
-                                            com.abhisheksati.mydoc.domain.model.MediaKind.VIDEO -> {
-                                                currentVideo = item.toMediaItem()
-                                            }
-                                            com.abhisheksati.mydoc.domain.model.MediaKind.AUDIO -> {
-                                                currentAudio = item.toMediaItem()
+                                                )
                                             }
                                         }
-                                    },
-                                    onDocumentClick = { doc -> currentDocument = doc },
-                                    onOpenFile = { file -> handleOpenFile(file) },
-                                    onSettingsClick = { isSettingsOpen = true },
-                                    onShareDocument = { doc -> shareDocument(doc) }
-                                )
+                                    }
+                                    ActiveScreen.Home -> {
+                                        HomeScreen(
+                                            viewModel = homeViewModel,
+                                            toolsViewModel = toolsViewModel,
+                                            fileManagerViewModel = fileManagerViewModel,
+                                            storageViewModel = storageViewModel,
+                                            updateManager = updateManager,
+                                            isDarkTheme = isDark,
+                                            onToggleTheme = {
+                                                val nextTheme = if (isDark) AppThemeMode.LIGHT else AppThemeMode.DARK
+                                                app.settingsRepository.setThemeMode(nextTheme)
+                                            },
+                                            onLibraryItemClick = { item ->
+                                                when (item.kind) {
+                                                    com.abhisheksati.mydoc.domain.model.MediaKind.DOCUMENT -> {
+                                                        lifecycleScope.launch {
+                                                            val res = app.documentRepository.registerOpenedDocument(Uri.parse(item.uri))
+                                                            res.onSuccess { doc ->
+                                                                currentDocument = doc
+                                                            }.onFailure {
+                                                                currentDocument = DocumentFile(
+                                                                    uri = item.uri,
+                                                                    displayName = item.name,
+                                                                    sizeBytes = item.sizeBytes,
+                                                                    mimeType = item.mimeType,
+                                                                    lastOpenedTimestamp = System.currentTimeMillis()
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                    com.abhisheksati.mydoc.domain.model.MediaKind.PHOTO -> {
+                                                        val m = item.toMediaItem()
+                                                        currentPhoto = Pair(m, listOf(m))
+                                                    }
+                                                    com.abhisheksati.mydoc.domain.model.MediaKind.VIDEO -> {
+                                                        currentVideo = item.toMediaItem()
+                                                    }
+                                                    com.abhisheksati.mydoc.domain.model.MediaKind.AUDIO -> {
+                                                        currentAudio = item.toMediaItem()
+                                                    }
+                                                }
+                                            },
+                                            onDocumentClick = { doc -> currentDocument = doc },
+                                            onOpenFile = { file -> handleOpenFile(file) },
+                                            onSettingsClick = { isSettingsOpen = true },
+                                            onShareDocument = { doc -> shareDocument(doc) }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

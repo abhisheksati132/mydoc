@@ -78,12 +78,12 @@ fun FileManagerClipboardBar(
                         Column {
                             Text(
                                 text = "${clip.items.size} items ready to ${if (clip.operation == ClipboardOperation.COPY) "copy" else "move"}",
-                                style = typography.body.copy(fontWeight = FontWeight.SemiBold),
+                                style = typography.bodyStrong,
                                 color = colors.textPrimary
                             )
                             Text(
                                 text = "Navigate to destination folder",
-                                style = typography.caption.copy(fontSize = 11.sp),
+                                style = typography.micro,
                                 color = colors.textSecondary
                             )
                         }

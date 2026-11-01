@@ -47,15 +47,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
 import com.abhisheksati.mydoc.designsystem.components.AppSlider
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
@@ -97,7 +96,6 @@ fun ReadingControlsBottomSheet(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val context = LocalContext.current
-    val haptic = LocalHapticFeedback.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -105,7 +103,7 @@ fun ReadingControlsBottomSheet(
         sheetState = sheetState,
         containerColor = colors.surface,
         contentColor = colors.textPrimary,
-        shape = RoundedCornerShape(topStart = AppSpacing.cornerRadius, topEnd = AppSpacing.cornerRadius),
+        shape = AppRadius.sheetShape,
         tonalElevation = AppSpacing.elevation,
         dragHandle = {
             Box(
@@ -139,7 +137,6 @@ fun ReadingControlsBottomSheet(
                 )
                 IconButton(
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onDismiss()
                     },
                     modifier = Modifier.size(AppSpacing.minTouchTarget)
@@ -165,7 +162,6 @@ fun ReadingControlsBottomSheet(
                     label = "Paper",
                     isSelected = readingMode == ReadingMode.NORMAL,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onReadingModeChange(ReadingMode.NORMAL)
                     },
                     modifier = Modifier.weight(1f)
@@ -174,7 +170,6 @@ fun ReadingControlsBottomSheet(
                     label = "Sepia",
                     isSelected = readingMode == ReadingMode.SEPIA,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onReadingModeChange(ReadingMode.SEPIA)
                     },
                     modifier = Modifier.weight(1f)
@@ -183,7 +178,6 @@ fun ReadingControlsBottomSheet(
                     label = "Eye comfort",
                     isSelected = readingMode == ReadingMode.EYE_COMFORT,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onReadingModeChange(ReadingMode.EYE_COMFORT)
                     },
                     modifier = Modifier.weight(1f)
@@ -192,7 +186,6 @@ fun ReadingControlsBottomSheet(
                     label = "Night",
                     isSelected = readingMode == ReadingMode.INVERTED_DARK,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onReadingModeChange(ReadingMode.INVERTED_DARK)
                     },
                     modifier = Modifier.weight(1f)
@@ -222,7 +215,6 @@ fun ReadingControlsBottomSheet(
                         onBrightnessChange(newVal)
                     },
                     onValueChangeFinished = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     },
                     valueRange = 0.05f..1f,
                     colors = SliderDefaults.colors(
@@ -255,7 +247,6 @@ fun ReadingControlsBottomSheet(
                     icon = Icons.Outlined.SwapVert,
                     isSelected = isContinuousScroll && !isDualPageView,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onDualPageViewChange(false)
                         onScrollModeChange(true)
                     },
@@ -266,7 +257,6 @@ fun ReadingControlsBottomSheet(
                     icon = Icons.Outlined.ViewDay,
                     isSelected = !isContinuousScroll && !isDualPageView,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onDualPageViewChange(false)
                         onScrollModeChange(false)
                     },
@@ -277,7 +267,6 @@ fun ReadingControlsBottomSheet(
                     icon = Icons.Outlined.ViewWeek,
                     isSelected = isDualPageView,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onDualPageViewChange(true)
                     },
                     modifier = Modifier.weight(1f)
@@ -297,7 +286,6 @@ fun ReadingControlsBottomSheet(
                         icon = Icons.Outlined.FitScreen,
                         isSelected = !isFitPage,
                         onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onFitPageChange(false)
                         },
                         modifier = Modifier.weight(1f)
@@ -307,7 +295,6 @@ fun ReadingControlsBottomSheet(
                         icon = Icons.Outlined.CropFree,
                         isSelected = isFitPage,
                         onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onFitPageChange(true)
                         },
                         modifier = Modifier.weight(1f)
@@ -331,7 +318,6 @@ fun ReadingControlsBottomSheet(
                     icon = Icons.Outlined.ScreenRotation,
                     isSelected = currentOrientation == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                     },
                     modifier = Modifier.weight(1f)
@@ -341,7 +327,6 @@ fun ReadingControlsBottomSheet(
                     icon = Icons.Outlined.StayCurrentPortrait,
                     isSelected = currentOrientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                     },
                     modifier = Modifier.weight(1f)
@@ -351,7 +336,6 @@ fun ReadingControlsBottomSheet(
                     icon = Icons.Outlined.StayCurrentLandscape,
                     isSelected = currentOrientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                     },
                     modifier = Modifier.weight(1f)
@@ -366,7 +350,6 @@ fun ReadingControlsBottomSheet(
                     .fillMaxWidth()
                     .height(AppSpacing.minTouchTarget)
                     .clickable {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onKeepScreenOnChange(!isKeepScreenOn)
                     },
                 verticalAlignment = Alignment.CenterVertically,
@@ -387,7 +370,6 @@ fun ReadingControlsBottomSheet(
                 Switch(
                     checked = isKeepScreenOn,
                     onCheckedChange = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onKeepScreenOnChange(it)
                     },
                     colors = SwitchDefaults.colors(
@@ -412,7 +394,6 @@ fun ReadingControlsBottomSheet(
                     icon = Icons.AutoMirrored.Outlined.OpenInNew,
                     label = "Open with",
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onDismiss()
                         val sendIntent = Intent(Intent.ACTION_VIEW).apply {
                             val mime = document.mimeType.ifEmpty { "application/pdf" }
@@ -431,7 +412,6 @@ fun ReadingControlsBottomSheet(
                     icon = Icons.Outlined.Print,
                     label = "Print",
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onDismiss()
                         PrintHelper.printDocument(context, document)
                     },
@@ -456,12 +436,12 @@ private fun ThemeOptionButton(
     Box(
         modifier = modifier
             .height(AppSpacing.minTouchTarget)
-            .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+            .clip(RoundedCornerShape(AppRadius.round))
             .background(if (isSelected) colors.surfaceVariant else colors.surface)
             .border(
                 width = AppSpacing.dividerThickness,
                 color = if (isSelected) colors.accent else colors.divider,
-                shape = RoundedCornerShape(AppSpacing.chipCornerRadius)
+                shape = RoundedCornerShape(AppRadius.round)
             )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
@@ -502,12 +482,12 @@ private fun ActionCardButton(
     Box(
         modifier = modifier
             .height(AppSpacing.minTouchTarget)
-            .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+            .clip(RoundedCornerShape(AppRadius.round))
             .background(colors.surfaceVariant)
             .border(
                 width = AppSpacing.dividerThickness,
                 color = colors.divider,
-                shape = RoundedCornerShape(AppSpacing.chipCornerRadius)
+                shape = RoundedCornerShape(AppRadius.round)
             )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center

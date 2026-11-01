@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
@@ -33,7 +34,7 @@ fun AppSearchField(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val isOled = colors.background == DarkAppColors.background
+    val isOled = LocalIsOled.current
 
     OutlinedTextField(
         value = query,

@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 
@@ -41,12 +42,7 @@ fun AppBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        shape = RoundedCornerShape(
-            topStart = AppSpacing.cornerRadius,
-            topEnd = AppSpacing.cornerRadius,
-            bottomStart = 0.dp,
-            bottomEnd = 0.dp
-        ),
+        shape = AppRadius.sheetShape,
         containerColor = colors.surfaceContainerLow,
         tonalElevation = AppSpacing.elevation,
         scrimColor = colors.background.copy(alpha = 0.6f),

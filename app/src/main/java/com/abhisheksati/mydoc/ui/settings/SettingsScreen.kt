@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.ui.res.stringResource
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.R
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
@@ -74,6 +75,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.data.local.AppThemeMode
 import com.abhisheksati.mydoc.data.local.SettingsRepository
+import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
@@ -133,14 +136,8 @@ fun SettingsScreen(
         modifier = modifier.fillMaxSize(),
         containerColor = colors.background,
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = "Settings",
-                        style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 18.sp),
-                        color = colors.textPrimary
-                    )
-                },
+            AppTabHeader(
+                title = "Settings",
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
@@ -149,10 +146,7 @@ fun SettingsScreen(
                             tint = colors.textPrimary
                         )
                     }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = colors.background
-                )
+                }
             )
         }
     ) { innerPadding ->
@@ -168,7 +162,7 @@ fun SettingsScreen(
             SettingsCard(title = "APPEARANCE") {
                 Text(
                     text = "Theme",
-                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+                    style = typography.captionStrong,
                     color = colors.textSecondary,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
@@ -181,7 +175,6 @@ fun SettingsScreen(
                         icon = Icons.Outlined.LightMode,
                         selected = currentTheme == AppThemeMode.LIGHT,
                         onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             settingsRepository.setThemeMode(AppThemeMode.LIGHT)
                         }
                     )
@@ -190,7 +183,6 @@ fun SettingsScreen(
                         icon = Icons.Outlined.DarkMode,
                         selected = currentTheme == AppThemeMode.DARK,
                         onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             settingsRepository.setThemeMode(AppThemeMode.DARK)
                         }
                     )
@@ -199,7 +191,6 @@ fun SettingsScreen(
                         icon = Icons.Outlined.Contrast,
                         selected = currentTheme == AppThemeMode.BLACK,
                         onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             settingsRepository.setThemeMode(AppThemeMode.BLACK)
                         }
                     )
@@ -234,7 +225,7 @@ fun SettingsScreen(
             SettingsCard(title = "READING & DOCUMENTS") {
                 Text(
                     text = "Default Reading Mode",
-                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+                    style = typography.captionStrong,
                     color = colors.textSecondary,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
@@ -266,7 +257,7 @@ fun SettingsScreen(
 
                 Text(
                     text = "PDF Page Scaling",
-                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+                    style = typography.captionStrong,
                     color = colors.textSecondary,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
@@ -364,7 +355,7 @@ fun SettingsScreen(
             SettingsCard(title = "STORAGE & FILES") {
                 Text(
                     text = "Default Startup Destination",
-                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+                    style = typography.captionStrong,
                     color = colors.textSecondary,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
@@ -399,7 +390,7 @@ fun SettingsScreen(
                     Box(
                         modifier = Modifier
                             .size(38.dp)
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(AppRadius.pillShape)
                             .background(colors.accent.copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center
                     ) {
@@ -409,13 +400,13 @@ fun SettingsScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Thumbnail & Render Cache",
-                            style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
+                            style = typography.bodyStrong,
                             color = colors.textPrimary
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "Currently used: $formattedCache",
-                            style = typography.caption.copy(fontSize = 12.sp),
+                            style = typography.caption,
                             color = colors.textSecondary
                         )
                     }
@@ -429,13 +420,13 @@ fun SettingsScreen(
                             val toastText = if (freedMb >= 0.1) String.format(Locale.US, "Freed %.1f MB", freedMb) else context.getString(R.string.cache_cleared)
                             Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
                         },
-                        shape = RoundedCornerShape(10.dp),
+                        shape = AppRadius.pillShape,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colors.accent,
                             contentColor = colors.onAccent
                         )
                     ) {
-                        Text(stringResource(R.string.clear_cache), fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+                        Text(stringResource(R.string.clear_cache), style = AppTheme.typography.captionStrong, maxLines = 1)
                     }
                 }
 
@@ -449,7 +440,7 @@ fun SettingsScreen(
                         Box(
                             modifier = Modifier
                                 .size(38.dp)
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(AppRadius.pillShape)
                                 .background(colors.accent.copy(alpha = 0.12f)),
                             contentAlignment = Alignment.Center
                         ) {
@@ -459,13 +450,13 @@ fun SettingsScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Recent History & Progress",
-                                style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
+                                style = typography.bodyStrong,
                                 color = colors.textPrimary
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = "Clear recent documents and continue reading/watching progress",
-                                style = typography.caption.copy(fontSize = 12.sp),
+                                style = typography.caption,
                                 color = colors.textSecondary
                             )
                         }
@@ -476,13 +467,13 @@ fun SettingsScreen(
                                 onClearRecent()
                                 Toast.makeText(context, context.getString(R.string.recent_history_cleared), Toast.LENGTH_SHORT).show()
                             },
-                            shape = RoundedCornerShape(10.dp),
+                            shape = AppRadius.pillShape,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = colors.accent,
                                 contentColor = colors.onAccent
                             )
                         ) {
-                            Text(stringResource(R.string.clear_cache), fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+                            Text(stringResource(R.string.clear_cache), style = AppTheme.typography.captionStrong, maxLines = 1)
                         }
                     }
                 }
@@ -537,20 +528,20 @@ fun SettingsScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = "Software Updates",
-                                    style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
+                                    style = typography.bodyStrong,
                                     color = colors.textPrimary
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = "Current version: v${updateManager.currentVersionName}",
-                                    style = typography.caption.copy(fontSize = 12.sp),
+                                    style = typography.caption,
                                     color = colors.textSecondary
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             Button(
                                 onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
-                                shape = RoundedCornerShape(10.dp),
+                                shape = AppRadius.pillShape,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = colors.accent,
                                     contentColor = Color.Black
@@ -558,7 +549,7 @@ fun SettingsScreen(
                             ) {
                                 Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Check", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+                                Text("Check", style = AppTheme.typography.captionStrong, maxLines = 1)
                             }
                         }
                     }
@@ -578,7 +569,7 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 text = "Checking for updates...",
-                                style = typography.body.copy(fontWeight = FontWeight.Medium, fontSize = 14.sp),
+                                style = typography.bodyMedium,
                                 color = colors.textPrimary
                             )
                         }
@@ -595,21 +586,21 @@ fun SettingsScreen(
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = "App is up to date (v${state.currentVersion})",
-                                        style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
+                                        style = typography.bodyStrong,
                                         color = colors.textPrimary
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "Latest release installed.",
-                                    style = typography.caption.copy(fontSize = 12.sp),
+                                    style = typography.caption,
                                     color = colors.textSecondary
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             Button(
                                 onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
-                                shape = RoundedCornerShape(10.dp),
+                                shape = AppRadius.pillShape,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = colors.accent,
                                     contentColor = Color.Black
@@ -617,7 +608,7 @@ fun SettingsScreen(
                             ) {
                                 Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Check", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+                                Text("Check", style = AppTheme.typography.captionStrong, maxLines = 1)
                             }
                         }
                     }
@@ -627,14 +618,14 @@ fun SettingsScreen(
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Text(
                                 text = "New Version Available: v${release.versionName}",
-                                style = typography.body.copy(fontWeight = FontWeight.Bold, fontSize = 14.5.sp),
+                                style = typography.bodyStrong,
                                 color = colors.accent
                             )
                             if (release.releaseNotes.isNotBlank()) {
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = release.releaseNotes.trim(),
-                                    style = typography.caption.copy(fontSize = 12.sp),
+                                    style = typography.caption,
                                     color = colors.textSecondary,
                                     maxLines = 4
                                 )
@@ -643,7 +634,7 @@ fun SettingsScreen(
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(
                                     onClick = { scope.launch { updateManager.downloadAndInstall(release) } },
-                                    shape = RoundedCornerShape(10.dp),
+                                    shape = AppRadius.pillShape,
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = colors.accent,
                                         contentColor = Color.Black
@@ -653,16 +644,16 @@ fun SettingsScreen(
                                         val mb = release.apkSizeBytes / (1024.0 * 1024.0)
                                         String.format(Locale.US, " (%.1f MB)", mb)
                                     } else ""
-                                    Text("Download & Install$sizeText", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+                                    Text("Download & Install$sizeText", style = AppTheme.typography.captionStrong, maxLines = 1)
                                 }
 
                                 OutlinedButton(
                                     onClick = { updateManager.dismissUpdate(release.tagName) },
-                                    shape = RoundedCornerShape(10.dp),
+                                    shape = AppRadius.pillShape,
                                     border = BorderStroke(0.8.dp, colors.divider),
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textSecondary)
                                 ) {
-                                    Text("Dismiss", fontSize = 12.5.sp, maxLines = 1)
+                                    Text("Dismiss", style = AppTheme.typography.caption, maxLines = 1)
                                 }
                             }
                         }
@@ -672,7 +663,7 @@ fun SettingsScreen(
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Text(
                                 text = "Downloading: ${state.progressPercent}%",
-                                style = typography.body.copy(fontWeight = FontWeight.Medium, fontSize = 13.5.sp),
+                                style = typography.label,
                                 color = colors.textPrimary
                             )
                             Spacer(modifier = Modifier.height(8.dp))
@@ -689,7 +680,7 @@ fun SettingsScreen(
                         Column {
                             Text(
                                 text = "Download complete for v${state.release.versionName}.",
-                                style = typography.body.copy(fontSize = 13.5.sp),
+                                style = typography.label,
                                 color = colors.textPrimary
                             )
                             Spacer(modifier = Modifier.height(10.dp))
@@ -702,13 +693,13 @@ fun SettingsScreen(
                                         updateManager.installerHelper.installApk(state.apkFile)
                                     }
                                 },
-                                shape = RoundedCornerShape(10.dp),
+                                shape = AppRadius.pillShape,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = colors.accent,
                                     contentColor = Color.Black
                                 )
                             ) {
-                                Text("Install Update Now", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                                Text("Install Update Now", style = AppTheme.typography.captionStrong)
                             }
                         }
                     }
@@ -717,16 +708,16 @@ fun SettingsScreen(
                         Column {
                             Text(
                                 text = "Update check failed: ${state.message}",
-                                style = typography.caption.copy(color = colors.error, fontSize = 12.sp)
+                                style = typography.caption.copy(color = colors.error)
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             OutlinedButton(
                                 onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
-                                shape = RoundedCornerShape(10.dp),
+                                shape = AppRadius.pillShape,
                                 border = BorderStroke(0.8.dp, colors.divider),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
                             ) {
-                                Text("Retry", fontSize = 12.sp, maxLines = 1)
+                                Text("Retry", style = AppTheme.typography.caption, maxLines = 1)
                             }
                         }
                     }
@@ -749,17 +740,13 @@ private fun SettingsCard(
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = title,
-            style = typography.caption.copy(
-                fontWeight = FontWeight.Bold,
-                fontSize = 11.5.sp,
-                letterSpacing = 1.1.sp
-            ),
+            style = typography.overline,
             color = colors.accent,
             modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
         )
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = AppRadius.cardShape,
             color = colors.surfaceContainer,
             border = BorderStroke(1.dp, colors.cardBorder)
         ) {
@@ -804,7 +791,7 @@ private fun SettingToggleRow(
         Box(
             modifier = Modifier
                 .size(38.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .clip(AppRadius.pillShape)
                 .background(colors.accent.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
@@ -819,13 +806,13 @@ private fun SettingToggleRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp),
+                style = typography.bodyStrong,
                 color = colors.textPrimary
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                style = typography.caption.copy(fontSize = 12.sp),
+                style = typography.caption,
                 color = colors.textSecondary
             )
         }
@@ -855,9 +842,9 @@ private fun ThemeChip(
 
     Surface(
         modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(AppRadius.pillShape)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(10.dp),
+        shape = AppRadius.pillShape,
         color = if (selected) colors.accent.copy(alpha = 0.16f) else Color.Transparent,
         border = BorderStroke(
             width = if (selected) 1.5.dp else 1.dp,
@@ -879,10 +866,7 @@ private fun ThemeChip(
             }
             Text(
                 text = label,
-                style = typography.body.copy(
-                    fontSize = 12.5.sp,
-                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
-                ),
+                style = if (selected) typography.captionStrong else typography.caption,
                 color = if (selected) colors.accent else colors.textPrimary
             )
         }

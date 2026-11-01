@@ -91,10 +91,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.MainActivity
@@ -144,7 +142,6 @@ fun PdfViewerScreen(
     val app = context.applicationContext as? MyDocApp
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
     val state by viewModel.uiState.collectAsState()
 
@@ -298,7 +295,6 @@ fun PdfViewerScreen(
                 (state.currentPage - 1).coerceAtLeast(0)
             }
             if (target != state.currentPage) {
-                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 viewModel.jumpToPage(target)
                 if (state.isContinuousScroll) {
                     lazyListState.animateScrollToItem(target)
@@ -429,7 +425,6 @@ fun PdfViewerScreen(
                 onPrevPage = {
                     val prev = (state.currentPage - 1).coerceAtLeast(0)
                     if (prev != state.currentPage) {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         viewModel.jumpToPage(prev)
                         coroutineScope.launch { pagerState.animateScrollToPage(prev) }
                     }
@@ -437,7 +432,6 @@ fun PdfViewerScreen(
                 onNextPage = {
                     val next = (state.currentPage + 1).coerceAtMost(state.pageCount - 1)
                     if (next != state.currentPage) {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         viewModel.jumpToPage(next)
                         coroutineScope.launch { pagerState.animateScrollToPage(next) }
                     }
@@ -965,7 +959,7 @@ fun PdfViewerScreen(
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("✕", style = typography.caption.copy(fontWeight = FontWeight.Bold), color = colors.textSecondary)
+                            Text("✕", style = typography.captionStrong, color = colors.textSecondary)
                         }
                     }
                 }
@@ -1133,6 +1127,6 @@ private fun FloatingPillItem(
     ) {
         Icon(imageVector = icon, contentDescription = label, tint = tint, modifier = Modifier.size(16.dp))
         Spacer(modifier = Modifier.width(6.dp))
-        Text(text = label, style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp), color = colors.textPrimary)
+        Text(text = label, style = typography.captionStrong, color = colors.textPrimary)
     }
 }

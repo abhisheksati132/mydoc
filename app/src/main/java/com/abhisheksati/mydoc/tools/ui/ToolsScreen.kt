@@ -50,12 +50,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
 import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
@@ -128,7 +130,6 @@ fun ToolsScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
             },
-            isDarkTheme = isDarkTheme,
             onToggleTheme = onToggleTheme,
             onSettingsClick = onSettingsClick,
             bottomContent = {
@@ -168,7 +169,7 @@ fun ToolsScreen(
                             border = BorderStroke(0.5.dp, if (isSelected) colors.accent.copy(alpha = 0.35f) else colors.line),
                             modifier = Modifier
                                 .clip(AppRadius.pillShape)
-                                .clickable {
+                                .pressScaleEffect {
                                     selectedToolGroup = if (isSelected) null else item.group
                                 }
                         ) {
@@ -185,10 +186,7 @@ fun ToolsScreen(
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = item.label,
-                                    style = typography.caption.copy(
-                                        fontSize = 12.5.sp,
-                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
-                                    ),
+                                    style = if (isSelected) typography.captionStrong else typography.caption,
                                     color = if (isSelected) colors.accent else colors.textPrimary
                                 )
                             }
@@ -222,7 +220,7 @@ fun ToolsScreen(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 96.dp)
+            contentPadding = PaddingValues(bottom = AppSpacing.large)
         ) {
             if (filteredTools.isEmpty()) {
                 item {
@@ -356,7 +354,7 @@ fun ToolsScreen(
                         }
 
                         item(key = "card_${group.name}") {
-                            val isOled = colors.background == DarkAppColors.background
+                            val isOled = LocalIsOled.current
                             Surface(
                                 shape = AppRadius.cardShape,
                                 color = if (isOled) colors.surface else colors.surfaceContainer,
@@ -437,7 +435,7 @@ private fun FeaturedToolCard(
 
             Text(
                 text = title,
-                style = typography.body.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
+                style = typography.bodyStrong,
                 color = colors.textPrimary
             )
 
@@ -445,7 +443,7 @@ private fun FeaturedToolCard(
 
             Text(
                 text = subtitle,
-                style = typography.caption.copy(fontSize = 11.5.sp),
+                style = typography.micro,
                 color = colors.textSecondary
             )
         }
@@ -489,14 +487,14 @@ private fun ToolListRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = tool.title,
-                style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
+                style = typography.bodyStrong,
                 color = colors.textPrimary,
                 maxLines = 1
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = tool.description,
-                style = typography.caption.copy(fontSize = 12.sp),
+                style = typography.caption,
                 color = colors.textSecondary,
                 maxLines = 1
             )

@@ -62,6 +62,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.components.AppSlider
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -360,7 +361,7 @@ fun VideoPlayerScreen(
                     }
                     Text(
                         text = gestureOverlayText!!,
-                        style = typography.title.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
+                        style = typography.titleSmall,
                         color = Color.White
                     )
                 }
@@ -407,7 +408,7 @@ fun VideoPlayerScreen(
 
                     Text(
                         text = item.displayName,
-                        style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 15.sp),
+                        style = typography.bodyStrong,
                         color = Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -530,8 +531,7 @@ fun VideoPlayerScreen(
                     ) {
                         Text(
                             text = formatTime(currentPositionMs),
-                            style = typography.caption.copy(color = Color.White, fontWeight = FontWeight.Medium),
-                            fontSize = 12.sp
+                            style = typography.caption.copy(color = Color.White)
                         )
 
                         AppSlider(
@@ -553,8 +553,7 @@ fun VideoPlayerScreen(
 
                         Text(
                             text = formatTime(totalDurationMs),
-                            style = typography.caption.copy(color = Color.White.copy(alpha = 0.8f), fontWeight = FontWeight.Medium),
-                            fontSize = 12.sp
+                            style = typography.caption.copy(color = Color.White.copy(alpha = 0.8f))
                         )
                     }
 
@@ -591,8 +590,7 @@ fun VideoPlayerScreen(
                                 Icon(Icons.Default.Speed, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                                 Text(
                                     text = "${playbackSpeed}x",
-                                    style = typography.caption.copy(color = Color.White, fontWeight = FontWeight.Bold),
-                                    fontSize = 12.sp
+                                    style = typography.captionStrong.copy(color = Color.White)
                                 )
                             }
                         }
@@ -617,7 +615,7 @@ fun VideoPlayerScreen(
             ) {
                 Text(
                     text = "Playback Speed",
-                    style = typography.title.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold),
+                    style = typography.bodyStrong,
                     color = Color.White
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -641,7 +639,7 @@ fun VideoPlayerScreen(
                             fontWeight = if (playbackSpeed == spd) FontWeight.Bold else FontWeight.Normal
                         )
                         if (playbackSpeed == spd) {
-                            Text("Active", color = colors.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Active", color = colors.accent, style = AppTheme.typography.captionStrong)
                         }
                     }
                 }

@@ -98,14 +98,14 @@ fun SingleItemActionBottomSheet(
                 Column {
                     Text(
                         text = item.name,
-                        style = typography.title.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
+                        style = typography.bodyStrong,
                         color = colors.textPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = item.formattedSize,
-                        style = typography.caption.copy(fontSize = 11.sp),
+                        style = typography.micro,
                         color = colors.textSecondary
                     )
                 }
@@ -211,7 +211,7 @@ fun ItemActionOption(
         Spacer(modifier = Modifier.width(14.dp))
         Text(
             text = title,
-            style = typography.body.copy(fontSize = 14.sp),
+            style = typography.body,
             color = tint
         )
     }

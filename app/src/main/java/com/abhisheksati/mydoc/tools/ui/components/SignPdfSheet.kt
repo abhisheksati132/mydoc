@@ -52,19 +52,19 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.components.AppBottomSheet
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.tools.security.SignatureStorage
 
 private data class SignatureStroke(
@@ -87,7 +87,7 @@ fun SignPdfSheet(
     val context = LocalContext.current
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val haptic = LocalHapticFeedback.current
+    val haptics = rememberAppHaptics()
 
     var isDrawMode by remember { mutableStateOf(true) }
     var typedName by remember { mutableStateOf("") }
@@ -231,9 +231,9 @@ fun SignPdfSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
-                    .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+                    .clip(RoundedCornerShape(AppRadius.round))
                     .background(Color.White)
-                    .border(1.dp, colors.divider, RoundedCornerShape(AppSpacing.chipCornerRadius))
+                    .border(1.dp, colors.divider, RoundedCornerShape(AppRadius.round))
             ) {
                 if (isDrawMode) {
                     Canvas(
@@ -309,9 +309,8 @@ fun SignPdfSheet(
                     modifier = Modifier
                         .weight(1f)
                         .height(AppSpacing.minTouchTarget)
-                        .border(1.dp, colors.divider, RoundedCornerShape(AppSpacing.chipCornerRadius))
+                        .border(1.dp, colors.divider, RoundedCornerShape(AppRadius.round))
                         .clickable {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             strokes.clear()
                             currentPoints = emptyList()
                             typedName = ""
@@ -325,10 +324,10 @@ fun SignPdfSheet(
                     modifier = Modifier
                         .weight(1f)
                         .height(AppSpacing.minTouchTarget)
-                        .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+                        .clip(RoundedCornerShape(AppRadius.round))
                         .background(if (hasContent) colors.accent else colors.surfaceVariant)
                         .clickable(enabled = hasContent) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            haptics.confirm()
                             val bmp = if (isDrawMode) {
                                 renderStrokesToBitmap(strokes)
                             } else {

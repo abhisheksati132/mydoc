@@ -105,7 +105,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -121,8 +120,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -148,14 +145,13 @@ import androidx.core.content.FileProvider
 import com.abhisheksati.mydoc.data.local.StoragePermissionHelper
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppSearchField
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.ClipboardOperation
+import com.abhisheksati.mydoc.domain.model.DocumentFilter
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.StorageFileType
 import com.abhisheksati.mydoc.domain.model.StorageItem
@@ -172,7 +168,6 @@ fun FileManagerScreen(
     onOpenFile: (File) -> Unit,
     onSettingsClick: (() -> Unit)? = null,
     onToggleTheme: (() -> Unit)? = null,
-    isDarkTheme: Boolean = false,
     isActive: Boolean = true,
     modifier: Modifier = Modifier
 ) {
@@ -226,18 +221,11 @@ fun FileManagerScreen(
     val pinnedFoldersManager = remember { com.abhisheksati.mydoc.data.local.PinnedFoldersManager(context) }
     val pinnedFolders by pinnedFoldersManager.pinnedFolders.collectAsState()
 
-    var docSubCategoryFilter by remember { mutableStateOf("All") }
+    var documentFilter by remember { mutableStateOf(DocumentFilter.ALL) }
 
-    val displayedItems = remember(uiState.filteredItems, uiState.activeCategory, docSubCategoryFilter) {
+    val displayedItems = remember(uiState.filteredItems, uiState.activeCategory, documentFilter) {
         if (uiState.activeCategory == FileCategory.DOCUMENTS) {
-            when (docSubCategoryFilter) {
-                "PDF" -> uiState.filteredItems.filter { it.extension == "pdf" }
-                "Word" -> uiState.filteredItems.filter { it.extension in setOf("doc", "docx", "dot", "dotx", "odt", "rtf") }
-                "Excel" -> uiState.filteredItems.filter { it.extension in setOf("xls", "xlsx", "xlsm", "csv", "ods") }
-                "PPT" -> uiState.filteredItems.filter { it.extension in setOf("ppt", "pptx", "pps", "odp") }
-                "Text" -> uiState.filteredItems.filter { it.extension in setOf("txt", "log", "md", "json", "xml") }
-                else -> uiState.filteredItems
-            }
+            uiState.filteredItems.filter { documentFilter.matches(it.extension) }
         } else {
             uiState.filteredItems
         }
@@ -305,7 +293,7 @@ fun FileManagerScreen(
                     containerColor = colors.surfaceVariant,
                     contentColor = colors.textPrimary,
                     actionColor = colors.accent,
-                    shape = RoundedCornerShape(AppSpacing.cornerRadius)
+                    shape = AppRadius.cardShape
                 )
             }
         },
@@ -378,7 +366,6 @@ fun FileManagerScreen(
                                 placeholder = "Search files..."
                             )
                         },
-                        isDarkTheme = isDarkTheme,
                         onToggleTheme = onToggleTheme,
                         onSettingsClick = onSettingsClick,
                         moreMenuContent = { onDismiss ->
@@ -472,7 +459,7 @@ fun FileManagerScreen(
                                     FileManagerCategoryChips(
                                         activeCategory = uiState.activeCategory,
                                         onCategorySelected = { category ->
-                                            docSubCategoryFilter = "All"
+                                            documentFilter = DocumentFilter.ALL
                                             if (uiState.activeCategory == category) {
                                                 viewModel.selectCategory(null)
                                             } else {
@@ -486,11 +473,11 @@ fun FileManagerScreen(
                                         activeCategory = uiState.activeCategory,
                                         displayedItemsCount = displayedItems.size,
                                         onClearCategory = {
-                                            docSubCategoryFilter = "All"
+                                            documentFilter = DocumentFilter.ALL
                                             viewModel.selectCategory(null)
                                         },
-                                        docSubCategoryFilter = docSubCategoryFilter,
-                                        onDocSubCategoryFilterSelected = { docSubCategoryFilter = it },
+                                        documentFilter = documentFilter,
+                                        onDocumentFilterSelected = { documentFilter = it },
                                         breadcrumbTrail = uiState.breadcrumbTrail,
                                         storageVolumes = uiState.storageVolumes,
                                         onNavigateToCrumb = { viewModel.navigateToCrumb(it) }
@@ -582,24 +569,32 @@ fun FileManagerScreen(
                             .fillMaxWidth()
                             .weight(1f)
                     ) {
-                        AppEmptyState(
-                            title = if (uiState.searchQuery.isNotEmpty()) "No matches found"
-                                    else if (uiState.activeCategory != null) {
-                                        if (uiState.activeCategory == FileCategory.DOCUMENTS && docSubCategoryFilter != "All") {
-                                            "No $docSubCategoryFilter documents"
-                                        } else {
-                                            "No files found"
-                                        }
-                                    } else "This folder is empty",
-                            message = if (uiState.searchQuery.isNotEmpty()) "Try a different search term"
-                                      else if (uiState.activeCategory != null) {
-                                        if (uiState.activeCategory == FileCategory.DOCUMENTS && docSubCategoryFilter != "All") {
-                                            "No $docSubCategoryFilter files found on this device"
-                                        } else {
-                                            "No ${uiState.activeCategory?.displayName?.lowercase()} files on this device"
-                                        }
-                                      } else "Tap '+' to create a new folder or file"
-                        )
+                        val category = uiState.activeCategory
+                        val emptyTitle: String
+                        val emptyMessage: String
+                        when {
+                            uiState.searchQuery.isNotEmpty() -> {
+                                emptyTitle = "No matches found"
+                                emptyMessage = "Try a different search term"
+                            }
+                            category == FileCategory.DOCUMENTS && documentFilter != DocumentFilter.ALL -> {
+                                emptyTitle = "No ${documentFilter.label} documents"
+                                emptyMessage = "No ${documentFilter.label} documents on this device"
+                            }
+                            category != null -> {
+                                emptyTitle = "No ${category.noun} here"
+                                emptyMessage = if (category == FileCategory.DOCUMENTS) {
+                                    "Documents you open or scan will appear here"
+                                } else {
+                                    "Files you add to ${category.displayName} will appear here"
+                                }
+                            }
+                            else -> {
+                                emptyTitle = "This folder is empty"
+                                emptyMessage = "Use the menu above to create a folder or file"
+                            }
+                        }
+                        AppEmptyState(title = emptyTitle, message = emptyMessage)
                     }
                 } else {
                     if (uiState.isGridView) {

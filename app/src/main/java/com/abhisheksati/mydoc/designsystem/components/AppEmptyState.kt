@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
@@ -58,7 +59,7 @@ fun AppEmptyState(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val isOled = colors.background == DarkAppColors.background
+    val isOled = LocalIsOled.current
     val effectiveAction = onAction ?: onActionClick
 
     val btnInteractionSource = remember { MutableInteractionSource() }
@@ -93,11 +94,7 @@ fun AppEmptyState(
             if (!title.isNullOrBlank()) {
                 Text(
                     text = title,
-                    style = typography.title.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 19.sp,
-                        letterSpacing = (-0.3).sp
-                    ),
+                    style = typography.titleSmall,
                     color = colors.textPrimary,
                     textAlign = TextAlign.Center
                 )
@@ -106,10 +103,7 @@ fun AppEmptyState(
 
             Text(
                 text = message,
-                style = typography.body.copy(
-                    fontSize = 14.sp,
-                    lineHeight = 22.sp
-                ),
+                style = typography.body,
                 color = colors.textSecondary,
                 textAlign = TextAlign.Center
             )
@@ -137,10 +131,7 @@ fun AppEmptyState(
                 ) {
                     Text(
                         text = actionLabel,
-                        style = typography.label.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
-                        ),
+                        style = typography.bodyStrong,
                         color = if (isOled) Color(0xFF000000) else Color.White
                     )
                     Spacer(modifier = Modifier.width(8.dp))

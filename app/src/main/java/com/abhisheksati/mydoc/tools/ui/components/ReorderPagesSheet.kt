@@ -73,8 +73,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.artifex.mupdf.fitz.ColorSpace
 import com.artifex.mupdf.fitz.Document
 import com.artifex.mupdf.fitz.Matrix
@@ -110,6 +112,7 @@ fun ReorderPagesSheet(
         val colors = LocalAppColors.current
         val typography = LocalAppTypography.current
         val haptic = LocalHapticFeedback.current
+        val haptics = rememberAppHaptics()
 
         val pages = remember { mutableStateListOf<OrganizedPageItem>() }
         val thumbnailCache = remember { mutableMapOf<Int, Bitmap>() }
@@ -214,7 +217,7 @@ fun ReorderPagesSheet(
                             Column {
                                 Text(
                                     text = "Page Organizer",
-                                    style = typography.title.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
+                                    style = typography.titleSmall,
                                     color = colors.textPrimary
                                 )
                                 Text(
@@ -230,7 +233,6 @@ fun ReorderPagesSheet(
                             // Select / Deselect All
                             IconButton(
                                 onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     if (selectedIds.size == pages.size) {
                                         selectedIds.clear()
                                     } else {
@@ -250,7 +252,6 @@ fun ReorderPagesSheet(
                             if (selectedIds.isNotEmpty()) {
                                 IconButton(
                                     onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         pages.forEachIndexed { idx, item ->
                                             if (item.uniqueId in selectedIds) {
                                                 pages[idx] = item.copy(rotationDegrees = (item.rotationDegrees + 90) % 360)
@@ -340,7 +341,6 @@ fun ReorderPagesSheet(
                                             shape = RoundedCornerShape(10.dp)
                                         )
                                         .clickable {
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             if (isSelected) selectedIds.remove(item.uniqueId)
                                             else selectedIds.add(item.uniqueId)
                                         },
@@ -363,7 +363,7 @@ fun ReorderPagesSheet(
                                             ) {
                                                 Text(
                                                     text = "${index + 1}",
-                                                    style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
+                                                    style = typography.micro,
                                                     color = colors.textPrimary,
                                                     modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                                 )
@@ -416,7 +416,7 @@ fun ReorderPagesSheet(
                                             // Move left
                                             IconButton(
                                                 onClick = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                    haptics.tick()
                                                     if (index > 0) {
                                                         val temp = pages[index]
                                                         pages[index] = pages[index - 1]
@@ -437,7 +437,6 @@ fun ReorderPagesSheet(
                                             // Rotate 90
                                             IconButton(
                                                 onClick = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                     pages[index] = item.copy(rotationDegrees = (item.rotationDegrees + 90) % 360)
                                                 },
                                                 modifier = Modifier.size(24.dp)
@@ -453,7 +452,7 @@ fun ReorderPagesSheet(
                                             // Move right
                                             IconButton(
                                                 onClick = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                    haptics.tick()
                                                     if (index < pages.size - 1) {
                                                         val temp = pages[index]
                                                         pages[index] = pages[index + 1]
@@ -510,13 +509,13 @@ fun ReorderPagesSheet(
                     ) {
                         Text(
                             text = "${pages.size} pages organized",
-                            style = typography.caption.copy(fontWeight = FontWeight.Medium),
+                            style = typography.caption,
                             color = colors.textSecondary
                         )
 
                         Button(
                             onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                haptics.confirm()
                                 val finalOrder = pages.map { it.originalPageIndex }
                                 onApplyOrder(finalOrder)
                             },
@@ -527,7 +526,7 @@ fun ReorderPagesSheet(
                         ) {
                             Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Apply & Save", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("Apply & Save", style = AppTheme.typography.captionStrong)
                         }
                     }
                 }

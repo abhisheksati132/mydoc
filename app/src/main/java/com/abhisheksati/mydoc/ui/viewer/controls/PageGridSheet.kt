@@ -47,14 +47,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
@@ -81,7 +80,6 @@ fun PageGridSheet(
 
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val haptic = LocalHapticFeedback.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val gridState = rememberLazyGridState()
 
@@ -99,7 +97,7 @@ fun PageGridSheet(
         sheetState = sheetState,
         containerColor = colors.surface,
         contentColor = colors.textPrimary,
-        shape = RoundedCornerShape(topStart = AppSpacing.cornerRadius, topEnd = AppSpacing.cornerRadius),
+        shape = AppRadius.sheetShape,
         tonalElevation = AppSpacing.elevation,
         dragHandle = {
             Box(
@@ -139,7 +137,6 @@ fun PageGridSheet(
 
                 IconButton(
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onDismiss()
                     },
                     modifier = Modifier.size(AppSpacing.minTouchTarget)
@@ -162,7 +159,6 @@ fun PageGridSheet(
                     jumpQuery = filtered
                     val pageNum = filtered.toIntOrNull()
                     if (pageNum != null && pageNum in 1..pageCount) {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onPageSelected(pageNum - 1)
                         onDismiss()
                     }
@@ -182,7 +178,7 @@ fun PageGridSheet(
                     )
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(AppSpacing.cornerRadius),
+                shape = AppRadius.cardShape,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = colors.accent,
                     unfocusedBorderColor = colors.divider,
@@ -226,7 +222,6 @@ fun PageGridSheet(
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
                             .clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 onPageSelected(pageIndex)
                                 onDismiss()
                             }
@@ -282,10 +277,7 @@ fun PageGridSheet(
                         // Page badge
                         Text(
                             text = "${pageIndex + 1}",
-                            style = typography.caption.copy(
-                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 12.sp
-                            ),
+                            style = if (isCurrent) typography.captionStrong else typography.caption,
                             color = if (isCurrent) colors.accent else colors.textSecondary
                         )
                     }

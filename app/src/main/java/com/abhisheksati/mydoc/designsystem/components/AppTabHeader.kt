@@ -39,19 +39,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsDark
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 
 /**
- * Standard symmetrical app header across all 4 root tabs (Files, Documents, Media, Tools).
- * Guarantees identical 56dp action row height, statusBarsPadding(), title styling, and balanced action buttons.
+ * The app header. One implementation for Home, Files, Tools and Settings:
+ * 56dp action row, status-bar inset, Bricolage title on the left,
+ * balanced 48dp action buttons on the right.
  */
 @Composable
 fun AppTabHeader(
@@ -61,7 +60,6 @@ fun AppTabHeader(
     isSearchActive: Boolean = false,
     searchContent: (@Composable () -> Unit)? = null,
     navigationIcon: (@Composable () -> Unit)? = null,
-    isDarkTheme: Boolean = false,
     onToggleTheme: (() -> Unit)? = null,
     onSettingsClick: (() -> Unit)? = null,
     moreMenuContent: (@Composable ColumnScope.(onDismiss: () -> Unit) -> Unit)? = null,
@@ -71,8 +69,7 @@ fun AppTabHeader(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val haptic = LocalHapticFeedback.current
-    val isOled = colors.background == DarkAppColors.background
+    val isDark = LocalIsDark.current
 
     var isMenuOpen by remember { mutableStateOf(false) }
 
@@ -101,35 +98,10 @@ fun AppTabHeader(
                 }
                 if (titleContent != null) {
                     titleContent()
-                } else if (title == "MyDoc") {
-                    // Split-weight brand wordmark: "My" (light, muted) + "Doc" (ExtraBold, accent)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "My",
-                            style = typography.title.copy(
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 22.sp,
-                                letterSpacing = (-0.5).sp
-                            ),
-                            color = colors.inkMuted
-                        )
-                        Text(
-                            text = "Doc",
-                            style = typography.title.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 22.sp,
-                                letterSpacing = (-0.5).sp
-                            ),
-                            color = colors.accent
-                        )
-                    }
                 } else {
                     Text(
                         text = title,
-                        style = typography.title.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 22.sp
-                        ),
+                        style = typography.screenTitle,
                         color = colors.textPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -147,10 +119,7 @@ fun AppTabHeader(
                 // 1. Search Action (if enabled)
                 if (onSearchClick != null) {
                     IconButton(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onSearchClick()
-                        },
+                        onClick = onSearchClick,
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
@@ -160,14 +129,23 @@ fun AppTabHeader(
                         )
                     }
                 }
+                if (onToggleTheme != null) {
+                    IconButton(
+                        onClick = onToggleTheme,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isDark) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
+                            contentDescription = "Toggle theme",
+                            tint = colors.textPrimary
+                        )
+                    }
+                }
 // 3. Action 3: Contextual Overflow Menu (with nested Settings) OR Standalone Settings Icon
                 if (moreMenuContent != null) {
                     Box {
                         IconButton(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                isMenuOpen = true
-                            },
+                            onClick = { isMenuOpen = true },
                             modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
@@ -181,10 +159,10 @@ fun AppTabHeader(
                             expanded = isMenuOpen,
                             onDismissRequest = { isMenuOpen = false },
                             shape = RoundedCornerShape(18.dp),
-                            containerColor = if (isOled) Color(0xFF141720) else colors.surfaceContainer,
+                            containerColor = colors.surfaceContainerHigh,
                             border = BorderStroke(
                                 1.dp,
-                                if (isOled) Color.White.copy(alpha = 0.10f) else colors.cardBorder
+                                colors.cardBorder
                             ),
                             shadowElevation = 8.dp,
                             tonalElevation = 4.dp
@@ -212,7 +190,6 @@ fun AppTabHeader(
                                     },
                                     onClick = {
                                         isMenuOpen = false
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         onSettingsClick()
                                     }
                                 )
@@ -221,10 +198,7 @@ fun AppTabHeader(
                     }
                 } else if (onSettingsClick != null) {
                     IconButton(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onSettingsClick()
-                        },
+                        onClick = onSettingsClick,
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(

@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.tools.appmanager.AppInfoItem
 import com.abhisheksati.mydoc.tools.appmanager.AppManagerHelper
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
@@ -77,11 +78,11 @@ fun AppManagerSheet(
         }
     }
 
-        val isOled = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
+        val isOled = LocalIsOled.current
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = if (isOled) Color(0xFF10121A) else colors.surfaceContainerLow,
+        containerColor = if (isOled) colors.surfaceContainerHigh else colors.surfaceContainerLow,
         dragHandle = { BottomSheetDefaults.DragHandle() },
         modifier = Modifier.fillMaxHeight(0.92f)
     ) {
@@ -115,12 +116,12 @@ fun AppManagerSheet(
                     Column {
                         Text(
                             text = "Installed Apps & APKs",
-                            style = typography.title.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
+                            style = typography.titleSmall,
                             color = colors.textPrimary
                         )
                         Text(
                             text = "${filteredApps.size} applications found",
-                            style = typography.caption.copy(fontSize = 12.sp),
+                            style = typography.caption,
                             color = colors.textSecondary
                         )
                     }
@@ -137,7 +138,7 @@ fun AppManagerSheet(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Search installed applications...", color = colors.textSecondary, fontSize = 13.sp) },
+                placeholder = { Text("Search installed applications...", color = colors.textSecondary, style = AppTheme.typography.label) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = colors.textSecondary) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
@@ -166,7 +167,7 @@ fun AppManagerSheet(
                 FilterChip(
                     selected = showSystemApps,
                     onClick = { showSystemApps = !showSystemApps },
-                    label = { Text("Include System Apps", fontSize = 12.sp) },
+                    label = { Text("Include System Apps", style = AppTheme.typography.caption) },
                     leadingIcon = {
                         if (showSystemApps) {
                             Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -303,19 +304,19 @@ private fun AppListItem(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = app.appName,
-                    style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
+                    style = typography.bodyStrong,
                     color = colors.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = "${app.versionName} • ${formatFileSize(app.apkSize)}",
-                    style = typography.caption.copy(fontSize = 11.sp),
+                    style = typography.micro,
                     color = colors.textSecondary
                 )
                 Text(
                     text = app.packageName,
-                    style = typography.caption.copy(fontSize = 10.sp),
+                    style = typography.micro,
                     color = colors.textSecondary.copy(alpha = 0.7f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

@@ -53,18 +53,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.abhisheksati.mydoc.designsystem.components.AppBottomSheet
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
 import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.tools.model.formatByteSize
 import com.abhisheksati.mydoc.tools.model.CompressionLevel
 import com.abhisheksati.mydoc.tools.model.PageMargin
@@ -95,7 +95,7 @@ fun ToolRunnerSheet(
 
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val haptic = LocalHapticFeedback.current
+    val haptics = rememberAppHaptics()
     val context = LocalContext.current
 
     var showVisualPageOrganizer by remember { mutableStateOf(false) }
@@ -172,7 +172,6 @@ fun ToolRunnerSheet(
 
                 IconButton(
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         viewModel.closeTool()
                     },
                     modifier = Modifier.size(AppSpacing.minTouchTarget)
@@ -239,10 +238,10 @@ fun ToolRunnerSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(AppSpacing.minTouchTarget)
-                            .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+                            .clip(RoundedCornerShape(AppRadius.round))
                             .background(if (canRun) colors.accent else colors.surfaceVariant)
                             .clickable(enabled = canRun) {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                haptics.confirm()
                                 viewModel.runTool()
                             },
                         contentAlignment = Alignment.Center
@@ -260,7 +259,6 @@ fun ToolRunnerSheet(
                     RunningProgressSection(
                         progress = state.progress,
                         onCancel = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             viewModel.cancelExecution()
                         }
                     )
@@ -327,10 +325,9 @@ fun ToolRunnerSheet(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(AppSpacing.minTouchTarget)
-                                .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+                                .clip(RoundedCornerShape(AppRadius.round))
                                 .background(colors.accent)
                                 .clickable {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     viewModel.selectTool(tool)
                                 },
                             contentAlignment = Alignment.Center
@@ -412,7 +409,7 @@ private fun InputFilesSection(
                     .border(
                         width = 1.dp,
                         color = colors.divider,
-                        shape = RoundedCornerShape(AppSpacing.chipCornerRadius)
+                        shape = RoundedCornerShape(AppRadius.round)
                     )
                     .clickable {
                         if (tool.requiresMultipleInputFiles) onPickMultiple() else onPickSingle()
@@ -442,7 +439,7 @@ private fun InputFilesSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(AppSpacing.minTouchTarget)
-                        .background(colors.surfaceVariant, RoundedCornerShape(AppSpacing.chipCornerRadius))
+                        .background(colors.surfaceVariant, RoundedCornerShape(AppRadius.round))
                         .padding(horizontal = AppSpacing.paddingMedium),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -472,7 +469,7 @@ private fun InputFilesSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(AppSpacing.minTouchTarget)
-                        .border(1.dp, colors.divider, RoundedCornerShape(AppSpacing.chipCornerRadius))
+                        .border(1.dp, colors.divider, RoundedCornerShape(AppRadius.round))
                         .clickable { onPickMultiple() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -528,7 +525,7 @@ private fun RunningProgressSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(AppSpacing.minTouchTarget)
-                .border(1.dp, colors.divider, RoundedCornerShape(AppSpacing.chipCornerRadius))
+                .border(1.dp, colors.divider, RoundedCornerShape(AppRadius.round))
                 .clickable { onCancel() },
             contentAlignment = Alignment.Center
         ) {
@@ -571,7 +568,7 @@ private fun SuccessVerificationSection(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(colors.surfaceVariant, RoundedCornerShape(AppSpacing.chipCornerRadius))
+                .background(colors.surfaceVariant, RoundedCornerShape(AppRadius.round))
                 .padding(AppSpacing.paddingMedium)
         ) {
             Text(text = "VERIFICATION", style = typography.label, color = colors.textSecondary)
@@ -633,7 +630,7 @@ private fun SuccessVerificationSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(AppSpacing.minTouchTarget)
-                .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+                .clip(RoundedCornerShape(AppRadius.round))
                 .background(colors.accent)
                 .clickable { onSaveSaf() },
             contentAlignment = Alignment.Center
@@ -656,7 +653,7 @@ private fun SuccessVerificationSection(
                 modifier = Modifier
                     .weight(1f)
                     .height(AppSpacing.minTouchTarget)
-                    .border(1.dp, colors.divider, RoundedCornerShape(AppSpacing.chipCornerRadius))
+                    .border(1.dp, colors.divider, RoundedCornerShape(AppRadius.round))
                     .clickable { onOpen() },
                 contentAlignment = Alignment.Center
             ) {
@@ -671,7 +668,7 @@ private fun SuccessVerificationSection(
                 modifier = Modifier
                     .weight(1f)
                     .height(AppSpacing.minTouchTarget)
-                    .border(1.dp, colors.divider, RoundedCornerShape(AppSpacing.chipCornerRadius))
+                    .border(1.dp, colors.divider, RoundedCornerShape(AppRadius.round))
                     .clickable { onShare() },
                 contentAlignment = Alignment.Center
             ) {

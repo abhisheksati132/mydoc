@@ -4,20 +4,15 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Single Source of Truth for Spacing, Shapes, and Touch Targets.
+ * Single source of truth for spacing, touch targets, and strokes.
+ * Corner radii live in [AppRadius] — do not add radii here.
  *
  * Rules:
- * - 8dp grid spacing (4dp, 8dp, 16dp, 24dp, 32dp, 48dp)
- * - Strict Radii:
- *   hero card: 28dp
- *   cards / sheets: 24dp (sheet top corners: 32dp)
- *   inputs and pills: 24dp
- *   file icon square: 14dp
- *   chips: 999dp (fully rounded)
- * - Screen side padding: 20dp
- * - Bottom Bar height: 72dp
- * - Elevation: none (0dp, flat colour and 1dp hairline lines only)
- * - Minimum touch target: 48dp
+ * - 4dp grid: 4, 8, 16, 24, 32, 48.
+ * - Screen side padding: 16dp everywhere (root tabs, sheets, settings).
+ * - Bottom nav height: 64dp + navigation bar inset.
+ * - Hairlines only, zero elevation.
+ * - Minimum touch target: 48dp.
  */
 object AppSpacing {
     val none: Dp = 0.dp
@@ -29,26 +24,16 @@ object AppSpacing {
     val xxLarge: Dp = 48.dp   // 6x grid
 
     // Layout Dimensions
-    val screenPadding: Dp = 20.dp
-    val navBarHeight: Dp = 72.dp
+    val screenPadding: Dp = 16.dp
+    val navBarHeight: Dp = 64.dp
     val minTouchTarget: Dp = 48.dp
 
-    // Strict Radii Hierarchy
-    val heroCardRadius: Dp = 28.dp
-    val cardRadius: Dp = 24.dp
-    val sheetTopRadius: Dp = 32.dp
-    val inputRadius: Dp = 24.dp
-    val buttonRadius: Dp = 24.dp
-    val pillRadius: Dp = 999.dp
-    val chipRadius: Dp = 999.dp
-    val fileIconSquareRadius: Dp = 14.dp
-
     // Stroke & Elevation
-    val hairline: Dp = 1.dp
-    val dividerThickness: Dp = 1.dp
+    val hairline: Dp = 0.5.dp
+    val dividerThickness: Dp = 0.5.dp
     val elevation: Dp = 0.dp
 
-    // Aliases for backward compatibility
+    // Legacy aliases — prefer the named scale above.
     val paddingXSmall: Dp = xSmall
     val paddingSmall: Dp = small
     val paddingMedium: Dp = medium
@@ -56,10 +41,6 @@ object AppSpacing {
     val paddingXLarge: Dp = xLarge
     val extraSmall: Dp = xSmall
     val extraLarge: Dp = xLarge
-    val cornerRadius: Dp = cardRadius
-    val chipCornerRadius: Dp = chipRadius
-    val cardCornerRadius: Dp = cardRadius
-    val pillCornerRadius: Dp = pillRadius
     val listRowHeight: Dp = 64.dp
-    val listDividerThickness: Dp = 1.dp
+    val listDividerThickness: Dp = 0.5.dp
 }

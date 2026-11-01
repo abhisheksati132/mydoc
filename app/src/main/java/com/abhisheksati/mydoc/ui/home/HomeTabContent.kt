@@ -1,7 +1,5 @@
 package com.abhisheksati.mydoc.ui.home
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -60,16 +58,22 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.R
+import com.abhisheksati.mydoc.designsystem.animation.documentHero
+import com.abhisheksati.mydoc.designsystem.animation.documentHeroKey
+import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
 import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
+import com.abhisheksati.mydoc.designsystem.components.DocumentFilterChips
 import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
-import com.abhisheksati.mydoc.designsystem.tokens.InterFontFamily
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
+import com.abhisheksati.mydoc.domain.model.DocumentFilter
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.LibraryItem
+import com.abhisheksati.mydoc.domain.model.MediaKind
 import com.abhisheksati.mydoc.tools.model.PdfTool
 
 /**
@@ -97,17 +101,10 @@ fun HomeTabContent(
     val colors = AppTheme.colors
     val typography = AppTheme.typography
     var showClearRecentDialog by remember { mutableStateOf(false) }
-    var selectedDocumentFilter by remember { mutableStateOf("All") }
+    var selectedDocumentFilter by remember { mutableStateOf(DocumentFilter.ALL) }
 
     val filteredRecentItems = remember(recentItems, selectedDocumentFilter) {
-        when (selectedDocumentFilter) {
-            "PDF" -> recentItems.filter { it.extension.equals("pdf", ignoreCase = true) }
-            "Word" -> recentItems.filter { it.extension.lowercase() in setOf("doc", "docx", "dot", "dotx", "odt", "rtf") }
-            "Excel" -> recentItems.filter { it.extension.lowercase() in setOf("xls", "xlsx", "xlsm", "csv", "ods") }
-            "PPT" -> recentItems.filter { it.extension.lowercase() in setOf("ppt", "pptx", "pps", "odp") }
-            "Text" -> recentItems.filter { it.extension.lowercase() in setOf("txt", "log", "md", "json", "xml") }
-            else -> recentItems
-        }
+        recentItems.filter { selectedDocumentFilter.matches(it.extension) }
     }
 
     if (showClearRecentDialog) {
@@ -137,35 +134,24 @@ fun HomeTabContent(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "My",
-                        fontFamily = InterFontFamily,
-                        style = typography.title.copy(
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Normal,
-                            letterSpacing = (-0.5).sp
-                        ),
+                        style = typography.wordmark,
                         color = colors.inkMuted
                     )
                     Text(
                         text = "Doc",
-                        fontFamily = InterFontFamily,
-                        style = typography.title.copy(
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = (-0.5).sp
-                        ),
+                        style = typography.wordmark,
                         color = colors.accent
                     )
                 }
             },
             onSearchClick = onSearchClick,
-            isDarkTheme = isDarkTheme,
             onToggleTheme = onToggleTheme,
             onSettingsClick = onSettingsClick
         )
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 96.dp)
+            contentPadding = PaddingValues(bottom = AppSpacing.large)
         ) {
             // 2. High-Density Quick Actions Strip
             item(key = "quick_actions_bar") {
@@ -181,7 +167,7 @@ fun HomeTabContent(
                     Surface(
                         shape = AppRadius.pillShape,
                         color = colors.accent,
-                        modifier = Modifier.clickable { onScanClick() }
+                        modifier = Modifier.pressScaleEffect(onClick = onScanClick)
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
@@ -196,7 +182,7 @@ fun HomeTabContent(
                             Spacer(modifier = Modifier.width(7.dp))
                             Text(
                                 text = "Scan Document",
-                                style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 13.sp),
+                                style = typography.bodyStrong,
                                 color = colors.onAccent
                             )
                         }
@@ -240,7 +226,8 @@ fun HomeTabContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)
-                            .clickable { onItemClick(continueItem) }
+                            .documentHero(documentHeroKey(continueItem.uri))
+                            .pressScaleEffect(onClick = { onItemClick(continueItem) })
                     ) {
                         Row(
                             modifier = Modifier
@@ -270,11 +257,7 @@ fun HomeTabContent(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         text = "NOW READING",
-                                        style = typography.caption.copy(
-                                            fontSize = 10.5.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            letterSpacing = 0.8.sp
-                                        ),
+                                        style = typography.overline,
                                         color = colors.accent
                                     )
                                     if (continueItem.progressFraction > 0f) {
@@ -282,7 +265,7 @@ fun HomeTabContent(
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
                                             text = "• $pct%",
-                                            style = typography.caption.withTabularFigures().copy(fontSize = 10.5.sp),
+                                            style = typography.caption.withTabularFigures(),
                                             color = colors.inkMuted
                                         )
                                     }
@@ -290,7 +273,7 @@ fun HomeTabContent(
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = formatMiddleTruncated(continueItem.name, 34),
-                                    style = typography.body.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
+                                    style = typography.bodyStrong,
                                     color = colors.ink,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
@@ -333,12 +316,8 @@ fun HomeTabContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Recent Documents",
-                        style = typography.heading.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 17.sp,
-                            letterSpacing = (-0.3).sp
-                        ),
+                        text = "Recent documents",
+                        style = typography.heading,
                         color = colors.ink
                     )
                     if (recentItems.isNotEmpty()) {
@@ -348,60 +327,21 @@ fun HomeTabContent(
                         ) {
                             Text(
                                 text = "Clear",
-                                style = typography.caption.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 12.5.sp,
-                                    color = colors.accent
-                                )
+                                style = typography.captionStrong.copy(color = colors.accent)
                             )
                         }
                     }
                 }
             }
 
-            // 5. Minimal Segmented Filter Chips
+            // 5. Document Format Filters
             item(key = "filter_chips") {
-                val docFilters = listOf("All", "PDF", "Word", "Excel", "PPT", "Text")
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    docFilters.forEach { label ->
-                        val isSelected = selectedDocumentFilter == label
-                        val chipBg by animateColorAsState(
-                            targetValue = if (isSelected) colors.ink else colors.surfaceContainer,
-                            animationSpec = tween(durationMillis = 150),
-                            label = "filterChipBg"
-                        )
-                        val chipText by animateColorAsState(
-                            targetValue = if (isSelected) colors.background else colors.inkMuted,
-                            animationSpec = tween(durationMillis = 150),
-                            label = "filterChipText"
-                        )
-
-                        Surface(
-                            shape = AppRadius.pillShape,
-                            color = chipBg,
-                            modifier = Modifier
-                                .clip(AppRadius.pillShape)
-                                .clickable { selectedDocumentFilter = label }
-                        ) {
-                            Text(
-                                text = label,
-                                style = typography.caption.copy(
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    fontSize = 12.sp
-                                ),
-                                color = chipText,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
+                DocumentFilterChips(
+                    selected = selectedDocumentFilter,
+                    onSelected = { selectedDocumentFilter = it },
+                    modifier = Modifier.padding(horizontal = AppSpacing.medium)
+                )
+                Spacer(modifier = Modifier.height(AppSpacing.small))
             }
 
             // 6. Content-First: Inset-Grouped List
@@ -429,14 +369,14 @@ fun HomeTabContent(
                             )
                             Spacer(modifier = Modifier.height(10.dp))
                             Text(
-                                text = if (selectedDocumentFilter == "All") "No recent documents" else "No $selectedDocumentFilter files found",
-                                style = typography.body.copy(fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold),
+                                text = if (selectedDocumentFilter == DocumentFilter.ALL) "No recent documents" else "No ${selectedDocumentFilter.label} files found",
+                                style = typography.bodyStrong,
                                 color = colors.ink
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = if (selectedDocumentFilter == "All") "Documents you open or scan will appear here" else "Open a $selectedDocumentFilter file to view it here",
-                                style = typography.caption.copy(fontSize = 12.sp),
+                                text = if (selectedDocumentFilter == DocumentFilter.ALL) "Documents you open or scan will appear here" else "Open a ${selectedDocumentFilter.label} file to view it here",
+                                style = typography.caption,
                                 color = colors.inkMuted
                             )
                         }
@@ -464,6 +404,7 @@ fun HomeTabContent(
                                 RecentItemRow(
                                     item = item,
                                     isDarkTheme = isDarkTheme,
+                                    isHero = item.kind == MediaKind.DOCUMENT && item.uri != continueItem?.uri,
                                     onClick = { onItemClick(item) }
                                 )
                             }
@@ -490,8 +431,8 @@ private fun EditorialActionPill(
     Surface(
         shape = AppRadius.pillShape,
         color = colors.surfaceContainer,
-        border = BorderStroke(0.5.dp, colors.line),
-        modifier = Modifier.clickable(onClick = onClick)
+        border = BorderStroke(AppSpacing.hairline, colors.line),
+        modifier = Modifier.pressScaleEffect(onClick = onClick)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -506,7 +447,7 @@ private fun EditorialActionPill(
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = title,
-                style = typography.caption.copy(fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold),
+                style = typography.captionStrong,
                 color = colors.ink
             )
         }
@@ -521,6 +462,7 @@ private fun EditorialActionPill(
 private fun RecentItemRow(
     item: LibraryItem,
     isDarkTheme: Boolean,
+    isHero: Boolean,
     onClick: () -> Unit
 ) {
     val colors = AppTheme.colors
@@ -530,7 +472,8 @@ private fun RecentItemRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .then(if (isHero) Modifier.documentHero(documentHeroKey(item.uri)) else Modifier)
+            .pressScaleEffect(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -555,7 +498,7 @@ private fun RecentItemRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = formatMiddleTruncated(item.name, 36),
-                style = typography.body.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
+                style = typography.bodyStrong,
                 color = colors.ink,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -566,19 +509,19 @@ private fun RecentItemRow(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = item.extension.uppercase(),
-                    style = typography.caption.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                    style = typography.micro,
                     color = formatTint
                 )
                 Spacer(modifier = Modifier.width(5.dp))
                 Text(
                     text = "•",
-                    style = typography.caption.copy(fontSize = 10.sp),
+                    style = typography.micro,
                     color = colors.inkMuted
                 )
                 Spacer(modifier = Modifier.width(5.dp))
                 Text(
                     text = item.formattedSize,
-                    style = typography.caption.withTabularFigures().copy(fontSize = 11.5.sp),
+                    style = typography.micro.withTabularFigures(),
                     color = colors.inkMuted
                 )
             }

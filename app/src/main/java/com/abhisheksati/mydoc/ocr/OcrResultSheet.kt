@@ -86,12 +86,12 @@ fun OcrResultSheet(
                     Column {
                         Text(
                             text = "Extracted Text (OCR)",
-                            style = typography.title.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
+                            style = typography.titleSmall,
                             color = colors.textPrimary
                         )
                         Text(
                             text = "$wordCount words • $charCount characters",
-                            style = typography.caption.copy(fontSize = 12.sp),
+                            style = typography.caption,
                             color = colors.textSecondary
                         )
                     }
@@ -121,7 +121,7 @@ fun OcrResultSheet(
                 ) {
                     Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Copy", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Copy", style = AppTheme.typography.captionStrong)
                 }
 
                 OutlinedButton(
@@ -138,7 +138,7 @@ fun OcrResultSheet(
                 ) {
                     Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Share", fontSize = 12.sp)
+                    Text("Share", style = AppTheme.typography.caption)
                 }
 
                 OutlinedButton(
@@ -160,7 +160,7 @@ fun OcrResultSheet(
                 ) {
                     Icon(Icons.Outlined.SaveAlt, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Save .txt", fontSize = 12.sp)
+                    Text("Save .txt", style = AppTheme.typography.caption)
                 }
             }
 
@@ -184,7 +184,7 @@ fun OcrResultSheet(
                     ) {
                         Text(
                             text = text.ifBlank { "No text detected in this image." },
-                            style = typography.body.copy(fontSize = 14.sp, lineHeight = 22.sp),
+                            style = typography.body,
                             color = colors.textPrimary
                         )
                     }

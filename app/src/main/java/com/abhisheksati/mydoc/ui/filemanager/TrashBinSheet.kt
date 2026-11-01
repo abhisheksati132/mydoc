@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -81,7 +82,7 @@ fun TrashBinSheet(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val isOled = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
+    val isOled = LocalIsOled.current
 
     var selectedIds by remember { mutableStateOf(setOf<Long>()) }
     var showEmptyConfirmDialog by remember { mutableStateOf(false) }
@@ -115,13 +116,13 @@ fun TrashBinSheet(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = if (isSelectionMode) "${selectedIds.size} Selected" else "Recycle Bin",
-                                style = typography.title.copy(fontSize = 18.sp),
+                                style = typography.titleSmall,
                                 color = colors.textPrimary
                             )
                             if (!isSelectionMode) {
                                 Text(
                                     text = "${trashItems.size} items • 30-day auto-purge",
-                                    style = typography.caption.copy(fontSize = 12.sp),
+                                    style = typography.caption,
                                     color = colors.textSecondary
                                 )
                             }
@@ -259,7 +260,7 @@ fun TrashBinSheet(
         AlertDialog(
             onDismissRequest = { showEmptyConfirmDialog = false },
             shape = AppRadius.modalShape,
-            containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+            containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
             modifier = Modifier.border(
                 BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
                 AppRadius.modalShape
@@ -289,7 +290,7 @@ fun TrashBinSheet(
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
             shape = AppRadius.modalShape,
-            containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+            containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
             modifier = Modifier.border(
                 BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
                 AppRadius.modalShape
@@ -329,7 +330,7 @@ private fun TrashItemCard(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
 
-    val isOled = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
+    val isOled = LocalIsOled.current
 
     Card(
         shape = RoundedCornerShape(12.dp),
@@ -380,7 +381,7 @@ private fun TrashItemCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = item.displayName,
-                    style = typography.body.copy(fontWeight = FontWeight.Medium),
+                    style = typography.bodyMedium,
                     color = colors.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

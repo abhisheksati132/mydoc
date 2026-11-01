@@ -35,6 +35,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.tools.scan.cropper.FreeCornersCropperDialog
 import com.abhisheksati.mydoc.tools.scan.filters.ScanFilter
 import com.abhisheksati.mydoc.tools.scan.filters.ScanFilterEngine
@@ -115,6 +116,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
+import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import java.io.File
 
@@ -154,6 +156,7 @@ fun CameraScanSheet(
         val context = LocalContext.current
         val lifecycleOwner = LocalLifecycleOwner.current
         val colors = LocalAppColors.current
+        val haptics = rememberAppHaptics()
         val typography = LocalAppTypography.current
         val haptic = LocalHapticFeedback.current
 
@@ -369,7 +372,7 @@ fun CameraScanSheet(
                     ) {
                         Text(
                             text = "Align document inside frame",
-                            style = typography.caption.copy(fontSize = 11.5.sp, fontWeight = FontWeight.Medium),
+                            style = typography.micro,
                             color = Color.White.copy(alpha = 0.9f),
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp)
                         )
@@ -412,7 +415,7 @@ fun CameraScanSheet(
                             ) {
                                 Text(
                                     text = "${capturedFiles.size} ${if (capturedFiles.size == 1) "page" else "pages"}",
-                                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
+                                    style = typography.captionStrong,
                                     color = colors.accent,
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
                                 )
@@ -420,7 +423,7 @@ fun CameraScanSheet(
                         } else {
                             Text(
                                 text = "Scan Document",
-                                style = typography.body.copy(fontWeight = FontWeight.SemiBold),
+                                style = typography.bodyStrong,
                                 color = Color.White
                             )
                         }
@@ -429,7 +432,6 @@ fun CameraScanSheet(
                             // Flashlight / Torch Toggle
                             IconButton(
                                 onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     isTorchOn = !isTorchOn
                                     cameraControl?.enableTorch(isTorchOn)
                                 },
@@ -454,7 +456,7 @@ fun CameraScanSheet(
                                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
                                     modifier = Modifier.height(34.dp)
                                 ) {
-                                    Text("Done (${capturedFiles.size})", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text("Done (${capturedFiles.size})", style = AppTheme.typography.captionStrong)
                                 }
                             }
                         }
@@ -489,10 +491,7 @@ fun CameraScanSheet(
                                 ) {
                                     Text(
                                         text = mode.label,
-                                        style = typography.caption.copy(
-                                            fontSize = 11.sp,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                        ),
+                                        style = if (isSelected) typography.captionStrong else typography.micro,
                                         color = if (isSelected) Color.White else Color(0xAAFFFFFF)
                                     )
                                 }
@@ -533,7 +532,6 @@ fun CameraScanSheet(
                                     .border(1.5.dp, colors.accent, RoundedCornerShape(8.dp))
                                     .background(Color(0xFF212121))
                                     .clickable {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         scope.launch(Dispatchers.IO) {
                                             try {
                                                 val boundsOpts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -571,7 +569,7 @@ fun CameraScanSheet(
                                 ) {
                                     Text(
                                         text = "${idx + 1}",
-                                        style = typography.caption.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
+                                        style = typography.micro,
                                         color = Color.White,
                                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                     )
@@ -627,7 +625,7 @@ fun CameraScanSheet(
                             ) {
                                 Text(
                                     text = filter.label,
-                                    style = typography.caption.copy(fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium),
+                                    style = if (isSelected) typography.captionStrong else typography.micro,
                                     color = if (isSelected) Color.Black else Color.White,
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                                 )
@@ -653,7 +651,6 @@ fun CameraScanSheet(
                         // Gallery Import button
                         IconButton(
                             onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 galleryLauncher.launch("image/*")
                             },
                             modifier = Modifier
@@ -684,7 +681,7 @@ fun CameraScanSheet(
                                     .clip(CircleShape)
                                     .background(if (isCapturing) colors.accent else Color.White)
                                     .clickable(enabled = !isCapturing) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        haptics.confirm()
                                         val capture = imageCapture ?: return@clickable
                                         isCapturing = true
 
@@ -722,7 +719,6 @@ fun CameraScanSheet(
                             if (capturedFiles.isNotEmpty()) {
                                 IconButton(
                                     onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         if (selectedScanFilter == ScanFilter.ORIGINAL) {
                                             val uris = capturedFiles.map { Uri.fromFile(it) }
                                             onScannedUris(uris)

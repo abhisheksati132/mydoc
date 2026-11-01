@@ -111,6 +111,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.domain.model.DocumentFile
@@ -376,7 +378,7 @@ fun PresentationViewerScreen(
     }
 
     val colors = com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors.current
-    val isAppDark = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
+    val isAppDark = LocalIsOled.current
 
     val bgColor = when (readingMode) {
         ReadingMode.INVERTED_DARK -> Color(0xFF000000)
@@ -536,7 +538,7 @@ fun PresentationViewerScreen(
                     Text(
                         text = errorMessage ?: "Error reading presentation",
                         color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = AppTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(16.dp))

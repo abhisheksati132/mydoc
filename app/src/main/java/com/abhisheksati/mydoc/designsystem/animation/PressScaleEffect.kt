@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.material3.ripple
@@ -45,4 +46,25 @@ fun Modifier.pressScaleEffect(
                 )
             } else Modifier
         )
+}
+
+/**
+ * Press physics only. For rows that need [combinedClickable] (long-press selection)
+ * or any custom gesture handling: share the same [interactionSource] with your gesture
+ * modifier and add this for the visual depression.
+ */
+fun Modifier.pressScale(
+    interactionSource: InteractionSource,
+    targetScaleOnPress: Float = 0.972f
+): Modifier = composed {
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) targetScaleOnPress else 1.0f,
+        animationSpec = spring(
+            dampingRatio = 0.65f,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "pressScale"
+    )
+    scale(scale)
 }

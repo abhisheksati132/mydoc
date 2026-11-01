@@ -40,8 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -78,7 +76,6 @@ fun ViewerTopBar(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val haptic = LocalHapticFeedback.current
     var isMoreMenuOpen by remember { mutableStateOf(false) }
 
     AnimatedVisibility(
@@ -109,7 +106,6 @@ fun ViewerTopBar(
                 // Back button (48dp touch target)
                 IconButton(
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onBackClick()
                     },
                     modifier = Modifier.size(AppSpacing.minTouchTarget)
@@ -147,7 +143,6 @@ fun ViewerTopBar(
                 // In-Viewer Search
                 IconButton(
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onSearchClick()
                     },
                     modifier = Modifier.size(AppSpacing.minTouchTarget)
@@ -162,7 +157,6 @@ fun ViewerTopBar(
                 // Bookmark Toggle
                 IconButton(
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onToggleBookmark()
                     },
                     modifier = Modifier.size(AppSpacing.minTouchTarget)
@@ -178,7 +172,6 @@ fun ViewerTopBar(
                 Box {
                     IconButton(
                         onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             isMoreMenuOpen = true
                         },
                         modifier = Modifier.size(AppSpacing.minTouchTarget)
@@ -344,4 +337,3 @@ private fun ViewerTopBarAmoledPreview() {
         )
     }
 }
-

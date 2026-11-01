@@ -96,7 +96,7 @@ fun DocumentTtsBar(
                                 TtsPlaybackState.ERROR -> "Voice error"
                                 else -> "Read Aloud Ready"
                             },
-                            style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 12.sp),
+                            style = typography.captionStrong,
                             color = colors.textPrimary
                         )
                     }
@@ -117,7 +117,7 @@ fun DocumentTtsBar(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "\"$currentUtterance\"",
-                        style = typography.caption.copy(fontSize = 11.sp),
+                        style = typography.micro,
                         color = colors.textSecondary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
@@ -155,8 +155,7 @@ fun DocumentTtsBar(
                         Text(
                             text = if (state == TtsPlaybackState.PLAYING) "Pause" else if (state == TtsPlaybackState.PAUSED) "Resume" else "Start",
                             color = Color.White,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
+                            style = AppTheme.typography.bodyStrong
                         )
                     }
 
@@ -168,7 +167,7 @@ fun DocumentTtsBar(
                     ) {
                         Icon(Icons.Default.Stop, contentDescription = null, tint = colors.error, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Stop", color = colors.error, fontSize = 12.sp)
+                        Text("Stop", color = colors.error, style = AppTheme.typography.caption)
                     }
 
                     // Speed toggle pill
@@ -185,7 +184,7 @@ fun DocumentTtsBar(
                     ) {
                         Text(
                             text = "${speed}x",
-                            style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 12.sp),
+                            style = typography.captionStrong,
                             color = colors.accent
                         )
                     }

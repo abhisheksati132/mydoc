@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
@@ -96,7 +97,7 @@ fun SearchOverlay(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { if (matchCount > 0) onNextMatch() }),
-                shape = RoundedCornerShape(AppSpacing.cornerRadius),
+                shape = AppRadius.cardShape,
                 modifier = Modifier.weight(1f),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = colors.surface,
@@ -111,13 +112,13 @@ fun SearchOverlay(
             if (matchCount > 0) {
                 Text(
                     text = "${currentMatchIndex + 1} of $matchCount",
-                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+                    style = typography.captionStrong,
                     color = colors.accent
                 )
             } else if (query.isNotBlank()) {
                 Text(
                     text = "0 matches",
-                    style = typography.caption.copy(fontSize = 12.sp),
+                    style = typography.caption,
                     color = colors.textSecondary
                 )
             }

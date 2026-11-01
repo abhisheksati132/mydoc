@@ -5,14 +5,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Editorial Document Studio Corner Radius Contract.
+ * Single source of truth for corner radii. No screen may hardcode a radius.
  *
- * Rules:
- * - Micro (6dp): Small format badges, tags, and item indicators.
- * - Pill (8dp): Segmented filter chips, search chips, and compact buttons.
- * - Card (12dp): Document cards, grouped list containers, and dialog surfaces.
- * - Sheet (20dp): Bottom sheets, modals, and major floating drawers.
- * - Round (999dp): Circular action buttons and status indicators.
+ * - micro (6dp): format badges, tiny tags, icon tiles.
+ * - pill  (8dp): chips, compact buttons, action pills.
+ * - card (12dp): document cards, grouped lists, inputs, snackbars.
+ * - sheet (20dp): bottom sheets and modals (top corners).
+ * - round (999dp): circular buttons, progress tracks, avatars.
  */
 object AppRadius {
     val micro: Dp = 6.dp

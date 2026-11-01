@@ -41,6 +41,10 @@ enum class FileCategory(val displayName: String) {
     AUDIO("Audio"),
     APKS("APKs"),
     ARCHIVES("Archives"),
-    LARGE_FILES("Large Files")
+    LARGE_FILES("Large Files");
+
+    /** Lowercase form for sentence copy ("No documents here"). */
+    val noun: String
+        get() = if (this == APKS) "APK files" else displayName.lowercase()
 }
 

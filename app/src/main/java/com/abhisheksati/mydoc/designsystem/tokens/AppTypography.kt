@@ -12,76 +12,86 @@ import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.R
 
 /**
- * Clean, native Android system typography system.
- * Uses standard, highly-legible Inter / system sans-serif across all headings, titles, and body text.
+ * Editorial type system: Bricolage Grotesque carries the brand (display, titles, headings),
+ * Inter carries the work (body, labels, captions, numbers).
+ *
+ * Sizes are fixed here on purpose. Screens must not override fontSize/weight with
+ * `.copy(...)` — pick the closest role instead, so the app keeps one voice.
  */
 
+private val interWeights = listOf(400 to FontWeight.Normal, 500 to FontWeight.Medium, 600 to FontWeight.SemiBold, 700 to FontWeight.Bold, 800 to FontWeight.ExtraBold)
+private val bricolageWeights = listOf(400 to FontWeight.Normal, 600 to FontWeight.SemiBold, 700 to FontWeight.Bold, 800 to FontWeight.ExtraBold)
+
 @OptIn(ExperimentalTextApi::class)
-val InterFontFamily: FontFamily = runCatching {
+private fun variableFamily(resId: Int, weights: List<Pair<Int, FontWeight>>): FontFamily = runCatching {
     FontFamily(
-        Font(
-            resId = R.font.inter,
-            weight = FontWeight.Normal,
-            variationSettings = FontVariation.Settings(
-                FontVariation.weight(400)
+        weights.map { (value, weight) ->
+            Font(
+                resId = resId,
+                weight = weight,
+                variationSettings = FontVariation.Settings(FontVariation.weight(value))
             )
-        ),
-        Font(
-            resId = R.font.inter,
-            weight = FontWeight.Medium,
-            variationSettings = FontVariation.Settings(
-                FontVariation.weight(500)
-            )
-        ),
-        Font(
-            resId = R.font.inter,
-            weight = FontWeight.SemiBold,
-            variationSettings = FontVariation.Settings(
-                FontVariation.weight(600)
-            )
-        ),
-        Font(
-            resId = R.font.inter,
-            weight = FontWeight.Bold,
-            variationSettings = FontVariation.Settings(
-                FontVariation.weight(700)
-            )
-        ),
-        Font(
-            resId = R.font.inter,
-            weight = FontWeight.ExtraBold,
-            variationSettings = FontVariation.Settings(
-                FontVariation.weight(800)
-            )
-        )
+        }
     )
 }.getOrElse { FontFamily.SansSerif }
 
-// Native alias for backwards compatibility
-val BricolageFontFamily: FontFamily = InterFontFamily
+val InterFontFamily: FontFamily = variableFamily(R.font.inter, interWeights)
+
+val BricolageFontFamily: FontFamily = variableFamily(R.font.bricolage_grotesque, bricolageWeights)
 
 @Immutable
 data class AppTypography(
     val display: TextStyle = TextStyle(
-        fontFamily = InterFontFamily,
+        fontFamily = BricolageFontFamily,
         fontWeight = FontWeight.ExtraBold,
         fontSize = 34.sp,
-        lineHeight = 40.sp,
+        lineHeight = 38.sp,
         letterSpacing = (-1.0).sp
     ),
     val title: TextStyle = TextStyle(
-        fontFamily = InterFontFamily,
+        fontFamily = BricolageFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 24.sp,
-        lineHeight = 30.sp,
-        letterSpacing = (-0.2).sp
+        lineHeight = 28.sp,
+        letterSpacing = (-0.4).sp
     ),
     val heading: TextStyle = TextStyle(
-        fontFamily = InterFontFamily,
+        fontFamily = BricolageFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 20.sp,
+        lineHeight = 25.sp,
+        letterSpacing = (-0.2).sp
+    ),
+    /** Compact Bricolage title. Below this size, titles are Inter body-strong. */
+    val titleSmall: TextStyle = TextStyle(
+        fontFamily = BricolageFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 18.sp,
+        lineHeight = 22.sp,
+        letterSpacing = (-0.2).sp
+    ),
+    /** Small, wide-tracked section label. Use for "RECENT DOCUMENTS", group headers. */
+    val overline: TextStyle = TextStyle(
+        fontFamily = InterFontFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 11.sp,
+        lineHeight = 14.sp,
+        letterSpacing = 0.8.sp
+    ),
+    val wordmark: TextStyle = TextStyle(
+        fontFamily = BricolageFontFamily,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 22.sp,
         lineHeight = 26.sp,
-        letterSpacing = (-0.1).sp
+        letterSpacing = (-0.6).sp
+    ),
+    /** Root-tab header title. */
+    val screenTitle: TextStyle = TextStyle(
+        fontFamily = BricolageFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 22.sp,
+        lineHeight = 26.sp,
+        letterSpacing = (-0.4).sp
     ),
     val bodyLarge: TextStyle = TextStyle(
         fontFamily = InterFontFamily,
@@ -90,9 +100,30 @@ data class AppTypography(
         lineHeight = 24.sp,
         letterSpacing = 0.sp
     ),
+    val bodyLargeStrong: TextStyle = TextStyle(
+        fontFamily = InterFontFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
+        letterSpacing = 0.sp
+    ),
     val body: TextStyle = TextStyle(
         fontFamily = InterFontFamily,
         fontWeight = FontWeight.Normal,
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        letterSpacing = 0.sp
+    ),
+    val bodyMedium: TextStyle = TextStyle(
+        fontFamily = InterFontFamily,
+        fontWeight = FontWeight.Medium,
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        letterSpacing = 0.sp
+    ),
+    val bodyStrong: TextStyle = TextStyle(
+        fontFamily = InterFontFamily,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.sp
@@ -109,6 +140,21 @@ data class AppTypography(
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 16.sp,
+        letterSpacing = 0.2.sp
+    ),
+    val captionStrong: TextStyle = TextStyle(
+        fontFamily = InterFontFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.2.sp
+    ),
+    /** Smallest legible tier: metadata, badges, dense counters. */
+    val micro: TextStyle = TextStyle(
+        fontFamily = InterFontFamily,
+        fontWeight = FontWeight.Medium,
+        fontSize = 11.sp,
+        lineHeight = 14.sp,
         letterSpacing = 0.2.sp
     ),
     // Compatibility alias

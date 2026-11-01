@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import com.abhisheksati.mydoc.ui.common.AppDivider
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
@@ -113,7 +114,7 @@ fun OutlineDrawer(
                     if (flattened.isEmpty()) {
                         Text(
                             text = "This document does not contain an outline.",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = AppTheme.typography.body,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = Spacing.large)
                         )
@@ -137,7 +138,7 @@ fun OutlineDrawer(
                                     Spacer(modifier = Modifier.width((item.level * 16).dp))
                                     Text(
                                         text = item.title,
-                                        style = MaterialTheme.typography.bodyLarge,
+                                        style = AppTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onBackground,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
@@ -146,7 +147,7 @@ fun OutlineDrawer(
                                     Spacer(modifier = Modifier.width(Spacing.small))
                                     Text(
                                         text = "${item.pageIndex + 1}",
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        style = AppTheme.typography.body,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
@@ -161,7 +162,7 @@ fun OutlineDrawer(
                     if (sortedBookmarks.isEmpty()) {
                         Text(
                             text = "No bookmarks yet. Tap the bookmark icon in the top toolbar to save a page.",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = AppTheme.typography.body,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = Spacing.large)
                         )
@@ -191,7 +192,7 @@ fun OutlineDrawer(
                                     Spacer(modifier = Modifier.width(Spacing.small))
                                     Text(
                                         text = "Page ${pageIndex + 1}",
-                                        style = MaterialTheme.typography.bodyLarge,
+                                        style = AppTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onBackground,
                                         modifier = Modifier.weight(1f)
                                     )

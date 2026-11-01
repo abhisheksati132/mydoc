@@ -69,6 +69,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
@@ -162,7 +164,7 @@ fun PhotoViewerScreen(
         value = mediaRepository.extractExif(currentItem.uri)
     }
 
-    val isDarkMode = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
+    val isDarkMode = LocalIsOled.current
     val viewerBackground = colors.background
     val overlayBackground = if (isDarkMode) colors.surface.copy(alpha = 0.88f) else colors.surface.copy(alpha = 0.94f)
     val contentColor = colors.textPrimary
@@ -233,7 +235,7 @@ fun PhotoViewerScreen(
                     ) {
                         Text(
                             text = currentItem.displayName,
-                            style = typography.body.copy(fontWeight = FontWeight.Medium),
+                            style = typography.bodyMedium,
                             color = contentColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -241,7 +243,7 @@ fun PhotoViewerScreen(
                         if (photoList.size > 1) {
                             Text(
                                 text = "${pagerState.currentPage + 1} of ${photoList.size}",
-                                style = typography.caption.copy(fontFeatureSettings = "tnum"),
+                                style = typography.caption.withTabularFigures(),
                                 color = secondaryColor
                             )
                         }
@@ -546,7 +548,6 @@ private fun PhotoViewerPillButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     Surface(
         shape = RoundedCornerShape(28.dp),
         color = LocalAppColors.current.surfaceMuted,
@@ -554,7 +555,6 @@ private fun PhotoViewerPillButton(
             .height(56.dp)
             .clip(RoundedCornerShape(28.dp))
             .clickable(onClick = {
-                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                 onClick()
             })
     ) {
@@ -572,7 +572,7 @@ private fun PhotoViewerPillButton(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = label,
-                style = LocalAppTypography.current.caption.copy(fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
+                style = LocalAppTypography.current.captionStrong,
                 color = tint
             )
         }

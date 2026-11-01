@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
 
 @Composable
@@ -38,14 +39,14 @@ fun PasswordDialog(
         title = {
             Text(
                 text = "Password Protected",
-                style = MaterialTheme.typography.titleMedium
+                style = AppTheme.typography.bodyLargeStrong
             )
         },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "This document is encrypted. Enter the password to unlock it.",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = AppTheme.typography.body,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(Spacing.medium))
@@ -63,7 +64,7 @@ fun PasswordDialog(
                     Spacer(modifier = Modifier.height(Spacing.extraSmall))
                     Text(
                         text = "Incorrect password. Please try again.",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = AppTheme.typography.caption,
                         color = MaterialTheme.colorScheme.error
                     )
                 }

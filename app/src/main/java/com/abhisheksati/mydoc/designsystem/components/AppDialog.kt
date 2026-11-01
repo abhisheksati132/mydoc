@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
@@ -47,13 +48,13 @@ fun AppDialog(
 
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val isOled = colors.background == DarkAppColors.background
+    val isOled = LocalIsOled.current
     val effectiveDismiss = onDismissRequest ?: onDismiss ?: {}
 
     AlertDialog(
         onDismissRequest = effectiveDismiss,
         shape = AppRadius.modalShape,
-        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+        containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
         modifier = Modifier.border(
             BorderStroke(
                 0.5.dp,
@@ -64,7 +65,7 @@ fun AppDialog(
         title = {
             Text(
                 text = title,
-                style = typography.title.copy(fontWeight = FontWeight.Bold, fontSize = 18.sp),
+                style = typography.titleSmall,
                 color = colors.textPrimary
             )
         },
@@ -73,7 +74,7 @@ fun AppDialog(
                 if (!message.isNullOrBlank()) {
                     Text(
                         text = message,
-                        style = typography.body.copy(lineHeight = 20.sp),
+                        style = typography.body,
                         color = colors.textSecondary
                     )
                 }
@@ -107,7 +108,7 @@ fun AppDialog(
                 ) {
                     Text(
                         text = confirmLabel,
-                        style = typography.label.copy(fontWeight = FontWeight.SemiBold)
+                        style = typography.label
                     )
                 }
             }

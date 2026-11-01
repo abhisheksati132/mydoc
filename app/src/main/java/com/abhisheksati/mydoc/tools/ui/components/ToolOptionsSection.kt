@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
@@ -217,7 +218,7 @@ internal fun ToolOptionsSection(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+                            .clip(RoundedCornerShape(AppRadius.round))
                             .background(colors.accent)
                             .clickable { onOpenOrganizer() }
                             .padding(vertical = 12.dp),
@@ -249,7 +250,7 @@ internal fun ToolOptionsSection(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+                            .clip(RoundedCornerShape(AppRadius.round))
                             .background(colors.accent)
                             .clickable { onOpenFormFiller() }
                             .padding(vertical = 12.dp),
@@ -367,7 +368,7 @@ internal fun ToolOptionsSection(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+                        .clip(RoundedCornerShape(AppRadius.round))
                         .background(if (hasSignature) colors.surfaceVariant else colors.accent)
                         .clickable { onOpenSignPad() }
                         .padding(14.dp),

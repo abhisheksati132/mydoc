@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
 
 @Composable
@@ -52,7 +53,7 @@ fun PageJumpDialog(
         title = {
             Text(
                 text = "Go to Page",
-                style = MaterialTheme.typography.titleMedium,
+                style = AppTheme.typography.bodyLargeStrong,
                 color = MaterialTheme.colorScheme.onBackground
             )
         },
@@ -60,7 +61,7 @@ fun PageJumpDialog(
             Column {
                 Text(
                     text = "Enter a page number between 1 and $pageCount:",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = AppTheme.typography.body,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(Spacing.medium))

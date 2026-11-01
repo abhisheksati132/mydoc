@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.MainActivity
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.data.local.DocumentStreamResolver
@@ -265,7 +266,7 @@ fun WordViewerScreen(
                 Text(
                     text = errorMessage ?: "Error reading document",
                     color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = AppTheme.typography.bodyLarge,
                     modifier = Modifier.padding(16.dp)
                 )
             }

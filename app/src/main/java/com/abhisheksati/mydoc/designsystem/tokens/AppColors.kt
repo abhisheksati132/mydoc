@@ -7,12 +7,13 @@ import androidx.compose.ui.graphics.Color
 import com.abhisheksati.mydoc.domain.model.MediaKind
 
 /**
- * Single Source of Truth for Design System Colors (Stacks Design System).
+ * Single source of truth for MyDoc color. Editorial print studio:
+ * warm paper neutrals, ink text, one violet stamp.
  *
  * Rules:
- * - Neutral canvas and surfaces.
- * - Meaningful color by MediaKind: Document (Blue), Photo (Pink), Video (Orange), Audio (Mint).
- * - Flat 1dp hairline lines, no shadows or gradients.
+ * - Neutral paper canvas and surfaces. No navy, teal, or off-brand darks.
+ * - Violet accent is the only interactive color; media/format hues are labels, not decoration.
+ * - Flat fills + 0.5dp hairlines. No gradients, no drop shadows.
  */
 @Immutable
 data class AppColors(

@@ -54,18 +54,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.StorageChartColors
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.StorageVolume
@@ -97,7 +94,7 @@ fun GoogleFilesHubContent(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val isOled = colors.background == DarkAppColors.background
+    val isOled = LocalIsOled.current
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -107,7 +104,7 @@ fun GoogleFilesHubContent(
         item {
             EditorialStorageOverviewCard(
                 storageUiState = storageUiState,
-                isDarkTheme = isOled,
+                isOled = isOled,
                 onCleanClick = onCleanClick,
                 onCategoryClick = onCategoryClick
             )
@@ -125,12 +122,12 @@ fun GoogleFilesHubContent(
             ) {
                 Text(
                     text = "Collections",
-                    style = typography.title.copy(fontSize = 17.sp, fontWeight = FontWeight.Bold),
+                    style = typography.titleSmall,
                     color = colors.textPrimary
                 )
                 Text(
                     text = "6 categories",
-                    style = typography.caption.copy(fontSize = 12.sp),
+                    style = typography.caption,
                     color = colors.textSecondary
                 )
             }
@@ -158,7 +155,7 @@ fun GoogleFilesHubContent(
             ) {
                 Text(
                     text = "Storage Devices",
-                    style = typography.title.copy(fontSize = 17.sp, fontWeight = FontWeight.Bold),
+                    style = typography.titleSmall,
                     color = colors.textPrimary
                 )
             }
@@ -194,7 +191,7 @@ fun GoogleFilesHubContent(
                 Spacer(modifier = Modifier.height(18.dp))
                 Text(
                     text = "Pinned Folders",
-                    style = typography.title.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
+                    style = typography.bodyStrong,
                     color = colors.textPrimary,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                 )
@@ -207,13 +204,11 @@ fun GoogleFilesHubContent(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     pinnedFolders.forEach { folder ->
-                        val haptic = LocalHapticFeedback.current
                         Surface(
                             shape = AppRadius.pillShape,
                             color = colors.surface,
                             border = BorderStroke(0.5.dp, colors.line),
                             modifier = Modifier.clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 onFolderClick(folder)
                             }
                         ) {
@@ -230,7 +225,7 @@ fun GoogleFilesHubContent(
                                 )
                                 Text(
                                     text = folder.name,
-                                    style = typography.body.copy(fontSize = 13.sp, fontWeight = FontWeight.Medium),
+                                    style = typography.label,
                                     color = colors.textPrimary
                                 )
                             }
@@ -245,7 +240,7 @@ fun GoogleFilesHubContent(
             Spacer(modifier = Modifier.height(22.dp))
             Text(
                 text = "Utilities",
-                style = typography.title.copy(fontSize = 17.sp, fontWeight = FontWeight.Bold),
+                style = typography.titleSmall,
                 color = colors.textPrimary,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
@@ -262,8 +257,8 @@ fun GoogleFilesHubContent(
                 Column {
                     HubUtilityRow(
                         icon = Icons.Outlined.DeleteSweep,
-                        iconTint = Color(0xFFD97706),
-                        iconBackground = Color(0xFFD97706).copy(alpha = 0.12f),
+                        iconTint = colors.textSecondary,
+                        iconBackground = colors.surfaceMuted,
                         title = "Recycle Bin",
                         subtitle = "Recently deleted items kept for 30 days",
                         badgeText = if (trashCount > 0) "$trashCount items" else null,
@@ -286,6 +281,8 @@ private fun EditorialCategoryGrid(
     onCategoryClick: (FileCategory) -> Unit,
     onAppsClick: () -> Unit
 ) {
+    val colors = LocalAppColors.current
+
     fun findCategoryStat(type: StorageCategoryType): StorageCategoryStat? {
         return storageUiState.categories.firstOrNull { it.type == type }
     }
@@ -322,7 +319,7 @@ private fun EditorialCategoryGrid(
                 countText = downloadsStat?.let { "${it.fileCount} files" } ?: "Scanning...",
                 sizeText = downloadsStat?.formattedSize ?: "",
                 icon = Icons.Outlined.Download,
-                tint = Color(0xFF38BDF8),
+                tint = colors.accent,
                 isOled = isOled,
                 modifier = Modifier.weight(1f),
                 onClick = { onCategoryClick(FileCategory.DOWNLOADS) }
@@ -339,7 +336,7 @@ private fun EditorialCategoryGrid(
                 countText = imagesStat?.let { "${it.fileCount} files" } ?: "Scanning...",
                 sizeText = imagesStat?.formattedSize ?: "",
                 icon = Icons.Outlined.Image,
-                tint = Color(0xFF10B981),
+                tint = DocumentFormatColors.mediaTint,
                 isOled = isOled,
                 modifier = Modifier.weight(1f),
                 onClick = { onCategoryClick(FileCategory.IMAGES) }
@@ -366,7 +363,7 @@ private fun EditorialCategoryGrid(
                 countText = audioStat?.let { "${it.fileCount} files" } ?: "Scanning...",
                 sizeText = audioStat?.formattedSize ?: "",
                 icon = Icons.Outlined.AudioFile,
-                tint = DocumentFormatColors.zipTint,
+                tint = DocumentFormatColors.mediaTint,
                 isOled = isOled,
                 modifier = Modifier.weight(1f),
                 onClick = { onCategoryClick(FileCategory.AUDIO) }
@@ -376,7 +373,7 @@ private fun EditorialCategoryGrid(
                 countText = if (storageUiState.userAppCount > 0) "${storageUiState.userAppCount} apps" else "Scanning...",
                 sizeText = if (storageUiState.userAppBytes > 0) StorageVolume.formatBytes(storageUiState.userAppBytes) else "",
                 icon = Icons.Outlined.Apps,
-                tint = DocumentFormatColors.pptTint,
+                tint = colors.accent,
                 isOled = isOled,
                 modifier = Modifier.weight(1f),
                 onClick = onAppsClick
@@ -401,7 +398,6 @@ private fun EditorialCategoryCard(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val haptic = LocalHapticFeedback.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
@@ -425,7 +421,6 @@ private fun EditorialCategoryCard(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     onClick()
                 }
             )
@@ -456,7 +451,7 @@ private fun EditorialCategoryCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
+                    style = typography.bodyStrong,
                     color = colors.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -465,7 +460,7 @@ private fun EditorialCategoryCard(
                 val sub = if (sizeText.isNotEmpty()) "$countText • $sizeText" else countText
                 Text(
                     text = sub,
-                    style = typography.caption.withTabularFigures().copy(fontSize = 11.sp),
+                    style = typography.micro.withTabularFigures(),
                     color = colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -535,13 +530,13 @@ private fun InternalStorageCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Internal Storage",
-                    style = typography.body.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
+                    style = typography.bodyStrong,
                     color = colors.textPrimary
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "${uiState.formattedFree} free of ${uiState.formattedTotal}",
-                    style = typography.caption.withTabularFigures().copy(fontSize = 12.sp),
+                    style = typography.caption.withTabularFigures(),
                     color = colors.textSecondary
                 )
                 Spacer(modifier = Modifier.height(6.dp))
@@ -599,13 +594,13 @@ private fun SecondaryStorageCard(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(AppRadius.microShape)
-                    .background(Color(0xFF009688).copy(alpha = 0.12f)),
+                    .background(colors.accent.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Outlined.SdCard,
                     contentDescription = null,
-                    tint = Color(0xFF009688),
+                    tint = colors.accent,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -615,13 +610,13 @@ private fun SecondaryStorageCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = volume.title,
-                    style = typography.body.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
+                    style = typography.bodyStrong,
                     color = colors.textPrimary
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "${StorageVolume.formatBytes(volume.freeBytes)} free of ${StorageVolume.formatBytes(volume.totalBytes)}",
-                    style = typography.caption.withTabularFigures().copy(fontSize = 12.sp),
+                    style = typography.caption.withTabularFigures(),
                     color = colors.textSecondary
                 )
                 Spacer(modifier = Modifier.height(6.dp))
@@ -631,7 +626,7 @@ private fun SecondaryStorageCard(
                         .fillMaxWidth()
                         .height(4.dp)
                         .clip(RoundedCornerShape(2.dp)),
-                    color = Color(0xFF009688),
+                    color = colors.accent,
                     trackColor = colors.line
                 )
             }
@@ -692,12 +687,12 @@ private fun HubUtilityRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
+                style = typography.bodyStrong,
                 color = colors.textPrimary
             )
             Text(
                 text = subtitle,
-                style = typography.caption.copy(fontSize = 11.5.sp),
+                style = typography.micro,
                 color = colors.textSecondary
             )
         }
@@ -710,7 +705,7 @@ private fun HubUtilityRow(
             ) {
                 Text(
                     text = badgeText,
-                    style = typography.caption.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                    style = typography.micro,
                     color = badgeColor,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                 )
@@ -734,7 +729,7 @@ private fun HubUtilityRow(
 @Composable
 private fun EditorialStorageOverviewCard(
     storageUiState: StorageAnalysisUiState,
-    isDarkTheme: Boolean,
+    isOled: Boolean,
     onCleanClick: () -> Unit,
     onCategoryClick: (FileCategory) -> Unit,
     modifier: Modifier = Modifier
@@ -764,7 +759,7 @@ private fun EditorialStorageOverviewCard(
 
     Surface(
         shape = AppRadius.cardShape,
-        color = if (isDarkTheme) colors.surface else colors.surfaceContainer,
+        color = if (isOled) colors.surface else colors.surfaceContainer,
         border = BorderStroke(0.5.dp, colors.line),
         modifier = modifier
             .fillMaxWidth()
@@ -800,7 +795,7 @@ private fun EditorialStorageOverviewCard(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Device Storage",
-                            style = typography.caption.copy(fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold),
+                            style = typography.captionStrong,
                             color = colors.textSecondary
                         )
                     }
@@ -811,7 +806,7 @@ private fun EditorialStorageOverviewCard(
                         } else {
                             "Calculating storage..."
                         },
-                        style = typography.title.withTabularFigures().copy(fontSize = 17.sp, fontWeight = FontWeight.Bold),
+                        style = typography.titleSmall.withTabularFigures(),
                         color = colors.textPrimary
                     )
                 }
@@ -836,7 +831,7 @@ private fun EditorialStorageOverviewCard(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = if (reclaimable > 0) "Clean ${StorageVolume.formatBytes(reclaimable)}" else "Clean",
-                        style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                        style = typography.captionStrong
                     )
                 }
             }
@@ -849,7 +844,7 @@ private fun EditorialStorageOverviewCard(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(RoundedCornerShape(3.dp))
-                    .background(if (isDarkTheme) Color(0x22FFFFFF) else Color(0x12000000))
+                    .background(colors.line)
             ) {
                 Row(modifier = Modifier.fillMaxSize()) {
                     if (docsWeight > 0.005f) {
@@ -857,7 +852,7 @@ private fun EditorialStorageOverviewCard(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .weight(docsWeight.coerceAtLeast(0.01f))
-                                .background(Color(0xFF5B4FE8))
+                                .background(StorageChartColors.documents)
                         )
                     }
                     if (imagesWeight > 0.005f) {
@@ -865,7 +860,7 @@ private fun EditorialStorageOverviewCard(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .weight(imagesWeight.coerceAtLeast(0.01f))
-                                .background(Color(0xFF10B981))
+                                .background(StorageChartColors.images)
                         )
                     }
                     if (videosWeight > 0.005f) {
@@ -873,7 +868,7 @@ private fun EditorialStorageOverviewCard(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .weight(videosWeight.coerceAtLeast(0.01f))
-                                .background(Color(0xFFFF7A3D))
+                                .background(StorageChartColors.videos)
                         )
                     }
                     if (audioWeight > 0.005f) {
@@ -881,7 +876,7 @@ private fun EditorialStorageOverviewCard(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .weight(audioWeight.coerceAtLeast(0.01f))
-                                .background(Color(0xFF86E7B8))
+                                .background(StorageChartColors.audio)
                         )
                     }
                     if (appsWeight > 0.005f) {
@@ -889,7 +884,7 @@ private fun EditorialStorageOverviewCard(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .weight(appsWeight.coerceAtLeast(0.01f))
-                                .background(Color(0xFF7C6FF5))
+                                .background(StorageChartColors.apps)
                         )
                     }
                     if (otherUsedWeight > 0.005f) {
@@ -897,7 +892,7 @@ private fun EditorialStorageOverviewCard(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .weight(otherUsedWeight.coerceAtLeast(0.01f))
-                                .background(Color(0xFF8E8E93))
+                                .background(StorageChartColors.other)
                         )
                     }
                     val freeWeight = (storageUiState.freeBytes.toFloat() / totalBytes).coerceIn(0f, 1f)
@@ -920,31 +915,31 @@ private fun EditorialStorageOverviewCard(
                 StorageLegendChip(
                     label = "Docs",
                     sizeText = StorageVolume.formatBytes(docsBytes),
-                    dotColor = Color(0xFF5B4FE8),
+                    dotColor = StorageChartColors.documents,
                     onClick = { onCategoryClick(FileCategory.DOCUMENTS) }
                 )
                 StorageLegendChip(
                     label = "Photos",
                     sizeText = StorageVolume.formatBytes(imagesBytes),
-                    dotColor = Color(0xFF10B981),
+                    dotColor = StorageChartColors.images,
                     onClick = { onCategoryClick(FileCategory.IMAGES) }
                 )
                 StorageLegendChip(
                     label = "Videos",
                     sizeText = StorageVolume.formatBytes(videosBytes),
-                    dotColor = Color(0xFFFF7A3D),
+                    dotColor = StorageChartColors.videos,
                     onClick = { onCategoryClick(FileCategory.VIDEOS) }
                 )
                 StorageLegendChip(
                     label = "Audio",
                     sizeText = StorageVolume.formatBytes(audioBytes),
-                    dotColor = Color(0xFF86E7B8),
+                    dotColor = StorageChartColors.audio,
                     onClick = { onCategoryClick(FileCategory.AUDIO) }
                 )
                 StorageLegendChip(
                     label = "Free",
                     sizeText = storageUiState.formattedFree,
-                    dotColor = if (isDarkTheme) Color.White.copy(alpha = 0.4f) else Color.Black.copy(alpha = 0.25f),
+                    dotColor = colors.line,
                     onClick = {}
                 )
             }
@@ -978,12 +973,12 @@ private fun StorageLegendChip(
         Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = "$label ",
-            style = typography.caption.copy(fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold),
+            style = typography.captionStrong,
             color = colors.textPrimary
         )
         Text(
             text = sizeText,
-            style = typography.caption.withTabularFigures().copy(fontSize = 11.sp),
+            style = typography.micro.withTabularFigures(),
             color = colors.textSecondary
         )
     }

@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.presentation
 
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -70,11 +71,7 @@ fun PresentationEmptyRecoveryCard(
                 ) {
                     Text(
                         text = "PRESENTATION ENGINE",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 10.sp,
-                            letterSpacing = 1.5.sp
-                        ),
+                        style = AppTheme.typography.overline,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -92,7 +89,7 @@ fun PresentationEmptyRecoveryCard(
 
                 Text(
                     text = "Complex Format Detected",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 18.sp),
+                    style = AppTheme.typography.titleSmall,
                     color = textColor,
                     textAlign = TextAlign.Center
                 )
@@ -101,7 +98,7 @@ fun PresentationEmptyRecoveryCard(
 
                 Text(
                     text = "This presentation contains proprietary slides or formatting that could not be parsed. Open in an external presentation viewer for complete rendering fidelity.",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = AppTheme.typography.body,
                     color = secondaryTextColor,
                     textAlign = TextAlign.Center,
                     lineHeight = 20.sp
@@ -139,10 +136,7 @@ fun ButtonInButtonCta(
         ) {
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                ),
+                style = AppTheme.typography.bodyStrong,
                 color = Color.White
             )
             Box(

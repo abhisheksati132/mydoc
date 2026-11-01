@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
 
 @Composable
@@ -30,7 +31,7 @@ fun EmptyState(
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
+            style = AppTheme.typography.bodyLargeStrong,
             color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center
         )
@@ -38,7 +39,7 @@ fun EmptyState(
             Spacer(modifier = Modifier.height(Spacing.small))
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
+                style = AppTheme.typography.body,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )

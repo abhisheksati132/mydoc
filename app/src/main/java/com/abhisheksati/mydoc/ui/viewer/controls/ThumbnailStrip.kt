@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.ui.common.AppDivider
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
 import kotlinx.coroutines.Dispatchers
@@ -121,7 +122,7 @@ fun ThumbnailStrip(
                             } else {
                                 Text(
                                     text = "${pageIndex + 1}",
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = AppTheme.typography.micro,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -130,7 +131,7 @@ fun ThumbnailStrip(
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "${pageIndex + 1}",
-                            style = MaterialTheme.typography.labelSmall,
+                            style = AppTheme.typography.micro,
                             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

@@ -17,6 +17,8 @@ context.md
 
 # Agent and tooling artifacts
 .agents/
+.claude/
+agent/
 skills-lock.json
 coverage-ui.json
 .coverage

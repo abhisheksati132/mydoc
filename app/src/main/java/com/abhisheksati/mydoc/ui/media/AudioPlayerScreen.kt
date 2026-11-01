@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Audiotrack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.designsystem.components.AppSlider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
@@ -197,7 +198,7 @@ fun AudioPlayerScreen(
 
             Text(
                 text = "Audio Player",
-                style = typography.title.copy(fontSize = 17.sp, fontWeight = FontWeight.Bold),
+                style = typography.titleSmall,
                 color = colors.ink
             )
 
@@ -257,7 +258,7 @@ fun AudioPlayerScreen(
         ) {
             Text(
                 text = item.displayName,
-                style = typography.headline.copy(fontSize = 20.sp, fontWeight = FontWeight.Bold),
+                style = typography.heading,
                 color = colors.ink,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -270,7 +271,7 @@ fun AudioPlayerScreen(
                     if (!item.bucketName.isNullOrBlank()) append("${item.bucketName} • ")
                     append(item.mimeType.substringAfterLast('/').uppercase(Locale.ROOT))
                 },
-                style = typography.caption.copy(fontSize = 13.sp),
+                style = typography.label,
                 color = colors.inkMuted
             )
         }
@@ -318,12 +319,12 @@ fun AudioPlayerScreen(
                 val displayPos = if (isSeeking) seekPositionMs else currentPositionMs
                 Text(
                     text = formatAudioTime(displayPos),
-                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontFeatureSettings = "tnum"),
+                    style = typography.captionStrong.withTabularFigures(),
                     color = colors.inkMuted
                 )
                 Text(
                     text = formatAudioTime(totalDurationMs),
-                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontFeatureSettings = "tnum"),
+                    style = typography.captionStrong.withTabularFigures(),
                     color = colors.inkMuted
                 )
             }
@@ -453,7 +454,7 @@ fun AudioPlayerScreen(
             ) {
                 Text(
                     text = "${playbackSpeed}x Speed",
-                    style = typography.caption.copy(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum"),
+                    style = typography.captionStrong.withTabularFigures(),
                     color = if (playbackSpeed != 1.0f) onMintContainer else colors.ink,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
                 )
@@ -484,7 +485,7 @@ fun AudioPlayerScreen(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = if (isLooping) "Looping" else "Loop Off",
-                        style = typography.caption.copy(fontWeight = FontWeight.Bold),
+                        style = typography.captionStrong,
                         color = if (isLooping) onMintContainer else colors.ink
                     )
                 }

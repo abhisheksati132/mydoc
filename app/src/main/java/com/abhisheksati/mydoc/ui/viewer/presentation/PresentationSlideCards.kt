@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxSlide
 import com.abhisheksati.mydoc.rendering.engine.presentation.VisualElementType
@@ -118,7 +119,7 @@ fun VisualSlideCard(
                             if (slide.title.isNotEmpty()) {
                                 Text(
                                     text = slide.title,
-                                    style = MaterialTheme.typography.titleLarge,
+                                    style = AppTheme.typography.title,
                                     color = defaultTextColor,
                                     textAlign = TextAlign.Center,
                                     fontWeight = FontWeight.Bold
@@ -128,7 +129,7 @@ fun VisualSlideCard(
                             for (line in slide.content) {
                                 Text(
                                     text = line,
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    style = AppTheme.typography.bodyLarge,
                                     color = defaultTextColor,
                                     textAlign = TextAlign.Center
                                 )
@@ -422,7 +423,7 @@ fun OutlineSlideCard(
                     if (allPoints.isEmpty()) {
                         Text(
                             text = "No additional bullet points on this slide.",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = AppTheme.typography.body,
                             color = textColor.copy(alpha = 0.5f),
                             fontStyle = FontStyle.Italic,
                             modifier = Modifier.padding(top = AppSpacing.paddingSmall)

@@ -40,13 +40,13 @@ import com.abhisheksati.mydoc.designsystem.components.AppBottomSheet
 import com.abhisheksati.mydoc.designsystem.components.AppCircularProgress
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
-import com.abhisheksati.mydoc.designsystem.components.AppFileRow
 import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
 import com.abhisheksati.mydoc.designsystem.components.AppLinearProgress
 import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
 import com.abhisheksati.mydoc.designsystem.components.AppToolbar
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 
@@ -116,8 +116,8 @@ fun DesignSystemPreviewScreen(
 
                     Spacer(modifier = Modifier.height(AppSpacing.large))
 
-                    // SECTION 2: TYPE SCALE (4 STYLES, INTER FONT ONLY)
-                    AppSectionHeader(title = "2. Type Scale (Inter font, 4 styles only)")
+                    // SECTION 2: TYPE SCALE (BRICOLAGE DISPLAY / INTER WORKHORSE)
+                    AppSectionHeader(title = "2. Type Scale (Bricolage + Inter)")
 
                     Column(
                         modifier = Modifier
@@ -125,10 +125,14 @@ fun DesignSystemPreviewScreen(
                             .padding(horizontal = AppSpacing.medium),
                         verticalArrangement = Arrangement.spacedBy(AppSpacing.small)
                     ) {
-                        Text(text = "Title (18sp SemiBold) — mydoc Fast Calm Reader", style = typography.title, color = colors.textPrimary)
-                        Text(text = "Body (14sp Normal) — Document viewing with zero bloat and 100ms instant feedback.", style = typography.body, color = colors.textPrimary)
-                        Text(text = "Label (12sp Medium) — ALL DOCUMENTS • RECENT HISTORY • FAVORITES", style = typography.label, color = colors.textSecondary)
-                        Text(text = "Caption (11sp Normal) — 2.4 MB  •  Page 14 of 42  •  Opened 2h ago", style = typography.caption, color = colors.textSecondary)
+                        Text(text = "Display (34sp Bricolage ExtraBold)", style = typography.display, color = colors.textPrimary)
+                        Text(text = "Title (24sp Bricolage Bold)", style = typography.title, color = colors.textPrimary)
+                        Text(text = "Heading (20sp Bricolage SemiBold)", style = typography.heading, color = colors.textPrimary)
+                        Text(text = "OVERLINE (11sp Inter SemiBold, tracked)", style = typography.overline, color = colors.accent)
+                        Text(text = "Body (14sp Inter) — Document viewing with zero bloat and 100ms instant feedback.", style = typography.body, color = colors.textPrimary)
+                        Text(text = "Body Strong (14sp Inter SemiBold)", style = typography.bodyStrong, color = colors.textPrimary)
+                        Text(text = "Caption (12sp Inter) — 2.4 MB  •  Page 14 of 42  •  Opened 2h ago", style = typography.caption, color = colors.textSecondary)
+                        Text(text = "MICRO (11sp Inter) — PDF · DOCX · XLSX", style = typography.micro, color = colors.textSecondary)
                     }
 
                     Spacer(modifier = Modifier.height(AppSpacing.large))
@@ -163,37 +167,8 @@ fun DesignSystemPreviewScreen(
 
                     Spacer(modifier = Modifier.height(AppSpacing.large))
 
-                    // SECTION 4: FILE ROW WITH MIDDLE TRUNCATION
-                    AppSectionHeader(title = "4. FileRow (Middle-Truncation & Progress)")
-
-                    AppFileRow(
-                        displayName = "Quarterly_Financial_Statement_And_Audited_Report_2026_Q3_Final.pdf",
-                        typeBadge = "PDF",
-                        metadataText = "4.8 MB  •  Yesterday",
-                        isFavorite = true,
-                        progressFraction = 0.45f,
-                        progressText = "Page 19/42 (45%)",
-                        onClick = {},
-                        onToggleFavorite = {},
-                        onShare = {},
-                        onDetails = {}
-                    )
-
-                    AppFileRow(
-                        displayName = "Engineering_Architecture_Design_Specifications_v2_Release.docx",
-                        typeBadge = "DOCX",
-                        metadataText = "1.2 MB  •  2h ago",
-                        isFavorite = false,
-                        onClick = {},
-                        onToggleFavorite = {},
-                        onShare = {},
-                        onDetails = {}
-                    )
-
-                    Spacer(modifier = Modifier.height(AppSpacing.large))
-
-                    // SECTION 5: PROGRESS INDICATORS
-                    AppSectionHeader(title = "5. ProgressIndicator (Linear & Circular)")
+                    // SECTION 4: PROGRESS INDICATORS
+                    AppSectionHeader(title = "4. ProgressIndicator (Linear & Circular)")
 
                     Row(
                         modifier = Modifier
@@ -210,8 +185,8 @@ fun DesignSystemPreviewScreen(
 
                     Spacer(modifier = Modifier.height(AppSpacing.large))
 
-                    // SECTION 6: INTERACTIVE BOTTOMSHEET & DIALOG
-                    AppSectionHeader(title = "6. BottomSheet & Dialog")
+                    // SECTION 5: INTERACTIVE BOTTOMSHEET & DIALOG
+                    AppSectionHeader(title = "5. BottomSheet & Dialog")
 
                     Row(
                         modifier = Modifier
@@ -222,7 +197,7 @@ fun DesignSystemPreviewScreen(
                         OutlinedButton(
                             onClick = { isSheetOpen = true },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(AppSpacing.cornerRadius)
+                            shape = AppRadius.cardShape
                         ) {
                             Text("Open BottomSheet", style = typography.label, color = colors.textPrimary)
                         }
@@ -230,7 +205,7 @@ fun DesignSystemPreviewScreen(
                         Button(
                             onClick = { isDialogOpen = true },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(AppSpacing.cornerRadius),
+                            shape = AppRadius.cardShape,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = colors.surfaceVariant,
                                 contentColor = colors.textPrimary
@@ -242,14 +217,14 @@ fun DesignSystemPreviewScreen(
 
                     Spacer(modifier = Modifier.height(AppSpacing.large))
 
-                    // SECTION 7: EMPTY STATE
-                    AppSectionHeader(title = "7. EmptyState (Calm, Plain, No Illustrations)")
+                    // SECTION 6: EMPTY STATE
+                    AppSectionHeader(title = "6. EmptyState (Calm, Plain, No Illustrations)")
 
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(180.dp)
-                            .border(AppSpacing.dividerThickness, colors.divider, RoundedCornerShape(AppSpacing.cornerRadius))
+                            .border(AppSpacing.dividerThickness, colors.divider, AppRadius.cardShape)
                             .padding(AppSpacing.medium)
                     ) {
                         AppEmptyState(
@@ -309,8 +284,8 @@ private fun ColorSwatchRow(name: String, color: Color, hexDesc: String) {
         modifier = Modifier
             .fillMaxWidth()
             .height(36.dp)
-            .border(AppSpacing.dividerThickness, colors.divider, RoundedCornerShape(AppSpacing.chipCornerRadius))
-            .background(colors.surface, RoundedCornerShape(AppSpacing.chipCornerRadius))
+            .border(AppSpacing.dividerThickness, colors.divider, RoundedCornerShape(AppRadius.round))
+            .background(colors.surface, RoundedCornerShape(AppRadius.round))
             .padding(horizontal = AppSpacing.small),
         verticalAlignment = Alignment.CenterVertically
     ) {

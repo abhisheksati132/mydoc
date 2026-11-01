@@ -3,11 +3,13 @@ package com.abhisheksati.mydoc.ui.home
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -21,12 +23,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.abhisheksati.mydoc.MainActivity
 import com.abhisheksati.mydoc.MyDocApp
+import com.abhisheksati.mydoc.designsystem.animation.AppMotion
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
 import com.abhisheksati.mydoc.designsystem.components.BottomNavBar
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
@@ -170,12 +174,12 @@ fun HomeScreen(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = "Update available: v${release.versionName}",
-                                            style = AppTheme.typography.title.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold),
+                                            style = AppTheme.typography.bodyStrong,
                                             color = colors.ink
                                         )
                                         Text(
                                             text = "Tap to update mydoc",
-                                            style = AppTheme.typography.caption.copy(fontSize = 12.sp),
+                                            style = AppTheme.typography.caption,
                                             color = colors.inkMuted
                                         )
                                     }
@@ -189,7 +193,7 @@ fun HomeScreen(
                                         ),
                                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                                     ) {
-                                        Text("Update", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                                        Text("Update", style = AppTheme.typography.captionStrong)
                                     }
                                 }
                             }
@@ -215,12 +219,12 @@ fun HomeScreen(
                                     ) {
                                         Text(
                                             text = "Downloading update...",
-                                            style = AppTheme.typography.body.copy(fontSize = 13.sp, fontWeight = FontWeight.Medium),
+                                            style = AppTheme.typography.label,
                                             color = colors.ink
                                         )
                                         Text(
                                             text = "${updateState.progressPercent}%",
-                                            style = AppTheme.typography.caption.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                                            style = AppTheme.typography.captionStrong,
                                             color = colors.accent
                                         )
                                     }
@@ -261,12 +265,12 @@ fun HomeScreen(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = "Update downloaded!",
-                                            style = AppTheme.typography.title.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold),
+                                            style = AppTheme.typography.bodyStrong,
                                             color = colors.ink
                                         )
                                         Text(
                                             text = "Ready to install v${updateState.release.versionName}",
-                                            style = AppTheme.typography.caption.copy(fontSize = 12.sp),
+                                            style = AppTheme.typography.caption,
                                             color = colors.inkMuted
                                         )
                                     }
@@ -287,7 +291,7 @@ fun HomeScreen(
                                         ),
                                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                                     ) {
-                                        Text("Install", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                                        Text("Install", style = AppTheme.typography.captionStrong)
                                     }
                                 }
                             }
@@ -310,59 +314,73 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(bottom = innerPadding.calculateBottomPadding())
         ) {
-            when (currentTab) {
-                HomeTab.HOME -> {
-                    HomeTabContent(
-                        continueItems = uiState.continueItems,
-                        recentItems = uiState.recentLibraryItems,
-                        onItemClick = onLibraryItemClick,
-                        onSearchClick = {
-                            showSpotlightSearch = true
-                        },
-                        onScanClick = {
-                            documentScanner()
-                        },
-                        onCategoryClick = { category ->
-                            fileManagerViewModel.selectCategory(category)
-                            viewModel.selectTab(HomeTab.FILES)
-                        },
-                        onToolClick = { tool ->
-                            toolsViewModel.selectTool(tool)
-                        },
-                        onSettingsClick = onSettingsClick,
-                        onToggleTheme = onToggleTheme,
-                        onClearRecent = { viewModel.clearAllRecents() },
-                        isDarkTheme = isDarkTheme,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-                HomeTab.FILES -> {
-                    FileManagerScreen(
-                        viewModel = fileManagerViewModel,
-                        storageViewModel = storageViewModel,
-                        onOpenFile = onOpenFile,
-                        onSettingsClick = onSettingsClick,
-                        onToggleTheme = onToggleTheme,
-                        isDarkTheme = isDarkTheme,
-                        isActive = currentTab == HomeTab.FILES,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-                HomeTab.TOOLS -> {
-                    ToolsScreen(
-                        viewModel = toolsViewModel,
-                        onToolClick = { tool ->
-                            if (tool == PdfTool.SCAN_TO_PDF) {
-                                documentScanner()
-                            } else {
-                                toolsViewModel.selectTool(tool)
-                            }
-                        },
-                        onSettingsClick = onSettingsClick,
-                        onToggleTheme = onToggleTheme,
-                        isDarkTheme = isDarkTheme,
-                        modifier = Modifier.fillMaxSize()
-                    )
+            // Root tabs share one horizontal axis and keep their own state (scroll, search,
+            // selection) when you leave and come back.
+            val tabStateHolder = rememberSaveableStateHolder()
+            AnimatedContent(
+                targetState = currentTab,
+                modifier = Modifier.fillMaxSize(),
+                transitionSpec = {
+                    val forward = targetState.ordinal > initialState.ordinal
+                    AppMotion.peerEnter(forward) togetherWith AppMotion.peerExit(forward)
+                },
+                label = "rootTab"
+            ) { tab ->
+                tabStateHolder.SaveableStateProvider(tab.name) {
+                    when (tab) {
+                        HomeTab.HOME -> {
+                            HomeTabContent(
+                                continueItems = uiState.continueItems,
+                                recentItems = uiState.recentLibraryItems,
+                                onItemClick = onLibraryItemClick,
+                                onSearchClick = {
+                                    showSpotlightSearch = true
+                                },
+                                onScanClick = {
+                                    documentScanner()
+                                },
+                                onCategoryClick = { category ->
+                                    fileManagerViewModel.selectCategory(category)
+                                    viewModel.selectTab(HomeTab.FILES)
+                                },
+                                onToolClick = { tool ->
+                                    toolsViewModel.selectTool(tool)
+                                },
+                                onSettingsClick = onSettingsClick,
+                                onToggleTheme = onToggleTheme,
+                                onClearRecent = { viewModel.clearAllRecents() },
+                                isDarkTheme = isDarkTheme,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                        HomeTab.FILES -> {
+                            FileManagerScreen(
+                                viewModel = fileManagerViewModel,
+                                storageViewModel = storageViewModel,
+                                onOpenFile = onOpenFile,
+                                onSettingsClick = onSettingsClick,
+                                onToggleTheme = onToggleTheme,
+                                isActive = currentTab == HomeTab.FILES,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                        HomeTab.TOOLS -> {
+                            ToolsScreen(
+                                viewModel = toolsViewModel,
+                                onToolClick = { tool ->
+                                    if (tool == PdfTool.SCAN_TO_PDF) {
+                                        documentScanner()
+                                    } else {
+                                        toolsViewModel.selectTool(tool)
+                                    }
+                                },
+                                onSettingsClick = onSettingsClick,
+                                onToggleTheme = onToggleTheme,
+                                isDarkTheme = isDarkTheme,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
                 }
             }
         }

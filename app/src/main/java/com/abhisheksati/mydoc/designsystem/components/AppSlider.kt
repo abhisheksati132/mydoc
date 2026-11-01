@@ -16,11 +16,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
+import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 
 /**
  * Modern tactile slider with a sleek circular thumb pointer.
@@ -43,7 +42,7 @@ fun AppSlider(
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() }
 ) {
     val appColors = LocalAppColors.current
-    val haptic = LocalHapticFeedback.current
+    val haptics = rememberAppHaptics()
     val sliderColors = colors ?: SliderDefaults.colors(
         thumbColor = appColors.accent,
         activeTrackColor = appColors.accent,
@@ -58,7 +57,7 @@ fun AppSlider(
         valueRange = valueRange,
         steps = steps,
         onValueChangeFinished = {
-            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            haptics.tick()
             onValueChangeFinished?.invoke()
         },
         colors = sliderColors,

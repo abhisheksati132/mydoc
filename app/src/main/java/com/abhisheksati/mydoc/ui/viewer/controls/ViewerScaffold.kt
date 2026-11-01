@@ -21,6 +21,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsDark
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
@@ -120,7 +122,7 @@ fun ViewerScaffold(
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp
     val colors = LocalAppColors.current
-    val isDark = colors.background == DarkAppColors.background
+    val isDark = LocalIsDark.current
 
     var isAppearanceSheetOpen by remember { mutableStateOf(false) }
     var isDocumentDetailsOpen by remember { mutableStateOf(false) }

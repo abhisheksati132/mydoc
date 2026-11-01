@@ -48,12 +48,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsDark
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
@@ -90,9 +90,8 @@ fun DocumentToolsSheet(
 
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val haptic = LocalHapticFeedback.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-    val isDark = colors.background == DarkAppColors.background
+    val isDark = LocalIsDark.current
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedGroup by remember { mutableStateOf<ToolGroup?>(null) }
@@ -182,12 +181,12 @@ fun DocumentToolsSheet(
                     Column {
                         Text(
                             text = "Document Tools",
-                            style = typography.title.copy(fontSize = 17.sp, fontWeight = FontWeight.Bold),
+                            style = typography.titleSmall,
                             color = colors.textPrimary
                         )
                         Text(
                             text = formatMiddleTruncated(document.displayName, maxChars = 30),
-                            style = typography.caption.copy(fontSize = 12.sp),
+                            style = typography.caption,
                             color = colors.textSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -197,7 +196,6 @@ fun DocumentToolsSheet(
 
                 IconButton(
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onDismiss()
                     },
                     modifier = Modifier.size(36.dp)
@@ -253,7 +251,6 @@ fun DocumentToolsSheet(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
                             .clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 selectedGroup = cat.group
                             }
                     ) {
@@ -270,10 +267,7 @@ fun DocumentToolsSheet(
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = cat.label,
-                                style = typography.caption.copy(
-                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                    fontSize = 12.sp
-                                ),
+                                style = if (isSelected) typography.captionStrong else typography.caption,
                                 color = if (isSelected) colors.textPrimary else colors.textSecondary
                             )
                         }
@@ -297,7 +291,6 @@ fun DocumentToolsSheet(
                         tool = tool,
                         isDark = isDark,
                         onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onDismiss()
                             onSelectTool(tool)
                         }
@@ -365,7 +358,7 @@ private fun DocumentToolCard(
             ) {
                 Text(
                     text = tool.title,
-                    style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
+                    style = typography.bodyStrong,
                     color = colors.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -373,7 +366,7 @@ private fun DocumentToolCard(
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = tool.description,
-                    style = typography.caption.copy(fontSize = 12.sp),
+                    style = typography.caption,
                     color = colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

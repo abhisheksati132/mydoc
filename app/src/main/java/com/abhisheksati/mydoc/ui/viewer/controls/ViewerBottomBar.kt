@@ -44,17 +44,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.components.AppSlider
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
@@ -85,7 +85,6 @@ fun ViewerBottomBar(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val haptic = LocalHapticFeedback.current
 
     var isDragging by remember { mutableStateOf(false) }
     var scrubPage by remember(currentPage) { mutableFloatStateOf(currentPage.toFloat()) }
@@ -123,11 +122,10 @@ fun ViewerBottomBar(
                         FilterChip(
                             selected = isSelected,
                             onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 onSheetSelect(item.pageIndex)
                             },
-                            label = { Text(item.title, fontSize = 12.sp) },
-                            shape = RoundedCornerShape(AppSpacing.chipCornerRadius),
+                            label = { Text(item.title, style = AppTheme.typography.caption) },
+                            shape = RoundedCornerShape(AppRadius.round),
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = colors.accent,
                                 selectedLabelColor = colors.surface
@@ -156,12 +154,12 @@ fun ViewerBottomBar(
                         val targetDisplayPage = (scrubPage.roundToInt() + 1).coerceIn(1, pageCount)
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+                                .clip(RoundedCornerShape(AppRadius.round))
                                 .background(colors.surfaceVariant)
                                 .border(
                                     width = AppSpacing.dividerThickness,
                                     color = colors.accent,
-                                    shape = RoundedCornerShape(AppSpacing.chipCornerRadius)
+                                    shape = RoundedCornerShape(AppRadius.round)
                                 )
                                 .padding(horizontal = AppSpacing.paddingMedium, vertical = 2.dp)
                         ) {
@@ -184,7 +182,6 @@ fun ViewerBottomBar(
                         onValueChangeFinished = {
                             isDragging = false
                             val target = scrubPage.roundToInt().coerceIn(0, pageCount - 1)
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onPageScrubbed(target)
                         },
                         valueRange = 0f..(pageCount - 1).toFloat(),
@@ -253,20 +250,18 @@ private fun BottomBarActionButton(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val haptic = LocalHapticFeedback.current
 
     val contentColor = if (enabled) colors.textPrimary else colors.textSecondary.copy(alpha = 0.38f)
 
     Box(
         modifier = modifier
             .height(52.dp)
-            .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+            .clip(RoundedCornerShape(AppRadius.round))
             .clickable(
                 enabled = enabled,
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     onClick()
                 }
             )

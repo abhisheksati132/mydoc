@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
@@ -203,7 +204,7 @@ fun FastScrollbar(
                     }
                     Text(
                         text = "${lastHapticPage + 1} / $pageCount",
-                        style = typography.caption.copy(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum"),
+                        style = typography.captionStrong.withTabularFigures(),
                         color = colors.textPrimary
                     )
                 }

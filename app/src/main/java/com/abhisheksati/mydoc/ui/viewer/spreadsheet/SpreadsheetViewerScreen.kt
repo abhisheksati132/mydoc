@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
@@ -137,7 +138,7 @@ fun SpreadsheetViewerScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         text = state.errorMessage ?: "Failed to open sheet",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = AppTheme.typography.body,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(16.dp)
                     )
@@ -179,7 +180,7 @@ fun SpreadsheetViewerScreen(
                                         ) {
                                             Text(
                                                 text = SheetData.columnIndexToLetter(c),
-                                                style = MaterialTheme.typography.bodySmall,
+                                                style = AppTheme.typography.caption,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
@@ -207,7 +208,7 @@ fun SpreadsheetViewerScreen(
                                         ) {
                                             Text(
                                                 text = "${r + 1}",
-                                                style = MaterialTheme.typography.bodySmall,
+                                                style = AppTheme.typography.caption,
                                                 fontWeight = FontWeight.Medium,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
@@ -251,7 +252,7 @@ fun SpreadsheetViewerScreen(
                                                     ) {
                                                         Text(
                                                             text = cellText,
-                                                            style = MaterialTheme.typography.bodySmall,
+                                                            style = AppTheme.typography.caption,
                                                             color = textColor,
                                                             maxLines = 1,
                                                             overflow = TextOverflow.Ellipsis,
@@ -289,13 +290,13 @@ fun SpreadsheetViewerScreen(
                 ) {
                     Text(
                         text = "CELL $cellRef",
-                        style = MaterialTheme.typography.titleSmall,
+                        style = AppTheme.typography.bodyStrong,
                         color = colors.accent
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = cellVal.ifEmpty { "(Empty cell)" },
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = AppTheme.typography.bodyLarge,
                         color = textColor
                     )
                     Spacer(modifier = Modifier.height(16.dp))

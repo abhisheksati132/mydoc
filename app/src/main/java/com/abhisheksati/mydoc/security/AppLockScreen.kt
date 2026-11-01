@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
 
 @Composable
@@ -64,7 +65,7 @@ fun AppLockScreen(
 
             Text(
                 text = "mydoc is locked",
-                style = MaterialTheme.typography.titleLarge,
+                style = AppTheme.typography.title,
                 color = MaterialTheme.colorScheme.onBackground
             )
 
@@ -72,7 +73,7 @@ fun AppLockScreen(
 
             Text(
                 text = "Biometric authentication is required to access your documents.",
-                style = MaterialTheme.typography.bodyMedium,
+                style = AppTheme.typography.body,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
@@ -94,7 +95,7 @@ fun AppLockScreen(
                 Spacer(modifier = Modifier.size(Spacing.small))
                 Text(
                     text = "Unlock",
-                    style = MaterialTheme.typography.titleMedium
+                    style = AppTheme.typography.bodyLargeStrong
                 )
             }
         }

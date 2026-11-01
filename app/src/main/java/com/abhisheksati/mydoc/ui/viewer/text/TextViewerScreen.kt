@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.MainActivity
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.data.local.DocumentStreamResolver
@@ -235,7 +236,7 @@ fun TextViewerScreen(
                 Text(
                     text = errorMessage ?: "Error reading file",
                     color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = AppTheme.typography.bodyLarge,
                     modifier = Modifier.padding(16.dp)
                 )
             }

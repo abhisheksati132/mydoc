@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
@@ -72,12 +73,12 @@ fun NewFolderDialog(
     var name by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
     val colors = LocalAppColors.current
-    val isOled = colors.background == DarkAppColors.background
+    val isOled = LocalIsOled.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = AppRadius.modalShape,
-        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+        containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
         modifier = Modifier.border(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
             AppRadius.modalShape
@@ -130,12 +131,12 @@ fun NewFileDialog(
     var name by remember { mutableStateOf("New Document.txt") }
     val focusRequester = remember { FocusRequester() }
     val colors = LocalAppColors.current
-    val isOled = colors.background == DarkAppColors.background
+    val isOled = LocalIsOled.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = AppRadius.modalShape,
-        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+        containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
         modifier = Modifier.border(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
             AppRadius.modalShape
@@ -189,12 +190,12 @@ fun RenameDialog(
     var name by remember { mutableStateOf(file.name) }
     val focusRequester = remember { FocusRequester() }
     val colors = LocalAppColors.current
-    val isOled = colors.background == DarkAppColors.background
+    val isOled = LocalIsOled.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = AppRadius.modalShape,
-        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+        containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
         modifier = Modifier.border(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
             AppRadius.modalShape
@@ -246,11 +247,11 @@ fun DeleteConfirmationDialog(
     onConfirm: () -> Unit
 ) {
     val colors = LocalAppColors.current
-    val isOled = colors.background == DarkAppColors.background
+    val isOled = LocalIsOled.current
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = AppRadius.modalShape,
-        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+        containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
         modifier = Modifier.border(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
             AppRadius.modalShape
@@ -294,12 +295,12 @@ fun FilePropertiesDialog(
         Toast.makeText(context, "$label copied", Toast.LENGTH_SHORT).show()
     }
 
-    val isOled = colors.background == DarkAppColors.background
+    val isOled = LocalIsOled.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = AppRadius.modalShape,
-        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+        containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
         modifier = Modifier.border(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
             AppRadius.modalShape
@@ -316,7 +317,7 @@ fun FilePropertiesDialog(
                 Text(
                     text = if (file.isDirectory) "Folder Details" else "File Details",
                     color = colors.textPrimary,
-                    style = typography.title.copy(fontSize = 17.sp)
+                    style = typography.titleSmall
                 )
             }
         },
@@ -381,7 +382,7 @@ fun FilePropertiesDialog(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "SHA-256 Checksum",
-                                style = typography.caption.copy(fontSize = 11.sp),
+                                style = typography.micro,
                                 color = colors.textSecondary
                             )
                             Spacer(modifier = Modifier.height(2.dp))
@@ -426,13 +427,13 @@ private fun PropertyItem(title: String, value: String) {
     Column(modifier = Modifier.padding(vertical = 4.dp)) {
         Text(
             text = title,
-            style = typography.caption.copy(fontSize = 11.sp),
+            style = typography.micro,
             color = colors.textSecondary
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = value,
-            style = typography.body.copy(fontSize = 13.sp),
+            style = typography.label,
             color = colors.textPrimary
         )
     }
@@ -448,7 +449,7 @@ fun SortOrderDropdownMenu(
     onSortSelected: (FileSortField) -> Unit
 ) {
     val colors = LocalAppColors.current
-    val isOled = colors.background == DarkAppColors.background
+    val isOled = LocalIsOled.current
 
     DropdownMenu(
         expanded = expanded,
@@ -515,12 +516,12 @@ fun CompressDialog(
     var name by remember { mutableStateOf(defaultName) }
     val focusRequester = remember { FocusRequester() }
     val colors = LocalAppColors.current
-    val isOled = colors.background == DarkAppColors.background
+    val isOled = LocalIsOled.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = AppRadius.modalShape,
-        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+        containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
         modifier = Modifier.border(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
             AppRadius.modalShape
@@ -577,12 +578,12 @@ fun ExtractConfirmDialog(
     onConfirm: () -> Unit
 ) {
     val colors = LocalAppColors.current
-    val isOled = colors.background == DarkAppColors.background
+    val isOled = LocalIsOled.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = AppRadius.modalShape,
-        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+        containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
         modifier = Modifier.border(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
             AppRadius.modalShape

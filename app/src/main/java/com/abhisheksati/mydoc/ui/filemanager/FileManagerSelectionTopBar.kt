@@ -71,7 +71,7 @@ fun FileManagerSelectionTopBar(
                 }
                 Text(
                     text = "$selectedCount selected",
-                    style = typography.title.copy(fontSize = 16.sp),
+                    style = typography.bodyStrong,
                     color = colors.textPrimary
                 )
             }

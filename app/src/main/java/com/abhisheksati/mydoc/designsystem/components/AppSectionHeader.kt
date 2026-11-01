@@ -37,11 +37,7 @@ fun AppSectionHeader(
     ) {
         Text(
             text = title,
-            style = typography.caption.copy(
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 0.5.sp
-            ),
+            style = typography.captionStrong,
             color = colors.textSecondary
         )
     }

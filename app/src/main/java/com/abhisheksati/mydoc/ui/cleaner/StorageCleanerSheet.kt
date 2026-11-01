@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.tools.cleaner.DuplicateGroup
 import com.abhisheksati.mydoc.tools.cleaner.StorageCleanScanResult
 import com.abhisheksati.mydoc.tools.cleaner.StorageCleanerManager
@@ -71,11 +72,11 @@ fun StorageCleanerSheet(
         isScanning = false
     }
 
-    val isOled = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
+    val isOled = LocalIsOled.current
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = if (isOled) Color(0xFF10121A) else colors.surfaceContainerLow,
+        containerColor = if (isOled) colors.surfaceContainerHigh else colors.surfaceContainerLow,
         dragHandle = { BottomSheetDefaults.DragHandle() },
         modifier = Modifier.fillMaxHeight(0.92f)
     ) {
@@ -109,12 +110,12 @@ fun StorageCleanerSheet(
                     Column {
                         Text(
                             text = "Storage Cleaner",
-                            style = typography.title.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
+                            style = typography.titleSmall,
                             color = colors.textPrimary
                         )
                         Text(
                             text = "Reclaim wasted space & remove junk",
-                            style = typography.caption.copy(fontSize = 12.sp),
+                            style = typography.caption,
                             color = colors.textSecondary
                         )
                     }
@@ -146,20 +147,20 @@ fun StorageCleanerSheet(
                         Spacer(modifier = Modifier.height(20.dp))
                         Text(
                             text = "Scanning Storage...",
-                            style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 16.sp),
+                            style = typography.bodyStrong,
                             color = colors.textPrimary
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = "$scannedCount files analyzed",
-                            style = typography.caption.copy(fontSize = 13.sp),
+                            style = typography.label,
                             color = colors.textSecondary
                         )
                         if (currentScannedName.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = currentScannedName,
-                                style = typography.caption.copy(fontSize = 11.sp),
+                                style = typography.micro,
                                 color = colors.textSecondary.copy(alpha = 0.7f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -197,13 +198,13 @@ fun StorageCleanerSheet(
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "Clean Up Complete!",
-                            style = typography.title.copy(fontSize = 20.sp, fontWeight = FontWeight.Bold),
+                            style = typography.heading,
                             color = colors.textPrimary
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "Successfully freed ${formatSize(cleanedBytes ?: 0L)} of storage space",
-                            style = typography.body.copy(fontSize = 14.sp),
+                            style = typography.body,
                             color = colors.textSecondary
                         )
                         Spacer(modifier = Modifier.height(24.dp))
@@ -241,19 +242,19 @@ fun StorageCleanerSheet(
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                     text = "Reclaimable Storage",
-                                    style = typography.caption.copy(fontSize = 12.sp),
+                                    style = typography.caption,
                                     color = colors.textSecondary
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = formatSize(res.totalReclaimableBytes),
-                                    style = typography.title.copy(fontSize = 26.sp, fontWeight = FontWeight.Bold),
+                                    style = typography.title,
                                     color = colors.accent
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "${res.totalScannedFiles} files scanned across ${res.totalScannedDirectories} folders",
-                                    style = typography.caption.copy(fontSize = 11.sp),
+                                    style = typography.micro,
                                     color = colors.textSecondary
                                 )
                             }
@@ -314,7 +315,7 @@ fun StorageCleanerSheet(
                                     Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)) {
                                         Text(
                                             text = "Keeping 1 original copy, removing duplicates:",
-                                            style = typography.caption.copy(fontSize = 11.sp),
+                                            style = typography.micro,
                                             color = colors.textSecondary
                                         )
                                         Spacer(modifier = Modifier.height(6.dp))
@@ -329,20 +330,20 @@ fun StorageCleanerSheet(
                                                 Column(modifier = Modifier.weight(1f)) {
                                                     Text(
                                                         text = group.original.name,
-                                                        style = typography.body.copy(fontSize = 13.sp),
+                                                        style = typography.label,
                                                         color = colors.textPrimary,
                                                         maxLines = 1,
                                                         overflow = TextOverflow.Ellipsis
                                                     )
                                                     Text(
                                                         text = "${group.duplicates.size} duplicate(s)",
-                                                        style = typography.caption.copy(fontSize = 11.sp),
+                                                        style = typography.micro,
                                                         color = colors.textSecondary
                                                     )
                                                 }
                                                 Text(
                                                     text = formatSize(group.wastedBytes),
-                                                    style = typography.caption.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+                                                    style = typography.captionStrong,
                                                     color = Color(0xFFFF9800)
                                                 )
                                             }
@@ -350,7 +351,7 @@ fun StorageCleanerSheet(
                                         if (res.duplicateGroups.size > 10) {
                                             Text(
                                                 text = "+ ${res.duplicateGroups.size - 10} more duplicate groups",
-                                                style = typography.caption.copy(fontSize = 11.sp),
+                                                style = typography.micro,
                                                 color = colors.textSecondary
                                             )
                                         }
@@ -401,12 +402,12 @@ fun StorageCleanerSheet(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = "Large Files (>50 MB)",
-                                            style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
+                                            style = typography.bodyStrong,
                                             color = colors.textPrimary
                                         )
                                         Text(
                                             text = "${res.largeFiles.size} large files (${formatSize(res.largeFiles.sumOf { it.length() })})",
-                                            style = typography.caption.copy(fontSize = 12.sp),
+                                            style = typography.caption,
                                             color = colors.textSecondary
                                         )
                                     }
@@ -430,7 +431,7 @@ fun StorageCleanerSheet(
                                             ) {
                                                 Text(
                                                     text = file.name,
-                                                    style = typography.body.copy(fontSize = 13.sp),
+                                                    style = typography.label,
                                                     color = colors.textPrimary,
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis,
@@ -439,7 +440,7 @@ fun StorageCleanerSheet(
                                                 Spacer(modifier = Modifier.width(8.dp))
                                                 Text(
                                                     text = formatSize(file.length()),
-                                                    style = typography.caption.copy(fontWeight = FontWeight.Bold, fontSize = 12.sp),
+                                                    style = typography.captionStrong,
                                                     color = colors.error
                                                 )
                                             }
@@ -469,12 +470,12 @@ fun StorageCleanerSheet(
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text(
                                         text = "Storage is Clean!",
-                                        style = typography.body.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp),
+                                        style = typography.bodyStrong,
                                         color = colors.textPrimary
                                     )
                                     Text(
                                         text = "No unnecessary junk or duplicate files found.",
-                                        style = typography.caption.copy(fontSize = 13.sp),
+                                        style = typography.label,
                                         color = colors.textSecondary
                                     )
                                 }
@@ -488,7 +489,7 @@ fun StorageCleanerSheet(
                 // Bottom Action Button
                 if (selectedBytesToFree > 0 || cleanEmptyFolders && res.emptyFolders.isNotEmpty()) {
                     Surface(
-                        color = if (isOled) Color(0xFF10121A) else colors.surface,
+                        color = if (isOled) colors.surfaceContainerHigh else colors.surface,
                         border = androidx.compose.foundation.BorderStroke(1.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider),
                         tonalElevation = 4.dp,
                         modifier = Modifier
@@ -587,12 +588,12 @@ private fun CleanerCategoryCard(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = typography.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
+                style = typography.bodyStrong,
                 color = colors.textPrimary
             )
             Text(
                 text = subtitle,
-                style = typography.caption.copy(fontSize = 12.sp),
+                style = typography.caption,
                 color = colors.textSecondary
             )
         }

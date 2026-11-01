@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
@@ -43,12 +44,12 @@ fun PhotoInfoSheet(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
 
-    val isOled = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
+    val isOled = LocalIsOled.current
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = if (isOled) Color(0xFF10121A) else colors.surface,
+        containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
         dragHandle = null
     ) {
         Column(
@@ -143,7 +144,7 @@ private fun InfoRow(label: String, value: String) {
         )
         Text(
             text = value,
-            style = typography.body.copy(fontWeight = FontWeight.Medium),
+            style = typography.bodyMedium,
             color = colors.textPrimary
         )
     }

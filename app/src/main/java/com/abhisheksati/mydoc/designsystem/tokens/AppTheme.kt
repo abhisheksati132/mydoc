@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
@@ -30,7 +31,20 @@ object AppTheme {
 
     val spacing: AppSpacing
         get() = AppSpacing
+
+    val isDark: Boolean
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalIsDark.current
+
+    val isOled: Boolean
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalIsOled.current
 }
+
+val LocalIsDark = staticCompositionLocalOf { false }
+val LocalIsOled = staticCompositionLocalOf { false }
 
 @Composable
 fun AppDesignSystemTheme(
@@ -93,7 +107,9 @@ fun AppDesignSystemTheme(
 
     CompositionLocalProvider(
         LocalAppColors provides colors,
-        LocalAppTypography provides typography
+        LocalAppTypography provides typography,
+        LocalIsDark provides darkTheme,
+        LocalIsOled provides (darkTheme && amoledBlack)
     ) {
         MaterialTheme(
             colorScheme = materialColorScheme,

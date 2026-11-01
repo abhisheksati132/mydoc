@@ -34,11 +34,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
@@ -63,13 +62,12 @@ fun DocumentDetailsDialog(
     val context = LocalContext.current
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val haptic = LocalHapticFeedback.current
-    val isOled = colors.background == DarkAppColors.background
+    val isOled = LocalIsOled.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = AppRadius.modalShape,
-        containerColor = if (isOled) Color(0xFF0E0F14) else colors.surface,
+        containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
         modifier = Modifier.border(
             BorderStroke(
                 0.5.dp,
@@ -131,7 +129,6 @@ fun DocumentDetailsDialog(
                         icon = Icons.Outlined.Share,
                         label = "Share",
                         onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onDismiss()
                             onShare(document)
                         },
@@ -141,7 +138,6 @@ fun DocumentDetailsDialog(
                         icon = Icons.AutoMirrored.Outlined.OpenInNew,
                         label = "Open with",
                         onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onDismiss()
                             val intent = Intent(Intent.ACTION_VIEW).apply {
                                 val mime = document.mimeType.ifEmpty { "application/pdf" }
@@ -163,10 +159,9 @@ fun DocumentDetailsDialog(
             Box(
                 modifier = Modifier
                     .height(AppSpacing.minTouchTarget)
-                    .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+                    .clip(RoundedCornerShape(AppRadius.round))
                     .background(colors.accent)
                     .clickable {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onDismiss()
                         onOpen(document)
                     }
@@ -184,14 +179,13 @@ fun DocumentDetailsDialog(
             Box(
                 modifier = Modifier
                     .height(AppSpacing.minTouchTarget)
-                    .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+                    .clip(RoundedCornerShape(AppRadius.round))
                     .border(
                         width = AppSpacing.dividerThickness,
                         color = colors.error,
-                        shape = RoundedCornerShape(AppSpacing.chipCornerRadius)
+                        shape = RoundedCornerShape(AppRadius.round)
                     )
                     .clickable {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onDismiss()
                         onRemove(document)
                     }
@@ -256,11 +250,11 @@ private fun DialogActionButton(
     Box(
         modifier = modifier
             .height(AppSpacing.minTouchTarget)
-            .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+            .clip(RoundedCornerShape(AppRadius.round))
             .border(
                 width = AppSpacing.dividerThickness,
                 color = colors.divider,
-                shape = RoundedCornerShape(AppSpacing.chipCornerRadius)
+                shape = RoundedCornerShape(AppRadius.round)
             )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center

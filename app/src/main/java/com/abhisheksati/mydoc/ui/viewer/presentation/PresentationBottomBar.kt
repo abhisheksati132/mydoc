@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxSlide
@@ -161,7 +162,7 @@ fun PresentationBottomBar(
             ) {
                 Text(
                     text = "Slide ${currentSlideIndex + 1} of $effectiveSlideCount",
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    style = AppTheme.typography.label,
                     color = textColor
                 )
             }

@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
@@ -112,7 +113,7 @@ fun PresentationTopBar(
                     Column {
                         Text(
                             text = document.displayName,
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                            style = AppTheme.typography.bodyLargeStrong,
                             color = textColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -124,22 +125,18 @@ fun PresentationTopBar(
                         ) {
                             Text(
                                 text = document.extension.uppercase(),
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp
-                                ),
+                                style = AppTheme.typography.overline,
                                 color = colors.accent
                             )
                             if (effectiveSlideCount > 0) {
                                 Text(
                                     text = "•",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    style = AppTheme.typography.micro,
                                     color = secondaryTextColor.copy(alpha = 0.5f)
                                 )
                                 Text(
                                     text = "$effectiveSlideCount slides",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    style = AppTheme.typography.micro,
                                     color = secondaryTextColor
                                 )
                             }

@@ -52,7 +52,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
@@ -174,7 +176,7 @@ fun FillFormSheet(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+                                .clip(RoundedCornerShape(AppRadius.round))
                                 .background(colors.surfaceVariant)
                                 .padding(AppSpacing.paddingMedium),
                             verticalAlignment = Alignment.CenterVertically
@@ -270,7 +272,7 @@ fun FillFormSheet(
                                                 unfocusedTextColor = colors.textPrimary
                                             )
                                         )
-                                        val isOled = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
+                                        val isOled = LocalIsOled.current
                                         DropdownMenu(
                                             expanded = expanded,
                                             onDismissRequest = { expanded = false },
@@ -326,7 +328,7 @@ fun FillFormSheet(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(AppSpacing.chipCornerRadius))
+                            .clip(RoundedCornerShape(AppRadius.round))
                             .background(colors.accent)
                             .clickable {
                                 onSaveValues(fieldValues.toMap(), flattenForm)

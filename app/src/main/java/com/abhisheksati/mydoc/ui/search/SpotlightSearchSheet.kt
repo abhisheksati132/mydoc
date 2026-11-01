@@ -183,7 +183,7 @@ fun SpotlightSearchSheet(
                                 if (query.isEmpty()) {
                                     Text(
                                         text = "Search documents, notes, media...",
-                                        style = typography.body.copy(fontSize = 14.5.sp),
+                                        style = typography.body,
                                         color = colors.inkMuted
                                     )
                                 }
@@ -193,11 +193,7 @@ fun SpotlightSearchSheet(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .focusRequester(focusRequester),
-                                    textStyle = typography.body.copy(
-                                        fontSize = 14.5.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = colors.ink
-                                    ),
+                                    textStyle = typography.bodyMedium.copy(color = colors.ink),
                                     singleLine = true,
                                     cursorBrush = SolidColor(colors.accent)
                                 )
@@ -241,10 +237,7 @@ fun SpotlightSearchSheet(
                         ) {
                             Text(
                                 text = label,
-                                style = typography.caption.copy(
-                                    fontSize = 12.5.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                ),
+                                style = if (isSelected) typography.captionStrong else typography.caption,
                                 color = if (isSelected) colors.background else colors.inkMuted,
                                 modifier = Modifier.padding(horizontal = 13.dp, vertical = 6.dp)
                             )
@@ -264,16 +257,12 @@ fun SpotlightSearchSheet(
                 ) {
                     Text(
                         text = if (query.isEmpty()) "ALL DOCUMENTS" else "SEARCH RESULTS",
-                        style = typography.caption.copy(
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.8.sp
-                        ),
+                        style = typography.overline,
                         color = colors.inkMuted
                     )
                     Text(
                         text = "${filteredItems.size} items",
-                        style = typography.caption.withTabularFigures().copy(fontSize = 11.5.sp),
+                        style = typography.micro.withTabularFigures(),
                         color = colors.inkMuted
                     )
                 }
@@ -298,13 +287,13 @@ fun SpotlightSearchSheet(
                             Spacer(modifier = Modifier.height(14.dp))
                             Text(
                                 text = if (query.isEmpty()) "No documents found" else "No matches for \"$query\"",
-                                style = typography.body.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
+                                style = typography.bodyStrong,
                                 color = colors.ink
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = if (query.isEmpty()) "Documents in your storage will appear here" else "Check for typos or try searching a different term",
-                                style = typography.caption.copy(fontSize = 12.5.sp),
+                                style = typography.caption,
                                 color = colors.inkMuted
                             )
                         }
@@ -359,7 +348,7 @@ fun SpotlightSearchSheet(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = formatMiddleTruncated(item.name, 36),
-                                            style = typography.body.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
+                                            style = typography.bodyStrong,
                                             color = colors.ink,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
@@ -368,15 +357,15 @@ fun SpotlightSearchSheet(
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(
                                                 text = item.extension.uppercase(),
-                                                style = typography.caption.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                                                style = typography.micro,
                                                 color = formatTint
                                             )
                                             Spacer(modifier = Modifier.width(6.dp))
-                                            Text(text = "•", color = colors.inkMuted, fontSize = 11.sp)
+                                            Text(text = "•", color = colors.inkMuted, style = typography.micro)
                                             Spacer(modifier = Modifier.width(6.dp))
                                             Text(
                                                 text = item.formattedSize,
-                                                style = typography.caption.withTabularFigures().copy(fontSize = 11.5.sp),
+                                                style = typography.micro.withTabularFigures(),
                                                 color = colors.inkMuted
                                             )
                                         }

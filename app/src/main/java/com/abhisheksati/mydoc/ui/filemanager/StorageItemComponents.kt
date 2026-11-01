@@ -4,6 +4,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material3.ripple
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -57,29 +59,35 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.runtime.remember
+import com.abhisheksati.mydoc.designsystem.animation.pressScale
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.StorageFileType
 import com.abhisheksati.mydoc.domain.model.StorageItem
 
+@Composable
 fun getFileTypeIcon(type: StorageFileType): Pair<ImageVector, Color> {
+    val colors = LocalAppColors.current
     return when (type) {
-        StorageFileType.DIRECTORY -> Icons.Outlined.Folder to Color(0xFFFFB300)
+        StorageFileType.DIRECTORY -> Icons.Outlined.Folder to colors.accent
         StorageFileType.PDF -> Icons.Outlined.PictureAsPdf to DocumentFormatColors.pdfTint
         StorageFileType.WORD -> Icons.Outlined.Description to DocumentFormatColors.wordTint
         StorageFileType.EXCEL -> Icons.Outlined.TableChart to DocumentFormatColors.excelTint
         StorageFileType.PPT -> Icons.Outlined.Slideshow to DocumentFormatColors.pptTint
-        StorageFileType.IMAGE -> Icons.Outlined.Image to Color(0xFF9C27B0)
-        StorageFileType.VIDEO -> Icons.Outlined.Movie to Color(0xFF009688)
-        StorageFileType.AUDIO -> Icons.Outlined.AudioFile to Color(0xFFE91E63)
-        StorageFileType.ARCHIVE -> Icons.Outlined.FolderZip to Color(0xFFFF5722)
-        StorageFileType.APK -> Icons.Outlined.Android to Color(0xFF4CAF50)
-        StorageFileType.CODE_TEXT -> Icons.Outlined.Code to Color(0xFF00ACC1)
-        StorageFileType.GENERIC -> Icons.AutoMirrored.Outlined.InsertDriveFile to Color(0xFF9E9E9E)
+        StorageFileType.IMAGE -> Icons.Outlined.Image to DocumentFormatColors.mediaTint
+        StorageFileType.VIDEO -> Icons.Outlined.Movie to DocumentFormatColors.mediaTint
+        StorageFileType.AUDIO -> Icons.Outlined.AudioFile to DocumentFormatColors.mediaTint
+        StorageFileType.ARCHIVE -> Icons.Outlined.FolderZip to DocumentFormatColors.zipTint
+        StorageFileType.APK -> Icons.Outlined.Android to colors.accent
+        StorageFileType.CODE_TEXT -> Icons.Outlined.Code to DocumentFormatColors.textTint
+        StorageFileType.GENERIC -> Icons.AutoMirrored.Outlined.InsertDriveFile to DocumentFormatColors.textTint
     }
 }
 
@@ -96,7 +104,8 @@ fun StorageItemRow(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val haptic = LocalHapticFeedback.current
+    val haptics = rememberAppHaptics()
+    val interactionSource = remember { MutableInteractionSource() }
     val (icon, tint) = getFileTypeIcon(item.fileType)
 
     val rowBackground = if (isSelected) {
@@ -107,20 +116,18 @@ fun StorageItemRow(
 
     Surface(
         color = rowBackground,
-        shape = RoundedCornerShape(12.dp),
-        border = if (isSelected) BorderStroke(1.dp, colors.accent.copy(alpha = 0.35f)) else null,
+        shape = AppRadius.cardShape,
+        border = if (isSelected) BorderStroke(AppSpacing.hairline, colors.accent.copy(alpha = 0.35f)) else null,
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(AppRadius.cardShape)
+            .pressScale(interactionSource)
             .combinedClickable(
-                onClick = {
-                    if (isSelectionMode) {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    }
-                    onClick()
-                },
+                interactionSource = interactionSource,
+                indication = ripple(),
+                onClick = onClick,
                 onLongClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptics.snap()
                     onLongClick()
                 }
             )
@@ -153,7 +160,7 @@ fun StorageItemRow(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(42.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(AppRadius.cardShape)
                     .background(tint.copy(alpha = 0.15f))
             ) {
                 Icon(
@@ -171,10 +178,7 @@ fun StorageItemRow(
             ) {
                 Text(
                     text = item.name,
-                    style = typography.body.copy(
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        fontSize = 15.sp
-                    ),
+                    style = if (isSelected) typography.bodyStrong else typography.body,
                     color = colors.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -185,13 +189,13 @@ fun StorageItemRow(
                 ) {
                     Text(
                         text = item.formattedSize,
-                        style = typography.caption.withTabularFigures().copy(fontSize = 12.sp),
+                        style = typography.caption.withTabularFigures(),
                         color = colors.textSecondary
                     )
                     if (item.formattedLastModified.isNotEmpty()) {
                         Text(
                             text = "  •  ${item.formattedLastModified}",
-                            style = typography.caption.withTabularFigures().copy(fontSize = 12.sp),
+                            style = typography.caption.withTabularFigures(),
                             color = colors.textSecondary
                         )
                     }
@@ -229,33 +233,33 @@ fun StorageItemGrid(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val haptic = LocalHapticFeedback.current
-    val isOled = colors.background == com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors.background
+    val isOled = LocalIsOled.current
+    val haptics = rememberAppHaptics()
     val (icon, tint) = getFileTypeIcon(item.fileType)
 
+    val interactionSource = remember { MutableInteractionSource() }
+
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = AppRadius.cardShape,
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) colors.primaryContainer else if (isOled) colors.surface else colors.surfaceContainer
         ),
         border = BorderStroke(
-            1.dp,
+            AppSpacing.hairline,
             if (isSelected) colors.accent else colors.cardBorder
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(0.92f)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(AppRadius.cardShape)
+            .pressScale(interactionSource)
             .combinedClickable(
-                onClick = {
-                    if (isSelectionMode) {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    }
-                    onClick()
-                },
+                interactionSource = interactionSource,
+                indication = ripple(),
+                onClick = onClick,
                 onLongClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptics.snap()
                     onLongClick()
                 }
             )
@@ -305,7 +309,7 @@ fun StorageItemGrid(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .size(48.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(AppRadius.cardShape)
                         .background(tint.copy(alpha = 0.15f))
                 ) {
                     Icon(
@@ -318,10 +322,7 @@ fun StorageItemGrid(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = item.name,
-                    style = typography.body.copy(
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        fontSize = 13.sp
-                    ),
+                    style = if (isSelected) typography.bodyStrong else typography.label,
                     color = colors.textPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -329,7 +330,7 @@ fun StorageItemGrid(
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = item.formattedSize,
-                    style = typography.caption.withTabularFigures().copy(fontSize = 11.sp),
+                    style = typography.micro.withTabularFigures(),
                     color = colors.textSecondary
                 )
             }
