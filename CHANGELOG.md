@@ -3,6 +3,50 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [1.4.5] — 2026-11-01
+
+Range: `v1.4.4..v1.4.5`.
+
+### Fixed
+
+- **Overlay windows followed the platform bar theme.** Bottom sheets and dialogs own a separate
+  window, so the activity's edge-to-edge bar appearance never reached them: on a dark theme the
+  sheet drew a light navigation bar. The new `OverlaySystemBars()` in
+  `designsystem/components/OverlaySystemBars.kt` resolves the enclosing window through
+  `DialogWindowProvider` and applies `AppTheme.isDark` to that window's controller. It is called
+  from `AppBottomSheet`, `AppDialog`, and the 20 hosts that build `ModalBottomSheet`/`Dialog`/
+  `AlertDialog` directly, so the fix covers the whole class, not one screen.
+- **Chip strips clipped the next chip.** Horizontally scrolling rows cut the following chip at the
+  viewport edge with no hint that more content existed. `Modifier.horizontalScrollWithFade(state)`
+  in `designsystem/components/ScrollEdgeFade.kt` erases a 24dp ramp at each edge with
+  `BlendMode.DstOut` over an offscreen layer, driven by `canScrollBackward`/`canScrollForward`, so
+  the fade resolves to the real surface underneath on light, dark and AMOLED. Applied to the file
+  and format filter chips, home quick actions, file-manager category chips, the Tools category
+  strip, tool option rows, scan filter presets, spotlight filter pills and viewer tool pills.
+- **Storage legend hid half its data.** The overview card's legend scrolled sideways and showed
+  about four of its eight entries. It is now a `FlowRow` that wraps, so files, photos, videos,
+  audio, apps, other and free space are all visible at once with no hidden destination.
+
+### Verification
+
+- `./gradlew :app:testDebugUnitTest` — 125 tests, 0 failures.
+- `./gradlew :app:assembleDebug` — debug APK builds.
+- `./gradlew :app:lintDebug` — 0 errors, 146 warnings, in issue classes unrelated to this work:
+  `GradleDependency` (64), `ModifierParameter` (21), `UnusedResources` (19),
+  `IconDuplicatesConfig` (10), `ObsoleteSdkInt` (7), `DefaultLocale` (4),
+  `FrequentlyChangedStateReadInComposition` (4), `AndroidGradlePluginVersion` (3),
+  `TrustAllX509TrustManager` (3), `StaticFieldLeak` (3), `AutoboxingStateCreation` (3),
+  `UseTomlInstead` (3), plus one each of `ScopedStorage`, `SetJavaScriptEnabled`,
+  `QueryPermissionsNeeded`, `PictureInPictureIssue` and `SourceLockedOrientationActivity`.
+  None of them are in the files added by this release.
+- Visual pass on an API 35 emulator (`mydoc_api35`), light, dark and AMOLED: nine screens captured
+  to `screenshots/` (`01-launch` … `09-quickactions-scrolled`). Overlay bars were confirmed at the
+  window level with `dumpsys window`: the sheet's dialog window no longer reports
+  `LIGHT_NAVIGATION_BAR` in dark theme, and still reports it in light theme where a white bar is
+  correct. Chip fades were confirmed by sampling the strip edge pixels (a ramp, not a hard cut)
+  before and after a swipe. The legend was confirmed to render every entry without scrolling.
+  Layout and motion at other screen sizes, rotation and non-default font scales remain unverified.
+
 ## [1.4.4] — 2026-11-01
 
 Range: `v1.4.3..v1.4.4`.
@@ -43,26 +87,6 @@ Range: `v1.4.3..v1.4.4`.
   int-flag overloads that are supressed today and removed in a future SDK.
 - **`Stacks` leftovers.** The APK extraction directory is `Download/MyDoc/ExtractedAPKs` (was
   `Download/Stacks/ExtractedAPKs`), and PDF/A producers plus the conversion report say `MyDoc`.
-
-### Fixed (visual pass)
-
-- **Overlay windows followed the platform bar theme.** Bottom sheets and dialogs own a separate
-  window, so the activity's edge-to-edge bar appearance never reached them: on a dark theme the
-  sheet drew a light navigation bar. The new `OverlaySystemBars()` in
-  `designsystem/components/OverlaySystemBars.kt` resolves the enclosing window through
-  `DialogWindowProvider` and applies `AppTheme.isDark` to that window's controller. It is called
-  from `AppBottomSheet`, `AppDialog`, and the 21 hosts that build `ModalBottomSheet`/`Dialog`/
-  `AlertDialog` directly, so the fix covers the whole class, not one screen.
-- **Chip strips clipped the next chip.** Horizontally scrolling rows cut the following chip at the
-  viewport edge with no hint that more content existed. `Modifier.horizontalScrollWithFade(state)`
-  in `designsystem/components/ScrollEdgeFade.kt` erases a 24dp ramp at each edge with
-  `BlendMode.DstOut` over an offscreen layer, driven by `canScrollBackward`/`canScrollForward`, so
-  the fade resolves to the real surface underneath on light, dark and AMOLED. Applied to the file
-  and format filter chips, home quick actions, file-manager category chips, the Tools category
-  strip, tool option rows, scan filter presets, spotlight filter pills and viewer tool pills.
-- **Storage legend hid half its data.** The overview card's legend scrolled sideways and showed
-  about four of its eight entries. It is now a `FlowRow` that wraps, so files, photos, videos,
-  audio, apps, other and free space are all visible at once with no hidden destination.
 
 ### Added (tests)
 
@@ -105,18 +129,9 @@ Range: `v1.4.3..v1.4.4`.
 
 - `./gradlew :app:testDebugUnitTest` — 125 tests, 0 failures.
 - `./gradlew :app:assembleDebug` — debug APK builds.
-- `./gradlew :app:lintDebug` — 0 errors, 146 warnings, in issue classes unrelated to this work:
-  `GradleDependency` (64), `ModifierParameter` (21), `UnusedResources` (19),
-  `IconDuplicatesConfig` (10), `ObsoleteSdkInt` (7), `DefaultLocale` (4),
-  `FrequentlyChangedStateReadInComposition` (4), `AndroidGradlePluginVersion` (3),
-  `TrustAllX509TrustManager` (3), `StaticFieldLeak` (3), `AutoboxingStateCreation` (3),
-  `UseTomlInstead` (3), plus one each of `ScopedStorage`, `SetJavaScriptEnabled`,
-  `QueryPermissionsNeeded`, `PictureInPictureIssue` and `SourceLockedOrientationActivity`.
-  None of them are in the files added by the visual pass.
-- Visual pass on an API 35 emulator (`mydoc_api35`), light, dark and AMOLED: nine screens
-  captured to `screenshots/` (`01-launch` … `09-quickactions-scrolled`). Overlay bars were
-  confirmed at the window level with `dumpsys window`: the sheet's dialog window no longer
-  reports `LIGHT_NAVIGATION_BAR` in dark theme, and still reports it in light theme where a white
-  bar is correct. Chip fades were confirmed by sampling the strip edge pixels (ramp, not a hard
-  cut) before and after a swipe. The legend was confirmed to render every entry without scrolling.
-  Layout and motion at other screen sizes, rotation and non-default font scales remain unverified.
+- `./gradlew :app:lintDebug` — 0 errors, 146 warnings, all in issue classes unrelated to this
+  work: `GradleDependency`/`AndroidGradlePluginVersion` (64+3), `UnusedResources` (19),
+  `IconDuplicatesConfig` (10), `ObsoleteSdkInt` (7), `DefaultLocale` (4), plus one each of
+  `ScopedStorage`, `SetJavaScriptEnabled`, `QueryPermissionsNeeded`, `PictureInPictureIssue` and
+  `SourceLockedOrientationActivity`.
+- No device or emulator was available: layout, motion and colour changes are unverified visually.
