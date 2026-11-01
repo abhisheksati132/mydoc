@@ -3,7 +3,6 @@ package com.abhisheksati.mydoc.tools.ui.components
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
+import com.abhisheksati.mydoc.designsystem.components.horizontalScrollWithFade
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
@@ -66,7 +66,7 @@ internal fun ToolOptionsSection(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
+                        .horizontalScrollWithFade(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
                 ) {
                     CompressionLevel.entries.forEach { lvl ->
@@ -123,7 +123,7 @@ internal fun ToolOptionsSection(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
+                        .horizontalScrollWithFade(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
                 ) {
                     PageNumberPosition.entries.forEach { pos ->
@@ -320,7 +320,7 @@ internal fun ToolOptionsSection(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
+                            .horizontalScrollWithFade(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
                     ) {
                         listOf("APPROVED", "CONFIDENTIAL", "REVIEWED", "DRAFT", "REJECTED").forEach { preset ->

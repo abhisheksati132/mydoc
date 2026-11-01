@@ -1,6 +1,5 @@
 package com.abhisheksati.mydoc.designsystem.components
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,7 +22,7 @@ fun DocumentFilterChips(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
+            .horizontalScrollWithFade(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(AppSpacing.small),
         verticalAlignment = Alignment.CenterVertically
     ) {
