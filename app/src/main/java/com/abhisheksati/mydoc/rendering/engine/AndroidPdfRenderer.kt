@@ -79,6 +79,11 @@ class AndroidPdfRenderer(
         }
     }
 
+    override fun getCachedPage(pageIndex: Int, scale: Float, mode: ReadingMode): Bitmap? {
+        val cached = tileCache.get(pageIndex, scale, mode)
+        return if (cached != null && !cached.isRecycled) cached else null
+    }
+
     override fun renderPage(pageIndex: Int, scale: Float, mode: ReadingMode): Bitmap? {
         val cached = tileCache.get(pageIndex, scale, mode)
         if (cached != null && !cached.isRecycled) return cached

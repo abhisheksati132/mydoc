@@ -54,6 +54,7 @@ class ViewerViewModel(
     private val repository: DocumentRepository,
     private val documentFile: DocumentFile
 ) : ViewModel() {
+    private val sessionTempFiles = java.util.concurrent.CopyOnWriteArrayList<java.io.File>()
 
     private val _uiState = MutableStateFlow(ViewerUiState())
     val uiState: StateFlow<ViewerUiState> = _uiState.asStateFlow()
@@ -116,6 +117,7 @@ class ViewerViewModel(
                         )
                         else -> null
                     }
+                    convertedPdfFile?.let { sessionTempFiles.add(it) }
 
                     val cacheFile: java.io.File = convertedPdfFile ?: run {
                         val temp = java.io.File(context.cacheDir, "temp_view_${System.currentTimeMillis()}.$ext")
@@ -125,6 +127,7 @@ class ViewerViewModel(
                             displayName = activeDocumentFile.displayName,
                             targetCacheFile = temp
                         )
+                        sessionTempFiles.add(temp)
 
                         if (resolveResult.isFailure) {
                             val exception = resolveResult.exceptionOrNull()
@@ -286,6 +289,11 @@ class ViewerViewModel(
             }
         }
     }
+    fun getCachedPageBitmap(pageIndex: Int, scale: Float): Bitmap? {
+        val rend = renderer ?: return null
+        return rend.getCachedPage(pageIndex, scale, _uiState.value.readingMode)
+    }
+
 
     fun renderPageBitmap(pageIndex: Int, scale: Float): Bitmap? {
         val rend = renderer ?: return null
@@ -493,6 +501,10 @@ class ViewerViewModel(
         prefetchJob = null
         renderer?.close()
         renderer = null
+        for (f in sessionTempFiles) {
+            try { if (f.exists()) f.delete() } catch (_: Throwable) {}
+        }
+        sessionTempFiles.clear()
     }
 
     class Factory(

@@ -1136,10 +1136,20 @@ private fun PageItemView(
     // Base bitmap: Two-step load (0.35x instant thumbnail, then 1.8x high-res base)
     @Suppress("ProduceStateDoesNotAssignValue")
     val baseBitmap by produceState<Bitmap?>(initialValue = null, pageIndex, readingMode) {
+        val cachedHigh = viewModel.getCachedPageBitmap(pageIndex, 1.8f)
+        if (cachedHigh != null) {
+            value = cachedHigh
+            return@produceState
+        }
+
         val lowRes = withContext(Dispatchers.Default) {
             viewModel.renderPageBitmap(pageIndex, 0.35f)
         }
-        value = lowRes
+        if (lowRes != null) {
+            value = lowRes
+        }
+
+        kotlinx.coroutines.delay(60)
 
         val highRes = withContext(Dispatchers.Default) {
             viewModel.renderPageBitmap(pageIndex, 1.8f)

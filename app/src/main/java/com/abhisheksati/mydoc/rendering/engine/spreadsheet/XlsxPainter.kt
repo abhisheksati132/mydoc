@@ -22,7 +22,7 @@ class SheetLayout(val sheet: XlsxSheet, extraRows: Int = 40, extraCols: Int = 8)
     val rowY = FloatArray(nRows + 1)
     val scrollRows: IntArray
     val colStyle = IntArray(nCols)
-    private val rowMerges: Array<List<CellRange>?> = arrayOfNulls(nRows)
+    private val rowMerges: Array<ArrayList<CellRange>?> = arrayOfNulls(nRows)
 
     init {
         for (c in 0 until nCols) colX[c + 1] = colX[c] + colWidthPx(sheet.colWidthChars(c))
@@ -35,8 +35,7 @@ class SheetLayout(val sheet: XlsxSheet, extraRows: Int = 40, extraCols: Int = 8)
         for (m in sheet.merges) {
             val last = minOf(m.r2, nRows - 1)
             for (r in maxOf(m.r1, 0)..last) {
-                @Suppress("UNCHECKED_CAST")
-                val list = (rowMerges[r] as? ArrayList<CellRange>) ?: ArrayList<CellRange>(2).also { rowMerges[r] = it }
+                val list = rowMerges[r] ?: ArrayList<CellRange>(2).also { rowMerges[r] = it }
                 list.add(m)
             }
         }

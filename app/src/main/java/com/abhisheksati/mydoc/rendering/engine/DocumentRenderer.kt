@@ -28,6 +28,7 @@ interface DocumentRenderer {
     fun authenticatePassword(password: String): Boolean
     fun getPageSize(pageIndex: Int): Pair<Float, Float>
     fun renderPage(pageIndex: Int, scale: Float, mode: ReadingMode): Bitmap?
+    fun getCachedPage(pageIndex: Int, scale: Float, mode: ReadingMode): Bitmap? = null
     fun renderRegion(
         pageIndex: Int,
         region: RectF,
