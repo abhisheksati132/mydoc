@@ -706,15 +706,15 @@ fun PdfViewerScreen(
             )
         }
 
-        // Consolidated Reading Controls Bottom Sheet
-        ReadingControlsBottomSheet(
-            isOpen = isReadingControlsOpen,
-            onDismiss = { isReadingControlsOpen = false },
-            readingMode = state.readingMode,
+        // Modal Sheets, Drawers & Dialogs
+        PdfViewerDialogsAndSheets(
+            document = document,
+            state = state,
+            bookmarks = bookmarks,
+            isReadingControlsOpen = isReadingControlsOpen,
+            onDismissReadingControls = { isReadingControlsOpen = false },
             onReadingModeChange = viewModel::setReadingMode,
-            isContinuousScroll = state.isContinuousScroll,
             onScrollModeChange = viewModel::setContinuousScroll,
-            isDualPageView = state.isDualPageView,
             onDualPageViewChange = viewModel::setDualPageView,
             currentBrightness = currentBrightness,
             onBrightnessChange = updateBrightness,
@@ -723,29 +723,12 @@ fun PdfViewerScreen(
                 isKeepScreenOn = newKeep
                 app?.settingsRepository?.setKeepScreenOn(newKeep)
             },
-            document = document,
-            isFitPage = state.isFitPage,
-            onFitPageChange = viewModel::setFitPage
-        )
-
-        // Document Details Dialog
-        if (isDocumentDetailsOpen) {
-            com.abhisheksati.mydoc.ui.home.DocumentDetailsDialog(
-                document = document,
-                onDismiss = { isDocumentDetailsOpen = false },
-                onOpen = { isDocumentDetailsOpen = false },
-                onShare = { onShareClick() },
-                onRemove = { isDocumentDetailsOpen = false }
-            )
-        }
-
-        // 3-Column Page Thumbnail Grid Overview Sheet
-        PageGridSheet(
-            isOpen = isThumbnailGridOpen,
-            pageCount = state.pageCount,
-            currentPage = state.currentPage,
-            bookmarks = bookmarks,
-            onDismiss = { isThumbnailGridOpen = false },
+            onFitPageChange = viewModel::setFitPage,
+            isDocumentDetailsOpen = isDocumentDetailsOpen,
+            onDismissDocumentDetails = { isDocumentDetailsOpen = false },
+            onShareClick = { onShareClick() },
+            isThumbnailGridOpen = isThumbnailGridOpen,
+            onDismissThumbnailGrid = { isThumbnailGridOpen = false },
             onPageSelected = { targetPage ->
                 viewModel.jumpToPage(targetPage)
                 coroutineScope.launch {
@@ -756,15 +739,10 @@ fun PdfViewerScreen(
                     }
                 }
             },
-            renderThumbnail = { p, s -> viewModel.renderPageBitmap(p, s) }
-        )
-
-        // Page Jump Dialog
-        PageJumpDialog(
-            isOpen = isPageJumpDialogOpen,
-            currentPage = state.currentPage,
-            pageCount = state.pageCount,
-            onJump = { targetPage ->
+            renderThumbnail = { p, s -> viewModel.renderPageBitmap(p, s) },
+            isPageJumpDialogOpen = isPageJumpDialogOpen,
+            onDismissPageJumpDialog = { isPageJumpDialogOpen = false },
+            onJumpToPage = { targetPage ->
                 viewModel.jumpToPage(targetPage)
                 coroutineScope.launch {
                     if (state.isContinuousScroll) {
@@ -774,16 +752,8 @@ fun PdfViewerScreen(
                     }
                 }
             },
-            onDismiss = { isPageJumpDialogOpen = false }
-        )
-
-        // Table of Contents & Bookmarks Drawer
-        OutlineDrawer(
-            outline = state.outline,
-            bookmarks = bookmarks,
-            isOpen = state.isOutlineDrawerOpen,
-            onDismiss = { viewModel.setOutlineDrawerOpen(false) },
-            onItemSelected = { page ->
+            onDismissOutlineDrawer = { viewModel.setOutlineDrawerOpen(false) },
+            onSelectOutlineItem = { page ->
                 viewModel.jumpToPage(page)
                 coroutineScope.launch {
                     if (state.isContinuousScroll) {
@@ -796,45 +766,24 @@ fun PdfViewerScreen(
             onRemoveBookmark = { page ->
                 app?.settingsRepository?.toggleBookmark(document.uri, page)
                 bookmarks = app?.settingsRepository?.getBookmarks(document.uri) ?: emptySet()
-            }
-        )
-
-        // Document In-Viewer Tools Sheet
-        DocumentToolsSheet(
-            isOpen = isToolsSheetOpen,
-            onDismiss = { isToolsSheetOpen = false },
-            document = document,
+            },
+            isToolsSheetOpen = isToolsSheetOpen,
+            onDismissToolsSheet = { isToolsSheetOpen = false },
             onSelectTool = { tool ->
                 if (onSelectTool != null) {
                     onSelectTool(tool)
                 } else {
                     onToolsClick?.invoke()
                 }
-            }
-        )
-
-        // Password Dialog
-        PasswordDialog(
-            isOpen = state.isPasswordRequired,
-            isIncorrect = state.isPasswordIncorrect,
-            onSubmit = viewModel::authenticatePassword,
-            onCancel = onBackClick
-        )
-
-        // OCR Result Modal Sheet
-        if (ocrExtractedText != null) {
-            com.abhisheksati.mydoc.ocr.OcrResultSheet(
-                text = ocrExtractedText!!,
-                onDismiss = { ocrExtractedText = null }
-            )
-        }
-
-        // Text-to-Speech (TTS) Read Aloud floating playback controller
-        com.abhisheksati.mydoc.ui.tts.DocumentTtsBar(
+            },
+            onAuthenticatePassword = viewModel::authenticatePassword,
+            onCancelPassword = onBackClick,
+            ocrExtractedText = ocrExtractedText,
+            onDismissOcr = { ocrExtractedText = null },
+            isTtsVisible = isTtsVisible,
+            onCloseTts = { isTtsVisible = false },
+            currentTtsText = currentTtsText,
             ttsManager = ttsManager,
-            documentText = currentTtsText,
-            isVisible = isTtsVisible,
-            onClose = { isTtsVisible = false },
             modifier = Modifier.align(Alignment.BottomCenter)
         )
 
