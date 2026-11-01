@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.AudioFile
@@ -37,10 +35,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import com.abhisheksati.mydoc.designsystem.components.AppChip
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
@@ -59,7 +58,7 @@ fun StoragePermissionBanner(
     val isOled = LocalIsOled.current
 
     Surface(
-        shape = RoundedCornerShape(18.dp),
+        shape = AppRadius.largeShape,
         color = colors.surface,
         border = BorderStroke(1.dp, colors.accent.copy(alpha = 0.25f)),
         modifier = Modifier
@@ -99,7 +98,7 @@ fun StoragePermissionBanner(
                     containerColor = colors.accent,
                     contentColor = if (isOled) Color.Black else Color.White
                 ),
-                shape = RoundedCornerShape(999.dp),
+                shape = AppRadius.roundShape,
                 contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -161,60 +160,33 @@ fun FileManagerCategoryChips(
     modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
 
     val categories = listOf(
         Triple(FileCategory.DOWNLOADS, Icons.Outlined.Download, colors.accent),
         Triple(FileCategory.DOCUMENTS, Icons.Outlined.Description, DocumentFormatColors.wordTint),
         Triple(FileCategory.IMAGES, Icons.Outlined.Image, DocumentFormatColors.mediaTint),
-        Triple(FileCategory.VIDEOS, Icons.Outlined.Videocam, DocumentFormatColors.mediaTint),
-        Triple(FileCategory.AUDIO, Icons.Outlined.AudioFile, DocumentFormatColors.mediaTint),
+        Triple(FileCategory.VIDEOS, Icons.Outlined.Videocam, DocumentFormatColors.pptTint),
+        Triple(FileCategory.AUDIO, Icons.Outlined.AudioFile, DocumentFormatColors.excelTint),
         Triple(FileCategory.APKS, Icons.Outlined.Android, colors.accent),
         Triple(FileCategory.ARCHIVES, Icons.Outlined.FolderZip, DocumentFormatColors.zipTint),
         Triple(FileCategory.LARGE_FILES, Icons.Outlined.DataUsage, DocumentFormatColors.pdfTint)
     )
 
-
     Row(
         modifier = modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = AppSpacing.medium, vertical = AppSpacing.small),
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
     ) {
-        for ((cat, icon, color) in categories) {
-            val isSelected = activeCategory == cat
-            val chipBg = if (isSelected) color.copy(alpha = 0.16f) else colors.surfaceContainer
-            val chipBorderColor = if (isSelected) color.copy(alpha = 0.4f) else colors.line
-
-            Surface(
-                shape = AppRadius.pillShape,
-                color = chipBg,
-                border = BorderStroke(0.5.dp, chipBorderColor),
-                modifier = Modifier
-                    .clip(AppRadius.pillShape)
-                    .clickable {
-                        onCategorySelected(cat)
-                    }
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = cat.displayName,
-                        tint = if (isSelected) color else color.copy(alpha = 0.85f),
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = cat.displayName,
-                        style = if (isSelected) typography.captionStrong else typography.caption,
-                        color = if (isSelected) colors.textPrimary else colors.textSecondary
-                    )
-                }
-            }
+        for ((cat, icon, tint) in categories) {
+            AppChip(
+                label = cat.displayName,
+                selected = activeCategory == cat,
+                onClick = { onCategorySelected(cat) },
+                leadingIcon = icon,
+                accentTint = tint
+            )
         }
     }
 }

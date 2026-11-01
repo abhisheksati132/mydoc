@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.settings
 
+import com.abhisheksati.mydoc.designsystem.components.AppChip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -44,21 +45,21 @@ fun SettingsAppearanceSection(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            ThemeChip(
+            AppChip(
                 label = "Light",
-                icon = Icons.Outlined.LightMode,
+                leadingIcon = Icons.Outlined.LightMode,
                 selected = currentTheme == AppThemeMode.LIGHT,
                 onClick = { onThemeChange(AppThemeMode.LIGHT) }
             )
-            ThemeChip(
+            AppChip(
                 label = "Dark",
-                icon = Icons.Outlined.DarkMode,
+                leadingIcon = Icons.Outlined.DarkMode,
                 selected = currentTheme == AppThemeMode.DARK,
                 onClick = { onThemeChange(AppThemeMode.DARK) }
             )
-            ThemeChip(
+            AppChip(
                 label = "Black",
-                icon = Icons.Outlined.Contrast,
+                leadingIcon = Icons.Outlined.Contrast,
                 selected = currentTheme == AppThemeMode.BLACK,
                 onClick = { onThemeChange(AppThemeMode.BLACK) }
             )

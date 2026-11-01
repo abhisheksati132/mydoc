@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.settings
 
+import com.abhisheksati.mydoc.designsystem.components.AppChip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -48,21 +49,19 @@ fun SettingsReadingSection(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            ThemeChip(
+            AppChip(
                 label = "Normal",
-                icon = null,
                 selected = currentReadingMode == ReadingMode.NORMAL,
                 onClick = { onReadingModeChange(ReadingMode.NORMAL) }
             )
-            ThemeChip(
+            AppChip(
                 label = "Dark",
-                icon = Icons.Outlined.DarkMode,
+                leadingIcon = Icons.Outlined.DarkMode,
                 selected = currentReadingMode == ReadingMode.INVERTED_DARK,
                 onClick = { onReadingModeChange(ReadingMode.INVERTED_DARK) }
             )
-            ThemeChip(
+            AppChip(
                 label = "Sepia",
-                icon = null,
                 selected = currentReadingMode == ReadingMode.SEPIA,
                 onClick = { onReadingModeChange(ReadingMode.SEPIA) }
             )
@@ -80,15 +79,13 @@ fun SettingsReadingSection(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            ThemeChip(
+            AppChip(
                 label = "Fit Width",
-                icon = null,
                 selected = pdfFitMode == "FIT_WIDTH",
                 onClick = { onPdfFitModeChange("FIT_WIDTH") }
             )
-            ThemeChip(
+            AppChip(
                 label = "Fit Whole Page",
-                icon = null,
                 selected = pdfFitMode == "FIT_PAGE",
                 onClick = { onPdfFitModeChange("FIT_PAGE") }
             )

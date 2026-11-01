@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.settings
 
+import com.abhisheksati.mydoc.designsystem.components.AppChip
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,9 +57,8 @@ fun SettingsStorageSection(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             HomeTab.entries.forEach { tab ->
-                ThemeChip(
+                AppChip(
                     label = tab.label,
-                    icon = null,
                     selected = startupTab == tab,
                     onClick = { onStartupTabChange(tab) }
                 )
