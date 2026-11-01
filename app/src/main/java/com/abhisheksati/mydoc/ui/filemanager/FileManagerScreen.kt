@@ -223,7 +223,6 @@ fun FileManagerScreen(
     var isSearchActive by remember { mutableStateOf(false) }
     var showStorageCleanerSheet by remember { mutableStateOf(false) }
     var showAppManagerSheet by remember { mutableStateOf(false) }
-    var isSelectionMenuOpen by remember { mutableStateOf(false) }
     val pinnedFoldersManager = remember { com.abhisheksati.mydoc.data.local.PinnedFoldersManager(context) }
     val pinnedFolders by pinnedFoldersManager.pinnedFolders.collectAsState()
 
@@ -327,99 +326,19 @@ fun FileManagerScreen(
                 label = "FileManagerTopBar"
             ) { isSelection ->
                 if (isSelection) {
-                    // Multi-selection Top Bar
-                Surface(
-                    color = colors.background,
-                    tonalElevation = 0.dp,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 6.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { viewModel.clearSelection() }) {
-                                Icon(Icons.Outlined.Close, contentDescription = "Close", tint = colors.textPrimary)
-                            }
-                            Text(
-                                text = "${uiState.selectedFiles.size} selected",
-                                style = typography.title.copy(fontSize = 16.sp),
-                                color = colors.textPrimary
-                            )
-                        }
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            // 1. Share
-                            IconButton(onClick = {
-                                shareFiles(context, uiState.selectedFiles.toList())
-                            }) {
-                                Icon(Icons.Outlined.Share, contentDescription = "Share", tint = colors.textPrimary)
-                            }
-
-                            // 2. Move (Cut)
-                            IconButton(onClick = { viewModel.cutSelected() }) {
-                                Icon(Icons.Outlined.ContentCut, contentDescription = "Move", tint = colors.textPrimary)
-                            }
-
-                            // 3. Delete
-                            IconButton(onClick = { showDeleteConfirmDialog = true }) {
-                                Icon(Icons.Outlined.Delete, contentDescription = "Delete", tint = colors.error)
-                            }
-
-                            // 4. Overflow Menu (Safe 48dp touch targets)
-                            Box {
-                                IconButton(onClick = { isSelectionMenuOpen = true }) {
-                                    Icon(Icons.Outlined.MoreVert, contentDescription = "More actions", tint = colors.textPrimary)
-                                }
-
-                                DropdownMenu(
-                                    expanded = isSelectionMenuOpen,
-                                    onDismissRequest = { isSelectionMenuOpen = false }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text("Select All", style = typography.body) },
-                                        leadingIcon = { Icon(Icons.Outlined.SelectAll, contentDescription = null, tint = colors.accent) },
-                                        onClick = {
-                                            isSelectionMenuOpen = false
-                                            viewModel.selectAll()
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Copy", style = typography.body) },
-                                        leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null, tint = colors.accent) },
-                                        onClick = {
-                                            isSelectionMenuOpen = false
-                                            viewModel.copySelected()
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Compress to ZIP", style = typography.body) },
-                                        leadingIcon = { Icon(Icons.Outlined.FolderZip, contentDescription = null, tint = colors.accent) },
-                                        onClick = {
-                                            isSelectionMenuOpen = false
-                                            showCompressDialog = true
-                                        }
-                                    )
-                                    if (uiState.selectedFiles.size == 1) {
-                                        DropdownMenuItem(
-                                            text = { Text("Rename", style = typography.body) },
-                                            leadingIcon = { Icon(Icons.Outlined.DriveFileRenameOutline, contentDescription = null, tint = colors.accent) },
-                                            onClick = {
-                                                isSelectionMenuOpen = false
-                                                showRenameDialogForFile = uiState.selectedFiles.first()
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                    FileManagerSelectionTopBar(
+                        selectedCount = uiState.selectedFiles.size,
+                        onClearSelection = { viewModel.clearSelection() },
+                        onShare = { shareFiles(context, uiState.selectedFiles.toList()) },
+                        onCut = { viewModel.cutSelected() },
+                        onDelete = { showDeleteConfirmDialog = true },
+                        onSelectAll = { viewModel.selectAll() },
+                        onCopy = { viewModel.copySelected() },
+                        onCompress = { showCompressDialog = true },
+                        onRename = if (uiState.selectedFiles.size == 1) {
+                            { showRenameDialogForFile = uiState.selectedFiles.first() }
+                        } else null
+                    )
 
             } else {
                 Box {
