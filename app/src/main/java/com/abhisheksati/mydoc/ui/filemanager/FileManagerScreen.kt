@@ -882,69 +882,15 @@ fun FileManagerScreen(
         }
 
             // Floating Clipboard Action Bar (Paste / Cancel)
-            AnimatedVisibility(
-                visible = uiState.clipboardState != null,
-                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            FileManagerClipboardBar(
+                clipboardState = uiState.clipboardState,
+                onCancel = { viewModel.cancelClipboard() },
+                onPaste = { viewModel.pasteClipboard() },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
                     .padding(start = 16.dp, end = 16.dp, bottom = 96.dp)
-            ) {
-                uiState.clipboardState?.let { clip ->
-                    Card(
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = colors.surface),
-                        
-                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = if (clip.operation == ClipboardOperation.COPY) Icons.Outlined.ContentCopy else Icons.Outlined.ContentCut,
-                                    contentDescription = null,
-                                    tint = colors.accent,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = "${clip.items.size} items ready to ${if (clip.operation == ClipboardOperation.COPY) "copy" else "move"}",
-                                        style = typography.body.copy(fontWeight = FontWeight.SemiBold),
-                                        color = colors.textPrimary
-                                    )
-                                    Text(
-                                        text = "Navigate to destination folder",
-                                        style = typography.caption.copy(fontSize = 11.sp),
-                                        color = colors.textSecondary
-                                    )
-                                }
-                            }
-
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                TextButton(onClick = { viewModel.cancelClipboard() }) {
-                                    Text("Cancel", color = colors.textSecondary)
-                                }
-                                Button(
-                                    onClick = { viewModel.pasteClipboard() },
-                                    colors = ButtonDefaults.buttonColors(containerColor = colors.accent)
-                                ) {
-                                    Icon(Icons.Outlined.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Paste")
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            )
         }
     }
 
@@ -1084,188 +1030,56 @@ fun FileManagerScreen(
 
     // Single item context action bottom sheet
     singleItemActionTarget?.let { item ->
-        val sheetState = rememberModalBottomSheetState()
-        ModalBottomSheet(
+        SingleItemActionBottomSheet(
+            item = item,
+            isPinned = item.isDirectory && pinnedFoldersManager.isPinned(item.file),
             onDismissRequest = { singleItemActionTarget = null },
-            sheetState = sheetState,
-            containerColor = colors.surface
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 10.dp)
-            ) {
-                // Header
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val (icon, tint) = getFileTypeIcon(item.fileType)
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(tint.copy(alpha = 0.15f))
-                    ) {
-                        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = item.name,
-                            style = typography.title.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
-                            color = colors.textPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = item.formattedSize,
-                            style = typography.caption.copy(fontSize = 11.sp),
-                            color = colors.textSecondary
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-                HorizontalDivider(color = colors.divider)
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Actions
-                ItemActionOption(
-                    title = "Open",
-                    icon = Icons.Outlined.FolderOpen,
-                    onClick = {
-                        singleItemActionTarget = null
-                        if (item.isDirectory) {
-                            viewModel.loadDirectory(item.file)
-                        } else {
-                            onOpenFile(item.file)
-                        }
-                    }
-                )
-
-                ItemActionOption(
-                    title = "Copy",
-                    icon = Icons.Outlined.ContentCopy,
-                    onClick = {
-                        singleItemActionTarget = null
-                        viewModel.toggleSelection(item.file)
-                        viewModel.copySelected()
-                    }
-                )
-
-                ItemActionOption(
-                    title = "Move (Cut)",
-                    icon = Icons.Outlined.ContentCut,
-                    onClick = {
-                        singleItemActionTarget = null
-                        viewModel.toggleSelection(item.file)
-                        viewModel.cutSelected()
-                    }
-                )
-
-                ItemActionOption(
-                    title = "Rename",
-                    icon = Icons.Outlined.DriveFileRenameOutline,
-                    onClick = {
-                        singleItemActionTarget = null
-                        showRenameDialogForFile = item.file
-                    }
-                )
-
-                ItemActionOption(
-                    title = "Move to Recycle Bin",
-                    icon = Icons.Outlined.Delete,
-                    tint = colors.error,
-                    onClick = {
-                        singleItemActionTarget = null
-                        viewModel.moveToTrashSingle(item.file)
-                    }
-                )
-
+            onOpen = {
+                singleItemActionTarget = null
                 if (item.isDirectory) {
-                    val isPinned = pinnedFoldersManager.isPinned(item.file)
-                    ItemActionOption(
-                        title = if (isPinned) "Unpin from Quick Access" else "Pin to Quick Access",
-                        icon = if (isPinned) Icons.Filled.Bookmark else Icons.Outlined.Bookmark,
-                        tint = colors.accent,
-                        onClick = {
-                            singleItemActionTarget = null
-                            pinnedFoldersManager.togglePin(item.file)
-                        }
-                    )
+                    viewModel.loadDirectory(item.file)
+                } else {
+                    onOpenFile(item.file)
                 }
-
-                val isZip = item.name.endsWith(".zip", ignoreCase = true) || item.name.endsWith(".jar", ignoreCase = true)
-                if (isZip) {
-                    ItemActionOption(
-                        title = "Extract ZIP Archive",
-                        icon = Icons.Outlined.FolderZip,
-                        tint = colors.accent,
-                        onClick = {
-                            singleItemActionTarget = null
-                            showExtractConfirmDialogForFile = item.file
-                        }
-                    )
-                }
-
-                ItemActionOption(
-                    title = "Compress to ZIP",
-                    icon = Icons.Outlined.Archive,
-                    onClick = {
-                        singleItemActionTarget = null
-                        singleItemCompressTarget = item.file
-                    }
-                )
-
-                ItemActionOption(
-                    title = "Details & Checksum",
-                    icon = Icons.Outlined.Info,
-                    onClick = {
-                        singleItemActionTarget = null
-                        viewModel.inspectItem(item.file)
-                    }
-                )
-
-                if (!item.isDirectory) {
-                    ItemActionOption(
-                        title = "Share",
-                        icon = Icons.Outlined.Share,
-                        onClick = {
-                            singleItemActionTarget = null
-                            shareFiles(context, listOf(item.file))
-                        }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
+            },
+            onCopy = {
+                singleItemActionTarget = null
+                viewModel.toggleSelection(item.file)
+                viewModel.copySelected()
+            },
+            onMove = {
+                singleItemActionTarget = null
+                viewModel.toggleSelection(item.file)
+                viewModel.cutSelected()
+            },
+            onRename = {
+                singleItemActionTarget = null
+                showRenameDialogForFile = item.file
+            },
+            onDelete = {
+                singleItemActionTarget = null
+                viewModel.moveToTrashSingle(item.file)
+            },
+            onTogglePin = {
+                singleItemActionTarget = null
+                pinnedFoldersManager.togglePin(item.file)
+            },
+            onExtractZip = {
+                singleItemActionTarget = null
+                showExtractConfirmDialogForFile = item.file
+            },
+            onCompressToZip = {
+                singleItemActionTarget = null
+                singleItemCompressTarget = item.file
+            },
+            onDetails = {
+                singleItemActionTarget = null
+                viewModel.inspectItem(item.file)
+            },
+            onShare = {
+                singleItemActionTarget = null
+                shareFiles(context, listOf(item.file))
             }
-        }
-    }
-}
-
-@Composable
-private fun ItemActionOption(
-    title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    tint: Color = LocalAppColors.current.textPrimary,
-    onClick: () -> Unit
-) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 10.dp, horizontal = 8.dp)
-    ) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(14.dp))
-        Text(
-            text = title,
-            style = typography.body.copy(fontSize = 14.sp),
-            color = tint
         )
     }
 }
