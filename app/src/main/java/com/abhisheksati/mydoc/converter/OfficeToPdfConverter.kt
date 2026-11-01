@@ -140,8 +140,8 @@ object OfficeToPdfConverter {
         return cacheDir.listFiles()?.sumOf { it.length() } ?: 0L
     }
 
-    private fun generateCacheKey(uri: Uri, fileName: String): String {
-        val raw = "${uri}_$fileName"
+    internal fun generateCacheKey(uriString: String, fileName: String): String {
+        val raw = "${uriString}_$fileName"
         return try {
             val md = MessageDigest.getInstance("MD5")
             md.digest(raw.toByteArray()).joinToString("") { "%02x".format(it) }
@@ -151,6 +151,9 @@ object OfficeToPdfConverter {
             raw.replace("[^a-zA-Z0-9]".toRegex(), "_")
         }
     }
+
+    private fun generateCacheKey(uri: Uri, fileName: String): String =
+        generateCacheKey(uri.toString(), fileName)
 
     // =========================================================================
     // 1. Plain Text & Markdown Converter
