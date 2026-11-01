@@ -65,4 +65,12 @@ object PdfToolUtils {
             .replace("\"", "&quot;")
             .replace("'", "&apos;")
     }
+
+    /**
+     * Create a managed temporary output file in the tools output cache directory.
+     */
+    fun createTempOutputFile(cacheDir: java.io.File, prefix: String, ext: String): java.io.File {
+        val toolsDir = java.io.File(cacheDir, "tools_output").apply { if (!exists()) mkdirs() }
+        return java.io.File.createTempFile("mydoc_${prefix}_", ".$ext", toolsDir)
+    }
 }
