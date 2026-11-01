@@ -3,9 +3,9 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
-## [Unreleased] — since v1.4.3
+## [1.4.4] — 2026-11-01
 
-Range: `v1.4.3..HEAD`.
+Range: `v1.4.3..v1.4.4`.
 
 ### Changed
 
