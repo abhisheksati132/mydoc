@@ -4,6 +4,7 @@ import android.util.Xml
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.xmlpull.v1.XmlPullParser
+import org.xmlpull.v1.XmlPullParserFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.util.zip.ZipEntry
@@ -30,6 +31,21 @@ data class DocxDocument(
 )
 
 class DocxParser {
+
+    private fun createPullParser(xmlBytes: ByteArray): XmlPullParser {
+        return try {
+            Xml.newPullParser().apply {
+                setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
+                setInput(ByteArrayInputStream(xmlBytes), "UTF-8")
+            }
+        } catch (_: Throwable) {
+            XmlPullParserFactory.newInstance().apply {
+                isNamespaceAware = false
+            }.newPullParser().apply {
+                setInput(ByteArrayInputStream(xmlBytes), "UTF-8")
+            }
+        }
+    }
 
     suspend fun parse(inputStream: InputStream): DocxDocument = withContext(Dispatchers.IO) {
         val bytes = inputStream.readBytes()
@@ -61,10 +77,7 @@ class DocxParser {
             val docXml = entryMap["word/document.xml"]
             if (docXml != null) {
                 try {
-                    val parser = Xml.newPullParser().apply {
-                        setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
-                        setInput(ByteArrayInputStream(docXml), "UTF-8")
-                    }
+                    val parser = createPullParser(docXml)
                     blocks.addAll(parseDocumentXml(parser))
                 } catch (_: Throwable) {}
             }
@@ -93,10 +106,7 @@ class DocxParser {
     private fun parseOdtXml(xmlBytes: ByteArray): List<DocxBlock> {
         val blocks = mutableListOf<DocxBlock>()
         try {
-            val parser = Xml.newPullParser().apply {
-                setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
-                setInput(ByteArrayInputStream(xmlBytes), "UTF-8")
-            }
+            val parser = createPullParser(xmlBytes)
             var eventType = parser.eventType
 
             var inH = false
