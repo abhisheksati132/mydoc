@@ -1,38 +1,33 @@
 package com.abhisheksati.mydoc.ui.settings
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
+import com.abhisheksati.mydoc.designsystem.components.EditorialAction
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.update.UpdateManager
 import com.abhisheksati.mydoc.update.UpdateUiState
 import java.util.Locale
@@ -44,230 +39,213 @@ fun SettingsAboutSection(
     updateState: UpdateUiState,
     checkUpdatesOnLaunch: Boolean,
     onCheckUpdatesOnLaunchChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    index: String? = null,
+    showRule: Boolean = true
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    SettingsCard(title = "ABOUT & UPDATES", modifier = modifier) {
+    SettingsCard(
+        title = "About & updates",
+        modifier = modifier,
+        index = index,
+        showRule = showRule
+    ) {
         SettingToggleRow(
             title = "Check for updates on launch",
-            subtitle = "Automatically check for new versions on GitHub when the app starts",
+            subtitle = "Check GitHub for a new version when the app starts",
             icon = Icons.Outlined.Refresh,
             checked = checkUpdatesOnLaunch,
             onCheckedChange = onCheckUpdatesOnLaunchChange
         )
 
-        HorizontalDivider(
-            modifier = Modifier.padding(vertical = 10.dp),
-            color = colors.divider.copy(alpha = 0.5f),
-            thickness = 0.5.dp
-        )
+        SettingsDivider()
 
         when (val state = updateState) {
             is UpdateUiState.Idle -> {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Software Updates",
-                            style = typography.bodyStrong,
-                            color = colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Current version: v${updateManager.currentVersionName}",
-                            style = typography.caption,
-                            color = colors.textSecondary
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
-                        shape = AppRadius.pillShape,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colors.accent,
-                            contentColor = Color.Black
-                        )
-                    ) {
-                        Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Check", style = AppTheme.typography.captionStrong, maxLines = 1)
-                    }
-                }
+                UpdateLine(
+                    title = "Software updates",
+                    detail = "Current version v${updateManager.currentVersionName}",
+                    actionLabel = "Check",
+                    onAction = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } }
+                )
             }
 
             is UpdateUiState.Checking -> {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                        color = colors.accent
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Checking for updates...",
-                        style = typography.bodyMedium,
-                        color = colors.textPrimary
-                    )
-                }
+                UpdateLine(
+                    title = "Checking for updates…",
+                    detail = "Asking GitHub for the latest release",
+                    actionLabel = null,
+                    onAction = null
+                )
             }
 
             is UpdateUiState.NoUpdate -> {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "App is up to date (v${state.currentVersion})",
-                                style = typography.bodyStrong,
-                                color = colors.textPrimary
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Latest release installed.",
-                            style = typography.caption,
-                            color = colors.textSecondary
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
-                        shape = AppRadius.pillShape,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colors.accent,
-                            contentColor = Color.Black
-                        )
-                    ) {
-                        Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Check", style = AppTheme.typography.captionStrong, maxLines = 1)
-                    }
-                }
+                UpdateLine(
+                    title = "App is up to date",
+                    detail = "v${state.currentVersion} installed",
+                    actionLabel = "Check again",
+                    onAction = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
+                    leadingCheck = true
+                )
             }
 
             is UpdateUiState.UpdateAvailable -> {
                 val release = state.release
-                Column(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = AppSpacing.small)
+                ) {
                     Text(
-                        text = "New Version Available: v${release.versionName}",
-                        style = typography.bodyStrong,
-                        color = colors.accent
+                        text = "New version v${release.versionName}",
+                        style = typography.bodyLargeStrong,
+                        color = colors.ink
                     )
                     if (release.releaseNotes.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(AppSpacing.xSmall))
                         Text(
                             text = release.releaseNotes.trim(),
                             style = typography.caption,
-                            color = colors.textSecondary,
+                            color = colors.inkMuted,
                             maxLines = 4
                         )
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = { scope.launch { updateManager.downloadAndInstall(release) } },
-                            shape = AppRadius.pillShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = colors.accent,
-                                contentColor = Color.Black
-                            )
-                        ) {
-                            val sizeText = if (release.apkSizeBytes > 0) {
-                                val mb = release.apkSizeBytes / (1024.0 * 1024.0)
-                                String.format(Locale.US, " (%.1f MB)", mb)
-                            } else ""
-                            Text("Download & Install$sizeText", style = AppTheme.typography.captionStrong, maxLines = 1)
-                        }
-
-                        OutlinedButton(
-                            onClick = { updateManager.dismissUpdate(release.tagName) },
-                            shape = AppRadius.pillShape,
-                            border = BorderStroke(0.8.dp, colors.divider),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textSecondary)
-                        ) {
-                            Text("Dismiss", style = AppTheme.typography.caption, maxLines = 1)
-                        }
+                    Spacer(modifier = Modifier.height(AppSpacing.small))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.large)
+                    ) {
+                        val sizeText = if (release.apkSizeBytes > 0) {
+                            val mb = release.apkSizeBytes / (1024.0 * 1024.0)
+                            String.format(Locale.US, " (%.1f MB)", mb)
+                        } else ""
+                        EditorialAction(
+                            label = "Download & install$sizeText",
+                            onClick = { scope.launch { updateManager.downloadAndInstall(release) } }
+                        )
+                        Text(
+                            text = "Dismiss",
+                            style = typography.captionStrong,
+                            color = colors.inkMuted,
+                            modifier = Modifier
+                                .padding(vertical = AppSpacing.xSmall)
+                                .pressScaleEffect(onClick = { updateManager.dismissUpdate(release.tagName) })
+                        )
                     }
                 }
             }
 
             is UpdateUiState.Downloading -> {
-                Column(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = AppSpacing.small)
+                ) {
                     Text(
-                        text = "Downloading: ${state.progressPercent}%",
-                        style = typography.label,
-                        color = colors.textPrimary
+                        text = "Downloading ${state.progressPercent}%",
+                        style = typography.caption.withTabularFigures(),
+                        color = colors.ink
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LinearProgressIndicator(
-                        progress = { if (state.totalBytes > 0) state.downloadedBytes.toFloat() / state.totalBytes else 0f },
-                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(AppRadius.roundShape),
-                        color = colors.accent,
-                        trackColor = colors.divider
-                    )
+                    Spacer(modifier = Modifier.height(AppSpacing.small))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(AppSpacing.rule)
+                            .background(colors.track)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(
+                                    if (state.totalBytes > 0) {
+                                        (state.downloadedBytes.toFloat() / state.totalBytes).coerceIn(0f, 1f)
+                                    } else {
+                                        0f
+                                    }
+                                )
+                                .background(colors.ink)
+                        )
+                    }
                 }
             }
 
             is UpdateUiState.ReadyToInstall -> {
-                Column {
-                    Text(
-                        text = "Download complete for v${state.release.versionName}.",
-                        style = typography.label,
-                        color = colors.textPrimary
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Button(
-                        onClick = {
-                            if (!updateManager.installerHelper.canInstallUnknownApps()) {
-                                val intent = updateManager.installerHelper.createManageUnknownAppSourcesIntent()
-                                context.startActivity(intent)
-                            } else {
-                                updateManager.installerHelper.installApk(state.apkFile)
-                            }
-                        },
-                        shape = AppRadius.pillShape,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colors.accent,
-                            contentColor = Color.Black
-                        )
-                    ) {
-                        Text("Install Update Now", style = AppTheme.typography.captionStrong)
+                UpdateLine(
+                    title = "Download complete",
+                    detail = "v${state.release.versionName} is ready to install",
+                    actionLabel = "Install now",
+                    onAction = {
+                        if (!updateManager.installerHelper.canInstallUnknownApps()) {
+                            val intent = updateManager.installerHelper.createManageUnknownAppSourcesIntent()
+                            context.startActivity(intent)
+                        } else {
+                            updateManager.installerHelper.installApk(state.apkFile)
+                        }
                     }
-                }
+                )
             }
 
             is UpdateUiState.Error -> {
-                Column {
-                    Text(
-                        text = "Update check failed: ${state.message}",
-                        style = typography.caption.copy(color = colors.error)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedButton(
-                        onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
-                        shape = AppRadius.pillShape,
-                        border = BorderStroke(0.8.dp, colors.divider),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
-                    ) {
-                        Text("Retry", style = AppTheme.typography.caption, maxLines = 1)
-                    }
-                }
+                UpdateLine(
+                    title = "Update check failed",
+                    detail = state.message,
+                    actionLabel = "Retry",
+                    onAction = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } }
+                )
             }
+        }
+    }
+}
+
+@Composable
+private fun UpdateLine(
+    title: String,
+    detail: String,
+    actionLabel: String?,
+    onAction: (() -> Unit)?,
+    leadingCheck: Boolean = false
+) {
+    val colors = LocalAppColors.current
+    val typography = LocalAppTypography.current
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = AppSpacing.small),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (leadingCheck) {
+            Icon(
+                imageVector = Icons.Outlined.Check,
+                contentDescription = null,
+                tint = colors.accent,
+                modifier = Modifier
+                    .padding(end = AppSpacing.small)
+                    .size(18.dp)
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = typography.bodyLargeStrong,
+                color = colors.ink
+            )
+            Text(
+                text = detail,
+                style = typography.caption,
+                color = colors.inkMuted
+            )
+        }
+        if (actionLabel != null && onAction != null) {
+            EditorialAction(
+                label = actionLabel,
+                onClick = onAction,
+                modifier = Modifier.padding(start = AppSpacing.medium)
+            )
         }
     }
 }

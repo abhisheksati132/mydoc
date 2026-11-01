@@ -17,6 +17,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.data.local.AppThemeMode
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 
@@ -28,18 +29,25 @@ fun SettingsAppearanceSection(
     onThemeChange: (AppThemeMode) -> Unit,
     onAmoledBlackChange: (Boolean) -> Unit,
     onHapticFeedbackChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    index: String? = null,
+    showRule: Boolean = true
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val haptic = LocalHapticFeedback.current
 
-    SettingsCard(title = "APPEARANCE", modifier = modifier) {
+    SettingsCard(
+        title = "Appearance",
+        modifier = modifier,
+        index = index,
+        showRule = showRule
+    ) {
         Text(
             text = "Theme",
-            style = typography.captionStrong,
-            color = colors.textSecondary,
-            modifier = Modifier.padding(bottom = 8.dp)
+            style = typography.caption,
+            color = colors.inkMuted,
+            modifier = Modifier.padding(top = AppSpacing.small, bottom = AppSpacing.small)
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -69,7 +77,7 @@ fun SettingsAppearanceSection(
 
         SettingToggleRow(
             title = "Pure AMOLED Black",
-            subtitle = "Use pitch black background in dark mode to save battery",
+            subtitle = "Pitch black background, saves battery on OLED",
             icon = Icons.Outlined.Contrast,
             checked = amoledBlack,
             onCheckedChange = onAmoledBlackChange
@@ -79,7 +87,7 @@ fun SettingsAppearanceSection(
 
         SettingToggleRow(
             title = "Tactile Vibration Haptics",
-            subtitle = "Vibration response for navigation, gestures, and actions",
+            subtitle = "Vibrate on taps and gestures",
             icon = Icons.Outlined.Vibration,
             checked = hapticFeedbackEnabled,
             onCheckedChange = {

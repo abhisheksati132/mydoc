@@ -5,9 +5,7 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -32,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.data.local.SettingsRepository
 import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.update.UpdateManager
 import java.util.Locale
@@ -100,8 +99,8 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(top = AppSpacing.small, bottom = AppSpacing.xLarge),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)
         ) {
             // 1. LOOK
             SettingsAppearanceSection(
@@ -110,7 +109,9 @@ fun SettingsScreen(
                 hapticFeedbackEnabled = hapticFeedbackEnabled,
                 onThemeChange = { settingsRepository.setThemeMode(it) },
                 onAmoledBlackChange = { settingsRepository.setAmoledBlack(it) },
-                onHapticFeedbackChange = { settingsRepository.setHapticFeedbackEnabled(it) }
+                onHapticFeedbackChange = { settingsRepository.setHapticFeedbackEnabled(it) },
+                index = "01",
+                showRule = false
             )
 
             // 2. READING
@@ -126,7 +127,8 @@ fun SettingsScreen(
                 onHighQualityPdfChange = { settingsRepository.setHighQualityPdf(it) },
                 onDoubleTapZoomChange = { settingsRepository.setDoubleTapZoom(it) },
                 onKeepScreenOnChange = { settingsRepository.setKeepScreenOn(it) },
-                onVolumeKeyTurningChange = { settingsRepository.setVolumeKeyPageTurning(it) }
+                onVolumeKeyTurningChange = { settingsRepository.setVolumeKeyPageTurning(it) },
+                index = "02"
             )
 
             // 3. MEDIA
@@ -136,7 +138,8 @@ fun SettingsScreen(
                 videoAutoLoop = videoAutoLoop,
                 onVideoHwAccelChange = { settingsRepository.setVideoHardwareAcceleration(it) },
                 onAutoResumeVideoChange = { settingsRepository.setAutoResumeVideo(it) },
-                onVideoAutoLoopChange = { settingsRepository.setVideoAutoLoop(it) }
+                onVideoAutoLoopChange = { settingsRepository.setVideoAutoLoop(it) },
+                index = "03"
             )
 
             // 4. LIBRARY & STORAGE
@@ -162,11 +165,12 @@ fun SettingsScreen(
                         clearAction()
                         Toast.makeText(context, context.getString(R.string.recent_history_cleared), Toast.LENGTH_SHORT).show()
                     }
-                }
+                },
+                index = "04"
             )
 
             // 5. PRIVACY & SECURITY
-            SettingsCard(title = "PRIVACY & SECURITY") {
+            SettingsCard(title = "Privacy & security", index = "05") {
                 SettingToggleRow(
                     title = "Biometric App Lock",
                     subtitle = "Require fingerprint or device PIN to open app",
@@ -192,10 +196,9 @@ fun SettingsScreen(
                 updateManager = updateManager,
                 updateState = updateState,
                 checkUpdatesOnLaunch = checkUpdatesOnLaunch,
-                onCheckUpdatesOnLaunchChange = { settingsRepository.setCheckUpdatesOnLaunch(it) }
+                onCheckUpdatesOnLaunchChange = { settingsRepository.setCheckUpdatesOnLaunch(it) },
+                index = "06"
             )
-
-            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

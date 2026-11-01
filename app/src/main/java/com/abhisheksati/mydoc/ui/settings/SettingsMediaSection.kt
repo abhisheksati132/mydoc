@@ -15,12 +15,19 @@ fun SettingsMediaSection(
     onVideoHwAccelChange: (Boolean) -> Unit,
     onAutoResumeVideoChange: (Boolean) -> Unit,
     onVideoAutoLoopChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    index: String? = null,
+    showRule: Boolean = true
 ) {
-    SettingsCard(title = "VIDEO & AUDIO", modifier = modifier) {
+    SettingsCard(
+        title = "Video & audio",
+        modifier = modifier,
+        index = index,
+        showRule = showRule
+    ) {
         SettingToggleRow(
             title = "Hardware Video Acceleration",
-            subtitle = "Use GPU hardware decoding for ultra-smooth 4K video playback",
+            subtitle = "GPU decoding for smooth 4K",
             icon = Icons.Outlined.Videocam,
             checked = videoHwAccel,
             onCheckedChange = onVideoHwAccelChange
@@ -30,7 +37,7 @@ fun SettingsMediaSection(
 
         SettingToggleRow(
             title = "Auto-Resume Video",
-            subtitle = "Remember last playback position and resume automatically",
+            subtitle = "Resume where you left off",
             icon = Icons.Outlined.Speed,
             checked = autoResumeVideo,
             onCheckedChange = onAutoResumeVideoChange
@@ -40,7 +47,7 @@ fun SettingsMediaSection(
 
         SettingToggleRow(
             title = "Video Auto-Loop",
-            subtitle = "Automatically replay videos when they reach the end",
+            subtitle = "Loop videos when they end",
             icon = Icons.Outlined.Repeat,
             checked = videoAutoLoop,
             onCheckedChange = onVideoAutoLoopChange

@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.ReadingMode
@@ -33,17 +34,24 @@ fun SettingsReadingSection(
     onDoubleTapZoomChange: (Boolean) -> Unit,
     onKeepScreenOnChange: (Boolean) -> Unit,
     onVolumeKeyTurningChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    index: String? = null,
+    showRule: Boolean = true
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
 
-    SettingsCard(title = "READING & DOCUMENTS", modifier = modifier) {
+    SettingsCard(
+        title = "Reading & documents",
+        modifier = modifier,
+        index = index,
+        showRule = showRule
+    ) {
         Text(
-            text = "Default Reading Mode",
-            style = typography.captionStrong,
-            color = colors.textSecondary,
-            modifier = Modifier.padding(bottom = 8.dp)
+            text = "Default reading mode",
+            style = typography.caption,
+            color = colors.inkMuted,
+            modifier = Modifier.padding(top = AppSpacing.small, bottom = AppSpacing.small)
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -70,10 +78,10 @@ fun SettingsReadingSection(
         SettingsDivider()
 
         Text(
-            text = "PDF Page Scaling",
-            style = typography.captionStrong,
-            color = colors.textSecondary,
-            modifier = Modifier.padding(bottom = 8.dp)
+            text = "PDF page scaling",
+            style = typography.caption,
+            color = colors.inkMuted,
+            modifier = Modifier.padding(top = AppSpacing.small, bottom = AppSpacing.small)
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -95,7 +103,7 @@ fun SettingsReadingSection(
 
         SettingToggleRow(
             title = "High-Quality Vector PDF",
-            subtitle = "Supersample text and vectors for ultra-crisp reading",
+            subtitle = "Supersample text and vectors",
             icon = Icons.Outlined.PictureAsPdf,
             checked = highQualityPdf,
             onCheckedChange = onHighQualityPdfChange
@@ -105,7 +113,7 @@ fun SettingsReadingSection(
 
         SettingToggleRow(
             title = "Double-Tap Quick Zoom",
-            subtitle = "Double tap document page to jump to 2.5x zoom",
+            subtitle = "Double tap a page to zoom to 2.5×",
             icon = Icons.Outlined.Speed,
             checked = doubleTapZoom,
             onCheckedChange = onDoubleTapZoomChange
@@ -115,7 +123,7 @@ fun SettingsReadingSection(
 
         SettingToggleRow(
             title = "Keep Screen Awake While Reading",
-            subtitle = "Prevents display timeout while reading documents",
+            subtitle = "Stop the screen sleeping while reading",
             icon = Icons.Outlined.LightMode,
             checked = keepScreenOn,
             onCheckedChange = onKeepScreenOnChange
@@ -125,7 +133,7 @@ fun SettingsReadingSection(
 
         SettingToggleRow(
             title = "Volume Button Page Turning",
-            subtitle = "Use volume keys to flip pages in book view",
+            subtitle = "Volume keys flip pages",
             icon = Icons.Outlined.Vibration,
             checked = volumeKeyTurning,
             onCheckedChange = onVolumeKeyTurningChange
