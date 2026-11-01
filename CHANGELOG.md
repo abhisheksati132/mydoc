@@ -5,6 +5,21 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Scanner layout and chrome.** The camera dialog lays Compose out against the display while its
+  window decor sits inside the system bars, so inset padding reported zero and the shutter bar was
+  pushed under the navigation bar (the sheet's bottom edge landed at 2534px on a 2274px-tall visible
+  area). The safe area is now measured against the window with `getWindowVisibleDisplayFrame` and the
+  bar bands are dimmed, so the controls sit fully inside the visible window. The page head is a
+  masthead (kicker, title, tabular page folio, 2dp rule), the aspect modes and scan filters are
+  rule-underlined tabs instead of pill groups, the viewfinder is centred in the camera window between
+  the two chrome bands, thumbnails are hairline-framed pages with tabular folios, and the commit
+  action is a single accent stamp.
+- **Scan output was dropped.** `selectTool()` resets the input list, and the scanner called
+  `setInputUris()` before it, so committing a scan opened "Scan to PDF" with no input and a disabled
+  run button. The tool is now selected first, then the captured pages are attached.
+
 ### Changed
 
 - **Editorial reading surface.** Home, Files, Tools, Settings and the reader chrome now share one
@@ -44,6 +59,10 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   Confirmed the action band shows all four actions, storage gauges and the reader scrubber are
   visible in both themes, and the reader's folio, three-action footer and ink selection read
   correctly. AMOLED, rotation, larger font scales and motion remain unverified.
+- Scanner checked on `mydoc_api35` in Document (empty and one page), ID Card and Full View: measured
+  the shutter band at 2015–2274px (flush with the navigation bar), the viewfinder centre at 1231px
+  against a camera-window centre of 1231px, and the commit stamp opening "Scan to PDF" with the
+  captured page attached.
 
 ## [1.4.5] — 2026-11-01
 

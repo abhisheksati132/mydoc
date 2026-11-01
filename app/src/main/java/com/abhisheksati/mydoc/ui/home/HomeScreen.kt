@@ -442,8 +442,9 @@ fun HomeScreen(
             onDismiss = { showCameraScanner = false },
             onScannedUris = { uris ->
                 showCameraScanner = false
-                toolsViewModel.setInputUris(uris)
+                // selectTool resets the input list, so it has to run before the pages land.
                 toolsViewModel.selectTool(PdfTool.SCAN_TO_PDF)
+                toolsViewModel.setInputUris(uris)
             }
         )
     }

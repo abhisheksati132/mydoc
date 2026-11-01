@@ -25,43 +25,39 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FlashOff
 import androidx.compose.material.icons.outlined.FlashOn
 import androidx.compose.material.icons.outlined.PhotoLibrary
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -78,28 +74,31 @@ import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.content.ContextCompat
-import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.abhisheksati.mydoc.designsystem.animation.pressScale
+import com.abhisheksati.mydoc.designsystem.components.EditorialRule
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.components.horizontalScrollWithFade
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.CaptureChromeColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
+import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.tools.scan.cropper.FreeCornersCropperDialog
 import com.abhisheksati.mydoc.tools.scan.filters.ScanFilter
 import com.abhisheksati.mydoc.tools.scan.filters.ScanFilterEngine
@@ -137,8 +136,11 @@ fun CameraScanSheet(
         DisposableEffect(view) {
             val window = (view.parent as? DialogWindowProvider)?.window
             if (window != null) {
-                window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-                WindowCompat.setDecorFitsSystemWindows(window, false)
+                // Compose sizes this dialog against the display while the window's decor sits
+                // inside the bars. Darken everything behind it so the bar bands read as part of
+                // the viewfinder instead of showing the host screen.
+                window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                window.setDimAmount(1f)
             }
             onDispose {}
         }
@@ -149,6 +151,18 @@ fun CameraScanSheet(
         val haptics = rememberAppHaptics()
         val typography = LocalAppTypography.current
         val haptic = LocalHapticFeedback.current
+        val density = androidx.compose.ui.platform.LocalDensity.current
+
+        // This dialog's window hands Compose zero insets (the platform dialog window is fitted
+        // separately from the full-bleed view Compose lays out), so bars padding reports 0 and
+        // the shutter bar ended up underneath the navigation bar. Measure the safe area against
+        // the window instead: it is correct whether the decor is fitted or full screen.
+        var safeTopPx by remember { mutableIntStateOf(0) }
+        var safeBottomPx by remember { mutableIntStateOf(0) }
+        // Measured chrome heights, so the viewfinder is centred in the camera window rather
+        // than under the page head and shutter band.
+        var topChromePx by remember { mutableIntStateOf(0) }
+        var bottomChromePx by remember { mutableIntStateOf(0) }
 
         var hasCameraPermission by remember {
             mutableStateOf(
@@ -180,6 +194,8 @@ fun CameraScanSheet(
         var isCapturing by remember { mutableStateOf(false) }
 
         val scope = androidx.compose.runtime.rememberCoroutineScope()
+        val shutterInteraction = remember { MutableInteractionSource() }
+        val commitInteraction = remember { MutableInteractionSource() }
         var selectedScanFilter by remember { mutableStateOf(ScanFilter.AUTO) }
         var editingPageForCrop by remember { mutableStateOf<Pair<Int, android.graphics.Bitmap>?>(null) }
         var isApplyingFilterAndSaving by remember { mutableStateOf(false) }
@@ -242,6 +258,18 @@ fun CameraScanSheet(
             modifier = modifier
                 .fillMaxSize()
                 .background(Color.Black)
+                .onGloballyPositioned { c ->
+                    val frame = android.graphics.Rect()
+                    view.getWindowVisibleDisplayFrame(frame)
+                    val location = IntArray(2)
+                    view.getLocationOnScreen(location)
+                    safeTopPx = (frame.top - location[1]).coerceAtLeast(0)
+                    safeBottomPx = (location[1] + c.size.height - frame.bottom).coerceAtLeast(0)
+                }
+                .padding(
+                    top = with(density) { safeTopPx.toDp() },
+                    bottom = with(density) { safeBottomPx.toDp() }
+                )
         ) {
             // CameraX Live Preview View
             AndroidView(
@@ -304,13 +332,19 @@ fun CameraScanSheet(
                     Pair(maxFrameWidth, maxFrameWidth / targetAspect)
                 }
 
+                val chromeTop = with(density) { topChromePx.toDp() }
+                val chromeBottom = with(density) { bottomChromePx.toDp() }
+
                 // Semi-transparent Scrim Mask with punched-out frame
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val frameLeft = (size.width - frameWidth.toPx()) / 2f
-                    val frameTop = (size.height - frameHeight.toPx()) / 2f - 38.dp.toPx()
+                    // Centre the frame in the camera window between the two chrome bands.
+                    val windowTop = chromeTop.toPx()
+                    val windowBottom = size.height - chromeBottom.toPx()
+                    val frameTop = windowTop + (windowBottom - windowTop - frameHeight.toPx()) / 2f
                     val frameRight = frameLeft + frameWidth.toPx()
                     val frameBottom = frameTop + frameHeight.toPx()
-                    val cornerRadius = CornerRadius(16.dp.toPx(), 16.dp.toPx())
+                    val cornerRadius = CornerRadius(AppRadius.micro.toPx(), AppRadius.micro.toPx())
 
                     // Path covering full screen with cutout
                     val scrimPath = Path().apply {
@@ -329,8 +363,8 @@ fun CameraScanSheet(
                     drawPath(scrimPath, color = CaptureChromeColors.scrim)
 
                     // Document Corner Guides
-                    val stroke = 3.dp.toPx()
-                    val cornerLen = 28.dp.toPx()
+                    val stroke = AppSpacing.rule.toPx()
+                    val cornerLen = 24.dp.toPx()
                     val cornerColor = Color.White.copy(alpha = 0.90f)
 
                     // Top-Left corner
@@ -349,155 +383,133 @@ fun CameraScanSheet(
                     drawLine(cornerColor, Offset(frameRight - cornerLen, frameBottom), Offset(frameRight, frameBottom), stroke, cap = StrokeCap.Round)
                     drawLine(cornerColor, Offset(frameRight, frameBottom), Offset(frameRight, frameBottom - cornerLen), stroke, cap = StrokeCap.Round)
                 }
-
-                // Helper Hint text above or below frame
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 114.dp)
-                ) {
-                    Surface(
-                        color = CaptureChromeColors.scrim,
-                        shape = AppRadius.cardShape
-                    ) {
-                        Text(
-                            text = "Align document inside frame",
-                            style = typography.micro,
-                            color = Color.White.copy(alpha = 0.9f),
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp)
-                        )
-                    }
-                }
             }
 
-            // Overlay Interface: Top Header Bar & Mode Chips
+            // Page head: kicker, title, page folio, and the masthead rule. Mode selection is a
+            // ruled tab row rather than a floating pill group, so the head reads like every
+            // other screen instead of an iOS camera sheet.
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .background(CaptureChromeColors.sheetScrim)
+                    .onGloballyPositioned { topChromePx = it.size.height }
             ) {
-                // Top control bar
-                Surface(
-                    color = CaptureChromeColors.controlsScrim,
-                    shape = AppRadius.xLargeShape,
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 4.dp, end = 12.dp, top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(44.dp)
                     ) {
-                        IconButton(
-                            onClick = onDismiss,
-                            modifier = Modifier.size(38.dp)
-                        ) {
-                            Icon(Icons.Outlined.Close, contentDescription = "Close Scanner", tint = Color.White)
-                        }
+                        Icon(
+                            imageVector = Icons.Outlined.Close,
+                            contentDescription = "Close scanner",
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
 
-                        // Scanned Page Count Pill or Title
-                        if (capturedFiles.isNotEmpty()) {
-                            Surface(
-                                color = colors.accent.copy(alpha = 0.25f),
-                                shape = AppRadius.cardShape
-                            ) {
-                                Text(
-                                    text = "${capturedFiles.size} ${if (capturedFiles.size == 1) "page" else "pages"}",
-                                    style = typography.captionStrong,
-                                    color = colors.accent,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
-                                )
-                            }
-                        } else {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 4.dp)
+                    ) {
+                        Text(
+                            text = "SCANNER",
+                            style = typography.overline,
+                            color = CaptureChromeColors.onChromeMuted
+                        )
+                        Text(
+                            text = "Scan document",
+                            style = typography.titleSmall,
+                            color = Color.White
+                        )
+                    }
+
+                    if (capturedFiles.isNotEmpty()) {
+                        Text(
+                            text = "${capturedFiles.size.toString().padStart(2, '0')} ${if (capturedFiles.size == 1) "PAGE" else "PAGES"}",
+                            style = typography.overline.withTabularFigures(),
+                            color = CaptureChromeColors.onChromeMuted,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = {
+                            isTorchOn = !isTorchOn
+                            cameraControl?.enableTorch(isTorchOn)
+                        },
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isTorchOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
+                            contentDescription = "Toggle torch",
+                            tint = if (isTorchOn) CaptureChromeColors.torchOn else Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+
+                EditorialRule(color = Color.White)
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        // Tabs sit on the title's axis; the close glyph hangs in the margin.
+                        .padding(start = 52.dp, end = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(28.dp)
+                ) {
+                    ScanAspectMode.entries.forEach { mode ->
+                        val isSelected = selectedMode == mode
+                        Column(
+                            modifier = Modifier
+                                .width(IntrinsicSize.Max)
+                                .clickable { selectedMode = mode }
+                                .padding(top = 8.dp, bottom = 10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
                             Text(
-                                text = "Scan Document",
-                                style = typography.bodyStrong,
-                                color = Color.White
+                                text = mode.label.uppercase(),
+                                style = typography.overline,
+                                color = if (isSelected) Color.White else CaptureChromeColors.onChromeMuted
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(AppSpacing.rule)
+                                    .background(if (isSelected) Color.White else Color.Transparent)
                             )
                         }
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            // Flashlight / Torch Toggle
-                            IconButton(
-                                onClick = {
-                                    isTorchOn = !isTorchOn
-                                    cameraControl?.enableTorch(isTorchOn)
-                                },
-                                modifier = Modifier.size(38.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (isTorchOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
-                                    contentDescription = "Toggle Torch",
-                                    tint = if (isTorchOn) CaptureChromeColors.torchOn else Color.White
-                                )
-                            }
-
-                            if (capturedFiles.isNotEmpty()) {
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Button(
-                                    onClick = {
-                                        val uris = capturedFiles.map { Uri.fromFile(it) }
-                                        onScannedUris(uris)
-                                    },
-                                    shape = AppRadius.cardShape,
-                                    colors = ButtonDefaults.buttonColors(containerColor = colors.accent, contentColor = Color.Black),
-                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
-                                    modifier = Modifier.height(34.dp)
-                                ) {
-                                    Text("Done (${capturedFiles.size})", style = AppTheme.typography.captionStrong)
-                                }
-                            }
-                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Aspect Mode Switcher Chips (Document, ID Card, Full)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Surface(
-                        color = CaptureChromeColors.panelVeil,
-                        shape = AppRadius.largeShape
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(3.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            ScanAspectMode.entries.forEach { mode ->
-                                val isSelected = selectedMode == mode
-                                Box(
-                                    modifier = Modifier
-                                        .clip(AppRadius.cardShape)
-                                        .background(if (isSelected) CaptureChromeColors.onChromeFaint else Color.Transparent)
-                                        .clickable {
-                                            selectedMode = mode
-                                        }
-                                        .padding(horizontal = 12.dp, vertical = 5.dp)
-                                ) {
-                                    Text(
-                                        text = mode.label,
-                                        style = if (isSelected) typography.captionStrong else typography.micro,
-                                        color = if (isSelected) Color.White else CaptureChromeColors.onChromeMuted
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                Text(
+                    text = "Align the page inside the frame",
+                    style = typography.micro,
+                    color = CaptureChromeColors.onChromeMuted,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp, bottom = 10.dp)
+                )
             }
 
-            // Bottom Section: Multi-page Thumbnails Carousel & Shutter Bar
+            // Bottom band: contact sheet, filter tabs and shutter. One ruled block, not a
+            // rounded sheet, so the chrome belongs to the same print system as the page head.
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .navigationBarsPadding()
+                    .background(CaptureChromeColors.sheetScrim)
+                    .onGloballyPositioned { bottomChromePx = it.size.height }
             ) {
+                EditorialRule(color = Color.White)
+
                 // Scanned Pages Horizontal Strip (collapsible if empty)
                 AnimatedVisibility(
                     visible = capturedFiles.isNotEmpty(),
@@ -507,9 +519,8 @@ fun CameraScanSheet(
                     LazyRow(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(horizontal = 4.dp)
+                            .padding(horizontal = 20.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         itemsIndexed(
                             items = capturedFiles,
@@ -518,8 +529,12 @@ fun CameraScanSheet(
                             Box(
                                 modifier = Modifier
                                     .size(width = 46.dp, height = 62.dp)
-                                    .clip(AppRadius.pillShape)
-                                    .border(1.5.dp, colors.accent, AppRadius.pillShape)
+                                    .clip(AppRadius.microShape)
+                                    .border(
+                                        AppSpacing.hairline,
+                                        CaptureChromeColors.onChromeMuted,
+                                        AppRadius.microShape
+                                    )
                                     .background(CaptureChromeColors.surface)
                                     .clickable {
                                         scope.launch(Dispatchers.IO) {
@@ -551,27 +566,23 @@ fun CameraScanSheet(
                                     contentScale = ContentScale.Crop
                                 )
 
-                                // Page Number badge
-                                Surface(
-                                    color = CaptureChromeColors.scrimStrong,
-                                    shape = RoundedCornerShape(bottomEnd = AppRadius.micro),
-                                    modifier = Modifier.align(Alignment.TopStart)
-                                ) {
-                                    Text(
-                                        text = "${idx + 1}",
-                                        style = typography.micro,
-                                        color = Color.White,
-                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                    )
-                                }
+                                // Folio: page numbers are set in tabular figures, never in a pill.
+                                Text(
+                                    text = (idx + 1).toString().padStart(2, '0'),
+                                    style = typography.micro.withTabularFigures(),
+                                    color = Color.White,
+                                    modifier = Modifier
+                                        .align(Alignment.BottomStart)
+                                        .background(CaptureChromeColors.scrimStrong)
+                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                )
 
                                 // Delete thumbnail button
                                 Box(
                                     modifier = Modifier
                                         .align(Alignment.TopEnd)
                                         .size(20.dp)
-                                        .clip(CircleShape)
-                                        .background(CaptureChromeColors.capture)
+                                        .background(CaptureChromeColors.scrimStrong)
                                         .clickable {
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             capturedFiles.removeAt(idx)
@@ -590,7 +601,7 @@ fun CameraScanSheet(
                     }
                 }
 
-                // Scan Filter Presets Strip
+                // Scan Filter Presets Strip: secondary tabs, thinner rule than the mode row.
                 AnimatedVisibility(
                     visible = capturedFiles.isNotEmpty(),
                     enter = fadeIn(),
@@ -600,115 +611,123 @@ fun CameraScanSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .horizontalScrollWithFade(rememberScrollState())
-                            .padding(horizontal = 20.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
                         ScanFilter.entries.forEach { filter ->
                             val isSelected = selectedScanFilter == filter
-                            Surface(
-                                color = if (isSelected) colors.accent else CaptureChromeColors.thumbInactive,
-                                shape = AppRadius.largeShape,
-                                modifier = Modifier.clickable {
-                                    selectedScanFilter = filter
-                                }
+                            Column(
+                                modifier = Modifier
+                                    .width(IntrinsicSize.Max)
+                                    .clickable { selectedScanFilter = filter }
+                                    .padding(bottom = 10.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
-                                    text = filter.label,
-                                    style = if (isSelected) typography.captionStrong else typography.micro,
-                                    color = if (isSelected) Color.Black else Color.White,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                    text = filter.label.uppercase(),
+                                    style = typography.overline,
+                                    color = if (isSelected) Color.White else CaptureChromeColors.onChromeMuted
+                                )
+                                Spacer(modifier = Modifier.height(5.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(AppSpacing.hairline)
+                                        .background(if (isSelected) Color.White else Color.Transparent)
                                 )
                             }
                         }
                     }
                 }
 
-                // Shutter Controls Container - safely padded above navigation bars
-                Surface(
-                    color = CaptureChromeColors.sheetScrim,
-                    shape = AppRadius.sheetShape,
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 28.dp)
-                            .padding(top = 16.dp, bottom = 32.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    // Gallery Import button
+                    IconButton(
+                        onClick = {
+                            galleryLauncher.launch("image/*")
+                        },
+                        modifier = Modifier.size(48.dp)
                     ) {
-                        // Gallery Import button
-                        IconButton(
-                            onClick = {
-                                galleryLauncher.launch("image/*")
-                            },
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(CaptureChromeColors.onChromeGhost)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.PhotoLibrary,
-                                contentDescription = "Import from gallery",
-                                tint = Color.White,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Outlined.PhotoLibrary,
+                            contentDescription = "Import from gallery",
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
 
-                        // Premium Tactile Shutter Trigger
+                    // Tactile shutter trigger
+                    Box(
+                        modifier = Modifier
+                            .size(68.dp)
+                            .clip(CircleShape)
+                            .border(AppSpacing.rule, Color.White, CircleShape)
+                            .padding(5.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Box(
                             modifier = Modifier
-                                .size(68.dp)
+                                .fillMaxSize()
                                 .clip(CircleShape)
-                                .border(3.dp, Color.White, CircleShape)
-                                .padding(4.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
+                                .background(if (isCapturing) colors.accent else Color.White)
+                                .clickable(
+                                    interactionSource = shutterInteraction,
+                                    indication = ripple(),
+                                    enabled = !isCapturing
+                                ) {
+                                    haptics.confirm()
+                                    val capture = imageCapture ?: return@clickable
+                                    isCapturing = true
+
+                                    val tempFile = File.createTempFile(
+                                        "scan_page_${capturedFiles.size + 1}_",
+                                        ".jpg",
+                                        context.cacheDir
+                                    )
+                                    val outputOptions = ImageCapture.OutputFileOptions.Builder(tempFile).build()
+
+                                    capture.takePicture(
+                                        outputOptions,
+                                        ContextCompat.getMainExecutor(context),
+                                        object : ImageCapture.OnImageSavedCallback {
+                                            override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                                                isCapturing = false
+                                                capturedFiles.add(tempFile)
+                                            }
+
+                                            override fun onError(exception: ImageCaptureException) {
+                                                isCapturing = false
+                                                Toast.makeText(context, "Capture failed: ${exception.message}", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    )
+                                }
+                                .pressScale(shutterInteraction)
+                        )
+                    }
+
+                    // Right slot: commit the scan
+                    Box(
+                        modifier = Modifier.size(48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (capturedFiles.isNotEmpty()) {
                             Box(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(CircleShape)
-                                    .background(if (isCapturing) colors.accent else Color.White)
-                                    .clickable(enabled = !isCapturing) {
-                                        haptics.confirm()
-                                        val capture = imageCapture ?: return@clickable
-                                        isCapturing = true
-
-                                        val tempFile = File.createTempFile(
-                                            "scan_page_${capturedFiles.size + 1}_",
-                                            ".jpg",
-                                            context.cacheDir
-                                        )
-                                        val outputOptions = ImageCapture.OutputFileOptions.Builder(tempFile).build()
-
-                                        capture.takePicture(
-                                            outputOptions,
-                                            ContextCompat.getMainExecutor(context),
-                                            object : ImageCapture.OnImageSavedCallback {
-                                                override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                                                    isCapturing = false
-                                                    capturedFiles.add(tempFile)
-                                                }
-
-                                                override fun onError(exception: ImageCaptureException) {
-                                                    isCapturing = false
-                                                    Toast.makeText(context, "Capture failed: ${exception.message}", Toast.LENGTH_SHORT).show()
-                                                }
-                                            }
-                                        )
-                                    }
-                            )
-                        }
-
-                        // Right slot: Finalize Checkmark or spacer
-                        Box(
-                            modifier = Modifier.size(48.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (capturedFiles.isNotEmpty()) {
-                                IconButton(
-                                    onClick = {
+                                    .size(46.dp)
+                                    .clip(AppRadius.microShape)
+                                    .background(if (isApplyingFilterAndSaving) CaptureChromeColors.panel else colors.accent)
+                                    .clickable(
+                                        interactionSource = commitInteraction,
+                                        indication = ripple(),
+                                        enabled = !isApplyingFilterAndSaving
+                                    ) {
                                         if (selectedScanFilter == ScanFilter.ORIGINAL) {
                                             val uris = capturedFiles.map { Uri.fromFile(it) }
                                             onScannedUris(uris)
@@ -742,27 +761,23 @@ fun CameraScanSheet(
                                                 }
                                             }
                                         }
-                                    },
-                                    enabled = !isApplyingFilterAndSaving,
-                                    modifier = Modifier
-                                        .size(50.dp)
-                                        .clip(CircleShape)
-                                        .background(if (isApplyingFilterAndSaving) Color.Gray else colors.accent)
-                                ) {
-                                    if (isApplyingFilterAndSaving) {
-                                        androidx.compose.material3.CircularProgressIndicator(
-                                            color = Color.White,
-                                            strokeWidth = 2.dp,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    } else {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Check,
-                                            contentDescription = "Done Scanning",
-                                            tint = Color.Black,
-                                            modifier = Modifier.size(26.dp)
-                                        )
                                     }
+                                    .pressScale(commitInteraction),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isApplyingFilterAndSaving) {
+                                    androidx.compose.material3.CircularProgressIndicator(
+                                        color = Color.White,
+                                        strokeWidth = 2.dp,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Check,
+                                        contentDescription = "Done scanning",
+                                        tint = Color.Black,
+                                        modifier = Modifier.size(22.dp)
+                                    )
                                 }
                             }
                         }
