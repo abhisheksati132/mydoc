@@ -674,160 +674,44 @@ fun PresentationViewerScreen(
         },
         bottomBar = {
             if (effectiveSlideCount > 0 && !isSlideshowMode) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(bgColor)
-                        .navigationBarsPadding()
-                ) {
-                    // Slide Thumbnail Carousel (when open)
-                    AnimatedVisibility(visible = isThumbnailStripOpen) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(bgColor)
-                        ) {
-                            LazyRow(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = AppSpacing.paddingSmall),
-                                contentPadding = PaddingValues(horizontal = AppSpacing.paddingMedium),
-                                horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
-                            ) {
-                                items(effectiveSlideCount) { index ->
-                                    val isSelected = index == currentSlideIndex
-                                    val slide = effectiveSlides.getOrNull(index)
-                                    Box(
-                                        modifier = Modifier
-                                            .width(96.dp)
-                                            .height(58.dp)
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(cardBgColor)
-                                            .border(
-                                                width = if (isSelected) 2.dp else 1.dp,
-                                                color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.1f),
-                                                shape = RoundedCornerShape(10.dp)
-                                            )
-                                            .clickable {
-                                                scope.launch {
-                                                    if (isContinuousVertical) {
-                                                        lazyListState.animateScrollToItem(index)
-                                                    } else {
-                                                        pagerState.animateScrollToPage(index)
-                                                    }
-                                                }
-                                            }
-                                            .padding(4.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.Center
-                                        ) {
-                                            Text(
-                                                text = "${index + 1}",
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (isSelected) MaterialTheme.colorScheme.primary else textColor
-                                            )
-                                            Text(
-                                                text = slide?.title ?: "Slide ${index + 1}",
-                                                fontSize = 9.sp,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                color = secondaryTextColor
-                                            )
-                                        }
-                                    }
-                                }
+                PresentationBottomBar(
+                    effectiveSlideCount = effectiveSlideCount,
+                    currentSlideIndex = currentSlideIndex,
+                    effectiveSlides = effectiveSlides,
+                    isThumbnailStripOpen = isThumbnailStripOpen,
+                    onToggleThumbnailStrip = { isThumbnailStripOpen = !isThumbnailStripOpen },
+                    onSelectSlide = { index ->
+                        scope.launch {
+                            if (isContinuousVertical) {
+                                lazyListState.animateScrollToItem(index)
+                            } else {
+                                pagerState.animateScrollToPage(index)
                             }
-                            AppDivider()
                         }
-                    }
-
-                    AppDivider()
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .padding(horizontal = AppSpacing.paddingMedium),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        IconButton(
-                            onClick = {
-                                scope.launch {
-                                    if (currentSlideIndex > 0) {
-                                        if (isContinuousVertical) lazyListState.animateScrollToItem(currentSlideIndex - 1)
-                                        else pagerState.animateScrollToPage(currentSlideIndex - 1)
-                                    }
-                                }
-                            },
-                            enabled = currentSlideIndex > 0
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                contentDescription = "Previous Slide",
-                                tint = if (currentSlideIndex > 0) textColor else secondaryTextColor.copy(alpha = 0.3f)
-                            )
+                    },
+                    onPreviousSlide = {
+                        scope.launch {
+                            if (currentSlideIndex > 0) {
+                                if (isContinuousVertical) lazyListState.animateScrollToItem(currentSlideIndex - 1)
+                                else pagerState.animateScrollToPage(currentSlideIndex - 1)
+                            }
                         }
-
-                        IconButton(onClick = { isThumbnailStripOpen = !isThumbnailStripOpen }) {
-                            Icon(
-                                imageVector = Icons.Outlined.ViewCarousel,
-                                contentDescription = "Toggle Thumbnails",
-                                tint = if (isThumbnailStripOpen) MaterialTheme.colorScheme.primary else secondaryTextColor
-                            )
+                    },
+                    onNextSlide = {
+                        scope.launch {
+                            if (currentSlideIndex < effectiveSlideCount - 1) {
+                                if (isContinuousVertical) lazyListState.animateScrollToItem(currentSlideIndex + 1)
+                                else pagerState.animateScrollToPage(currentSlideIndex + 1)
+                            }
                         }
-
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(100.dp))
-                                .background(cardBgColor)
-                                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(100.dp))
-                                .clickable { isJumpDialogOpen = true }
-                                .padding(horizontal = 14.dp, vertical = 6.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Slide ${currentSlideIndex + 1} of $effectiveSlideCount",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                                color = textColor
-                            )
-                        }
-
-                        val currentSlide = effectiveSlides.getOrNull(currentSlideIndex)
-                        val hasNotes = !currentSlide?.notes.isNullOrBlank()
-                        IconButton(
-                            onClick = { isNotesSheetOpen = true },
-                            enabled = hasNotes
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Description,
-                                contentDescription = "Speaker Notes",
-                                tint = if (hasNotes) MaterialTheme.colorScheme.primary else secondaryTextColor.copy(alpha = 0.25f)
-                            )
-                        }
-
-                        IconButton(
-                            onClick = {
-                                scope.launch {
-                                    if (currentSlideIndex < effectiveSlideCount - 1) {
-                                        if (isContinuousVertical) lazyListState.animateScrollToItem(currentSlideIndex + 1)
-                                        else pagerState.animateScrollToPage(currentSlideIndex + 1)
-                                    }
-                                }
-                            },
-                            enabled = currentSlideIndex < effectiveSlideCount - 1
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
-                                contentDescription = "Next Slide",
-                                tint = if (currentSlideIndex < effectiveSlideCount - 1) textColor else secondaryTextColor.copy(alpha = 0.3f)
-                            )
-                        }
-                    }
-                }
+                    },
+                    onOpenJumpDialog = { isJumpDialogOpen = true },
+                    onOpenNotesSheet = { isNotesSheetOpen = true },
+                    bgColor = bgColor,
+                    cardBgColor = cardBgColor,
+                    textColor = textColor,
+                    secondaryTextColor = secondaryTextColor
+                )
             }
         },
         containerColor = bgColor
