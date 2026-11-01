@@ -1,126 +1,29 @@
 package com.abhisheksati.mydoc.ui.filemanager
 
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.Sort
-import androidx.compose.material.icons.outlined.Android
-import androidx.compose.material.icons.outlined.Archive
-import androidx.compose.material.icons.outlined.ArrowUpward
-import androidx.compose.material.icons.outlined.AudioFile
-import androidx.compose.material.icons.outlined.ChevronRight
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.ContentCut
-import androidx.compose.material.icons.outlined.ContentPaste
-import androidx.compose.material.icons.outlined.CreateNewFolder
-import androidx.compose.material.icons.outlined.DataUsage
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.DeleteSweep
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.DriveFileRenameOutline
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.FolderOpen
-import androidx.compose.material.icons.outlined.FolderZip
-import androidx.compose.material.icons.outlined.GridView
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.foundation.layout.statusBarsPadding
-import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.outlined.Bookmark
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
-import androidx.compose.material.icons.automirrored.outlined.NoteAdd
-import androidx.compose.material.icons.automirrored.outlined.ViewList
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
-import androidx.compose.material.icons.outlined.SelectAll
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material.icons.outlined.Storage
-import androidx.compose.material.icons.outlined.Videocam
-import androidx.compose.material.icons.outlined.WarningAmber
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
-import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -128,29 +31,21 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.content.FileProvider
+import com.abhisheksati.mydoc.data.local.PinnedFoldersManager
 import com.abhisheksati.mydoc.data.local.StoragePermissionHelper
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
-import com.abhisheksati.mydoc.designsystem.components.AppSearchField
-import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
-import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
-import com.abhisheksati.mydoc.domain.model.ClipboardOperation
 import com.abhisheksati.mydoc.domain.model.DocumentFilter
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.StorageFileType
@@ -158,7 +53,6 @@ import com.abhisheksati.mydoc.domain.model.StorageItem
 import com.abhisheksati.mydoc.ui.storage.StorageViewModel
 import com.abhisheksati.mydoc.viewmodel.FileManagerViewModel
 import java.io.File
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -203,14 +97,12 @@ fun FileManagerScreen(
         }
     }
 
-
     // Dialog & menu state
     var showNewFolderDialog by remember { mutableStateOf(false) }
     var showNewFileDialog by remember { mutableStateOf(false) }
     var showRenameDialogForFile by remember { mutableStateOf<File?>(null) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
-    var showOverflowMenu by remember { mutableStateOf(false) }
     var singleItemActionTarget by remember { mutableStateOf<StorageItem?>(null) }
     var showCompressDialog by remember { mutableStateOf(false) }
     var showExtractConfirmDialogForFile by remember { mutableStateOf<File?>(null) }
@@ -218,7 +110,7 @@ fun FileManagerScreen(
     var isSearchActive by remember { mutableStateOf(false) }
     var showStorageCleanerSheet by remember { mutableStateOf(false) }
     var showAppManagerSheet by remember { mutableStateOf(false) }
-    val pinnedFoldersManager = remember { com.abhisheksati.mydoc.data.local.PinnedFoldersManager(context) }
+    val pinnedFoldersManager = remember { PinnedFoldersManager(context) }
     val pinnedFolders by pinnedFoldersManager.pinnedFolders.collectAsState()
 
     var documentFilter by remember { mutableStateOf(DocumentFilter.ALL) }
@@ -298,204 +190,25 @@ fun FileManagerScreen(
             }
         },
         topBar = {
-            AnimatedContent(
-                targetState = uiState.isSelectionMode,
-                transitionSpec = {
-                    (slideInVertically(
-                        initialOffsetY = { -it / 2 },
-                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-                    ) + fadeIn(spring(stiffness = Spring.StiffnessMediumLow))).togetherWith(
-                        slideOutVertically(
-                            targetOffsetY = { -it / 2 },
-                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-                        ) + fadeOut()
-                    )
-                },
-                label = "FileManagerTopBar"
-            ) { isSelection ->
-                if (isSelection) {
-                    FileManagerSelectionTopBar(
-                        selectedCount = uiState.selectedFiles.size,
-                        onClearSelection = { viewModel.clearSelection() },
-                        onShare = { shareFiles(context, uiState.selectedFiles.toList()) },
-                        onCut = { viewModel.cutSelected() },
-                        onDelete = { showDeleteConfirmDialog = true },
-                        onSelectAll = { viewModel.selectAll() },
-                        onCopy = { viewModel.copySelected() },
-                        onCompress = { showCompressDialog = true },
-                        onRename = if (uiState.selectedFiles.size == 1) {
-                            { showRenameDialogForFile = uiState.selectedFiles.first() }
-                        } else null
-                    )
-
-            } else {
-                Box {
-                    AppTabHeader(
-                        title = when {
-                            uiState.activeCategory != null -> uiState.activeCategory!!.displayName
-                            uiState.isBrowsingStorage -> {
-                                val isAtRoot = uiState.storageVolumes.any { it.path == uiState.currentDirectory.absolutePath } ||
-                                        uiState.currentDirectory.absolutePath == "/storage/emulated/0"
-                                if (isAtRoot) "Internal Storage" else uiState.currentDirectory.name
-                            }
-                            else -> "Files"
-                        },
-                        navigationIcon = if (uiState.activeCategory != null || uiState.isBrowsingStorage) {
-                            {
-                                IconButton(onClick = {
-                                    if (uiState.activeCategory != null) {
-                                        viewModel.selectCategory(null)
-                                    } else {
-                                        viewModel.navigateUp()
-                                    }
-                                }) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                        contentDescription = "Back",
-                                        tint = colors.textPrimary
-                                    )
-                                }
-                            }
-                        } else null,
-                        onSearchClick = { isSearchActive = !isSearchActive },
-                        isSearchActive = isSearchActive,
-                        searchContent = {
-                            AppSearchField(
-                                query = uiState.searchQuery,
-                                onQueryChanged = { viewModel.setSearchQuery(it) },
-                                placeholder = "Search files..."
-                            )
-                        },
-                        onToggleTheme = onToggleTheme,
-                        onSettingsClick = onSettingsClick,
-                        moreMenuContent = { onDismiss ->
-                            DropdownMenuItem(
-                                text = { Text(if (uiState.isGridView) "Switch to List View" else "Switch to Grid View", style = typography.body, color = colors.textPrimary) },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = if (uiState.isGridView) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
-                                        contentDescription = null,
-                                        tint = colors.accent
-                                    )
-                                },
-                                onClick = {
-                                    onDismiss()
-                                    viewModel.toggleViewMode()
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Sort files...", style = typography.body, color = colors.textPrimary) },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Sort, contentDescription = null, tint = colors.accent) },
-                                onClick = {
-                                    onDismiss()
-                                    showSortMenu = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        if (uiState.showHiddenFiles) "Hide hidden files" else "Show hidden files",
-                                        style = typography.body,
-                                        color = colors.textPrimary
-                                    )
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = if (uiState.showHiddenFiles) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                                        contentDescription = null,
-                                        tint = colors.accent
-                                    )
-                                },
-                                onClick = {
-                                    onDismiss()
-                                    viewModel.toggleHiddenFiles()
-                                }
-                            )
-
-                            HorizontalDivider(color = colors.divider.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 4.dp))
-
-                            DropdownMenuItem(
-                                text = { Text("New Folder", style = typography.body, color = colors.textPrimary) },
-                                leadingIcon = { Icon(Icons.Outlined.CreateNewFolder, contentDescription = null, tint = colors.accent) },
-                                onClick = {
-                                    onDismiss()
-                                    showNewFolderDialog = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("New File", style = typography.body, color = colors.textPrimary) },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Outlined.NoteAdd, contentDescription = null, tint = colors.accent) },
-                                onClick = {
-                                    onDismiss()
-                                    showNewFileDialog = true
-                                }
-                            )
-
-                            HorizontalDivider(color = colors.divider.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 4.dp))
-
-                            DropdownMenuItem(
-                                text = { Text(if (uiState.trashItems.isNotEmpty()) "Recycle Bin (${uiState.trashItems.size})" else "Recycle Bin", style = typography.body, color = colors.textPrimary) },
-                                leadingIcon = { Icon(Icons.Outlined.Delete, contentDescription = null, tint = colors.accent) },
-                                onClick = {
-                                    onDismiss()
-                                    viewModel.openTrash()
-                                }
-                            )
-
-                            DropdownMenuItem(
-                                text = { Text("Refresh", style = typography.body, color = colors.textPrimary) },
-                                leadingIcon = { Icon(Icons.Outlined.Refresh, contentDescription = null, tint = colors.textSecondary) },
-                                onClick = {
-                                    onDismiss()
-                                    viewModel.loadDirectory(uiState.currentDirectory, addToHistory = false)
-                                    viewModel.refreshVolumes()
-                                }
-                            )
-                        },
-                        bottomContent = if (!isHubMode) {
-                            {
-                                Column(modifier = Modifier.fillMaxWidth()) {
-                                    // Fast Categories Chips
-                                    FileManagerCategoryChips(
-                                        activeCategory = uiState.activeCategory,
-                                        onCategorySelected = { category ->
-                                            documentFilter = DocumentFilter.ALL
-                                            if (uiState.activeCategory == category) {
-                                                viewModel.selectCategory(null)
-                                            } else {
-                                                viewModel.selectCategory(category)
-                                            }
-                                        }
-                                    )
-
-                                    // Breadcrumb Trail or Category Banner
-                                    FileManagerBreadcrumbBar(
-                                        activeCategory = uiState.activeCategory,
-                                        displayedItemsCount = displayedItems.size,
-                                        onClearCategory = {
-                                            documentFilter = DocumentFilter.ALL
-                                            viewModel.selectCategory(null)
-                                        },
-                                        documentFilter = documentFilter,
-                                        onDocumentFilterSelected = { documentFilter = it },
-                                        breadcrumbTrail = uiState.breadcrumbTrail,
-                                        storageVolumes = uiState.storageVolumes,
-                                        onNavigateToCrumb = { viewModel.navigateToCrumb(it) }
-                                    )
-                                }
-                            }
-                        } else null
-                    )
-
-                    SortOrderDropdownMenu(
-                        expanded = showSortMenu,
-                        currentSort = uiState.sortOrder,
-                        onDismiss = { showSortMenu = false },
-                        onSortSelected = { viewModel.toggleSort(it) }
-                    )
-                }
-            }
-        }
+            FileManagerTopBar(
+                uiState = uiState,
+                viewModel = viewModel,
+                displayedItemsCount = displayedItems.size,
+                documentFilter = documentFilter,
+                isHubMode = isHubMode,
+                isSearchActive = isSearchActive,
+                showSortMenu = showSortMenu,
+                onToggleSearch = { isSearchActive = !isSearchActive },
+                onToggleSortMenu = { showSortMenu = it },
+                onDocumentFilterChange = { documentFilter = it },
+                onShowNewFolderDialog = { showNewFolderDialog = true },
+                onShowNewFileDialog = { showNewFileDialog = true },
+                onShowDeleteConfirmDialog = { showDeleteConfirmDialog = true },
+                onShowCompressDialog = { showCompressDialog = true },
+                onRenameSingleSelected = { showRenameDialogForFile = it },
+                onToggleTheme = onToggleTheme,
+                onSettingsClick = onSettingsClick
+            )
         }
     ) { padding ->
         Box(
@@ -543,7 +256,6 @@ fun FileManagerScreen(
                 }
             } else {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // Storage Permission Missing Warning
                     if (!hasPermission) {
                         StoragePermissionBanner(
                             onRequestPermission = {
@@ -552,138 +264,137 @@ fun FileManagerScreen(
                         )
                     }
 
-                    // File List / Grid Content
-                if (uiState.isLoading) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                    ) {
-                        CircularProgressIndicator(color = colors.accent)
-                    }
-                } else if (displayedItems.isEmpty()) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                    ) {
-                        val category = uiState.activeCategory
-                        val emptyTitle: String
-                        val emptyMessage: String
-                        when {
-                            uiState.searchQuery.isNotEmpty() -> {
-                                emptyTitle = "No matches found"
-                                emptyMessage = "Try a different search term"
-                            }
-                            category == FileCategory.DOCUMENTS && documentFilter != DocumentFilter.ALL -> {
-                                emptyTitle = "No ${documentFilter.label} documents"
-                                emptyMessage = "No ${documentFilter.label} documents on this device"
-                            }
-                            category != null -> {
-                                emptyTitle = "No ${category.noun} here"
-                                emptyMessage = if (category == FileCategory.DOCUMENTS) {
-                                    "Documents you open or scan will appear here"
-                                } else {
-                                    "Files you add to ${category.displayName} will appear here"
+                    if (uiState.isLoading) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                        ) {
+                            CircularProgressIndicator(color = colors.accent)
+                        }
+                    } else if (displayedItems.isEmpty()) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                        ) {
+                            val category = uiState.activeCategory
+                            val emptyTitle: String
+                            val emptyMessage: String
+                            when {
+                                uiState.searchQuery.isNotEmpty() -> {
+                                    emptyTitle = "No matches found"
+                                    emptyMessage = "Try a different search term"
+                                }
+                                category == FileCategory.DOCUMENTS && documentFilter != DocumentFilter.ALL -> {
+                                    emptyTitle = "No ${documentFilter.label} documents"
+                                    emptyMessage = "No ${documentFilter.label} documents on this device"
+                                }
+                                category != null -> {
+                                    emptyTitle = "No ${category.noun} here"
+                                    emptyMessage = if (category == FileCategory.DOCUMENTS) {
+                                        "Documents you open or scan will appear here"
+                                    } else {
+                                        "Files you add to ${category.displayName} will appear here"
+                                    }
+                                }
+                                else -> {
+                                    emptyTitle = "This folder is empty"
+                                    emptyMessage = "Use the menu above to create a folder or file"
                                 }
                             }
-                            else -> {
-                                emptyTitle = "This folder is empty"
-                                emptyMessage = "Use the menu above to create a folder or file"
-                            }
-                        }
-                        AppEmptyState(title = emptyTitle, message = emptyMessage)
-                    }
-                } else {
-                    if (uiState.isGridView) {
-                        LazyVerticalGrid(
-                            columns = GridCells.Adaptive(minSize = 100.dp),
-                            contentPadding = PaddingValues(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 104.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f)
-                        ) {
-                            items(
-                                items = displayedItems,
-                                key = { it.path },
-                                contentType = { if (it.isDirectory) "dir_grid" else "file_grid" }
-                            ) { item ->
-                                val isSelected = uiState.selectedFiles.contains(item.file)
-                                StorageItemGrid(
-                                    item = item,
-                                    modifier = Modifier.animateItem(),
-                                    isSelected = isSelected,
-                                    isSelectionMode = uiState.isSelectionMode,
-                                    onClick = {
-                                        if (uiState.isSelectionMode) {
-                                            viewModel.toggleSelection(item.file)
-                                        } else {
-                                            if (item.isDirectory) {
-                                                viewModel.loadDirectory(item.file)
-                                            } else if (item.fileType == StorageFileType.ARCHIVE || item.name.endsWith(".zip", ignoreCase = true)) {
-                                                singleItemActionTarget = item
-                                            } else {
-                                                onOpenFile(item.file)
-                                            }
-                                        }
-                                    },
-                                    onLongClick = {
-                                        viewModel.toggleSelection(item.file)
-                                    },
-                                    onMoreClick = {
-                                        singleItemActionTarget = item
-                                    }
-                                )
-                            }
+                            AppEmptyState(title = emptyTitle, message = emptyMessage)
                         }
                     } else {
-                        LazyColumn(
-                            contentPadding = PaddingValues(top = 6.dp, bottom = 104.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f)
-                        ) {
-                            items(
-                                items = displayedItems,
-                                key = { it.path },
-                                contentType = { if (it.isDirectory) "dir_row" else "file_row" }
-                            ) { item ->
-                                val isSelected = uiState.selectedFiles.contains(item.file)
-                                StorageItemRow(
-                                    item = item,
-                                    modifier = Modifier.animateItem(),
-                                    isSelected = isSelected,
-                                    isSelectionMode = uiState.isSelectionMode,
-                                    onClick = {
-                                        if (uiState.isSelectionMode) {
-                                            viewModel.toggleSelection(item.file)
-                                        } else {
-                                            if (item.isDirectory) {
-                                                viewModel.loadDirectory(item.file)
-                                            } else if (item.fileType == StorageFileType.ARCHIVE || item.name.endsWith(".zip", ignoreCase = true)) {
-                                                singleItemActionTarget = item
+                        if (uiState.isGridView) {
+                            LazyVerticalGrid(
+                                columns = GridCells.Adaptive(minSize = 100.dp),
+                                contentPadding = PaddingValues(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 104.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                            ) {
+                                items(
+                                    items = displayedItems,
+                                    key = { it.path },
+                                    contentType = { if (it.isDirectory) "dir_grid" else "file_grid" }
+                                ) { item ->
+                                    val isSelected = uiState.selectedFiles.contains(item.file)
+                                    StorageItemGrid(
+                                        item = item,
+                                        modifier = Modifier.animateItem(),
+                                        isSelected = isSelected,
+                                        isSelectionMode = uiState.isSelectionMode,
+                                        onClick = {
+                                            if (uiState.isSelectionMode) {
+                                                viewModel.toggleSelection(item.file)
                                             } else {
-                                                onOpenFile(item.file)
+                                                if (item.isDirectory) {
+                                                    viewModel.loadDirectory(item.file)
+                                                } else if (item.fileType == StorageFileType.ARCHIVE || item.name.endsWith(".zip", ignoreCase = true)) {
+                                                    singleItemActionTarget = item
+                                                } else {
+                                                    onOpenFile(item.file)
+                                                }
                                             }
+                                        },
+                                        onLongClick = {
+                                            viewModel.toggleSelection(item.file)
+                                        },
+                                        onMoreClick = {
+                                            singleItemActionTarget = item
                                         }
-                                    },
-                                    onLongClick = {
-                                        viewModel.toggleSelection(item.file)
-                                    },
-                                    onMoreClick = {
-                                        singleItemActionTarget = item
-                                    }
-                                )
+                                    )
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                contentPadding = PaddingValues(top = 6.dp, bottom = 104.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                            ) {
+                                items(
+                                    items = displayedItems,
+                                    key = { it.path },
+                                    contentType = { if (it.isDirectory) "dir_row" else "file_row" }
+                                ) { item ->
+                                    val isSelected = uiState.selectedFiles.contains(item.file)
+                                    StorageItemRow(
+                                        item = item,
+                                        modifier = Modifier.animateItem(),
+                                        isSelected = isSelected,
+                                        isSelectionMode = uiState.isSelectionMode,
+                                        onClick = {
+                                            if (uiState.isSelectionMode) {
+                                                viewModel.toggleSelection(item.file)
+                                            } else {
+                                                if (item.isDirectory) {
+                                                    viewModel.loadDirectory(item.file)
+                                                } else if (item.fileType == StorageFileType.ARCHIVE || item.name.endsWith(".zip", ignoreCase = true)) {
+                                                    singleItemActionTarget = item
+                                                } else {
+                                                    onOpenFile(item.file)
+                                                }
+                                            }
+                                        },
+                                        onLongClick = {
+                                            viewModel.toggleSelection(item.file)
+                                        },
+                                        onMoreClick = {
+                                            singleItemActionTarget = item
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
-        }
 
             // Floating Clipboard Action Bar (Paste / Cancel)
             FileManagerClipboardBar(
@@ -698,193 +409,33 @@ fun FileManagerScreen(
         }
     }
 
-    // Dialogs
-    if (showNewFolderDialog) {
-        NewFolderDialog(
-            onDismiss = { showNewFolderDialog = false },
-            onConfirm = { name ->
-                showNewFolderDialog = false
-                viewModel.createNewFolder(name)
-            }
-        )
-    }
-
-    if (showNewFileDialog) {
-        NewFileDialog(
-            onDismiss = { showNewFileDialog = false },
-            onConfirm = { name ->
-                showNewFileDialog = false
-                viewModel.createNewFile(name)
-            }
-        )
-    }
-
-    showRenameDialogForFile?.let { file ->
-        RenameDialog(
-            file = file,
-            onDismiss = { showRenameDialogForFile = null },
-            onConfirm = { newName ->
-                showRenameDialogForFile = null
-                viewModel.renameItem(file, newName)
-            }
-        )
-    }
-
-    if (showDeleteConfirmDialog) {
-        DeleteConfirmationDialog(
-            count = uiState.selectedFiles.size,
-            fileNamePreview = uiState.selectedFiles.firstOrNull()?.name,
-            onDismiss = { showDeleteConfirmDialog = false },
-            onConfirm = {
-                showDeleteConfirmDialog = false
-                viewModel.moveToTrashSelected()
-            }
-        )
-    }
-
-    uiState.selectedProperties?.let { props ->
-        FilePropertiesDialog(
-            properties = props,
-            checksum = uiState.calculatedChecksum,
-            onDismiss = { viewModel.dismissPropertiesDialog() }
-        )
-    }
-
-    if (showCompressDialog) {
-        val defaultName = if (uiState.selectedFiles.size == 1) {
-            "${uiState.selectedFiles.first().nameWithoutExtension}.zip"
-        } else "Archive.zip"
-        CompressDialog(
-            defaultName = defaultName,
-            onDismiss = { showCompressDialog = false },
-            onConfirm = { name ->
-                showCompressDialog = false
-                viewModel.compressSelected(name)
-            }
-        )
-    }
-
-    singleItemCompressTarget?.let { file ->
-        CompressDialog(
-            defaultName = "${file.nameWithoutExtension}.zip",
-            onDismiss = { singleItemCompressTarget = null },
-            onConfirm = { name ->
-                singleItemCompressTarget = null
-                viewModel.compressSingle(file, name)
-            }
-        )
-    }
-
-    showExtractConfirmDialogForFile?.let { file ->
-        ExtractConfirmDialog(
-            archiveName = file.name,
-            onDismiss = { showExtractConfirmDialogForFile = null },
-            onConfirm = {
-                showExtractConfirmDialogForFile = null
-                viewModel.extractArchive(file)
-            }
-        )
-    }
-
-    if (showStorageCleanerSheet) {
-        com.abhisheksati.mydoc.ui.cleaner.StorageCleanerSheet(
-            rootDir = android.os.Environment.getExternalStorageDirectory(),
-            onDismiss = {
-                showStorageCleanerSheet = false
-                viewModel.refreshVolumes()
-                storageViewModel.refresh()
-                if (uiState.isBrowsingStorage) {
-                    viewModel.loadDirectory(uiState.currentDirectory, addToHistory = false)
-                }
-            },
-            onFileClick = { file ->
-                showStorageCleanerSheet = false
-                onOpenFile(file)
-            }
-        )
-    }
-
-    if (showAppManagerSheet) {
-        com.abhisheksati.mydoc.ui.appmanager.AppManagerSheet(
-            onDismiss = {
-                showAppManagerSheet = false
-                viewModel.refreshVolumes()
-                storageViewModel.refresh()
-            }
-        )
-    }
-
-    if (uiState.isTrashOpen) {
-        com.abhisheksati.mydoc.ui.filemanager.TrashBinSheet(
-            trashItems = uiState.trashItems,
-            onRestore = { items ->
-                viewModel.restoreTrashItems(items)
-            },
-            onDeletePermanently = { items ->
-                viewModel.permanentlyDeleteTrashItems(items)
-            },
-            onEmptyTrash = {
-                viewModel.emptyTrash()
-            },
-            onClose = {
-                viewModel.closeTrash()
-            }
-        )
-    }
-
-    // Single item context action bottom sheet
-    singleItemActionTarget?.let { item ->
-        SingleItemActionBottomSheet(
-            item = item,
-            isPinned = item.isDirectory && pinnedFoldersManager.isPinned(item.file),
-            onDismissRequest = { singleItemActionTarget = null },
-            onOpen = {
-                singleItemActionTarget = null
-                if (item.isDirectory) {
-                    viewModel.loadDirectory(item.file)
-                } else {
-                    onOpenFile(item.file)
-                }
-            },
-            onCopy = {
-                singleItemActionTarget = null
-                viewModel.toggleSelection(item.file)
-                viewModel.copySelected()
-            },
-            onMove = {
-                singleItemActionTarget = null
-                viewModel.toggleSelection(item.file)
-                viewModel.cutSelected()
-            },
-            onRename = {
-                singleItemActionTarget = null
-                showRenameDialogForFile = item.file
-            },
-            onDelete = {
-                singleItemActionTarget = null
-                viewModel.moveToTrashSingle(item.file)
-            },
-            onTogglePin = {
-                singleItemActionTarget = null
-                pinnedFoldersManager.togglePin(item.file)
-            },
-            onExtractZip = {
-                singleItemActionTarget = null
-                showExtractConfirmDialogForFile = item.file
-            },
-            onCompressToZip = {
-                singleItemActionTarget = null
-                singleItemCompressTarget = item.file
-            },
-            onDetails = {
-                singleItemActionTarget = null
-                viewModel.inspectItem(item.file)
-            },
-            onShare = {
-                singleItemActionTarget = null
-                shareFiles(context, listOf(item.file))
-            }
-        )
-    }
+    // Overlays, dialogs, sheets
+    FileManagerOverlays(
+        viewModel = viewModel,
+        storageViewModel = storageViewModel,
+        uiState = uiState,
+        pinnedFoldersManager = pinnedFoldersManager,
+        showNewFolderDialog = showNewFolderDialog,
+        onDismissNewFolder = { showNewFolderDialog = false },
+        showNewFileDialog = showNewFileDialog,
+        onDismissNewFile = { showNewFileDialog = false },
+        showRenameDialogForFile = showRenameDialogForFile,
+        onDismissRename = { showRenameDialogForFile = null },
+        showDeleteConfirmDialog = showDeleteConfirmDialog,
+        onDismissDeleteConfirm = { showDeleteConfirmDialog = false },
+        showCompressDialog = showCompressDialog,
+        onDismissCompress = { showCompressDialog = false },
+        singleItemCompressTarget = singleItemCompressTarget,
+        onDismissSingleCompress = { singleItemCompressTarget = null },
+        showExtractConfirmDialogForFile = showExtractConfirmDialogForFile,
+        onDismissExtractConfirm = { showExtractConfirmDialogForFile = null },
+        showStorageCleanerSheet = showStorageCleanerSheet,
+        onDismissStorageCleaner = { showStorageCleanerSheet = false },
+        showAppManagerSheet = showAppManagerSheet,
+        onDismissAppManager = { showAppManagerSheet = false },
+        singleItemActionTarget = singleItemActionTarget,
+        onDismissSingleItemAction = { singleItemActionTarget = null },
+        onRequestRename = { file -> showRenameDialogForFile = file },
+        onOpenFile = onOpenFile
+    )
 }
-
