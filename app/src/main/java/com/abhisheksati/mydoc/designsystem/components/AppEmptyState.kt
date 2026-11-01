@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Description
@@ -34,14 +32,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
-import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 
 /**
  * Clean, breathable, free-flowing Empty State.
@@ -120,7 +117,7 @@ fun AppEmptyState(
                             scaleX = btnScale
                             scaleY = btnScale
                         }
-                        .clip(RoundedCornerShape(999.dp))
+                        .clip(AppRadius.roundShape)
                         .background(colors.accent)
                         .clickable(
                             interactionSource = btnInteractionSource,
@@ -132,13 +129,13 @@ fun AppEmptyState(
                     Text(
                         text = actionLabel,
                         style = typography.bodyStrong,
-                        color = if (isOled) Color(0xFF000000) else Color.White
+                        color = if (isOled) DocumentCanvasColors.blackPage else Color.White
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                         contentDescription = null,
-                        tint = if (isOled) Color(0xFF000000) else Color.White,
+                        tint = if (isOled) DocumentCanvasColors.blackPage else Color.White,
                         modifier = Modifier.size(16.dp)
                     )
                 }

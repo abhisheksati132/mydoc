@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -158,7 +157,7 @@ fun DesignSystemPreviewScreen(
                     ) {
                         listOf("All", "PDF", "Word", "Excel", "PPT").forEach { chip ->
                             AppFilterChip(
-                                selected = selectedChip == chip,
+                                isSelected = selectedChip == chip,
                                 onClick = { selectedChip = chip },
                                 label = chip
                             )
@@ -252,9 +251,9 @@ fun DesignSystemPreviewScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
                 ) {
-                    AppFilterChip(selected = true, onClick = {}, label = "Continuous")
-                    AppFilterChip(selected = false, onClick = {}, label = "Single Page")
-                    AppFilterChip(selected = false, onClick = {}, label = "Two Page")
+                    AppFilterChip(label = "Continuous", isSelected = true, onClick = {})
+                    AppFilterChip(label = "Single Page", isSelected = false, onClick = {})
+                    AppFilterChip(label = "Two Page", isSelected = false, onClick = {})
                 }
                 Spacer(modifier = Modifier.height(AppSpacing.large))
             }
@@ -284,16 +283,16 @@ private fun ColorSwatchRow(name: String, color: Color, hexDesc: String) {
         modifier = Modifier
             .fillMaxWidth()
             .height(36.dp)
-            .border(AppSpacing.dividerThickness, colors.divider, RoundedCornerShape(AppRadius.round))
-            .background(colors.surface, RoundedCornerShape(AppRadius.round))
+            .border(AppSpacing.dividerThickness, colors.divider, AppRadius.roundShape)
+            .background(colors.surface, AppRadius.roundShape)
             .padding(horizontal = AppSpacing.small),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
                 .size(20.dp)
-                .background(color, RoundedCornerShape(4.dp))
-                .border(1.dp, colors.divider, RoundedCornerShape(4.dp))
+                .background(color, AppRadius.microShape)
+                .border(1.dp, colors.divider, AppRadius.microShape)
         )
         Spacer(modifier = Modifier.width(AppSpacing.small))
         Text(text = name, style = typography.body, color = colors.textPrimary, modifier = Modifier.weight(1f))

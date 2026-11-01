@@ -5,7 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Search
@@ -18,11 +17,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 
 @Composable
 fun AppSearchField(
@@ -30,7 +28,7 @@ fun AppSearchField(
     onQueryChanged: (String) -> Unit,
     placeholder: String = "Search documents",
     modifier: Modifier = Modifier,
-    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(24.dp)
+    shape: androidx.compose.ui.graphics.Shape = AppRadius.xLargeShape
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
@@ -83,8 +81,8 @@ fun AppSearchField(
         singleLine = true,
         shape = shape,
         colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = if (isOled) Color(0xFF141418) else colors.surfaceContainerHigh,
-            unfocusedContainerColor = if (isOled) Color(0xFF101014) else colors.surfaceContainer,
+            focusedContainerColor = colors.surfaceContainerHigh,
+            unfocusedContainerColor = colors.surfaceContainer,
             focusedBorderColor = colors.accent,
             unfocusedBorderColor = Color.Transparent,
             cursorColor = colors.accent

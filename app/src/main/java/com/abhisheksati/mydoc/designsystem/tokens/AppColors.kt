@@ -51,6 +51,8 @@ data class AppColors(
     val cardBorder: Color = line,
     val accentVariant: Color = accent.copy(alpha = 0.16f),
     val error: Color = Color(0xFFE5484D),
+    val warning: Color = Color(0xFFFFB300),
+    val scrim: Color = Color(0x88000000),
 
     // Container mappings
     val primaryContainer: Color = surfaceMuted,

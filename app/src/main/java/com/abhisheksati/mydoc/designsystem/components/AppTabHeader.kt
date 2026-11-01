@@ -7,7 +7,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,14 +37,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsDark
-import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 
 /**
  * The app header. One implementation for Home, Files, Tools and Settings:
@@ -158,7 +155,7 @@ fun AppTabHeader(
                         DropdownMenu(
                             expanded = isMenuOpen,
                             onDismissRequest = { isMenuOpen = false },
-                            shape = RoundedCornerShape(18.dp),
+                            shape = AppRadius.largeShape,
                             containerColor = colors.surfaceContainerHigh,
                             border = BorderStroke(
                                 1.dp,
