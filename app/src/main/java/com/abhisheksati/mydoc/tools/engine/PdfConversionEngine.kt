@@ -517,7 +517,7 @@ class PdfConversionEngine(private val context: Context) {
                     }
                     cat.metadata = metadataStream
 
-                    doc.documentInformation?.producer = "Stacks Archival Engine (PDF/A-1b Profile)"
+                    doc.documentInformation?.producer = "MyDoc Archival Engine (PDF/A-1b Profile)"
 
                     FileOutputStream(boxOutFile).use { fos -> doc.save(fos) }
                 }
@@ -540,7 +540,7 @@ class PdfConversionEngine(private val context: Context) {
             val srcDoc = Document.openDocument(file.absolutePath) as? PDFDocument
                 ?: throw IllegalArgumentException("Cannot open document")
             try {
-                srcDoc.setMetaData(Document.META_INFO_PRODUCER, "Stacks Archival Engine (PDF/A-1b Profile)")
+                srcDoc.setMetaData(Document.META_INFO_PRODUCER, "MyDoc Archival Engine (PDF/A-1b Profile)")
                 val outFile = createTempOutputFile("pdfa_archival", "pdf")
                 srcDoc.save(outFile.absolutePath, "compress,clean,garbage=4")
                 return outFile
