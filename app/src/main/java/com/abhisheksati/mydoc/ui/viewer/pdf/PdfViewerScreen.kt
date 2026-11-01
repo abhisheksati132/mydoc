@@ -842,291 +842,140 @@ fun PdfViewerScreen(
         if (selectedPageForActions != null) {
             val pageNum = selectedPageForActions!!
             val activeSelectionText = if (selectedTextState?.first == pageNum) selectedTextState?.second?.selectedText else null
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .padding(top = 64.dp, start = 20.dp, end = 20.dp),
-                contentAlignment = Alignment.TopCenter
-            ) {
-                Surface(
-                    shape = AppRadius.roundShape,
-                    color = if (state.readingMode == ReadingMode.INVERTED_DARK) Color(0xF218181A) else Color(0xF8FFFFFF),
-                    border = BorderStroke(0.5.dp, if (state.readingMode == ReadingMode.INVERTED_DARK) Color(0xFF2A2A2E) else Color(0xFFE2E2DD)),
-                    shadowElevation = 4.dp,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        // 1. Copy
-                        FloatingPillItem(
-                            icon = Icons.Outlined.ContentCopy,
-                            label = if (activeSelectionText != null) "Copy" else "Copy Page",
-                            tint = colors.accent
-                        ) {
-                            coroutineScope.launch {
-                                val text = activeSelectionText ?: viewModel.getPageText(pageNum)
-                                if (text.isNotBlank()) {
-                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    clipboard.setPrimaryClip(ClipData.newPlainText("PDF Text", text))
-                                    Toast.makeText(context, if (activeSelectionText != null) "Text copied to clipboard" else "Page ${pageNum + 1} text copied", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, "No text detected on this page", Toast.LENGTH_SHORT).show()
-                                }
-                                selectedPageForActions = null
-                                selectedTextState = null
-                            }
-                        }
 
-                        // 2. Share
-                        FloatingPillItem(
-                            icon = Icons.Outlined.Share,
-                            label = "Share",
-                            tint = Color(0xFF10B981)
-                        ) {
-                            coroutineScope.launch {
-                                val text = activeSelectionText ?: viewModel.getPageText(pageNum)
-                                if (text.isNotBlank()) {
-                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(Intent.EXTRA_TEXT, text)
-                                    }
-                                    context.startActivity(Intent.createChooser(shareIntent, "Share Text"))
-                                } else {
-                                    Toast.makeText(context, "No text to share", Toast.LENGTH_SHORT).show()
-                                }
-                                selectedPageForActions = null
-                                selectedTextState = null
-                            }
+            PdfFloatingContextualBar(
+                pageNum = pageNum,
+                activeSelectionText = activeSelectionText,
+                readingMode = state.readingMode,
+                onCopy = {
+                    coroutineScope.launch {
+                        val text = activeSelectionText ?: viewModel.getPageText(pageNum)
+                        if (text.isNotBlank()) {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("PDF Text", text))
+                            Toast.makeText(context, if (activeSelectionText != null) "Text copied to clipboard" else "Page ${pageNum + 1} text copied", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "No text detected on this page", Toast.LENGTH_SHORT).show()
                         }
-
-                        // 3. Web Search
-                        FloatingPillItem(
-                            icon = Icons.Outlined.TextFields,
-                            label = "Search",
-                            tint = Color(0xFF5B4FE8)
-                        ) {
-                            coroutineScope.launch {
-                                val text = activeSelectionText ?: viewModel.getPageText(pageNum)
-                                if (text.isNotBlank()) {
-                                    val searchIntent = Intent(Intent.ACTION_WEB_SEARCH).apply {
-                                        putExtra(SearchManager.QUERY, text.take(150))
-                                    }
-                                    try {
-                                        context.startActivity(searchIntent)
-                                    } catch (_: Exception) {
-                                        Toast.makeText(context, "No browser found", Toast.LENGTH_SHORT).show()
-                                    }
-                                } else {
-                                    Toast.makeText(context, "No text to search", Toast.LENGTH_SHORT).show()
-                                }
-                                selectedPageForActions = null
-                                selectedTextState = null
-                            }
-                        }
-
-                        // 4. Read Aloud
-                        FloatingPillItem(
-                            icon = Icons.AutoMirrored.Outlined.VolumeUp,
-                            label = "Speak",
-                            tint = Color(0xFFAF52DE)
-                        ) {
-                            coroutineScope.launch {
-                                val text = activeSelectionText ?: viewModel.getPageText(pageNum)
-                                if (text.isNotBlank()) {
-                                    currentTtsText = text
-                                    isTtsVisible = true
-                                    ttsManager.startReading(text)
-                                } else {
-                                    Toast.makeText(context, "No text to read", Toast.LENGTH_SHORT).show()
-                                }
-                                selectedPageForActions = null
-                                selectedTextState = null
-                            }
-                        }
-
-                        // Close button
-                        Box(
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(CircleShape)
-                                .clickable {
-                                    selectedPageForActions = null
-                                    selectedTextState = null
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("✕", style = typography.captionStrong, color = colors.textSecondary)
-                        }
+                        selectedPageForActions = null
+                        selectedTextState = null
                     }
+                },
+                onShare = {
+                    coroutineScope.launch {
+                        val text = activeSelectionText ?: viewModel.getPageText(pageNum)
+                        if (text.isNotBlank()) {
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, text)
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "Share Text"))
+                        } else {
+                            Toast.makeText(context, "No text to share", Toast.LENGTH_SHORT).show()
+                        }
+                        selectedPageForActions = null
+                        selectedTextState = null
+                    }
+                },
+                onSearch = {
+                    coroutineScope.launch {
+                        val text = activeSelectionText ?: viewModel.getPageText(pageNum)
+                        if (text.isNotBlank()) {
+                            val searchIntent = Intent(Intent.ACTION_WEB_SEARCH).apply {
+                                putExtra(SearchManager.QUERY, text.take(150))
+                            }
+                            try {
+                                context.startActivity(searchIntent)
+                            } catch (_: Exception) {
+                                Toast.makeText(context, "No browser found", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            Toast.makeText(context, "No text to search", Toast.LENGTH_SHORT).show()
+                        }
+                        selectedPageForActions = null
+                        selectedTextState = null
+                    }
+                },
+                onSpeak = {
+                    coroutineScope.launch {
+                        val text = activeSelectionText ?: viewModel.getPageText(pageNum)
+                        if (text.isNotBlank()) {
+                            currentTtsText = text
+                            isTtsVisible = true
+                            ttsManager.startReading(text)
+                        } else {
+                            Toast.makeText(context, "No text to read", Toast.LENGTH_SHORT).show()
+                        }
+                        selectedPageForActions = null
+                        selectedTextState = null
+                    }
+                },
+                onClose = {
+                    selectedPageForActions = null
+                    selectedTextState = null
                 }
-            }
-        }
+            )
 
-        // Page Contextual Action Sheet (Copy, Read, Share, OCR)
-        if (selectedPageForActions != null) {
-            val pageNum = selectedPageForActions!!
-            AppBottomSheet(
+            // Page Contextual Action Sheet (Copy, Read, Share, OCR)
+            PdfPageActionSheet(
                 isOpen = true,
-                onDismiss = { selectedPageForActions = null }
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(AppSpacing.paddingLarge)
-                ) {
-                    Text(
-                        text = "Page ${pageNum + 1} Actions",
-                        style = typography.title,
-                        color = colors.textPrimary
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // 1. Copy Page Text
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable {
-                                coroutineScope.launch {
-                                    val text = viewModel.getPageText(pageNum)
-                                    if (text.isNotBlank()) {
-                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                        clipboard.setPrimaryClip(ClipData.newPlainText("Page ${pageNum + 1}", text))
-                                        Toast.makeText(context, "Page ${pageNum + 1} text copied to clipboard", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        Toast.makeText(context, "No digital text on this page. Try OCR extract.", Toast.LENGTH_SHORT).show()
-                                    }
-                                    selectedPageForActions = null
-                                }
-                            }
-                            .padding(vertical = 12.dp, horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Outlined.ContentCopy, contentDescription = null, tint = colors.accent)
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column {
-                            Text("Copy Page Text", style = typography.body, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
-                            Text("Copy all digital text from this page to clipboard", style = typography.caption, color = colors.textSecondary)
+                pageNum = pageNum,
+                onDismiss = { selectedPageForActions = null },
+                onCopyPageText = {
+                    coroutineScope.launch {
+                        val text = viewModel.getPageText(pageNum)
+                        if (text.isNotBlank()) {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Page ${pageNum + 1}", text))
+                            Toast.makeText(context, "Page ${pageNum + 1} text copied to clipboard", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "No digital text on this page. Try OCR extract.", Toast.LENGTH_SHORT).show()
                         }
+                        selectedPageForActions = null
                     }
-
-                    // 2. Read Page Aloud (TTS)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable {
-                                coroutineScope.launch {
-                                    val text = viewModel.getPageText(pageNum)
-                                    if (text.isNotBlank()) {
-                                        currentTtsText = text
-                                        isTtsVisible = true
-                                    } else {
-                                        Toast.makeText(context, "No text on this page to read", Toast.LENGTH_SHORT).show()
-                                    }
-                                    selectedPageForActions = null
-                                }
-                            }
-                            .padding(vertical = 12.dp, horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.AutoMirrored.Outlined.VolumeUp, contentDescription = null, tint = colors.accent)
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column {
-                            Text("Read Page Aloud (TTS)", style = typography.body, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
-                            Text("Listen to this page with offline speech synthesizer", style = typography.caption, color = colors.textSecondary)
+                },
+                onReadPageAloud = {
+                    coroutineScope.launch {
+                        val text = viewModel.getPageText(pageNum)
+                        if (text.isNotBlank()) {
+                            currentTtsText = text
+                            isTtsVisible = true
+                        } else {
+                            Toast.makeText(context, "No text on this page to read", Toast.LENGTH_SHORT).show()
                         }
+                        selectedPageForActions = null
                     }
-
-                    // 3. Share Page Text
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable {
-                                coroutineScope.launch {
-                                    val text = viewModel.getPageText(pageNum)
-                                    if (text.isNotBlank()) {
-                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                            type = "text/plain"
-                                            putExtra(Intent.EXTRA_TEXT, text)
-                                        }
-                                        context.startActivity(Intent.createChooser(shareIntent, "Share Page ${pageNum + 1} Text"))
-                                    } else {
-                                        Toast.makeText(context, "No text on this page to share", Toast.LENGTH_SHORT).show()
-                                    }
-                                    selectedPageForActions = null
-                                }
+                },
+                onSharePageText = {
+                    coroutineScope.launch {
+                        val text = viewModel.getPageText(pageNum)
+                        if (text.isNotBlank()) {
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, text)
                             }
-                            .padding(vertical = 12.dp, horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Outlined.Share, contentDescription = null, tint = colors.accent)
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column {
-                            Text("Share Page Text", style = typography.body, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
-                            Text("Share page text to WhatsApp, Messages, or Email", style = typography.caption, color = colors.textSecondary)
+                            context.startActivity(Intent.createChooser(shareIntent, "Share Page ${pageNum + 1} Text"))
+                        } else {
+                            Toast.makeText(context, "No text on this page to share", Toast.LENGTH_SHORT).show()
                         }
+                        selectedPageForActions = null
                     }
-
-                    // 4. OCR Extract Text
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable {
-                                selectedPageForActions = null
-                                coroutineScope.launch {
-                                    val pageBmp = viewModel.renderPageBitmap(pageNum, 2.0f)
-                                    if (pageBmp != null) {
-                                        val ocr = ocrEngine.recognizeText(pageBmp)
-                                        if (ocr.isNotBlank()) {
-                                            ocrExtractedText = ocr
-                                        } else {
-                                            Toast.makeText(context, "No text found with OCR", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                }
+                },
+                onExtractOcr = {
+                    selectedPageForActions = null
+                    coroutineScope.launch {
+                        val pageBmp = viewModel.renderPageBitmap(pageNum, 2.0f)
+                        if (pageBmp != null) {
+                            val ocr = ocrEngine.recognizeText(pageBmp)
+                            if (ocr.isNotBlank()) {
+                                ocrExtractedText = ocr
+                            } else {
+                                Toast.makeText(context, "No text found with OCR", Toast.LENGTH_SHORT).show()
                             }
-                            .padding(vertical = 12.dp, horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Outlined.TextFields, contentDescription = null, tint = colors.accent)
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column {
-                            Text("Extract Text with OCR", style = typography.body, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
-                            Text("Recognize printed or handwritten text on images", style = typography.caption, color = colors.textSecondary)
                         }
                     }
                 }
-            }
+            )
         }
-    }
 }
-
-@Composable
-private fun FloatingPillItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    tint: Color,
-    onClick: () -> Unit
-) {
-    val typography = LocalAppTypography.current
-    val colors = LocalAppColors.current
-
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(imageVector = icon, contentDescription = label, tint = tint, modifier = Modifier.size(16.dp))
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(text = label, style = typography.captionStrong, color = colors.textPrimary)
-    }
 }
