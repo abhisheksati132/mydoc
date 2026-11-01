@@ -49,6 +49,9 @@ data class AppColors(
     val textSecondary: Color = inkMuted,
     val divider: Color = line,
     val cardBorder: Color = line,
+    // Unfilled part of a progress gauge or scrubber. A hairline's line token is too
+    // close to the surface to read as a track, so this is ink at low alpha instead.
+    val track: Color = ink.copy(alpha = 0.16f),
     val accentVariant: Color = accent.copy(alpha = 0.16f),
     val error: Color = Color(0xFFE5484D),
     val warning: Color = Color(0xFFFFB300),
@@ -104,16 +107,18 @@ val LightAppColors = AppColors(
     onDocumentKind = Color(0xFFFFFFFF),
     documentContainer = Color(0xFFEDEBFF),
 
-    photoKind = Color(0xFFFF8AC2),
-    onPhotoKind = Color(0xFF2A0A18),
+    // Kind hues are glyph strokes on paper, never tile fills: each one clears 4.5:1
+    // against both #FFFFFF and the paper canvas.
+    photoKind = Color(0xFFC2185B),
+    onPhotoKind = Color(0xFFFFE0EF),
     photoContainer = Color(0xFFFFE0EF),
 
-    videoKind = Color(0xFFFF7A3D),
-    onVideoKind = Color(0xFF1A0E05),
+    videoKind = Color(0xFFB4471B),
+    onVideoKind = Color(0xFFFFE3D4),
     videoContainer = Color(0xFFFFE3D4),
 
-    audioKind = Color(0xFF86E7B8),
-    onAudioKind = Color(0xFF06210F),
+    audioKind = Color(0xFF1F7A4F),
+    onAudioKind = Color(0xFFD4F6E5),
     audioContainer = Color(0xFFD4F6E5)
 )
 
@@ -171,9 +176,9 @@ fun kindColor(kind: MediaKind, isDark: Boolean = false): Color {
     } else {
         when (kind) {
             MediaKind.DOCUMENT -> Color(0xFF5B4FE8)
-            MediaKind.PHOTO -> Color(0xFFFF8AC2)
-            MediaKind.VIDEO -> Color(0xFFFF7A3D)
-            MediaKind.AUDIO -> Color(0xFF86E7B8)
+            MediaKind.PHOTO -> Color(0xFFC2185B)
+            MediaKind.VIDEO -> Color(0xFFB4471B)
+            MediaKind.AUDIO -> Color(0xFF1F7A4F)
         }
     }
 }
@@ -202,9 +207,9 @@ fun onKindColor(kind: MediaKind, isDark: Boolean = false): Color {
     } else {
         when (kind) {
             MediaKind.DOCUMENT -> Color(0xFFFFFFFF)
-            MediaKind.PHOTO -> Color(0xFF2A0A18)
-            MediaKind.VIDEO -> Color(0xFF1A0E05)
-            MediaKind.AUDIO -> Color(0xFF06210F)
+            MediaKind.PHOTO -> Color(0xFFFFE0EF)
+            MediaKind.VIDEO -> Color(0xFFFFE3D4)
+            MediaKind.AUDIO -> Color(0xFFD4F6E5)
         }
     }
 }

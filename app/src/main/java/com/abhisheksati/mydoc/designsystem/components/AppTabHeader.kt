@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -40,9 +41,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsDark
+import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 
 /**
  * The app header. One implementation for Home, Files, Tools and Settings:
@@ -53,6 +56,8 @@ import com.abhisheksati.mydoc.designsystem.tokens.LocalIsDark
 fun AppTabHeader(
     title: String,
     titleContent: (@Composable () -> Unit)? = null,
+    kicker: String? = null,
+    meta: String? = null,
     onSearchClick: (() -> Unit)? = null,
     isSearchActive: Boolean = false,
     searchContent: (@Composable () -> Unit)? = null,
@@ -76,14 +81,14 @@ fun AppTabHeader(
             .background(colors.background)
             .statusBarsPadding()
     ) {
-        // Top 56dp Action Row
+        // Top action row: kicker, title, then the action rail
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 16.dp)
+                .defaultMinSize(minHeight = 56.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             // Left Title / Navigation
             Row(
@@ -96,12 +101,29 @@ fun AppTabHeader(
                 if (titleContent != null) {
                     titleContent()
                 } else {
+                    Column {
+                        if (kicker != null) {
+                            Text(
+                                text = kicker,
+                                style = typography.overline,
+                                color = colors.inkMuted
+                            )
+                        }
+                        Text(
+                            text = title,
+                            style = typography.title,
+                            color = colors.textPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                if (meta != null) {
                     Text(
-                        text = title,
-                        style = typography.screenTitle,
-                        color = colors.textPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        text = meta,
+                        style = typography.overline.withTabularFigures(),
+                        color = colors.inkMuted,
+                        modifier = Modifier.padding(start = 8.dp)
                     )
                 }
             }
@@ -155,14 +177,14 @@ fun AppTabHeader(
                         DropdownMenu(
                             expanded = isMenuOpen,
                             onDismissRequest = { isMenuOpen = false },
-                            shape = AppRadius.largeShape,
-                            containerColor = colors.surfaceContainerHigh,
+                            shape = AppRadius.pillShape,
+                            containerColor = colors.surface,
                             border = BorderStroke(
-                                1.dp,
-                                colors.cardBorder
+                                AppSpacing.hairline,
+                                colors.line
                             ),
-                            shadowElevation = 8.dp,
-                            tonalElevation = 4.dp
+                            shadowElevation = 0.dp,
+                            tonalElevation = 0.dp
                         ) {
                             moreMenuContent { isMenuOpen = false }
                             if (onSettingsClick != null) {
@@ -207,6 +229,9 @@ fun AppTabHeader(
                 }
             }
         }
+
+        // The masthead rule closes the page title, before any filters or content.
+        EditorialRule()
 
         // Search Field (animated slide down when active)
         if (searchContent != null) {

@@ -15,9 +15,8 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.draw.scale
 
 /**
- * Material 3 Expressive tactile bounce effect.
- * Smoothly depresses to [targetScaleOnPress] (default 0.972x) when pressed,
- * and springs back with physical momentum on release.
+ * Crisp press physics: a 0.972x depression that returns without overshoot.
+ * The app has one press behaviour; anything that springs past 1.0x reads as toy-like.
  */
 fun Modifier.pressScaleEffect(
     targetScaleOnPress: Float = 0.972f,
@@ -29,8 +28,8 @@ fun Modifier.pressScaleEffect(
     val scale by animateFloatAsState(
         targetValue = if (isPressed) targetScaleOnPress else 1.0f,
         animationSpec = spring(
-            dampingRatio = 0.65f,
-            stiffness = Spring.StiffnessMediumLow
+            dampingRatio = 1f,
+            stiffness = Spring.StiffnessMedium
         ),
         label = "pressScaleEffect"
     )
@@ -61,8 +60,8 @@ fun Modifier.pressScale(
     val scale by animateFloatAsState(
         targetValue = if (isPressed) targetScaleOnPress else 1.0f,
         animationSpec = spring(
-            dampingRatio = 0.65f,
-            stiffness = Spring.StiffnessMediumLow
+            dampingRatio = 1f,
+            stiffness = Spring.StiffnessMedium
         ),
         label = "pressScale"
     )

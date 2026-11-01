@@ -8,10 +8,11 @@ import androidx.compose.ui.unit.dp
  * Corner radii live in [AppRadius] — do not add radii here.
  *
  * Rules:
- * - 4dp grid: 4, 8, 16, 24, 32, 48.
+ * - 4dp grid: 4, 8, 16, 24, 32, 48. Nothing in between.
  * - Screen side padding: 16dp everywhere (root tabs, sheets, settings).
  * - Bottom nav height: 64dp + navigation bar inset.
- * - Hairlines only, zero elevation.
+ * - Two strokes only: [hairline] (0.5dp, internal dividers) and [rule] (2dp, section
+ *   breaks and the masthead underline). No 1dp borders anywhere.
  * - Minimum touch target: 48dp.
  */
 object AppSpacing {
@@ -27,9 +28,13 @@ object AppSpacing {
     val screenPadding: Dp = 16.dp
     val navBarHeight: Dp = 64.dp
     val minTouchTarget: Dp = 48.dp
+    val sectionGap: Dp = 32.dp
+    val listRowHeight: Dp = 56.dp
+    val objectRowHeight: Dp = 64.dp
 
     // Stroke & Elevation
     val hairline: Dp = 0.5.dp
+    val rule: Dp = 2.dp
     val dividerThickness: Dp = 0.5.dp
     val elevation: Dp = 0.dp
 
@@ -41,6 +46,5 @@ object AppSpacing {
     val paddingXLarge: Dp = xLarge
     val extraSmall: Dp = xSmall
     val extraLarge: Dp = xLarge
-    val listRowHeight: Dp = 64.dp
     val listDividerThickness: Dp = 0.5.dp
 }
