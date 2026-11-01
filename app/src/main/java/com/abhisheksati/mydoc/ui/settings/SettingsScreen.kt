@@ -3,91 +3,38 @@ package com.abhisheksati.mydoc.ui.settings
 import android.app.KeyguardManager
 import android.content.Context
 import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.ui.res.stringResource
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
-import com.abhisheksati.mydoc.R
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Contrast
-import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.LightMode
-import androidx.compose.material.icons.outlined.Palette
-import androidx.compose.material.icons.outlined.PictureAsPdf
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Security
-import androidx.compose.material.icons.outlined.Speed
-import androidx.compose.material.icons.outlined.Storage
-import androidx.compose.material.icons.outlined.Vibration
-import androidx.compose.material.icons.outlined.Videocam
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.abhisheksati.mydoc.data.local.AppThemeMode
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.data.local.SettingsRepository
 import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
-import com.abhisheksati.mydoc.domain.model.HomeTab
-import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.update.UpdateManager
-import com.abhisheksati.mydoc.update.UpdateUiState
 import java.util.Locale
-import kotlinx.coroutines.launch
-
-import androidx.compose.material.icons.outlined.DeleteSweep
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,10 +47,8 @@ fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val updateState by updateManager.state.collectAsState()
-    val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
     val haptic = LocalHapticFeedback.current
 
     // LOOK
@@ -159,325 +104,66 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // 1. LOOK
-            SettingsCard(title = "APPEARANCE") {
-                Text(
-                    text = "Theme",
-                    style = typography.captionStrong,
-                    color = colors.textSecondary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ThemeChip(
-                        label = "Light",
-                        icon = Icons.Outlined.LightMode,
-                        selected = currentTheme == AppThemeMode.LIGHT,
-                        onClick = {
-                            settingsRepository.setThemeMode(AppThemeMode.LIGHT)
-                        }
-                    )
-                    ThemeChip(
-                        label = "Dark",
-                        icon = Icons.Outlined.DarkMode,
-                        selected = currentTheme == AppThemeMode.DARK,
-                        onClick = {
-                            settingsRepository.setThemeMode(AppThemeMode.DARK)
-                        }
-                    )
-                    ThemeChip(
-                        label = "Black",
-                        icon = Icons.Outlined.Contrast,
-                        selected = currentTheme == AppThemeMode.BLACK,
-                        onClick = {
-                            settingsRepository.setThemeMode(AppThemeMode.BLACK)
-                        }
-                    )
-
-                }
-
-                SettingsDivider()
-
-                SettingToggleRow(
-                    title = "Pure AMOLED Black",
-                    subtitle = "Use pitch black background in dark mode to save battery",
-                    icon = Icons.Outlined.Contrast,
-                    checked = amoledBlack,
-                    onCheckedChange = { settingsRepository.setAmoledBlack(it) }
-                )
-
-                SettingsDivider()
-
-                SettingToggleRow(
-                    title = "Tactile Vibration Haptics",
-                    subtitle = "Vibration response for navigation, gestures, and actions",
-                    icon = Icons.Outlined.Vibration,
-                    checked = hapticFeedbackEnabled,
-                    onCheckedChange = {
-                        if (it) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        settingsRepository.setHapticFeedbackEnabled(it)
-                    }
-                )
-            }
+            SettingsAppearanceSection(
+                currentTheme = currentTheme,
+                amoledBlack = amoledBlack,
+                hapticFeedbackEnabled = hapticFeedbackEnabled,
+                onThemeChange = { settingsRepository.setThemeMode(it) },
+                onAmoledBlackChange = { settingsRepository.setAmoledBlack(it) },
+                onHapticFeedbackChange = { settingsRepository.setHapticFeedbackEnabled(it) }
+            )
 
             // 2. READING
-            SettingsCard(title = "READING & DOCUMENTS") {
-                Text(
-                    text = "Default Reading Mode",
-                    style = typography.captionStrong,
-                    color = colors.textSecondary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ThemeChip(
-                        label = "Normal",
-                        icon = null,
-                        selected = currentReadingMode == ReadingMode.NORMAL,
-                        onClick = { settingsRepository.setDefaultReadingMode(ReadingMode.NORMAL) }
-                    )
-                    ThemeChip(
-                        label = "Dark",
-                        icon = Icons.Outlined.DarkMode,
-                        selected = currentReadingMode == ReadingMode.INVERTED_DARK,
-                        onClick = { settingsRepository.setDefaultReadingMode(ReadingMode.INVERTED_DARK) }
-                    )
-                    ThemeChip(
-                        label = "Sepia",
-                        icon = null,
-                        selected = currentReadingMode == ReadingMode.SEPIA,
-                        onClick = { settingsRepository.setDefaultReadingMode(ReadingMode.SEPIA) }
-                    )
-                }
-
-                SettingsDivider()
-
-                Text(
-                    text = "PDF Page Scaling",
-                    style = typography.captionStrong,
-                    color = colors.textSecondary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ThemeChip(
-                        label = "Fit Width",
-                        icon = null,
-                        selected = pdfFitMode == "FIT_WIDTH",
-                        onClick = { settingsRepository.setPdfFitMode("FIT_WIDTH") }
-                    )
-                    ThemeChip(
-                        label = "Fit Whole Page",
-                        icon = null,
-                        selected = pdfFitMode == "FIT_PAGE",
-                        onClick = { settingsRepository.setPdfFitMode("FIT_PAGE") }
-                    )
-                }
-
-                SettingsDivider()
-
-                SettingToggleRow(
-                    title = "High-Quality Vector PDF",
-                    subtitle = "Supersample text and vectors for ultra-crisp reading",
-                    icon = Icons.Outlined.PictureAsPdf,
-                    checked = highQualityPdf,
-                    onCheckedChange = { settingsRepository.setHighQualityPdf(it) }
-                )
-
-                SettingsDivider()
-
-                SettingToggleRow(
-                    title = "Double-Tap Quick Zoom",
-                    subtitle = "Double tap document page to jump to 2.5x zoom",
-                    icon = Icons.Outlined.Speed,
-                    checked = doubleTapZoom,
-                    onCheckedChange = { settingsRepository.setDoubleTapZoom(it) }
-                )
-
-                SettingsDivider()
-
-                SettingToggleRow(
-                    title = "Keep Screen Awake While Reading",
-                    subtitle = "Prevents display timeout while reading documents",
-                    icon = Icons.Outlined.LightMode,
-                    checked = keepScreenOn,
-                    onCheckedChange = { settingsRepository.setKeepScreenOn(it) }
-                )
-
-                SettingsDivider()
-
-                SettingToggleRow(
-                    title = "Volume Button Page Turning",
-                    subtitle = "Use volume keys to flip pages in book view",
-                    icon = Icons.Outlined.Vibration,
-                    checked = volumeKeyTurning,
-                    onCheckedChange = { settingsRepository.setVolumeKeyPageTurning(it) }
-                )
-            }
+            SettingsReadingSection(
+                currentReadingMode = currentReadingMode,
+                pdfFitMode = pdfFitMode,
+                highQualityPdf = highQualityPdf,
+                doubleTapZoom = doubleTapZoom,
+                keepScreenOn = keepScreenOn,
+                volumeKeyTurning = volumeKeyTurning,
+                onReadingModeChange = { settingsRepository.setDefaultReadingMode(it) },
+                onPdfFitModeChange = { settingsRepository.setPdfFitMode(it) },
+                onHighQualityPdfChange = { settingsRepository.setHighQualityPdf(it) },
+                onDoubleTapZoomChange = { settingsRepository.setDoubleTapZoom(it) },
+                onKeepScreenOnChange = { settingsRepository.setKeepScreenOn(it) },
+                onVolumeKeyTurningChange = { settingsRepository.setVolumeKeyPageTurning(it) }
+            )
 
             // 3. MEDIA
-            SettingsCard(title = "VIDEO & AUDIO") {
-                SettingToggleRow(
-                    title = "Hardware Video Acceleration",
-                    subtitle = "Use GPU hardware decoding for ultra-smooth 4K video playback",
-                    icon = Icons.Outlined.Videocam,
-                    checked = videoHwAccel,
-                    onCheckedChange = { settingsRepository.setVideoHardwareAcceleration(it) }
-                )
+            SettingsMediaSection(
+                videoHwAccel = videoHwAccel,
+                autoResumeVideo = autoResumeVideo,
+                videoAutoLoop = videoAutoLoop,
+                onVideoHwAccelChange = { settingsRepository.setVideoHardwareAcceleration(it) },
+                onAutoResumeVideoChange = { settingsRepository.setAutoResumeVideo(it) },
+                onVideoAutoLoopChange = { settingsRepository.setVideoAutoLoop(it) }
+            )
 
-                SettingsDivider()
-
-                SettingToggleRow(
-                    title = "Auto-Resume Video",
-                    subtitle = "Remember last playback position and resume automatically",
-                    icon = Icons.Outlined.Speed,
-                    checked = autoResumeVideo,
-                    onCheckedChange = { settingsRepository.setAutoResumeVideo(it) }
-                )
-
-                SettingsDivider()
-
-                SettingToggleRow(
-                    title = "Video Auto-Loop",
-                    subtitle = "Automatically replay videos when they reach the end",
-                    icon = Icons.Outlined.Repeat,
-                    checked = videoAutoLoop,
-                    onCheckedChange = { settingsRepository.setVideoAutoLoop(it) }
-                )
-            }
-
-            // 4. LIBRARY
-            SettingsCard(title = "STORAGE & FILES") {
-                Text(
-                    text = "Default Startup Destination",
-                    style = typography.captionStrong,
-                    color = colors.textSecondary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    HomeTab.entries.forEach { tab ->
-                        ThemeChip(
-                            label = tab.label,
-                            icon = null,
-                            selected = startupTab == tab,
-                            onClick = { settingsRepository.setDefaultStartupTab(tab) }
-                        )
+            // 4. LIBRARY & STORAGE
+            SettingsStorageSection(
+                startupTab = startupTab,
+                cacheSizeBytes = cacheSizeBytes,
+                onStartupTabChange = { settingsRepository.setDefaultStartupTab(it) },
+                onClearCacheClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    val freed = settingsRepository.clearCache(context)
+                    cacheSizeBytes = settingsRepository.getCacheSizeBytes(context)
+                    val freedMb = freed / (1024.0 * 1024.0)
+                    val toastText = if (freedMb >= 0.1) {
+                        String.format(Locale.US, "Freed %.1f MB", freedMb)
+                    } else {
+                        context.getString(R.string.cache_cleared)
+                    }
+                    Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
+                },
+                onClearRecentClick = onClearRecent?.let { clearAction ->
+                    {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        clearAction()
+                        Toast.makeText(context, context.getString(R.string.recent_history_cleared), Toast.LENGTH_SHORT).show()
                     }
                 }
-
-                SettingsDivider()
-
-                val formattedCache = if (cacheSizeBytes < 1024) {
-                    "$cacheSizeBytes B"
-                } else if (cacheSizeBytes < 1024 * 1024) {
-                    String.format(Locale.US, "%.1f KB", cacheSizeBytes / 1024.0)
-                } else {
-                    String.format(Locale.US, "%.1f MB", cacheSizeBytes / (1024.0 * 1024.0))
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(AppRadius.pillShape)
-                            .background(colors.accent.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Outlined.Storage, contentDescription = null, tint = colors.accent, modifier = Modifier.size(19.dp))
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Thumbnail & Render Cache",
-                            style = typography.bodyStrong,
-                            color = colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Currently used: $formattedCache",
-                            style = typography.caption,
-                            color = colors.textSecondary
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            val freed = settingsRepository.clearCache(context)
-                            cacheSizeBytes = settingsRepository.getCacheSizeBytes(context)
-                            val freedMb = freed / (1024.0 * 1024.0)
-                            val toastText = if (freedMb >= 0.1) String.format(Locale.US, "Freed %.1f MB", freedMb) else context.getString(R.string.cache_cleared)
-                            Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
-                        },
-                        shape = AppRadius.pillShape,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colors.accent,
-                            contentColor = colors.onAccent
-                        )
-                    ) {
-                        Text(stringResource(R.string.clear_cache), style = AppTheme.typography.captionStrong, maxLines = 1)
-                    }
-                }
-
-                if (onClearRecent != null) {
-                    SettingsDivider()
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(AppRadius.pillShape)
-                                .background(colors.accent.copy(alpha = 0.12f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.accent, modifier = Modifier.size(19.dp))
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Recent History & Progress",
-                                style = typography.bodyStrong,
-                                color = colors.textPrimary
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Clear recent documents and continue reading/watching progress",
-                                style = typography.caption,
-                                color = colors.textSecondary
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onClearRecent()
-                                Toast.makeText(context, context.getString(R.string.recent_history_cleared), Toast.LENGTH_SHORT).show()
-                            },
-                            shape = AppRadius.pillShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = colors.accent,
-                                contentColor = colors.onAccent
-                            )
-                        ) {
-                            Text(stringResource(R.string.clear_cache), style = AppTheme.typography.captionStrong, maxLines = 1)
-                        }
-                    }
-                }
-            }
+            )
 
             // 5. PRIVACY & SECURITY
             SettingsCard(title = "PRIVACY & SECURITY") {
@@ -502,373 +188,14 @@ fun SettingsScreen(
             }
 
             // 6. ABOUT & UPDATES
-            SettingsCard(title = "ABOUT & UPDATES") {
-                SettingToggleRow(
-                    title = "Check for updates on launch",
-                    subtitle = "Automatically check for new versions on GitHub when the app starts",
-                    icon = Icons.Outlined.Refresh,
-                    checked = checkUpdatesOnLaunch,
-                    onCheckedChange = { isChecked ->
-                        settingsRepository.setCheckUpdatesOnLaunch(isChecked)
-                    }
-                )
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 10.dp),
-                    color = colors.divider.copy(alpha = 0.5f),
-                    thickness = 0.5.dp
-                )
-
-                when (val state = updateState) {
-                    is UpdateUiState.Idle -> {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Software Updates",
-                                    style = typography.bodyStrong,
-                                    color = colors.textPrimary
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "Current version: v${updateManager.currentVersionName}",
-                                    style = typography.caption,
-                                    color = colors.textSecondary
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Button(
-                                onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
-                                shape = AppRadius.pillShape,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = colors.accent,
-                                    contentColor = Color.Black
-                                )
-                            ) {
-                                Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Check", style = AppTheme.typography.captionStrong, maxLines = 1)
-                            }
-                        }
-                    }
-
-                    is UpdateUiState.Checking -> {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
-                                color = colors.accent
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = "Checking for updates...",
-                                style = typography.bodyMedium,
-                                color = colors.textPrimary
-                            )
-                        }
-                    }
-
-                    is UpdateUiState.NoUpdate -> {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.accent, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "App is up to date (v${state.currentVersion})",
-                                        style = typography.bodyStrong,
-                                        color = colors.textPrimary
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Latest release installed.",
-                                    style = typography.caption,
-                                    color = colors.textSecondary
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Button(
-                                onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
-                                shape = AppRadius.pillShape,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = colors.accent,
-                                    contentColor = Color.Black
-                                )
-                            ) {
-                                Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Check", style = AppTheme.typography.captionStrong, maxLines = 1)
-                            }
-                        }
-                    }
-
-                    is UpdateUiState.UpdateAvailable -> {
-                        val release = state.release
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                text = "New Version Available: v${release.versionName}",
-                                style = typography.bodyStrong,
-                                color = colors.accent
-                            )
-                            if (release.releaseNotes.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = release.releaseNotes.trim(),
-                                    style = typography.caption,
-                                    color = colors.textSecondary,
-                                    maxLines = 4
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Button(
-                                    onClick = { scope.launch { updateManager.downloadAndInstall(release) } },
-                                    shape = AppRadius.pillShape,
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = colors.accent,
-                                        contentColor = Color.Black
-                                    )
-                                ) {
-                                    val sizeText = if (release.apkSizeBytes > 0) {
-                                        val mb = release.apkSizeBytes / (1024.0 * 1024.0)
-                                        String.format(Locale.US, " (%.1f MB)", mb)
-                                    } else ""
-                                    Text("Download & Install$sizeText", style = AppTheme.typography.captionStrong, maxLines = 1)
-                                }
-
-                                OutlinedButton(
-                                    onClick = { updateManager.dismissUpdate(release.tagName) },
-                                    shape = AppRadius.pillShape,
-                                    border = BorderStroke(0.8.dp, colors.divider),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textSecondary)
-                                ) {
-                                    Text("Dismiss", style = AppTheme.typography.caption, maxLines = 1)
-                                }
-                            }
-                        }
-                    }
-
-                    is UpdateUiState.Downloading -> {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                text = "Downloading: ${state.progressPercent}%",
-                                style = typography.label,
-                                color = colors.textPrimary
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            LinearProgressIndicator(
-                                progress = { if (state.totalBytes > 0) state.downloadedBytes.toFloat() / state.totalBytes else 0f },
-                                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                                color = colors.accent,
-                                trackColor = colors.divider
-                            )
-                        }
-                    }
-
-                    is UpdateUiState.ReadyToInstall -> {
-                        Column {
-                            Text(
-                                text = "Download complete for v${state.release.versionName}.",
-                                style = typography.label,
-                                color = colors.textPrimary
-                            )
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Button(
-                                onClick = {
-                                    if (!updateManager.installerHelper.canInstallUnknownApps()) {
-                                        val intent = updateManager.installerHelper.createManageUnknownAppSourcesIntent()
-                                        context.startActivity(intent)
-                                    } else {
-                                        updateManager.installerHelper.installApk(state.apkFile)
-                                    }
-                                },
-                                shape = AppRadius.pillShape,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = colors.accent,
-                                    contentColor = Color.Black
-                                )
-                            ) {
-                                Text("Install Update Now", style = AppTheme.typography.captionStrong)
-                            }
-                        }
-                    }
-
-                    is UpdateUiState.Error -> {
-                        Column {
-                            Text(
-                                text = "Update check failed: ${state.message}",
-                                style = typography.caption.copy(color = colors.error)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            OutlinedButton(
-                                onClick = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
-                                shape = AppRadius.pillShape,
-                                border = BorderStroke(0.8.dp, colors.divider),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
-                            ) {
-                                Text("Retry", style = AppTheme.typography.caption, maxLines = 1)
-                            }
-                        }
-                    }
-                }
-            }
+            SettingsAboutSection(
+                updateManager = updateManager,
+                updateState = updateState,
+                checkUpdatesOnLaunch = checkUpdatesOnLaunch,
+                onCheckUpdatesOnLaunchChange = { settingsRepository.setCheckUpdatesOnLaunch(it) }
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
-}
-
-@Composable
-private fun SettingsCard(
-    title: String,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = title,
-            style = typography.overline,
-            color = colors.accent,
-            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
-        )
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = AppRadius.cardShape,
-            color = colors.surfaceContainer,
-            border = BorderStroke(1.dp, colors.cardBorder)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                content()
-            }
-        }
-    }
-}
-
-@Composable
-private fun SettingsDivider() {
-    val colors = LocalAppColors.current
-    HorizontalDivider(
-        modifier = Modifier.padding(vertical = 12.dp),
-        thickness = 0.6.dp,
-        color = colors.divider.copy(alpha = 0.5f)
-    )
-}
-
-@Composable
-private fun SettingToggleRow(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) },
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .clip(AppRadius.pillShape)
-                .background(colors.accent.copy(alpha = 0.12f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = colors.accent,
-                modifier = Modifier.size(19.dp)
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = typography.bodyStrong,
-                color = colors.textPrimary
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                style = typography.caption,
-                color = colors.textSecondary
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = colors.background,
-                checkedTrackColor = colors.accent,
-                uncheckedThumbColor = colors.textSecondary,
-                uncheckedTrackColor = colors.surface
-            )
-        )
-    }
-}
-
-@Composable
-private fun ThemeChip(
-    label: String,
-    icon: ImageVector?,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
-
-    Surface(
-        modifier = Modifier
-            .clip(AppRadius.pillShape)
-            .clickable(onClick = onClick),
-        shape = AppRadius.pillShape,
-        color = if (selected) colors.accent.copy(alpha = 0.16f) else Color.Transparent,
-        border = BorderStroke(
-            width = if (selected) 1.5.dp else 1.dp,
-            color = if (selected) colors.accent else colors.divider
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (icon != null) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = if (selected) colors.accent else colors.textSecondary,
-                    modifier = Modifier.size(15.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-            }
-            Text(
-                text = label,
-                style = if (selected) typography.captionStrong else typography.caption,
-                color = if (selected) colors.accent else colors.textPrimary
-            )
         }
     }
 }
