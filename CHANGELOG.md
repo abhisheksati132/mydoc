@@ -14,7 +14,7 @@ Range: `v1.4.4..v1.4.5`.
   sheet drew a light navigation bar. The new `OverlaySystemBars()` in
   `designsystem/components/OverlaySystemBars.kt` resolves the enclosing window through
   `DialogWindowProvider` and applies `AppTheme.isDark` to that window's controller. It is called
-  from `AppBottomSheet`, `AppDialog`, and the 20 hosts that build `ModalBottomSheet`/`Dialog`/
+  from `AppBottomSheet`, `AppDialog`, and the 22 hosts that build `ModalBottomSheet`/`Dialog`/
   `AlertDialog` directly, so the fix covers the whole class, not one screen.
 - **Chip strips clipped the next chip.** Horizontally scrolling rows cut the following chip at the
   viewport edge with no hint that more content existed. `Modifier.horizontalScrollWithFade(state)`
