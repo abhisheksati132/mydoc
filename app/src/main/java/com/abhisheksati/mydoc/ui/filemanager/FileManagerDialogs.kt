@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
@@ -79,6 +80,7 @@ fun NewFolderDialog(
         ),
         title = { Text("New Folder", color = colors.textPrimary) },
         text = {
+            OverlaySystemBars()
             Column {
                 OutlinedTextField(
                     value = name,
@@ -137,6 +139,7 @@ fun NewFileDialog(
         ),
         title = { Text("New File", color = colors.textPrimary) },
         text = {
+            OverlaySystemBars()
             Column {
                 OutlinedTextField(
                     value = name,
@@ -196,6 +199,7 @@ fun RenameDialog(
         ),
         title = { Text("Rename", color = colors.textPrimary) },
         text = {
+            OverlaySystemBars()
             Column {
                 OutlinedTextField(
                     value = name,
@@ -252,6 +256,7 @@ fun DeleteConfirmationDialog(
         ),
         title = { Text("Delete", color = colors.textPrimary) },
         text = {
+            OverlaySystemBars()
             val message = if (count == 1 && fileNamePreview != null) {
                 "Are you sure you want to permanently delete \"$fileNamePreview\"?"
             } else {
@@ -316,6 +321,7 @@ fun FilePropertiesDialog(
             }
         },
         text = {
+            OverlaySystemBars()
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -519,6 +525,7 @@ fun CompressDialog(
         ),
         title = { Text("Compress to ZIP", color = colors.textPrimary) },
         text = {
+            OverlaySystemBars()
             Column {
                 Text(
                     text = "Enter archive name:",
@@ -581,6 +588,7 @@ fun ExtractConfirmDialog(
         ),
         title = { Text("Extract Archive", color = colors.textPrimary) },
         text = {
+            OverlaySystemBars()
             Text(
                 "Extract '$archiveName' into a dedicated folder in the current directory?",
                 color = colors.textPrimary,

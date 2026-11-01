@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
@@ -86,6 +87,7 @@ fun DocumentDetailsDialog(
             }
         },
         text = {
+            OverlaySystemBars()
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = document.displayName,

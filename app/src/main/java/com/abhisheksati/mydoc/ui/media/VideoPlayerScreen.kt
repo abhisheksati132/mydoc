@@ -89,6 +89,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.abhisheksati.mydoc.designsystem.components.AppSlider
+import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
@@ -603,6 +604,7 @@ fun VideoPlayerScreen(
             containerColor = DarkAppColors.surface,
             contentColor = Color.White
         ) {
+            OverlaySystemBars()
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

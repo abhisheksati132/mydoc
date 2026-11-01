@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.CaptureChromeColors
@@ -100,6 +101,7 @@ fun FreeCornersCropperDialog(
             decorFitsSystemWindows = false
         )
     ) {
+        OverlaySystemBars()
         BackHandler(onBack = onDismiss)
 
         var currentBitmap by remember { mutableStateOf(bitmap) }

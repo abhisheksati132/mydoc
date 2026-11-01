@@ -17,6 +17,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
@@ -48,6 +49,7 @@ fun PhotoInfoSheet(
         containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
         dragHandle = null
     ) {
+        OverlaySystemBars()
         Column(
             modifier = Modifier
                 .fillMaxWidth()

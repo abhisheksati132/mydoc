@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 
@@ -45,6 +46,7 @@ fun PresentationSpeakerNotesSheet(
         onDismissRequest = onDismiss,
         containerColor = cardBgColor
     ) {
+        OverlaySystemBars()
         Column(
             modifier = Modifier
                 .fillMaxWidth()

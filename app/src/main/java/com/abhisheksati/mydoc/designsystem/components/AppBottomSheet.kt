@@ -54,6 +54,7 @@ fun AppBottomSheet(
             )
         }
     ) {
+        OverlaySystemBars()
         Column(
             modifier = Modifier
                 .fillMaxWidth()

@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
@@ -42,6 +43,7 @@ fun PasswordDialog(
             )
         },
         text = {
+            OverlaySystemBars()
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "This document is encrypted. Enter the password to unlock it.",

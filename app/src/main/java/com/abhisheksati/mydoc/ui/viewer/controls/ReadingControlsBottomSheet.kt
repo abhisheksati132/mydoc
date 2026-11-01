@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
 import com.abhisheksati.mydoc.designsystem.components.AppSlider
+import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
@@ -114,6 +115,7 @@ fun ReadingControlsBottomSheet(
         },
         modifier = modifier
     ) {
+        OverlaySystemBars()
         Column(
             modifier = Modifier
                 .fillMaxWidth()

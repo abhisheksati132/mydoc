@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
@@ -66,6 +67,7 @@ fun OutlineDrawer(
         containerColor = MaterialTheme.colorScheme.surface,
         modifier = modifier
     ) {
+        OverlaySystemBars()
         Column(
             modifier = Modifier
                 .fillMaxWidth()

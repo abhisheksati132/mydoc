@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.MyDocApp
+import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
@@ -283,6 +284,7 @@ fun SpreadsheetViewerScreen(
                 onDismissRequest = viewModel::clearSelectedCell,
                 containerColor = MaterialTheme.colorScheme.surface
             ) {
+                OverlaySystemBars()
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()

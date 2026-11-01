@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
@@ -57,6 +58,7 @@ fun PageJumpDialog(
             )
         },
         text = {
+            OverlaySystemBars()
             Column {
                 Text(
                     text = "Enter a page number between 1 and $pageCount:",

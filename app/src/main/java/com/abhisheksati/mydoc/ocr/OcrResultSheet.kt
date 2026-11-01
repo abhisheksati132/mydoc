@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
@@ -56,6 +57,7 @@ fun OcrResultSheet(
         dragHandle = { BottomSheetDefaults.DragHandle() },
         modifier = modifier.fillMaxHeight(0.85f)
     ) {
+        OverlaySystemBars()
         Column(
             modifier = Modifier
                 .fillMaxSize()

@@ -57,6 +57,7 @@ fun AppDialog(
             shape = AppRadius.modalShape
         ),
         title = {
+            OverlaySystemBars()
             Text(
                 text = title,
                 style = typography.titleSmall,

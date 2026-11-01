@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import androidx.compose.material.icons.Icons
@@ -95,6 +96,7 @@ fun TrashBinSheet(
             decorFitsSystemWindows = false
         )
     ) {
+        OverlaySystemBars()
         BackHandler {
             if (isSelectionMode) {
                 selectedIds = emptySet()
@@ -263,7 +265,10 @@ fun TrashBinSheet(
                 AppRadius.modalShape
             ),
             title = { Text("Empty Recycle Bin?", color = colors.textPrimary) },
-            text = { Text("This will permanently delete all ${trashItems.size} items. This action cannot be undone.", color = colors.textSecondary) },
+            text = {
+                OverlaySystemBars()
+                Text("This will permanently delete all ${trashItems.size} items. This action cannot be undone.", color = colors.textSecondary)
+            },
             confirmButton = {
                 Button(
                     onClick = {
@@ -293,7 +298,10 @@ fun TrashBinSheet(
                 AppRadius.modalShape
             ),
             title = { Text("Delete Permanently?", color = colors.textPrimary) },
-            text = { Text("Permanently delete ${selectedItems.size} items? This cannot be undone.", color = colors.textSecondary) },
+            text = {
+                OverlaySystemBars()
+                Text("Permanently delete ${selectedItems.size} items? This cannot be undone.", color = colors.textSecondary)
+            },
             confirmButton = {
                 Button(
                     onClick = {
