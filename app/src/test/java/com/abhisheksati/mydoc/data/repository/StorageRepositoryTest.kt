@@ -187,6 +187,94 @@ class StorageRepositoryTest {
         assertFalse(testFile.exists())
     }
 
+    @Test
+    fun testListDirectorySortingAndHiddenFilter() = runBlocking {
+        val root = tempFolder.root
+        val repo = StorageRepositoryImpl(mockContext())
+        val testDir = File(root, "SortTestDir").apply { mkdirs() }
+
+        // Create folders and files
+        File(testDir, "FolderB").mkdirs()
+        File(testDir, "FolderA").mkdirs()
+        File(testDir, ".hiddenFolder").mkdirs()
+
+        val f1 = File(testDir, "apple.txt").apply { writeText("short") }
+        val f2 = File(testDir, "banana.pdf").apply { writeText("much longer content to test size sorting") }
+        val f3 = File(testDir, "cherry.jpg").apply { writeText("medium text content") }
+        val hiddenFile = File(testDir, ".secret.txt").apply { writeText("secret") }
+
+        // 1. Verify hidden filter
+        val listNoHidden = repo.listDirectory(testDir, showHidden = false, FileSortOrder(FileSortField.NAME, isAscending = true))
+        assertFalse(listNoHidden.any { it.name.startsWith(".") })
+        assertEquals(5, listNoHidden.size) // 2 folders + 3 files
+
+        val listWithHidden = repo.listDirectory(testDir, showHidden = true, FileSortOrder(FileSortField.NAME, isAscending = true))
+        assertTrue(listWithHidden.any { it.name == ".secret.txt" })
+        assertTrue(listWithHidden.any { it.name == ".hiddenFolder" })
+        assertEquals(7, listWithHidden.size) // 3 folders + 4 files
+
+        // 2. Directories always appear first
+        assertTrue(listNoHidden[0].isDirectory)
+        assertTrue(listNoHidden[1].isDirectory)
+        assertFalse(listNoHidden[2].isDirectory)
+
+        // 3. Name Ascending: FolderA, FolderB, then apple, banana, cherry
+        val nameAsc = repo.listDirectory(testDir, showHidden = false, FileSortOrder(FileSortField.NAME, isAscending = true))
+        assertEquals("FolderA", nameAsc[0].name)
+        assertEquals("FolderB", nameAsc[1].name)
+        assertEquals("apple.txt", nameAsc[2].name)
+        assertEquals("banana.pdf", nameAsc[3].name)
+        assertEquals("cherry.jpg", nameAsc[4].name)
+
+        // 4. Name Descending
+        val nameDesc = repo.listDirectory(testDir, showHidden = false, FileSortOrder(FileSortField.NAME, isAscending = false))
+        assertEquals("FolderB", nameDesc[0].name)
+        assertEquals("FolderA", nameDesc[1].name)
+        assertEquals("cherry.jpg", nameDesc[2].name)
+        assertEquals("banana.pdf", nameDesc[3].name)
+        assertEquals("apple.txt", nameDesc[4].name)
+
+        // 5. Size Ascending (files: apple < cherry < banana)
+        val sizeAsc = repo.listDirectory(testDir, showHidden = false, FileSortOrder(FileSortField.SIZE, isAscending = true))
+        val filesOnly = sizeAsc.filter { !it.isDirectory }
+        assertEquals("apple.txt", filesOnly[0].name)
+        assertEquals("cherry.jpg", filesOnly[1].name)
+        assertEquals("banana.pdf", filesOnly[2].name)
+
+        // 6. Type Ascending (extensions: jpg < pdf < txt)
+        val typeAsc = repo.listDirectory(testDir, showHidden = false, FileSortOrder(FileSortField.TYPE, isAscending = true))
+        val typeFilesOnly = typeAsc.filter { !it.isDirectory }
+        assertEquals("cherry.jpg", typeFilesOnly[0].name)
+        assertEquals("banana.pdf", typeFilesOnly[1].name)
+        assertEquals("apple.txt", typeFilesOnly[2].name)
+    }
+
+    @Test
+    fun testCopyNameCollisionHandling() = runBlocking {
+        val root = tempFolder.root
+        val repo = StorageRepositoryImpl(mockContext())
+
+        val srcDir = File(root, "CollisionSrc").apply { mkdirs() }
+        val targetDir = File(root, "CollisionTarget").apply { mkdirs() }
+
+        val original = File(srcDir, "doc.pdf").apply { writeText("Version 1") }
+        // Pre-create same name in target
+        File(targetDir, "doc.pdf").apply { writeText("Existing target version") }
+
+        // Copy original to targetDir with collision
+        val copyRes = repo.copy(listOf(original), targetDir)
+        assertTrue(copyRes.isSuccess)
+        assertEquals(1, copyRes.getOrThrow())
+
+        // Target should now contain original doc.pdf AND non-conflicting copy "doc (1).pdf"
+        val existing = File(targetDir, "doc.pdf")
+        val copy1 = File(targetDir, "doc (1).pdf")
+        assertTrue(existing.exists())
+        assertEquals("Existing target version", existing.readText())
+        assertTrue(copy1.exists())
+        assertEquals("Version 1", copy1.readText())
+    }
+
     private fun mockContext(): android.content.Context {
         val root = tempFolder.root
         return object : android.content.ContextWrapper(null) {
