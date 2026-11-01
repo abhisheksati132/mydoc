@@ -1,65 +1,21 @@
 package com.abhisheksati.mydoc.ui.viewer.pdf
 
 import android.app.Activity
-import android.app.SearchManager
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.material3.Surface
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.graphics.Bitmap
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material.icons.outlined.TextFields
-import androidx.compose.material.icons.automirrored.outlined.VolumeUp
-import androidx.compose.material3.Icon
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.size
-import com.abhisheksati.mydoc.tools.model.PdfTool
-import com.abhisheksati.mydoc.ui.viewer.controls.DocumentToolsSheet
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
-import com.abhisheksati.mydoc.designsystem.components.AppBottomSheet
-import androidx.compose.ui.text.font.FontWeight
-import android.graphics.RectF
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.findRootCoordinates
-import androidx.compose.ui.layout.onGloballyPositioned
-import com.abhisheksati.mydoc.ui.viewer.controls.TileBitmapCache
-import kotlinx.coroutines.delay
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -71,7 +27,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.Text
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -79,7 +35,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -89,9 +44,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
@@ -100,29 +52,16 @@ import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
+import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.ui.viewer.controls.FastScrollbar
-import com.abhisheksati.mydoc.ui.viewer.controls.OutlineDrawer
-import com.abhisheksati.mydoc.ui.viewer.controls.PageGridSheet
-import com.abhisheksati.mydoc.ui.viewer.controls.PageJumpDialog
-import com.abhisheksati.mydoc.ui.viewer.controls.PasswordDialog
-import com.abhisheksati.mydoc.ui.viewer.controls.ReadingControlsBottomSheet
-import com.abhisheksati.mydoc.ui.viewer.controls.SearchOverlay
-import com.abhisheksati.mydoc.ui.viewer.controls.ThumbnailStrip
-import com.abhisheksati.mydoc.ui.viewer.controls.ViewerBottomBar
-import com.abhisheksati.mydoc.ui.viewer.controls.ViewerTopBar
 import com.abhisheksati.mydoc.ui.viewer.controls.ZoomableViewport
 import com.abhisheksati.mydoc.ui.viewer.controls.rememberZoomState
 import com.abhisheksati.mydoc.viewmodel.ViewerViewModel
-import androidx.compose.foundation.clickable
-import androidx.compose.material3.ExperimentalMaterial3Api
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -141,7 +80,6 @@ fun PdfViewerScreen(
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp
     val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
     val coroutineScope = rememberCoroutineScope()
     val state by viewModel.uiState.collectAsState()
 
@@ -445,7 +383,6 @@ fun PdfViewerScreen(
                 }
 
                 if (state.isDualPageView) {
-                    // Two-page spread for tablets and landscape
                     val pairCount = (state.pageCount + 1) / 2
                     LazyColumn(
                         state = lazyListState,
@@ -571,21 +508,19 @@ fun PdfViewerScreen(
             }
         }
 
-        // Clean, uncluttered Top Toolbar
-        ViewerTopBar(
-            title = document.displayName,
-            currentPage = state.currentPage,
-            pageCount = state.pageCount,
-            visible = state.areControlsVisible && !state.isSearchOpen,
-            isBookmarked = isCurrentBookmarked,
+        // Top bar, search bar, thumbnail scrubber, and bottom bar controls
+        PdfViewerControlsOverlay(
+            document = document,
+            state = state,
+            viewModel = viewModel,
+            isCurrentBookmarked = isCurrentBookmarked,
             onBackClick = onBackClick,
-            onSearchClick = viewModel::openSearch,
+            onShareClick = onShareClick,
             onToggleBookmark = {
                 val added = app?.settingsRepository?.toggleBookmark(document.uri, state.currentPage) ?: false
                 bookmarks = app?.settingsRepository?.getBookmarks(document.uri) ?: emptySet()
                 Toast.makeText(context, if (added) "Bookmarked page ${state.currentPage + 1}" else "Bookmark removed", Toast.LENGTH_SHORT).show()
             },
-            onShareClick = onShareClick,
             onToolsClick = { isToolsSheetOpen = true },
             onOcrClick = {
                 if (!isOcrRunning) {
@@ -635,76 +570,20 @@ fun PdfViewerScreen(
             onSlideshowClick = onSlideshowClick,
             onReflowClick = onReflowClick,
             onDocumentDetailsClick = { isDocumentDetailsOpen = true },
-            modifier = Modifier.align(Alignment.TopCenter)
-        )
-
-        // Search Overlay
-        SearchOverlay(
-            visible = state.isSearchOpen,
-            query = state.searchQuery,
-            matchCount = state.searchMatches.size,
-            currentMatchIndex = state.currentMatchIndex,
-            onQueryChanged = viewModel::onSearchQueryChanged,
-            onNextMatch = viewModel::nextSearchMatch,
-            onPreviousMatch = viewModel::previousSearchMatch,
-            onCloseSearch = viewModel::closeSearch,
-            modifier = Modifier.align(Alignment.TopCenter)
-        )
-
-        // Ergonomic Bottom Controls
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-        ) {
-            ThumbnailStrip(
-                pageCount = state.pageCount,
-                currentPage = state.currentPage,
-                visible = state.isThumbnailStripVisible && state.areControlsVisible,
-                onPageSelected = { page ->
-                    viewModel.jumpToPage(page)
-                    coroutineScope.launch {
-                        if (state.isContinuousScroll) {
-                            lazyListState.scrollToItem(page)
-                        } else {
-                            pagerState.scrollToPage(page)
-                        }
-                    }
-                },
-                renderThumbnail = { p, s -> viewModel.renderPageBitmap(p, s) }
-            )
-
-            ViewerBottomBar(
-                currentPage = state.currentPage,
-                pageCount = state.pageCount,
-                visible = state.areControlsVisible,
-                hasOutline = state.outline.isNotEmpty(),
-                onOutlineClick = { viewModel.setOutlineDrawerOpen(true) },
-                onPagesClick = { isThumbnailGridOpen = true },
-                onAppearanceClick = { isReadingControlsOpen = true },
-                onPageScrubbed = { targetPage ->
-                    viewModel.jumpToPage(targetPage)
-                    coroutineScope.launch {
-                        if (state.isContinuousScroll) {
-                            lazyListState.scrollToItem(targetPage)
-                        } else {
-                            pagerState.scrollToPage(targetPage)
-                        }
-                    }
-                },
-                sheetItems = state.outline,
-                onSheetSelect = { pageIdx ->
-                    viewModel.jumpToPage(pageIdx)
-                    coroutineScope.launch {
-                        if (state.isContinuousScroll) {
-                            lazyListState.animateScrollToItem(pageIdx)
-                        } else {
-                            pagerState.animateScrollToPage(pageIdx)
-                        }
+            onOpenOutlineDrawer = { viewModel.setOutlineDrawerOpen(true) },
+            onOpenThumbnailGrid = { isThumbnailGridOpen = true },
+            onOpenReadingControls = { isReadingControlsOpen = true },
+            onPageSelected = { targetPage ->
+                viewModel.jumpToPage(targetPage)
+                coroutineScope.launch {
+                    if (state.isContinuousScroll) {
+                        lazyListState.scrollToItem(targetPage)
+                    } else {
+                        pagerState.scrollToPage(targetPage)
                     }
                 }
-            )
-        }
+            }
+        )
 
         // Modal Sheets, Drawers & Dialogs
         PdfViewerDialogsAndSheets(
@@ -787,144 +666,25 @@ fun PdfViewerScreen(
             modifier = Modifier.align(Alignment.BottomCenter)
         )
 
-        // Floating Contextual Action Pill (Copy, Share, Web Search, Read Aloud)
-        if (selectedPageForActions != null) {
-            val pageNum = selectedPageForActions!!
-            val activeSelectionText = if (selectedTextState?.first == pageNum) selectedTextState?.second?.selectedText else null
-
-            PdfFloatingContextualBar(
-                pageNum = pageNum,
-                activeSelectionText = activeSelectionText,
-                readingMode = state.readingMode,
-                onCopy = {
-                    coroutineScope.launch {
-                        val text = activeSelectionText ?: viewModel.getPageText(pageNum)
-                        if (text.isNotBlank()) {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("PDF Text", text))
-                            Toast.makeText(context, if (activeSelectionText != null) "Text copied to clipboard" else "Page ${pageNum + 1} text copied", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(context, "No text detected on this page", Toast.LENGTH_SHORT).show()
-                        }
-                        selectedPageForActions = null
-                        selectedTextState = null
-                    }
-                },
-                onShare = {
-                    coroutineScope.launch {
-                        val text = activeSelectionText ?: viewModel.getPageText(pageNum)
-                        if (text.isNotBlank()) {
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, text)
-                            }
-                            context.startActivity(Intent.createChooser(shareIntent, "Share Text"))
-                        } else {
-                            Toast.makeText(context, "No text to share", Toast.LENGTH_SHORT).show()
-                        }
-                        selectedPageForActions = null
-                        selectedTextState = null
-                    }
-                },
-                onSearch = {
-                    coroutineScope.launch {
-                        val text = activeSelectionText ?: viewModel.getPageText(pageNum)
-                        if (text.isNotBlank()) {
-                            val searchIntent = Intent(Intent.ACTION_WEB_SEARCH).apply {
-                                putExtra(SearchManager.QUERY, text.take(150))
-                            }
-                            try {
-                                context.startActivity(searchIntent)
-                            } catch (_: Exception) {
-                                Toast.makeText(context, "No browser found", Toast.LENGTH_SHORT).show()
-                            }
-                        } else {
-                            Toast.makeText(context, "No text to search", Toast.LENGTH_SHORT).show()
-                        }
-                        selectedPageForActions = null
-                        selectedTextState = null
-                    }
-                },
-                onSpeak = {
-                    coroutineScope.launch {
-                        val text = activeSelectionText ?: viewModel.getPageText(pageNum)
-                        if (text.isNotBlank()) {
-                            currentTtsText = text
-                            isTtsVisible = true
-                            ttsManager.startReading(text)
-                        } else {
-                            Toast.makeText(context, "No text to read", Toast.LENGTH_SHORT).show()
-                        }
-                        selectedPageForActions = null
-                        selectedTextState = null
-                    }
-                },
-                onClose = {
-                    selectedPageForActions = null
-                    selectedTextState = null
-                }
-            )
-
-            // Page Contextual Action Sheet (Copy, Read, Share, OCR)
-            PdfPageActionSheet(
-                isOpen = true,
-                pageNum = pageNum,
-                onDismiss = { selectedPageForActions = null },
-                onCopyPageText = {
-                    coroutineScope.launch {
-                        val text = viewModel.getPageText(pageNum)
-                        if (text.isNotBlank()) {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("Page ${pageNum + 1}", text))
-                            Toast.makeText(context, "Page ${pageNum + 1} text copied to clipboard", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(context, "No digital text on this page. Try OCR extract.", Toast.LENGTH_SHORT).show()
-                        }
-                        selectedPageForActions = null
-                    }
-                },
-                onReadPageAloud = {
-                    coroutineScope.launch {
-                        val text = viewModel.getPageText(pageNum)
-                        if (text.isNotBlank()) {
-                            currentTtsText = text
-                            isTtsVisible = true
-                        } else {
-                            Toast.makeText(context, "No text on this page to read", Toast.LENGTH_SHORT).show()
-                        }
-                        selectedPageForActions = null
-                    }
-                },
-                onSharePageText = {
-                    coroutineScope.launch {
-                        val text = viewModel.getPageText(pageNum)
-                        if (text.isNotBlank()) {
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, text)
-                            }
-                            context.startActivity(Intent.createChooser(shareIntent, "Share Page ${pageNum + 1} Text"))
-                        } else {
-                            Toast.makeText(context, "No text on this page to share", Toast.LENGTH_SHORT).show()
-                        }
-                        selectedPageForActions = null
-                    }
-                },
-                onExtractOcr = {
-                    selectedPageForActions = null
-                    coroutineScope.launch {
-                        val pageBmp = viewModel.renderPageBitmap(pageNum, 2.0f)
-                        if (pageBmp != null) {
-                            val ocr = ocrEngine.recognizeText(pageBmp)
-                            if (ocr.isNotBlank()) {
-                                ocrExtractedText = ocr
-                            } else {
-                                Toast.makeText(context, "No text found with OCR", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    }
-                }
-            )
-        }
-}
+        // Floating Contextual Action Pill (Copy, Share, Web Search, Read Aloud) & Action Sheet
+        PdfContextualActionsHost(
+            pageNum = selectedPageForActions,
+            activeSelectionText = if (selectedTextState?.first == selectedPageForActions) selectedTextState?.second?.selectedText else null,
+            readingMode = state.readingMode,
+            viewModel = viewModel,
+            ocrEngine = ocrEngine,
+            ttsManager = ttsManager,
+            onStartTts = { text ->
+                currentTtsText = text
+                isTtsVisible = true
+            },
+            onOcrResult = { ocr ->
+                ocrExtractedText = ocr
+            },
+            onClose = {
+                selectedPageForActions = null
+                selectedTextState = null
+            }
+        )
+    }
 }
