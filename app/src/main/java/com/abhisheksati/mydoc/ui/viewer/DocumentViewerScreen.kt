@@ -39,6 +39,7 @@ fun DocumentViewerScreen(
     val app = context.applicationContext as MyDocApp
     val ext = document.extension.lowercase()
     var isSlideshowActive by rememberSaveable { mutableStateOf(false) }
+    var isWordReflowActive by rememberSaveable { mutableStateOf(false) }
 
     when {
         // 1. Spreadsheets: Multi-sheet grid viewer supporting cell formulas, borders, and frozen panes.
@@ -88,34 +89,39 @@ fun DocumentViewerScreen(
             )
         }
 
-        // 4. Modern Word processing documents (.docx, .dotx):
-        // Converted and rendered through high-fidelity PDF/vector engine for crisp text and exact layout.
-        ext in setOf("docx", "dotx") -> {
-            val viewerViewModel: ViewerViewModel = viewModel(
-                key = document.uri,
-                factory = ViewerViewModel.Factory(context, app.documentRepository, document)
-            )
-            PdfViewerScreen(
-                document = document,
-                viewModel = viewerViewModel,
-                onBackClick = onBackClick,
-                onShareClick = onShareClick,
-                onToolsClick = onToolsClick,
-                onSelectTool = onSelectTool,
-                onDocumentUpdated = onDocumentUpdated,
-                modifier = modifier.fillMaxSize()
-            )
-        }
-
-        // 5. Legacy Word documents (.doc, .rtf, .odt):
-        // Handled via WordViewerScreen using streaming POI DocxParser block layout.
-        document.category == DocumentCategory.WORD || ext in setOf("doc", "dot", "rtf", "odt", "fodt", "ott", "wps", "wpd") -> {
-            WordViewerScreen(
-                document = document,
-                onBackClick = onBackClick,
-                onShareClick = onShareClick,
-                modifier = modifier.fillMaxSize()
-            )
+        // 4. Word processing documents (.docx, .dotx, .doc, .odt, etc.):
+        // Supports both Paginated Vector Engine (crisp print fidelity) and Reflow Reading Mode (native text & TTS).
+        ext in setOf("docx", "dotx") || document.category == DocumentCategory.WORD || ext in setOf("doc", "dot", "rtf", "odt", "fodt", "ott", "wps", "wpd") -> {
+            if (isWordReflowActive || ext in setOf("doc", "dot", "rtf", "odt", "fodt", "ott", "wps", "wpd")) {
+                WordViewerScreen(
+                    document = document,
+                    onBackClick = {
+                        if (isWordReflowActive && ext in setOf("docx", "dotx")) {
+                            isWordReflowActive = false
+                        } else {
+                            onBackClick()
+                        }
+                    },
+                    onShareClick = onShareClick,
+                    modifier = modifier.fillMaxSize()
+                )
+            } else {
+                val viewerViewModel: ViewerViewModel = viewModel(
+                    key = document.uri,
+                    factory = ViewerViewModel.Factory(context, app.documentRepository, document)
+                )
+                PdfViewerScreen(
+                    document = document,
+                    viewModel = viewerViewModel,
+                    onBackClick = onBackClick,
+                    onShareClick = onShareClick,
+                    onToolsClick = onToolsClick,
+                    onSelectTool = onSelectTool,
+                    onDocumentUpdated = onDocumentUpdated,
+                    onReflowClick = { isWordReflowActive = true },
+                    modifier = modifier.fillMaxSize()
+                )
+            }
         }
 
         // 6. Plain text, logs, configuration files, and source code:

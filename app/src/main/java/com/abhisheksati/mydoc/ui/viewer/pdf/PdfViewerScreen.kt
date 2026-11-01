@@ -137,6 +137,7 @@ fun PdfViewerScreen(
     onSelectTool: ((PdfTool) -> Unit)? = null,
     onDocumentUpdated: ((DocumentFile) -> Unit)? = null,
     onSlideshowClick: (() -> Unit)? = null,
+    onReflowClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -638,6 +639,7 @@ fun PdfViewerScreen(
                 }
             },
             onSlideshowClick = onSlideshowClick,
+            onReflowClick = onReflowClick,
             onDocumentDetailsClick = { isDocumentDetailsOpen = true },
             modifier = Modifier.align(Alignment.TopCenter)
         )

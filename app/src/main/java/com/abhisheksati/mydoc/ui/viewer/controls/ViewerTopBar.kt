@@ -72,6 +72,7 @@ fun ViewerTopBar(
     onOcrClick: (() -> Unit)? = null,
     onTtsClick: (() -> Unit)? = null,
     onSlideshowClick: (() -> Unit)? = null,
+    onReflowClick: (() -> Unit)? = null,
     onDocumentDetailsClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -252,6 +253,19 @@ fun ViewerTopBar(
                                 onClick = {
                                     isMoreMenuOpen = false
                                     onSlideshowClick()
+                                }
+                            )
+                        }
+
+                        if (onReflowClick != null) {
+                            DropdownMenuItem(
+                                text = { Text("Reflow reading mode", style = typography.body) },
+                                leadingIcon = {
+                                    Icon(Icons.Outlined.TextFields, contentDescription = null, tint = colors.textSecondary)
+                                },
+                                onClick = {
+                                    isMoreMenuOpen = false
+                                    onReflowClick()
                                 }
                             )
                         }
