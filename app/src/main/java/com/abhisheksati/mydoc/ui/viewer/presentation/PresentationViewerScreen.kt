@@ -206,7 +206,6 @@ fun PresentationViewerScreen(
 
     var readingMode by remember { mutableStateOf(ReadingMode.NORMAL) }
     var isVisualMode by remember { mutableStateOf(true) }
-    var isMenuOpen by remember { mutableStateOf(false) }
     var isJumpDialogOpen by remember { mutableStateOf(false) }
 
     var isSearchOpen by remember { mutableStateOf(false) }
@@ -410,267 +409,70 @@ fun PresentationViewerScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            if (!isSlideshowMode) {
-                Column(
-                    modifier = Modifier.background(bgColor)
-                ) {
-                    if (isSearchOpen) {
-                        SearchOverlay(
-                            visible = true,
-                            query = searchQuery,
-                            matchCount = searchMatches.size,
-                            currentMatchIndex = currentMatchIndex,
-                            onQueryChanged = {
-                                searchQuery = it
-                                currentMatchIndex = 0
-                            },
-                            onNextMatch = {
-                                if (searchMatches.isNotEmpty()) {
-                                    currentMatchIndex = (currentMatchIndex + 1) % searchMatches.size
-                                    scope.launch { pagerState.animateScrollToPage(searchMatches[currentMatchIndex]) }
-                                }
-                            },
-                            onPreviousMatch = {
-                                if (searchMatches.isNotEmpty()) {
-                                    currentMatchIndex = (currentMatchIndex - 1 + searchMatches.size) % searchMatches.size
-                                    scope.launch { pagerState.animateScrollToPage(searchMatches[currentMatchIndex]) }
-                                }
-                            },
-                            onCloseSearch = {
-                                isSearchOpen = false
-                                searchQuery = ""
-                            }
-                        )
-                    } else {
-                        TopAppBar(
-                            title = {
-                                Column {
-                                    Text(
-                                        text = document.displayName,
-                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                                        color = textColor,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                        modifier = Modifier.padding(top = 2.dp)
-                                    ) {
-                                        Text(
-                                            text = document.extension.uppercase(),
-                                            style = MaterialTheme.typography.labelSmall.copy(
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                letterSpacing = 1.sp
-                                            ),
-                                            color = colors.accent
-                                        )
-                                        if (effectiveSlideCount > 0) {
-                                            Text(
-                                                text = "•",
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                                color = secondaryTextColor.copy(alpha = 0.5f)
-                                            )
-                                            Text(
-                                                text = "$effectiveSlideCount slides",
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                                color = secondaryTextColor
-                                            )
-                                        }
-                                    }
-                                }
-                            },
-                            navigationIcon = {
-                                IconButton(onClick = onBackClick) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                        contentDescription = "Back",
-                                        tint = textColor
-                                    )
-                                }
-                            },
-                            actions = {
-                                // Search
-                                IconButton(onClick = { isSearchOpen = true }) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Search,
-                                        contentDescription = "Search Slides",
-                                        tint = secondaryTextColor
-                                    )
-                                }
-
-                                // Continuous Vertical vs Horizontal toggle button
-                                IconButton(onClick = {
-                                    val newMode = !isContinuousVertical
-                                    isContinuousVertical = newMode
-                                    scope.launch {
-                                        if (newMode) {
-                                            lazyListState.scrollToItem(pagerState.currentPage)
-                                        } else {
-                                            pagerState.scrollToPage(lazyListState.firstVisibleItemIndex)
-                                        }
-                                    }
-                                }) {
-                                    Icon(
-                                        imageVector = if (isContinuousVertical) Icons.Outlined.ViewCarousel else Icons.Outlined.SwapVert,
-                                        contentDescription = if (isContinuousVertical) "Switch to Horizontal Paging" else "Switch to Continuous Vertical",
-                                        tint = if (isContinuousVertical) colors.accent else secondaryTextColor
-                                    )
-                                }
-
-                                // Slideshow Mode
-                                IconButton(onClick = { isSlideshowMode = true }) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.PlayArrow,
-                                        contentDescription = "Start Slideshow",
-                                        tint = colors.accent
-                                    )
-                                }
-
-                                // More Options
-                                Box {
-                                    IconButton(onClick = { isMenuOpen = true }) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.MoreVert,
-                                            contentDescription = "More Options",
-                                            tint = secondaryTextColor
-                                        )
-                                    }
-                                    DropdownMenu(
-                                        expanded = isMenuOpen,
-                                        onDismissRequest = { isMenuOpen = false },
-                                        shape = RoundedCornerShape(16.dp),
-                                        containerColor = colors.surface,
-                                        border = BorderStroke(1.dp, colors.divider),
-                                        shadowElevation = 8.dp,
-                                        tonalElevation = 4.dp
-                                    ) {
-                                        DropdownMenuItem(
-                                            text = { Text(if (isContinuousVertical) "Switch to Horizontal Pager" else "Switch to Continuous Vertical") },
-                                            leadingIcon = {
-                                                Icon(
-                                                    imageVector = if (isContinuousVertical) Icons.Outlined.ViewCarousel else Icons.Outlined.SwapVert,
-                                                    contentDescription = null
-                                                )
-                                            },
-                                            onClick = {
-                                                isMenuOpen = false
-                                                val newMode = !isContinuousVertical
-                                                isContinuousVertical = newMode
-                                                scope.launch {
-                                                    if (newMode) {
-                                                        lazyListState.scrollToItem(pagerState.currentPage)
-                                                    } else {
-                                                        pagerState.scrollToPage(lazyListState.firstVisibleItemIndex)
-                                                    }
-                                                }
-                                            }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text(if (isVisualMode) "Switch to Outline View" else "Switch to Visual View") },
-                                            leadingIcon = {
-                                                Icon(
-                                                    imageVector = if (isVisualMode) Icons.AutoMirrored.Filled.Article else Icons.Default.Slideshow,
-                                                    contentDescription = null
-                                                )
-                                            },
-                                            onClick = {
-                                                isMenuOpen = false
-                                                isVisualMode = !isVisualMode
-                                            }
-                                        )
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(when (readingMode) {
-                                                    ReadingMode.NORMAL -> "Theme: Dark"
-                                                    ReadingMode.INVERTED_DARK -> "Theme: Sepia"
-                                                    ReadingMode.SEPIA -> "Theme: Eye Comfort"
-                                                    ReadingMode.EYE_COMFORT -> "Theme: Light"
-                                                })
-                                            },
-                                            leadingIcon = {
-                                                Icon(Icons.Outlined.Brightness4, contentDescription = null)
-                                            },
-                                            onClick = {
-                                                isMenuOpen = false
-                                                readingMode = when (readingMode) {
-                                                    ReadingMode.NORMAL -> ReadingMode.INVERTED_DARK
-                                                    ReadingMode.INVERTED_DARK -> ReadingMode.SEPIA
-                                                    ReadingMode.SEPIA -> ReadingMode.EYE_COMFORT
-                                                    ReadingMode.EYE_COMFORT -> ReadingMode.NORMAL
-                                                }
-                                            }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text("Jump to Slide...") },
-                                            leadingIcon = {
-                                                Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = null)
-                                            },
-                                            onClick = {
-                                                isMenuOpen = false
-                                                isJumpDialogOpen = true
-                                            }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text("Thumbnail Strip") },
-                                            leadingIcon = {
-                                                Icon(Icons.Outlined.ViewCarousel, contentDescription = null)
-                                            },
-                                            onClick = {
-                                                isMenuOpen = false
-                                                isThumbnailStripOpen = !isThumbnailStripOpen
-                                            }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text("Speaker Notes") },
-                                            leadingIcon = {
-                                                Icon(Icons.Outlined.Description, contentDescription = null)
-                                            },
-                                            onClick = {
-                                                isMenuOpen = false
-                                                isNotesSheetOpen = true
-                                            }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text("Share Presentation") },
-                                            leadingIcon = {
-                                                Icon(Icons.Outlined.Share, contentDescription = null)
-                                            },
-                                            onClick = {
-                                                isMenuOpen = false
-                                                onShareClick()
-                                            }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text("Open in Office App") },
-                                            leadingIcon = {
-                                                Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
-                                            },
-                                            onClick = {
-                                                isMenuOpen = false
-                                                openPresentationInOfficeApp(context, document)
-                                            }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text("Print") },
-                                            leadingIcon = {
-                                                Icon(Icons.Outlined.Print, contentDescription = null)
-                                            },
-                                            onClick = {
-                                                isMenuOpen = false
-                                                PrintHelper.printDocument(context, document)
-                                            }
-                                        )
-                                    }
-                                }
-                            },
-                            colors = TopAppBarDefaults.topAppBarColors(containerColor = bgColor)
-                        )
+            PresentationTopBar(
+                document = document,
+                effectiveSlideCount = effectiveSlideCount,
+                isSlideshowMode = isSlideshowMode,
+                isSearchOpen = isSearchOpen,
+                searchQuery = searchQuery,
+                searchMatchesCount = searchMatches.size,
+                currentMatchIndex = currentMatchIndex,
+                onQueryChanged = {
+                    searchQuery = it
+                    currentMatchIndex = 0
+                },
+                onNextMatch = {
+                    if (searchMatches.isNotEmpty()) {
+                        currentMatchIndex = (currentMatchIndex + 1) % searchMatches.size
+                        scope.launch { pagerState.animateScrollToPage(searchMatches[currentMatchIndex]) }
                     }
-                    AppDivider()
-                }
-            }
+                },
+                onPreviousMatch = {
+                    if (searchMatches.isNotEmpty()) {
+                        currentMatchIndex = (currentMatchIndex - 1 + searchMatches.size) % searchMatches.size
+                        scope.launch { pagerState.animateScrollToPage(searchMatches[currentMatchIndex]) }
+                    }
+                },
+                onCloseSearch = {
+                    isSearchOpen = false
+                    searchQuery = ""
+                },
+                onOpenSearch = { isSearchOpen = true },
+                onBackClick = onBackClick,
+                isContinuousVertical = isContinuousVertical,
+                onToggleContinuousVertical = {
+                    val newMode = !isContinuousVertical
+                    isContinuousVertical = newMode
+                    scope.launch {
+                        if (newMode) {
+                            lazyListState.scrollToItem(pagerState.currentPage)
+                        } else {
+                            pagerState.scrollToPage(lazyListState.firstVisibleItemIndex)
+                        }
+                    }
+                },
+                onStartSlideshow = { isSlideshowMode = true },
+                isVisualMode = isVisualMode,
+                onToggleVisualMode = { isVisualMode = !isVisualMode },
+                readingMode = readingMode,
+                onCycleReadingMode = {
+                    readingMode = when (readingMode) {
+                        ReadingMode.NORMAL -> ReadingMode.INVERTED_DARK
+                        ReadingMode.INVERTED_DARK -> ReadingMode.SEPIA
+                        ReadingMode.SEPIA -> ReadingMode.EYE_COMFORT
+                        ReadingMode.EYE_COMFORT -> ReadingMode.NORMAL
+                    }
+                },
+                onOpenJumpDialog = { isJumpDialogOpen = true },
+                onToggleThumbnailStrip = { isThumbnailStripOpen = !isThumbnailStripOpen },
+                onOpenNotesSheet = { isNotesSheetOpen = true },
+                onShareClick = onShareClick,
+                onOpenInOfficeApp = { openPresentationInOfficeApp(context, document) },
+                onPrintClick = { PrintHelper.printDocument(context, document) },
+                bgColor = bgColor,
+                textColor = textColor,
+                secondaryTextColor = secondaryTextColor
+            )
         },
         bottomBar = {
             if (effectiveSlideCount > 0 && !isSlideshowMode) {
@@ -912,47 +714,14 @@ fun PresentationViewerScreen(
             )
 
             // Speaker Notes Bottom Sheet
-            if (isNotesSheetOpen) {
-                val curNotes = effectiveSlides.getOrNull(currentSlideIndex)?.notes ?: "No speaker notes for this slide."
-                ModalBottomSheet(
-                    onDismissRequest = { isNotesSheetOpen = false },
-                    containerColor = cardBgColor
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(AppSpacing.paddingLarge)
-                            .navigationBarsPadding()
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Speaker Notes — Slide ${currentSlideIndex + 1}",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = textColor
-                            )
-                            IconButton(onClick = { isNotesSheetOpen = false }) {
-                                Icon(Icons.Outlined.Close, contentDescription = "Close", tint = textColor)
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
-                        Text(
-                            text = curNotes,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = textColor,
-                            lineHeight = 24.sp,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .verticalScroll(rememberScrollState())
-                        )
-                    }
-                }
-            }
+            PresentationSpeakerNotesSheet(
+                isOpen = isNotesSheetOpen,
+                currentSlideIndex = currentSlideIndex,
+                notes = effectiveSlides.getOrNull(currentSlideIndex)?.notes ?: "",
+                onDismiss = { isNotesSheetOpen = false },
+                cardBgColor = cardBgColor,
+                textColor = textColor
+            )
         }
     }
 }
-
