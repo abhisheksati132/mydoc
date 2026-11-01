@@ -7,6 +7,11 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ### Fixed
 
+- **Theme toggle left list content on the old palette.** Lazy list items did not invalidate when
+  the palette composition local changed, so after flipping the theme the header and nav updated
+  while every card, chip and row kept the previous theme's colors until the tab was re-entered.
+  The palette is now folded into the lazy item keys on Home, Tools and the Files hub, so items
+  rebuild the moment the theme changes.
 - **Scanner layout and chrome.** The camera dialog lays Compose out against the display while its
   window decor sits inside the system bars, so inset padding reported zero and the shutter bar was
   pushed under the navigation bar (the sheet's bottom edge landed at 2534px on a 2274px-tall visible
@@ -22,6 +27,18 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ### Changed
 
+- **Vivid premium redesign.** The editorial print grammar is replaced by a saturated, glowing
+  design language on Home, Files, Tools and the root nav. New tokens in
+  `designsystem/tokens/VividGradients.kt` define seven fixed gradient families (brand, sunset,
+  ocean, forest, gold, grape, fire) plus colored `glow` shadows; `AppColors` gains pink, cyan,
+  amber and green accents and richer light/dark/AMOLED palettes; `AppRadius` softens (cards 16dp,
+  sheets 24dp, pill chips). New primitives in `designsystem/components/VividComponents.kt`:
+  `AuroraBackdrop` (slow-breathing radial blooms behind every tab), `VividRule` (the 3dp spectrum
+  line that closes every header) and `VividIconTile` (gradient plaque with a matching halo).
+  Home opens on a glowing gradient scan hero with a frosted camera disc, three gradient action
+  tiles and soft cards with colored format badges; Tools and Files list hue-coded cards per group
+  and category; the storage readout is a card with a spectrum gauge; selected chips and the active
+  nav pill wear the brand gradient inside a floating pill bar.
 - **Editorial reading surface.** Home, Files, Tools, Settings and the reader chrome now share one
   printed-page grammar instead of separate card systems. New primitives in
   `designsystem/components/EditorialRules.kt` (`EditorialRule`, `EditorialMasthead`,

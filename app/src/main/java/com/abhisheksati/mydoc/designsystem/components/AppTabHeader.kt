@@ -230,8 +230,8 @@ fun AppTabHeader(
             }
         }
 
-        // The masthead rule closes the page title, before any filters or content.
-        EditorialRule()
+        // The gradient rule closes the page title, before any filters or content.
+        VividRule()
 
         // Search Field (animated slide down when active)
         if (searchContent != null) {

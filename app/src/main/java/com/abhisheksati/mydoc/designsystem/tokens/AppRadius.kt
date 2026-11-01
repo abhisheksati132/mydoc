@@ -6,22 +6,24 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Single source of truth for corner radii. No screen may hardcode a radius.
+ * Vivid premium: everything is soft and generous — big radii, pill chips.
  *
- * - micro (6dp): format badges, tiny tags, icon tiles, thumbnails.
- * - pill  (8dp): chips, compact buttons, action pills.
- * - card (12dp): document cards, grouped lists, inputs, snackbars.
- * - large (16dp): hero cards, dialogs, floating bars.
- * - sheet (20dp): bottom sheets and modals (top corners).
- * - xLarge (24dp): large media surfaces, player panels, full sheets.
+ * - micro (8dp): format badges, tiny tags, thumbnails.
+ * - card (16dp): document cards, grouped lists, inputs, snackbars.
+ * - large (20dp): hero cards, dialogs, floating bars.
+ * - sheet (24dp): bottom sheets and modals (top corners).
+ * - xLarge (28dp): large media surfaces, player panels, full sheets.
+ * - pill (28dp): chips, compact buttons, action pills — clamps to a stadium at
+ *   chip heights, and stays a rounded rect for larger shapes (slide elements).
  * - round (999dp): circular buttons, progress tracks, avatars, drag handles.
  */
 object AppRadius {
-    val micro: Dp = 6.dp
-    val pill: Dp = 8.dp
-    val card: Dp = 12.dp
-    val large: Dp = 16.dp
-    val sheet: Dp = 20.dp
-    val xLarge: Dp = 24.dp
+    val micro: Dp = 8.dp
+    val pill: Dp = 28.dp
+    val card: Dp = 16.dp
+    val large: Dp = 20.dp
+    val sheet: Dp = 24.dp
+    val xLarge: Dp = 28.dp
     val round: Dp = 999.dp
 
     val microShape = RoundedCornerShape(micro)

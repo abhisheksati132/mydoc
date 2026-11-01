@@ -7,13 +7,14 @@ import androidx.compose.ui.graphics.Color
 import com.abhisheksati.mydoc.domain.model.MediaKind
 
 /**
- * Single source of truth for MyDoc color. Editorial print studio:
- * warm paper neutrals, ink text, one violet stamp.
+ * Single source of truth for MyDoc color. Vivid premium studio:
+ * clean bright canvas, electric violet anchor, and a full spectrum of
+ * secondary hues (pink, cyan, amber) used as gradients and glowing tiles.
  *
  * Rules:
- * - Neutral paper canvas and surfaces. No navy, teal, or off-brand darks.
- * - Violet accent is the only interactive color; media/format hues are labels, not decoration.
- * - Flat fills + 0.5dp hairlines. No gradients, no drop shadows.
+ * - Every functional area owns a saturated hue; color is information AND joy.
+ * - Gradients are the primary decoration language (see VividGradients).
+ * - Soft colored glows replace hairlines for elevation.
  */
 @Immutable
 data class AppColors(
@@ -26,6 +27,10 @@ data class AppColors(
     val highlight: Color,
     val accent: Color,
     val onAccent: Color,
+    val accentPink: Color = Color(0xFFEC4899),
+    val accentCyan: Color = Color(0xFF06B6D4),
+    val accentAmber: Color = Color(0xFFF59E0B),
+    val accentGreen: Color = Color(0xFF22C55E),
 
     // MediaKind Color Tokens
     val documentKind: Color,
@@ -92,75 +97,81 @@ data class AppColors(
 }
 
 val LightAppColors = AppColors(
-    background = Color(0xFFF7F7F4),
+    background = Color(0xFFF8F8FD),
     surface = Color(0xFFFFFFFF),
-    surfaceMuted = Color(0xFFEFEFEA),
-    line = Color(0xFFE2E2DD),
-    ink = Color(0xFF121212),
-    inkMuted = Color(0xFF55554F),
-    highlight = Color(0xFFE5E3FF),
-    // MyDoc brand violet — not Apple blue. Ours.
-    accent = Color(0xFF5B4FE8),
+    surfaceMuted = Color(0xFFF1F0FA),
+    line = Color(0xFFE4E2F0),
+    ink = Color(0xFF14121F),
+    inkMuted = Color(0xFF5D5A6E),
+    highlight = Color(0xFFE9E4FF),
+    // MyDoc brand violet — electric, saturated, ours.
+    accent = Color(0xFF6C3DF5),
     onAccent = Color(0xFFFFFFFF),
+    accentPink = Color(0xFFEC4899),
+    accentCyan = Color(0xFF06B6D4),
+    accentAmber = Color(0xFFF59E0B),
+    accentGreen = Color(0xFF22C55E),
 
-    documentKind = Color(0xFF5B4FE8),
+    documentKind = Color(0xFF6C3DF5),
     onDocumentKind = Color(0xFFFFFFFF),
-    documentContainer = Color(0xFFEDEBFF),
+    documentContainer = Color(0xFFEDE7FF),
 
-    // Kind hues are glyph strokes on paper, never tile fills: each one clears 4.5:1
-    // against both #FFFFFF and the paper canvas.
-    photoKind = Color(0xFFC2185B),
-    onPhotoKind = Color(0xFFFFE0EF),
-    photoContainer = Color(0xFFFFE0EF),
+    photoKind = Color(0xFFEC4899),
+    onPhotoKind = Color(0xFFFFFFFF),
+    photoContainer = Color(0xFFFFE3F1),
 
-    videoKind = Color(0xFFB4471B),
-    onVideoKind = Color(0xFFFFE3D4),
-    videoContainer = Color(0xFFFFE3D4),
+    videoKind = Color(0xFFF97316),
+    onVideoKind = Color(0xFFFFFFFF),
+    videoContainer = Color(0xFFFFE7D6),
 
-    audioKind = Color(0xFF1F7A4F),
-    onAudioKind = Color(0xFFD4F6E5),
-    audioContainer = Color(0xFFD4F6E5)
+    audioKind = Color(0xFF10B981),
+    onAudioKind = Color(0xFFFFFFFF),
+    audioContainer = Color(0xFFD6F8EC)
 )
 
 val DarkAppColors = AppColors(
-    background = Color(0xFF0E0E0F),
-    surface = Color(0xFF18181A),
-    surfaceMuted = Color(0xFF242426),
-    line = Color(0xFF2A2A2D),
-    ink = Color(0xFFF2F1EC),
-    inkMuted = Color(0xFFA3A29B),
-    highlight = Color(0xFF2A2660),
-    // MyDoc brand violet dark variant
-    accent = Color(0xFF9B93FF),
-    onAccent = Color(0xFF0E0E0F),
+    background = Color(0xFF0C0A14),
+    surface = Color(0xFF171422),
+    surfaceMuted = Color(0xFF221E33),
+    line = Color(0xFF2E2945),
+    ink = Color(0xFFF4F2FF),
+    inkMuted = Color(0xFFA9A4C2),
+    highlight = Color(0xFF322A63),
+    // MyDoc brand violet — neon dark variant
+    accent = Color(0xFFA78BFA),
+    onAccent = Color(0xFF120C26),
+    accentPink = Color(0xFFF472B6),
+    accentCyan = Color(0xFF22D3EE),
+    accentAmber = Color(0xFFFBBF24),
+    accentGreen = Color(0xFF4ADE80),
 
-    documentKind = Color(0xFF9B93FF),
-    onDocumentKind = Color(0xFF0E0E0F),
-    documentContainer = Color(0xFF1D1A42),
+    documentKind = Color(0xFFA78BFA),
+    onDocumentKind = Color(0xFF120C26),
+    documentContainer = Color(0xFF271E56),
 
-    photoKind = Color(0xFFFF9BCB),
-    onPhotoKind = Color(0xFF0E0E0F),
-    photoContainer = Color(0xFF3B1A2B),
+    photoKind = Color(0xFFF472B6),
+    onPhotoKind = Color(0xFF2A0C1B),
+    photoContainer = Color(0xFF42172F),
 
-    videoKind = Color(0xFFFF8F5C),
-    onVideoKind = Color(0xFF0E0E0F),
-    videoContainer = Color(0xFF3A2315),
+    videoKind = Color(0xFFFB923C),
+    onVideoKind = Color(0xFF2A1206),
+    videoContainer = Color(0xFF42240F),
 
-    audioKind = Color(0xFF86E7B8),
-    onAudioKind = Color(0xFF0E0E0F),
-    audioContainer = Color(0xFF12301F)
+    audioKind = Color(0xFF34D399),
+    onAudioKind = Color(0xFF06281C),
+    audioContainer = Color(0xFF10382A)
 )
 
 val BlackAppColors = DarkAppColors.copy(
     background = Color(0xFF000000), // Pure AMOLED zero-nit background
-    surface = Color(0xFF0A0A0C),     // Deep obsidian card surface
-    surfaceMuted = Color(0xFF141416),
-    line = Color(0xFF1E1E22),
-    surfaceContainer = Color(0xFF0A0A0C),
-    surfaceContainerHigh = Color(0xFF141416),
+    surface = Color(0xFF0B0912),     // Deep obsidian card surface
+    surfaceMuted = Color(0xFF161322),
+    line = Color(0xFF221E33),
+    surfaceContainer = Color(0xFF0B0912),
+    surfaceContainerHigh = Color(0xFF161322),
     surfaceContainerLow = Color(0xFF000000),
-    primaryContainer = Color(0xFF141416),
-    secondaryContainer = Color(0xFF141416)
+    primaryContainer = Color(0xFF161322),
+    secondaryContainer = Color(0xFF161322)
 )
 
 val LocalAppColors = staticCompositionLocalOf { LightAppColors }
@@ -168,17 +179,17 @@ val LocalAppColors = staticCompositionLocalOf { LightAppColors }
 fun kindColor(kind: MediaKind, isDark: Boolean = false): Color {
     return if (isDark) {
         when (kind) {
-            MediaKind.DOCUMENT -> Color(0xFF9B93FF)
-            MediaKind.PHOTO -> Color(0xFFFF9BCB)
-            MediaKind.VIDEO -> Color(0xFFFF8F5C)
-            MediaKind.AUDIO -> Color(0xFF86E7B8)
+            MediaKind.DOCUMENT -> Color(0xFFA78BFA)
+            MediaKind.PHOTO -> Color(0xFFF472B6)
+            MediaKind.VIDEO -> Color(0xFFFB923C)
+            MediaKind.AUDIO -> Color(0xFF34D399)
         }
     } else {
         when (kind) {
-            MediaKind.DOCUMENT -> Color(0xFF5B4FE8)
-            MediaKind.PHOTO -> Color(0xFFC2185B)
-            MediaKind.VIDEO -> Color(0xFFB4471B)
-            MediaKind.AUDIO -> Color(0xFF1F7A4F)
+            MediaKind.DOCUMENT -> Color(0xFF6C3DF5)
+            MediaKind.PHOTO -> Color(0xFFEC4899)
+            MediaKind.VIDEO -> Color(0xFFF97316)
+            MediaKind.AUDIO -> Color(0xFF10B981)
         }
     }
 }
@@ -186,48 +197,43 @@ fun kindColor(kind: MediaKind, isDark: Boolean = false): Color {
 fun kindContainer(kind: MediaKind, isDark: Boolean = false): Color {
     return if (isDark) {
         when (kind) {
-            MediaKind.DOCUMENT -> Color(0xFF1D1A42)
-            MediaKind.PHOTO -> Color(0xFF3B1A2B)
-            MediaKind.VIDEO -> Color(0xFF3A2315)
-            MediaKind.AUDIO -> Color(0xFF12301F)
+            MediaKind.DOCUMENT -> Color(0xFF271E56)
+            MediaKind.PHOTO -> Color(0xFF42172F)
+            MediaKind.VIDEO -> Color(0xFF42240F)
+            MediaKind.AUDIO -> Color(0xFF10382A)
         }
     } else {
         when (kind) {
-            MediaKind.DOCUMENT -> Color(0xFFE3E6FF)
-            MediaKind.PHOTO -> Color(0xFFFFE0EF)
-            MediaKind.VIDEO -> Color(0xFFFFE3D4)
-            MediaKind.AUDIO -> Color(0xFFD4F6E5)
+            MediaKind.DOCUMENT -> Color(0xFFEDE7FF)
+            MediaKind.PHOTO -> Color(0xFFFFE3F1)
+            MediaKind.VIDEO -> Color(0xFFFFE7D6)
+            MediaKind.AUDIO -> Color(0xFFD6F8EC)
         }
     }
 }
 
 fun onKindColor(kind: MediaKind, isDark: Boolean = false): Color {
     return if (isDark) {
-        Color(0xFF0E0E0F)
+        Color(0xFF0C0A14)
     } else {
-        when (kind) {
-            MediaKind.DOCUMENT -> Color(0xFFFFFFFF)
-            MediaKind.PHOTO -> Color(0xFFFFE0EF)
-            MediaKind.VIDEO -> Color(0xFFFFE3D4)
-            MediaKind.AUDIO -> Color(0xFFD4F6E5)
-        }
+        Color(0xFFFFFFFF)
     }
 }
 
 fun onKindContainer(kind: MediaKind, isDark: Boolean = false): Color {
     return if (isDark) {
         when (kind) {
-            MediaKind.DOCUMENT -> Color(0xFF9B93FF)
-            MediaKind.PHOTO -> Color(0xFFFF9BCB)
-            MediaKind.VIDEO -> Color(0xFFFF8F5C)
-            MediaKind.AUDIO -> Color(0xFF86E7B8)
+            MediaKind.DOCUMENT -> Color(0xFFA78BFA)
+            MediaKind.PHOTO -> Color(0xFFF472B6)
+            MediaKind.VIDEO -> Color(0xFFFB923C)
+            MediaKind.AUDIO -> Color(0xFF34D399)
         }
     } else {
         when (kind) {
-            MediaKind.DOCUMENT -> Color(0xFF2B2590)
-            MediaKind.PHOTO -> Color(0xFF5A1538)
-            MediaKind.VIDEO -> Color(0xFF5A2508)
-            MediaKind.AUDIO -> Color(0xFF0D4222)
+            MediaKind.DOCUMENT -> Color(0xFF3B1E9E)
+            MediaKind.PHOTO -> Color(0xFF96165B)
+            MediaKind.VIDEO -> Color(0xFF9A3D07)
+            MediaKind.AUDIO -> Color(0xFF0A6847)
         }
     }
 }
