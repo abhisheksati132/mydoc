@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.abhisheksati.mydoc.designsystem.animation.AppMotion
 import com.abhisheksati.mydoc.designsystem.components.AppTopBar
 import com.abhisheksati.mydoc.data.local.PinnedFoldersManager
 import com.abhisheksati.mydoc.data.local.StoragePermissionHelper
@@ -78,8 +79,6 @@ import com.abhisheksati.mydoc.viewmodel.FileManagerViewModel
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import java.io.File
 import com.abhisheksati.mydoc.designsystem.components.showMessage
-
-private enum class FilesPane { RECENTS, BROWSE }
 
 /**
  * Files-first home: Recents and Browse share one header, one storage readout
@@ -105,19 +104,6 @@ fun FilesScreen(
     val storageUiState by storageViewModel.uiState.collectAsState()
     val homeUiState by homeViewModel.uiState.collectAsState()
     val context = LocalContext.current
-
-    // The file manager view model outlives this screen (opening a document
-    // replaces the whole tree), so resume on the pane the user was in.
-    var paneIndex by rememberSaveable {
-        mutableIntStateOf(
-            if (uiState.isBrowsingStorage || uiState.activeCategory != null) {
-                FilesPane.BROWSE.ordinal
-            } else {
-                FilesPane.RECENTS.ordinal
-            }
-        )
-    }
-    val pane = FilesPane.entries[paneIndex]
 
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
     var showNewFolderDialog by remember { mutableStateOf(false) }
@@ -158,15 +144,14 @@ fun FilesScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val insideBrowse = pane == FilesPane.BROWSE &&
-            (uiState.isBrowsingStorage || uiState.activeCategory != null)
+    val insideBrowse = uiState.isBrowsingStorage || uiState.activeCategory != null
     val isBrowsingFolder = uiState.isBrowsingStorage
     val atStorageRoot = uiState.storageVolumes.any { it.path == uiState.currentDirectory.absolutePath } ||
             uiState.currentDirectory.absolutePath == "/storage/emulated/0"
 
     val activeCategory = uiState.activeCategory
     val title = when {
-        !insideBrowse -> "Files"
+        !insideBrowse -> "Library"
         activeCategory != null -> activeCategory.displayName
         atStorageRoot -> uiState.storageVolumes.firstOrNull {
             it.path == uiState.currentDirectory.absolutePath
@@ -175,7 +160,8 @@ fun FilesScreen(
     }
     val subtitle = when {
         insideBrowse -> if (uiState.filteredItems.size == 1) "1 item" else "${uiState.filteredItems.size} items"
-        else -> "${homeUiState.recentLibraryItems.size} recent · ${storageUiState.formattedFree} free"
+        storageUiState.formattedTotal.isNotEmpty() -> "${storageUiState.formattedFree} free of ${storageUiState.formattedTotal}"
+        else -> "Storage & Folders"
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -297,7 +283,6 @@ fun FilesScreen(
                         title = title,
                         subtitle = subtitle,
                         isInsideFolder = insideBrowse,
-                        pane = pane,
                         uiState = uiState,
                         isSearchActive = isSearchActive,
                         onBack = { viewModel.navigateUp() },
@@ -321,28 +306,6 @@ fun FilesScreen(
                             storageViewModel.refresh()
                         }
                     )
-
-                    if (!insideBrowse) {
-                        PrimaryTabRow(
-                            selectedTabIndex = paneIndex,
-                            containerColor = MaterialTheme.colorScheme.background
-                        ) {
-                            Tab(
-                                selected = pane == FilesPane.RECENTS,
-                                onClick = {
-                                    paneIndex = FilesPane.RECENTS.ordinal
-                                    isSearchActive = false
-                                    if (uiState.searchQuery.isNotEmpty()) viewModel.setSearchQuery("")
-                                },
-                                text = { Text("Recents") }
-                            )
-                            Tab(
-                                selected = pane == FilesPane.BROWSE,
-                                onClick = { paneIndex = FilesPane.BROWSE.ordinal },
-                                text = { Text("Browse") }
-                            )
-                        }
-                    }
 
                     if (isSearchActive) {
                         OutlinedTextField(
@@ -380,68 +343,56 @@ fun FilesScreen(
                 }
 
                 Box(modifier = Modifier.weight(1f)) {
-                AnimatedContent(
-                    targetState = pane,
-                    transitionSpec = { fadeIn() togetherWith fadeOut() },
-                    label = "filesPane",
-                    modifier = Modifier.fillMaxSize()
-                ) { activePane ->
-                    when (activePane) {
-                        FilesPane.RECENTS -> RecentsPane(
-                            recentItems = homeUiState.recentLibraryItems,
-                            onOpenItem = onLibraryItemClick,
-                            onItemDetails = onLibraryItemDetails,
-                            onBrowse = {
-                                viewModel.startBrowsingStorage()
-                                paneIndex = FilesPane.BROWSE.ordinal
-                            },
-                            modifier = Modifier.fillMaxSize()
-                        )
-
-                        FilesPane.BROWSE -> {
-                            if (insideBrowse) {
-                                DirectoryPane(
-                                    uiState = uiState,
-                                    onOpenItem = { item ->
-                                        when {
-                                            item.isDirectory -> viewModel.loadDirectory(item.file)
-                                            item.fileType == StorageFileType.ARCHIVE ||
-                                                    item.name.endsWith(".zip", ignoreCase = true) -> {
-                                                actionTarget = item
-                                            }
-                                            else -> onOpenFile(item.file)
+                    AnimatedContent(
+                        targetState = insideBrowse,
+                        transitionSpec = {
+                            val forward = targetState
+                            AppMotion.peerEnter(forward) togetherWith AppMotion.peerExit(forward)
+                        },
+                        label = "libraryPane",
+                        modifier = Modifier.fillMaxSize()
+                    ) { isInside ->
+                        if (isInside) {
+                            DirectoryPane(
+                                uiState = uiState,
+                                onOpenItem = { item ->
+                                    when {
+                                        item.isDirectory -> viewModel.loadDirectory(item.file)
+                                        item.fileType == StorageFileType.ARCHIVE ||
+                                                item.name.endsWith(".zip", ignoreCase = true) -> {
+                                            actionTarget = item
                                         }
-                                    },
-                                    onMoreItem = { actionTarget = it },
-                                    onToggleSelection = { viewModel.toggleSelection(it.file) },
-                                    onToggleView = { viewModel.toggleViewMode() },
-                                    onSort = { field: FileSortField -> viewModel.toggleSort(field) },
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            } else {
-                                BrowseHomePane(
-                                    storageUiState = storageUiState,
-                                    volumes = storageUiState.volumes.ifEmpty { uiState.storageVolumes },
-                                    pinnedFolders = pinnedFolders,
-                                    trashCount = uiState.trashItems.size,
-                                    onBrowseInternal = {
-                                        viewModel.startBrowsingStorage()
-                                    },
-                                    onBrowseVolume = { volume: StorageVolume ->
-                                        viewModel.startBrowsingStorage(volume.file)
-                                    },
-                                    onCategory = { category -> viewModel.selectCategory(category) },
-                                    onFolder = { folder -> viewModel.startBrowsingStorage(folder) },
-                                    onOpenTrash = { viewModel.openTrash() },
-                                    onApps = { showAppManager = true },
-                                    onInsights = { showInsights = true },
-                                    onClean = { showCleaner = true },
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
+                                        else -> onOpenFile(item.file)
+                                    }
+                                },
+                                onMoreItem = { actionTarget = it },
+                                onToggleSelection = { viewModel.toggleSelection(it.file) },
+                                onToggleView = { viewModel.toggleViewMode() },
+                                onSort = { field: FileSortField -> viewModel.toggleSort(field) },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            BrowseHomePane(
+                                storageUiState = storageUiState,
+                                volumes = storageUiState.volumes.ifEmpty { uiState.storageVolumes },
+                                pinnedFolders = pinnedFolders,
+                                trashCount = uiState.trashItems.size,
+                                onBrowseInternal = {
+                                    viewModel.startBrowsingStorage()
+                                },
+                                onBrowseVolume = { volume: StorageVolume ->
+                                    viewModel.startBrowsingStorage(volume.file)
+                                },
+                                onCategory = { category -> viewModel.selectCategory(category) },
+                                onFolder = { folder -> viewModel.startBrowsingStorage(folder) },
+                                onOpenTrash = { viewModel.openTrash() },
+                                onApps = { showAppManager = true },
+                                onInsights = { showInsights = true },
+                                onClean = { showCleaner = true },
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
                     }
-                }
                 }
             }
 
@@ -509,7 +460,6 @@ private fun FilesHeader(
     title: String,
     subtitle: String,
     isInsideFolder: Boolean,
-    pane: FilesPane,
     uiState: FileManagerUiState,
     isSearchActive: Boolean,
     onBack: () -> Unit,
@@ -544,35 +494,33 @@ private fun FilesHeader(
                     Icon(Icons.Outlined.MoreVert, contentDescription = "More options", tint = scheme.onSurface)
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    if (pane == FilesPane.BROWSE) {
-                        DropdownMenuItem(
-                            text = { Text(if (uiState.isGridView) "List view" else "Grid view") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = if (uiState.isGridView) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
-                                    contentDescription = null
-                                )
-                            },
-                            onClick = {
-                                menuOpen = false
-                                onToggleView()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(if (uiState.showHiddenFiles) "Hide hidden files" else "Show hidden files") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = if (uiState.showHiddenFiles) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                                    contentDescription = null
-                                )
-                            },
-                            onClick = {
-                                menuOpen = false
-                                onToggleHidden()
-                            }
-                        )
-                        HorizontalDivider()
-                    }
+                    DropdownMenuItem(
+                        text = { Text(if (uiState.isGridView) "List view" else "Grid view") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = if (uiState.isGridView) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
+                                contentDescription = null
+                            )
+                        },
+                        onClick = {
+                            menuOpen = false
+                            onToggleView()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(if (uiState.showHiddenFiles) "Hide hidden files" else "Show hidden files") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = if (uiState.showHiddenFiles) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                contentDescription = null
+                            )
+                        },
+                        onClick = {
+                            menuOpen = false
+                            onToggleHidden()
+                        }
+                    )
+                    HorizontalDivider()
                     DropdownMenuItem(
                         text = { Text("New folder") },
                         leadingIcon = { Icon(Icons.Outlined.CreateNewFolder, contentDescription = null) },

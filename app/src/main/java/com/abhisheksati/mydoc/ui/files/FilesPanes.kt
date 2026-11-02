@@ -207,7 +207,7 @@ fun BrowseHomePane(
         }
 
         item(key = "browse_categories_header") {
-            FilesSectionHeader(title = "Browse")
+            FilesSectionHeader(title = "Categories")
         }
         item(key = "browse_categories") {
             CategoryShortcutGrid(
@@ -215,13 +215,6 @@ fun BrowseHomePane(
                 onCategory = onCategory,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
-        }
-
-        item(key = "browse_insights_header") {
-            FilesSectionHeader(title = "Storage by type")
-        }
-        item(key = "browse_insights") {
-            StorageBreakdown(storageUiState = storageUiState)
         }
 
         item(key = "browse_locations_header") {
