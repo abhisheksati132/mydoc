@@ -22,7 +22,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowDownward
 import androidx.compose.material.icons.outlined.ArrowUpward
@@ -58,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.FileSortField
 import com.abhisheksati.mydoc.domain.model.LibraryItem
@@ -133,7 +133,7 @@ fun RecentFileRow(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(AppRadius.cardShape)
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -141,8 +141,7 @@ fun RecentFileRow(
     ) {
         LibraryThumbnail(
             item = item,
-            modifier = Modifier.size(width = 44.dp, height = 52.dp),
-            cornerRadius = 10
+            modifier = Modifier.size(width = 44.dp, height = 52.dp)
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(

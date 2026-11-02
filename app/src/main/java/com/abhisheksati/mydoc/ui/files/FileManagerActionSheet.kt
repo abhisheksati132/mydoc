@@ -1,4 +1,4 @@
-package com.abhisheksati.mydoc.ui.filemanager
+package com.abhisheksati.mydoc.ui.files
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -45,7 +45,6 @@ import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.StorageItem
-import com.abhisheksati.mydoc.ui.files.getFileTypeIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

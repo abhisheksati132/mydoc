@@ -47,9 +47,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.abhisheksati.mydoc.data.local.DocumentStreamResolver
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.domain.model.LibraryItem
 import com.abhisheksati.mydoc.domain.model.MediaKind
@@ -121,12 +121,11 @@ private fun tintFor(type: StorageFileType): Color = when (type) {
 @Composable
 fun StorageThumbnail(
     item: StorageItem,
-    modifier: Modifier = Modifier,
-    cornerRadius: Int = 12
+    modifier: Modifier = Modifier
 ) {
     when {
         item.fileType == StorageFileType.IMAGE -> Box(
-            modifier = modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(cornerRadius.dp))
+            modifier = modifier.clip(AppRadius.insetShape)
         ) {
             AsyncImage(
                 model = item.file,
@@ -138,19 +137,16 @@ fun StorageThumbnail(
         item.fileType == StorageFileType.PDF -> PdfThumbnail(
             key = item.path,
             modifier = modifier,
-            cornerRadius = cornerRadius,
             load = { item.file }
         )
         item.fileType == StorageFileType.CODE_TEXT -> TextThumbnail(
             key = item.path,
             modifier = modifier,
-            cornerRadius = cornerRadius,
             load = { readTextFile(item.file) }
         )
         else -> TypePlate(
             type = item.fileType,
-            modifier = modifier,
-            cornerRadius = cornerRadius
+            modifier = modifier
         )
     }
 }
@@ -158,13 +154,12 @@ fun StorageThumbnail(
 @Composable
 fun LibraryThumbnail(
     item: LibraryItem,
-    modifier: Modifier = Modifier,
-    cornerRadius: Int = 12
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     when {
         item.kind == MediaKind.PHOTO -> Box(
-            modifier = modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(cornerRadius.dp))
+            modifier = modifier.clip(AppRadius.insetShape)
         ) {
             AsyncImage(
                 model = item.uri,
@@ -176,13 +171,11 @@ fun LibraryThumbnail(
         item.extension == "pdf" -> PdfThumbnail(
             key = item.uri,
             modifier = modifier,
-            cornerRadius = cornerRadius,
             load = { findLibraryPdf(context, item) }
         )
         item.extension in textPreviewExtensions -> TextThumbnail(
             key = item.uri,
             modifier = modifier,
-            cornerRadius = cornerRadius,
             load = { readLibraryText(context, item) }
         )
         else -> TypePlate(
@@ -193,8 +186,7 @@ fun LibraryThumbnail(
                 MediaKind.DOCUMENT -> genericTypeFor(item.extension)
             },
             badge = item.typeBadge,
-            modifier = modifier,
-            cornerRadius = cornerRadius
+            modifier = modifier
         )
     }
 }
@@ -213,13 +205,12 @@ private fun genericTypeFor(extension: String): StorageFileType = when (extension
 private fun TypePlate(
     type: StorageFileType,
     modifier: Modifier = Modifier,
-    cornerRadius: Int = 12,
     badge: String? = null
 ) {
     val tint = tintFor(type)
     val container = tint.copy(alpha = 0.14f)
     Box(
-        modifier = modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(cornerRadius.dp))
+        modifier = modifier.clip(AppRadius.insetShape)
             .background(container),
         contentAlignment = Alignment.Center
     ) {
@@ -227,7 +218,6 @@ private fun TypePlate(
             Text(
                 text = badge,
                 color = tint,
-                fontSize = 10.sp,
                 style = MaterialTheme.typography.labelSmall
             )
         } else {
@@ -245,7 +235,6 @@ private fun TypePlate(
 private fun PdfThumbnail(
     key: String,
     modifier: Modifier,
-    cornerRadius: Int,
     load: () -> File?
 ) {
     var bitmap by remember(key) { mutableStateOf(pdfThumbnailCache.get(key)) }
@@ -254,7 +243,7 @@ private fun PdfThumbnail(
     }
     Box(
         modifier = modifier
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(cornerRadius.dp))
+            .clip(AppRadius.insetShape)
             .background(Color.White),
         contentAlignment = Alignment.Center
     ) {
@@ -281,7 +270,6 @@ private fun PdfThumbnail(
 private fun TextThumbnail(
     key: String,
     modifier: Modifier,
-    cornerRadius: Int,
     load: () -> String?
 ) {
     var bitmap by remember(key) { mutableStateOf(pdfThumbnailCache.get(key)) }
@@ -290,7 +278,7 @@ private fun TextThumbnail(
     }
     Box(
         modifier = modifier
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(cornerRadius.dp))
+            .clip(AppRadius.insetShape)
             .background(Color.White),
         contentAlignment = Alignment.Center
     ) {

@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.PhotoLibrary
@@ -51,6 +50,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.AppSlider
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import kotlin.math.roundToInt
 
@@ -245,7 +245,7 @@ private fun SheetTab(
                 .height(2.dp)
                 .background(
                     color = if (selected) scheme.primary else Color.Transparent,
-                    shape = RoundedCornerShape(1.dp)
+                    shape = AppRadius.roundShape
                 )
         )
     }

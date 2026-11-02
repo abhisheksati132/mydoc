@@ -50,6 +50,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentReadingType
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxSlide
 import com.abhisheksati.mydoc.rendering.engine.presentation.VisualElementType
 
@@ -404,7 +405,7 @@ fun OutlineSlideCard(
                     HighlightableText(
                         text = slide.title,
                         query = highlightQuery,
-                        fontSize = 20.sp,
+                        fontSize = DocumentReadingType.heading2,
                         fontWeight = FontWeight.Bold,
                         color = textColor,
                         modifier = Modifier.padding(bottom = AppSpacing.paddingMedium)
@@ -434,12 +435,12 @@ fun OutlineSlideCard(
                                     text = "• ",
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary,
-                                    fontSize = 15.sp
+                                    fontSize = DocumentReadingType.body
                                 )
                                 HighlightableText(
                                     text = item,
                                     query = highlightQuery,
-                                    fontSize = 15.sp,
+                                    fontSize = DocumentReadingType.body,
                                     color = textColor
                                 )
                             }

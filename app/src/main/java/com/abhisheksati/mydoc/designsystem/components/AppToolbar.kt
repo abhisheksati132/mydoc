@@ -1,90 +1,84 @@
 package com.abhisheksati.mydoc.designsystem.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TopAppBar
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 
+/**
+ * The single app bar every screen uses, so back affordance, insets, title rhythm and
+ * action placement stay identical across the Files, Settings, viewer and media surfaces.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppToolbar(
+fun AppTopBar(
     title: String,
-    navigationIcon: ImageVector? = null,
-    onNavigationClick: (() -> Unit)? = null,
-    actions: @Composable (RowScope.() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    onBack: (() -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit = {},
+    titleContent: (@Composable () -> Unit)? = null,
+    contentInsets: WindowInsets = TopAppBarDefaults.windowInsets,
+    containerColor: Color = MaterialTheme.colorScheme.surface
 ) {
-    val colors = AppTheme.colors
-    val typography = AppTheme.typography
-
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(colors.background)
-            .statusBarsPadding()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = AppSpacing.small),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (navigationIcon != null && onNavigationClick != null) {
-                IconButton(
-                    onClick = onNavigationClick,
-                    modifier = Modifier.size(AppSpacing.minTouchTarget)
-                ) {
+    val barColors = TopAppBarDefaults.topAppBarColors(
+        containerColor = containerColor,
+        titleContentColor = MaterialTheme.colorScheme.onSurface,
+        navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    TopAppBar(
+        modifier = modifier,
+        title = {
+            if (titleContent != null) {
+                titleContent()
+            } else {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (subtitle != null) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        },
+        navigationIcon = {
+            if (onBack != null) {
+                IconButton(onClick = onBack) {
                     Icon(
-                        imageVector = navigationIcon,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = colors.textPrimary,
-                        modifier = Modifier.size(22.dp)
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Spacer(modifier = Modifier.width(AppSpacing.xSmall))
-            } else {
-                Spacer(modifier = Modifier.width(AppSpacing.small))
             }
-
-            Text(
-                text = title,
-                style = typography.title,
-                color = colors.textPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
-
-            if (actions != null) {
-                actions()
-            }
-        }
-
-        // Standard hairline divider
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(AppSpacing.dividerThickness)
-                .background(colors.divider)
-        )
-    }
+        },
+        actions = actions,
+        colors = barColors,
+        windowInsets = contentInsets
+    )
 }

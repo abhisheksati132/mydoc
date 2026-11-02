@@ -1,6 +1,5 @@
 package com.abhisheksati.mydoc.ui.files
 
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -16,9 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.outlined.DeleteSweep
@@ -62,27 +59,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.abhisheksati.mydoc.designsystem.components.AppTopBar
 import com.abhisheksati.mydoc.data.local.PinnedFoldersManager
 import com.abhisheksati.mydoc.data.local.StoragePermissionHelper
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.domain.model.FileSortField
 import com.abhisheksati.mydoc.domain.model.LibraryItem
 import com.abhisheksati.mydoc.domain.model.StorageFileType
 import com.abhisheksati.mydoc.domain.model.StorageItem
 import com.abhisheksati.mydoc.domain.model.StorageVolume
-import com.abhisheksati.mydoc.ui.filemanager.FileManagerClipboardBar
-import com.abhisheksati.mydoc.ui.filemanager.FileManagerOverlays
-import com.abhisheksati.mydoc.ui.filemanager.StoragePermissionBanner
-import com.abhisheksati.mydoc.ui.filemanager.shareFiles
 import com.abhisheksati.mydoc.ui.storage.StorageViewModel
 import com.abhisheksati.mydoc.viewmodel.FileManagerUiState
 import com.abhisheksati.mydoc.viewmodel.FileManagerViewModel
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import java.io.File
+import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 private enum class FilesPane { RECENTS, BROWSE }
 
@@ -186,7 +181,7 @@ fun FilesScreen(
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let {
-            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            context.showMessage(it)
             viewModel.consumeMessage()
         }
     }
@@ -355,7 +350,7 @@ fun FilesScreen(
                             placeholder = { Text("Search this folder") },
                             leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
                             singleLine = true,
-                            shape = RoundedCornerShape(28.dp),
+                            shape = AppRadius.pillShape,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -529,126 +524,97 @@ private fun FilesHeader(
     val scheme = MaterialTheme.colorScheme
     var menuOpen by remember { mutableStateOf(false) }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (isInsideFolder) {
-            IconButton(onClick = onBack) {
+    AppTopBar(
+        title = title,
+        subtitle = subtitle,
+        onBack = if (isInsideFolder) onBack else null,
+        contentInsets = WindowInsets(0),
+        actions = {
+            IconButton(onClick = onSearch) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = "Back",
-                    tint = scheme.onSurface
+                    imageVector = Icons.Outlined.Search,
+                    contentDescription = "Search",
+                    tint = if (isSearchActive) scheme.primary else scheme.onSurface
                 )
             }
-        }
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = if (isInsideFolder) 0.dp else 12.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                color = scheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = scheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
 
-        IconButton(onClick = onSearch) {
-            Icon(
-                imageVector = Icons.Outlined.Search,
-                contentDescription = "Search",
-                tint = if (isSearchActive) scheme.primary else scheme.onSurface
-            )
-        }
-
-        Box {
-            IconButton(onClick = { menuOpen = true }) {
-                Icon(Icons.Outlined.MoreVert, contentDescription = "More options", tint = scheme.onSurface)
-            }
-            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                if (pane == FilesPane.BROWSE) {
+            Box {
+                IconButton(onClick = { menuOpen = true }) {
+                    Icon(Icons.Outlined.MoreVert, contentDescription = "More options", tint = scheme.onSurface)
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    if (pane == FilesPane.BROWSE) {
+                        DropdownMenuItem(
+                            text = { Text(if (uiState.isGridView) "List view" else "Grid view") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = if (uiState.isGridView) Icons.Outlined.ViewList else Icons.Outlined.GridView,
+                                    contentDescription = null
+                                )
+                            },
+                            onClick = {
+                                menuOpen = false
+                                onToggleView()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(if (uiState.showHiddenFiles) "Hide hidden files" else "Show hidden files") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = if (uiState.showHiddenFiles) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                    contentDescription = null
+                                )
+                            },
+                            onClick = {
+                                menuOpen = false
+                                onToggleHidden()
+                            }
+                        )
+                        HorizontalDivider()
+                    }
                     DropdownMenuItem(
-                        text = { Text(if (uiState.isGridView) "List view" else "Grid view") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = if (uiState.isGridView) Icons.Outlined.ViewList else Icons.Outlined.GridView,
-                                contentDescription = null
-                            )
-                        },
+                        text = { Text("New folder") },
+                        leadingIcon = { Icon(Icons.Outlined.CreateNewFolder, contentDescription = null) },
                         onClick = {
                             menuOpen = false
-                            onToggleView()
+                            onNewFolder()
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text(if (uiState.showHiddenFiles) "Hide hidden files" else "Show hidden files") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = if (uiState.showHiddenFiles) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                                contentDescription = null
-                            )
-                        },
+                        text = { Text("New file") },
+                        leadingIcon = { Icon(Icons.Outlined.NoteAdd, contentDescription = null) },
                         onClick = {
                             menuOpen = false
-                            onToggleHidden()
+                            onNewFile()
                         }
                     )
                     HorizontalDivider()
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                if (uiState.trashItems.isNotEmpty()) "Recycle Bin (${uiState.trashItems.size})" else "Recycle Bin"
+                            )
+                        },
+                        leadingIcon = { Icon(Icons.Outlined.DeleteSweep, contentDescription = null) },
+                        onClick = {
+                            menuOpen = false
+                            onOpenTrash()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Refresh") },
+                        leadingIcon = { Icon(Icons.Outlined.Refresh, contentDescription = null) },
+                        onClick = {
+                            menuOpen = false
+                            onRefresh()
+                        }
+                    )
                 }
-                DropdownMenuItem(
-                    text = { Text("New folder") },
-                    leadingIcon = { Icon(Icons.Outlined.CreateNewFolder, contentDescription = null) },
-                    onClick = {
-                        menuOpen = false
-                        onNewFolder()
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("New file") },
-                    leadingIcon = { Icon(Icons.Outlined.NoteAdd, contentDescription = null) },
-                    onClick = {
-                        menuOpen = false
-                        onNewFile()
-                    }
-                )
-                HorizontalDivider()
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            if (uiState.trashItems.isNotEmpty()) "Recycle Bin (${uiState.trashItems.size})" else "Recycle Bin"
-                        )
-                    },
-                    leadingIcon = { Icon(Icons.Outlined.DeleteSweep, contentDescription = null) },
-                    onClick = {
-                        menuOpen = false
-                        onOpenTrash()
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Refresh") },
-                    leadingIcon = { Icon(Icons.Outlined.Refresh, contentDescription = null) },
-                    onClick = {
-                        menuOpen = false
-                        onRefresh()
-                    }
-                )
+            }
+
+            IconButton(onClick = onSettingsClick) {
+                Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = scheme.onSurface)
             }
         }
-
-        IconButton(onClick = onSettingsClick) {
-            Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = scheme.onSurface)
-        }
-    }
+    )
 }

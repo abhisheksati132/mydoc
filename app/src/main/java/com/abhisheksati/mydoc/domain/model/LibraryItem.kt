@@ -28,6 +28,11 @@ data class LibraryItem(
     val durationMs: Long = 0L,
     val progressFraction: Float = 0f
 ) {
+    // A document indexed by MediaStore appears as file://… in a directory scan but keeps
+    // the content://… URI it was opened with in the recents table, so distinctBy(uri)
+    // cannot see that the two rows are one file. Name+size+kind survives that split.
+    val identityKey: String = "$name|$sizeBytes|$kind"
+
     val extension: String = run {
         val dot = name.lastIndexOf('.')
         if (dot != -1 && dot < name.length - 1) name.substring(dot + 1).lowercase(Locale.ROOT) else ""

@@ -80,6 +80,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 @Composable
 fun PhotoViewerScreen(
@@ -315,7 +316,7 @@ fun PhotoViewerScreen(
                                     try {
                                         context.startActivity(Intent.createChooser(openIntent, "Open with"))
                                     } catch (_: Exception) {
-                                        Toast.makeText(context, "No app found to open this image", Toast.LENGTH_SHORT).show()
+                                        context.showMessage("No app found to open this image")
                                     }
                                 }
                             )
@@ -334,7 +335,7 @@ fun PhotoViewerScreen(
                                     try {
                                         context.startActivity(Intent.createChooser(setAsIntent, "Set as"))
                                     } catch (_: Exception) {
-                                        Toast.makeText(context, "Unable to set wallpaper", Toast.LENGTH_SHORT).show()
+                                        context.showMessage("Unable to set wallpaper")
                                     }
                                 }
                             )
@@ -515,7 +516,7 @@ fun PhotoViewerScreen(
                             }
                         }
                         if (success) {
-                            Toast.makeText(context, "Photo moved to Recycle Bin", Toast.LENGTH_SHORT).show()
+                            context.showMessage("Photo moved to Recycle Bin")
                             onDeletePhoto?.invoke(itemToDelete)
                             val idx = photoList.indexOf(itemToDelete)
                             if (idx >= 0) {
@@ -525,7 +526,7 @@ fun PhotoViewerScreen(
                                 onBackClick()
                             }
                         } else {
-                            Toast.makeText(context, "Failed to move photo to Recycle Bin", Toast.LENGTH_SHORT).show()
+                            context.showMessage("Failed to move photo to Recycle Bin")
                         }
                     }
                 },

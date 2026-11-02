@@ -37,6 +37,7 @@ import com.abhisheksati.mydoc.tools.appmanager.AppInfoItem
 import com.abhisheksati.mydoc.tools.appmanager.AppManagerHelper
 import java.io.File
 import kotlinx.coroutines.launch
+import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -213,13 +214,9 @@ fun AppManagerSheet(
                                     val result = appHelper.extractApk(app)
                                     extractingPackage = null
                                     result.onSuccess { file ->
-                                        Toast.makeText(
-                                            context,
-                                            "Extracted to Downloads/MyDoc/ExtractedAPKs/${file.name}",
-                                            Toast.LENGTH_LONG
-                                        ).show()
+                                        context.showMessage("Extracted to Downloads/MyDoc/ExtractedAPKs/${file.name}", long = true)
                                     }.onFailure { err ->
-                                        Toast.makeText(context, "Failed: ${err.message}", Toast.LENGTH_SHORT).show()
+                                        context.showMessage("Failed: ${err.message}")
                                     }
                                 }
                             },
@@ -231,7 +228,7 @@ fun AppManagerSheet(
                                     result.onSuccess { file ->
                                         shareApk(context, file)
                                     }.onFailure { err ->
-                                        Toast.makeText(context, "Extract error: ${err.message}", Toast.LENGTH_SHORT).show()
+                                        context.showMessage("Extract error: ${err.message}")
                                     }
                                 }
                             },
@@ -395,7 +392,7 @@ private fun shareApk(context: Context, apkFile: File) {
         }
         context.startActivity(Intent.createChooser(shareIntent, "Share APK"))
     } catch (e: Exception) {
-        Toast.makeText(context, "Share error: ${e.message}", Toast.LENGTH_SHORT).show()
+        context.showMessage("Share error: ${e.message}")
     }
 }
 

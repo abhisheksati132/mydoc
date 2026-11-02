@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.CallSplit
 import androidx.compose.material.icons.outlined.AllInclusive
@@ -58,6 +57,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.tools.model.ToolGroup
 import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
@@ -161,7 +161,7 @@ fun ToolsScreen(
                     }
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(28.dp),
+                shape = AppRadius.pillShape,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -301,7 +301,7 @@ private fun ToolRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(AppRadius.cardShape)
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -310,7 +310,7 @@ private fun ToolRow(
         Box(
             modifier = Modifier
                 .size(44.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(AppRadius.insetShape)
                 .background(scheme.surfaceContainerHigh),
             contentAlignment = Alignment.Center
         ) {

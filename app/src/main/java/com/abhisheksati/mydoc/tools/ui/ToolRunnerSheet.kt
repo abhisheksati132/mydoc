@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -21,7 +20,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
@@ -67,6 +65,7 @@ import com.abhisheksati.mydoc.tools.ui.components.ToolOptionsSection
 import com.abhisheksati.mydoc.tools.viewmodel.ToolExecutionUiState
 import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
 import java.io.File
+import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -123,10 +122,10 @@ fun ToolRunnerSheet(
                 context = context,
                 destinationUri = destUri,
                 onSuccess = {
-                    Toast.makeText(context, "Saved successfully.", Toast.LENGTH_SHORT).show()
+                    context.showMessage("Saved successfully.")
                 },
                 onError = { err ->
-                    Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+                    context.showMessage(err, long = true)
                 }
             )
         }
@@ -230,7 +229,7 @@ fun ToolRunnerSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = AppRadius.cardShape
                     ) {
                         Text(text = "Run ${tool.title}", style = typography.titleSmall)
                     }
@@ -301,7 +300,7 @@ fun ToolRunnerSheet(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(52.dp),
-                            shape = RoundedCornerShape(16.dp)
+                            shape = AppRadius.cardShape
                         ) {
                             Text(text = "Try again", style = typography.titleSmall)
                         }
@@ -355,7 +354,7 @@ private fun IconPlate(
     Box(
         modifier = modifier
             .size(40.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(AppRadius.insetShape)
             .background(scheme.surfaceContainerHigh),
         contentAlignment = Alignment.Center
     ) {
@@ -394,7 +393,7 @@ private fun InputFilesSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(64.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(AppRadius.cardShape)
                     .background(scheme.surfaceContainerHigh)
                     .clickable {
                         if (tool.requiresMultipleInputFiles) onPickMultiple() else onPickSingle()
@@ -424,7 +423,7 @@ private fun InputFilesSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(AppSpacing.minTouchTarget + 8.dp)
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(AppRadius.cardShape)
                         .background(scheme.surfaceContainerHigh)
                         .padding(start = 12.dp, end = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -437,7 +436,7 @@ private fun InputFilesSection(
                         Box(
                             modifier = Modifier
                                 .size(32.dp)
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(AppRadius.insetShape)
                                 .background(scheme.surfaceContainerHighest),
                             contentAlignment = Alignment.Center
                         ) {
@@ -473,7 +472,7 @@ private fun InputFilesSection(
                 OutlinedButton(
                     onClick = onAddMore,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = AppRadius.cardShape
                 ) {
                     Text(text = "Add more files", style = typography.titleSmall)
                 }
@@ -530,7 +529,7 @@ private fun RunningProgressSection(
         OutlinedButton(
             onClick = onCancel,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp)
+            shape = AppRadius.cardShape
         ) {
             Text(text = "Cancel", style = typography.titleSmall)
         }
@@ -564,7 +563,7 @@ private fun SuccessVerificationSection(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppRadius.cardShape)
                 .background(scheme.surfaceContainerHigh)
                 .padding(16.dp)
         ) {
@@ -631,7 +630,7 @@ private fun SuccessVerificationSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
-            shape = RoundedCornerShape(16.dp)
+            shape = AppRadius.cardShape
         ) {
             Icon(Icons.Outlined.Save, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(8.dp))
@@ -649,7 +648,7 @@ private fun SuccessVerificationSection(
                 modifier = Modifier
                     .weight(1f)
                     .height(52.dp),
-                shape = RoundedCornerShape(16.dp),
+                shape = AppRadius.cardShape,
                 contentPadding = PaddingValues(horizontal = 12.dp)
             ) {
                 Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -662,7 +661,7 @@ private fun SuccessVerificationSection(
                 modifier = Modifier
                     .weight(1f)
                     .height(52.dp),
-                shape = RoundedCornerShape(16.dp),
+                shape = AppRadius.cardShape,
                 contentPadding = PaddingValues(horizontal = 12.dp)
             ) {
                 Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(18.dp))

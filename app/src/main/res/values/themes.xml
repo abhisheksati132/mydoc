@@ -5,4 +5,13 @@
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowBackground">@color/app_window_background</item>
     </style>
+
+    <!-- Starting theme. The system draws this before the process is ready, so it is the
+         only place the brand mark can appear; Theme.MyDoc takes over at postSplashScreenTheme. -->
+    <style name="Theme.MyDoc.Splash" parent="Theme.MyDoc">
+        <item name="windowSplashScreenBackground">@color/app_window_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/app_splash_icon</item>
+        <item name="windowSplashScreenAnimationDuration">600</item>
+        <item name="postSplashScreenTheme">@style/Theme.MyDoc</item>
+    </style>
 </resources>

@@ -61,6 +61,7 @@ import com.abhisheksati.mydoc.ui.viewer.controls.rememberZoomState
 import com.abhisheksati.mydoc.viewmodel.ViewerViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -518,28 +519,28 @@ fun PdfViewerScreen(
             onToggleBookmark = {
                 val added = app?.settingsRepository?.toggleBookmark(document.uri, state.currentPage) ?: false
                 bookmarks = app?.settingsRepository?.getBookmarks(document.uri) ?: emptySet()
-                Toast.makeText(context, if (added) "Bookmarked page ${state.currentPage + 1}" else "Bookmark removed", Toast.LENGTH_SHORT).show()
+                context.showMessage(if (added) "Bookmarked page ${state.currentPage + 1}" else "Bookmark removed")
             },
             onToolsClick = { isToolsSheetOpen = true },
             onOcrClick = {
                 if (!isOcrRunning) {
                     isOcrRunning = true
-                    Toast.makeText(context, "Extracting text from page ${state.currentPage + 1}...", Toast.LENGTH_SHORT).show()
+                    context.showMessage("Extracting text from page ${state.currentPage + 1}...")
                     coroutineScope.launch {
                         try {
                             val pageBmp = viewModel.renderPageBitmap(state.currentPage, 2.0f)
                             if (pageBmp != null) {
                                 val text = ocrEngine.recognizeText(pageBmp)
                                 if (text.isBlank()) {
-                                    Toast.makeText(context, "No text detected on this page", Toast.LENGTH_SHORT).show()
+                                    context.showMessage("No text detected on this page")
                                 } else {
                                     ocrExtractedText = text
                                 }
                             } else {
-                                Toast.makeText(context, "Unable to render page for OCR", Toast.LENGTH_SHORT).show()
+                                context.showMessage("Unable to render page for OCR")
                             }
                         } catch (e: Exception) {
-                            Toast.makeText(context, "OCR failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                            context.showMessage("OCR failed: ${e.message}")
                         } finally {
                             isOcrRunning = false
                         }
@@ -560,7 +561,7 @@ fun PdfViewerScreen(
                                 currentTtsText = ocr
                                 isTtsVisible = true
                             } else {
-                                Toast.makeText(context, "No text detected on this page to read", Toast.LENGTH_SHORT).show()
+                                context.showMessage("No text detected on this page to read")
                             }
                         }
                     }

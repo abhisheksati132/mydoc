@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -105,6 +104,7 @@ import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 enum class ScanAspectMode(val label: String, val ratio: Float) {
     DOCUMENT("Document", 0.71f),
@@ -171,7 +171,7 @@ fun CameraScanSheet(
         ) { granted ->
             hasCameraPermission = granted
             if (!granted) {
-                Toast.makeText(context, "Camera permission is required to scan documents.", Toast.LENGTH_SHORT).show()
+                context.showMessage("Camera permission is required to scan documents.")
                 onDismiss()
             }
         }
@@ -215,11 +215,11 @@ fun CameraScanSheet(
                                 val f = capturedFiles[pageIdx]
                                 capturedFiles.removeAt(pageIdx)
                                 capturedFiles.add(pageIdx, f)
-                                Toast.makeText(context, "Page ${pageIdx + 1} deskewed & cropped.", Toast.LENGTH_SHORT).show()
+                                context.showMessage("Page ${pageIdx + 1} deskewed & cropped.")
                             }
                         } catch (e: Exception) {
                             withContext(Dispatchers.Main) {
-                                Toast.makeText(context, "Failed to save: ${e.message}", Toast.LENGTH_SHORT).show()
+                                context.showMessage("Failed to save: ${e.message}")
                             }
                         }
                     }
@@ -302,7 +302,7 @@ fun CameraScanSheet(
                             )
                             cameraControl = camera.cameraControl
                         } catch (e: Exception) {
-                            Toast.makeText(ctx, "Failed to start camera: ${e.message}", Toast.LENGTH_SHORT).show()
+                            ctx.showMessage("Failed to start camera: ${e.message}")
                         }
                     }, ContextCompat.getMainExecutor(ctx))
 
@@ -707,7 +707,7 @@ fun CameraScanSheet(
 
                                             override fun onError(exception: ImageCaptureException) {
                                                 isCapturing = false
-                                                Toast.makeText(context, "Capture failed: ${exception.message}", Toast.LENGTH_SHORT).show()
+                                                context.showMessage("Capture failed: ${exception.message}")
                                             }
                                         }
                                     )

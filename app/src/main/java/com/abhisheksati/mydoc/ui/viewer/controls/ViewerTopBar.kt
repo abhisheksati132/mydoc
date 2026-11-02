@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.components.AppTopBar
 import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
 
 /**
@@ -84,45 +85,12 @@ fun ViewerTopBar(
         ) + fadeOut(spring(stiffness = Spring.StiffnessMediumLow)),
         modifier = modifier
     ) {
-        Surface(color = scheme.surface) {
-            Column(modifier = Modifier.fillMaxWidth().statusBarsPadding()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp)
-                        .padding(horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "Navigate back",
-                            tint = scheme.onSurface
-                        )
-                    }
-
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = 8.dp)
-                    ) {
-                        Text(
-                            text = formatMiddleTruncated(title, maxChars = 30),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = scheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        if (pageCount > 0) {
-                            Text(
-                                text = "Page ${currentPage + 1} of $pageCount",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = scheme.onSurfaceVariant,
-                                maxLines = 1
-                            )
-                        }
-                    }
-
+        Column(modifier = Modifier.fillMaxWidth()) {
+            AppTopBar(
+                title = formatMiddleTruncated(title, maxChars = 30),
+                subtitle = if (pageCount > 0) "Page ${currentPage + 1} of $pageCount" else null,
+                onBack = onBackClick,
+                actions = {
                     IconButton(onClick = onSearchClick) {
                         Icon(
                             imageVector = Icons.Outlined.Search,
@@ -228,10 +196,10 @@ fun ViewerTopBar(
                         }
                     }
                 }
-                }
-
-                HorizontalDivider(color = scheme.outlineVariant)
             }
+        )
+
+            HorizontalDivider(color = scheme.outlineVariant)
         }
     }
 }

@@ -22,7 +22,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.outlined.Close
@@ -51,6 +50,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -177,7 +177,7 @@ fun PageGridSheet(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(AppRadius.insetShape)
                             .clickable {
                                 onPageSelected(pageIndex)
                                 onDismiss()
@@ -188,12 +188,12 @@ fun PageGridSheet(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(0.707f)
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(AppRadius.microShape)
                                 .background(scheme.surfaceContainerHigh)
                                 .border(
                                     width = if (isCurrent) 2.dp else 1.dp,
                                     color = if (isCurrent) scheme.primary else scheme.outlineVariant,
-                                    shape = RoundedCornerShape(8.dp)
+                                    shape = AppRadius.microShape
                                 ),
                             contentAlignment = Alignment.Center
                         ) {

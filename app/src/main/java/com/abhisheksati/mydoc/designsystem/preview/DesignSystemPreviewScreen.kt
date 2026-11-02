@@ -43,7 +43,7 @@ import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
 import com.abhisheksati.mydoc.designsystem.components.AppLinearProgress
 import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
-import com.abhisheksati.mydoc.designsystem.components.AppToolbar
+import com.abhisheksati.mydoc.designsystem.components.AppTopBar
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
@@ -69,10 +69,9 @@ fun DesignSystemPreviewScreen(
             color = colors.background
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                AppToolbar(
+                AppTopBar(
                     title = "Design System Showcase",
-                    navigationIcon = Icons.AutoMirrored.Outlined.ArrowBack,
-                    onNavigationClick = onBackClick,
+                    onBack = onBackClick,
                     actions = {
                         IconButton(
                             onClick = { isDarkTheme = !isDarkTheme },

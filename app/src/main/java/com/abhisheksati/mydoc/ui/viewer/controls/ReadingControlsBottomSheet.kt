@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.net.Uri
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -62,6 +61,7 @@ import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
+import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 /**
  * Consolidated Appearance Bottom Sheet.
@@ -386,7 +386,7 @@ fun ReadingControlsBottomSheet(
                         try {
                             context.startActivity(Intent.createChooser(sendIntent, "Open with"))
                         } catch (_: Exception) {
-                            Toast.makeText(context, "No app available to open file", Toast.LENGTH_SHORT).show()
+                            context.showMessage("No app available to open file")
                         }
                     },
                     modifier = Modifier.weight(1f)

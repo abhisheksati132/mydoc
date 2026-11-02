@@ -67,6 +67,7 @@ import com.abhisheksati.mydoc.domain.model.MediaKind
 import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 @Composable
 fun AudioPlayerScreen(
@@ -124,7 +125,7 @@ fun AudioPlayerScreen(
                 isPlaying = true
             }
         } catch (e: Exception) {
-            Toast.makeText(context, "Cannot play audio: ${e.message}", Toast.LENGTH_SHORT).show()
+            context.showMessage("Cannot play audio: ${e.message}")
         }
 
         onDispose {

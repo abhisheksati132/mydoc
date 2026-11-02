@@ -5,6 +5,52 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+### Added
+
+- **`AppTopBar`, one top-bar wrapper.** Files, Settings, spotlight search and the viewer header now
+  come from a single component: title and subtitle slots, action slot, container colour and bar
+  insets are declared once instead of re-cut per screen.
+- **`AppMessages` snackbar bus.** `Context.showMessage(text)` replaced all 54 `Toast.makeText`
+  calls across 19 files, rendered by one `AppSnackbarHost` at the activity root. Toasts ignored the
+  app theme, landed wherever the system put them and could not be dismissed; the host renders them
+  themed, in position and dismissible. Screens that need an action (trash undo) keep a local host.
+- **A designed splash.** `androidx.core:core-splashscreen` with a purpose-built document mark on a
+  plate matched to the window background, declared in both the compat and the API 31+ platform
+  attribute sets. The system splash previously showed the four-pill launcher icon. The mark is held
+  until the first Compose frame with a 1200 ms deadline, so a stalled first frame cannot trap the
+  user on the splash.
+- **`UnlabeledTapTarget` lint rule** (`lint-rules/`, wired through `lintChecks`) reports
+  `IconButton`, FAB and clickable surfaces whose `contentDescription` is null or missing, so an
+  unlabeled control can no longer be merged.
+- **`AppRadius.inset` (12dp) and `DocumentReadingType`.** The radius scale now steps cleanly
+  8/12/16/20/24/28 with a named tier for elements nested inside a card, and the reader's document
+  text sizes (heading levels, body, table cells) live in the token layer rather than in the views.
+- **`LibraryItemTest`** covers the identity key the search list dedupes on.
+
+### Changed
+
+- **Spotlight search is a routed screen.** It was a `Dialog` with `usePlatformDefaultWidth = false`
+  plus its own system-bar overlay — a whole screen dressed as a modal. It now shares the activity's
+  navigation, so back, insets and the header behave like every other destination. Trash, camera
+  capture and the cropper stay dialogs: they are modal tasks, not places.
+- **One back handler instead of seven.** The mutually guarded `BackHandler` stack collapsed into a
+  single ordered pop over the active-screen state.
+- **`ui/filemanager` is `ui/files`.** The file-manager cluster moved in with its owner.
+- **Every literal corner radius and font size in the app layer is a token.** 45
+  `RoundedCornerShape(<n>.dp)` and 14 `.sp` literals were folded onto `AppRadius` and the type
+  scale. Off-scale radii snapped to the nearest step (10/14 → 12, 18 → 16, 22 → 20), the 2dp tab
+  indicator's 1dp radius became `roundShape` (clamping makes them identical), and thumbnails take
+  one radius from the scale instead of threading a `cornerRadius: Int` through five composables.
+
+### Fixed
+
+- **Search could list one document twice, and its header count disagreed with the list.** Results
+  are deduped by identity and the count reads the same collection the list renders, so the two can
+  no longer diverge. The list key moved to the identity as well, which keeps Compose state attached
+  to the right row.
+- **The typed-signature placeholder resized the moment you typed.** The empty state was 20sp over a
+  32sp input; placeholder and field now share one `displaySmall` italic style.
+
 ## [1.5.1] — 2026-11-02
 
 Range: `v1.5.0..v1.5.1`.

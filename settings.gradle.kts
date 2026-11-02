@@ -18,3 +18,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "mydoc"
 include(":app")
+include(":lint-rules")

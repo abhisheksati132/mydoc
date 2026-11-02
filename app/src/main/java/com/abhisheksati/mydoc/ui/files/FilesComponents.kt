@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
@@ -55,6 +54,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.domain.model.StorageFileType
 import com.abhisheksati.mydoc.domain.model.StorageItem
@@ -114,7 +114,7 @@ fun StorageOverviewCard(
     val scheme = MaterialTheme.colorScheme
     Card(
         onClick = onBrowse,
-        shape = RoundedCornerShape(22.dp),
+        shape = AppRadius.largeShape,
         colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainerLow),
         modifier = modifier.fillMaxWidth()
     ) {
@@ -194,7 +194,7 @@ fun CategoryTile(
     val scheme = MaterialTheme.colorScheme
     Card(
         onClick = onClick,
-        shape = RoundedCornerShape(18.dp),
+        shape = AppRadius.cardShape,
         colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainerLow),
         modifier = modifier
     ) {
@@ -202,7 +202,7 @@ fun CategoryTile(
             Box(
                 modifier = Modifier
                     .size(36.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(AppRadius.insetShape)
                     .background(scheme.secondaryContainer),
                 contentAlignment = Alignment.Center
             ) {
@@ -242,7 +242,7 @@ fun FolderPlate(modifier: Modifier = Modifier, size: Int = 44) {
     Box(
         modifier = modifier
             .size(size.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(AppRadius.insetShape)
             .background(scheme.secondaryContainer),
         contentAlignment = Alignment.Center
     ) {
@@ -273,7 +273,7 @@ fun FileRow(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(AppRadius.cardShape)
             .background(if (isSelected) scheme.primaryContainer else scheme.background)
             .combinedClickable(
                 onClick = onClick,
@@ -292,8 +292,7 @@ fun FileRow(
             StorageThumbnail(
                 item = item,
                 modifier = Modifier
-                    .size(width = 44.dp, height = 52.dp),
-                cornerRadius = 10
+                    .size(width = 44.dp, height = 52.dp)
             )
         }
 
@@ -355,7 +354,7 @@ fun FileGridCell(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
+            .clip(AppRadius.cardShape)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = {
@@ -369,7 +368,7 @@ fun FileGridCell(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .clip(RoundedCornerShape(14.dp))
+                .clip(AppRadius.insetShape)
                 .background(if (isSelected) scheme.primaryContainer else scheme.surfaceContainerLow)
         ) {
             if (item.isDirectory) {
@@ -384,8 +383,7 @@ fun FileGridCell(
             } else {
                 StorageThumbnail(
                     item = item,
-                    modifier = Modifier.fillMaxSize(),
-                    cornerRadius = 14
+                    modifier = Modifier.fillMaxSize()
                 )
                 if (isSelected) {
                     Box(
@@ -438,7 +436,7 @@ fun LocationRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(AppRadius.cardShape)
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -447,7 +445,7 @@ fun LocationRow(
         Box(
             modifier = Modifier
                 .size(44.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(AppRadius.insetShape)
                 .background(scheme.surfaceContainerHigh),
             contentAlignment = Alignment.Center
         ) {
@@ -637,7 +635,7 @@ fun BreadcrumbRow(
                 style = MaterialTheme.typography.labelLarge,
                 color = if (isLast) scheme.onSurface else scheme.onSurfaceVariant,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(AppRadius.microShape)
                     .clickable(onClick = onClick)
                     .padding(horizontal = 6.dp, vertical = 4.dp)
             )

@@ -5,8 +5,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.KeyEvent
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -29,9 +29,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.FileProvider
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.abhisheksati.mydoc.designsystem.components.AppSnackbarHost
 import com.abhisheksati.mydoc.data.local.AppThemeMode
 import com.abhisheksati.mydoc.designsystem.animation.AppMotion
 import com.abhisheksati.mydoc.designsystem.animation.LocalAnimatedVisibilityScope
@@ -49,6 +51,7 @@ import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.tools.ui.ToolRunnerSheet
 import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
 import com.abhisheksati.mydoc.ui.home.HomeScreen
+import com.abhisheksati.mydoc.ui.search.SpotlightSearchSheet
 import com.abhisheksati.mydoc.ui.settings.SettingsScreen
 import com.abhisheksati.mydoc.ui.viewer.DocumentViewerScreen
 import com.abhisheksati.mydoc.update.UpdateManager
@@ -56,6 +59,7 @@ import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import java.io.File
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 class MainActivity : ComponentActivity() {
@@ -64,6 +68,7 @@ class MainActivity : ComponentActivity() {
         data object Lock : ActiveScreen
         data object DesignSystemPreview : ActiveScreen
         data object Settings : ActiveScreen
+        data object Search : ActiveScreen
         data class Document(val document: DocumentFile) : ActiveScreen
         data class Photo(val item: com.abhisheksati.mydoc.domain.model.MediaItem, val allPhotos: List<com.abhisheksati.mydoc.domain.model.MediaItem>) : ActiveScreen
         data class Video(val item: com.abhisheksati.mydoc.domain.model.MediaItem) : ActiveScreen
@@ -75,8 +80,10 @@ class MainActivity : ComponentActivity() {
         this is ActiveScreen.Document || this is ActiveScreen.Photo ||
             this is ActiveScreen.Video || this is ActiveScreen.Audio
 
-    private fun ActiveScreen.isSettings(): Boolean =
-        this is ActiveScreen.Settings || this is ActiveScreen.DesignSystemPreview
+    // Peer screens slide in from the side rather than carrying a shared element.
+    private fun ActiveScreen.isPeer(): Boolean =
+        this is ActiveScreen.Settings || this is ActiveScreen.DesignSystemPreview ||
+            this is ActiveScreen.Search
 
     companion object {
         const val ACTION_QUICK_SCAN = "com.abhisheksati.mydoc.action.QUICK_SCAN"
@@ -109,10 +116,20 @@ class MainActivity : ComponentActivity() {
     private var currentVideo by mutableStateOf<com.abhisheksati.mydoc.domain.model.MediaItem?>(null)
     private var currentAudio by mutableStateOf<com.abhisheksati.mydoc.domain.model.MediaItem?>(null)
     private var isSettingsOpen by mutableStateOf(false)
+    private var isSpotlightSearchOpen by mutableStateOf(false)
     private var isDesignSystemPreviewOpen by mutableStateOf(false)
     private var isAppUnlocked by mutableStateOf(true)
 
+    @Volatile
+    private var isContentReady = false
+
+    // The splash may be held this long at most; a stalled first frame must not trap the user.
+    private val splashDeadlineMs = SystemClock.elapsedRealtime() + 1_200L
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen().setKeepOnScreenCondition {
+            !isContentReady && SystemClock.elapsedRealtime() < splashDeadlineMs
+        }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
@@ -133,6 +150,8 @@ class MainActivity : ComponentActivity() {
         handleIncomingIntent(intent)
 
         setContent {
+            LaunchedEffect(Unit) { isContentReady = true }
+
             val themeMode by app.settingsRepository.themeMode.collectAsStateWithLifecycle()
             val amoledBlack by app.settingsRepository.amoledBlack.collectAsStateWithLifecycle()
             val dynamicColor by app.settingsRepository.dynamicColor.collectAsStateWithLifecycle()
@@ -167,7 +186,7 @@ class MainActivity : ComponentActivity() {
                     confirmCredentialLauncher = confirmCredentialLauncher,
                     onSuccess = { isAppUnlocked = true },
                     onError = { errMsg ->
-                        Toast.makeText(this@MainActivity, errMsg, Toast.LENGTH_SHORT).show()
+                        this@MainActivity.showMessage(errMsg)
                     }
                 )
             }
@@ -188,39 +207,11 @@ class MainActivity : ComponentActivity() {
             ) {
                 val selectedTool by toolsViewModel.selectedTool.collectAsStateWithLifecycle()
 
-                // Intercept back presses smoothly so the app never exits abruptly
-                BackHandler(enabled = isDesignSystemPreviewOpen) {
-                    isDesignSystemPreviewOpen = false
-                }
-
-                BackHandler(enabled = !isDesignSystemPreviewOpen && isSettingsOpen) {
-                    isSettingsOpen = false
-                }
-
-                BackHandler(enabled = !isDesignSystemPreviewOpen && !isSettingsOpen && selectedTool != null) {
-                    toolsViewModel.closeTool()
-                }
-
-                BackHandler(enabled = !isDesignSystemPreviewOpen && !isSettingsOpen && currentPhoto != null) {
-                    currentPhoto = null
-                }
-
-                BackHandler(enabled = !isDesignSystemPreviewOpen && !isSettingsOpen && currentVideo != null) {
-                    currentVideo = null
-                }
-
-                BackHandler(enabled = !isDesignSystemPreviewOpen && !isSettingsOpen && currentAudio != null) {
-                    currentAudio = null
-                }
-
-                BackHandler(enabled = !isDesignSystemPreviewOpen && !isSettingsOpen && selectedTool == null && currentDocument != null) {
-                    currentDocument = null
-                }
-
                 val activeScreen: ActiveScreen = when {
                     !isAppUnlocked && isBiometricLockEnabled -> ActiveScreen.Lock
                     isDesignSystemPreviewOpen -> ActiveScreen.DesignSystemPreview
                     isSettingsOpen -> ActiveScreen.Settings
+                    isSpotlightSearchOpen -> ActiveScreen.Search
                     currentPhoto != null -> ActiveScreen.Photo(currentPhoto!!.first, currentPhoto!!.second)
                     currentVideo != null -> ActiveScreen.Video(currentVideo!!)
                     currentAudio != null -> ActiveScreen.Audio(currentAudio!!)
@@ -228,174 +219,216 @@ class MainActivity : ComponentActivity() {
                     else -> ActiveScreen.Home
                 }
 
+                // One back entry point, unwinding in the same order the screens are
+                // resolved above. Lock is excluded on purpose: back must still exit.
+                val popActiveScreen: () -> Unit = {
+                    when {
+                        isDesignSystemPreviewOpen -> isDesignSystemPreviewOpen = false
+                        isSettingsOpen -> isSettingsOpen = false
+                        isSpotlightSearchOpen -> isSpotlightSearchOpen = false
+                        selectedTool != null -> toolsViewModel.closeTool()
+                        currentPhoto != null -> currentPhoto = null
+                        currentVideo != null -> currentVideo = null
+                        currentAudio != null -> currentAudio = null
+                        currentDocument != null -> currentDocument = null
+                    }
+                }
+
+                val isRootShowing =
+                    activeScreen == ActiveScreen.Home || activeScreen == ActiveScreen.Lock
+                BackHandler(enabled = !isRootShowing || selectedTool != null) {
+                    popActiveScreen()
+                }
+
+                // Shared by the library lists and the search destination: one item,
+                // one routing rule, no duplicated open logic.
+                val openLibraryItem: (com.abhisheksati.mydoc.domain.model.LibraryItem) -> Unit = { item ->
+                    when (item.kind) {
+                        com.abhisheksati.mydoc.domain.model.MediaKind.DOCUMENT -> {
+                            lifecycleScope.launch {
+                                val res = app.documentRepository.registerOpenedDocument(Uri.parse(item.uri))
+                                res.onSuccess { doc ->
+                                    currentDocument = doc
+                                }.onFailure {
+                                    currentDocument = DocumentFile(
+                                        uri = item.uri,
+                                        displayName = item.name,
+                                        sizeBytes = item.sizeBytes,
+                                        mimeType = item.mimeType,
+                                        lastOpenedTimestamp = System.currentTimeMillis()
+                                    )
+                                }
+                            }
+                        }
+                        com.abhisheksati.mydoc.domain.model.MediaKind.PHOTO -> {
+                            val m = item.toMediaItem()
+                            currentPhoto = Pair(m, listOf(m))
+                        }
+                        com.abhisheksati.mydoc.domain.model.MediaKind.VIDEO -> {
+                            currentVideo = item.toMediaItem()
+                        }
+                        com.abhisheksati.mydoc.domain.model.MediaKind.AUDIO -> {
+                            currentAudio = item.toMediaItem()
+                        }
+                    }
+                }
+
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = LocalAppColors.current.background
                 ) {
-                    // One shared-element host for the whole app: the row you tapped
-                    // becomes the document you are reading.
-                    SharedTransitionLayout(modifier = Modifier.fillMaxSize()) {
-                        val sharedScope = this
-                        AnimatedContent(
-                            targetState = activeScreen,
-                            transitionSpec = {
-                                val targetIsDetail = targetState.isViewer()
-                                val initialIsDetail = initialState.isViewer()
-                                val targetIsPeer = targetState.isSettings()
-                                val initialIsPeer = initialState.isSettings()
-                                val targetIsDocument = targetState is ActiveScreen.Document
-                                val initialIsDocument = initialState is ActiveScreen.Document
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // One shared-element host for the whole app: the row you tapped
+                        // becomes the document you are reading.
+                        SharedTransitionLayout(modifier = Modifier.fillMaxSize()) {
+                            val sharedScope = this
+                            AnimatedContent(
+                                targetState = activeScreen,
+                                transitionSpec = {
+                                    val targetIsDetail = targetState.isViewer()
+                                    val initialIsDetail = initialState.isViewer()
+                                    val targetIsPeer = targetState.isPeer()
+                                    val initialIsPeer = initialState.isPeer()
+                                    val targetIsDocument = targetState is ActiveScreen.Document
+                                    val initialIsDocument = initialState is ActiveScreen.Document
 
-                                when {
-                                    // Home list -> document viewer (and back): the hero carries it.
-                                    targetIsDocument && initialState is ActiveScreen.Home ->
-                                        AppMotion.heroEnter() togetherWith AppMotion.heroExit()
-                                    initialIsDocument && targetState is ActiveScreen.Home ->
-                                        AppMotion.heroEnter() togetherWith AppMotion.heroExit()
-                                    // Opening a document / photo / video / audio.
-                                    targetIsDetail -> AppMotion.detailEnter() togetherWith AppMotion.detailExit()
-                                    // Coming back from one.
-                                    initialIsDetail -> AppMotion.detailReturnEnter() togetherWith AppMotion.detailReturnExit()
-                                    // Pushing Settings / Design System to the right.
-                                    targetIsPeer -> AppMotion.peerEnter(forward = true) togetherWith AppMotion.peerExit(forward = true)
-                                    // Popping back to the left.
-                                    initialIsPeer -> AppMotion.peerEnter(forward = false) togetherWith AppMotion.peerExit(forward = false)
-                                    else -> AppMotion.neutralEnter() togetherWith AppMotion.neutralExit()
-                                }
-                            },
-                            label = "screenTransition"
-                        ) { screen ->
-                            val visibilityScope = this
-                            CompositionLocalProvider(
-                                LocalSharedTransitionScope provides sharedScope,
-                                LocalAnimatedVisibilityScope provides visibilityScope
-                            ) {
-                                when (screen) {
-                                    ActiveScreen.Lock -> {
-                                        AppLockScreen(
-                                            onUnlockClick = { attemptUnlock() }
-                                        )
+                                    when {
+                                        // Home list -> document viewer (and back): the hero carries it.
+                                        targetIsDocument && initialState is ActiveScreen.Home ->
+                                            AppMotion.heroEnter() togetherWith AppMotion.heroExit()
+                                        initialIsDocument && targetState is ActiveScreen.Home ->
+                                            AppMotion.heroEnter() togetherWith AppMotion.heroExit()
+                                        // Opening a document / photo / video / audio.
+                                        targetIsDetail -> AppMotion.detailEnter() togetherWith AppMotion.detailExit()
+                                        // Coming back from one.
+                                        initialIsDetail -> AppMotion.detailReturnEnter() togetherWith AppMotion.detailReturnExit()
+                                        // Pushing Settings / Design System to the right.
+                                        targetIsPeer -> AppMotion.peerEnter(forward = true) togetherWith AppMotion.peerExit(forward = true)
+                                        // Popping back to the left.
+                                        initialIsPeer -> AppMotion.peerEnter(forward = false) togetherWith AppMotion.peerExit(forward = false)
+                                        else -> AppMotion.neutralEnter() togetherWith AppMotion.neutralExit()
                                     }
-                                    ActiveScreen.DesignSystemPreview -> {
-                                        DesignSystemPreviewScreen(
-                                            onBackClick = { isDesignSystemPreviewOpen = false }
-                                        )
-                                    }
-                                    ActiveScreen.Settings -> {
-                                        SettingsScreen(
-                                            updateManager = updateManager,
-                                            settingsRepository = app.settingsRepository,
-                                            onBackClick = { isSettingsOpen = false },
-                                            onDesignSystemPreviewClick = { isDesignSystemPreviewOpen = true },
-                                            onClearRecent = {
-                                                lifecycleScope.launch {
-                                                    app.libraryRepository.clearAllRecents()
-                                                }
-                                            }
-                                        )
-                                    }
-                                    is ActiveScreen.Photo -> {
-                                        com.abhisheksati.mydoc.ui.media.PhotoViewerScreen(
-                                            items = screen.allPhotos.ifEmpty { listOf(screen.item) },
-                                            initialIndex = screen.allPhotos.indexOf(screen.item).coerceAtLeast(0),
-                                            mediaRepository = app.mediaRepository,
-                                            onBackClick = { currentPhoto = null },
-                                            onDeletePhoto = { currentPhoto = null }
-                                        )
-                                    }
-                                    is ActiveScreen.Video -> {
-                                        com.abhisheksati.mydoc.ui.media.VideoPlayerScreen(
-                                            item = screen.item,
-                                            mediaRepository = app.mediaRepository,
-                                            onBackClick = { currentVideo = null }
-                                        )
-                                    }
-                                    is ActiveScreen.Audio -> {
-                                        com.abhisheksati.mydoc.ui.media.AudioPlayerScreen(
-                                            item = screen.item,
-                                            onBackClick = { currentAudio = null }
-                                        )
-                                    }
-                                    is ActiveScreen.Document -> {
-                                        val activeDoc = screen.document
-                                        Box(modifier = Modifier.fillMaxSize()) {
-                                            DocumentViewerScreen(
-                                                document = activeDoc,
-                                                onBackClick = { currentDocument = null },
-                                                onShareClick = { shareDocument(activeDoc) },
-                                                onDocumentUpdated = { newDoc ->
-                                                    currentDocument = newDoc
-                                                },
-                                                onSelectTool = { tool ->
-                                                    toolsViewModel.selectTool(tool, preselectedUri = Uri.parse(activeDoc.uri))
-                                                },
-                                                modifier = Modifier.documentHero(documentHeroKey(activeDoc.uri))
+                                },
+                                label = "screenTransition"
+                            ) { screen ->
+                                val visibilityScope = this
+                                CompositionLocalProvider(
+                                    LocalSharedTransitionScope provides sharedScope,
+                                    LocalAnimatedVisibilityScope provides visibilityScope
+                                ) {
+                                    when (screen) {
+                                        ActiveScreen.Lock -> {
+                                            AppLockScreen(
+                                                onUnlockClick = { attemptUnlock() }
                                             )
+                                        }
+                                        ActiveScreen.DesignSystemPreview -> {
+                                            DesignSystemPreviewScreen(
+                                                onBackClick = { isDesignSystemPreviewOpen = false }
+                                            )
+                                        }
+                                        ActiveScreen.Settings -> {
+                                            SettingsScreen(
+                                                updateManager = updateManager,
+                                                settingsRepository = app.settingsRepository,
+                                                onBackClick = { isSettingsOpen = false },
+                                                onDesignSystemPreviewClick = { isDesignSystemPreviewOpen = true },
+                                                onClearRecent = {
+                                                    lifecycleScope.launch {
+                                                        app.libraryRepository.clearAllRecents()
+                                                    }
+                                                }
+                                            )
+                                        }
+                                        ActiveScreen.Search -> {
+                                            // Collected here, not at the activity root, so list
+                                            // updates recompose only this destination.
+                                            val libraryState by homeViewModel.uiState.collectAsStateWithLifecycle()
+                                            SpotlightSearchSheet(
+                                                items = libraryState.libraryItems.ifEmpty { libraryState.recentLibraryItems },
+                                                onItemClick = { item ->
+                                                    isSpotlightSearchOpen = false
+                                                    openLibraryItem(item)
+                                                },
+                                                onDismiss = { isSpotlightSearchOpen = false }
+                                            )
+                                        }
+                                        is ActiveScreen.Photo -> {
+                                            com.abhisheksati.mydoc.ui.media.PhotoViewerScreen(
+                                                items = screen.allPhotos.ifEmpty { listOf(screen.item) },
+                                                initialIndex = screen.allPhotos.indexOf(screen.item).coerceAtLeast(0),
+                                                mediaRepository = app.mediaRepository,
+                                                onBackClick = { currentPhoto = null },
+                                                onDeletePhoto = { currentPhoto = null }
+                                            )
+                                        }
+                                        is ActiveScreen.Video -> {
+                                            com.abhisheksati.mydoc.ui.media.VideoPlayerScreen(
+                                                item = screen.item,
+                                                mediaRepository = app.mediaRepository,
+                                                onBackClick = { currentVideo = null }
+                                            )
+                                        }
+                                        is ActiveScreen.Audio -> {
+                                            com.abhisheksati.mydoc.ui.media.AudioPlayerScreen(
+                                                item = screen.item,
+                                                onBackClick = { currentAudio = null }
+                                            )
+                                        }
+                                        is ActiveScreen.Document -> {
+                                            val activeDoc = screen.document
+                                            Box(modifier = Modifier.fillMaxSize()) {
+                                                DocumentViewerScreen(
+                                                    document = activeDoc,
+                                                    onBackClick = { currentDocument = null },
+                                                    onShareClick = { shareDocument(activeDoc) },
+                                                    onDocumentUpdated = { newDoc ->
+                                                        currentDocument = newDoc
+                                                    },
+                                                    onSelectTool = { tool ->
+                                                        toolsViewModel.selectTool(tool, preselectedUri = Uri.parse(activeDoc.uri))
+                                                    },
+                                                    modifier = Modifier.documentHero(documentHeroKey(activeDoc.uri))
+                                                )
 
-                                            if (selectedTool != null) {
-                                                ToolRunnerSheet(
-                                                    viewModel = toolsViewModel,
-                                                    onOpenResultFile = { file, _ ->
-                                                        val uri = Uri.fromFile(file)
-                                                        lifecycleScope.launch {
-                                                            val myApp = application as MyDocApp
-                                                            val res = myApp.documentRepository.registerOpenedDocument(uri)
-                                                            res.onSuccess { doc ->
-                                                                toolsViewModel.closeTool()
-                                                                currentDocument = doc
+                                                if (selectedTool != null) {
+                                                    ToolRunnerSheet(
+                                                        viewModel = toolsViewModel,
+                                                        onOpenResultFile = { file, _ ->
+                                                            val uri = Uri.fromFile(file)
+                                                            lifecycleScope.launch {
+                                                                val myApp = application as MyDocApp
+                                                                val res = myApp.documentRepository.registerOpenedDocument(uri)
+                                                                res.onSuccess { doc ->
+                                                                    toolsViewModel.closeTool()
+                                                                    currentDocument = doc
+                                                                }
                                                             }
                                                         }
-                                                    }
-                                                )
+                                                    )
+                                                }
                                             }
                                         }
-                                    }
-                                    ActiveScreen.Home -> {
-                                        HomeScreen(
-                                            viewModel = homeViewModel,
-                                            toolsViewModel = toolsViewModel,
-                                            fileManagerViewModel = fileManagerViewModel,
-                                            storageViewModel = storageViewModel,
-                                            updateManager = updateManager,
-                                            onLibraryItemClick = { item ->
-                                                when (item.kind) {
-                                                    com.abhisheksati.mydoc.domain.model.MediaKind.DOCUMENT -> {
-                                                        lifecycleScope.launch {
-                                                            val res = app.documentRepository.registerOpenedDocument(Uri.parse(item.uri))
-                                                            res.onSuccess { doc ->
-                                                                currentDocument = doc
-                                                            }.onFailure {
-                                                                currentDocument = DocumentFile(
-                                                                    uri = item.uri,
-                                                                    displayName = item.name,
-                                                                    sizeBytes = item.sizeBytes,
-                                                                    mimeType = item.mimeType,
-                                                                    lastOpenedTimestamp = System.currentTimeMillis()
-                                                                )
-                                                            }
-                                                        }
-                                                    }
-                                                    com.abhisheksati.mydoc.domain.model.MediaKind.PHOTO -> {
-                                                        val m = item.toMediaItem()
-                                                        currentPhoto = Pair(m, listOf(m))
-                                                    }
-                                                    com.abhisheksati.mydoc.domain.model.MediaKind.VIDEO -> {
-                                                        currentVideo = item.toMediaItem()
-                                                    }
-                                                    com.abhisheksati.mydoc.domain.model.MediaKind.AUDIO -> {
-                                                        currentAudio = item.toMediaItem()
-                                                    }
-                                                }
-                                            },
-                                            onDocumentClick = { doc -> currentDocument = doc },
-                                            onOpenFile = { file -> handleOpenFile(file) },
-                                            onSettingsClick = { isSettingsOpen = true },
-                                            onShareDocument = { doc -> shareDocument(doc) }
-                                        )
+                                        ActiveScreen.Home -> {
+                                            HomeScreen(
+                                                viewModel = homeViewModel,
+                                                toolsViewModel = toolsViewModel,
+                                                fileManagerViewModel = fileManagerViewModel,
+                                                storageViewModel = storageViewModel,
+                                                updateManager = updateManager,
+                                                onLibraryItemClick = openLibraryItem,
+                                                onDocumentClick = { doc -> currentDocument = doc },
+                                                onOpenFile = { file -> handleOpenFile(file) },
+                                                onSettingsClick = { isSettingsOpen = true },
+                                                onSpotlightSearch = { isSpotlightSearchOpen = true },
+                                                onShareDocument = { doc -> shareDocument(doc) }
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
+                        AppSnackbarHost()
                     }
                 }
             }
@@ -561,14 +594,14 @@ class MainActivity : ComponentActivity() {
                                     }
                                     startActivity(Intent.createChooser(intent, "Open with"))
                                 } catch (_: Exception) {
-                                    Toast.makeText(this@MainActivity, "Could not open file: ${e.localizedMessage ?: "Unknown error"}", Toast.LENGTH_SHORT).show()
+                                    this@MainActivity.showMessage("Could not open file: ${e.localizedMessage ?: "Unknown error"}")
                                 }
                             } else {
-                                Toast.makeText(this@MainActivity, "Could not open file: ${e.localizedMessage ?: "Unknown error"}", Toast.LENGTH_SHORT).show()
+                                this@MainActivity.showMessage("Could not open file: ${e.localizedMessage ?: "Unknown error"}")
                             }
                         }
                     } catch (e: Exception) {
-                        Toast.makeText(this@MainActivity, "Unable to access file: ${e.localizedMessage ?: "Permission denied"}", Toast.LENGTH_SHORT).show()
+                        this@MainActivity.showMessage("Unable to access file: ${e.localizedMessage ?: "Permission denied"}")
                     }
                 }
             }

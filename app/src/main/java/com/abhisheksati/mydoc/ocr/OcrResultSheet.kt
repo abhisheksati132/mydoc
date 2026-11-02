@@ -36,6 +36,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -115,7 +116,7 @@ fun OcrResultSheet(
                     onClick = {
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         clipboard.setPrimaryClip(ClipData.newPlainText("Extracted Text", text))
-                        Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                        context.showMessage("Copied to clipboard")
                     },
                     modifier = Modifier.weight(1f),
                     shape = AppRadius.pillShape,
@@ -151,9 +152,9 @@ fun OcrResultSheet(
                             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
                             val file = File(docsDir, "OCR_Text_$timestamp.txt")
                             file.writeText(text)
-                            Toast.makeText(context, "Saved to Documents/${file.name}", Toast.LENGTH_SHORT).show()
+                            context.showMessage("Saved to Documents/${file.name}")
                         } catch (e: Exception) {
-                            Toast.makeText(context, "Failed to save: ${e.message}", Toast.LENGTH_SHORT).show()
+                            context.showMessage("Failed to save: ${e.message}")
                         }
                     },
                     modifier = Modifier.weight(1f),

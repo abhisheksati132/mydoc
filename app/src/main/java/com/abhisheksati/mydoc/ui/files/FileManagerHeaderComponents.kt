@@ -1,8 +1,7 @@
-package com.abhisheksati.mydoc.ui.filemanager
+package com.abhisheksati.mydoc.ui.files
 
 import android.content.Context
 import android.content.Intent
-import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import java.io.File
+import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 @Composable
 fun StoragePermissionBanner(
@@ -97,6 +97,6 @@ fun shareFiles(context: Context, files: List<File>) {
 
         context.startActivity(Intent.createChooser(intent, "Share via"))
     } catch (e: Exception) {
-        Toast.makeText(context, "Share error: ${e.message}", Toast.LENGTH_SHORT).show()
+        context.showMessage("Share error: ${e.message}")
     }
 }

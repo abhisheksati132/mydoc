@@ -2,7 +2,6 @@ package com.abhisheksati.mydoc.ui.home
 
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,6 +43,7 @@ import java.util.Locale
 
 import androidx.compose.foundation.BorderStroke
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 @Composable
 fun DocumentDetailsDialog(
@@ -143,7 +143,7 @@ fun DocumentDetailsDialog(
                             try {
                                 context.startActivity(Intent.createChooser(intent, "Open with"))
                             } catch (_: Exception) {
-                                Toast.makeText(context, "No app available", Toast.LENGTH_SHORT).show()
+                                context.showMessage("No app available")
                             }
                         },
                         modifier = Modifier.weight(1f)

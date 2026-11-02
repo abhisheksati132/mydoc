@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -25,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 
 /**
  * One settings group on a tonal card: a tinted icon plate, a heading and the
@@ -43,7 +43,7 @@ fun SettingsCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(24.dp),
+        shape = AppRadius.modalShape,
         color = scheme.surfaceContainerLow
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -54,7 +54,7 @@ fun SettingsCard(
                 Box(
                     modifier = Modifier
                         .size(32.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(AppRadius.insetShape)
                         .background(scheme.surfaceContainerHigh),
                     contentAlignment = Alignment.Center
                 ) {

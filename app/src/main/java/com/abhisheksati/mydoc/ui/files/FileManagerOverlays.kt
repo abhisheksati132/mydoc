@@ -1,4 +1,4 @@
-package com.abhisheksati.mydoc.ui.filemanager
+package com.abhisheksati.mydoc.ui.files
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext

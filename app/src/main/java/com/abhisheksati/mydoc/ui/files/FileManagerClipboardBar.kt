@@ -1,4 +1,4 @@
-package com.abhisheksati.mydoc.ui.filemanager
+package com.abhisheksati.mydoc.ui.files
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.ContentCut
@@ -30,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.domain.model.ClipboardOperation
 import com.abhisheksati.mydoc.domain.model.ClipboardState
 
@@ -51,7 +51,7 @@ fun FileManagerClipboardBar(
         clipboardState?.let { clip ->
             val isCopy = clip.operation == ClipboardOperation.COPY
             Surface(
-                shape = RoundedCornerShape(20.dp),
+                shape = AppRadius.largeShape,
                 color = scheme.surfaceContainerHigh,
                 shadowElevation = 6.dp,
                 modifier = Modifier.fillMaxWidth()

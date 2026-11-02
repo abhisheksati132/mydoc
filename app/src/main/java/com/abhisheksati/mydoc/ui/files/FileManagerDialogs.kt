@@ -1,9 +1,8 @@
-package com.abhisheksati.mydoc.ui.filemanager
+package com.abhisheksati.mydoc.ui.files
 
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -52,13 +51,12 @@ import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
-import com.abhisheksati.mydoc.domain.model.FileSortField
-import com.abhisheksati.mydoc.domain.model.FileSortOrder
 import com.abhisheksati.mydoc.domain.model.FolderProperties
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
+import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 @Composable
 fun NewFolderDialog(
@@ -291,7 +289,7 @@ fun FilePropertiesDialog(
     fun copyToClipboard(label: String, text: String) {
         val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         cm.setPrimaryClip(ClipData.newPlainText(label, text))
-        Toast.makeText(context, "$label copied", Toast.LENGTH_SHORT).show()
+        context.showMessage("$label copied")
     }
 
     val isOled = LocalIsOled.current
@@ -437,72 +435,6 @@ private fun PropertyItem(title: String, value: String) {
 }
 
 private fun formatBytes(bytes: Long): String = com.abhisheksati.mydoc.domain.model.StorageVolume.formatBytes(bytes)
-
-@Composable
-fun SortOrderDropdownMenu(
-    expanded: Boolean,
-    currentSort: FileSortOrder,
-    onDismiss: () -> Unit,
-    onSortSelected: (FileSortField) -> Unit
-) {
-    val colors = LocalAppColors.current
-    val isOled = LocalIsOled.current
-
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = onDismiss,
-        shape = AppRadius.largeShape,
-        containerColor = colors.surface,
-        border = BorderStroke(
-            1.dp,
-            if (isOled) Color.White.copy(alpha = 0.10f) else colors.divider.copy(alpha = 0.7f)
-        ),
-        shadowElevation = 8.dp,
-        tonalElevation = 4.dp
-    ) {
-        val options = listOf(
-            FileSortField.NAME to "Name",
-            FileSortField.DATE to "Date Modified",
-            FileSortField.SIZE to "Size",
-            FileSortField.TYPE to "Type"
-        )
-
-        for ((field, label) in options) {
-            val isSelected = currentSort.field == field
-            val arrow = if (isSelected) {
-                if (currentSort.isAscending) "  ↑" else "  ↓"
-            } else ""
-
-            DropdownMenuItem(
-                text = {
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "$label$arrow",
-                            color = if (isSelected) colors.accent else colors.textPrimary,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                        )
-                        if (isSelected) {
-                            Icon(
-                                imageVector = Icons.Outlined.Check,
-                                contentDescription = null,
-                                tint = colors.accent,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                },
-                onClick = {
-                    onSortSelected(field)
-                    onDismiss()
-                }
-            )
-        }
-    }
-}
 
 @Composable
 fun CompressDialog(

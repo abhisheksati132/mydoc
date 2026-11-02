@@ -2,4 +2,12 @@
 <resources>
     <!-- Matches the Material 3 light surface so cold start has no flash. -->
     <color name="app_window_background">#FDFBFF</color>
+
+    <!-- Splash mark. Hues lifted from the launcher pills, darkened for contrast on the
+         light surface; the night resource set lightens them for the black surface. -->
+    <color name="splash_ink">#3D4CFF</color>
+    <color name="splash_plate">#FDFBFF</color>
+    <color name="splash_rule_one">#4FD39C</color>
+    <color name="splash_rule_two">#FF6E2C</color>
+    <color name="splash_rule_three">#FF6FB2</color>
 </resources>

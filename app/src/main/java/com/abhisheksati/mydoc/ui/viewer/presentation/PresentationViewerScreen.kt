@@ -3,7 +3,6 @@ package com.abhisheksati.mydoc.ui.viewer.presentation
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -77,6 +76,7 @@ import com.abhisheksati.mydoc.ui.viewer.controls.PrintHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 fun openPresentationInOfficeApp(context: Context, document: DocumentFile) {
     try {
@@ -127,7 +127,7 @@ fun openPresentationInOfficeApp(context: Context, document: DocumentFile) {
             }
             context.startActivity(playStoreIntent)
         } catch (_: Exception) {
-            Toast.makeText(context, "Install Google Slides or Microsoft PowerPoint to view full graphics", Toast.LENGTH_LONG).show()
+            context.showMessage("Install Google Slides or Microsoft PowerPoint to view full graphics", long = true)
         }
     }
 }

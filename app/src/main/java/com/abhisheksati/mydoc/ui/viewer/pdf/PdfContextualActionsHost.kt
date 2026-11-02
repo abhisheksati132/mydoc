@@ -14,6 +14,7 @@ import com.abhisheksati.mydoc.ocr.OcrEngine
 import com.abhisheksati.mydoc.tools.tts.DocumentTtsManager
 import com.abhisheksati.mydoc.viewmodel.ViewerViewModel
 import kotlinx.coroutines.launch
+import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 @Composable
 fun PdfContextualActionsHost(
@@ -42,9 +43,9 @@ fun PdfContextualActionsHost(
                 if (text.isNotBlank()) {
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     clipboard.setPrimaryClip(ClipData.newPlainText("PDF Text", text))
-                    Toast.makeText(context, if (activeSelectionText != null) "Text copied to clipboard" else "Page ${pageNum + 1} text copied", Toast.LENGTH_SHORT).show()
+                    context.showMessage(if (activeSelectionText != null) "Text copied to clipboard" else "Page ${pageNum + 1} text copied")
                 } else {
-                    Toast.makeText(context, "No text detected on this page", Toast.LENGTH_SHORT).show()
+                    context.showMessage("No text detected on this page")
                 }
                 onClose()
             }
@@ -59,7 +60,7 @@ fun PdfContextualActionsHost(
                     }
                     context.startActivity(Intent.createChooser(shareIntent, "Share Text"))
                 } else {
-                    Toast.makeText(context, "No text to share", Toast.LENGTH_SHORT).show()
+                    context.showMessage("No text to share")
                 }
                 onClose()
             }
@@ -74,10 +75,10 @@ fun PdfContextualActionsHost(
                     try {
                         context.startActivity(searchIntent)
                     } catch (_: Exception) {
-                        Toast.makeText(context, "No browser found", Toast.LENGTH_SHORT).show()
+                        context.showMessage("No browser found")
                     }
                 } else {
-                    Toast.makeText(context, "No text to search", Toast.LENGTH_SHORT).show()
+                    context.showMessage("No text to search")
                 }
                 onClose()
             }
@@ -89,7 +90,7 @@ fun PdfContextualActionsHost(
                     onStartTts(text)
                     ttsManager.startReading(text)
                 } else {
-                    Toast.makeText(context, "No text to read", Toast.LENGTH_SHORT).show()
+                    context.showMessage("No text to read")
                 }
                 onClose()
             }
@@ -108,9 +109,9 @@ fun PdfContextualActionsHost(
                 if (text.isNotBlank()) {
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     clipboard.setPrimaryClip(ClipData.newPlainText("Page ${pageNum + 1}", text))
-                    Toast.makeText(context, "Page ${pageNum + 1} text copied to clipboard", Toast.LENGTH_SHORT).show()
+                    context.showMessage("Page ${pageNum + 1} text copied to clipboard")
                 } else {
-                    Toast.makeText(context, "No digital text on this page. Try OCR extract.", Toast.LENGTH_SHORT).show()
+                    context.showMessage("No digital text on this page. Try OCR extract.")
                 }
                 onClose()
             }
@@ -121,7 +122,7 @@ fun PdfContextualActionsHost(
                 if (text.isNotBlank()) {
                     onStartTts(text)
                 } else {
-                    Toast.makeText(context, "No text on this page to read", Toast.LENGTH_SHORT).show()
+                    context.showMessage("No text on this page to read")
                 }
                 onClose()
             }
@@ -136,7 +137,7 @@ fun PdfContextualActionsHost(
                     }
                     context.startActivity(Intent.createChooser(shareIntent, "Share Page ${pageNum + 1} Text"))
                 } else {
-                    Toast.makeText(context, "No text on this page to share", Toast.LENGTH_SHORT).show()
+                    context.showMessage("No text on this page to share")
                 }
                 onClose()
             }
@@ -150,7 +151,7 @@ fun PdfContextualActionsHost(
                     if (ocr.isNotBlank()) {
                         onOcrResult(ocr)
                     } else {
-                        Toast.makeText(context, "No text found with OCR", Toast.LENGTH_SHORT).show()
+                        context.showMessage("No text found with OCR")
                     }
                 }
             }

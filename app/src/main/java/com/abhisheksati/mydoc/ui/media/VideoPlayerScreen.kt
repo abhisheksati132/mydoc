@@ -101,6 +101,7 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 @androidx.annotation.OptIn(UnstableApi::class)
 enum class VideoResizeMode(val label: String, val mode: Int) {
@@ -416,7 +417,7 @@ fun VideoPlayerScreen(
                     // Aspect Ratio Button
                     IconButton(onClick = {
                         resizeModeIndex = (resizeModeIndex + 1) % VideoResizeMode.entries.size
-                        Toast.makeText(context, VideoResizeMode.entries[resizeModeIndex].label, Toast.LENGTH_SHORT).show()
+                        context.showMessage(VideoResizeMode.entries[resizeModeIndex].label)
                     }) {
                         Icon(Icons.Outlined.AspectRatio, contentDescription = "Aspect Ratio", tint = Color.White)
                     }
@@ -429,7 +430,7 @@ fun VideoPlayerScreen(
                             2 -> "Portrait"
                             else -> "Auto Rotate"
                         }
-                        Toast.makeText(context, modeName, Toast.LENGTH_SHORT).show()
+                        context.showMessage(modeName)
                     }) {
                         Icon(Icons.Default.ScreenRotation, contentDescription = "Rotation", tint = Color.White)
                     }
@@ -563,7 +564,7 @@ fun VideoPlayerScreen(
                         IconButton(onClick = {
                             isLooping = !isLooping
                             exoPlayer.repeatMode = if (isLooping) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
-                            Toast.makeText(context, if (isLooping) "Repeat: ON" else "Repeat: OFF", Toast.LENGTH_SHORT).show()
+                            context.showMessage(if (isLooping) "Repeat: ON" else "Repeat: OFF")
                         }) {
                             Icon(
                                 Icons.Default.Repeat,

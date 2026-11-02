@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Check
@@ -102,7 +101,7 @@ fun FillFormSheet(
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(AppRadius.insetShape)
                         .background(scheme.surfaceContainerHigh),
                     contentAlignment = Alignment.Center
                 ) {
@@ -149,7 +148,7 @@ fun FillFormSheet(
                     Box(
                         modifier = Modifier
                             .size(64.dp)
-                            .clip(RoundedCornerShape(20.dp))
+                            .clip(AppRadius.largeShape)
                             .background(scheme.surfaceContainerHigh),
                         contentAlignment = Alignment.Center
                     ) {
@@ -324,7 +323,7 @@ fun FillFormSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = AppRadius.cardShape
                     ) {
                         Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))

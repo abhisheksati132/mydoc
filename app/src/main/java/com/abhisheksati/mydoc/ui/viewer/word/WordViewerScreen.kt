@@ -39,11 +39,11 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.MainActivity
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.data.local.DocumentStreamResolver
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentReadingType
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingPrefs
@@ -279,15 +279,9 @@ fun WordViewerScreen(
                 items(filteredBlocks) { block ->
                     when (block) {
                         is DocxBlock.Heading -> {
-                            val fontSize = when (block.level) {
-                                1 -> 24.sp
-                                2 -> 20.sp
-                                3 -> 17.sp
-                                else -> 15.sp
-                            }
                             Text(
                                 text = block.text,
-                                fontSize = fontSize * readingPrefs.fontScale,
+                                fontSize = DocumentReadingType.heading(block.level) * readingPrefs.fontScale,
                                 fontWeight = FontWeight.Bold,
                                 color = textColor,
                                 modifier = Modifier.padding(vertical = 8.dp)
@@ -309,7 +303,7 @@ fun WordViewerScreen(
                                 Text(
                                     text = "• ",
                                     color = secondaryTextColor,
-                                    fontSize = 14.sp * readingPrefs.fontScale,
+                                    fontSize = DocumentReadingType.body * readingPrefs.fontScale,
                                     fontWeight = FontWeight.Bold
                                 )
                                 DocxRunsView(
@@ -369,7 +363,7 @@ private fun DocxRunsView(
                 fontStyle = if (run.isItalic) FontStyle.Italic else FontStyle.Normal,
                 textDecoration = if (run.isUnderline) TextDecoration.Underline else TextDecoration.None,
                 color = textColor,
-                fontSize = 14.sp * fontScale,
+                fontSize = DocumentReadingType.body * fontScale,
                 background = if (searchQuery.isNotBlank() && run.text.contains(searchQuery, ignoreCase = true)) {
                     DocumentCanvasColors.searchHighlight
                 } else Color.Transparent
@@ -382,7 +376,7 @@ private fun DocxRunsView(
 
     Text(
         text = annotatedString,
-        lineHeight = (20f * fontScale).sp
+        lineHeight = DocumentReadingType.bodyLineHeight * fontScale
     )
 }
 
@@ -410,7 +404,7 @@ private fun DocxTableView(
                         text = cellText,
                         color = textColor,
                         fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
-                        fontSize = 12.sp,
+                        fontSize = DocumentReadingType.tableCell,
                         modifier = Modifier
                             .weight(1f)
                             .border(0.5.dp, borderColor)

@@ -1,7 +1,6 @@
 package com.abhisheksati.mydoc.ui.home
 
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -64,7 +63,6 @@ import com.abhisheksati.mydoc.tools.ui.components.CameraScanSheet
 import com.abhisheksati.mydoc.tools.ui.components.SignPdfSheet
 import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
 import com.abhisheksati.mydoc.ui.files.FilesScreen
-import com.abhisheksati.mydoc.ui.search.SpotlightSearchSheet
 import com.abhisheksati.mydoc.ui.storage.StorageViewModel
 import com.abhisheksati.mydoc.update.UpdateManager
 import com.abhisheksati.mydoc.update.UpdateUiState
@@ -72,6 +70,7 @@ import com.abhisheksati.mydoc.viewmodel.FileManagerViewModel
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import java.io.File
 import kotlinx.coroutines.launch
+import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 @Composable
 fun HomeScreen(
@@ -84,6 +83,7 @@ fun HomeScreen(
     onDocumentClick: (DocumentFile) -> Unit,
     onOpenFile: (File) -> Unit,
     onSettingsClick: () -> Unit,
+    onSpotlightSearch: () -> Unit,
     onShareDocument: (DocumentFile) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -99,7 +99,6 @@ fun HomeScreen(
     var showSignaturePad by remember { mutableStateOf(false) }
     var selectedDocForDetails by remember { mutableStateOf<DocumentFile?>(null) }
     var documentToDelete by remember { mutableStateOf<DocumentFile?>(null) }
-    var showSpotlightSearch by remember { mutableStateOf(false) }
 
     val documentScanner = com.abhisheksati.mydoc.tools.scan.rememberDocumentScanner(
         onLaunchScanner = {
@@ -333,9 +332,7 @@ fun HomeScreen(
                                     selectedDocForDetails = item.toDocumentFile()
                                 },
                                 onSettingsClick = onSettingsClick,
-                                onSpotlightSearch = {
-                                    showSpotlightSearch = true
-                                },
+                                onSpotlightSearch = onSpotlightSearch,
                                 isActive = currentTab == HomeTab.FILES,
                                 modifier = Modifier.fillMaxSize()
                             )
@@ -391,7 +388,7 @@ fun HomeScreen(
             onConfirm = {
                 viewModel.removeFromRecents(doc)
                 documentToDelete = null
-                Toast.makeText(context, "Document removed", Toast.LENGTH_SHORT).show()
+                context.showMessage("Document removed")
             },
             onDismiss = { documentToDelete = null }
         )
@@ -437,20 +434,8 @@ fun HomeScreen(
             onDismiss = { showSignaturePad = false },
             onSignatureSaved = {
                 showSignaturePad = false
-                Toast.makeText(context, "Signature encrypted and saved.", Toast.LENGTH_SHORT).show()
+                context.showMessage("Signature encrypted and saved.")
             }
-        )
-    }
-
-    // Unified Apple Spotlight Search Sheet
-    if (showSpotlightSearch) {
-        SpotlightSearchSheet(
-            items = uiState.libraryItems.ifEmpty { uiState.recentLibraryItems },
-            onItemClick = { item ->
-                showSpotlightSearch = false
-                onLibraryItemClick(item)
-            },
-            onDismiss = { showSpotlightSearch = false },
         )
     }
 }

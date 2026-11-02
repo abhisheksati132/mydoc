@@ -70,7 +70,7 @@ class LibraryRepositoryImpl(
         }
 
         (docItems + mediaItems)
-            .distinctBy { it.uri }
+            .distinctBy { it.identityKey }
             .sortedByDescending { it.lastModified }
     }.flowOn(Dispatchers.Default)
 

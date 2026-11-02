@@ -2,4 +2,10 @@
 <resources>
     <!-- Matches the Material 3 dark surface (AMOLED default) so cold start has no flash. -->
     <color name="app_window_background">#000000</color>
+
+    <color name="splash_ink">#7C88FF</color>
+    <color name="splash_plate">#000000</color>
+    <color name="splash_rule_one">#7FE3B4</color>
+    <color name="splash_rule_two">#FF8A50</color>
+    <color name="splash_rule_three">#FF9AC9</color>
 </resources>

@@ -69,7 +69,7 @@
             android:exported="true"
             android:supportsPictureInPicture="true"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
-            android:theme="@style/Theme.MyDoc">
+            android:theme="@style/Theme.MyDoc.Splash">
             
             <!-- Standard App Launcher -->
             <intent-filter>

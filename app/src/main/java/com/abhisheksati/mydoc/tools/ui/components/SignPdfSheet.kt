@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -63,7 +62,6 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.components.AppBottomSheet
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
@@ -272,15 +270,17 @@ fun SignPdfSheet(
                             .padding(20.dp),
                         contentAlignment = Alignment.Center
                     ) {
+                        // Placeholder and field share one style, so the signature does not
+                        // change size the moment the user starts typing.
+                        val signatureStyle = typography.displaySmall.copy(
+                            color = activeInkColor,
+                            fontStyle = FontStyle.Italic,
+                            fontWeight = FontWeight.Normal
+                        )
                         BasicTextField(
                             value = typedName,
                             onValueChange = { typedName = it },
-                            textStyle = androidx.compose.ui.text.TextStyle(
-                                color = activeInkColor,
-                                fontSize = 32.sp,
-                                fontStyle = FontStyle.Italic,
-                                fontWeight = FontWeight.Normal
-                            ),
+                            textStyle = signatureStyle,
                             cursorBrush = SolidColor(activeInkColor),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             modifier = Modifier.fillMaxWidth()
@@ -288,8 +288,7 @@ fun SignPdfSheet(
                         if (typedName.isEmpty()) {
                             Text(
                                 text = "Type your name here...",
-                                style = typography.bodyLarge.copy(fontSize = 20.sp, fontStyle = FontStyle.Italic),
-                                color = Color.Black.copy(alpha = 0.38f)
+                                style = signatureStyle.copy(color = Color.Black.copy(alpha = 0.38f))
                             )
                         }
                     }
@@ -312,7 +311,7 @@ fun SignPdfSheet(
                     modifier = Modifier
                         .weight(1f)
                         .height(52.dp),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = AppRadius.cardShape
                 ) {
                     Text("Clear")
                 }
@@ -333,7 +332,7 @@ fun SignPdfSheet(
                     modifier = Modifier
                         .weight(1f)
                         .height(52.dp),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = AppRadius.cardShape
                 ) {
                     Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
