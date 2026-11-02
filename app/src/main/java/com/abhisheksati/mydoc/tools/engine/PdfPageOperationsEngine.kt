@@ -78,7 +78,7 @@ class PdfPageOperationsEngine(private val context: Context) {
                         subDoc.destroy()
 
                         // Add to zip
-                        zos.putNextEntry(ZipEntry(String.format("part_%03d.pdf", partNum)))
+                        zos.putNextEntry(ZipEntry(String.format(java.util.Locale.ROOT, "part_%03d.pdf", partNum)))
                         partFile.inputStream().use { it.copyTo(zos) }
                         zos.closeEntry()
                         partFile.delete()

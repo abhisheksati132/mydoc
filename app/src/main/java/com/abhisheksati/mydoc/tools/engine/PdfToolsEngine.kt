@@ -170,7 +170,9 @@ class PdfToolsEngine(private val context: Context) {
                     ((initialSizeBytes - finalSizeBytes).toFloat() / initialSizeBytes.toFloat()) * 100f
                 } else 0f
                 if (savingsPercent < 5.0f) {
-                    warningNote = "Compression saved only ${String.format("%.1f", savingsPercent.coerceAtLeast(0f))}%. Images in this document are already optimized."
+                    warningNote = "Compression saved only " +
+                        "${String.format(java.util.Locale.US, "%.1f", savingsPercent.coerceAtLeast(0f))}%." +
+                        " Images in this document are already optimized."
                 }
             } else if (tool == PdfTool.OFFICE_TO_PDF || tool == PdfTool.PDF_TO_OFFICE) {
                 warningNote = "Best-effort offline conversion. Complex multi-column layouts and vector art will not match the original."

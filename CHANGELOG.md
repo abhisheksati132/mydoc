@@ -50,6 +50,13 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   to the right row.
 - **The typed-signature placeholder resized the moment you typed.** The empty state was 20sp over a
   32sp input; placeholder and field now share one `displaySmall` italic style.
+- **Archive entry names were locale-dependent.** `String.format` without a locale used the device
+  default, so on Arabic, Persian or Thai locales `%03d` wrote non-ASCII digits into zip entries
+  (`page_٠٠٧.png`) inside the archives the split and image-export tools produce. Five sites now pin
+  `Locale.ROOT` for machine identifiers and `Locale.US` for the one displayed number, which also
+  stops "Compression saved only 12,3%" on German and French locales. A JVM probe of `%02x` across
+  seven locales came back ASCII everywhere, so the four hex-digest call sites are deliberately
+  unchanged.
 
 ## [1.5.1] — 2026-11-02
 

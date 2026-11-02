@@ -295,7 +295,7 @@ class PdfConversionEngine(private val context: Context) {
                     val pixmap = page.toPixmap(Matrix(scale, scale), ColorSpace.DeviceRGB, false)
                     val bitmap = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
 
-                    zos.putNextEntry(ZipEntry(String.format("page_%03d.$ext", p + 1)))
+                    zos.putNextEntry(ZipEntry(String.format(java.util.Locale.ROOT, "page_%03d.$ext", p + 1)))
                     bitmap.compress(compressFormat, quality, zos)
                     zos.closeEntry()
 
@@ -578,7 +578,12 @@ class PdfConversionEngine(private val context: Context) {
                                     if (xObject is PDImageXObject) {
                                         val bmp = runCatching { xObject.image }.getOrNull()
                                         if (bmp != null) {
-                                            val entryName = String.format("images/page_%03d_img_%02d.png", p + 1, pageImgIdx++)
+                                            val entryName = String.format(
+                                                java.util.Locale.ROOT,
+                                                "images/page_%03d_img_%02d.png",
+                                                p + 1,
+                                                pageImgIdx++
+                                            )
                                             zos.putNextEntry(ZipEntry(entryName))
                                             bmp.compress(Bitmap.CompressFormat.PNG, 100, zos)
                                             zos.closeEntry()
@@ -618,7 +623,7 @@ class PdfConversionEngine(private val context: Context) {
                         val pixmap = page.toPixmap(Matrix(2.0f, 2.0f), ColorSpace.DeviceRGB, false)
                         val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
 
-                        zos.putNextEntry(ZipEntry(String.format("images/page_%03d.png", p + 1)))
+                        zos.putNextEntry(ZipEntry(String.format(java.util.Locale.ROOT, "images/page_%03d.png", p + 1)))
                         bmp.compress(Bitmap.CompressFormat.PNG, 95, zos)
                         zos.closeEntry()
 
