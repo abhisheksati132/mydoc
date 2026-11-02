@@ -41,7 +41,7 @@ enum class DocumentSortOrder(val displayName: String) {
     SIZE_ASC("Size (Smallest)")
 }
 
-class SettingsRepository(context: Context) {
+class SettingsRepository(private val context: Context) {
 
     private val prefs: SharedPreferences = context.getSharedPreferences("mydoc_settings", Context.MODE_PRIVATE)
 
@@ -175,9 +175,16 @@ class SettingsRepository(context: Context) {
         _sortOrder.value = order
     }
 
-    fun setBiometricLockEnabled(enabled: Boolean) {
+    fun setBiometricLockEnabled(enabled: Boolean): Boolean {
+        if (enabled) {
+            val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
+            if (keyguardManager == null || !keyguardManager.isDeviceSecure) {
+                return false
+            }
+        }
         prefs.edit().putBoolean(KEY_BIOMETRIC_LOCK, enabled).apply()
         _isBiometricLockEnabled.value = enabled
+        return true
     }
 
     fun setVolumeKeyPageTurning(enabled: Boolean) {

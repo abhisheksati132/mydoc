@@ -1,5 +1,8 @@
 package com.abhisheksati.mydoc.data.local
 
+// Migration tests require androidTest (on-device) for Room; see:
+// app/src/androidTest/java/com/abhisheksati/mydoc/data/local/MigrationTest.kt
+
 import android.database.Cursor
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteQuery

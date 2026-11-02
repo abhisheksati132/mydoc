@@ -183,8 +183,8 @@ fun SettingsScreen(
                         onCheckedChange = { isChecked ->
                             if (isChecked) {
                                 val km = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
-                                if (km?.isDeviceSecure == false) {
-                                    context.showMessage("Set a screen lock in device settings first")
+                                if (km == null || !km.isDeviceSecure) {
+                                    context.showMessage("App lock requires a screen lock (PIN, pattern, or fingerprint)")
                                 } else {
                                     settingsRepository.setBiometricLockEnabled(true)
                                 }

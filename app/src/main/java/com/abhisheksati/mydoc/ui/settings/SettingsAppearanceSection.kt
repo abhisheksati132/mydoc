@@ -1,11 +1,15 @@
 package com.abhisheksati.mydoc.ui.settings
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BrightnessAuto
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
@@ -40,9 +44,17 @@ fun SettingsAppearanceSection(
     ) {
         SettingsSectionLabel(text = "Theme")
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            ThemeChip(
+                label = "System",
+                icon = Icons.Outlined.BrightnessAuto,
+                selected = currentTheme == AppThemeMode.SYSTEM,
+                onClick = { onThemeChange(AppThemeMode.SYSTEM) }
+            )
             ThemeChip(
                 label = "Light",
                 icon = Icons.Outlined.LightMode,
@@ -101,7 +113,7 @@ private fun ThemeChip(
         label = { Text(label) },
         leadingIcon = {
             Icon(
-                imageVector = icon,
+                imageVector = if (selected) Icons.Outlined.Check else icon,
                 contentDescription = null,
                 modifier = Modifier.size(18.dp)
             )
