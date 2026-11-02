@@ -119,6 +119,7 @@ android {
 
 dependencies {
     lintChecks(project(":lint-rules"))
+    implementation(project(":office-engine"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
