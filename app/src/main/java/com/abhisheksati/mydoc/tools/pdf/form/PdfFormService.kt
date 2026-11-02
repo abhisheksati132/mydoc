@@ -73,7 +73,7 @@ object PdfFormService {
                 FormField(
                     name = field.fullyQualifiedName ?: field.partialName ?: "",
                     type = FieldType.CHOICE,
-                    value = field.valueAsString ?: "",
+                    value = field.value.orEmpty().joinToString(", "),
                     options = runCatching { field.options ?: emptyList() }.getOrDefault(emptyList())
                 )
             )

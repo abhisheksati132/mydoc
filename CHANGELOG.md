@@ -24,6 +24,9 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 - **Tool runner sheet on Material 3.** Header, input list, progress, result verification and the
   save/open/share actions now use tonal surfaces and standard buttons; the "add more files" action
   appends to the input list instead of replacing it.
+- **Tool sheets rebuilt on Material 3.** The page organizer, form filler and signature pad are now
+  full-height Material 3 modal sheets with tonal headers, outlined cards, standard text fields,
+  switches, dropdowns and filled action buttons that respect the current theme's insets.
 
 ### Changed
 
@@ -39,6 +42,11 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 - **Paste from a category view wrote into the last folder.** Copying a file and then opening a
   category pasted into the previous directory and dropped the user on the browse hub. The clipboard
   bar now only appears while browsing a real folder, and paste stays in that folder.
+- **Form choice fields showed bracketed values.** A combo box value came back as
+  `[United States]` from PDFBox, and the editor both displayed and saved the brackets. Choice values
+  now come from the selected option list and round-trip cleanly.
+- **Page organizer actions sat behind the system taskbar.** The organizer's fixed action bar was
+  covered by the gesture-nav taskbar; as a full-height sheet it now stays in reach.
 - **New-folder button covered the Paste button.** The FAB steps aside while the clipboard bar is up.
 - **Opening a document reset Files to Recents.** The pane is restored from the view model, so
   returning from the viewer lands back in the folder.

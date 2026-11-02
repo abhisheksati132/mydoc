@@ -1,39 +1,40 @@
 package com.abhisheksati.mydoc.tools.ui.components
 
 import android.net.Uri
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,23 +46,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
-import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
-import com.abhisheksati.mydoc.designsystem.components.AppDivider
+import com.abhisheksati.mydoc.designsystem.components.AppBottomSheet
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.tools.pdf.form.PdfFormService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FillFormSheet(
     sourceUri: Uri,
@@ -69,8 +63,8 @@ fun FillFormSheet(
     onSaveValues: (values: Map<String, String>, flatten: Boolean) -> Unit
 ) {
     val context = LocalContext.current
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
+    val scheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
 
     var isLoading by remember { mutableStateOf(true) }
     var fields by remember { mutableStateOf<List<PdfFormService.FormField>>(emptyList()) }
@@ -90,123 +84,133 @@ fun FillFormSheet(
         }
     }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+    AppBottomSheet(
+        isOpen = true,
+        onDismiss = onDismiss
     ) {
-        OverlaySystemBars()
-        BackHandler { onDismiss() }
-
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .background(colors.surface)
-                .statusBarsPadding()
-                .navigationBarsPadding()
+                .fillMaxWidth()
+                .fillMaxHeight()
         ) {
-            // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = AppSpacing.paddingMedium),
+                    .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onDismiss) {
-                    Icon(Icons.Outlined.Close, contentDescription = "Close", tint = colors.textPrimary)
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(scheme.surfaceContainerHigh),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = null,
+                        tint = scheme.primary,
+                        modifier = Modifier.size(21.dp)
+                    )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Fill PDF Form",
-                        style = typography.title,
-                        color = colors.textPrimary
+                        style = typography.titleLarge,
+                        color = scheme.onSurface
                     )
                     Text(
                         text = if (isLoading) "Reading interactive fields..." else "${fields.size} editable fields found",
-                        style = typography.caption,
-                        color = colors.textSecondary
+                        style = typography.bodySmall,
+                        color = scheme.onSurfaceVariant
                     )
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Outlined.Close, contentDescription = "Close", tint = scheme.onSurfaceVariant)
                 }
             }
 
-            AppDivider()
+            HorizontalDivider(color = scheme.outlineVariant)
 
             if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = colors.accent)
+                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
             } else if (fields.isEmpty()) {
-                Box(
+                Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(AppSpacing.paddingLarge),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(scheme.surfaceContainerHigh),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = null,
-                            modifier = Modifier.size(56.dp),
-                            tint = colors.textSecondary
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "No Interactive Fields Detected",
-                            style = typography.title,
-                            color = colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "This document does not contain digital AcroForm fields. It may be a scanned or flattened document.",
-                            style = typography.body,
-                            color = colors.textSecondary,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            modifier = Modifier.size(28.dp),
+                            tint = scheme.primary
                         )
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "No interactive fields",
+                        style = typography.titleMedium,
+                        color = scheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "This document does not contain digital AcroForm fields. It may be a scanned or flattened document.",
+                        style = typography.bodyMedium,
+                        color = scheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(horizontal = AppSpacing.paddingMedium)
+                        .padding(horizontal = 16.dp)
                 ) {
                     item {
-                        Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
-                        // Flatten option
+                        Spacer(modifier = Modifier.height(16.dp))
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(AppRadius.roundShape)
-                                .background(colors.surfaceVariant)
-                                .padding(AppSpacing.paddingMedium),
+                                .clip(AppRadius.cardShape)
+                                .background(scheme.surfaceContainerLow)
+                                .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.accent)
+                            Icon(Icons.Outlined.Lock, contentDescription = null, tint = scheme.primary)
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = "Flatten form upon saving",
-                                    style = typography.body,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colors.textPrimary
+                                    style = typography.titleSmall,
+                                    color = scheme.onSurface
                                 )
                                 Text(
                                     text = "Permanently bakes fields so values cannot be altered.",
-                                    style = typography.caption,
-                                    color = colors.textSecondary
+                                    style = typography.bodySmall,
+                                    color = scheme.onSurfaceVariant
                                 )
                             }
+                            Spacer(modifier = Modifier.width(8.dp))
                             Switch(
                                 checked = flattenForm,
-                                onCheckedChange = { flattenForm = it },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.Black,
-                                    checkedTrackColor = colors.accent
-                                )
+                                onCheckedChange = { flattenForm = it }
                             )
                         }
-                        Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
 
                     items(fields, key = { it.name }) { field ->
@@ -214,14 +218,14 @@ fun FillFormSheet(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = AppSpacing.paddingSmall)
+                                .padding(vertical = 8.dp)
                         ) {
                             Text(
                                 text = field.name.ifEmpty { "Field" },
-                                style = typography.label,
-                                color = colors.textSecondary
+                                style = typography.labelLarge,
+                                color = scheme.onSurfaceVariant
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
 
                             when (field.type) {
                                 PdfFormService.FieldType.CHECKBOX -> {
@@ -229,8 +233,8 @@ fun FillFormSheet(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clip(AppRadius.pillShape)
-                                            .background(colors.surfaceVariant)
+                                            .clip(AppRadius.cardShape)
+                                            .background(scheme.surfaceContainerLow)
                                             .clickable {
                                                 fieldValues[field.name] = if (isChecked) "false" else "true"
                                             }
@@ -239,49 +243,39 @@ fun FillFormSheet(
                                     ) {
                                         Text(
                                             text = if (isChecked) "Checked" else "Unchecked",
-                                            style = typography.body,
-                                            color = colors.textPrimary,
+                                            style = typography.bodyMedium,
+                                            color = scheme.onSurface,
                                             modifier = Modifier.weight(1f)
                                         )
                                         Switch(
                                             checked = isChecked,
                                             onCheckedChange = { chk ->
                                                 fieldValues[field.name] = if (chk) "true" else "false"
-                                            },
-                                            colors = SwitchDefaults.colors(
-                                                checkedThumbColor = Color.Black,
-                                                checkedTrackColor = colors.accent
-                                            )
+                                            }
                                         )
                                     }
                                 }
 
                                 PdfFormService.FieldType.CHOICE -> {
                                     var expanded by remember { mutableStateOf(false) }
-                                    Box {
+                                    ExposedDropdownMenuBox(
+                                        expanded = expanded,
+                                        onExpandedChange = { expanded = it }
+                                    ) {
                                         OutlinedTextField(
                                             value = currentValue,
                                             onValueChange = {},
                                             readOnly = true,
+                                            trailingIcon = {
+                                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                                            },
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .clickable { expanded = true },
-                                            colors = OutlinedTextFieldDefaults.colors(
-                                                focusedBorderColor = colors.accent,
-                                                unfocusedBorderColor = colors.divider,
-                                                focusedTextColor = colors.textPrimary,
-                                                unfocusedTextColor = colors.textPrimary
-                                            )
+                                                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                                         )
-                                        val isOled = LocalIsOled.current
-                                        DropdownMenu(
+                                        ExposedDropdownMenu(
                                             expanded = expanded,
-                                            onDismissRequest = { expanded = false },
-                                            shape = AppRadius.largeShape,
-                                            containerColor = colors.surface,
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, if (isOled) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.10f) else colors.divider.copy(alpha = 0.7f)),
-                                            shadowElevation = 8.dp,
-                                            tonalElevation = 4.dp
+                                            onDismissRequest = { expanded = false }
                                         ) {
                                             field.options.forEach { opt ->
                                                 DropdownMenuItem(
@@ -304,50 +298,37 @@ fun FillFormSheet(
                                         },
                                         singleLine = false,
                                         maxLines = 4,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = colors.accent,
-                                            unfocusedBorderColor = colors.divider,
-                                            focusedTextColor = colors.textPrimary,
-                                            unfocusedTextColor = colors.textPrimary
-                                        )
+                                        modifier = Modifier.fillMaxWidth()
                                     )
                                 }
                             }
                         }
                     }
+
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
                 }
 
-                // Bottom apply bar
-                AppDivider()
+                HorizontalDivider(color = scheme.outlineVariant)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(AppSpacing.paddingMedium),
-                    horizontalArrangement = Arrangement.End
+                        .padding(16.dp)
                 ) {
-                    Box(
+                    Button(
+                        onClick = {
+                            onSaveValues(fieldValues.toMap(), flattenForm)
+                            onDismiss()
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(AppRadius.roundShape)
-                            .background(colors.accent)
-                            .clickable {
-                                onSaveValues(fieldValues.toMap(), flattenForm)
-                                onDismiss()
-                            }
-                            .padding(vertical = 14.dp),
-                        contentAlignment = Alignment.Center
+                            .height(52.dp),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.Check, contentDescription = null, tint = Color.Black)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Apply Form Values",
-                                style = typography.body,
-                                color = Color.Black,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Apply Form Values")
                     }
                 }
             }

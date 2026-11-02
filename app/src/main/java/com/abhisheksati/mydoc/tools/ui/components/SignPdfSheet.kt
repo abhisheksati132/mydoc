@@ -21,16 +21,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Undo
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Draw
 import androidx.compose.material.icons.outlined.TextFields
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -58,11 +65,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.components.AppBottomSheet
-import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.tools.security.SignatureStorage
 
@@ -72,10 +77,6 @@ private data class SignatureStroke(
     val strokeWidth: Float
 )
 
-/**
- * Enterprise Signature Pad for PDF documents with smooth Bezier curve pen strokes,
- * typed script cursive font mode, multi-color ink palette, and undo history.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignPdfSheet(
@@ -84,17 +85,17 @@ fun SignPdfSheet(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
+    val scheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
     val haptics = rememberAppHaptics()
 
     var isDrawMode by remember { mutableStateOf(true) }
     var typedName by remember { mutableStateOf("") }
 
     val inkColors = listOf(
-        DocumentCanvasColors.inkBlack, // Pure Black
-        DocumentCanvasColors.inkNavy, // Legal Navy Blue
-        DocumentCanvasColors.inkCrimson  // Crimson Red
+        DocumentCanvasColors.inkBlack,
+        DocumentCanvasColors.inkNavy,
+        DocumentCanvasColors.inkCrimson
     )
     var selectedColorIndex by remember { mutableIntStateOf(0) }
     val activeInkColor = inkColors[selectedColorIndex]
@@ -111,84 +112,87 @@ fun SignPdfSheet(
                 .fillMaxWidth()
                 .padding(bottom = AppSpacing.paddingLarge)
         ) {
-            // Header with mode toggle
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(AppSpacing.minTouchTarget),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .height(56.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isDrawMode) "Draw Signature" else "Type Signature",
-                    style = typography.title,
-                    color = colors.textPrimary
+                    text = if (isDrawMode) "Draw signature" else "Type signature",
+                    style = typography.titleLarge,
+                    color = scheme.onSurface,
+                    modifier = Modifier.weight(1f)
                 )
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Mode toggle pill
-                    Surface(
-                        color = colors.surfaceVariant,
-                        shape = AppRadius.largeShape,
-                        modifier = Modifier.padding(end = 4.dp)
+                Surface(
+                    color = scheme.surfaceContainerHigh,
+                    shape = CircleShape
+                ) {
+                    Row(
+                        modifier = Modifier.padding(2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        Row(modifier = Modifier.padding(2.dp)) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(AppRadius.cardShape)
-                                    .background(if (isDrawMode) colors.accent else Color.Transparent)
-                                    .clickable { isDrawMode = true }
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Draw,
-                                    contentDescription = "Draw",
-                                    tint = if (isDrawMode) Color.Black else colors.textSecondary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .clip(AppRadius.cardShape)
-                                    .background(if (!isDrawMode) colors.accent else Color.Transparent)
-                                    .clickable { isDrawMode = false }
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.TextFields,
-                                    contentDescription = "Type",
-                                    tint = if (!isDrawMode) Color.Black else colors.textSecondary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
+                        FilledIconToggleButton(
+                            checked = isDrawMode,
+                            onCheckedChange = { isDrawMode = it },
+                            shape = CircleShape,
+                            colors = IconButtonDefaults.filledIconToggleButtonColors(
+                                containerColor = Color.Transparent,
+                                contentColor = scheme.onSurfaceVariant,
+                                checkedContainerColor = scheme.primary,
+                                checkedContentColor = scheme.onPrimary
+                            ),
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Draw,
+                                contentDescription = "Draw",
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        FilledIconToggleButton(
+                            checked = !isDrawMode,
+                            onCheckedChange = { isDrawMode = !it },
+                            shape = CircleShape,
+                            colors = IconButtonDefaults.filledIconToggleButtonColors(
+                                containerColor = Color.Transparent,
+                                contentColor = scheme.onSurfaceVariant,
+                                checkedContainerColor = scheme.primary,
+                                checkedContentColor = scheme.onPrimary
+                            ),
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.TextFields,
+                                contentDescription = "Type",
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
+                }
 
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.size(AppSpacing.minTouchTarget)
-                    ) {
-                        Icon(Icons.Outlined.Close, contentDescription = "Close", tint = colors.textSecondary)
-                    }
+                Spacer(modifier = Modifier.width(4.dp))
+
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Outlined.Close, contentDescription = "Close", tint = scheme.onSurfaceVariant)
                 }
             }
 
             Text(
                 text = "Signatures are encrypted with hardware-backed AES-256 in Android Keystore.",
-                style = typography.caption,
-                color = colors.textSecondary
+                style = typography.bodySmall,
+                color = scheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Ink color selector & Undo bar
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Color choices
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     inkColors.forEachIndexed { index, color ->
                         val isSelected = selectedColorIndex == index
                         Box(
@@ -197,8 +201,8 @@ fun SignPdfSheet(
                                 .clip(CircleShape)
                                 .background(color)
                                 .border(
-                                    width = if (isSelected) 2.5.dp else 1.dp,
-                                    color = if (isSelected) colors.accent else Color.Gray.copy(alpha = 0.5f),
+                                    width = if (isSelected) 2.dp else 1.dp,
+                                    color = if (isSelected) scheme.primary else scheme.outline,
                                     shape = CircleShape
                                 )
                                 .clickable { selectedColorIndex = index }
@@ -210,29 +214,27 @@ fun SignPdfSheet(
                     IconButton(
                         onClick = {
                             if (strokes.isNotEmpty()) strokes.removeAt(strokes.size - 1)
-                        },
-                        modifier = Modifier.size(32.dp)
+                        }
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.Undo,
                             contentDescription = "Undo stroke",
-                            tint = colors.textPrimary,
-                            modifier = Modifier.size(18.dp)
+                            tint = scheme.onSurfaceVariant
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Signature Canvas / Input Box
+            // White paper keeps ink readable in every theme
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
                     .clip(AppRadius.roundShape)
                     .background(Color.White)
-                    .border(1.dp, colors.divider, AppRadius.roundShape)
+                    .border(1.dp, scheme.outlineVariant, AppRadius.roundShape)
             ) {
                 if (isDrawMode) {
                     Canvas(
@@ -256,11 +258,9 @@ fun SignPdfSheet(
                                 )
                             }
                     ) {
-                        // Draw completed smooth Bezier strokes
                         for (stroke in strokes) {
                             drawSmoothStroke(stroke.points, stroke.color, stroke.strokeWidth)
                         }
-                        // Draw active in-progress stroke
                         if (currentPoints.isNotEmpty()) {
                             drawSmoothStroke(currentPoints, activeInkColor, 5f)
                         }
@@ -288,61 +288,56 @@ fun SignPdfSheet(
                         if (typedName.isEmpty()) {
                             Text(
                                 text = "Type your name here...",
-                                style = typography.body.copy(fontSize = 20.sp, fontStyle = FontStyle.Italic),
-                                color = Color.Gray.copy(alpha = 0.6f)
+                                style = typography.bodyLarge.copy(fontSize = 20.sp, fontStyle = FontStyle.Italic),
+                                color = Color.Black.copy(alpha = 0.38f)
                             )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Actions: Clear and Save
             val hasContent = (isDrawMode && strokes.isNotEmpty()) || (!isDrawMode && typedName.isNotBlank())
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Box(
+                OutlinedButton(
+                    onClick = {
+                        strokes.clear()
+                        currentPoints = emptyList()
+                        typedName = ""
+                    },
                     modifier = Modifier
                         .weight(1f)
-                        .height(AppSpacing.minTouchTarget)
-                        .border(1.dp, colors.divider, AppRadius.roundShape)
-                        .clickable {
-                            strokes.clear()
-                            currentPoints = emptyList()
-                            typedName = ""
-                        },
-                    contentAlignment = Alignment.Center
+                        .height(52.dp),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text(text = "Clear", style = typography.body, color = colors.textPrimary)
+                    Text("Clear")
                 }
 
-                Box(
+                Button(
+                    onClick = {
+                        haptics.confirm()
+                        val bmp = if (isDrawMode) {
+                            renderStrokesToBitmap(strokes)
+                        } else {
+                            renderTextToBitmap(typedName, activeInkColor)
+                        }
+                        SignatureStorage.saveSignature(context, bmp)
+                        bmp.recycle()
+                        onSignatureSaved()
+                    },
+                    enabled = hasContent,
                     modifier = Modifier
                         .weight(1f)
-                        .height(AppSpacing.minTouchTarget)
-                        .clip(AppRadius.roundShape)
-                        .background(if (hasContent) colors.accent else colors.surfaceVariant)
-                        .clickable(enabled = hasContent) {
-                            haptics.confirm()
-                            val bmp = if (isDrawMode) {
-                                renderStrokesToBitmap(strokes)
-                            } else {
-                                renderTextToBitmap(typedName, activeInkColor)
-                            }
-                            SignatureStorage.saveSignature(context, bmp)
-                            bmp.recycle()
-                            onSignatureSaved()
-                        },
-                    contentAlignment = Alignment.Center
+                        .height(52.dp),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text(
-                        text = "Save Signature",
-                        style = typography.body,
-                        color = if (hasContent) colors.background else colors.textSecondary
-                    )
+                    Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Save signature")
                 }
             }
         }

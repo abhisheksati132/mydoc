@@ -2,7 +2,6 @@ package com.abhisheksati.mydoc.tools.ui.components
 
 import android.graphics.Bitmap
 import android.net.Uri
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -15,19 +14,17 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.RotateRight
@@ -37,17 +34,20 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.SelectAll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -60,15 +60,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
+import com.abhisheksati.mydoc.designsystem.components.AppBottomSheet
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.artifex.mupdf.fitz.ColorSpace
 import com.artifex.mupdf.fitz.Document
@@ -85,6 +80,7 @@ data class OrganizedPageItem(
     var rotationDegrees: Int = 0
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReorderPagesSheet(
     pdfUri: Uri,
@@ -92,24 +88,14 @@ fun ReorderPagesSheet(
     onApplyOrder: (List<Int>) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
-    ) {
-        OverlaySystemBars()
-        BackHandler(onBack = onDismiss)
-
-        val context = LocalContext.current
-        val colors = LocalAppColors.current
-        val typography = LocalAppTypography.current
+    val context = LocalContext.current
+        val scheme = MaterialTheme.colorScheme
+        val typography = MaterialTheme.typography
         val haptic = LocalHapticFeedback.current
         val haptics = rememberAppHaptics()
 
         val pages = remember { mutableStateListOf<OrganizedPageItem>() }
-        val thumbnailCache = remember { mutableMapOf<Int, Bitmap>() }
+        val thumbnailCache = remember { mutableStateMapOf<Int, Bitmap>() }
         val selectedIds = remember { mutableStateListOf<String>() }
 
         var isLoading by remember { mutableStateOf(true) }
@@ -150,7 +136,7 @@ fun ReorderPagesSheet(
                             val targetWidth = 240f
                             val scale = targetWidth / maxOf(bounds.x1 - bounds.x0, 100f)
                             val matrix = Matrix(scale, scale)
-                            val pixmap = page.toPixmap(matrix, ColorSpace.DeviceRGB, false)
+                            val pixmap = page.toPixmap(matrix, ColorSpace.DeviceRGB, true)
                             val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
                             pixmap.destroy()
                             page.destroy()
@@ -158,7 +144,9 @@ fun ReorderPagesSheet(
                             withContext(Dispatchers.Main) {
                                 thumbnailCache[p] = bmp
                             }
-                        } catch (_: Throwable) {}
+                        } catch (t: Throwable) {
+                            android.util.Log.w("ReorderPages", "Thumbnail render failed for page $p", t)
+                        }
                     }
 
                     doc.destroy()
@@ -176,310 +164,309 @@ fun ReorderPagesSheet(
             }
         }
 
-        Surface(
-            modifier = modifier.fillMaxSize(),
-            color = colors.background
+    AppBottomSheet(
+        isOpen = true,
+        onDismiss = onDismiss
+    ) {
+        Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
         ) {
-            Column(
+            // Header
+            Row(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .navigationBarsPadding()
+                    .fillMaxWidth()
+                    .padding(start = 4.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Header Action Bar
-                Surface(
-                    color = colors.surfaceVariant,
-                    modifier = Modifier.fillMaxWidth(),
-                    shadowElevation = 2.dp
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = onDismiss) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                    contentDescription = "Back",
-                                    tint = colors.textPrimary
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Column {
-                                Text(
-                                    text = "Page Organizer",
-                                    style = typography.titleSmall,
-                                    color = colors.textPrimary
-                                )
-                                Text(
-                                    text = if (selectedIds.isEmpty()) "${pages.size} pages" else "${selectedIds.size} of ${pages.size} selected",
-                                    style = typography.caption,
-                                    color = if (selectedIds.isEmpty()) colors.textSecondary else colors.accent
-                                )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
+                        contentDescription = "Back",
+                        tint = scheme.onSurface
+                    )
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Page Organizer",
+                        style = typography.titleLarge,
+                        color = scheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = if (selectedIds.isEmpty()) "${pages.size} pages" else "${selectedIds.size} of ${pages.size} selected",
+                        style = typography.bodySmall,
+                        color = if (selectedIds.isEmpty()) scheme.onSurfaceVariant else scheme.primary
+                    )
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = {
+                            if (selectedIds.size == pages.size) {
+                                selectedIds.clear()
+                            } else {
+                                selectedIds.clear()
+                                selectedIds.addAll(pages.map { it.uniqueId })
                             }
                         }
+                    ) {
+                        Icon(
+                            imageVector = if (selectedIds.size == pages.size && pages.isNotEmpty()) Icons.Outlined.CheckCircle else Icons.Outlined.SelectAll,
+                            contentDescription = "Toggle Select All",
+                            tint = if (selectedIds.size == pages.size && pages.isNotEmpty()) scheme.primary else scheme.onSurfaceVariant
+                        )
+                    }
 
-                        // Batch Action Icons
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            // Select / Deselect All
-                            IconButton(
-                                onClick = {
-                                    if (selectedIds.size == pages.size) {
-                                        selectedIds.clear()
-                                    } else {
-                                        selectedIds.clear()
-                                        selectedIds.addAll(pages.map { it.uniqueId })
+                    if (selectedIds.isNotEmpty()) {
+                        IconButton(
+                            onClick = {
+                                pages.forEachIndexed { idx, item ->
+                                    if (item.uniqueId in selectedIds) {
+                                        pages[idx] = item.copy(rotationDegrees = (item.rotationDegrees + 90) % 360)
                                     }
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = if (selectedIds.size == pages.size && pages.isNotEmpty()) Icons.Outlined.CheckCircle else Icons.Outlined.SelectAll,
-                                    contentDescription = "Toggle Select All",
-                                    tint = colors.textPrimary
-                                )
-                            }
-
-                            // Rotate Selected
-                            if (selectedIds.isNotEmpty()) {
-                                IconButton(
-                                    onClick = {
-                                        pages.forEachIndexed { idx, item ->
-                                            if (item.uniqueId in selectedIds) {
-                                                pages[idx] = item.copy(rotationDegrees = (item.rotationDegrees + 90) % 360)
-                                            }
-                                        }
-                                    }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Outlined.RotateRight,
-                                        contentDescription = "Rotate Selected",
-                                        tint = colors.accent
-                                    )
-                                }
-
-                                // Delete Selected
-                                IconButton(
-                                    onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        pages.removeAll { it.uniqueId in selectedIds }
-                                        selectedIds.clear()
-                                    }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Delete,
-                                        contentDescription = "Delete Selected",
-                                        tint = colors.error
-                                    )
                                 }
                             }
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Outlined.RotateRight,
+                                contentDescription = "Rotate Selected",
+                                tint = scheme.primary
+                            )
+                        }
+
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                pages.removeAll { it.uniqueId in selectedIds }
+                                selectedIds.clear()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = "Delete Selected",
+                                tint = scheme.error
+                            )
                         }
                     }
                 }
+            }
 
-                // Grid Content
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(horizontal = 12.dp)
-                ) {
-                    if (isLoading) {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            CircularProgressIndicator(color = colors.accent, modifier = Modifier.size(36.dp), strokeWidth = 3.dp)
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(text = "Loading document pages...", style = typography.body, color = colors.textSecondary)
-                        }
-                    } else if (errorMessage != null) {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(text = errorMessage!!, style = typography.body, color = colors.error)
-                        }
-                    } else if (pages.isEmpty()) {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(text = "No pages remaining. Add or restore pages.", style = typography.body, color = colors.textSecondary)
-                        }
-                    } else {
-                        LazyVerticalGrid(
-                            columns = GridCells.Adaptive(minSize = 108.dp),
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(vertical = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            itemsIndexed(pages, key = { _, item -> item.uniqueId }) { index, item ->
-                                val bmp = thumbnailCache[item.originalPageIndex]
-                                val isSelected = item.uniqueId in selectedIds
-                                val rotation by animateFloatAsState(targetValue = item.rotationDegrees.toFloat(), label = "pageRot")
+            HorizontalDivider(color = scheme.outlineVariant)
 
-                                Surface(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(AppRadius.cardShape)
-                                        .border(
-                                            width = if (isSelected) 2.dp else 0.8.dp,
-                                            color = if (isSelected) colors.accent else colors.divider,
-                                            shape = AppRadius.cardShape
-                                        )
-                                        .clickable {
-                                            if (isSelected) selectedIds.remove(item.uniqueId)
-                                            else selectedIds.add(item.uniqueId)
-                                        },
-                                    color = colors.surfaceVariant,
-                                    shadowElevation = if (isSelected) 4.dp else 1.dp
+            // Grid Content
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 16.dp)
+            ) {
+                if (isLoading) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(36.dp),
+                            strokeWidth = 3.dp
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Loading document pages...",
+                            style = typography.bodyMedium,
+                            color = scheme.onSurfaceVariant
+                        )
+                    }
+                } else if (errorMessage != null) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = errorMessage!!,
+                            style = typography.bodyMedium,
+                            color = scheme.error
+                        )
+                    }
+                } else if (pages.isEmpty()) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "No pages remaining. Add or restore pages.",
+                            style = typography.bodyMedium,
+                            color = scheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(minSize = 108.dp),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(vertical = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        itemsIndexed(pages, key = { _, item -> item.uniqueId }) { index, item ->
+                            val bmp = thumbnailCache[item.originalPageIndex]
+                            val isSelected = item.uniqueId in selectedIds
+                            val rotation by animateFloatAsState(targetValue = item.rotationDegrees.toFloat(), label = "pageRot")
+
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(AppRadius.cardShape)
+                                    .border(
+                                        width = if (isSelected) 2.dp else 1.dp,
+                                        color = if (isSelected) scheme.primary else scheme.outlineVariant,
+                                        shape = AppRadius.cardShape
+                                    )
+                                    .clickable {
+                                        if (isSelected) selectedIds.remove(item.uniqueId)
+                                        else selectedIds.add(item.uniqueId)
+                                    },
+                                color = if (isSelected) scheme.surfaceContainerHigh else scheme.surfaceContainerLow,
+                                shape = AppRadius.cardShape
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(6.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Column(
-                                        modifier = Modifier.padding(6.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    // Page index + selection state
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        // Header inside page card: Page index + selection checkbox
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
+                                        Surface(
+                                            color = scheme.surfaceContainerHighest,
+                                            shape = AppRadius.microShape
                                         ) {
-                                            Surface(
-                                                color = colors.background,
-                                                shape = AppRadius.microShape
-                                            ) {
-                                                Text(
-                                                    text = "${index + 1}",
-                                                    style = typography.micro,
-                                                    color = colors.textPrimary,
-                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                                                )
-                                            }
+                                            Text(
+                                                text = "${index + 1}",
+                                                style = typography.labelSmall,
+                                                color = scheme.onSurface,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
 
+                                        Icon(
+                                            imageVector = if (isSelected) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+                                            contentDescription = "Select",
+                                            tint = if (isSelected) scheme.primary else scheme.onSurfaceVariant,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    // Page render stays on white paper regardless of theme
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .aspectRatio(0.72f)
+                                            .clip(AppRadius.microShape)
+                                            .background(Color.White),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (bmp != null) {
+                                            Image(
+                                                bitmap = bmp.asImageBitmap(),
+                                                contentDescription = "Page ${index + 1}",
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .graphicsLayer { rotationZ = rotation }
+                                            )
+                                        } else {
+                                            CircularProgressIndicator(
+                                                strokeWidth = 2.dp,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    // Card controls: move left, rotate, move right, delete
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        IconButton(
+                                            onClick = {
+                                                haptics.tick()
+                                                if (index > 0) {
+                                                    val temp = pages[index]
+                                                    pages[index] = pages[index - 1]
+                                                    pages[index - 1] = temp
+                                                }
+                                            },
+                                            enabled = index > 0,
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
                                             Icon(
-                                                imageVector = if (isSelected) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
-                                                contentDescription = "Select",
-                                                tint = if (isSelected) colors.accent else colors.textSecondary.copy(alpha = 0.5f),
+                                                imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
+                                                contentDescription = "Move left",
+                                                tint = if (index > 0) scheme.onSurfaceVariant else scheme.onSurfaceVariant.copy(alpha = 0.38f),
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+
+                                        IconButton(
+                                            onClick = {
+                                                pages[index] = item.copy(rotationDegrees = (item.rotationDegrees + 90) % 360)
+                                            },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Outlined.RotateRight,
+                                                contentDescription = "Rotate 90°",
+                                                tint = scheme.primary,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                         }
 
-                                        Spacer(modifier = Modifier.height(4.dp))
-
-                                        // Thumbnail image with animated rotation
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .aspectRatio(0.72f)
-                                                .clip(AppRadius.microShape)
-                                                .background(Color.White),
-                                            contentAlignment = Alignment.Center
+                                        IconButton(
+                                            onClick = {
+                                                haptics.tick()
+                                                if (index < pages.size - 1) {
+                                                    val temp = pages[index]
+                                                    pages[index] = pages[index + 1]
+                                                    pages[index + 1] = temp
+                                                }
+                                            },
+                                            enabled = index < pages.size - 1,
+                                            modifier = Modifier.size(28.dp)
                                         ) {
-                                            if (bmp != null) {
-                                                Image(
-                                                    bitmap = bmp.asImageBitmap(),
-                                                    contentDescription = "Page ${index + 1}",
-                                                    modifier = Modifier
-                                                        .fillMaxSize()
-                                                        .graphicsLayer { rotationZ = rotation }
-                                                )
-                                            } else {
-                                                CircularProgressIndicator(
-                                                    strokeWidth = 2.dp,
-                                                    modifier = Modifier.size(20.dp),
-                                                    color = colors.accent
-                                                )
-                                            }
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                                                contentDescription = "Move right",
+                                                tint = if (index < pages.size - 1) scheme.onSurfaceVariant else scheme.onSurfaceVariant.copy(alpha = 0.38f),
+                                                modifier = Modifier.size(18.dp)
+                                            )
                                         }
 
-                                        Spacer(modifier = Modifier.height(6.dp))
-
-                                        // Card Controls: Move Left, Rotate, Move Right, Delete
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
+                                        IconButton(
+                                            onClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                pages.removeAt(index)
+                                                selectedIds.remove(item.uniqueId)
+                                            },
+                                            modifier = Modifier.size(28.dp)
                                         ) {
-                                            // Move left
-                                            IconButton(
-                                                onClick = {
-                                                    haptics.tick()
-                                                    if (index > 0) {
-                                                        val temp = pages[index]
-                                                        pages[index] = pages[index - 1]
-                                                        pages[index - 1] = temp
-                                                    }
-                                                },
-                                                enabled = index > 0,
-                                                modifier = Modifier.size(24.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
-                                                    contentDescription = "Move left",
-                                                    tint = if (index > 0) colors.textPrimary else colors.textSecondary.copy(alpha = 0.3f),
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                            }
-
-                                            // Rotate 90
-                                            IconButton(
-                                                onClick = {
-                                                    pages[index] = item.copy(rotationDegrees = (item.rotationDegrees + 90) % 360)
-                                                },
-                                                modifier = Modifier.size(24.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.AutoMirrored.Outlined.RotateRight,
-                                                    contentDescription = "Rotate 90°",
-                                                    tint = colors.accent,
-                                                    modifier = Modifier.size(15.dp)
-                                                )
-                                            }
-
-                                            // Move right
-                                            IconButton(
-                                                onClick = {
-                                                    haptics.tick()
-                                                    if (index < pages.size - 1) {
-                                                        val temp = pages[index]
-                                                        pages[index] = pages[index + 1]
-                                                        pages[index + 1] = temp
-                                                    }
-                                                },
-                                                enabled = index < pages.size - 1,
-                                                modifier = Modifier.size(24.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-                                                    contentDescription = "Move right",
-                                                    tint = if (index < pages.size - 1) colors.textPrimary else colors.textSecondary.copy(alpha = 0.3f),
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                            }
-
-                                            // Delete page
-                                            IconButton(
-                                                onClick = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    pages.removeAt(index)
-                                                    selectedIds.remove(item.uniqueId)
-                                                },
-                                                modifier = Modifier.size(24.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Outlined.Close,
-                                                    contentDescription = "Remove page",
-                                                    tint = colors.error,
-                                                    modifier = Modifier.size(14.dp)
-                                                )
-                                            }
+                                            Icon(
+                                                imageVector = Icons.Outlined.Close,
+                                                contentDescription = "Remove page",
+                                                tint = scheme.error,
+                                                modifier = Modifier.size(16.dp)
+                                            )
                                         }
                                     }
                                 }
@@ -487,42 +474,36 @@ fun ReorderPagesSheet(
                         }
                     }
                 }
+            }
 
-                // Bottom Save Action Bar
-                Surface(
-                    color = colors.surfaceVariant,
-                    modifier = Modifier.fillMaxWidth(),
-                    shadowElevation = 8.dp
+            HorizontalDivider(color = scheme.outlineVariant)
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${pages.size} pages organized",
+                    style = typography.bodySmall,
+                    color = scheme.onSurfaceVariant
+                )
+
+                Button(
+                    onClick = {
+                        haptics.confirm()
+                        val finalOrder = pages.map { it.originalPageIndex }
+                        onApplyOrder(finalOrder)
+                    },
+                    enabled = pages.isNotEmpty() && !isLoading,
+                    shape = AppRadius.cardShape,
+                    modifier = Modifier.height(48.dp)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "${pages.size} pages organized",
-                            style = typography.caption,
-                            color = colors.textSecondary
-                        )
-
-                        Button(
-                            onClick = {
-                                haptics.confirm()
-                                val finalOrder = pages.map { it.originalPageIndex }
-                                onApplyOrder(finalOrder)
-                            },
-                            enabled = pages.isNotEmpty() && !isLoading,
-                            shape = AppRadius.cardShape,
-                            colors = ButtonDefaults.buttonColors(containerColor = colors.accent, contentColor = Color.Black),
-                            modifier = Modifier.height(42.dp)
-                        ) {
-                            Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Apply & Save", style = AppTheme.typography.captionStrong)
-                        }
-                    }
+                    Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Apply & Save")
                 }
             }
         }
