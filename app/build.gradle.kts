@@ -13,8 +13,8 @@ plugins {
 //   4. Tag & push: git tag v1.2.1 && git push origin v1.2.1
 //   5. Create GitHub Release with tag "v1.2.1" — the in-app updater reads this tag
 // -----------------------------------------------------------------------------
-val APP_VERSION_NAME = "1.5.1"
-val APP_VERSION_CODE = 151  // Increment by 1 every release, never decrease
+val APP_VERSION_NAME = "1.5.2"
+val APP_VERSION_CODE = 152  // Increment by 1 every release, never decrease
 
 android {
     namespace = "com.abhisheksati.mydoc"
@@ -177,7 +177,9 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
     debugImplementation(libs.compose.ui.tooling)
+    debugImplementation(libs.compose.ui.test.manifest)
 }
 
 ksp {

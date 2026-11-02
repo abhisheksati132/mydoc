@@ -225,14 +225,15 @@ fun SignPdfSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // White paper keeps ink readable in every theme
+            // White paper keeps ink readable in every theme. cardShape, not roundShape: a
+            // 200dp-tall box clamped to a stadium reads as a pill, not as a sheet of paper.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
-                    .clip(AppRadius.roundShape)
+                    .clip(AppRadius.cardShape)
                     .background(Color.White)
-                    .border(1.dp, scheme.outlineVariant, AppRadius.roundShape)
+                    .border(1.dp, scheme.outlineVariant, AppRadius.cardShape)
             ) {
                 if (isDrawMode) {
                     Canvas(

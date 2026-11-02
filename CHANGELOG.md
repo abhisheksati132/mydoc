@@ -5,6 +5,10 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+## [1.5.2] — 2026-11-02
+
+Range: `v1.5.1..v1.5.2`.
+
 ### Added
 
 - **`AppTopBar`, one top-bar wrapper.** Files, Settings, spotlight search and the viewer header now
@@ -26,6 +30,12 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   8/12/16/20/24/28 with a named tier for elements nested inside a card, and the reader's document
   text sizes (heading levels, body, table cells) live in the token layer rather than in the views.
 - **`LibraryItemTest`** covers the identity key the search list dedupes on.
+- **First instrumented UI tests.** Five Compose tests in a new `androidTest` source set, aimed at the
+  things that broke silently rather than at easy coverage: the search list dedupes a duplicate
+  identity to one row and its count label agrees, a query narrows list and count together, tapping a
+  result reports that item, `AppTopBar` renders title, subtitle and a working back action after the
+  `modifier` reorder, and the `AppMessages` bus reaches the snackbar host. All five pass on
+  `mydoc_api35`.
 
 ### Changed
 
@@ -91,6 +101,8 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 - **Picture-in-picture entered without a source rect or auto-enter.** The player's measured bounds
   are now passed to `setSourceRectHint`, and `setAutoEnterEnabled(true)` is set on API 31+ — the two
   calls lint asks for at `targetSdk 31` and above.
+- **The signature plate was a stadium, not paper.** A 200dp-tall box clipped with `roundShape` clamps
+  to a full pill; it now uses `cardShape`, matching every other surface in the sheet.
 
 ## [1.5.1] — 2026-11-02
 
