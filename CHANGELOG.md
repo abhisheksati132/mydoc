@@ -5,6 +5,10 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+## [1.4.6] — 2026-11-02
+
+Range: `v1.4.5..v1.4.6`.
+
 ### Fixed
 
 - **Theme toggle left list content on the old palette.** Lazy list items did not invalidate when
