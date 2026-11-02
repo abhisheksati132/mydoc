@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.viewmodel
 
+import androidx.lifecycle.ViewModel
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.FileSortField
 import com.abhisheksati.mydoc.domain.model.FileSortOrder
@@ -13,6 +14,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -28,13 +30,14 @@ import java.io.File
 @OptIn(ExperimentalCoroutinesApi::class)
 class FileManagerViewModelTest {
 
-    private val testDispatcher = StandardTestDispatcher()
+    private lateinit var testDispatcher: TestDispatcher
     private lateinit var fakeRepo: FakeStorageRepository
     private lateinit var tempDir: File
     private lateinit var viewModel: FileManagerViewModel
 
     @Before
     fun setUp() {
+        testDispatcher = StandardTestDispatcher()
         Dispatchers.setMain(testDispatcher)
         tempDir = File.createTempFile("fm_test", "dir").apply {
             delete()
@@ -69,6 +72,12 @@ class FileManagerViewModelTest {
 
     @After
     fun tearDown() {
+        try {
+            val method = ViewModel::class.java.getDeclaredMethod("onCleared")
+            method.isAccessible = true
+            method.invoke(viewModel)
+        } catch (_: Exception) {}
+        testDispatcher.scheduler.advanceUntilIdle()
         Dispatchers.resetMain()
         tempDir.deleteRecursively()
     }

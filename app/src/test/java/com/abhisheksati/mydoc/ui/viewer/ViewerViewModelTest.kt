@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -34,7 +35,7 @@ import java.io.File
 @OptIn(ExperimentalCoroutinesApi::class)
 class ViewerViewModelTest {
 
-    private val testDispatcher = StandardTestDispatcher()
+    private lateinit var testDispatcher: TestDispatcher
     private lateinit var tempDir: File
     private lateinit var fakeRepo: FakeDocumentRepository
     private lateinit var docFile: DocumentFile
@@ -42,6 +43,7 @@ class ViewerViewModelTest {
 
     @Before
     fun setUp() {
+        testDispatcher = StandardTestDispatcher()
         Dispatchers.setMain(testDispatcher)
         tempDir = File.createTempFile("vm_test", "dir").apply {
             delete()
