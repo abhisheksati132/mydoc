@@ -16,6 +16,7 @@ import com.abhisheksati.mydoc.rendering.engine.MuPdfRenderer
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import com.abhisheksati.mydoc.rendering.engine.SearchMatch
 import com.abhisheksati.mydoc.rendering.engine.TextSelectionResult
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -56,7 +57,8 @@ class ViewerViewModel(
     // Application, not Context: this outlives the Activity that creates it.
     private val context: Application,
     private val repository: DocumentRepository,
-    private val documentFile: DocumentFile
+    private val documentFile: DocumentFile,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
     private val sessionTempFiles = java.util.concurrent.CopyOnWriteArrayList<java.io.File>()
 
@@ -101,7 +103,7 @@ class ViewerViewModel(
             // Restore per-file view state from Room
             val savedState = repository.getViewState(activeDocumentFile.uri)
 
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 try {
                     val uri = Uri.parse(activeDocumentFile.uri)
                     val ext = activeDocumentFile.extension.lowercase().ifEmpty { "pdf" }
@@ -302,7 +304,7 @@ class ViewerViewModel(
 
     fun authenticatePassword(password: String) {
         val rend = renderer ?: return
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val success = rend.authenticatePassword(password)
             if (success) {
                 val totalPages = rend.pageCount
@@ -466,7 +468,7 @@ class ViewerViewModel(
         }
         // A full-document MuPDF text search is expensive enough that starting one per
         // keystroke keeps the workers busy with queries the user has already abandoned.
-        searchJob = viewModelScope.launch(Dispatchers.IO) {
+        searchJob = viewModelScope.launch(ioDispatcher) {
             delay(250)
             val matches = renderer?.search(query) ?: emptyList()
             _uiState.update {
@@ -516,19 +518,19 @@ class ViewerViewModel(
         }
     }
 
-    suspend fun selectTextAt(pageIndex: Int, point: android.graphics.PointF): TextSelectionResult? = withContext(Dispatchers.IO) {
+    suspend fun selectTextAt(pageIndex: Int, point: android.graphics.PointF): TextSelectionResult? = withContext(ioDispatcher) {
         renderer?.selectTextAt(pageIndex, point)
     }
 
-    suspend fun selectTextBetween(pageIndex: Int, start: android.graphics.PointF, end: android.graphics.PointF): TextSelectionResult? = withContext(Dispatchers.IO) {
+    suspend fun selectTextBetween(pageIndex: Int, start: android.graphics.PointF, end: android.graphics.PointF): TextSelectionResult? = withContext(ioDispatcher) {
         renderer?.selectTextBetween(pageIndex, start, end)
     }
 
-    suspend fun getPageText(pageIndex: Int): String = withContext(Dispatchers.IO) {
+    suspend fun getPageText(pageIndex: Int): String = withContext(ioDispatcher) {
         renderer?.getPageText(pageIndex).orEmpty()
     }
 
-    suspend fun getDocumentText(): String = withContext(Dispatchers.IO) {
+    suspend fun getDocumentText(): String = withContext(ioDispatcher) {
         renderer?.getDocumentText().orEmpty()
     }
 

@@ -63,10 +63,16 @@ class ViewerViewModelTest {
     fun tearDown() {
         currentViewModel?.let { vm ->
             try {
-                val method = ViewModel::class.java.getDeclaredMethod("onCleared")
+                val method = ViewModel::class.java.getDeclaredMethod("clear")
                 method.isAccessible = true
                 method.invoke(vm)
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+                try {
+                    val method = ViewModel::class.java.getDeclaredMethod("onCleared")
+                    method.isAccessible = true
+                    method.invoke(vm)
+                } catch (_: Exception) {}
+            }
         }
         testDispatcher.scheduler.advanceUntilIdle()
         Dispatchers.resetMain()
@@ -82,7 +88,7 @@ class ViewerViewModelTest {
 
     private fun createViewModel(): Pair<ViewerViewModel, MutableStateFlow<ViewerUiState>> {
         val app = mockApplication(tempDir)
-        val vm = ViewerViewModel(app, fakeRepo, docFile)
+        val vm = ViewerViewModel(app, fakeRepo, docFile, testDispatcher)
         currentViewModel = vm
         val field = ViewerViewModel::class.java.getDeclaredField("_uiState")
         field.isAccessible = true
