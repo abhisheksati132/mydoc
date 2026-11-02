@@ -2,9 +2,9 @@ package com.abhisheksati.mydoc.tools.ui.components
 
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,7 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -208,20 +207,20 @@ internal fun ToolOptionsSection(
                 Text(text = "VISUAL PAGE ORGANIZER", style = typography.label, color = colors.textSecondary)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 if (uris.isNotEmpty()) {
-                    Box(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(AppRadius.roundShape)
-                            .background(colors.accent)
+                            .clip(AppRadius.cardShape)
+                            .background(colors.surface)
+                            .border(1.dp, colors.line, AppRadius.cardShape)
                             .clickable { onOpenOrganizer() }
-                            .padding(vertical = 12.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.GridView, contentDescription = null, tint = Color.Black)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Open Visual Page Organizer", style = typography.body, color = Color.Black, fontWeight = FontWeight.Bold)
-                        }
+                        Icon(Icons.Outlined.GridView, contentDescription = null, tint = colors.accent)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Open Visual Page Organizer", style = typography.body, color = colors.ink, fontWeight = FontWeight.SemiBold)
                     }
                     if (options.reorderedPageIndices.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(6.dp))
@@ -240,20 +239,20 @@ internal fun ToolOptionsSection(
                 Text(text = "FORM FIELDS", style = typography.label, color = colors.textSecondary)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 if (uris.isNotEmpty()) {
-                    Box(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(AppRadius.roundShape)
-                            .background(colors.accent)
+                            .clip(AppRadius.cardShape)
+                            .background(colors.surface)
+                            .border(1.dp, colors.line, AppRadius.cardShape)
                             .clickable { onOpenFormFiller() }
-                            .padding(vertical = 12.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Edit, contentDescription = null, tint = Color.Black)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Open Interactive Form Editor", style = typography.body, color = Color.Black, fontWeight = FontWeight.Bold)
-                        }
+                        Icon(Icons.Default.Edit, contentDescription = null, tint = colors.accent)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Open Interactive Form Editor", style = typography.body, color = colors.ink, fontWeight = FontWeight.SemiBold)
                     }
                     if (options.formFieldValues.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(6.dp))
@@ -358,29 +357,33 @@ internal fun ToolOptionsSection(
                 val hasSignature = SignatureStorage.hasSavedSignature(LocalContext.current)
                 Text(text = "DIGITAL SIGNATURE", style = typography.label, color = colors.textSecondary)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
-                Box(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(AppRadius.roundShape)
-                        .background(if (hasSignature) colors.surfaceVariant else colors.accent)
+                        .clip(AppRadius.cardShape)
+                        .background(if (hasSignature) colors.surface else colors.accent.copy(alpha = 0.10f))
+                        .border(
+                            width = 1.dp,
+                            color = if (hasSignature) colors.line else colors.accent.copy(alpha = 0.30f),
+                            shape = AppRadius.cardShape
+                        )
                         .clickable { onOpenSignPad() }
-                        .padding(14.dp),
-                    contentAlignment = Alignment.Center
+                        .padding(vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Outlined.Draw,
-                            contentDescription = null,
-                            tint = if (hasSignature) colors.textPrimary else colors.background
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (hasSignature) "Edit / Redraw Signature" else "Draw Signature Now",
-                            style = typography.body,
-                            color = if (hasSignature) colors.textPrimary else colors.background,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Outlined.Draw,
+                        contentDescription = null,
+                        tint = if (hasSignature) colors.textPrimary else colors.accent
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (hasSignature) "Edit / Redraw Signature" else "Draw Signature Now",
+                        style = typography.body,
+                        color = if (hasSignature) colors.ink else colors.accent,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 Text(text = "PLACEMENT PAGE", style = typography.label, color = colors.textSecondary)

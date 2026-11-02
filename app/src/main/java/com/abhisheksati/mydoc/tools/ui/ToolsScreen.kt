@@ -269,7 +269,7 @@ private fun ToolCard(
     }
 }
 
-private fun familyForGroup(group: ToolGroup): VividGradients.Family = when (group) {
+internal fun familyForGroup(group: ToolGroup): VividGradients.Family = when (group) {
     ToolGroup.ORGANIZE -> VividGradients.Family.OCEAN
     ToolGroup.OPTIMIZE -> VividGradients.Family.FOREST
     ToolGroup.CONVERT_TO -> VividGradients.Family.GRAPE

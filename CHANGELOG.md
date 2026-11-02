@@ -27,6 +27,15 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ### Changed
 
+- **Vivid sweep across the tool runner.** The tool sheet opens on a gradient header plaque in the
+  tool's section hue and closes its header on the 3dp spectrum rule; the empty input picker is an
+  accent-tinted drop card, attached files are soft surface cards with ocean document plaques, and
+  progress tracks use the pill gauge. Run and Save are glowing brand-gradient pills with white
+  labels, the verification panel, Open / Share and the error retry are soft cards, and the success
+  header carries a forest check plaque. Inline option launchers (visual page organizer, form
+  editor, signature pad) became secondary framed cards with accent iconography instead of
+  competing full-width gradients, so the Run CTA is the only primary action on the sheet. This
+  also fixes black labels and icons that sat on accent-filled option buttons in light mode.
 - **Vivid sweep across Settings, reader chrome and scanner.** The last editorial surfaces join
   the vivid language. Settings sections are soft cards with gradient icon plaques (grape
   Appearance, ocean Reading, sunset Media, forest Storage, fire Privacy, brand About) on an

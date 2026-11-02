@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FileOpen
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Share
@@ -43,16 +44,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.abhisheksati.mydoc.designsystem.components.AppBottomSheet
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
+import com.abhisheksati.mydoc.designsystem.components.VividIconTile
+import com.abhisheksati.mydoc.designsystem.components.VividRule
 import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
+import com.abhisheksati.mydoc.designsystem.tokens.glow
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.tools.model.formatByteSize
 import com.abhisheksati.mydoc.tools.model.PdfTool
@@ -131,7 +139,7 @@ fun ToolRunnerSheet(
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = AppSpacing.paddingLarge)
         ) {
-            // Header: Tool title and close button
+            // Header: gradient tool plaque, title and close button
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -140,11 +148,12 @@ fun ToolRunnerSheet(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = tool.icon,
-                        contentDescription = null,
-                        tint = colors.accent,
-                        modifier = Modifier.size(24.dp)
+                    VividIconTile(
+                        icon = tool.icon,
+                        family = familyForGroup(tool.group),
+                        size = 40.dp,
+                        iconSize = 20.dp,
+                        shape = AppRadius.largeShape
                     )
                     Spacer(modifier = Modifier.width(AppSpacing.paddingSmall))
                     Text(
@@ -172,10 +181,10 @@ fun ToolRunnerSheet(
                 text = tool.description,
                 style = typography.caption,
                 color = colors.textSecondary,
-                modifier = Modifier.padding(bottom = AppSpacing.paddingMedium)
+                modifier = Modifier.padding(top = AppSpacing.paddingSmall, bottom = AppSpacing.paddingMedium)
             )
 
-            AppDivider()
+            VividRule()
             Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
 
             // State-based content
@@ -222,8 +231,13 @@ fun ToolRunnerSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(AppSpacing.minTouchTarget)
+                            .glow(
+                                VividGradients.glowColor(VividGradients.Family.BRAND),
+                                AppRadius.roundShape,
+                                elevation = if (canRun) 12.dp else 0.dp
+                            )
                             .clip(AppRadius.roundShape)
-                            .background(if (canRun) colors.accent else colors.surfaceVariant)
+                            .background(if (canRun) VividGradients.brand else SolidColor(colors.surfaceVariant))
                             .clickable(enabled = canRun) {
                                 haptics.confirm()
                                 viewModel.runTool()
@@ -233,7 +247,7 @@ fun ToolRunnerSheet(
                         Text(
                             text = "Run ${tool.title}",
                             style = typography.body,
-                            color = if (canRun) colors.background else colors.textSecondary
+                            color = if (canRun) Color.White else colors.textSecondary
                         )
                     }
                 }
@@ -310,7 +324,7 @@ fun ToolRunnerSheet(
                                 .fillMaxWidth()
                                 .height(AppSpacing.minTouchTarget)
                                 .clip(AppRadius.roundShape)
-                                .background(colors.accent)
+                                .background(VividGradients.brand)
                                 .clickable {
                                     viewModel.selectTool(tool)
                                 },
@@ -319,7 +333,7 @@ fun ToolRunnerSheet(
                             Text(
                                 text = "Try again",
                                 style = typography.body,
-                                color = colors.background
+                                color = Color.White
                             )
                         }
                     }
@@ -389,12 +403,10 @@ private fun InputFilesSection(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(AppSpacing.minTouchTarget)
-                    .border(
-                        width = 1.dp,
-                        color = colors.divider,
-                        shape = AppRadius.roundShape
-                    )
+                    .height(64.dp)
+                    .clip(AppRadius.cardShape)
+                    .background(colors.accent.copy(alpha = 0.10f))
+                    .border(1.dp, colors.accent.copy(alpha = 0.30f), AppRadius.cardShape)
                     .clickable {
                         if (tool.requiresMultipleInputFiles) onPickMultiple() else onPickSingle()
                     }
@@ -422,18 +434,35 @@ private fun InputFilesSection(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(AppSpacing.minTouchTarget)
-                        .background(colors.surfaceVariant, AppRadius.roundShape)
+                        .height(AppSpacing.minTouchTarget + 8.dp)
+                        .clip(AppRadius.cardShape)
+                        .background(colors.surface)
+                        .border(1.dp, colors.line, AppRadius.cardShape)
                         .padding(horizontal = AppSpacing.paddingMedium),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = formatMiddleTruncated(fileName, 32),
-                        style = typography.body,
-                        color = colors.textPrimary,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        VividIconTile(
+                            icon = Icons.Outlined.Description,
+                            family = VividGradients.Family.OCEAN,
+                            size = 32.dp,
+                            iconSize = 16.dp,
+                            shape = AppRadius.microShape
+                        )
+                        Spacer(modifier = Modifier.width(AppSpacing.paddingSmall))
+                        Text(
+                            text = formatMiddleTruncated(fileName, 32),
+                            style = typography.body,
+                            color = colors.textPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                     IconButton(
                         onClick = { onRemoveUri(uri) },
                         modifier = Modifier.size(AppSpacing.minTouchTarget)
@@ -453,7 +482,8 @@ private fun InputFilesSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(AppSpacing.minTouchTarget)
-                        .border(1.dp, colors.divider, AppRadius.roundShape)
+                        .clip(AppRadius.cardShape)
+                        .border(1.dp, colors.accent.copy(alpha = 0.30f), AppRadius.cardShape)
                         .clickable { onPickMultiple() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -484,16 +514,22 @@ private fun RunningProgressSection(
     ) {
         if (progress.isIndeterminate) {
             LinearProgressIndicator(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(AppRadius.pillShape),
                 color = colors.accent,
-                trackColor = colors.surfaceVariant
+                trackColor = colors.track
             )
         } else {
             LinearProgressIndicator(
                 progress = { progress.percent / 100f },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(AppRadius.pillShape),
                 color = colors.accent,
-                trackColor = colors.surfaceVariant
+                trackColor = colors.track
             )
         }
 
@@ -509,7 +545,8 @@ private fun RunningProgressSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(AppSpacing.minTouchTarget)
-                .border(1.dp, colors.divider, AppRadius.roundShape)
+                .clip(AppRadius.pillShape)
+                .border(1.dp, colors.line, AppRadius.pillShape)
                 .clickable { onCancel() },
             contentAlignment = Alignment.Center
         ) {
@@ -532,11 +569,12 @@ private fun SuccessVerificationSection(
     Column(modifier = Modifier.fillMaxWidth()) {
         // Verification Header
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Outlined.Check,
-                contentDescription = null,
-                tint = colors.accent,
-                modifier = Modifier.size(24.dp)
+            VividIconTile(
+                icon = Icons.Outlined.Check,
+                family = VividGradients.Family.FOREST,
+                size = 40.dp,
+                iconSize = 20.dp,
+                shape = AppRadius.largeShape
             )
             Spacer(modifier = Modifier.width(AppSpacing.paddingSmall))
             Text(
@@ -548,11 +586,13 @@ private fun SuccessVerificationSection(
 
         Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
 
-        // Before / After Verification Card (Plain layout, thin border)
+        // Before / After verification card
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(colors.surfaceVariant, AppRadius.roundShape)
+                .clip(AppRadius.cardShape)
+                .background(colors.surface)
+                .border(1.dp, colors.line, AppRadius.cardShape)
                 .padding(AppSpacing.paddingMedium)
         ) {
             Text(text = "VERIFICATION", style = typography.label, color = colors.textSecondary)
@@ -614,15 +654,20 @@ private fun SuccessVerificationSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(AppSpacing.minTouchTarget)
+                .glow(
+                    VividGradients.glowColor(VividGradients.Family.BRAND),
+                    AppRadius.roundShape,
+                    elevation = 12.dp
+                )
                 .clip(AppRadius.roundShape)
-                .background(colors.accent)
+                .background(VividGradients.brand)
                 .clickable { onSaveSaf() },
             contentAlignment = Alignment.Center
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Save, contentDescription = null, tint = colors.background, modifier = Modifier.size(20.dp))
+                Icon(Icons.Outlined.Save, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(AppSpacing.paddingSmall))
-                Text(text = "Save to device", style = typography.body, color = colors.background)
+                Text(text = "Save to device", style = typography.body, color = Color.White)
             }
         }
 
@@ -637,7 +682,9 @@ private fun SuccessVerificationSection(
                 modifier = Modifier
                     .weight(1f)
                     .height(AppSpacing.minTouchTarget)
-                    .border(1.dp, colors.divider, AppRadius.roundShape)
+                    .clip(AppRadius.cardShape)
+                    .background(colors.surface)
+                    .border(1.dp, colors.line, AppRadius.cardShape)
                     .clickable { onOpen() },
                 contentAlignment = Alignment.Center
             ) {
@@ -652,7 +699,9 @@ private fun SuccessVerificationSection(
                 modifier = Modifier
                     .weight(1f)
                     .height(AppSpacing.minTouchTarget)
-                    .border(1.dp, colors.divider, AppRadius.roundShape)
+                    .clip(AppRadius.cardShape)
+                    .background(colors.surface)
+                    .border(1.dp, colors.line, AppRadius.cardShape)
                     .clickable { onShare() },
                 contentAlignment = Alignment.Center
             ) {
