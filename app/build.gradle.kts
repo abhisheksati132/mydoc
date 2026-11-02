@@ -161,6 +161,10 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.compose.material.icons.extended)
 
+    // Glass backdrop blur engine
+    implementation(libs.haze)
+    implementation(libs.haze.materials)
+
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)

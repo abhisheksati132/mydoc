@@ -14,18 +14,41 @@ import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.R
 
 /**
- * Editorial type system: Bricolage Grotesque carries the brand (display, titles, headings),
- * Inter carries the work (body, labels, captions, numbers).
- *
- * Sizes are fixed here on purpose. Screens must not override fontSize/weight with
- * `.copy(...)` — pick the closest role instead, so the app keeps one voice.
+ * Editorial "Paper under glass" type system:
+ * - Fraunces Serif carries the editorial voice (display, titles, document names)
+ * - Inter Grotesk carries the interface (body, labels, captions, buttons)
+ * - JetBrains Mono carries the metadata (file size, page counts, timestamps, technical info)
  */
 
-private val interWeights = listOf(400 to FontWeight.Normal, 500 to FontWeight.Medium, 600 to FontWeight.SemiBold, 700 to FontWeight.Bold, 800 to FontWeight.ExtraBold)
-private val bricolageWeights = listOf(400 to FontWeight.Normal, 600 to FontWeight.SemiBold, 700 to FontWeight.Bold, 800 to FontWeight.ExtraBold)
+private val interWeights = listOf(
+    400 to FontWeight.Normal,
+    500 to FontWeight.Medium,
+    600 to FontWeight.SemiBold,
+    700 to FontWeight.Bold,
+    800 to FontWeight.ExtraBold
+)
+
+private val frauncesWeights = listOf(
+    400 to FontWeight.Normal,
+    500 to FontWeight.Medium,
+    600 to FontWeight.SemiBold,
+    700 to FontWeight.Bold,
+    800 to FontWeight.ExtraBold
+)
+
+private val monoWeights = listOf(
+    400 to FontWeight.Normal,
+    500 to FontWeight.Medium,
+    600 to FontWeight.SemiBold,
+    700 to FontWeight.Bold
+)
 
 @OptIn(ExperimentalTextApi::class)
-private fun variableFamily(resId: Int, weights: List<Pair<Int, FontWeight>>): FontFamily = runCatching {
+private fun variableFamily(
+    resId: Int,
+    weights: List<Pair<Int, FontWeight>>,
+    fallback: FontFamily = FontFamily.SansSerif
+): FontFamily = runCatching {
     FontFamily(
         weights.map { (value, weight) ->
             Font(
@@ -35,66 +58,72 @@ private fun variableFamily(resId: Int, weights: List<Pair<Int, FontWeight>>): Fo
             )
         }
     )
-}.getOrElse { FontFamily.SansSerif }
+}.getOrElse { fallback }
 
-val InterFontFamily: FontFamily = variableFamily(R.font.inter, interWeights)
+val InterFontFamily: FontFamily = variableFamily(R.font.inter, interWeights, FontFamily.SansSerif)
+val FrauncesFontFamily: FontFamily = variableFamily(R.font.fraunces, frauncesWeights, FontFamily.Serif)
+val JetBrainsMonoFontFamily: FontFamily = variableFamily(R.font.jetbrains_mono, monoWeights, FontFamily.Monospace)
 
-val BricolageFontFamily: FontFamily = variableFamily(R.font.bricolage_grotesque, bricolageWeights)
+// Backward compatibility alias for Bricolage
+val BricolageFontFamily: FontFamily = FrauncesFontFamily
 
 @Immutable
 data class AppTypography(
+    // --- Fraunces Serif Display Tier ---
     val display: TextStyle = TextStyle(
-        fontFamily = BricolageFontFamily,
-        fontWeight = FontWeight.ExtraBold,
-        fontSize = 34.sp,
+        fontFamily = FrauncesFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 32.sp,
         lineHeight = 38.sp,
-        letterSpacing = (-1.0).sp
+        letterSpacing = (-0.5).sp
     ),
     val title: TextStyle = TextStyle(
-        fontFamily = BricolageFontFamily,
-        fontWeight = FontWeight.Bold,
+        fontFamily = FrauncesFontFamily,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 24.sp,
-        lineHeight = 28.sp,
-        letterSpacing = (-0.4).sp
+        lineHeight = 30.sp,
+        letterSpacing = (-0.3).sp
     ),
     val heading: TextStyle = TextStyle(
-        fontFamily = BricolageFontFamily,
+        fontFamily = FrauncesFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 20.sp,
-        lineHeight = 25.sp,
+        lineHeight = 26.sp,
         letterSpacing = (-0.2).sp
     ),
-    /** Compact Bricolage title. Below this size, titles are Inter body-strong. */
+    /** Compact title. */
     val titleSmall: TextStyle = TextStyle(
-        fontFamily = BricolageFontFamily,
-        fontWeight = FontWeight.Bold,
+        fontFamily = FrauncesFontFamily,
+        fontWeight = FontWeight.Medium,
         fontSize = 18.sp,
-        lineHeight = 22.sp,
-        letterSpacing = (-0.2).sp
+        lineHeight = 23.sp,
+        letterSpacing = (-0.1).sp
     ),
-    /** Small, wide-tracked section label. Use for "RECENT DOCUMENTS", group headers. */
-    val overline: TextStyle = TextStyle(
-        fontFamily = InterFontFamily,
+    /** Document item title. */
+    val documentName: TextStyle = TextStyle(
+        fontFamily = FrauncesFontFamily,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 11.sp,
-        lineHeight = 14.sp,
-        letterSpacing = 0.8.sp
+        fontSize = 17.sp,
+        lineHeight = 22.sp,
+        letterSpacing = (-0.1).sp
     ),
     val wordmark: TextStyle = TextStyle(
-        fontFamily = BricolageFontFamily,
+        fontFamily = FrauncesFontFamily,
         fontWeight = FontWeight.ExtraBold,
         fontSize = 22.sp,
         lineHeight = 26.sp,
-        letterSpacing = (-0.6).sp
+        letterSpacing = (-0.4).sp
     ),
     /** Root-tab header title. */
     val screenTitle: TextStyle = TextStyle(
-        fontFamily = BricolageFontFamily,
-        fontWeight = FontWeight.Bold,
+        fontFamily = FrauncesFontFamily,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 22.sp,
-        lineHeight = 26.sp,
-        letterSpacing = (-0.4).sp
+        lineHeight = 28.sp,
+        letterSpacing = (-0.3).sp
     ),
+
+    // --- Inter Clean Grotesk UI Tier ---
     val bodyLarge: TextStyle = TextStyle(
         fontFamily = InterFontFamily,
         fontWeight = FontWeight.Normal,
@@ -137,28 +166,61 @@ data class AppTypography(
         lineHeight = 18.sp,
         letterSpacing = 0.1.sp
     ),
+    /** Small, wide-tracked section label. Use for "RECENT DOCUMENTS", group headers. */
+    val overline: TextStyle = TextStyle(
+        fontFamily = InterFontFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 11.sp,
+        lineHeight = 14.sp,
+        letterSpacing = 0.8.sp
+    ),
     val caption: TextStyle = TextStyle(
         fontFamily = InterFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 16.sp,
-        letterSpacing = 0.2.sp
+        letterSpacing = 0.1.sp
     ),
     val captionStrong: TextStyle = TextStyle(
         fontFamily = InterFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 12.sp,
         lineHeight = 16.sp,
-        letterSpacing = 0.2.sp
+        letterSpacing = 0.1.sp
     ),
-    /** Smallest legible tier: metadata, badges, dense counters. */
+    /** Smallest legible tier: badges, dense counters. */
     val micro: TextStyle = TextStyle(
         fontFamily = InterFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 14.sp,
-        letterSpacing = 0.2.sp
+        letterSpacing = 0.1.sp
     ),
+
+    // --- JetBrains Mono Technical Metadata Tier ---
+    val metadata: TextStyle = TextStyle(
+        fontFamily = JetBrainsMonoFontFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = 11.sp,
+        lineHeight = 15.sp,
+        letterSpacing = (-0.1).sp,
+        fontFeatureSettings = "tnum"
+    ),
+    val metadataStrong: TextStyle = TextStyle(
+        fontFamily = JetBrainsMonoFontFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 11.sp,
+        lineHeight = 15.sp,
+        letterSpacing = (-0.1).sp,
+        fontFeatureSettings = "tnum"
+    ),
+    val code: TextStyle = TextStyle(
+        fontFamily = JetBrainsMonoFontFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = 13.sp,
+        lineHeight = 18.sp
+    ),
+
     // Compatibility alias
     val headline: TextStyle = heading
 )
@@ -166,9 +228,7 @@ data class AppTypography(
 val LocalAppTypography = staticCompositionLocalOf { AppTypography() }
 
 /**
- * Maps the Material 3 type scale onto the legacy role names so screens that
- * still read LocalAppTypography render the same Roboto scale as the rest of
- * the app.
+ * Maps the Material 3 type scale onto the role names.
  */
 @Composable
 fun appTypographyFromMaterial(base: Typography): AppTypography = AppTypography(
@@ -176,6 +236,7 @@ fun appTypographyFromMaterial(base: Typography): AppTypography = AppTypography(
     title = base.headlineSmall,
     heading = base.titleLarge,
     titleSmall = base.titleMedium,
+    documentName = base.titleMedium,
     overline = base.labelSmall,
     wordmark = base.titleLarge,
     screenTitle = base.headlineSmall,
