@@ -48,9 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxSlide
 import com.abhisheksati.mydoc.rendering.engine.presentation.VisualElementType
@@ -89,18 +87,18 @@ fun VisualSlideCard(
 
         Box(
             modifier = cardModifier
-                .clip(AppRadius.xLargeShape)
+                .clip(MaterialTheme.shapes.extraLarge)
                 .background(cardBgColor.copy(alpha = 0.5f))
-                .border(1.dp, Color.White.copy(alpha = 0.08f), AppRadius.xLargeShape)
+                .border(1.dp, Color.White.copy(alpha = 0.08f), MaterialTheme.shapes.extraLarge)
                 .padding(6.dp),
             contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(slideBg, AppRadius.largeShape)
-                    .border(0.5.dp, Color.Black.copy(alpha = 0.06f), AppRadius.largeShape)
-                    .clip(AppRadius.largeShape)
+                    .background(slideBg, MaterialTheme.shapes.large)
+                    .border(0.5.dp, Color.Black.copy(alpha = 0.06f), MaterialTheme.shapes.large)
+                    .clip(MaterialTheme.shapes.large)
             ) {
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                     val totalWidth = maxWidth
@@ -120,7 +118,7 @@ fun VisualSlideCard(
                             if (slide.title.isNotEmpty()) {
                                 Text(
                                     text = slide.title,
-                                    style = AppTheme.typography.title,
+                                    style = MaterialTheme.typography.headlineSmall,
                                     color = defaultTextColor,
                                     textAlign = TextAlign.Center,
                                     fontWeight = FontWeight.Bold
@@ -130,7 +128,7 @@ fun VisualSlideCard(
                             for (line in slide.content) {
                                 Text(
                                     text = line,
-                                    style = AppTheme.typography.bodyLarge,
+                                    style = MaterialTheme.typography.bodyLarge,
                                     color = defaultTextColor,
                                     textAlign = TextAlign.Center
                                 )
@@ -211,7 +209,7 @@ fun VisualSlideCard(
                                                 if (!isVectorPreset && element.backgroundColor != null && element.backgroundColor != Color.Transparent) {
                                                     Modifier.background(
                                                         color = element.backgroundColor,
-                                                        shape = if (element.isRounded) AppRadius.pillShape else if (element.isEllipse) CircleShape else RectangleShape
+                                                        shape = if (element.isRounded) CircleShape else if (element.isEllipse) CircleShape else RectangleShape
                                                     )
                                                 } else Modifier
                                             )
@@ -220,7 +218,7 @@ fun VisualSlideCard(
                                                     Modifier.border(
                                                         width = (element.borderWidthDp.takeIf { it > 0f } ?: 1f).dp,
                                                         color = element.borderColor,
-                                                        shape = if (element.isRounded) AppRadius.pillShape else if (element.isEllipse) CircleShape else RectangleShape
+                                                        shape = if (element.isRounded) CircleShape else if (element.isEllipse) CircleShape else RectangleShape
                                                     )
                                                 } else Modifier
                                             )
@@ -316,8 +314,8 @@ fun VisualSlideCard(
                                         Column(
                                             modifier = Modifier
                                                 .fillMaxSize()
-                                                .background(DocumentCanvasColors.elementShadow, AppRadius.microShape)
-                                                .border(1.dp, DocumentCanvasColors.elementHairline, AppRadius.microShape)
+                                                .background(DocumentCanvasColors.elementShadow, MaterialTheme.shapes.extraSmall)
+                                                .border(1.dp, DocumentCanvasColors.elementHairline, MaterialTheme.shapes.extraSmall)
                                                 .padding(4.dp)
                                         ) {
                                             for (row in element.tableRows) {
@@ -384,18 +382,18 @@ fun OutlineSlideCard(
 
         Box(
             modifier = cardModifier
-                .clip(AppRadius.xLargeShape)
+                .clip(MaterialTheme.shapes.extraLarge)
                 .background(cardBgColor.copy(alpha = 0.5f))
-                .border(1.dp, Color.White.copy(alpha = 0.08f), AppRadius.xLargeShape)
+                .border(1.dp, Color.White.copy(alpha = 0.08f), MaterialTheme.shapes.extraLarge)
                 .padding(6.dp),
             contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(cardBgColor, AppRadius.largeShape)
-                    .border(0.5.dp, Color.Black.copy(alpha = 0.06f), AppRadius.largeShape)
-                    .clip(AppRadius.largeShape)
+                    .background(cardBgColor, MaterialTheme.shapes.large)
+                    .border(0.5.dp, Color.Black.copy(alpha = 0.06f), MaterialTheme.shapes.large)
+                    .clip(MaterialTheme.shapes.large)
                     .padding(AppSpacing.paddingLarge)
             ) {
                 Column(
@@ -424,7 +422,7 @@ fun OutlineSlideCard(
                     if (allPoints.isEmpty()) {
                         Text(
                             text = "No additional bullet points on this slide.",
-                            style = AppTheme.typography.body,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = textColor.copy(alpha = 0.5f),
                             fontStyle = FontStyle.Italic,
                             modifier = Modifier.padding(top = AppSpacing.paddingSmall)

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,8 +36,8 @@ import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 @Composable
 fun EditorialRule(
     modifier: Modifier = Modifier,
-    thickness: Dp = AppSpacing.rule,
-    color: Color = LocalAppColors.current.ink
+    thickness: Dp = AppSpacing.hairline,
+    color: Color = MaterialTheme.colorScheme.outlineVariant
 ) {
     Box(
         modifier = modifier

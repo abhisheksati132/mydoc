@@ -24,21 +24,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.CallSplit
-import androidx.compose.material.icons.automirrored.outlined.MergeType
 import androidx.compose.material.icons.outlined.AllInclusive
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Compress
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Transform
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -144,8 +140,6 @@ fun ToolsScreen(
                 isSearchActive = !isSearchActive
                 if (!isSearchActive) searchQuery = ""
             },
-            onScan = { onToolClick(PdfTool.SCAN_TO_PDF) },
-            onMerge = { onToolClick(PdfTool.MERGE) },
             onSettingsClick = onSettingsClick
         )
 
@@ -249,13 +243,10 @@ private fun ToolsHeader(
     toolCount: Int,
     isSearchActive: Boolean,
     onSearch: () -> Unit,
-    onScan: () -> Unit,
-    onMerge: () -> Unit,
     onSettingsClick: (() -> Unit)?
 ) {
     val scheme = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
-    var menuOpen by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
@@ -288,30 +279,6 @@ private fun ToolsHeader(
                 contentDescription = "Search tools",
                 tint = if (isSearchActive) scheme.primary else scheme.onSurface
             )
-        }
-
-        Box {
-            IconButton(onClick = { menuOpen = true }) {
-                Icon(Icons.Outlined.MoreVert, contentDescription = "More options", tint = scheme.onSurface)
-            }
-            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                DropdownMenuItem(
-                    text = { Text("Scan document") },
-                    leadingIcon = { Icon(Icons.Outlined.CameraAlt, contentDescription = null) },
-                    onClick = {
-                        menuOpen = false
-                        onScan()
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Merge documents") },
-                    leadingIcon = { Icon(Icons.AutoMirrored.Outlined.MergeType, contentDescription = null) },
-                    onClick = {
-                        menuOpen = false
-                        onMerge()
-                    }
-                )
-            }
         }
 
         if (onSettingsClick != null) {

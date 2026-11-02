@@ -80,53 +80,15 @@ private val shortcutCategories = listOf(
 @Composable
 fun RecentsPane(
     recentItems: List<LibraryItem>,
-    storageUiState: StorageAnalysisUiState,
-    pinnedFolders: List<File>,
-    trashCount: Int,
     onOpenItem: (LibraryItem) -> Unit,
     onItemDetails: (LibraryItem) -> Unit,
     onBrowse: () -> Unit,
-    onCategory: (FileCategory) -> Unit,
-    onFolder: (File) -> Unit,
-    onOpenTrash: () -> Unit,
-    onInsights: () -> Unit,
-    onClean: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val scheme = MaterialTheme.colorScheme
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(bottom = 120.dp)
+        contentPadding = PaddingValues(top = 8.dp, bottom = 120.dp)
     ) {
-        item(key = "recent_storage") {
-            StorageOverviewCard(
-                usedRatio = storageUiState.usedRatio,
-                formattedUsed = storageUiState.formattedUsed,
-                formattedTotal = storageUiState.formattedTotal,
-                formattedFree = storageUiState.formattedFree,
-                usedPercentage = storageUiState.usedPercentage,
-                reclaimableBytes = storageUiState.cleanSummary.totalReclaimableBytes,
-                onBrowse = onBrowse,
-                onInsights = onInsights,
-                onClean = if (storageUiState.cleanSummary.totalReclaimableBytes > 0) onClean else null,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-        }
-
-        item(key = "recent_categories_header") {
-            FilesSectionHeader(
-                title = "Browse by type",
-                modifier = Modifier.padding(horizontal = 0.dp)
-            )
-        }
-        item(key = "recent_categories") {
-            CategoryShortcutGrid(
-                storageUiState = storageUiState,
-                onCategory = onCategory,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-        }
-
         item(key = "recent_header") {
             FilesSectionHeader(
                 title = "Recent",
@@ -155,51 +117,6 @@ fun RecentsPane(
                     onMoreClick = { onItemDetails(item) }
                 )
             }
-        }
-
-        if (pinnedFolders.isNotEmpty()) {
-            item(key = "recent_folders_header") {
-                FilesSectionHeader(title = "Pinned folders")
-            }
-            items(pinnedFolders, key = { "pin_${it.absolutePath}" }) { folder ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onFolder(folder) }
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    FolderPlate()
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = folder.name,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = scheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = folder.absolutePath,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = scheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-            }
-        }
-
-        item(key = "recent_trash") {
-            Spacer(Modifier.height(8.dp))
-            LocationRow(
-                title = "Recycle Bin",
-                meta = if (trashCount > 0) "$trashCount items kept for 30 days" else "Empty",
-                icon = Icons.Outlined.DeleteSweep,
-                onClick = onOpenTrash,
-                modifier = Modifier.padding(horizontal = 10.dp)
-            )
         }
     }
 }
@@ -302,11 +219,7 @@ fun BrowseHomePane(
         }
 
         item(key = "browse_insights_header") {
-            FilesSectionHeader(
-                title = "Storage by type",
-                actionLabel = "Details",
-                onAction = onInsights
-            )
+            FilesSectionHeader(title = "Storage by type")
         }
         item(key = "browse_insights") {
             StorageBreakdown(storageUiState = storageUiState)

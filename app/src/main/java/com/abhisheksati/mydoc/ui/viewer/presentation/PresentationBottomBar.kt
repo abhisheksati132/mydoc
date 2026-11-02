@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.ViewCarousel
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,10 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.abhisheksati.mydoc.designsystem.components.AppDivider
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxSlide
 
 /**
@@ -60,7 +58,7 @@ fun PresentationBottomBar(
     secondaryTextColor: Color,
     modifier: Modifier = Modifier
 ) {
-    val typography = AppTheme.typography
+    val typography = MaterialTheme.typography
 
     Column(
         modifier = modifier
@@ -89,12 +87,16 @@ fun PresentationBottomBar(
                             modifier = Modifier
                                 .width(96.dp)
                                 .height(58.dp)
-                                .clip(AppRadius.cardShape)
+                                .clip(MaterialTheme.shapes.small)
                                 .background(cardBgColor)
                                 .border(
                                     width = if (isSelected) 2.dp else 1.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.1f),
-                                    shape = AppRadius.cardShape
+                                    color = if (isSelected) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.outlineVariant
+                                    },
+                                    shape = MaterialTheme.shapes.small
                                 )
                                 .clickable { onSelectSlide(index) }
                                 .padding(4.dp),
@@ -106,12 +108,12 @@ fun PresentationBottomBar(
                             ) {
                                 Text(
                                     text = "${index + 1}",
-                                    style = typography.captionStrong,
+                                    style = typography.labelLarge,
                                     color = if (isSelected) MaterialTheme.colorScheme.primary else textColor
                                 )
                                 Text(
                                     text = slide?.title ?: "Slide ${index + 1}",
-                                    style = typography.micro,
+                                    style = typography.labelSmall,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     color = secondaryTextColor
@@ -120,11 +122,11 @@ fun PresentationBottomBar(
                         }
                     }
                 }
-                AppDivider()
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
         }
 
-        AppDivider()
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -154,16 +156,15 @@ fun PresentationBottomBar(
 
             Box(
                 modifier = Modifier
-                    .clip(AppRadius.roundShape)
+                    .clip(MaterialTheme.shapes.extraLarge)
                     .background(cardBgColor)
-                    .border(1.dp, Color.White.copy(alpha = 0.08f), AppRadius.roundShape)
                     .clickable { onOpenJumpDialog() }
                     .padding(horizontal = 14.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "Slide ${currentSlideIndex + 1} of $effectiveSlideCount",
-                    style = AppTheme.typography.label,
+                    style = MaterialTheme.typography.labelMedium,
                     color = textColor
                 )
             }

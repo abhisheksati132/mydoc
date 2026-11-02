@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -92,13 +94,11 @@ fun AuroraBackdrop(modifier: Modifier = Modifier) {
  * replaces the old ink rule. One consistent stroke of brand color everywhere.
  */
 @Composable
-fun VividRule(modifier: Modifier = Modifier, thickness: Dp = 3.dp) {
-    val colors = AppTheme.colors
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(thickness)
-            .background(VividGradients.wordmark(colors))
+fun VividRule(modifier: Modifier = Modifier, thickness: Dp = 1.dp) {
+    HorizontalDivider(
+        modifier = modifier,
+        thickness = thickness,
+        color = MaterialTheme.colorScheme.outlineVariant
     )
 }
 

@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -39,8 +40,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
@@ -120,7 +119,7 @@ fun SpreadsheetViewerScreen(
                     onValueChange = viewModel::onSearchQueryChanged,
                     placeholder = { Text("Search sheet cells…") },
                     singleLine = true,
-                    shape = AppRadius.pillShape,
+                    shape = MaterialTheme.shapes.extraLarge,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -129,18 +128,18 @@ fun SpreadsheetViewerScreen(
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 )
-                AppDivider()
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
 
             if (state.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = colors.accent)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             } else if (state.errorMessage != null) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         text = state.errorMessage ?: "Failed to open sheet",
-                        style = AppTheme.typography.body,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(16.dp)
                     )
@@ -182,7 +181,7 @@ fun SpreadsheetViewerScreen(
                                         ) {
                                             Text(
                                                 text = SheetData.columnIndexToLetter(c),
-                                                style = AppTheme.typography.caption,
+                                                style = MaterialTheme.typography.bodySmall,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
@@ -210,7 +209,7 @@ fun SpreadsheetViewerScreen(
                                         ) {
                                             Text(
                                                 text = "${r + 1}",
-                                                style = AppTheme.typography.caption,
+                                                style = MaterialTheme.typography.bodySmall,
                                                 fontWeight = FontWeight.Medium,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
@@ -254,7 +253,7 @@ fun SpreadsheetViewerScreen(
                                                     ) {
                                                         Text(
                                                             text = cellText,
-                                                            style = AppTheme.typography.caption,
+                                                            style = MaterialTheme.typography.bodySmall,
                                                             color = textColor,
                                                             maxLines = 1,
                                                             overflow = TextOverflow.Ellipsis,
@@ -282,7 +281,7 @@ fun SpreadsheetViewerScreen(
 
             ModalBottomSheet(
                 onDismissRequest = viewModel::clearSelectedCell,
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             ) {
                 OverlaySystemBars()
                 Column(
@@ -292,14 +291,14 @@ fun SpreadsheetViewerScreen(
                         .navigationBarsPadding()
                 ) {
                     Text(
-                        text = "CELL $cellRef",
-                        style = AppTheme.typography.bodyStrong,
-                        color = colors.accent
+                        text = "Cell $cellRef",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = cellVal.ifEmpty { "(Empty cell)" },
-                        style = AppTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = textColor
                     )
                     Spacer(modifier = Modifier.height(16.dp))

@@ -21,7 +21,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,10 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
-import com.abhisheksati.mydoc.ui.common.AppDivider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -74,14 +72,14 @@ fun ThumbnailStrip(
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface)
         ) {
-            AppDivider()
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             LazyRow(
                 state = listState,
-                contentPadding = PaddingValues(horizontal = Spacing.medium, vertical = Spacing.small),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                items(pageCount) { pageIndex ->
+                items(count = pageCount, key = { it }) { pageIndex ->
                     val isSelected = pageIndex == currentPage
                     @Suppress("ProduceStateDoesNotAssignValue")
                     val thumbnailBitmap by produceState<Bitmap?>(initialValue = null, pageIndex) {
@@ -93,7 +91,7 @@ fun ThumbnailStrip(
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
-                            .padding(end = Spacing.small)
+                            .padding(end = 8.dp)
                             .clickable { onPageSelected(pageIndex) }
                     ) {
                         Box(
@@ -102,12 +100,16 @@ fun ThumbnailStrip(
                                 .height(85.dp)
                                 .border(
                                     width = if (isSelected) 2.dp else 1.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                                    shape = AppRadius.microShape
+                                    color = if (isSelected) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.outlineVariant
+                                    },
+                                    shape = MaterialTheme.shapes.small
                                 )
                                 .background(
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                    shape = AppRadius.microShape
+                                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                    shape = MaterialTheme.shapes.small
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
@@ -122,7 +124,7 @@ fun ThumbnailStrip(
                             } else {
                                 Text(
                                     text = "${pageIndex + 1}",
-                                    style = AppTheme.typography.micro,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -131,8 +133,12 @@ fun ThumbnailStrip(
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "${pageIndex + 1}",
-                            style = AppTheme.typography.micro,
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isSelected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
                         )
                     }
                 }

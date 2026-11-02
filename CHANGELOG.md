@@ -27,6 +27,14 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 - **Tool sheets rebuilt on Material 3.** The page organizer, form filler and signature pad are now
   full-height Material 3 modal sheets with tonal headers, outlined cards, standard text fields,
   switches, dropdowns and filled action buttons that respect the current theme's insets.
+- **Viewer chrome rewritten on Material 3.** The document top and bottom bars, PDF floating action
+  bar, page action sheet, document tools sheet, reading controls, page grid, thumbnail strip,
+  search overlay, jump/password dialogs, outline drawer, fast scrollbar and presentation bars now
+  use tonal surfaces, standard shape and type scales, filter chips and standard buttons. The
+  vivid gradients, custom chips and bespoke radii are gone from the viewer.
+- **Scanner rebuilt on Material 3.** The capture screen drops its gradient and glow treatment for
+  a single primary accent, standard type scale and theme-aware controls, while keeping the dark
+  scrims that read correctly over a live viewfinder.
 
 ### Changed
 
@@ -52,6 +60,10 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   returning from the viewer lands back in the folder.
 - **System bars followed system night mode, not the app theme.** Status and navigation bar icon
   appearance now tracks the app's chosen theme.
+- **Document tools sheet opened half-expanded and cut off the list.** It now opens fully expanded,
+  so the tool list and its bottom padding stay above the navigation bar.
+- **Splash and window background sat on the old paper palette.** The window background now matches
+  the Material 3 light surface and AMOLED black, so app launch no longer flashes a different tone.
 
 ## [1.5.0] — 2026-11-02
 

@@ -40,8 +40,6 @@ import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.MainActivity
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.data.local.DocumentStreamResolver
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
@@ -255,14 +253,14 @@ fun WordViewerScreen(
     ) {
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = colors.accent)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else if (errorMessage != null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
                     text = errorMessage ?: "Error reading document",
                     color = MaterialTheme.colorScheme.error,
-                    style = AppTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(16.dp)
                 )
             }
@@ -394,7 +392,7 @@ private fun DocxTableView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, borderColor, AppRadius.microShape)
+            .border(1.dp, borderColor, MaterialTheme.shapes.extraSmall)
     ) {
         table.rows.forEachIndexed { rowIndex, row ->
             val isHeader = rowIndex == 0

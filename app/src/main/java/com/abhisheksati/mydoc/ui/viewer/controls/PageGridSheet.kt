@@ -17,21 +17,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -48,20 +50,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.abhisheksati.mydoc.designsystem.components.AppDivider
-import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * High-performance 3-column page thumbnail grid overview.
- * Enables visual scanning across documents and instant 1-tap jumping.
+ * Page thumbnail overview: three-column grid with instant tap-to-jump, a page
+ * number field and bookmark badges, on a Material 3 modal sheet.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,14 +72,11 @@ fun PageGridSheet(
 ) {
     if (!isOpen || pageCount <= 0) return
 
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
+    val scheme = MaterialTheme.colorScheme
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val gridState = rememberLazyGridState()
-
     var jumpQuery by remember { mutableStateOf("") }
 
-    // Scroll automatically to currently open page on launch
     LaunchedEffect(currentPage) {
         if (currentPage in 0 until pageCount) {
             gridState.scrollToItem(currentPage)
@@ -94,64 +86,44 @@ fun PageGridSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = colors.surface,
-        contentColor = colors.textPrimary,
-        shape = AppRadius.sheetShape,
-        tonalElevation = AppSpacing.elevation,
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .padding(vertical = AppSpacing.paddingSmall)
-                    .size(width = 36.dp, height = 4.dp)
-                    .background(colors.divider, AppRadius.roundShape)
-            )
-        },
+        containerColor = scheme.surfaceContainerLow,
+        contentColor = scheme.onSurface,
         modifier = modifier
     ) {
         OverlaySystemBars()
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = AppSpacing.paddingMedium)
+                .padding(horizontal = 20.dp)
         ) {
-            // Header bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(AppSpacing.minTouchTarget),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .height(56.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Page Overview",
-                        style = typography.title,
-                        color = colors.textPrimary
+                        text = "Pages",
+                        style = MaterialTheme.typography.titleLarge
                     )
                     Text(
-                        text = "$pageCount pages total",
-                        style = typography.caption,
-                        color = colors.textSecondary
+                        text = "$pageCount pages",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant
                     )
                 }
 
-                IconButton(
-                    onClick = {
-                        onDismiss()
-                    },
-                    modifier = Modifier.size(AppSpacing.minTouchTarget)
-                ) {
+                IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
-                        contentDescription = "Close page overview",
-                        tint = colors.textSecondary
+                        contentDescription = "Close page overview"
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Fast Page Number Jump Bar
             OutlinedTextField(
                 value = jumpQuery,
                 onValueChange = { input ->
@@ -163,44 +135,26 @@ fun PageGridSheet(
                         onDismiss()
                     }
                 },
-                placeholder = {
-                    Text(
-                        text = "Jump directly to page… (1 - $pageCount)",
-                        style = typography.body,
-                        color = colors.textSecondary
-                    )
-                },
+                placeholder = { Text("Jump to page (1 - $pageCount)") },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Search,
-                        contentDescription = null,
-                        tint = colors.textSecondary
+                        contentDescription = null
                     )
                 },
                 singleLine = true,
-                shape = AppRadius.cardShape,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = colors.accent,
-                    unfocusedBorderColor = colors.divider,
-                    focusedContainerColor = colors.surface,
-                    unfocusedContainerColor = colors.surface
-                ),
+                shape = MaterialTheme.shapes.extraLarge,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
-            AppDivider()
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // 3-Column Thumbnails Grid
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
                 state = gridState,
-                contentPadding = PaddingValues(
-                    vertical = AppSpacing.paddingMedium,
-                    horizontal = AppSpacing.paddingSmall
-                ),
-                horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingMedium),
-                verticalArrangement = Arrangement.spacedBy(AppSpacing.paddingMedium),
+                contentPadding = PaddingValues(vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
@@ -209,7 +163,6 @@ fun PageGridSheet(
                     val isCurrent = pageIndex == currentPage
                     val isBookmarked = bookmarks.contains(pageIndex)
 
-                    @Suppress("ProduceStateDoesNotAssignValue")
                     val thumbnail by produceState<Bitmap?>(initialValue = null, pageIndex) {
                         value = withContext(Dispatchers.Default) {
                             renderThumbnail(pageIndex, 0.35f)
@@ -220,7 +173,7 @@ fun PageGridSheet(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(AppRadius.cardShape)
+                            .clip(RoundedCornerShape(12.dp))
                             .clickable {
                                 onPageSelected(pageIndex)
                                 onDismiss()
@@ -231,12 +184,12 @@ fun PageGridSheet(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(0.707f)
-                                .clip(AppRadius.pillShape)
-                                .background(colors.surface)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(scheme.surfaceContainerHigh)
                                 .border(
-                                    width = if (isCurrent) 2.5.dp else 1.dp,
-                                    color = if (isCurrent) colors.accent else colors.divider.copy(alpha = 0.6f),
-                                    shape = AppRadius.pillShape
+                                    width = if (isCurrent) 2.dp else 1.dp,
+                                    color = if (isCurrent) scheme.primary else scheme.outlineVariant,
+                                    shape = RoundedCornerShape(8.dp)
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
@@ -249,17 +202,19 @@ fun PageGridSheet(
                                     modifier = Modifier.fillMaxSize()
                                 )
                             } else {
-                                AppProgressIndicator()
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp
+                                )
                             }
 
-                            // Bookmark badge overlay
                             if (isBookmarked) {
                                 Box(
                                     modifier = Modifier
                                         .align(Alignment.TopEnd)
                                         .padding(4.dp)
                                         .size(20.dp)
-                                        .background(colors.accent, CircleShape),
+                                        .background(scheme.primary, CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -274,11 +229,10 @@ fun PageGridSheet(
 
                         Spacer(modifier = Modifier.height(4.dp))
 
-                        // Page badge
                         Text(
                             text = "${pageIndex + 1}",
-                            style = if (isCurrent) typography.captionStrong else typography.caption,
-                            color = if (isCurrent) colors.accent else colors.textSecondary
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (isCurrent) scheme.primary else scheme.onSurfaceVariant
                         )
                     }
                 }

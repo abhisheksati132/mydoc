@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -19,9 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 
 @Composable
 fun PasswordDialog(
@@ -38,8 +35,8 @@ fun PasswordDialog(
         onDismissRequest = onCancel,
         title = {
             Text(
-                text = "Password Protected",
-                style = AppTheme.typography.bodyLargeStrong
+                text = "Password protected",
+                style = MaterialTheme.typography.headlineSmall
             )
         },
         text = {
@@ -47,7 +44,7 @@ fun PasswordDialog(
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "This document is encrypted. Enter the password to unlock it.",
-                    style = AppTheme.typography.body,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(Spacing.medium))
@@ -58,37 +55,24 @@ fun PasswordDialog(
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     isError = isIncorrect,
-                    shape = AppRadius.microShape,
+                    supportingText = if (isIncorrect) {
+                        { Text("Incorrect password. Try again.") }
+                    } else {
+                        null
+                    },
                     modifier = Modifier.fillMaxWidth()
                 )
-                if (isIncorrect) {
-                    Spacer(modifier = Modifier.height(Spacing.extraSmall))
-                    Text(
-                        text = "Incorrect password. Please try again.",
-                        style = AppTheme.typography.caption,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
             }
         },
         confirmButton = {
-            Button(
-                onClick = { onSubmit(password) },
-                shape = AppRadius.cardShape,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-            ) {
+            Button(onClick = { onSubmit(password) }) {
                 Text("Unlock")
             }
         },
         dismissButton = {
-            OutlinedButton(
-                onClick = onCancel,
-                shape = AppRadius.cardShape
-            ) {
+            OutlinedButton(onClick = onCancel) {
                 Text("Cancel")
             }
-        },
-        shape = AppRadius.sheetShape,
-        containerColor = MaterialTheme.colorScheme.surface
+        }
     )
 }

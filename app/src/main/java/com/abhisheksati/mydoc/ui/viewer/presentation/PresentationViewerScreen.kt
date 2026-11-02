@@ -63,7 +63,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.domain.model.DocumentFile
@@ -482,7 +481,7 @@ fun PresentationViewerScreen(
                     Text(
                         text = errorMessage ?: "Error reading presentation",
                         color = MaterialTheme.colorScheme.error,
-                        style = AppTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -494,9 +493,6 @@ fun PresentationViewerScreen(
                 }
             } else if (effectiveSlideCount == 0) {
                 PresentationEmptyRecoveryCard(
-                    cardBgColor = cardBgColor,
-                    textColor = textColor,
-                    secondaryTextColor = secondaryTextColor,
                     onOpenExternal = {
                         openPresentationInOfficeApp(context, document)
                     }
@@ -664,9 +660,7 @@ fun PresentationViewerScreen(
                 isOpen = isNotesSheetOpen,
                 currentSlideIndex = currentSlideIndex,
                 notes = effectiveSlides.getOrNull(currentSlideIndex)?.notes ?: "",
-                onDismiss = { isNotesSheetOpen = false },
-                cardBgColor = cardBgColor,
-                textColor = textColor
+                onDismiss = { isNotesSheetOpen = false }
             )
         }
     }

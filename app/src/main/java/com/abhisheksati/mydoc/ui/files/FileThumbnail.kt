@@ -15,6 +15,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
+import androidx.compose.material.icons.outlined.Android
+import androidx.compose.material.icons.outlined.AudioFile
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.FolderZip
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Movie
+import androidx.compose.material.icons.outlined.PictureAsPdf
+import androidx.compose.material.icons.outlined.Slideshow
+import androidx.compose.material.icons.outlined.TableChart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -41,10 +55,24 @@ import com.abhisheksati.mydoc.domain.model.LibraryItem
 import com.abhisheksati.mydoc.domain.model.MediaKind
 import com.abhisheksati.mydoc.domain.model.StorageFileType
 import com.abhisheksati.mydoc.domain.model.StorageItem
-import com.abhisheksati.mydoc.ui.filemanager.getFileTypeIcon
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+fun getFileTypeIcon(type: StorageFileType): ImageVector = when (type) {
+    StorageFileType.DIRECTORY -> Icons.Outlined.Folder
+    StorageFileType.PDF -> Icons.Outlined.PictureAsPdf
+    StorageFileType.WORD -> Icons.Outlined.Description
+    StorageFileType.EXCEL -> Icons.Outlined.TableChart
+    StorageFileType.PPT -> Icons.Outlined.Slideshow
+    StorageFileType.IMAGE -> Icons.Outlined.Image
+    StorageFileType.VIDEO -> Icons.Outlined.Movie
+    StorageFileType.AUDIO -> Icons.Outlined.AudioFile
+    StorageFileType.ARCHIVE -> Icons.Outlined.FolderZip
+    StorageFileType.APK -> Icons.Outlined.Android
+    StorageFileType.CODE_TEXT -> Icons.Outlined.Code
+    StorageFileType.GENERIC -> Icons.AutoMirrored.Outlined.InsertDriveFile
+}
 
 private val pdfThumbnailCache = object : LruCache<String, ImageBitmap>(64) {}
 private val textPreviewExtensions = setOf("txt", "md", "csv", "log", "json")

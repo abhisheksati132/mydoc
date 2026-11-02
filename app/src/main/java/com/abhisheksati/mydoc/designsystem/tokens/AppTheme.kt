@@ -162,8 +162,6 @@ fun AppDesignSystemTheme(
     val materialColorScheme = if (darkTheme && amoledBlack) baseScheme.amoled() else baseScheme
     val colors = AppColors.fromMaterialScheme(materialColorScheme)
 
-    val typography = AppTypography()
-
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -176,13 +174,18 @@ fun AppDesignSystemTheme(
 
     CompositionLocalProvider(
         LocalAppColors provides colors,
-        LocalAppTypography provides typography,
         LocalIsDark provides darkTheme,
         LocalIsOled provides (darkTheme && amoledBlack)
     ) {
         MaterialTheme(
             colorScheme = materialColorScheme,
-            content = content
+            content = {
+                CompositionLocalProvider(
+                    LocalAppTypography provides appTypographyFromMaterial(MaterialTheme.typography)
+                ) {
+                    content()
+                }
+            }
         )
     }
 }

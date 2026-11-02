@@ -21,9 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 
 @Composable
 fun PageJumpDialog(
@@ -52,17 +50,16 @@ fun PageJumpDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Go to Page",
-                style = AppTheme.typography.bodyLargeStrong,
-                color = MaterialTheme.colorScheme.onBackground
+                text = "Go to page",
+                style = MaterialTheme.typography.headlineSmall
             )
         },
         text = {
             OverlaySystemBars()
             Column {
                 Text(
-                    text = "Enter a page number between 1 and $pageCount:",
-                    style = AppTheme.typography.body,
+                    text = "Enter a page number between 1 and $pageCount.",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(Spacing.medium))
@@ -93,22 +90,14 @@ fun PageJumpDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = { submit() },
-                shape = AppRadius.cardShape
-            ) {
+            Button(onClick = { submit() }) {
                 Text("Go")
             }
         },
         dismissButton = {
-            OutlinedButton(
-                onClick = onDismiss,
-                shape = AppRadius.cardShape
-            ) {
+            OutlinedButton(onClick = onDismiss) {
                 Text("Cancel")
             }
-        },
-        shape = AppRadius.sheetShape,
-        containerColor = MaterialTheme.colorScheme.surface
+        }
     )
 }

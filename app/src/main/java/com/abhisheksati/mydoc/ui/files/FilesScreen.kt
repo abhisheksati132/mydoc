@@ -392,26 +392,12 @@ fun FilesScreen(
                     when (activePane) {
                         FilesPane.RECENTS -> RecentsPane(
                             recentItems = homeUiState.recentLibraryItems,
-                            storageUiState = storageUiState,
-                            pinnedFolders = pinnedFolders,
-                            trashCount = uiState.trashItems.size,
                             onOpenItem = onLibraryItemClick,
                             onItemDetails = onLibraryItemDetails,
                             onBrowse = {
                                 viewModel.startBrowsingStorage()
                                 paneIndex = FilesPane.BROWSE.ordinal
                             },
-                            onCategory = { category ->
-                                viewModel.selectCategory(category)
-                                paneIndex = FilesPane.BROWSE.ordinal
-                            },
-                            onFolder = { folder ->
-                                viewModel.startBrowsingStorage(folder)
-                                paneIndex = FilesPane.BROWSE.ordinal
-                            },
-                            onOpenTrash = { viewModel.openTrash() },
-                            onInsights = { showInsights = true },
-                            onClean = { showCleaner = true },
                             modifier = Modifier.fillMaxSize()
                         )
 

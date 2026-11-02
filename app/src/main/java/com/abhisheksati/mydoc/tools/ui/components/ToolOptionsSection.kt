@@ -19,8 +19,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Draw
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,10 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
 import com.abhisheksati.mydoc.designsystem.components.horizontalScrollWithFade
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.tools.model.CompressionLevel
 import com.abhisheksati.mydoc.tools.model.PageNumberPosition
 import com.abhisheksati.mydoc.tools.model.PageSizeFormat
@@ -54,13 +51,10 @@ internal fun ToolOptionsSection(
     onOpenSignPad: () -> Unit = {},
     onOptionsChange: ((com.abhisheksati.mydoc.tools.model.ToolOptions) -> com.abhisheksati.mydoc.tools.model.ToolOptions) -> Unit
 ) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
-
     Column(modifier = Modifier.fillMaxWidth()) {
         when (tool) {
             PdfTool.COMPRESS -> {
-                Text(text = "COMPRESSION LEVEL", style = typography.label, color = colors.textSecondary)
+                Text(text = "COMPRESSION LEVEL", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 Row(
                     modifier = Modifier
@@ -79,13 +73,13 @@ internal fun ToolOptionsSection(
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 Text(
                     text = options.compressionLevel.description,
-                    style = typography.caption,
-                    color = colors.textSecondary
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             PdfTool.ROTATE -> {
-                Text(text = "ROTATION ANGLE", style = typography.label, color = colors.textSecondary)
+                Text(text = "ROTATION ANGLE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)) {
                     listOf(90, 180, 270).forEach { deg ->
@@ -99,7 +93,7 @@ internal fun ToolOptionsSection(
             }
 
             PdfTool.ADD_WATERMARK -> {
-                Text(text = "WATERMARK TEXT", style = typography.label, color = colors.textSecondary)
+                Text(text = "WATERMARK TEXT", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 OutlinedTextField(
                     value = options.watermarkText,
@@ -107,17 +101,11 @@ internal fun ToolOptionsSection(
                     placeholder = { Text("CONFIDENTIAL") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = colors.accent,
-                        unfocusedBorderColor = colors.divider,
-                        focusedTextColor = colors.textPrimary,
-                        unfocusedTextColor = colors.textPrimary
-                    )
                 )
             }
 
             PdfTool.ADD_PAGE_NUMBERS -> {
-                Text(text = "POSITION", style = typography.label, color = colors.textSecondary)
+                Text(text = "POSITION", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 Row(
                     modifier = Modifier
@@ -136,7 +124,7 @@ internal fun ToolOptionsSection(
             }
 
             PdfTool.PROTECT -> {
-                Text(text = "DOCUMENT PASSWORD", style = typography.label, color = colors.textSecondary)
+                Text(text = "DOCUMENT PASSWORD", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 OutlinedTextField(
                     value = options.userPassword,
@@ -144,17 +132,11 @@ internal fun ToolOptionsSection(
                     placeholder = { Text("Enter password to open file") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = colors.accent,
-                        unfocusedBorderColor = colors.divider,
-                        focusedTextColor = colors.textPrimary,
-                        unfocusedTextColor = colors.textPrimary
-                    )
                 )
             }
 
             PdfTool.UNLOCK -> {
-                Text(text = "CURRENT PASSWORD", style = typography.label, color = colors.textSecondary)
+                Text(text = "CURRENT PASSWORD", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 OutlinedTextField(
                     value = options.userPassword,
@@ -162,17 +144,11 @@ internal fun ToolOptionsSection(
                     placeholder = { Text("Enter password to unlock") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = colors.accent,
-                        unfocusedBorderColor = colors.divider,
-                        focusedTextColor = colors.textPrimary,
-                        unfocusedTextColor = colors.textPrimary
-                    )
                 )
             }
 
             PdfTool.REDACT -> {
-                Text(text = "TEXT TO REDACT PERMANENTLY", style = typography.label, color = colors.textSecondary)
+                Text(text = "TEXT TO REDACT PERMANENTLY", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 OutlinedTextField(
                     value = options.redactQuery,
@@ -180,17 +156,11 @@ internal fun ToolOptionsSection(
                     placeholder = { Text("Search word or phrase (e.g. Secret)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = colors.accent,
-                        unfocusedBorderColor = colors.divider,
-                        focusedTextColor = colors.textPrimary,
-                        unfocusedTextColor = colors.textPrimary
-                    )
                 )
             }
 
             PdfTool.IMAGE_TO_PDF -> {
-                Text(text = "PAGE SIZE", style = typography.label, color = colors.textSecondary)
+                Text(text = "PAGE SIZE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)) {
                     PageSizeFormat.entries.forEach { fmt ->
@@ -204,71 +174,71 @@ internal fun ToolOptionsSection(
             }
 
             PdfTool.REORDER_PAGES -> {
-                Text(text = "VISUAL PAGE ORGANIZER", style = typography.label, color = colors.textSecondary)
+                Text(text = "VISUAL PAGE ORGANIZER", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 if (uris.isNotEmpty()) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(AppRadius.cardShape)
-                            .background(colors.surface)
-                            .border(1.dp, colors.line, AppRadius.cardShape)
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium)
                             .clickable { onOpenOrganizer() }
                             .padding(vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Icon(Icons.Outlined.GridView, contentDescription = null, tint = colors.accent)
+                        Icon(Icons.Outlined.GridView, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Open Visual Page Organizer", style = typography.body, color = colors.ink, fontWeight = FontWeight.SemiBold)
+                        Text("Open Visual Page Organizer", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
                     }
                     if (options.reorderedPageIndices.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = "Organized order: ${options.reorderedPageIndices.map { it + 1 }.joinToString(", ")}",
-                            style = typography.caption,
-                            color = colors.accent
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 } else {
-                    Text("Select a PDF document above to view and organize its pages.", style = typography.caption, color = colors.textSecondary)
+                    Text("Select a PDF document above to view and organize its pages.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
             PdfTool.FILL_FORM -> {
-                Text(text = "FORM FIELDS", style = typography.label, color = colors.textSecondary)
+                Text(text = "FORM FIELDS", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 if (uris.isNotEmpty()) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(AppRadius.cardShape)
-                            .background(colors.surface)
-                            .border(1.dp, colors.line, AppRadius.cardShape)
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium)
                             .clickable { onOpenFormFiller() }
                             .padding(vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Icon(Icons.Default.Edit, contentDescription = null, tint = colors.accent)
+                        Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Open Interactive Form Editor", style = typography.body, color = colors.ink, fontWeight = FontWeight.SemiBold)
+                        Text("Open Interactive Form Editor", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
                     }
                     if (options.formFieldValues.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = "${options.formFieldValues.size} fields filled ${if (options.flattenForm) "(Will be flattened)" else "(Editable)"}",
-                            style = typography.caption,
-                            color = colors.accent
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 } else {
-                    Text("Select a PDF above to detect and fill form fields.", style = typography.caption, color = colors.textSecondary)
+                    Text("Select a PDF above to detect and fill form fields.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
             PdfTool.PDF_TO_IMAGES -> {
-                Text(text = "EXPORT FORMAT", style = typography.label, color = colors.textSecondary)
+                Text(text = "EXPORT FORMAT", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)) {
                     AppFilterChip(
@@ -298,7 +268,7 @@ internal fun ToolOptionsSection(
             }
 
             PdfTool.ANNOTATE -> {
-                Text(text = "ANNOTATION MODE", style = typography.label, color = colors.textSecondary)
+                Text(text = "ANNOTATION MODE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)) {
                     AppFilterChip(
@@ -314,7 +284,7 @@ internal fun ToolOptionsSection(
                 }
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 if (options.annotationType.equals("STAMP", ignoreCase = true)) {
-                    Text(text = "PRESET STAMPS", style = typography.label, color = colors.textSecondary)
+                    Text(text = "PRESET STAMPS", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                     Row(
                         modifier = Modifier
@@ -334,8 +304,8 @@ internal fun ToolOptionsSection(
                 }
                 Text(
                     text = if (options.annotationType.equals("STAMP", ignoreCase = true)) "STAMP TEXT" else "KEYWORD TO HIGHLIGHT",
-                    style = typography.label,
-                    color = colors.textSecondary
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 OutlinedTextField(
@@ -344,28 +314,22 @@ internal fun ToolOptionsSection(
                     placeholder = { Text(if (options.annotationType.equals("STAMP", ignoreCase = true)) "APPROVED" else "Search keyword") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = colors.accent,
-                        unfocusedBorderColor = colors.divider,
-                        focusedTextColor = colors.textPrimary,
-                        unfocusedTextColor = colors.textPrimary
-                    )
                 )
             }
 
             PdfTool.SIGN_PDF -> {
                 val hasSignature = SignatureStorage.hasSavedSignature(LocalContext.current)
-                Text(text = "DIGITAL SIGNATURE", style = typography.label, color = colors.textSecondary)
+                Text(text = "DIGITAL SIGNATURE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(AppRadius.cardShape)
-                        .background(if (hasSignature) colors.surface else colors.accent.copy(alpha = 0.10f))
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(if (hasSignature) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
                         .border(
                             width = 1.dp,
-                            color = if (hasSignature) colors.line else colors.accent.copy(alpha = 0.30f),
-                            shape = AppRadius.cardShape
+                            color = if (hasSignature) MaterialTheme.colorScheme.outlineVariant else MaterialTheme.colorScheme.primary.copy(alpha = 0.30f),
+                            shape = MaterialTheme.shapes.medium
                         )
                         .clickable { onOpenSignPad() }
                         .padding(vertical = 14.dp),
@@ -375,18 +339,18 @@ internal fun ToolOptionsSection(
                     Icon(
                         imageVector = Icons.Outlined.Draw,
                         contentDescription = null,
-                        tint = if (hasSignature) colors.textPrimary else colors.accent
+                        tint = if (hasSignature) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = if (hasSignature) "Edit / Redraw Signature" else "Draw Signature Now",
-                        style = typography.body,
-                        color = if (hasSignature) colors.ink else colors.accent,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (hasSignature) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
-                Text(text = "PLACEMENT PAGE", style = typography.label, color = colors.textSecondary)
+                Text(text = "PLACEMENT PAGE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)) {
                     listOf("First Page" to 0, "Last Page" to 999).forEach { (label, pg) ->
@@ -398,7 +362,7 @@ internal fun ToolOptionsSection(
                     }
                 }
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
-                Text(text = "POSITION", style = typography.label, color = colors.textSecondary)
+                Text(text = "POSITION", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)) {
                     listOf("Bottom Right" to Pair(0.75f, 0.85f), "Bottom Center" to Pair(0.5f, 0.85f), "Bottom Left" to Pair(0.25f, 0.85f)).forEach { (label, coords) ->
@@ -417,7 +381,7 @@ internal fun ToolOptionsSection(
             }
 
             PdfTool.EXTRACT_PAGES -> {
-                Text(text = "PAGE RANGE TO EXTRACT", style = typography.label, color = colors.textSecondary)
+                Text(text = "PAGE RANGE TO EXTRACT", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 OutlinedTextField(
                     value = options.pageRange,
@@ -425,23 +389,17 @@ internal fun ToolOptionsSection(
                     placeholder = { Text("e.g. 1-3, 5, 8-10") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = colors.accent,
-                        unfocusedBorderColor = colors.divider,
-                        focusedTextColor = colors.textPrimary,
-                        unfocusedTextColor = colors.textPrimary
-                    )
                 )
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 Text(
                     text = "Specify individual pages or page ranges separated by commas.",
-                    style = typography.caption,
-                    color = colors.textSecondary
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             PdfTool.REMOVE_PAGES -> {
-                Text(text = "PAGES TO REMOVE", style = typography.label, color = colors.textSecondary)
+                Text(text = "PAGES TO REMOVE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 OutlinedTextField(
                     value = options.pageRange,
@@ -449,23 +407,17 @@ internal fun ToolOptionsSection(
                     placeholder = { Text("e.g. 2, 4-6") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = colors.accent,
-                        unfocusedBorderColor = colors.divider,
-                        focusedTextColor = colors.textPrimary,
-                        unfocusedTextColor = colors.textPrimary
-                    )
                 )
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 Text(
                     text = "Specified pages will be pruned while preserving all remaining pages.",
-                    style = typography.caption,
-                    color = colors.textSecondary
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             PdfTool.SPLIT -> {
-                Text(text = "SPLIT EVERY N PAGES", style = typography.label, color = colors.textSecondary)
+                Text(text = "SPLIT EVERY N PAGES", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)) {
                     listOf(1, 2, 5, 10).forEach { n ->
@@ -481,7 +433,7 @@ internal fun ToolOptionsSection(
                     }
                 }
                 Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
-                Text(text = "OR CUSTOM PAGE RANGE", style = typography.label, color = colors.textSecondary)
+                Text(text = "OR CUSTOM PAGE RANGE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 OutlinedTextField(
                     value = options.pageRange,
@@ -489,17 +441,11 @@ internal fun ToolOptionsSection(
                     placeholder = { Text("Optional: e.g. 1-4, 5-10") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = colors.accent,
-                        unfocusedBorderColor = colors.divider,
-                        focusedTextColor = colors.textPrimary,
-                        unfocusedTextColor = colors.textPrimary
-                    )
                 )
             }
 
             PdfTool.CROP -> {
-                Text(text = "CROP MARGIN (ALL SIDES)", style = typography.label, color = colors.textSecondary)
+                Text(text = "CROP MARGIN (ALL SIDES)", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)) {
                     listOf("5%" to 0.05f, "10%" to 0.10f, "15%" to 0.15f, "20%" to 0.20f).forEach { (lbl, frac) ->
@@ -511,7 +457,7 @@ internal fun ToolOptionsSection(
                     }
                 }
                 Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
-                Text(text = "PAGE RANGE (BLANK FOR ALL)", style = typography.label, color = colors.textSecondary)
+                Text(text = "PAGE RANGE (BLANK FOR ALL)", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 OutlinedTextField(
                     value = options.pageRange,
@@ -519,12 +465,6 @@ internal fun ToolOptionsSection(
                     placeholder = { Text("All pages or e.g. 1-5") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = colors.accent,
-                        unfocusedBorderColor = colors.divider,
-                        focusedTextColor = colors.textPrimary,
-                        unfocusedTextColor = colors.textPrimary
-                    )
                 )
             }
 
@@ -532,14 +472,14 @@ internal fun ToolOptionsSection(
                 if (uris.size < 2) {
                     Text(
                         text = "Add at least 2 PDF documents above to combine them into one file.",
-                        style = typography.caption,
-                        color = colors.accent
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 } else {
                     Text(
                         text = "${uris.size} documents will be combined in the order listed above.",
-                        style = typography.caption,
-                        color = colors.textSecondary
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -548,14 +488,14 @@ internal fun ToolOptionsSection(
                 if (uris.size < 2) {
                     Text(
                         text = "Select 2 documents above to perform a side-by-side comparison.",
-                        style = typography.caption,
-                        color = colors.accent
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 } else {
                     Text(
                         text = "Documents will be analyzed page-by-page for text differences.",
-                        style = typography.caption,
-                        color = colors.textSecondary
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

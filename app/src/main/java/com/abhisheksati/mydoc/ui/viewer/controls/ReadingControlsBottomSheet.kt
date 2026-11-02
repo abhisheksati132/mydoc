@@ -34,6 +34,10 @@ import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material.icons.outlined.ViewDay
 import androidx.compose.material.icons.outlined.ViewWeek
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
@@ -49,8 +53,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.components.AppDivider
-import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
 import com.abhisheksati.mydoc.designsystem.components.AppSlider
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
@@ -101,18 +103,7 @@ fun ReadingControlsBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = colors.surface,
-        contentColor = colors.textPrimary,
-        shape = AppRadius.sheetShape,
-        tonalElevation = AppSpacing.elevation,
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .padding(top = AppSpacing.paddingSmall, bottom = AppSpacing.paddingSmall)
-                    .size(width = 32.dp, height = 4.dp)
-                    .background(colors.divider, AppRadius.roundShape)
-            )
-        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = modifier
     ) {
         OverlaySystemBars()
@@ -133,8 +124,7 @@ fun ReadingControlsBottomSheet(
             ) {
                 Text(
                     text = "Appearance",
-                    style = typography.title,
-                    color = colors.textPrimary
+                    style = MaterialTheme.typography.titleLarge
                 )
                 IconButton(
                     onClick = {
@@ -150,11 +140,10 @@ fun ReadingControlsBottomSheet(
                 }
             }
 
-            AppDivider()
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
 
-            // 1. Reading Theme Section
-            AppSectionHeader(title = "READING MODE")
+            SectionLabel("Reading mode")
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
@@ -176,7 +165,7 @@ fun ReadingControlsBottomSheet(
                     modifier = Modifier.weight(1f)
                 )
                 ThemeOptionButton(
-                    label = "Eye comfort",
+                    label = "Comfort",
                     isSelected = readingMode == ReadingMode.EYE_COMFORT,
                     onClick = {
                         onReadingModeChange(ReadingMode.EYE_COMFORT)
@@ -196,7 +185,7 @@ fun ReadingControlsBottomSheet(
             Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
 
             // 2. Brightness Section
-            AppSectionHeader(title = "BRIGHTNESS")
+            SectionLabel("Brightness")
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -238,13 +227,13 @@ fun ReadingControlsBottomSheet(
             Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
 
             // 3. Scroll & Page Layout Mode
-            AppSectionHeader(title = "LAYOUT")
+            SectionLabel("Layout")
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
             ) {
                 ThemeOptionButton(
-                    label = "Continuous",
+                    label = "Scroll",
                     icon = Icons.Outlined.SwapVert,
                     isSelected = isContinuousScroll && !isDualPageView,
                     onClick = {
@@ -277,7 +266,7 @@ fun ReadingControlsBottomSheet(
             // 4. Page Fit (Width vs Page)
             if (onFitPageChange != null) {
                 Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
-                AppSectionHeader(title = "PAGE FIT")
+                SectionLabel("Page fit")
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
@@ -306,7 +295,7 @@ fun ReadingControlsBottomSheet(
             Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
 
             // 5. Orientation Lock
-            AppSectionHeader(title = "SCREEN ORIENTATION")
+            SectionLabel("Screen orientation")
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
@@ -359,13 +348,12 @@ fun ReadingControlsBottomSheet(
                 Column {
                     Text(
                         text = "Keep screen awake",
-                        style = typography.body,
-                        color = colors.textPrimary
+                        style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
                         text = "Prevent screen from sleeping while reading",
-                        style = typography.caption,
-                        color = colors.textSecondary
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Switch(
@@ -373,17 +361,11 @@ fun ReadingControlsBottomSheet(
                     onCheckedChange = {
                         onKeepScreenOnChange(it)
                     },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = colors.accent,
-                        checkedTrackColor = colors.surfaceVariant,
-                        uncheckedThumbColor = colors.textSecondary,
-                        uncheckedTrackColor = colors.surface
-                    )
                 )
             }
 
             Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
-            AppDivider()
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
 
             // 7. Utility Actions (Open With & Print)
@@ -424,6 +406,16 @@ fun ReadingControlsBottomSheet(
 }
 
 @Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(bottom = 8.dp)
+    )
+}
+
+@Composable
 private fun ThemeOptionButton(
     label: String,
     isSelected: Boolean,
@@ -431,43 +423,21 @@ private fun ThemeOptionButton(
     modifier: Modifier = Modifier,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null
 ) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
-
-    Box(
-        modifier = modifier
-            .height(AppSpacing.minTouchTarget)
-            .clip(AppRadius.roundShape)
-            .background(if (isSelected) colors.surfaceVariant else colors.surface)
-            .border(
-                width = AppSpacing.dividerThickness,
-                color = if (isSelected) colors.accent else colors.divider,
-                shape = AppRadius.roundShape
-            )
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(horizontal = AppSpacing.paddingSmall)
-        ) {
-            if (icon != null) {
+    FilterChip(
+        selected = isSelected,
+        onClick = onClick,
+        label = { Text(label, maxLines = 1) },
+        leadingIcon = if (icon != null) {
+            {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = if (isSelected) colors.accent else colors.textSecondary,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(18.dp)
                 )
-                Spacer(modifier = Modifier.width(AppSpacing.paddingSmall))
             }
-            Text(
-                text = label,
-                style = typography.label,
-                color = if (isSelected) colors.accent else colors.textPrimary
-            )
-        }
-    }
+        } else null,
+        modifier = modifier
+    )
 }
 
 @Composable
@@ -477,40 +447,14 @@ private fun ActionCardButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
-
-    Box(
-        modifier = modifier
-            .height(AppSpacing.minTouchTarget)
-            .clip(AppRadius.roundShape)
-            .background(colors.surfaceVariant)
-            .border(
-                width = AppSpacing.dividerThickness,
-                color = colors.divider,
-                shape = AppRadius.roundShape
-            )
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(horizontal = AppSpacing.paddingSmall)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = colors.textPrimary,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(AppSpacing.paddingSmall))
-            Text(
-                text = label,
-                style = typography.body,
-                color = colors.textPrimary
-            )
-        }
+    OutlinedButton(onClick = onClick, modifier = modifier) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(label)
     }
 }
 

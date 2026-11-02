@@ -49,8 +49,10 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FlashOff
 import androidx.compose.material.icons.outlined.FlashOn
 import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -71,7 +73,6 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -91,15 +92,9 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.abhisheksati.mydoc.designsystem.animation.pressScale
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
-import com.abhisheksati.mydoc.designsystem.components.VividRule
 import com.abhisheksati.mydoc.designsystem.components.horizontalScrollWithFade
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.CaptureChromeColors
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
-import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
-import com.abhisheksati.mydoc.designsystem.tokens.glow
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.tools.scan.cropper.FreeCornersCropperDialog
@@ -150,9 +145,7 @@ fun CameraScanSheet(
 
         val context = LocalContext.current
         val lifecycleOwner = LocalLifecycleOwner.current
-        val colors = LocalAppColors.current
         val haptics = rememberAppHaptics()
-        val typography = LocalAppTypography.current
         val haptic = LocalHapticFeedback.current
         val density = androidx.compose.ui.platform.LocalDensity.current
 
@@ -231,7 +224,7 @@ fun CameraScanSheet(
                         }
                     }
                 },
-                accentColor = colors.accent
+                accentColor = MaterialTheme.colorScheme.primary
             )
         }
 
@@ -252,7 +245,7 @@ fun CameraScanSheet(
                     .background(Color.Black),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = "Requesting Camera Permission...", style = typography.body, color = Color.White)
+                Text(text = "Requesting Camera Permission...", style = MaterialTheme.typography.bodyMedium, color = Color.White)
             }
             return@Dialog
         }
@@ -347,7 +340,7 @@ fun CameraScanSheet(
                     val frameTop = windowTop + (windowBottom - windowTop - frameHeight.toPx()) / 2f
                     val frameRight = frameLeft + frameWidth.toPx()
                     val frameBottom = frameTop + frameHeight.toPx()
-                    val cornerRadius = CornerRadius(AppRadius.micro.toPx(), AppRadius.micro.toPx())
+                    val cornerRadius = CornerRadius(with(density) { 4.dp.toPx() }, with(density) { 4.dp.toPx() })
 
                     // Path covering full screen with cutout
                     val scrimPath = Path().apply {
@@ -421,12 +414,12 @@ fun CameraScanSheet(
                     ) {
                         Text(
                             text = "SCANNER",
-                            style = typography.overline,
+                            style = MaterialTheme.typography.labelSmall,
                             color = CaptureChromeColors.onChromeMuted
                         )
                         Text(
                             text = "Scan document",
-                            style = typography.titleSmall,
+                            style = MaterialTheme.typography.titleMedium,
                             color = Color.White
                         )
                     }
@@ -435,14 +428,14 @@ fun CameraScanSheet(
                         Box(
                             modifier = Modifier
                                 .padding(end = 8.dp)
-                                .clip(AppRadius.pillShape)
-                                .background(VividGradients.brand)
+                                .clip(MaterialTheme.shapes.extraLarge)
+                                .background(MaterialTheme.colorScheme.primary)
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Text(
                                 text = "${capturedFiles.size} ${if (capturedFiles.size == 1) "PAGE" else "PAGES"}",
-                                style = typography.overline.withTabularFigures(),
-                                color = Color.White
+                                style = MaterialTheme.typography.labelSmall.withTabularFigures(),
+                                color = MaterialTheme.colorScheme.onPrimary
                             )
                         }
                     }
@@ -463,7 +456,7 @@ fun CameraScanSheet(
                     }
                 }
 
-                VividRule()
+                HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
 
                 Row(
                     modifier = Modifier
@@ -483,7 +476,7 @@ fun CameraScanSheet(
                         ) {
                             Text(
                                 text = mode.label.uppercase(),
-                                style = typography.overline,
+                                style = MaterialTheme.typography.labelSmall,
                                 color = if (isSelected) Color.White else CaptureChromeColors.onChromeMuted
                             )
                             Spacer(modifier = Modifier.height(6.dp))
@@ -491,8 +484,8 @@ fun CameraScanSheet(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(3.dp)
-                                    .clip(AppRadius.pillShape)
-                                    .background(if (isSelected) VividGradients.brand else SolidColor(Color.Transparent))
+                                    .clip(MaterialTheme.shapes.extraLarge)
+                                    .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
                             )
                         }
                     }
@@ -500,7 +493,7 @@ fun CameraScanSheet(
 
                 Text(
                     text = "Align the page inside the frame",
-                    style = typography.micro,
+                    style = MaterialTheme.typography.labelMedium,
                     color = CaptureChromeColors.onChromeMuted,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
@@ -518,7 +511,7 @@ fun CameraScanSheet(
                     .background(CaptureChromeColors.sheetScrim)
                     .onGloballyPositioned { bottomChromePx = it.size.height }
             ) {
-                VividRule()
+                HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
 
                 // Scanned Pages Horizontal Strip (collapsible if empty)
                 AnimatedVisibility(
@@ -539,11 +532,11 @@ fun CameraScanSheet(
                             Box(
                                 modifier = Modifier
                                     .size(width = 46.dp, height = 62.dp)
-                                    .clip(AppRadius.microShape)
+                                    .clip(MaterialTheme.shapes.extraSmall)
                                     .border(
                                         AppSpacing.hairline,
                                         CaptureChromeColors.onChromeMuted,
-                                        AppRadius.microShape
+                                        MaterialTheme.shapes.extraSmall
                                     )
                                     .background(CaptureChromeColors.surface)
                                     .clickable {
@@ -579,7 +572,7 @@ fun CameraScanSheet(
                                 // Folio: page numbers are set in tabular figures, never in a pill.
                                 Text(
                                     text = (idx + 1).toString().padStart(2, '0'),
-                                    style = typography.micro.withTabularFigures(),
+                                    style = MaterialTheme.typography.labelMedium.withTabularFigures(),
                                     color = Color.White,
                                     modifier = Modifier
                                         .align(Alignment.BottomStart)
@@ -635,7 +628,7 @@ fun CameraScanSheet(
                             ) {
                                 Text(
                                     text = filter.label.uppercase(),
-                                    style = typography.overline,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = if (isSelected) Color.White else CaptureChromeColors.onChromeMuted
                                 )
                                 Spacer(modifier = Modifier.height(5.dp))
@@ -643,8 +636,8 @@ fun CameraScanSheet(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(AppSpacing.rule)
-                                        .clip(AppRadius.pillShape)
-                                        .background(if (isSelected) VividGradients.brand else SolidColor(Color.Transparent))
+                                        .clip(MaterialTheme.shapes.extraLarge)
+                                        .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
                                 )
                             }
                         }
@@ -686,7 +679,7 @@ fun CameraScanSheet(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .clip(CircleShape)
-                                .background(if (isCapturing) colors.accent else Color.White)
+                                .background(if (isCapturing) MaterialTheme.colorScheme.primary else Color.White)
                                 .clickable(
                                     interactionSource = shutterInteraction,
                                     indication = ripple(),
@@ -732,17 +725,12 @@ fun CameraScanSheet(
                             Box(
                                 modifier = Modifier
                                     .size(46.dp)
-                                    .glow(
-                                        VividGradients.glowColor(VividGradients.Family.BRAND),
-                                        AppRadius.microShape,
-                                        elevation = 10.dp
-                                    )
-                                    .clip(AppRadius.microShape)
+                                    .clip(MaterialTheme.shapes.large)
                                     .background(
                                         if (isApplyingFilterAndSaving) {
-                                            SolidColor(CaptureChromeColors.panel)
+                                            CaptureChromeColors.panel
                                         } else {
-                                            VividGradients.brand
+                                            MaterialTheme.colorScheme.primary
                                         }
                                     )
                                     .clickable(
@@ -789,7 +777,7 @@ fun CameraScanSheet(
                             ) {
                                 if (isApplyingFilterAndSaving) {
                                     androidx.compose.material3.CircularProgressIndicator(
-                                        color = Color.White,
+                                        color = MaterialTheme.colorScheme.onPrimary,
                                         strokeWidth = 2.dp,
                                         modifier = Modifier.size(20.dp)
                                     )
@@ -797,7 +785,7 @@ fun CameraScanSheet(
                                     Icon(
                                         imageVector = Icons.Outlined.Check,
                                         contentDescription = "Done scanning",
-                                        tint = Color.White,
+                                        tint = MaterialTheme.colorScheme.onPrimary,
                                         modifier = Modifier.size(22.dp)
                                     )
                                 }

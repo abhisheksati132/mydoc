@@ -18,6 +18,7 @@ import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,11 +35,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
-import com.abhisheksati.mydoc.ui.common.AppDivider
 
 private enum class DrawerTab {
     OUTLINE,
@@ -64,7 +62,7 @@ fun OutlineDrawer(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = modifier
     ) {
         OverlaySystemBars()
@@ -88,8 +86,7 @@ fun OutlineDrawer(
                             contentDescription = null,
                             modifier = Modifier.size(16.dp)
                         )
-                    },
-                    shape = AppRadius.microShape
+                    }
                 )
 
                 FilterChip(
@@ -102,13 +99,12 @@ fun OutlineDrawer(
                             contentDescription = null,
                             modifier = Modifier.size(16.dp)
                         )
-                    },
-                    shape = AppRadius.microShape
+                    }
                 )
             }
 
             Spacer(modifier = Modifier.height(Spacing.small))
-            AppDivider()
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             when (selectedTab) {
                 DrawerTab.OUTLINE -> {
@@ -116,7 +112,7 @@ fun OutlineDrawer(
                     if (flattened.isEmpty()) {
                         Text(
                             text = "This document does not contain an outline.",
-                            style = AppTheme.typography.body,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = Spacing.large)
                         )
@@ -140,7 +136,7 @@ fun OutlineDrawer(
                                     Spacer(modifier = Modifier.width((item.level * 16).dp))
                                     Text(
                                         text = item.title,
-                                        style = AppTheme.typography.bodyLarge,
+                                        style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onBackground,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
@@ -149,11 +145,11 @@ fun OutlineDrawer(
                                     Spacer(modifier = Modifier.width(Spacing.small))
                                     Text(
                                         text = "${item.pageIndex + 1}",
-                                        style = AppTheme.typography.body,
+                                        style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                                AppDivider()
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                             }
                         }
                     }
@@ -164,7 +160,7 @@ fun OutlineDrawer(
                     if (sortedBookmarks.isEmpty()) {
                         Text(
                             text = "No bookmarks yet. Tap the bookmark icon in the top toolbar to save a page.",
-                            style = AppTheme.typography.body,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = Spacing.large)
                         )
@@ -194,7 +190,7 @@ fun OutlineDrawer(
                                     Spacer(modifier = Modifier.width(Spacing.small))
                                     Text(
                                         text = "Page ${pageIndex + 1}",
-                                        style = AppTheme.typography.bodyLarge,
+                                        style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onBackground,
                                         modifier = Modifier.weight(1f)
                                     )
@@ -210,7 +206,7 @@ fun OutlineDrawer(
                                         )
                                     }
                                 }
-                                AppDivider()
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                             }
                         }
                     }

@@ -1,5 +1,7 @@
 package com.abhisheksati.mydoc.designsystem.tokens
 
+import androidx.compose.material3.Typography
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.ExperimentalTextApi
@@ -162,6 +164,32 @@ data class AppTypography(
 )
 
 val LocalAppTypography = staticCompositionLocalOf { AppTypography() }
+
+/**
+ * Maps the Material 3 type scale onto the legacy role names so screens that
+ * still read LocalAppTypography render the same Roboto scale as the rest of
+ * the app.
+ */
+@Composable
+fun appTypographyFromMaterial(base: Typography): AppTypography = AppTypography(
+    display = base.displaySmall,
+    title = base.headlineSmall,
+    heading = base.titleLarge,
+    titleSmall = base.titleMedium,
+    overline = base.labelSmall,
+    wordmark = base.titleLarge,
+    screenTitle = base.headlineSmall,
+    bodyLarge = base.bodyLarge,
+    bodyLargeStrong = base.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+    body = base.bodyMedium,
+    bodyMedium = base.bodyMedium.copy(fontWeight = FontWeight.Medium),
+    bodyStrong = base.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+    label = base.labelLarge,
+    caption = base.bodySmall,
+    captionStrong = base.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+    micro = base.labelSmall,
+    headline = base.titleLarge
+)
 
 /**
  * Extension helper to apply OpenType Tabular Figures (tnum) to any TextStyle.

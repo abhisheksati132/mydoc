@@ -2,12 +2,8 @@ package com.abhisheksati.mydoc.ui.viewer.pdf
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -15,18 +11,17 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.components.AppBottomSheet
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 
 /**
  * Bottom action sheet displaying contextual tools for a specific PDF page:
@@ -45,92 +40,74 @@ fun PdfPageActionSheet(
 ) {
     if (!isOpen) return
 
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    AppBottomSheet(
-        isOpen = true,
-        onDismiss = onDismiss
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
+        OverlaySystemBars()
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(AppSpacing.paddingLarge)
+                .padding(bottom = 24.dp)
         ) {
             Text(
-                text = "Page ${pageNum + 1} Actions",
-                style = typography.title,
-                color = colors.textPrimary
+                text = "Page ${pageNum + 1}",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
             )
-            Spacer(modifier = Modifier.height(16.dp))
 
-            // 1. Copy Page Text
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(AppRadius.pillShape)
-                    .clickable(onClick = onCopyPageText)
-                    .padding(vertical = 12.dp, horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Outlined.ContentCopy, contentDescription = null, tint = colors.accent)
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text("Copy Page Text", style = typography.body, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
-                    Text("Copy all digital text from this page to clipboard", style = typography.caption, color = colors.textSecondary)
-                }
-            }
-
-            // 2. Read Page Aloud (TTS)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(AppRadius.pillShape)
-                    .clickable(onClick = onReadPageAloud)
-                    .padding(vertical = 12.dp, horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.AutoMirrored.Outlined.VolumeUp, contentDescription = null, tint = colors.accent)
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text("Read Page Aloud (TTS)", style = typography.body, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
-                    Text("Listen to this page with offline speech synthesizer", style = typography.caption, color = colors.textSecondary)
-                }
-            }
-
-            // 3. Share Page Text
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(AppRadius.pillShape)
-                    .clickable(onClick = onSharePageText)
-                    .padding(vertical = 12.dp, horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Outlined.Share, contentDescription = null, tint = colors.accent)
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text("Share Page Text", style = typography.body, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
-                    Text("Share page text to WhatsApp, Messages, or Email", style = typography.caption, color = colors.textSecondary)
-                }
-            }
-
-            // 4. OCR Extract Text
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(AppRadius.pillShape)
-                    .clickable(onClick = onExtractOcr)
-                    .padding(vertical = 12.dp, horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Outlined.TextFields, contentDescription = null, tint = colors.accent)
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text("Extract Text with OCR", style = typography.body, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
-                    Text("Recognize printed or handwritten text on images", style = typography.caption, color = colors.textSecondary)
-                }
-            }
+            PageAction(
+                icon = Icons.Outlined.ContentCopy,
+                title = "Copy page text",
+                supporting = "Copy all digital text from this page",
+                onClick = onCopyPageText
+            )
+            PageAction(
+                icon = Icons.AutoMirrored.Outlined.VolumeUp,
+                title = "Read page aloud",
+                supporting = "Listen with the offline speech synthesizer",
+                onClick = onReadPageAloud
+            )
+            PageAction(
+                icon = Icons.Outlined.Share,
+                title = "Share page text",
+                supporting = "Send this page's text to another app",
+                onClick = onSharePageText
+            )
+            PageAction(
+                icon = Icons.Outlined.TextFields,
+                title = "Extract text with OCR",
+                supporting = "Recognize printed or handwritten text",
+                onClick = onExtractOcr
+            )
         }
     }
+}
+
+@Composable
+private fun PageAction(
+    icon: ImageVector,
+    title: String,
+    supporting: String,
+    onClick: () -> Unit
+) {
+    ListItem(
+        headlineContent = { Text(title) },
+        supportingContent = { Text(supporting) },
+        leadingContent = {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    )
 }

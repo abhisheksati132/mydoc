@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Matches AppColors.LightAppColors.background so cold start has no flash. -->
-    <color name="app_window_background">#F7F7F4</color>
+    <!-- Matches the Material 3 light surface so cold start has no flash. -->
+    <color name="app_window_background">#FDFBFF</color>
 </resources>

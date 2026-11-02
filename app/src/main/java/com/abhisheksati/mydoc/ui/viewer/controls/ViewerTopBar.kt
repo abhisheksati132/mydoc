@@ -1,21 +1,18 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -31,8 +28,11 @@ import androidx.compose.material.icons.outlined.Slideshow
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,23 +41,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.components.VividRule
 import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
-import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 
 /**
- * The reader's masthead: back, document title with a tabular page counter, search,
- * bookmark, and the overflow index. Closed by the 3dp spectrum rule — the same
- * signature stroke as every other header in the app.
+ * Reader masthead: back, title with a page counter, search, bookmark and overflow.
+ * Material 3 surface with a standard divider; no gradient rule.
  */
 @Composable
 fun ViewerTopBar(
@@ -78,8 +69,7 @@ fun ViewerTopBar(
     onDocumentDetailsClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
+    val scheme = MaterialTheme.colorScheme
     var isMoreMenuOpen by remember { mutableStateOf(false) }
 
     AnimatedVisibility(
@@ -94,79 +84,73 @@ fun ViewerTopBar(
         ) + fadeOut(spring(stiffness = Spring.StiffnessMediumLow)),
         modifier = modifier
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(colors.background)
-                .statusBarsPadding()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(AppSpacing.listRowHeight)
-                    .padding(horizontal = AppSpacing.xSmall),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                BarIconAction(
-                    icon = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = "Navigate back",
-                    tint = colors.ink,
-                    onClick = onBackClick
-                )
-
-                Column(
+        Surface(color = scheme.surface) {
+            Column(modifier = Modifier.fillMaxWidth().statusBarsPadding()) {
+                Row(
                     modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = AppSpacing.small)
+                        .fillMaxWidth()
+                        .height(64.dp)
+                        .padding(horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = formatMiddleTruncated(title, maxChars = 30),
-                        style = typography.titleSmall,
-                        color = colors.ink,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (pageCount > 0) {
-                        Text(
-                            text = "PAGE ${(currentPage + 1).toString().padStart(2, '0')} / " +
-                                pageCount.toString().padStart(2, '0'),
-                            style = typography.overline.withTabularFigures(),
-                            color = colors.inkMuted,
-                            maxLines = 1
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = "Navigate back",
+                            tint = scheme.onSurface
                         )
                     }
-                }
 
-                BarIconAction(
-                    icon = Icons.Outlined.Search,
-                    contentDescription = "Search text in document",
-                    tint = colors.inkMuted,
-                    onClick = onSearchClick
-                )
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 8.dp)
+                    ) {
+                        Text(
+                            text = formatMiddleTruncated(title, maxChars = 30),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = scheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (pageCount > 0) {
+                            Text(
+                                text = "Page ${currentPage + 1} of $pageCount",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = scheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+                    }
 
-                BarIconAction(
-                    icon = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                    contentDescription = if (isBookmarked) "Remove page bookmark" else "Add page bookmark",
-                    tint = if (isBookmarked) colors.accent else colors.inkMuted,
-                    onClick = onToggleBookmark
-                )
+                    IconButton(onClick = onSearchClick) {
+                        Icon(
+                            imageVector = Icons.Outlined.Search,
+                            contentDescription = "Search text in document",
+                            tint = scheme.onSurfaceVariant
+                        )
+                    }
 
-                Box {
-                    BarIconAction(
-                        icon = Icons.Outlined.MoreVert,
-                        contentDescription = "More options",
-                        tint = colors.inkMuted,
-                        onClick = { isMoreMenuOpen = true }
-                    )
+                    IconButton(onClick = onToggleBookmark) {
+                        Icon(
+                            imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                            contentDescription = if (isBookmarked) "Remove page bookmark" else "Add page bookmark",
+                            tint = if (isBookmarked) scheme.primary else scheme.onSurfaceVariant
+                        )
+                    }
 
-                    DropdownMenu(
+                    Box {
+                        IconButton(onClick = { isMoreMenuOpen = true }) {
+                            Icon(
+                                imageVector = Icons.Outlined.MoreVert,
+                                contentDescription = "More options",
+                                tint = scheme.onSurfaceVariant
+                            )
+                        }
+
+                        DropdownMenu(
                         expanded = isMoreMenuOpen,
-                        onDismissRequest = { isMoreMenuOpen = false },
-                        shape = AppRadius.pillShape,
-                        containerColor = colors.surface,
-                        border = BorderStroke(AppSpacing.hairline, colors.line),
-                        shadowElevation = 0.dp,
-                        tonalElevation = 0.dp
+                        onDismissRequest = { isMoreMenuOpen = false }
                     ) {
                         OverflowAction(
                             label = "Share document",
@@ -244,50 +228,27 @@ fun ViewerTopBar(
                         }
                     }
                 }
+                }
+
+                HorizontalDivider(color = scheme.outlineVariant)
             }
-
-            VividRule()
         }
-    }
-}
-
-@Composable
-private fun BarIconAction(
-    icon: ImageVector,
-    contentDescription: String,
-    tint: Color,
-    onClick: () -> Unit
-) {
-    IconButton(
-        onClick = onClick,
-        modifier = Modifier.size(AppSpacing.minTouchTarget)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = tint,
-            modifier = Modifier.size(20.dp)
-        )
     }
 }
 
 @Composable
 private fun OverflowAction(
     label: String,
-    icon: ImageVector,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit
 ) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
-
     DropdownMenuItem(
-        text = { Text(label, style = typography.body, color = colors.ink) },
+        text = { Text(label) },
         leadingIcon = {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = colors.inkMuted,
-                modifier = Modifier.size(18.dp)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
         onClick = onClick

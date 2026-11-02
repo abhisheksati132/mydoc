@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Matches AppColors.DarkAppColors.background so cold start has no flash. -->
-    <color name="app_window_background">#0E0E0F</color>
+    <!-- Matches the Material 3 dark surface (AMOLED default) so cold start has no flash. -->
+    <color name="app_window_background">#000000</color>
 </resources>

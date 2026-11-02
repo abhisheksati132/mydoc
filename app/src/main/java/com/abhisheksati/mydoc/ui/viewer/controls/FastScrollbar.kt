@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,10 +38,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
@@ -59,8 +57,6 @@ fun FastScrollbar(
 ) {
     if (pageCount <= 1) return
 
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
     val haptics = com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics()
     val density = LocalDensity.current
 
@@ -146,7 +142,7 @@ fun FastScrollbar(
                     .padding(end = 4.dp)
                     .fillMaxHeight()
                     .width(2.dp)
-                    .background(colors.divider.copy(alpha = 0.4f))
+                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
             )
 
             // Scroll thumb (48dp height)
@@ -156,8 +152,14 @@ fun FastScrollbar(
                     .offset { IntOffset(x = 0, y = thumbYOffsetPx.roundToInt()) }
                     .padding(end = 2.dp)
                     .size(width = 6.dp, height = thumbHeightDp)
-                    .clip(AppRadius.roundShape)
-                    .background(if (isDragging) colors.accent else colors.textSecondary.copy(alpha = 0.6f))
+                    .clip(MaterialTheme.shapes.small)
+                    .background(
+                        if (isDragging) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        }
+                    )
             )
 
             // Floating page bubble with live thumbnail preview during drag
@@ -177,12 +179,12 @@ fun FastScrollbar(
             ) {
                 Column(
                     modifier = Modifier
-                        .clip(AppRadius.cardShape)
-                        .background(colors.surface)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                         .border(
                             width = 1.dp,
-                            color = colors.divider,
-                            shape = AppRadius.cardShape
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            shape = MaterialTheme.shapes.medium
                         )
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -193,16 +195,16 @@ fun FastScrollbar(
                             contentDescription = "Page ${lastHapticPage + 1}",
                             modifier = Modifier
                                 .size(width = 68.dp, height = 90.dp)
-                                .clip(AppRadius.microShape)
-                                .border(0.5.dp, colors.divider.copy(alpha = 0.5f), AppRadius.microShape),
+                                .clip(MaterialTheme.shapes.extraSmall)
+                                .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.extraSmall),
                             contentScale = ContentScale.Fit
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                     }
                     Text(
                         text = "${lastHapticPage + 1} / $pageCount",
-                        style = typography.captionStrong.withTabularFigures(),
-                        color = colors.textPrimary
+                        style = MaterialTheme.typography.labelMedium.withTabularFigures(),
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }

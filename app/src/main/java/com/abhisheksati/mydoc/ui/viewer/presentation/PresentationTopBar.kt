@@ -1,6 +1,5 @@
 package com.abhisheksati.mydoc.ui.viewer.presentation
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,8 +24,10 @@ import androidx.compose.material.icons.outlined.ViewCarousel
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -41,10 +42,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.abhisheksati.mydoc.designsystem.components.AppDivider
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.ui.viewer.controls.SearchOverlay
@@ -90,7 +87,6 @@ fun PresentationTopBar(
     if (isSlideshowMode) return
 
     var isMenuOpen by remember { mutableStateOf(false) }
-    val colors = LocalAppColors.current
 
     Column(modifier = modifier.background(bgColor)) {
         if (isSearchOpen) {
@@ -110,7 +106,7 @@ fun PresentationTopBar(
                     Column {
                         Text(
                             text = document.displayName,
-                            style = AppTheme.typography.bodyLargeStrong,
+                            style = MaterialTheme.typography.titleMedium,
                             color = textColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -122,18 +118,18 @@ fun PresentationTopBar(
                         ) {
                             Text(
                                 text = document.extension.uppercase(),
-                                style = AppTheme.typography.overline,
-                                color = colors.accent
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
                             )
                             if (effectiveSlideCount > 0) {
                                 Text(
                                     text = "•",
-                                    style = AppTheme.typography.micro,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = secondaryTextColor.copy(alpha = 0.5f)
                                 )
                                 Text(
                                     text = "$effectiveSlideCount slides",
-                                    style = AppTheme.typography.micro,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = secondaryTextColor
                                 )
                             }
@@ -164,7 +160,7 @@ fun PresentationTopBar(
                         Icon(
                             imageVector = if (isContinuousVertical) Icons.Outlined.ViewCarousel else Icons.Outlined.SwapVert,
                             contentDescription = if (isContinuousVertical) "Switch to Horizontal Paging" else "Switch to Continuous Vertical",
-                            tint = if (isContinuousVertical) colors.accent else secondaryTextColor
+                            tint = if (isContinuousVertical) MaterialTheme.colorScheme.primary else secondaryTextColor
                         )
                     }
 
@@ -173,7 +169,7 @@ fun PresentationTopBar(
                         Icon(
                             imageVector = Icons.Outlined.PlayArrow,
                             contentDescription = "Start Slideshow",
-                            tint = colors.accent
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
 
@@ -188,12 +184,7 @@ fun PresentationTopBar(
                         }
                         DropdownMenu(
                             expanded = isMenuOpen,
-                            onDismissRequest = { isMenuOpen = false },
-                            shape = AppRadius.largeShape,
-                            containerColor = colors.surface,
-                            border = BorderStroke(1.dp, colors.divider),
-                            shadowElevation = 8.dp,
-                            tonalElevation = 4.dp
+                            onDismissRequest = { isMenuOpen = false }
                         ) {
                             DropdownMenuItem(
                                 text = { Text(if (isContinuousVertical) "Switch to Horizontal Pager" else "Switch to Continuous Vertical") },
@@ -304,6 +295,6 @@ fun PresentationTopBar(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = bgColor)
             )
         }
-        AppDivider()
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
