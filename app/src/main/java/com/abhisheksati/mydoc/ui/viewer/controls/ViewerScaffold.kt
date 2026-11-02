@@ -90,13 +90,14 @@ object ViewerThemeTokens {
 @Composable
 fun ViewerScaffold(
     document: DocumentFile,
+    onBackClick: () -> Unit,
+    onShareClick: () -> Unit,
+    modifier: Modifier = Modifier,
     capabilities: ViewerCapabilities = ViewerCapabilities(),
     currentPage: Int = 0,
     pageCount: Int = 1,
     isControlsVisible: Boolean = true,
     onControlsVisibilityChange: ((Boolean) -> Unit)? = null,
-    onBackClick: () -> Unit,
-    onShareClick: () -> Unit,
     onSearchClick: (() -> Unit)? = null,
     isBookmarked: Boolean = false,
     onToggleBookmark: (() -> Unit)? = null,
@@ -114,7 +115,6 @@ fun ViewerScaffold(
     searchOverlay: @Composable (BoxScope.() -> Unit)? = null,
     ttsBar: @Composable (BoxScope.() -> Unit)? = null,
     passwordDialog: @Composable (() -> Unit)? = null,
-    modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
     val context = LocalContext.current

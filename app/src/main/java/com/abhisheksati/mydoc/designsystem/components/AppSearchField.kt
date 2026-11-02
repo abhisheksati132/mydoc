@@ -26,8 +26,8 @@ import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 fun AppSearchField(
     query: String,
     onQueryChanged: (String) -> Unit,
-    placeholder: String = "Search documents",
     modifier: Modifier = Modifier,
+    placeholder: String = "Search documents",
     shape: androidx.compose.ui.graphics.Shape = AppRadius.xLargeShape
 ) {
     val colors = LocalAppColors.current

@@ -14,26 +14,13 @@ import java.util.Locale
 
 class PackageInstallerHelper(private val context: Context) {
 
-    fun canInstallUnknownApps(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.packageManager.canRequestPackageInstalls()
-        } else {
-            true
-        }
-    }
+    fun canInstallUnknownApps(): Boolean = context.packageManager.canRequestPackageInstalls()
 
-    fun createManageUnknownAppSourcesIntent(): Intent {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                data = Uri.parse("package:${context.packageName}")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-        } else {
-            Intent(Settings.ACTION_SECURITY_SETTINGS).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
+    fun createManageUnknownAppSourcesIntent(): Intent =
+        Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+            data = Uri.parse("package:${context.packageName}")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-    }
 
     fun installApk(apkFile: File) {
         verifyApkPackageAndSignature(apkFile)

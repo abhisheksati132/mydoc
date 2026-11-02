@@ -11,6 +11,8 @@ room = "2.6.1"
 coroutines = "1.10.1"
 materialIconsExtended = "1.7.6"
 junit = "4.13.2"
+kxml2 = "2.3.0"
+json = "20240303"
 androidxJunit = "1.2.1"
 espresso = "3.6.1"
 mupdf = "1.24.4"
@@ -63,6 +65,10 @@ room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+
+kxml2 = { group = "net.sf.kxml", name = "kxml2", version.ref = "kxml2" }
+org-json = { group = "org.json", name = "json", version.ref = "json" }
 
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxJunit" }

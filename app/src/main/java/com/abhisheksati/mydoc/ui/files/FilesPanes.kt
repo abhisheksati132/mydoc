@@ -23,18 +23,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Sort
+import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.ArrowDownward
 import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.SdCard
-import androidx.compose.material.icons.outlined.Sort
 import androidx.compose.material.icons.outlined.Storage
-import androidx.compose.material.icons.outlined.ViewList
-import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Button
@@ -415,14 +415,14 @@ fun DirectoryPane(
         ) {
             Spacer(modifier = Modifier.weight(1f))
             IconButton(onClick = { sortMenuOpen = true }, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Outlined.Sort, contentDescription = "Sort", tint = scheme.onSurfaceVariant)
+                Icon(Icons.AutoMirrored.Outlined.Sort, contentDescription = "Sort", tint = scheme.onSurfaceVariant)
             }
             IconButton(
                 onClick = onToggleView,
                 modifier = Modifier.size(40.dp)
             ) {
                 Icon(
-                    imageVector = if (uiState.isGridView) Icons.Outlined.ViewList else Icons.Outlined.GridView,
+                    imageVector = if (uiState.isGridView) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
                     contentDescription = if (uiState.isGridView) "List view" else "Grid view",
                     tint = scheme.onSurfaceVariant
                 )

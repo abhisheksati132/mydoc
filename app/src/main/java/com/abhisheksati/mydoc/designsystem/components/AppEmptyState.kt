@@ -27,12 +27,12 @@ import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 @Composable
 fun AppEmptyState(
     message: String,
+    modifier: Modifier = Modifier,
     title: String? = null,
     icon: ImageVector = Icons.Outlined.Description,
     actionLabel: String? = null,
     onActionClick: (() -> Unit)? = null,
-    onAction: (() -> Unit)? = onActionClick,
-    modifier: Modifier = Modifier
+    onAction: (() -> Unit)? = onActionClick
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current

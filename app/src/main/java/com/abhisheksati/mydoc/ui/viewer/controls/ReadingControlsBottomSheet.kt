@@ -89,9 +89,9 @@ fun ReadingControlsBottomSheet(
     isKeepScreenOn: Boolean,
     onKeepScreenOnChange: (Boolean) -> Unit,
     document: DocumentFile,
+    modifier: Modifier = Modifier,
     isFitPage: Boolean = false,
-    onFitPageChange: ((Boolean) -> Unit)? = null,
-    modifier: Modifier = Modifier
+    onFitPageChange: ((Boolean) -> Unit)? = null
 ) {
     if (!isOpen) return
 

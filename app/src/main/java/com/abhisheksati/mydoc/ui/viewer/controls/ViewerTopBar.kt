@@ -62,13 +62,13 @@ fun ViewerTopBar(
     onSearchClick: () -> Unit,
     onToggleBookmark: () -> Unit,
     onShareClick: () -> Unit,
+    modifier: Modifier = Modifier,
     onToolsClick: (() -> Unit)? = null,
     onOcrClick: (() -> Unit)? = null,
     onTtsClick: (() -> Unit)? = null,
     onSlideshowClick: (() -> Unit)? = null,
     onReflowClick: (() -> Unit)? = null,
-    onDocumentDetailsClick: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    onDocumentDetailsClick: (() -> Unit)? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     var isMoreMenuOpen by remember { mutableStateOf(false) }

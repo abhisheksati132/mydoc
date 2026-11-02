@@ -441,9 +441,7 @@ fun AudioPlayerScreen(
                         val nextIdx = (speeds.indexOf(playbackSpeed) + 1).let { if (it in speeds.indices) it else 0 }
                         playbackSpeed = speeds[nextIdx]
                         try {
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                                mediaPlayer.playbackParams = mediaPlayer.playbackParams.setSpeed(playbackSpeed)
-                            }
+                            mediaPlayer.playbackParams = mediaPlayer.playbackParams.setSpeed(playbackSpeed)
                         } catch (_: Exception) {}
                     }
             ) {

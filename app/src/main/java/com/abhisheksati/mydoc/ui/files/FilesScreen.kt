@@ -16,16 +16,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.NoteAdd
+import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.NoteAdd
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.ViewList
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.DropdownMenu
@@ -97,8 +97,8 @@ fun FilesScreen(
     onLibraryItemDetails: (LibraryItem) -> Unit,
     onSettingsClick: () -> Unit,
     onSpotlightSearch: () -> Unit,
-    isActive: Boolean = true,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isActive: Boolean = true
 ) {
 
     val uiState by viewModel.uiState.collectAsState()
@@ -548,7 +548,7 @@ private fun FilesHeader(
                             text = { Text(if (uiState.isGridView) "List view" else "Grid view") },
                             leadingIcon = {
                                 Icon(
-                                    imageVector = if (uiState.isGridView) Icons.Outlined.ViewList else Icons.Outlined.GridView,
+                                    imageVector = if (uiState.isGridView) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
                                     contentDescription = null
                                 )
                             },
@@ -582,7 +582,7 @@ private fun FilesHeader(
                     )
                     DropdownMenuItem(
                         text = { Text("New file") },
-                        leadingIcon = { Icon(Icons.Outlined.NoteAdd, contentDescription = null) },
+                        leadingIcon = { Icon(Icons.AutoMirrored.Outlined.NoteAdd, contentDescription = null) },
                         onClick = {
                             menuOpen = false
                             onNewFile()

@@ -52,8 +52,8 @@ fun FastScrollbar(
     currentPage: Int,
     pageCount: Int,
     onPageSelected: (Int) -> Unit,
-    renderThumbnail: (suspend (pageIndex: Int, scale: Float) -> Bitmap?)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    renderThumbnail: (suspend (pageIndex: Int, scale: Float) -> Bitmap?)? = null
 ) {
     if (pageCount <= 1) return
 

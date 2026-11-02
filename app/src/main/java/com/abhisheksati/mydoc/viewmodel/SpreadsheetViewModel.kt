@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.viewmodel
 
+import android.app.Application
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
@@ -30,7 +31,8 @@ data class SpreadsheetUiState(
 }
 
 class SpreadsheetViewModel(
-    private val context: Context,
+    // Application, not Context: this outlives the Activity that creates it.
+    private val context: Application,
     private val documentFile: DocumentFile,
     private val parser: SpreadsheetParser = SpreadsheetParser()
 ) : ViewModel() {
@@ -108,7 +110,7 @@ class SpreadsheetViewModel(
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(SpreadsheetViewModel::class.java)) {
-                return SpreadsheetViewModel(context, documentFile) as T
+                return SpreadsheetViewModel(context.applicationContext as Application, documentFile) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class: ")
         }

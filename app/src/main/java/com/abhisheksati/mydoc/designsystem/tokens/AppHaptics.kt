@@ -20,7 +20,7 @@ class AppHaptics(private val view: View) {
     fun tick() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             view.performHapticFeedback(HapticFeedbackConstants.SEGMENT_TICK)
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        } else {
             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
         }
     }

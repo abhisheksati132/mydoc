@@ -68,9 +68,9 @@ fun ViewerBottomBar(
     onPagesClick: () -> Unit,
     onAppearanceClick: () -> Unit,
     onPageScrubbed: (Int) -> Unit,
+    modifier: Modifier = Modifier,
     sheetItems: List<OutlineItem> = emptyList(),
-    onSheetSelect: ((Int) -> Unit)? = null,
-    modifier: Modifier = Modifier
+    onSheetSelect: ((Int) -> Unit)? = null
 ) {
     val scheme = MaterialTheme.colorScheme
 

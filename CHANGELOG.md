@@ -41,6 +41,20 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   scale. Off-scale radii snapped to the nearest step (10/14 → 12, 18 → 16, 22 → 20), the 2dp tab
   indicator's 1dp radius became `roundShape` (clamping makes them identical), and thumbnails take
   one radius from the scale instead of threading a `cornerRadius: Int` through five composables.
+- **Dead resources removed.** 20 unused strings, the unreferenced `drawable/ic_launcher_foreground.xml`,
+  and ten night-mode icon PNGs that were byte-identical to their day twins. The night
+  `ic_launcher.png` and `ic_launcher_round.png` differ from the day copies, so they were checked by
+  blob hash and kept.
+- **Six version checks below `minSdk 26` deleted** — the M/O branches in haptics, audio playback
+  parameters, the installer helper, `StaticLayout` creation and the PiP gate. `mipmap-anydpi-v26`
+  became `mipmap-anydpi` for the same reason.
+- **Test dependencies moved into the version catalog**, which also aligned `kotlinx-coroutines-test`
+  with the runtime it tests (it was pinned to 1.8.1 against a 1.10.1 runtime).
+- **`kotlinOptions` became `compilerOptions`** in `app/build.gradle.kts`, and 18 composables reordered
+  `modifier` to the first optional parameter.
+- **Boxed state replaced with typed state** in the three places that held an `Int`/`Long` in a plain
+  `mutableStateOf` (search match index in both readers, cache size in Settings), which was allocating
+  a wrapper per update.
 
 ### Fixed
 
@@ -57,6 +71,26 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   stops "Compression saved only 12,3%" on German and French locales. A JVM probe of `%02x` across
   seven locales came back ASCII everywhere, so the four hex-digest call sites are deliberately
   unchanged.
+- **Three ViewModels held an Activity context.** `MainActivity` passed itself straight into
+  `StorageViewModel.Factory`, and the viewer and spreadsheet factories forwarded
+  `LocalContext.current`. All three ViewModels now take `Application`, resolved through
+  `applicationContext` in the factory, so a rotation cannot pin a dead Activity for the life of the
+  ViewModel.
+- **The text and Word readers recomposed the whole viewer on every scroll frame.** Both read
+  `firstVisibleItemIndex` in composition — once as a `LaunchedEffect` key, once as the header's page
+  number. The index now comes from a `derivedStateOf`, and reading progress is persisted through
+  `snapshotFlow` instead of a composition-time read.
+- **PDF text extraction re-parsed the whole document for every page.** `AndroidPdfRenderer` called
+  `PDDocument.load(file)` inside `getPageText`, `getDocumentText`, `search` and `getOutline`, so
+  reading text across N pages cost N full parses. One document is now opened per renderer and closed
+  with it.
+- **Edited Office documents reopened the stale PDF.** The conversion cache key was
+  `MD5(uri + fileName)`, so saving a document under the same name kept serving the PDF rendered from
+  the previous version. The key now carries the source's size and modification time, falling back to
+  the old behaviour when a provider reports neither.
+- **Picture-in-picture entered without a source rect or auto-enter.** The player's measured bounds
+  are now passed to `setSourceRectHint`, and `setAutoEnterEnabled(true)` is set on API 31+ — the two
+  calls lint asks for at `targetSdk 31` and above.
 
 ## [1.5.1] — 2026-11-02
 

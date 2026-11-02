@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.storage
 
+import android.app.Application
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.os.Environment
@@ -21,7 +22,9 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 class StorageViewModel(
-    private val context: Context,
+    // Application, not Context: this outlives the Activity that creates it, so an
+    // Activity context here would leak the whole window after a rotation.
+    private val context: Application,
     private val storageRepository: StorageRepository
 ) : ViewModel() {
 
@@ -321,7 +324,7 @@ class StorageViewModel(
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(StorageViewModel::class.java)) {
-                return StorageViewModel(context, storageRepository) as T
+                return StorageViewModel(context.applicationContext as Application, storageRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }

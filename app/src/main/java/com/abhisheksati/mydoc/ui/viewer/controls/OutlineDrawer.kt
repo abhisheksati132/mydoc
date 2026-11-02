@@ -47,12 +47,12 @@ private enum class DrawerTab {
 @Composable
 fun OutlineDrawer(
     outline: List<OutlineItem>,
-    bookmarks: Set<Int> = emptySet(),
     isOpen: Boolean,
     onDismiss: () -> Unit,
     onItemSelected: (pageIndex: Int) -> Unit,
-    onRemoveBookmark: (pageIndex: Int) -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    bookmarks: Set<Int> = emptySet(),
+    onRemoveBookmark: (pageIndex: Int) -> Unit = {}
 ) {
     if (!isOpen) return
 

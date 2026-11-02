@@ -97,8 +97,8 @@ private fun friendlyHeader(group: ToolGroup): String = when (group) {
 fun ToolsScreen(
     viewModel: ToolsViewModel,
     onToolClick: (PdfTool) -> Unit,
-    onSettingsClick: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSettingsClick: (() -> Unit)? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography

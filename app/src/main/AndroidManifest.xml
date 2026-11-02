@@ -30,7 +30,7 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
-                <!-- Package Installer & APK viewing support for seamless in-app self updates -->
+        <!-- Package Installer & APK viewing support for seamless in-app self updates -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:mimeType="application/vnd.android.package-archive" />

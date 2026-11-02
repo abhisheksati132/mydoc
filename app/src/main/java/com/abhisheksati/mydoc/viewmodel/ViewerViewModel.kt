@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.viewmodel
 
+import android.app.Application
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
@@ -52,7 +53,8 @@ data class ViewerUiState(
 )
 
 class ViewerViewModel(
-    private val context: Context,
+    // Application, not Context: this outlives the Activity that creates it.
+    private val context: Application,
     private val repository: DocumentRepository,
     private val documentFile: DocumentFile
 ) : ViewModel() {
@@ -553,7 +555,7 @@ class ViewerViewModel(
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(ViewerViewModel::class.java)) {
-                return ViewerViewModel(context, repository, documentFile) as T
+                return ViewerViewModel(context.applicationContext as Application, repository, documentFile) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class: ")
         }

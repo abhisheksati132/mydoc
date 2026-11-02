@@ -70,12 +70,12 @@ fun PdfViewerScreen(
     viewModel: ViewerViewModel,
     onBackClick: () -> Unit,
     onShareClick: () -> Unit,
+    modifier: Modifier = Modifier,
     onToolsClick: (() -> Unit)? = null,
     onSelectTool: ((PdfTool) -> Unit)? = null,
     onDocumentUpdated: ((DocumentFile) -> Unit)? = null,
     onSlideshowClick: (() -> Unit)? = null,
-    onReflowClick: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    onReflowClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp

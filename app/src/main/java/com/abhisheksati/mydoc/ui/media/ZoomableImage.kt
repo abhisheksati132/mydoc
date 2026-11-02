@@ -26,9 +26,9 @@ fun ZoomableImage(
     item: MediaItem,
     isFillScale: Boolean,
     displayRotation: Float,
-    isFlippedHorizontal: Boolean = false,
     onTap: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isFlippedHorizontal: Boolean = false
 ) {
     val context = LocalContext.current
     var scale by remember { mutableFloatStateOf(1f) }

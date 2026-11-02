@@ -5,6 +5,7 @@ import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.graphics.Rect
 import android.media.AudioManager
 import android.os.Build
 import android.util.Rational
@@ -74,6 +75,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -146,6 +149,9 @@ fun VideoPlayerScreen(
     var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
     var resizeModeIndex by remember { mutableIntStateOf(0) }
     var isScreenLocked by remember { mutableStateOf(false) }
+    // Window bounds of the player, used as the PiP source-rect hint so the system can
+    // animate the surface out of its real position instead of a full-screen snapshot.
+    var playerBounds by remember { mutableStateOf<Rect?>(null) }
     var orientationMode by remember { mutableIntStateOf(0) } // 0: Auto, 1: Landscape, 2: Portrait
     var isSpeedSheetOpen by remember { mutableStateOf(false) }
 
@@ -338,7 +344,17 @@ fun VideoPlayerScreen(
             update = { playerView ->
                 playerView.resizeMode = VideoResizeMode.entries[resizeModeIndex].mode
             },
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .onGloballyPositioned { coords ->
+                    val bounds = coords.boundsInWindow()
+                    playerBounds = Rect(
+                        bounds.left.toInt(),
+                        bounds.top.toInt(),
+                        bounds.right.toInt(),
+                        bounds.bottom.toInt()
+                    )
+                }
         )
 
         // Center Gesture Feedback Overlay (Brightness, Volume, Seek)
@@ -436,15 +452,19 @@ fun VideoPlayerScreen(
                     }
 
                     // Picture-in-Picture Button
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        IconButton(onClick = {
-                            val params = PictureInPictureParams.Builder()
-                                .setAspectRatio(Rational(16, 9))
-                                .build()
-                            activity?.enterPictureInPictureMode(params)
-                        }) {
-                            Icon(Icons.Default.PictureInPicture, contentDescription = "PiP", tint = Color.White)
-                        }
+                    IconButton(onClick = {
+                        val pipParams = PictureInPictureParams.Builder()
+                            .setAspectRatio(Rational(16, 9))
+                            .apply {
+                                playerBounds?.let { setSourceRectHint(it) }
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                    setAutoEnterEnabled(true)
+                                }
+                            }
+                            .build()
+                        activity?.enterPictureInPictureMode(pipParams)
+                    }) {
+                        Icon(Icons.Default.PictureInPicture, contentDescription = "PiP", tint = Color.White)
                     }
 
                     // Share Video

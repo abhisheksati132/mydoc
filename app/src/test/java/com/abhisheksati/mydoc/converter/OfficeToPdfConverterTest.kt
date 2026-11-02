@@ -45,6 +45,25 @@ class OfficeToPdfConverterTest {
     }
 
     @Test
+    fun generateCacheKey_distinctForEditedSource() {
+        // A document rewritten in place keeps its uri and name, so only size/mtime can
+        // tell the two versions apart. Without that the app would reopen the stale PDF.
+        val before = OfficeToPdfConverter.generateCacheKey("content://com.mydoc/doc1", "report.docx", "20480_1730000000000")
+        val after = OfficeToPdfConverter.generateCacheKey("content://com.mydoc/doc1", "report.docx", "21304_1730000600000")
+
+        assertNotEquals(before, after)
+    }
+
+    @Test
+    fun generateCacheKey_stableForUnchangedSource() {
+        val version = "20480_1730000000000"
+        val first = OfficeToPdfConverter.generateCacheKey("content://com.mydoc/doc1", "report.docx", version)
+        val second = OfficeToPdfConverter.generateCacheKey("content://com.mydoc/doc1", "report.docx", version)
+
+        assertEquals(first, second)
+    }
+
+    @Test
     fun cacheFileManagement_measuresSizesAndDeletesCleanly() {
         val tempDir = File.createTempFile("cache_test", "dir").apply {
             delete()

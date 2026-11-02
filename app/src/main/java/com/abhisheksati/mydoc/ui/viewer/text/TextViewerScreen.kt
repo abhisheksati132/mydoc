@@ -21,11 +21,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,7 +83,7 @@ fun TextViewerScreen(
 
     var isSearchOpen by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    var currentMatchIndex by remember { mutableStateOf(0) }
+    var currentMatchIndex by remember { mutableIntStateOf(0) }
 
     val showLineNumbers by remember { mutableStateOf(true) }
     var isTtsVisible by remember { mutableStateOf(false) }
@@ -111,6 +115,9 @@ fun TextViewerScreen(
     val secondaryTextColor = ViewerThemeTokens.getSecondaryTextColor(readingPrefs.readingMode, colors.textSecondary)
 
     val listState = rememberLazyListState()
+    // Scroll position is a frequently-changing state object; reading it straight in
+    // composition subscribes the whole viewer to every frame. Derive the index once.
+    val visibleLineIndex by remember { derivedStateOf { listState.firstVisibleItemIndex } }
 
     // Smart Resume: Restore last read position on open
     LaunchedEffect(lines.size) {
@@ -128,19 +135,22 @@ fun TextViewerScreen(
     }
 
     // Smart Resume: Persist reading progress on scroll
-    LaunchedEffect(listState.firstVisibleItemIndex, lines.size) {
-        if (lines.isNotEmpty()) {
-            withContext(Dispatchers.IO) {
-                app?.documentRepository?.updatePageProgress(document.uri, listState.firstVisibleItemIndex, lines.size)
-                app?.documentRepository?.saveViewState(
-                    ViewState(
-                        uri = document.uri,
-                        lastPage = listState.firstVisibleItemIndex,
-                        readingMode = readingPrefs.readingMode
+    LaunchedEffect(lines.size) {
+        if (lines.isEmpty()) return@LaunchedEffect
+        snapshotFlow { listState.firstVisibleItemIndex }
+            .distinctUntilChanged()
+            .collect { index ->
+                withContext(Dispatchers.IO) {
+                    app?.documentRepository?.updatePageProgress(document.uri, index, lines.size)
+                    app?.documentRepository?.saveViewState(
+                        ViewState(
+                            uri = document.uri,
+                            lastPage = index,
+                            readingMode = readingPrefs.readingMode
+                        )
                     )
-                )
+                }
             }
-        }
     }
 
     // Volume key line scrolling
@@ -175,7 +185,7 @@ fun TextViewerScreen(
             supportsTts = true,
             supportsZoom = false
         ),
-        currentPage = if (lines.isNotEmpty()) listState.firstVisibleItemIndex else 0,
+        currentPage = if (lines.isNotEmpty()) visibleLineIndex else 0,
         pageCount = lines.size.coerceAtLeast(1),
         isControlsVisible = !isSearchOpen,
         onBackClick = onBackClick,

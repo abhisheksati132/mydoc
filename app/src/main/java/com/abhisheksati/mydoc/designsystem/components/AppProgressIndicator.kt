@@ -37,8 +37,8 @@ fun AppProgressIndicator(
 
 @Composable
 fun AppLinearProgress(
-    progress: Float? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    progress: Float? = null
 ) {
     val colors = AppTheme.colors
     if (progress != null) {

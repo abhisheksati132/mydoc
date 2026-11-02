@@ -24,11 +24,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -59,6 +62,7 @@ import com.abhisheksati.mydoc.ui.viewer.controls.ViewerCapabilities
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerScaffold
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerThemeTokens
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -86,7 +90,7 @@ fun WordViewerScreen(
 
     var isSearchOpen by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    var currentMatchIndex by remember { mutableStateOf(0) }
+    var currentMatchIndex by remember { mutableIntStateOf(0) }
 
     var isTtsVisible by remember { mutableStateOf(false) }
     val ttsManager = remember { DocumentTtsManager(context) }
@@ -130,6 +134,9 @@ fun WordViewerScreen(
     }
 
     val lazyListState = rememberLazyListState()
+    // Scroll position is a frequently-changing state object; reading it straight in
+    // composition subscribes the whole viewer to every frame. Derive the index once.
+    val visibleBlockIndex by remember { derivedStateOf { lazyListState.firstVisibleItemIndex } }
 
     // Smart Resume: Restore position
     LaunchedEffect(filteredBlocks.size) {
@@ -147,19 +154,22 @@ fun WordViewerScreen(
     }
 
     // Smart Resume: Persist progress
-    LaunchedEffect(lazyListState.firstVisibleItemIndex, filteredBlocks.size) {
-        if (filteredBlocks.isNotEmpty()) {
-            withContext(Dispatchers.IO) {
-                app?.documentRepository?.updatePageProgress(document.uri, lazyListState.firstVisibleItemIndex, filteredBlocks.size)
-                app?.documentRepository?.saveViewState(
-                    ViewState(
-                        uri = document.uri,
-                        lastPage = lazyListState.firstVisibleItemIndex,
-                        readingMode = readingPrefs.readingMode
+    LaunchedEffect(filteredBlocks.size) {
+        if (filteredBlocks.isEmpty()) return@LaunchedEffect
+        snapshotFlow { lazyListState.firstVisibleItemIndex }
+            .distinctUntilChanged()
+            .collect { index ->
+                withContext(Dispatchers.IO) {
+                    app?.documentRepository?.updatePageProgress(document.uri, index, filteredBlocks.size)
+                    app?.documentRepository?.saveViewState(
+                        ViewState(
+                            uri = document.uri,
+                            lastPage = index,
+                            readingMode = readingPrefs.readingMode
+                        )
                     )
-                )
+                }
             }
-        }
     }
 
     // Volume key page turning
@@ -200,7 +210,7 @@ fun WordViewerScreen(
             supportsTts = true,
             supportsZoom = false
         ),
-        currentPage = if (filteredBlocks.isNotEmpty()) lazyListState.firstVisibleItemIndex else 0,
+        currentPage = if (filteredBlocks.isNotEmpty()) visibleBlockIndex else 0,
         pageCount = filteredBlocks.size.coerceAtLeast(1),
         isControlsVisible = !isSearchOpen,
         onBackClick = onBackClick,

@@ -56,6 +56,7 @@ import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 @Composable
 fun AppTabHeader(
     title: String,
+    modifier: Modifier = Modifier,
     titleContent: (@Composable () -> Unit)? = null,
     kicker: String? = null,
     meta: String? = null,
@@ -67,8 +68,7 @@ fun AppTabHeader(
     onSettingsClick: (() -> Unit)? = null,
     moreMenuContent: (@Composable ColumnScope.(onDismiss: () -> Unit) -> Unit)? = null,
     extraActions: (@Composable RowScope.() -> Unit)? = null,
-    bottomContent: (@Composable () -> Unit)? = null,
-    modifier: Modifier = Modifier
+    bottomContent: (@Composable () -> Unit)? = null
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current

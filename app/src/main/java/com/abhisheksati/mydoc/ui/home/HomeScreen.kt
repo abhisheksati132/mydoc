@@ -78,14 +78,14 @@ fun HomeScreen(
     toolsViewModel: ToolsViewModel,
     fileManagerViewModel: FileManagerViewModel,
     storageViewModel: StorageViewModel,
-    updateManager: UpdateManager? = null,
     onLibraryItemClick: (LibraryItem) -> Unit,
     onDocumentClick: (DocumentFile) -> Unit,
     onOpenFile: (File) -> Unit,
     onSettingsClick: () -> Unit,
     onSpotlightSearch: () -> Unit,
     onShareDocument: (DocumentFile) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    updateManager: UpdateManager? = null
 ) {
 
     val uiState by viewModel.uiState.collectAsState()

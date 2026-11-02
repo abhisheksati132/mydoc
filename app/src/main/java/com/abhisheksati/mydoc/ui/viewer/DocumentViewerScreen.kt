@@ -31,10 +31,10 @@ fun DocumentViewerScreen(
     document: DocumentFile,
     onBackClick: () -> Unit,
     onShareClick: () -> Unit,
+    modifier: Modifier = Modifier,
     onToolsClick: (() -> Unit)? = null,
     onSelectTool: ((PdfTool) -> Unit)? = null,
-    onDocumentUpdated: ((DocumentFile) -> Unit)? = null,
-    modifier: Modifier = Modifier
+    onDocumentUpdated: ((DocumentFile) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as MyDocApp

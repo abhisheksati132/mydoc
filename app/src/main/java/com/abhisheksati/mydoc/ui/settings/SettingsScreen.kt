@@ -23,7 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -44,9 +44,9 @@ fun SettingsScreen(
     updateManager: UpdateManager,
     settingsRepository: SettingsRepository,
     onBackClick: () -> Unit,
+    modifier: Modifier = Modifier,
     onDesignSystemPreviewClick: () -> Unit = {},
-    onClearRecent: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    onClearRecent: (() -> Unit)? = null
 ) {
     val updateState by updateManager.state.collectAsState()
     val context = LocalContext.current
@@ -73,7 +73,7 @@ fun SettingsScreen(
 
     // LIBRARY
     val startupTab by settingsRepository.defaultStartupTab.collectAsState()
-    var cacheSizeBytes by remember { mutableStateOf(settingsRepository.getCacheSizeBytes(context)) }
+    var cacheSizeBytes by remember { mutableLongStateOf(settingsRepository.getCacheSizeBytes(context)) }
 
     // ABOUT & SECURITY
     val biometricLockEnabled by settingsRepository.isBiometricLockEnabled.collectAsState()

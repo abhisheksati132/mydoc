@@ -62,7 +62,7 @@ object OfficeToPdfConverter {
     ): Result<File> = withContext(Dispatchers.IO) {
         try {
             val cacheDir = File(context.cacheDir, CACHE_DIR_NAME).apply { mkdirs() }
-            val cacheKey = generateCacheKey(sourceUri, fileName)
+            val cacheKey = generateCacheKey(sourceUri.toString(), fileName, sourceVersion(context, sourceUri))
             val cachedPdfFile = File(cacheDir, "$cacheKey.pdf")
 
             // Fast path: cached version already exists and is non-empty
@@ -140,8 +140,8 @@ object OfficeToPdfConverter {
         return cacheDir.listFiles()?.sumOf { it.length() } ?: 0L
     }
 
-    internal fun generateCacheKey(uriString: String, fileName: String): String {
-        val raw = "${uriString}_$fileName"
+    internal fun generateCacheKey(uriString: String, fileName: String, version: String = ""): String {
+        val raw = "${uriString}_${fileName}_$version"
         return try {
             val md = MessageDigest.getInstance("MD5")
             md.digest(raw.toByteArray()).joinToString("") { "%02x".format(it) }
@@ -152,8 +152,40 @@ object OfficeToPdfConverter {
         }
     }
 
-    private fun generateCacheKey(uri: Uri, fileName: String): String =
-        generateCacheKey(uri.toString(), fileName)
+    /**
+     * Size and modification time of the source, so an edited document gets a new cache
+     * entry instead of reopening the PDF rendered from the previous version. Empty string
+     * means neither could be read, which falls back to the old uri+name behaviour.
+     */
+    private fun sourceVersion(context: Context, uri: Uri): String {
+        val size = runCatching {
+            context.contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize } ?: -1L
+        }.getOrDefault(-1L)
+        val modified = runCatching {
+            uri.path?.let { path ->
+                val file = File(path)
+                if (file.exists()) file.lastModified() else 0L
+            } ?: 0L
+        }.getOrDefault(0L)
+        val stamp = if (modified > 0L) modified else queryLastModified(context, uri)
+        return when {
+            size > 0L && stamp > 0L -> "${size}_$stamp"
+            size > 0L -> "${size}_0"
+            stamp > 0L -> "0_$stamp"
+            else -> ""
+        }
+    }
+
+    /** Providers name the timestamp column differently, so read whatever the cursor offers. */
+    private fun queryLastModified(context: Context, uri: Uri): Long = runCatching {
+        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            if (!cursor.moveToFirst()) return@use 0L
+            val column = cursor.columnNames.firstOrNull {
+                it.equals("last_modified", true) || it.equals("date_modified", true)
+            } ?: return@use 0L
+            cursor.getLong(cursor.getColumnIndexOrThrow(column)) * 1000L
+        } ?: 0L
+    }.getOrDefault(0L)
 
     // =========================================================================
     // 1. Plain Text & Markdown Converter
@@ -912,16 +944,10 @@ object OfficeToPdfConverter {
         canvas.drawText("Page $pageNumber", A4_WIDTH - margin - 45f, y + 6f, textPaint)
     }
 
-    private fun createStaticLayout(text: CharSequence, paint: TextPaint, width: Int): StaticLayout {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            StaticLayout.Builder.obtain(text, 0, text.length, paint, width.coerceAtLeast(10))
-                .setAlignment(Layout.Alignment.ALIGN_NORMAL)
-                .setLineSpacing(0f, 1.15f)
-                .setIncludePad(false)
-                .build()
-        } else {
-            @Suppress("DEPRECATION")
-            StaticLayout(text, paint, width.coerceAtLeast(10), Layout.Alignment.ALIGN_NORMAL, 1.15f, 0f, false)
-        }
-    }
+    private fun createStaticLayout(text: CharSequence, paint: TextPaint, width: Int): StaticLayout =
+        StaticLayout.Builder.obtain(text, 0, text.length, paint, width.coerceAtLeast(10))
+            .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+            .setLineSpacing(0f, 1.15f)
+            .setIncludePad(false)
+            .build()
 }

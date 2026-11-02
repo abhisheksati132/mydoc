@@ -88,8 +88,8 @@ fun PhotoViewerScreen(
     initialIndex: Int,
     mediaRepository: MediaRepository,
     onBackClick: () -> Unit,
-    onDeletePhoto: ((MediaItem) -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onDeletePhoto: ((MediaItem) -> Unit)? = null
 ) {
     if (items.isEmpty()) return
 
