@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.FilterChip
@@ -21,7 +23,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
-import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.HomeTab
 import java.util.Locale
 
@@ -32,6 +33,8 @@ fun SettingsStorageSection(
     onStartupTabChange: (HomeTab) -> Unit,
     onClearCacheClick: () -> Unit,
     onClearRecentClick: (() -> Unit)?,
+    onOpenStorageCleaner: (() -> Unit)? = null,
+    onOpenAppManager: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     SettingsCard(
@@ -54,6 +57,28 @@ fun SettingsStorageSection(
         }
 
         SettingsDivider(modifier = Modifier.padding(top = 12.dp))
+
+        if (onOpenStorageCleaner != null) {
+            SettingActionRow(
+                title = "Storage cleaner",
+                subtitle = "Scan and clean junk files, APKs, and large downloads",
+                icon = Icons.Outlined.CleaningServices,
+                actionLabel = "Clean",
+                onAction = onOpenStorageCleaner
+            )
+            SettingsDivider()
+        }
+
+        if (onOpenAppManager != null) {
+            SettingActionRow(
+                title = "App manager",
+                subtitle = "Manage installed applications and view permissions",
+                icon = Icons.Outlined.Apps,
+                actionLabel = "Manage",
+                onAction = onOpenAppManager
+            )
+            SettingsDivider()
+        }
 
         val formattedCache = if (cacheSizeBytes < 1024) {
             "$cacheSizeBytes B"
@@ -101,18 +126,20 @@ private fun SettingActionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = scheme.onSurfaceVariant,
-            modifier = Modifier
-                .padding(end = 16.dp)
-                .size(20.dp)
+            modifier = Modifier.size(24.dp)
         )
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 16.dp, end = 8.dp)
+        ) {
             Text(
                 text = title,
                 style = typography.bodyLarge,
@@ -120,15 +147,15 @@ private fun SettingActionRow(
             )
             Text(
                 text = subtitle,
-                style = typography.bodyMedium.withTabularFigures(),
+                style = typography.bodySmall,
                 color = scheme.onSurfaceVariant
             )
         }
-        TextButton(
-            onClick = onAction,
-            modifier = Modifier.padding(start = 12.dp)
-        ) {
-            Text(actionLabel)
+        TextButton(onClick = onAction) {
+            Text(
+                text = actionLabel,
+                color = scheme.primary
+            )
         }
     }
 }

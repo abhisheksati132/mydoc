@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -36,6 +37,8 @@ import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.data.local.SettingsRepository
 import com.abhisheksati.mydoc.designsystem.components.AppTopBar
+import com.abhisheksati.mydoc.ui.appmanager.AppManagerSheet
+import com.abhisheksati.mydoc.ui.cleaner.StorageCleanerSheet
 import com.abhisheksati.mydoc.update.UpdateManager
 import java.util.Locale
 import com.abhisheksati.mydoc.designsystem.components.showMessage
@@ -60,6 +63,10 @@ fun SettingsScreen(
     val currentTheme by settingsRepository.themeMode.collectAsState()
     val amoledBlack by settingsRepository.amoledBlack.collectAsState()
     val hapticFeedbackEnabled by settingsRepository.isHapticFeedbackEnabled.collectAsState()
+    val glassEffectMode by settingsRepository.glassEffectMode.collectAsState()
+
+    var showStorageCleaner by remember { mutableStateOf(false) }
+    var showAppManager by remember { mutableStateOf(false) }
 
     // READING
     val currentReadingMode by settingsRepository.defaultReadingMode.collectAsState()
@@ -113,9 +120,11 @@ fun SettingsScreen(
                     currentTheme = currentTheme,
                     amoledBlack = amoledBlack,
                     hapticFeedbackEnabled = hapticFeedbackEnabled,
+                    glassEffectMode = glassEffectMode,
                     onThemeChange = { settingsRepository.setThemeMode(it) },
                     onAmoledBlackChange = { settingsRepository.setAmoledBlack(it) },
-                    onHapticFeedbackChange = { settingsRepository.setHapticFeedbackEnabled(it) }
+                    onHapticFeedbackChange = { settingsRepository.setHapticFeedbackEnabled(it) },
+                    onGlassEffectModeChange = { settingsRepository.setGlassEffectMode(it) }
                 )
 
                 // 2. READING
@@ -167,7 +176,9 @@ fun SettingsScreen(
                             clearAction()
                             context.showMessage(recentHistoryClearedMessage)
                         }
-                    }
+                    },
+                    onOpenStorageCleaner = { showStorageCleaner = true },
+                    onOpenAppManager = { showAppManager = true }
                 )
 
                 // 5. PRIVACY & SECURITY
@@ -203,6 +214,22 @@ fun SettingsScreen(
                     onCheckUpdatesOnLaunchChange = { settingsRepository.setCheckUpdatesOnLaunch(it) }
                 )
             }
+        }
+
+        if (showStorageCleaner) {
+            StorageCleanerSheet(
+                rootDir = android.os.Environment.getExternalStorageDirectory(),
+                onDismiss = { showStorageCleaner = false },
+                onFileClick = {
+                    showStorageCleaner = false
+                }
+            )
+        }
+
+        if (showAppManager) {
+            AppManagerSheet(
+                onDismiss = { showAppManager = false }
+            )
         }
     }
 }

@@ -34,6 +34,7 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.abhisheksati.mydoc.designsystem.components.AppSnackbarHost
+import com.abhisheksati.mydoc.designsystem.components.LocalGlassEffectMode
 import com.abhisheksati.mydoc.data.local.AppThemeMode
 import com.abhisheksati.mydoc.designsystem.animation.AppMotion
 import com.abhisheksati.mydoc.designsystem.animation.LocalAnimatedVisibilityScope
@@ -155,6 +156,7 @@ class MainActivity : ComponentActivity() {
             val themeMode by app.settingsRepository.themeMode.collectAsStateWithLifecycle()
             val amoledBlack by app.settingsRepository.amoledBlack.collectAsStateWithLifecycle()
             val dynamicColor by app.settingsRepository.dynamicColor.collectAsStateWithLifecycle()
+            val glassEffectMode by app.settingsRepository.glassEffectMode.collectAsStateWithLifecycle()
             val isBiometricLockEnabled by app.settingsRepository.isBiometricLockEnabled.collectAsStateWithLifecycle()
             val isDark = when (themeMode) {
                 AppThemeMode.BLACK, AppThemeMode.DARK -> true
@@ -205,7 +207,8 @@ class MainActivity : ComponentActivity() {
                 dynamicColor = dynamicColor,
                 amoledBlack = isBlack
             ) {
-                val selectedTool by toolsViewModel.selectedTool.collectAsStateWithLifecycle()
+                CompositionLocalProvider(LocalGlassEffectMode provides glassEffectMode) {
+                    val selectedTool by toolsViewModel.selectedTool.collectAsStateWithLifecycle()
 
                 val photo = currentPhoto
                 val video = currentVideo
@@ -434,6 +437,7 @@ class MainActivity : ComponentActivity() {
                         }
                         AppSnackbarHost()
                     }
+                }
                 }
             }
         }

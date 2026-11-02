@@ -24,15 +24,18 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.data.local.AppThemeMode
+import com.abhisheksati.mydoc.designsystem.components.GlassEffectMode
 
 @Composable
 fun SettingsAppearanceSection(
     currentTheme: AppThemeMode,
     amoledBlack: Boolean,
     hapticFeedbackEnabled: Boolean,
+    glassEffectMode: GlassEffectMode,
     onThemeChange: (AppThemeMode) -> Unit,
     onAmoledBlackChange: (Boolean) -> Unit,
     onHapticFeedbackChange: (Boolean) -> Unit,
+    onGlassEffectModeChange: (GlassEffectMode) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -72,6 +75,35 @@ fun SettingsAppearanceSection(
                 icon = Icons.Outlined.Contrast,
                 selected = currentTheme == AppThemeMode.BLACK,
                 onClick = { onThemeChange(AppThemeMode.BLACK) }
+            )
+        }
+
+        SettingsDivider(modifier = Modifier.padding(top = 12.dp))
+
+        SettingsSectionLabel(text = "Glass effects")
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ThemeChip(
+                label = "Auto",
+                icon = Icons.Outlined.BrightnessAuto,
+                selected = glassEffectMode == GlassEffectMode.AUTO,
+                onClick = { onGlassEffectModeChange(GlassEffectMode.AUTO) }
+            )
+            ThemeChip(
+                label = "On",
+                icon = Icons.Outlined.Palette,
+                selected = glassEffectMode == GlassEffectMode.ON,
+                onClick = { onGlassEffectModeChange(GlassEffectMode.ON) }
+            )
+            ThemeChip(
+                label = "Off",
+                icon = Icons.Outlined.Contrast,
+                selected = glassEffectMode == GlassEffectMode.OFF,
+                onClick = { onGlassEffectModeChange(GlassEffectMode.OFF) }
             )
         }
 

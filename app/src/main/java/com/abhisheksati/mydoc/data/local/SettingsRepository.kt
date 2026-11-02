@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
 import android.os.Environment
+import com.abhisheksati.mydoc.designsystem.components.GlassEffectMode
 import com.abhisheksati.mydoc.domain.model.HomeTab
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.domain.model.ReadingPrefs
@@ -113,6 +114,19 @@ class SettingsRepository(private val context: Context) {
 
     private val _amoledBlack = MutableStateFlow(prefs.getBoolean(KEY_AMOLED_BLACK, true))
     val amoledBlack: StateFlow<Boolean> = _amoledBlack.asStateFlow()
+
+    private val _glassEffectMode = MutableStateFlow(loadGlassEffectMode())
+    val glassEffectMode: StateFlow<GlassEffectMode> = _glassEffectMode.asStateFlow()
+
+    fun setGlassEffectMode(mode: GlassEffectMode) {
+        prefs.edit().putString(KEY_GLASS_EFFECT_MODE, mode.name).apply()
+        _glassEffectMode.value = mode
+    }
+
+    private fun loadGlassEffectMode(): GlassEffectMode {
+        val raw = prefs.getString(KEY_GLASS_EFFECT_MODE, null) ?: return GlassEffectMode.AUTO
+        return runCatching { GlassEffectMode.valueOf(raw) }.getOrDefault(GlassEffectMode.AUTO)
+    }
 
     private val _checkUpdatesOnLaunch = MutableStateFlow(prefs.getBoolean(KEY_CHECK_UPDATES_ON_LAUNCH, true))
     val checkUpdatesOnLaunch: StateFlow<Boolean> = _checkUpdatesOnLaunch.asStateFlow()
@@ -400,5 +414,6 @@ class SettingsRepository(private val context: Context) {
         private const val KEY_READING_CONTINUOUS_SCROLL = "reading_continuous_scroll"
         private const val KEY_READING_DUAL_PAGE = "reading_dual_page"
         private const val KEY_READING_FIT_PAGE = "reading_fit_page"
+        private const val KEY_GLASS_EFFECT_MODE = "glass_effect_mode"
     }
 }
