@@ -21,7 +21,6 @@ import com.abhisheksati.mydoc.data.local.AppThemeMode
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
-import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
 
 @Composable
 fun SettingsAppearanceSection(
@@ -40,7 +39,6 @@ fun SettingsAppearanceSection(
     SettingsCard(
         title = "Appearance",
         icon = Icons.Outlined.Palette,
-        family = VividGradients.Family.GRAPE,
         modifier = modifier
     ) {
         Text(

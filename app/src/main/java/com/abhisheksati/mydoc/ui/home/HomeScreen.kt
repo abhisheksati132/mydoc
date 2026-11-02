@@ -54,6 +54,7 @@ import com.abhisheksati.mydoc.designsystem.components.AppDialog
 import com.abhisheksati.mydoc.designsystem.components.BottomNavBar
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.tokens.PaperTheme
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.HomeTab
 import com.abhisheksati.mydoc.domain.model.LibraryItem
@@ -347,15 +348,17 @@ fun HomeScreen(
                             )
                         }
                         HomeTab.FILES -> {
-                            FileManagerScreen(
-                                viewModel = fileManagerViewModel,
-                                storageViewModel = storageViewModel,
-                                onOpenFile = onOpenFile,
-                                onSettingsClick = onSettingsClick,
-                                onToggleTheme = onToggleTheme,
-                                isActive = currentTab == HomeTab.FILES,
-                                modifier = Modifier.fillMaxSize()
-                            )
+                            PaperTheme {
+                                FileManagerScreen(
+                                    viewModel = fileManagerViewModel,
+                                    storageViewModel = storageViewModel,
+                                    onOpenFile = onOpenFile,
+                                    onSettingsClick = onSettingsClick,
+                                    onToggleTheme = onToggleTheme,
+                                    isActive = currentTab == HomeTab.FILES,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
                         }
                         HomeTab.TOOLS -> {
                             ToolsScreen(

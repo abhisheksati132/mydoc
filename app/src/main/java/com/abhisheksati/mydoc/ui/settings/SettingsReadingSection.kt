@@ -19,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
-import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 
 @Composable
@@ -44,7 +43,6 @@ fun SettingsReadingSection(
     SettingsCard(
         title = "Reading & documents",
         icon = Icons.AutoMirrored.Outlined.MenuBook,
-        family = VividGradients.Family.OCEAN,
         modifier = modifier
     ) {
         Text(

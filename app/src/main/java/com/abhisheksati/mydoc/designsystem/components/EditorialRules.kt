@@ -25,6 +25,7 @@ import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.LocalPaperPalette
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 
 /**
@@ -148,11 +149,22 @@ fun AppSectionHeader(
             )
             action?.invoke()
         }
-        VividRule(
-            modifier = Modifier
-                .padding(start = AppSpacing.screenPadding, bottom = AppSpacing.small)
-                .width(40.dp)
-        )
+        val paper = LocalPaperPalette.current
+        if (paper != null) {
+            Box(
+                modifier = Modifier
+                    .padding(start = AppSpacing.screenPadding, bottom = AppSpacing.small)
+                    .width(28.dp)
+                    .height(2.dp)
+                    .background(paper.accent)
+            )
+        } else {
+            VividRule(
+                modifier = Modifier
+                    .padding(start = AppSpacing.screenPadding, bottom = AppSpacing.small)
+                    .width(40.dp)
+            )
+        }
     }
 }
 

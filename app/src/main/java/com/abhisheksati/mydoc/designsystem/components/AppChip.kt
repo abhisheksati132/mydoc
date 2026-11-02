@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -29,6 +30,7 @@ import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.designsystem.tokens.LocalPaperPalette
 import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
 
 /**
@@ -49,6 +51,7 @@ fun AppChip(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
+    val paper = LocalPaperPalette.current
 
     val gradientAlpha by animateFloatAsState(
         targetValue = if (selected) 1f else 0f,
@@ -56,7 +59,11 @@ fun AppChip(
         label = "chipGradient"
     )
     val contentColor by animateColorAsState(
-        targetValue = if (selected) Color.White else colors.textSecondary,
+        targetValue = if (selected) {
+            if (paper != null) paper.sheet else Color.White
+        } else {
+            colors.textSecondary
+        },
         animationSpec = tween(durationMillis = AppMotion.FAST),
         label = "chipContent"
     )
@@ -81,7 +88,7 @@ fun AppChip(
                 modifier = Modifier
                     .matchParentSize()
                     .graphicsLayer { alpha = gradientAlpha }
-                    .background(VividGradients.brand)
+                    .background(paper?.let { SolidColor(it.ink) } ?: VividGradients.brand)
             )
             Row(
                 modifier = Modifier.padding(

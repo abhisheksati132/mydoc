@@ -23,7 +23,6 @@ import com.abhisheksati.mydoc.designsystem.components.EditorialAction
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
-import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.HomeTab
 import java.util.Locale
@@ -43,7 +42,6 @@ fun SettingsStorageSection(
     SettingsCard(
         title = "Storage & files",
         icon = Icons.Outlined.Storage,
-        family = VividGradients.Family.FOREST,
         modifier = modifier
     ) {
         Text(

@@ -7,7 +7,6 @@ import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
 
 @Composable
 fun SettingsMediaSection(
@@ -22,7 +21,6 @@ fun SettingsMediaSection(
     SettingsCard(
         title = "Video & audio",
         icon = Icons.Outlined.PlayCircle,
-        family = VividGradients.Family.SUNSET,
         modifier = modifier
     ) {
         SettingToggleRow(

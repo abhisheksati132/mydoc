@@ -24,20 +24,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
 import com.abhisheksati.mydoc.designsystem.components.EditorialAction
-import com.abhisheksati.mydoc.designsystem.components.VividIconTile
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.components.PaperSurface
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsDark
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
-import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
+import com.abhisheksati.mydoc.designsystem.tokens.PaperShape
+import com.abhisheksati.mydoc.designsystem.tokens.rememberSheetPalette
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.StorageVolume
@@ -50,14 +49,12 @@ private data class IndexEntry(
     val title: String,
     val icon: ImageVector,
     val meta: String,
-    val family: VividGradients.Family,
     val onClick: () -> Unit
 )
 
 /**
- * The Files index, vivid premium: a storage card with a spectrum gauge, then
- * collections, devices, pinned folders and utilities as soft cards with
- * gradient plaques hue-coded per kind.
+ * The Files index printed on paper: a storage sheet, then collections, devices,
+ * pinned folders and utilities as sheets with flat icon plates.
  */
 @Composable
 fun GoogleFilesHubContent(
@@ -88,35 +85,30 @@ fun GoogleFilesHubContent(
             title = "Documents",
             icon = StorageCategoryType.DOCUMENTS.icon,
             meta = filesMeta(stat(StorageCategoryType.DOCUMENTS)),
-            family = VividGradients.Family.BRAND,
             onClick = { onCategoryClick(FileCategory.DOCUMENTS) }
         ),
         IndexEntry(
             title = "Downloads",
             icon = StorageCategoryType.DOWNLOADS.icon,
             meta = filesMeta(stat(StorageCategoryType.DOWNLOADS)),
-            family = VividGradients.Family.OCEAN,
             onClick = { onCategoryClick(FileCategory.DOWNLOADS) }
         ),
         IndexEntry(
             title = "Images",
             icon = StorageCategoryType.IMAGES.icon,
             meta = filesMeta(stat(StorageCategoryType.IMAGES)),
-            family = VividGradients.Family.SUNSET,
             onClick = { onCategoryClick(FileCategory.IMAGES) }
         ),
         IndexEntry(
             title = "Videos",
             icon = StorageCategoryType.VIDEOS.icon,
             meta = filesMeta(stat(StorageCategoryType.VIDEOS)),
-            family = VividGradients.Family.GOLD,
             onClick = { onCategoryClick(FileCategory.VIDEOS) }
         ),
         IndexEntry(
             title = "Audio",
             icon = StorageCategoryType.AUDIO.icon,
             meta = filesMeta(stat(StorageCategoryType.AUDIO)),
-            family = VividGradients.Family.FOREST,
             onClick = { onCategoryClick(FileCategory.AUDIO) }
         ),
         IndexEntry(
@@ -128,7 +120,6 @@ fun GoogleFilesHubContent(
             } else {
                 "Scanning…"
             },
-            family = VividGradients.Family.GRAPE,
             onClick = onAppsClick
         )
     )
@@ -164,7 +155,6 @@ fun GoogleFilesHubContent(
                 title = entry.title,
                 meta = entry.meta,
                 icon = entry.icon,
-                family = entry.family,
                 onClick = entry.onClick
             )
         }
@@ -182,7 +172,6 @@ fun GoogleFilesHubContent(
                     title = volume.title,
                     meta = "${StorageVolume.formatBytes(volume.freeBytes)} free of ${StorageVolume.formatBytes(volume.totalBytes)}",
                     icon = Icons.Outlined.SdCard,
-                    family = VividGradients.Family.OCEAN,
                     onClick = { onBrowseStorageVolume(volume) }
                 )
             }
@@ -201,7 +190,6 @@ fun GoogleFilesHubContent(
                     title = folder.name,
                     meta = folder.absolutePath,
                     icon = Icons.Outlined.Folder,
-                    family = VividGradients.Family.GOLD,
                     onClick = { onFolderClick(folder) }
                 )
             }
@@ -215,7 +203,6 @@ fun GoogleFilesHubContent(
                 title = "Recycle Bin",
                 meta = "Recently deleted, kept for 30 days",
                 icon = Icons.Outlined.DeleteSweep,
-                family = VividGradients.Family.FIRE,
                 trailing = if (trashCount > 0) {
                     {
                         Text(
@@ -233,21 +220,20 @@ fun GoogleFilesHubContent(
     }
 }
 
-/** One index entry: soft card, gradient plaque, quiet chevron or custom trailing. */
+/** One index entry printed on its own sheet, with a flat icon plate. */
 @Composable
 private fun VividEntryCard(
     title: String,
     meta: String,
     icon: ImageVector,
-    family: VividGradients.Family,
     onClick: () -> Unit,
     trailing: (@Composable () -> Unit)? = null
 ) {
-    val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val shape = AppRadius.cardShape
+    val paper = rememberSheetPalette()
 
-    Row(
+    PaperSurface(
+        palette = paper,
         modifier = Modifier
             .fillMaxWidth()
             .padding(
@@ -255,51 +241,59 @@ private fun VividEntryCard(
                 end = AppSpacing.screenPadding,
                 bottom = AppSpacing.small
             )
-            .clip(shape)
-            .background(colors.surface)
-            .border(1.dp, colors.line, shape)
-            .pressScaleEffect(onClick = onClick)
-            .padding(AppSpacing.small + 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium)
+            .pressScaleEffect(onClick = onClick),
+        elevation = 2.dp
     ) {
-        VividIconTile(
-            icon = icon,
-            family = family,
-            size = 40.dp,
-            iconSize = 20.dp,
-            shape = shape
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = typography.bodyStrong,
-                color = colors.ink,
-                maxLines = 1
-            )
-            Text(
-                text = meta,
-                style = typography.caption.withTabularFigures(),
-                color = colors.inkMuted,
-                maxLines = 1
-            )
-        }
-        if (trailing != null) {
-            trailing()
-        } else {
-            Icon(
-                imageVector = Icons.Outlined.ChevronRight,
-                contentDescription = null,
-                tint = colors.inkMuted,
-                modifier = Modifier.size(16.dp)
-            )
+        Row(
+            modifier = Modifier.padding(AppSpacing.small + 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(paper.sheetEdge, PaperShape)
+                    .border(1.dp, paper.rule, PaperShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = paper.ink,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = typography.bodyStrong,
+                    color = paper.ink,
+                    maxLines = 1
+                )
+                Text(
+                    text = meta,
+                    style = typography.caption.withTabularFigures(),
+                    color = paper.inkMuted,
+                    maxLines = 1
+                )
+            }
+            if (trailing != null) {
+                trailing()
+            } else {
+                Icon(
+                    imageVector = Icons.Outlined.ChevronRight,
+                    contentDescription = null,
+                    tint = paper.inkMuted,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
     }
 }
 
 /**
- * The storage figure: a soft card, the used space set large, and a spectrum
- * gauge that makes the number feel physical.
+ * The storage figure printed on a sheet: the used space set large, then an
+ * accent gauge and a folded corner.
  */
 @Composable
 private fun StorageReadout(
@@ -307,101 +301,99 @@ private fun StorageReadout(
     onBrowseInternalStorage: () -> Unit,
     onCleanClick: () -> Unit
 ) {
-    val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
+    val paper = rememberSheetPalette()
     val reclaimable = storageUiState.cleanSummary.totalReclaimableBytes
     val usedRatio = storageUiState.usedRatio.coerceIn(0f, 1f)
-    val shape = AppRadius.largeShape
 
-    Column(
+    PaperSurface(
+        palette = paper,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = AppSpacing.screenPadding, vertical = AppSpacing.xSmall)
-            .clip(shape)
-            .background(colors.surface)
-            .border(1.dp, colors.line, shape)
-            .pressScaleEffect(onClick = onBrowseInternalStorage)
-            .padding(AppSpacing.medium)
+            .pressScaleEffect(onClick = onBrowseInternalStorage),
+        elevation = 6.dp,
+        foldSize = 20.dp
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Internal storage",
-                style = typography.caption,
-                color = colors.inkMuted
-            )
-            Box(modifier = Modifier.weight(1f))
-            Icon(
-                imageVector = Icons.Outlined.ChevronRight,
-                contentDescription = null,
-                tint = colors.inkMuted,
-                modifier = Modifier.size(16.dp)
-            )
-        }
+        Column(modifier = Modifier.padding(AppSpacing.medium)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Internal storage",
+                    style = typography.caption,
+                    color = paper.inkMuted
+                )
+                Box(modifier = Modifier.weight(1f))
+                Icon(
+                    imageVector = Icons.Outlined.ChevronRight,
+                    contentDescription = null,
+                    tint = paper.inkMuted,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = AppSpacing.xSmall),
-            verticalAlignment = Alignment.Bottom
-        ) {
-            Text(
-                text = if (storageUiState.formattedUsed.isNotEmpty()) {
-                    storageUiState.formattedUsed
-                } else {
-                    "—"
-                },
-                style = typography.title.withTabularFigures(),
-                color = colors.ink
-            )
-            Text(
-                text = if (storageUiState.formattedTotal.isNotEmpty()) {
-                    "  used of ${storageUiState.formattedTotal}"
-                } else {
-                    "  calculating storage"
-                },
-                style = typography.caption,
-                color = colors.inkMuted,
-                modifier = Modifier.padding(bottom = AppSpacing.xSmall)
-            )
-        }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = AppSpacing.xSmall),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Text(
+                    text = if (storageUiState.formattedUsed.isNotEmpty()) {
+                        storageUiState.formattedUsed
+                    } else {
+                        "—"
+                    },
+                    style = typography.title.withTabularFigures(),
+                    color = paper.ink
+                )
+                Text(
+                    text = if (storageUiState.formattedTotal.isNotEmpty()) {
+                        "  used of ${storageUiState.formattedTotal}"
+                    } else {
+                        "  calculating storage"
+                    },
+                    style = typography.caption,
+                    color = paper.inkMuted,
+                    modifier = Modifier.padding(bottom = AppSpacing.xSmall)
+                )
+            }
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = AppSpacing.small)
-                .height(8.dp)
-                .clip(AppRadius.roundShape)
-                .background(colors.track)
-        ) {
             Box(
                 modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(usedRatio)
-                    .clip(AppRadius.roundShape)
-                    .background(VividGradients.wordmark(colors))
-            )
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = AppSpacing.small),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "${storageUiState.formattedFree} free · ${storageUiState.usedPercentage}% used",
-                style = typography.caption.withTabularFigures(),
-                color = colors.inkMuted
-            )
-            if (reclaimable > 0) {
-                EditorialAction(
-                    label = "Clean ${StorageVolume.formatBytes(reclaimable)}",
-                    onClick = onCleanClick
+                    .fillMaxWidth()
+                    .padding(top = AppSpacing.small)
+                    .height(6.dp)
+                    .background(paper.track)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(usedRatio)
+                        .background(paper.accent)
                 )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = AppSpacing.small),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "${storageUiState.formattedFree} free · ${storageUiState.usedPercentage}% used",
+                    style = typography.caption.withTabularFigures(),
+                    color = paper.inkMuted
+                )
+                if (reclaimable > 0) {
+                    EditorialAction(
+                        label = "Clean ${StorageVolume.formatBytes(reclaimable)}",
+                        onClick = onCleanClick
+                    )
+                }
             }
         }
     }

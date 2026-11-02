@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -23,61 +24,67 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.components.VividIconTile
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.components.PaperSurface
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
-import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
+import com.abhisheksati.mydoc.designsystem.tokens.PaperShape
+import com.abhisheksati.mydoc.designsystem.tokens.rememberSheetPalette
 
 /**
- * A settings section as a soft vivid card: gradient icon plaque, heading, and the
- * section's rows inside one surface. Same card recipe as the Files hub entries.
+ * A settings section printed on one sheet: flat icon plate, heading, and the
+ * section's rows inside the paper card.
  */
 @Composable
 fun SettingsCard(
     title: String,
     icon: ImageVector,
-    family: VividGradients.Family,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val shape = AppRadius.cardShape
+    val paper = rememberSheetPalette()
 
-    Column(
+    PaperSurface(
+        palette = paper,
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = AppSpacing.screenPadding)
-            .clip(shape)
-            .background(colors.surface)
-            .border(1.dp, colors.line, shape)
-            .padding(AppSpacing.medium)
+            .padding(horizontal = AppSpacing.screenPadding),
+        elevation = 2.dp
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
-        ) {
-            VividIconTile(
-                icon = icon,
-                family = family,
-                size = 36.dp,
-                iconSize = 20.dp,
-                shape = shape
-            )
-            Text(
-                text = title,
-                style = typography.bodyLargeStrong,
-                color = colors.ink
+        Column(modifier = Modifier.padding(AppSpacing.medium)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(PaperShape)
+                        .background(paper.sheetEdge)
+                        .border(1.dp, paper.rule, PaperShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = paper.accent,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Text(
+                    text = title,
+                    style = typography.bodyLargeStrong,
+                    color = paper.ink
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = AppSpacing.xSmall),
+                content = content
             )
         }
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = AppSpacing.xSmall),
-            content = content
-        )
     }
 }
 
