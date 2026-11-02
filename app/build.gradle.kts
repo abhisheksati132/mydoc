@@ -26,7 +26,7 @@ android {
             val keystorePath = System.getenv("MYDOC_KEYSTORE_PATH")
                 ?: (project.findProperty("mydoc.keystore.path") as? String)
             val keystorePass = System.getenv("MYDOC_KEYSTORE_PASSWORD")
-                ?: (project.findProperty("mydoc.key.password") as? String)
+                ?: (project.findProperty("mydoc.keystore.password") as? String)
             val keyAlias = System.getenv("MYDOC_KEY_ALIAS")
                 ?: (project.findProperty("mydoc.key.alias") as? String)
             val keyPass = System.getenv("MYDOC_KEY_PASSWORD")
@@ -82,6 +82,8 @@ android {
         }
         debug {
             isMinifyEnabled = false
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
             signingConfig = signingConfigs.getByName("shared")
         }
     }
