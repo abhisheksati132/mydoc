@@ -63,20 +63,32 @@ class FileManagerViewModelTest {
             ),
             filesInDir = testFiles.map { StorageItem(file = it) }
         )
+    }
 
-        viewModel = FileManagerViewModel(
+    private fun createViewModel(): FileManagerViewModel {
+        val vm = FileManagerViewModel(
             storageRepository = fakeRepo,
             baseDir = tempDir
         )
+        viewModel = vm
+        return vm
     }
 
     @After
     fun tearDown() {
-        try {
-            val method = ViewModel::class.java.getDeclaredMethod("onCleared")
-            method.isAccessible = true
-            method.invoke(viewModel)
-        } catch (_: Exception) {}
+        if (::viewModel.isInitialized) {
+            try {
+                val method = ViewModel::class.java.getDeclaredMethod("clear")
+                method.isAccessible = true
+                method.invoke(viewModel)
+            } catch (_: Exception) {
+                try {
+                    val method = ViewModel::class.java.getDeclaredMethod("onCleared")
+                    method.isAccessible = true
+                    method.invoke(viewModel)
+                } catch (_: Exception) {}
+            }
+        }
         testDispatcher.scheduler.advanceUntilIdle()
         Dispatchers.resetMain()
         tempDir.deleteRecursively()
@@ -84,6 +96,7 @@ class FileManagerViewModelTest {
 
     @Test
     fun initialState_loadsVolumesAndDirectory() = runTest(testDispatcher) {
+        createViewModel()
         advanceUntilIdle()
         val state = viewModel.uiState.value
 
@@ -97,6 +110,7 @@ class FileManagerViewModelTest {
 
     @Test
     fun searchQuery_filtersItemsAccurately() = runTest(testDispatcher) {
+        createViewModel()
         advanceUntilIdle()
 
         viewModel.setSearchQuery("report")
@@ -115,6 +129,7 @@ class FileManagerViewModelTest {
 
     @Test
     fun toggleSelection_activatesAndUpdatesSelectionMode() = runTest(testDispatcher) {
+        createViewModel()
         advanceUntilIdle()
         val targetFile = File(tempDir, "report.pdf")
 
@@ -134,6 +149,7 @@ class FileManagerViewModelTest {
 
     @Test
     fun selectAll_selectsAllFilesInCurrentList() = runTest(testDispatcher) {
+        createViewModel()
         advanceUntilIdle()
         viewModel.selectAll()
 
@@ -147,6 +163,7 @@ class FileManagerViewModelTest {
 
     @Test
     fun sortOrder_togglesSortingFieldAndDirection() = runTest(testDispatcher) {
+        createViewModel()
         advanceUntilIdle()
         val initialSort = viewModel.uiState.value.sortOrder
 
@@ -166,6 +183,7 @@ class FileManagerViewModelTest {
 
     @Test
     fun toggleHiddenFiles_updatesStateAndReloads() = runTest(testDispatcher) {
+        createViewModel()
         advanceUntilIdle()
         assertFalse(viewModel.uiState.value.showHiddenFiles)
 
@@ -177,6 +195,7 @@ class FileManagerViewModelTest {
 
     @Test
     fun startBrowsingStorage_and_exitToHub_transitionsCorrectly() = runTest(testDispatcher) {
+        createViewModel()
         advanceUntilIdle()
         assertFalse(viewModel.uiState.value.isBrowsingStorage)
 
