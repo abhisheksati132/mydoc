@@ -142,19 +142,7 @@ class UpdateManager(
         }
     }
 
-    fun isNewerVersion(remote: String, local: String): Boolean {
-        val remoteParts = remote.split('.').mapNotNull { it.toIntOrNull() }
-        val localParts = local.split('.').mapNotNull { it.toIntOrNull() }
-
-        val maxLen = maxOf(remoteParts.size, localParts.size)
-        for (i in 0 until maxLen) {
-            val r = remoteParts.getOrElse(i) { 0 }
-            val l = localParts.getOrElse(i) { 0 }
-            if (r > l) return true
-            if (r < l) return false
-        }
-        return false
-    }
+    fun isNewerVersion(remote: String, local: String): Boolean = Companion.isNewerVersion(remote, local)
 
     fun resetState() {
         _state.value = UpdateUiState.Idle
@@ -163,5 +151,19 @@ class UpdateManager(
     companion object {
         private const val KEY_LAST_CHECK_TIME = "last_update_check_time"
         private const val KEY_IGNORED_TAG = "last_ignored_release_tag"
+
+        fun isNewerVersion(remote: String, local: String): Boolean {
+            val remoteParts = remote.split('.').mapNotNull { it.toIntOrNull() }
+            val localParts = local.split('.').mapNotNull { it.toIntOrNull() }
+
+            val maxLen = maxOf(remoteParts.size, localParts.size)
+            for (i in 0 until maxLen) {
+                val r = remoteParts.getOrElse(i) { 0 }
+                val l = localParts.getOrElse(i) { 0 }
+                if (r > l) return true
+                if (r < l) return false
+            }
+            return false
+        }
     }
 }
