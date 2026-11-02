@@ -163,10 +163,14 @@ fun PageGridSheet(
                     val isCurrent = pageIndex == currentPage
                     val isBookmarked = bookmarks.contains(pageIndex)
 
+                    // The checker does not resolve ProduceStateScope.value through the
+                    // property delegate here; the assignment below is the canonical form.
+                    @Suppress("ProduceStateDoesNotAssignValue")
                     val thumbnail by produceState<Bitmap?>(initialValue = null, pageIndex) {
-                        value = withContext(Dispatchers.Default) {
+                        val rendered = withContext(Dispatchers.Default) {
                             renderThumbnail(pageIndex, 0.35f)
                         }
+                        value = rendered
                     }
 
                     Column(
