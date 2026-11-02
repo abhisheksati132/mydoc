@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -113,247 +114,269 @@ fun HomeScreen(
         }
     }
 
+    val hazeState = remember { dev.chrisbanes.haze.HazeState() }
+
     // Navigate back to Home tab when pressing Back on other tabs
     BackHandler(
-        enabled = currentTab != HomeTab.FILES &&
+        enabled = currentTab != HomeTab.HOME &&
             !showCameraScanner &&
             !showSignaturePad &&
             selectedDocForDetails == null &&
             documentToDelete == null
     ) {
-        viewModel.selectTab(HomeTab.FILES)
+        viewModel.selectTab(HomeTab.HOME)
     }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = colors.background,
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        bottomBar = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                val updateState = updateManager?.state?.collectAsState()?.value
-                val isUpdateActive = updateState is UpdateUiState.UpdateAvailable ||
-                        updateState is UpdateUiState.Downloading ||
-                        updateState is UpdateUiState.ReadyToInstall
-
-                AnimatedVisibility(
-                    visible = isUpdateActive,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
-                ) {
-                    when (updateState) {
-                        is UpdateUiState.UpdateAvailable -> {
-                            val release = updateState.release
-                            Surface(
-                                color = colors.surface,
-                                shape = AppRadius.largeShape,
-                                tonalElevation = 6.dp,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 6.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.SystemUpdate,
-                                        contentDescription = null,
-                                        tint = colors.accent,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "Update available: v${release.versionName}",
-                                            style = AppTheme.typography.bodyStrong,
-                                            color = colors.ink
-                                        )
-                                        Text(
-                                            text = "Tap to update mydoc",
-                                            style = AppTheme.typography.caption,
-                                            color = colors.inkMuted
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Button(
-                                        onClick = { scope.launch { updateManager.downloadAndInstall(release) } },
-                                        shape = AppRadius.cardShape,
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = colors.accent,
-                                            contentColor = colors.onAccent
-                                        ),
-                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-                                    ) {
-                                        Text("Update", style = AppTheme.typography.captionStrong)
-                                    }
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(colors.background)
+    ) {
+        // Root tabs share one horizontal axis and keep their own state (scroll, search,
+        // selection) when you leave and come back.
+        val tabStateHolder = rememberSaveableStateHolder()
+        AnimatedContent(
+            targetState = currentTab,
+            modifier = Modifier.fillMaxSize(),
+            transitionSpec = {
+                val forward = targetState.ordinal > initialState.ordinal
+                AppMotion.peerEnter(forward) togetherWith AppMotion.peerExit(forward)
+            },
+            label = "rootTab"
+        ) { tab ->
+            tabStateHolder.SaveableStateProvider(tab.name) {
+                when (tab) {
+                    HomeTab.HOME -> {
+                        HomeFeedPane(
+                            continueItems = uiState.continueItems,
+                            recentItems = uiState.recentLibraryItems,
+                            onLibraryItemClick = onLibraryItemClick,
+                            onLibraryItemDetails = { item ->
+                                selectedDocForDetails = item.toDocumentFile()
+                            },
+                            onRemoveFromRecents = { item ->
+                                viewModel.removeFromRecents(item.toDocumentFile())
+                            },
+                            onShareDocument = { item ->
+                                onShareDocument(item.toDocumentFile())
+                            },
+                            onSpotlightSearch = onSpotlightSearch,
+                            onSettingsClick = onSettingsClick,
+                            onScanClick = { documentScanner() },
+                            onNavigateToLibrary = { viewModel.selectTab(HomeTab.LIBRARY) },
+                            hazeState = hazeState,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    HomeTab.LIBRARY -> {
+                        FilesScreen(
+                            viewModel = fileManagerViewModel,
+                            homeViewModel = viewModel,
+                            storageViewModel = storageViewModel,
+                            onOpenFile = onOpenFile,
+                            onLibraryItemClick = onLibraryItemClick,
+                            onLibraryItemDetails = { item ->
+                                selectedDocForDetails = item.toDocumentFile()
+                            },
+                            onSettingsClick = onSettingsClick,
+                            onSpotlightSearch = onSpotlightSearch,
+                            isActive = currentTab == HomeTab.LIBRARY,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    HomeTab.TOOLS -> {
+                        ToolsScreen(
+                            viewModel = toolsViewModel,
+                            onToolClick = { tool ->
+                                if (tool == PdfTool.SCAN_TO_PDF) {
+                                    documentScanner()
+                                } else {
+                                    toolsViewModel.selectTool(tool)
                                 }
-                            }
-                        }
-                        is UpdateUiState.Downloading -> {
-                            Surface(
-                                color = colors.surface,
-                                shape = AppRadius.largeShape,
-                                tonalElevation = 6.dp,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 6.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 10.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "Downloading update...",
-                                            style = AppTheme.typography.label,
-                                            color = colors.ink
-                                        )
-                                        Text(
-                                            text = "${updateState.progressPercent}%",
-                                            style = AppTheme.typography.captionStrong,
-                                            color = colors.accent
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    LinearProgressIndicator(
-                                        progress = { updateState.progressPercent / 100f },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(4.dp),
-                                        color = colors.accent,
-                                        trackColor = colors.surfaceMuted
-                                    )
-                                }
-                            }
-                        }
-                        is UpdateUiState.ReadyToInstall -> {
-                            Surface(
-                                color = colors.surface,
-                                shape = AppRadius.largeShape,
-                                tonalElevation = 6.dp,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 6.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.CheckCircle,
-                                        contentDescription = null,
-                                        tint = colors.accent,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "Update downloaded!",
-                                            style = AppTheme.typography.bodyStrong,
-                                            color = colors.ink
-                                        )
-                                        Text(
-                                            text = "Ready to install v${updateState.release.versionName}",
-                                            style = AppTheme.typography.caption,
-                                            color = colors.inkMuted
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Button(
-                                        onClick = {
-                                            if (!updateManager.installerHelper.canInstallUnknownApps()) {
-                                                val intent = updateManager.installerHelper.createManageUnknownAppSourcesIntent()
-                                                context.startActivity(intent)
-                                            } else {
-                                                updateManager.installerHelper.installApk(updateState.apkFile)
-                                            }
-                                        },
-                                        shape = AppRadius.cardShape,
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = colors.accent,
-                                            contentColor = colors.onAccent
-                                        ),
-                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-                                    ) {
-                                        Text("Install", style = AppTheme.typography.captionStrong)
-                                    }
-                                }
-                            }
-                        }
-                        else -> Unit
+                            },
+                            onSettingsClick = onSettingsClick,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                 }
-
-                BottomNavBar(
-                    currentTab = currentTab,
-                    onTabSelected = { tab ->
-                        viewModel.selectTab(tab)
-                    }
-                )
             }
         }
-    ) { innerPadding ->
-        Box(
+
+        // FLOATING GLASS BOTTOM NAVIGATION & UPDATE BANNER
+        Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = innerPadding.calculateBottomPadding())
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
         ) {
-            // Root tabs share one horizontal axis and keep their own state (scroll, search,
-            // selection) when you leave and come back.
-            val tabStateHolder = rememberSaveableStateHolder()
-            AnimatedContent(
-                targetState = currentTab,
-                modifier = Modifier.fillMaxSize(),
-                transitionSpec = {
-                    val forward = targetState.ordinal > initialState.ordinal
-                    AppMotion.peerEnter(forward) togetherWith AppMotion.peerExit(forward)
-                },
-                label = "rootTab"
-            ) { tab ->
-                tabStateHolder.SaveableStateProvider(tab.name) {
-                    when (tab) {
-                        HomeTab.FILES -> {
-                            FilesScreen(
-                                viewModel = fileManagerViewModel,
-                                homeViewModel = viewModel,
-                                storageViewModel = storageViewModel,
-                                onOpenFile = onOpenFile,
-                                onLibraryItemClick = onLibraryItemClick,
-                                onLibraryItemDetails = { item ->
-                                    selectedDocForDetails = item.toDocumentFile()
-                                },
-                                onSettingsClick = onSettingsClick,
-                                onSpotlightSearch = onSpotlightSearch,
-                                isActive = currentTab == HomeTab.FILES,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                        HomeTab.TOOLS -> {
-                            ToolsScreen(
-                                viewModel = toolsViewModel,
-                                onToolClick = { tool ->
-                                    if (tool == PdfTool.SCAN_TO_PDF) {
-                                        documentScanner()
-                                    } else {
-                                        toolsViewModel.selectTool(tool)
-                                    }
-                                },
-                                onSettingsClick = onSettingsClick,
-                                modifier = Modifier.fillMaxSize()
-                            )
+            val updateState = updateManager?.state?.collectAsState()?.value
+            val isUpdateActive = updateState is UpdateUiState.UpdateAvailable ||
+                    updateState is UpdateUiState.Downloading ||
+                    updateState is UpdateUiState.ReadyToInstall
+
+            AnimatedVisibility(
+                visible = isUpdateActive,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                when (updateState) {
+                    is UpdateUiState.UpdateAvailable -> {
+                        val release = updateState.release
+                        Surface(
+                            color = colors.surface,
+                            shape = AppRadius.largeShape,
+                            tonalElevation = 6.dp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.SystemUpdate,
+                                    contentDescription = null,
+                                    tint = colors.accent,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Update available: v${release.versionName}",
+                                        style = AppTheme.typography.bodyStrong,
+                                        color = colors.ink
+                                    )
+                                    Text(
+                                        text = "Tap to update mydoc",
+                                        style = AppTheme.typography.caption,
+                                        color = colors.inkMuted
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Button(
+                                    onClick = { scope.launch { updateManager.downloadAndInstall(release) } },
+                                    shape = AppRadius.cardShape,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = colors.accent,
+                                        contentColor = colors.onAccent
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                ) {
+                                    Text("Update", style = AppTheme.typography.captionStrong)
+                                }
+                            }
                         }
                     }
+                    is UpdateUiState.Downloading -> {
+                        Surface(
+                            color = colors.surface,
+                            shape = AppRadius.largeShape,
+                            tonalElevation = 6.dp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Downloading update...",
+                                        style = AppTheme.typography.label,
+                                        color = colors.ink
+                                    )
+                                    Text(
+                                        text = "${updateState.progressPercent}%",
+                                        style = AppTheme.typography.captionStrong,
+                                        color = colors.accent
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                LinearProgressIndicator(
+                                    progress = { updateState.progressPercent / 100f },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(4.dp),
+                                    color = colors.accent,
+                                    trackColor = colors.surfaceMuted
+                                )
+                            }
+                        }
+                    }
+                    is UpdateUiState.ReadyToInstall -> {
+                        Surface(
+                            color = colors.surface,
+                            shape = AppRadius.largeShape,
+                            tonalElevation = 6.dp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.CheckCircle,
+                                    contentDescription = null,
+                                    tint = colors.accent,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Update downloaded!",
+                                        style = AppTheme.typography.bodyStrong,
+                                        color = colors.ink
+                                    )
+                                    Text(
+                                        text = "Ready to install v${updateState.release.versionName}",
+                                        style = AppTheme.typography.caption,
+                                        color = colors.inkMuted
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Button(
+                                    onClick = {
+                                        if (!updateManager.installerHelper.canInstallUnknownApps()) {
+                                            val intent = updateManager.installerHelper.createManageUnknownAppSourcesIntent()
+                                            context.startActivity(intent)
+                                        } else {
+                                            updateManager.installerHelper.installApk(updateState.apkFile)
+                                        }
+                                    },
+                                    shape = AppRadius.cardShape,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = colors.accent,
+                                        contentColor = colors.onAccent
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                ) {
+                                    Text("Install", style = AppTheme.typography.captionStrong)
+                                }
+                            }
+                        }
+                    }
+                    else -> Unit
                 }
             }
+
+            BottomNavBar(
+                currentTab = currentTab,
+                onTabSelected = { tab -> viewModel.selectTab(tab) },
+                onScanClick = { documentScanner() },
+                hazeState = hazeState
+            )
         }
     }
 

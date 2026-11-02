@@ -332,10 +332,11 @@ class SettingsRepository(private val context: Context) {
     }
 
     private fun loadDefaultStartupTab(): HomeTab {
-        val saved = prefs.getString(KEY_DEFAULT_STARTUP_TAB, HomeTab.FILES.name)
-        if (saved == "NOW" || saved == "DOCUMENTS" || saved == "HOME") return HomeTab.FILES
-        return runCatching { HomeTab.valueOf(saved ?: HomeTab.FILES.name) }
-            .getOrDefault(HomeTab.FILES)
+        val saved = prefs.getString(KEY_DEFAULT_STARTUP_TAB, HomeTab.HOME.name)
+        if (saved == "NOW" || saved == "DOCUMENTS" || saved == "FILES") return HomeTab.LIBRARY
+        if (saved == "HOME") return HomeTab.HOME
+        return runCatching { HomeTab.valueOf(saved ?: HomeTab.HOME.name) }
+            .getOrDefault(HomeTab.HOME)
     }
 
     private fun loadReadingPrefs(): ReadingPrefs {

@@ -14,6 +14,10 @@ import androidx.compose.ui.platform.LocalView
  */
 class AppHaptics(private val view: View) {
 
+    fun click() {
+        tick()
+    }
+
     /**
      * Subtle tick when scrubbing through sliders or page numbers.
      */

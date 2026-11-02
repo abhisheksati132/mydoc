@@ -1,71 +1,207 @@
 package com.abhisheksati.mydoc.designsystem.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.outlined.Build
-import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.FolderCopy
+import androidx.compose.material.icons.filled.Widgets
+import androidx.compose.material.icons.outlined.AutoStories
+import androidx.compose.material.icons.outlined.DocumentScanner
+import androidx.compose.material.icons.outlined.FolderCopy
+import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.domain.model.HomeTab
+import dev.chrisbanes.haze.HazeState
 
-/** Root navigation on a Material 3 navigation bar. */
+/**
+ * Floating glass pill bottom navigation bar with central Scan CTA.
+ *
+ * Implements "Paper under glass" chrome identity:
+ * - Backdrop blur via [GlassSurface] and [HazeState]
+ * - 1dp specular rim highlight + soft inner shadow
+ * - One accent color (Stamp Vermilion) for active selection and central Scan action
+ * - High-performance solid fallback when glass effects are disabled
+ */
 @Composable
 fun BottomNavBar(
     currentTab: HomeTab,
     onTabSelected: (HomeTab) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    hazeState: HazeState? = null,
+    onScanClick: () -> Unit = {}
 ) {
     val haptics = rememberAppHaptics()
-    val scheme = MaterialTheme.colorScheme
+    val colors = AppTheme.colors
 
-    NavigationBar(
-        modifier = modifier,
-        containerColor = scheme.surfaceContainer,
-        tonalElevation = 0.dp
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center
     ) {
-        HomeTab.entries.forEach { tab ->
-            val isSelected = currentTab == tab
-            val icon: ImageVector = if (isSelected) when (tab) {
-                HomeTab.FILES -> Icons.Filled.Folder
-                HomeTab.TOOLS -> Icons.Filled.Build
-            } else when (tab) {
-                HomeTab.FILES -> Icons.Outlined.Folder
-                HomeTab.TOOLS -> Icons.Outlined.Build
-            }
-
-            NavigationBarItem(
-                selected = isSelected,
-                onClick = {
-                    if (!isSelected) {
-                        haptics.tick()
-                        onTabSelected(tab)
+        GlassSurface(
+            shape = RoundedCornerShape(32.dp),
+            hazeState = hazeState,
+            elevation = 10.dp,
+            modifier = Modifier.wrapContentWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // Home Tab
+                NavPillItem(
+                    selected = currentTab == HomeTab.HOME,
+                    label = "Home",
+                    selectedIcon = Icons.Filled.AutoStories,
+                    unselectedIcon = Icons.Outlined.AutoStories,
+                    onClick = {
+                        if (currentTab != HomeTab.HOME) {
+                            haptics.tick()
+                            onTabSelected(HomeTab.HOME)
+                        }
                     }
-                },
-                icon = {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = tab.label
-                    )
-                },
-                label = { Text(tab.label) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = scheme.onSecondaryContainer,
-                    selectedTextColor = scheme.onSurface,
-                    indicatorColor = scheme.secondaryContainer,
-                    unselectedIconColor = scheme.onSurfaceVariant,
-                    unselectedTextColor = scheme.onSurfaceVariant
                 )
-            )
+
+                // Library Tab
+                NavPillItem(
+                    selected = currentTab == HomeTab.LIBRARY,
+                    label = "Library",
+                    selectedIcon = Icons.Filled.FolderCopy,
+                    unselectedIcon = Icons.Outlined.FolderCopy,
+                    onClick = {
+                        if (currentTab != HomeTab.LIBRARY) {
+                            haptics.tick()
+                            onTabSelected(HomeTab.LIBRARY)
+                        }
+                    }
+                )
+
+                // Central Scan CTA Action
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .shadow(
+                            elevation = 4.dp,
+                            shape = CircleShape,
+                            ambientColor = colors.accent.copy(alpha = 0.35f),
+                            spotColor = colors.accent.copy(alpha = 0.50f)
+                        )
+                        .clip(CircleShape)
+                        .background(colors.accent)
+                        .clickable(
+                            role = Role.Button,
+                            onClick = {
+                                haptics.click()
+                                onScanClick()
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.DocumentScanner,
+                        contentDescription = "Scan Document",
+                        tint = colors.onAccent,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                // Tools Tab
+                NavPillItem(
+                    selected = currentTab == HomeTab.TOOLS,
+                    label = "Tools",
+                    selectedIcon = Icons.Filled.Widgets,
+                    unselectedIcon = Icons.Outlined.Widgets,
+                    onClick = {
+                        if (currentTab != HomeTab.TOOLS) {
+                            haptics.tick()
+                            onTabSelected(HomeTab.TOOLS)
+                        }
+                    }
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun NavPillItem(
+    selected: Boolean,
+    label: String,
+    selectedIcon: ImageVector,
+    unselectedIcon: ImageVector,
+    onClick: () -> Unit
+) {
+    val colors = AppTheme.colors
+    val containerColor by animateColorAsState(
+        targetValue = if (selected) colors.accentContainer else Color.Transparent,
+        animationSpec = spring(stiffness = 500f),
+        label = "pillContainer"
+    )
+    val contentColor by animateColorAsState(
+        targetValue = if (selected) colors.accent else colors.inkSecondary,
+        animationSpec = spring(stiffness = 500f),
+        label = "pillContent"
+    )
+
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(containerColor)
+            .clickable(
+                role = Role.Tab,
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+                onClick = onClick
+            )
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Icon(
+            imageVector = if (selected) selectedIcon else unselectedIcon,
+            contentDescription = label,
+            tint = contentColor,
+            modifier = Modifier.size(19.dp)
+        )
+        Text(
+            text = label,
+            style = if (selected) AppTheme.typography.captionStrong else AppTheme.typography.caption,
+            color = contentColor
+        )
     }
 }

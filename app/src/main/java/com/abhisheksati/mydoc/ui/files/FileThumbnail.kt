@@ -86,17 +86,17 @@ private val pdfThumbnailCache = object : LruCache<String, ImageBitmap>(MAX_THUMB
 private val textPreviewExtensions = setOf("txt", "md", "csv", "log", "json")
 
 private object TypeTint {
-    val pdf = Color(0xFFE5484D)
-    val word = Color(0xFF3B6FF5)
-    val excel = Color(0xFF2E9E6B)
-    val slides = Color(0xFFE07A2F)
-    val image = Color(0xFFB45BCB)
-    val video = Color(0xFFE2618A)
-    val audio = Color(0xFF2AA198)
-    val archive = Color(0xFF8A6B2F)
-    val apk = Color(0xFF34A853)
-    val code = Color(0xFF6B7280)
-    val generic = Color(0xFF7A8CA3)
+    val pdf = Color(0xFFD94324)     // Stamp Vermilion
+    val word = Color(0xFF43586B)    // Editorial slate
+    val excel = Color(0xFF38634B)   // Sage ink
+    val slides = Color(0xFF7D5432)  // Warm bronze
+    val image = Color(0xFF5E576B)   // Stone slate
+    val video = Color(0xFF6E4D5B)   // Muted plum
+    val audio = Color(0xFF3D5E5E)   // Deep spruce
+    val archive = Color(0xFF665943) // Kraft parchment
+    val apk = Color(0xFF43604C)     // Olive ink
+    val code = Color(0xFF4E565F)    // Charcoal
+    val generic = Color(0xFF5D646D) // Neutral ink
 }
 
 private fun tintFor(type: StorageFileType): Color = when (type) {
@@ -207,8 +207,9 @@ private fun TypePlate(
     modifier: Modifier = Modifier,
     badge: String? = null
 ) {
-    val tint = tintFor(type)
-    val container = tint.copy(alpha = 0.14f)
+    val colors = com.abhisheksati.mydoc.designsystem.tokens.AppTheme.colors
+    val tint = if (type == StorageFileType.PDF) colors.accent else tintFor(type)
+    val container = if (type == StorageFileType.PDF) colors.accentContainer else colors.surfaceMuted
     Box(
         modifier = modifier.clip(AppRadius.insetShape)
             .background(container),
@@ -218,7 +219,7 @@ private fun TypePlate(
             Text(
                 text = badge,
                 color = tint,
-                style = MaterialTheme.typography.labelSmall
+                style = com.abhisheksati.mydoc.designsystem.tokens.AppTheme.typography.captionStrong
             )
         } else {
             Icon(
