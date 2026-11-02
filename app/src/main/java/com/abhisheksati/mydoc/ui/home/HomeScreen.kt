@@ -54,7 +54,6 @@ import com.abhisheksati.mydoc.designsystem.components.AppDialog
 import com.abhisheksati.mydoc.designsystem.components.BottomNavBar
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
-import com.abhisheksati.mydoc.designsystem.tokens.PaperTheme
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.HomeTab
 import com.abhisheksati.mydoc.domain.model.LibraryItem
@@ -64,7 +63,7 @@ import com.abhisheksati.mydoc.tools.ui.ToolsScreen
 import com.abhisheksati.mydoc.tools.ui.components.CameraScanSheet
 import com.abhisheksati.mydoc.tools.ui.components.SignPdfSheet
 import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
-import com.abhisheksati.mydoc.ui.filemanager.FileManagerScreen
+import com.abhisheksati.mydoc.ui.files.FilesScreen
 import com.abhisheksati.mydoc.ui.search.SpotlightSearchSheet
 import com.abhisheksati.mydoc.ui.storage.StorageViewModel
 import com.abhisheksati.mydoc.update.UpdateManager
@@ -117,13 +116,13 @@ fun HomeScreen(
 
     // Navigate back to Home tab when pressing Back on other tabs
     BackHandler(
-        enabled = currentTab != HomeTab.HOME &&
+        enabled = currentTab != HomeTab.FILES &&
             !showCameraScanner &&
             !showSignaturePad &&
             selectedDocForDetails == null &&
             documentToDelete == null
     ) {
-        viewModel.selectTab(HomeTab.HOME)
+        viewModel.selectTab(HomeTab.FILES)
     }
 
     Scaffold(
@@ -323,42 +322,23 @@ fun HomeScreen(
             ) { tab ->
                 tabStateHolder.SaveableStateProvider(tab.name) {
                     when (tab) {
-                        HomeTab.HOME -> {
-                            HomeTabContent(
-                                continueItems = uiState.continueItems,
-                                recentItems = uiState.recentLibraryItems,
-                                onItemClick = onLibraryItemClick,
-                                onSearchClick = {
-                                    showSpotlightSearch = true
-                                },
-                                onScanClick = {
-                                    documentScanner()
-                                },
-                                onCategoryClick = { category ->
-                                    fileManagerViewModel.selectCategory(category)
-                                    viewModel.selectTab(HomeTab.FILES)
-                                },
-                                onToolClick = { tool ->
-                                    toolsViewModel.selectTool(tool)
+                        HomeTab.FILES -> {
+                            FilesScreen(
+                                viewModel = fileManagerViewModel,
+                                homeViewModel = viewModel,
+                                storageViewModel = storageViewModel,
+                                onOpenFile = onOpenFile,
+                                onLibraryItemClick = onLibraryItemClick,
+                                onLibraryItemDetails = { item ->
+                                    selectedDocForDetails = item.toDocumentFile()
                                 },
                                 onSettingsClick = onSettingsClick,
-                                onToggleTheme = onToggleTheme,
-                                onClearRecent = { viewModel.clearAllRecents() },
+                                onSpotlightSearch = {
+                                    showSpotlightSearch = true
+                                },
+                                isActive = currentTab == HomeTab.FILES,
                                 modifier = Modifier.fillMaxSize()
                             )
-                        }
-                        HomeTab.FILES -> {
-                            PaperTheme {
-                                FileManagerScreen(
-                                    viewModel = fileManagerViewModel,
-                                    storageViewModel = storageViewModel,
-                                    onOpenFile = onOpenFile,
-                                    onSettingsClick = onSettingsClick,
-                                    onToggleTheme = onToggleTheme,
-                                    isActive = currentTab == HomeTab.FILES,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
                         }
                         HomeTab.TOOLS -> {
                             ToolsScreen(
@@ -475,3 +455,14 @@ fun HomeScreen(
         )
     }
 }
+
+private fun LibraryItem.toDocumentFile() = DocumentFile(
+    uri = uri,
+    displayName = name,
+    sizeBytes = sizeBytes,
+    mimeType = mimeType,
+    lastOpenedTimestamp = lastModified,
+    pageCount = pageCount,
+    lastPage = lastPage,
+    isFavorite = isFavorite
+)

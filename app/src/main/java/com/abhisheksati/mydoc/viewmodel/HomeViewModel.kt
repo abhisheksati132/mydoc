@@ -47,7 +47,7 @@ class HomeViewModel(
     private val libraryRepository: LibraryRepository
 ) : ViewModel() {
 
-    private val _currentTab = MutableStateFlow(HomeTab.HOME)
+    private val _currentTab = MutableStateFlow(HomeTab.FILES)
     val currentTab: StateFlow<HomeTab> = _currentTab.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")

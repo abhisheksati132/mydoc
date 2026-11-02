@@ -12,6 +12,7 @@ import com.abhisheksati.mydoc.domain.model.FileSortOrder
 import com.abhisheksati.mydoc.domain.model.FolderProperties
 import com.abhisheksati.mydoc.domain.model.StorageItem
 import com.abhisheksati.mydoc.domain.model.StorageVolume
+import com.abhisheksati.mydoc.data.local.SettingsRepository
 import com.abhisheksati.mydoc.domain.repository.StorageRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,7 +54,8 @@ data class FileManagerUiState(
 
 class FileManagerViewModel(
     private val storageRepository: StorageRepository,
-    baseDir: File? = null
+    baseDir: File? = null,
+    private val settingsRepository: SettingsRepository? = null
 ) : ViewModel() {
 
     private val backStack = ArrayDeque<File>()
@@ -70,7 +72,9 @@ class FileManagerViewModel(
         FileManagerUiState(
             currentDirectory = initialDir,
             storageVolumes = registeredVolumes,
-            breadcrumbTrail = buildBreadcrumb(initialDir)
+            breadcrumbTrail = buildBreadcrumb(initialDir),
+            isGridView = settingsRepository?.filesGridView?.value ?: false,
+            showHiddenFiles = settingsRepository?.showHiddenFiles?.value ?: false
         )
     )
     val uiState: StateFlow<FileManagerUiState> = _uiState.asStateFlow()
@@ -253,7 +257,11 @@ class FileManagerViewModel(
                 clipboardState = ClipboardState(ClipboardOperation.COPY, selected),
                 selectedFiles = emptySet(),
                 isSelectionMode = false,
-                userMessage = "Copied ${selected.size} items to clipboard"
+                userMessage = if (selected.size == 1) {
+                    "Copied 1 item to clipboard"
+                } else {
+                    "Copied ${selected.size} items to clipboard"
+                }
             )
         }
     }
@@ -298,7 +306,7 @@ class FileManagerViewModel(
                         clipboardState = null,
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = "Pasted $count items"
+                        userMessage = if (count == 1) "Pasted 1 item" else "Pasted $count items"
                     )
                 }
                 loadDirectory(targetDir, addToHistory = false)
@@ -719,7 +727,9 @@ class FileManagerViewModel(
     }
 
     fun toggleViewMode() {
-        _uiState.update { it.copy(isGridView = !it.isGridView) }
+        val next = !_uiState.value.isGridView
+        _uiState.update { it.copy(isGridView = next) }
+        settingsRepository?.setFilesGridView(next)
     }
 
     fun toggleHiddenFiles() {
@@ -808,12 +818,13 @@ class FileManagerViewModel(
     }
 
     class Factory(
-        private val storageRepository: StorageRepository
+        private val storageRepository: StorageRepository,
+        private val settingsRepository: SettingsRepository? = null
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(FileManagerViewModel::class.java)) {
-                return FileManagerViewModel(storageRepository) as T
+                return FileManagerViewModel(storageRepository, settingsRepository = settingsRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }

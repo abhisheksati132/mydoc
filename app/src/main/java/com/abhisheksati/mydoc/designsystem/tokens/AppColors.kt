@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.designsystem.tokens
 
+import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
@@ -93,6 +94,54 @@ data class AppColors(
         MediaKind.PHOTO -> photoContainer
         MediaKind.VIDEO -> videoContainer
         MediaKind.AUDIO -> audioContainer
+    }
+
+    companion object {
+        /** Folds a Material 3 scheme (dynamic or fallback) into the app's token model. */
+        fun fromMaterialScheme(scheme: ColorScheme): AppColors = AppColors(
+            background = scheme.background,
+            surface = scheme.surface,
+            surfaceMuted = scheme.surfaceContainerHigh,
+            line = scheme.outlineVariant,
+            ink = scheme.onBackground,
+            inkMuted = scheme.onSurfaceVariant,
+            highlight = scheme.primaryContainer,
+            accent = scheme.primary,
+            onAccent = scheme.onPrimary,
+            accentPink = scheme.tertiary,
+            accentCyan = scheme.secondary,
+            accentAmber = Color(0xFFF59E0B),
+            accentGreen = Color(0xFF22C55E),
+            documentKind = scheme.primary,
+            onDocumentKind = scheme.onPrimary,
+            documentContainer = scheme.primaryContainer,
+            photoKind = scheme.tertiary,
+            onPhotoKind = scheme.onTertiary,
+            photoContainer = scheme.tertiaryContainer,
+            videoKind = scheme.secondary,
+            onVideoKind = scheme.onSecondary,
+            videoContainer = scheme.secondaryContainer,
+            audioKind = scheme.primary,
+            onAudioKind = scheme.onPrimary,
+            audioContainer = scheme.tertiaryContainer,
+            textPrimary = scheme.onBackground,
+            textSecondary = scheme.onSurfaceVariant,
+            divider = scheme.outlineVariant,
+            cardBorder = scheme.outlineVariant,
+            track = scheme.surfaceVariant,
+            accentVariant = scheme.primary.copy(alpha = 0.16f),
+            error = scheme.error,
+            primaryContainer = scheme.primaryContainer,
+            onPrimaryContainer = scheme.onPrimaryContainer,
+            secondaryContainer = scheme.secondaryContainer,
+            onSecondaryContainer = scheme.onSecondaryContainer,
+            surfaceContainer = scheme.surfaceContainer,
+            surfaceVariant = scheme.surfaceVariant,
+            surfaceContainerHigh = scheme.surfaceContainerHigh,
+            surfaceContainerLow = scheme.surfaceContainerLow,
+            outline = scheme.outline,
+            outlineVariant = scheme.outlineVariant
+        )
     }
 }
 

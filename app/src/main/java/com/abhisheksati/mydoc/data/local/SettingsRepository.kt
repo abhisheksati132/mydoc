@@ -105,8 +105,11 @@ class SettingsRepository(context: Context) {
     private val _doubleTapZoom = MutableStateFlow(prefs.getBoolean(KEY_DOUBLE_TAP_ZOOM, true))
     val doubleTapZoom: StateFlow<Boolean> = _doubleTapZoom.asStateFlow()
 
-    private val _dynamicColor = MutableStateFlow(prefs.getBoolean(KEY_DYNAMIC_COLOR, false))
+    private val _dynamicColor = MutableStateFlow(prefs.getBoolean(KEY_DYNAMIC_COLOR, true))
     val dynamicColor: StateFlow<Boolean> = _dynamicColor.asStateFlow()
+
+    private val _filesGridView = MutableStateFlow(prefs.getBoolean(KEY_FILES_GRID_VIEW, false))
+    val filesGridView: StateFlow<Boolean> = _filesGridView.asStateFlow()
 
     private val _amoledBlack = MutableStateFlow(prefs.getBoolean(KEY_AMOLED_BLACK, true))
     val amoledBlack: StateFlow<Boolean> = _amoledBlack.asStateFlow()
@@ -122,6 +125,11 @@ class SettingsRepository(context: Context) {
     fun setDynamicColor(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_DYNAMIC_COLOR, enabled).apply()
         _dynamicColor.value = enabled
+    }
+
+    fun setFilesGridView(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_FILES_GRID_VIEW, enabled).apply()
+        _filesGridView.value = enabled
     }
 
     fun setAmoledBlack(enabled: Boolean) {
@@ -317,10 +325,10 @@ class SettingsRepository(context: Context) {
     }
 
     private fun loadDefaultStartupTab(): HomeTab {
-        val saved = prefs.getString(KEY_DEFAULT_STARTUP_TAB, HomeTab.HOME.name)
-        if (saved == "NOW" || saved == "DOCUMENTS") return HomeTab.HOME
-        return runCatching { HomeTab.valueOf(saved ?: HomeTab.HOME.name) }
-            .getOrDefault(HomeTab.HOME)
+        val saved = prefs.getString(KEY_DEFAULT_STARTUP_TAB, HomeTab.FILES.name)
+        if (saved == "NOW" || saved == "DOCUMENTS" || saved == "HOME") return HomeTab.FILES
+        return runCatching { HomeTab.valueOf(saved ?: HomeTab.FILES.name) }
+            .getOrDefault(HomeTab.FILES)
     }
 
     private fun loadReadingPrefs(): ReadingPrefs {
@@ -375,6 +383,7 @@ class SettingsRepository(context: Context) {
         private const val KEY_PDF_FIT_MODE = "pdf_fit_mode"
         private const val KEY_DOUBLE_TAP_ZOOM = "double_tap_zoom"
         private const val KEY_DYNAMIC_COLOR = "dynamic_color_enabled"
+        private const val KEY_FILES_GRID_VIEW = "files_grid_view"
         private const val KEY_AMOLED_BLACK = "amoled_black_enabled"
         private const val KEY_CHECK_UPDATES_ON_LAUNCH = "check_updates_on_launch"
         private const val KEY_SCAN_FULL_DEVICE = "scan_full_device_storage"

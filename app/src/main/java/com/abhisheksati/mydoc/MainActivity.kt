@@ -29,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.FileProvider
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.abhisheksati.mydoc.data.local.AppThemeMode
@@ -95,7 +96,7 @@ class MainActivity : ComponentActivity() {
 
     private val fileManagerViewModel: com.abhisheksati.mydoc.viewmodel.FileManagerViewModel by viewModels {
         val app = application as MyDocApp
-        com.abhisheksati.mydoc.viewmodel.FileManagerViewModel.Factory(app.storageRepository)
+        com.abhisheksati.mydoc.viewmodel.FileManagerViewModel.Factory(app.storageRepository, app.settingsRepository)
     }
 
     private val storageViewModel: com.abhisheksati.mydoc.ui.storage.StorageViewModel by viewModels {
@@ -135,6 +136,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode by app.settingsRepository.themeMode.collectAsStateWithLifecycle()
             val amoledBlack by app.settingsRepository.amoledBlack.collectAsStateWithLifecycle()
+            val dynamicColor by app.settingsRepository.dynamicColor.collectAsStateWithLifecycle()
             val isBiometricLockEnabled by app.settingsRepository.isBiometricLockEnabled.collectAsStateWithLifecycle()
             val isDark = when (themeMode) {
                 AppThemeMode.BLACK, AppThemeMode.DARK -> true
@@ -142,6 +144,15 @@ class MainActivity : ComponentActivity() {
                 AppThemeMode.SYSTEM -> isSystemInDarkTheme()
             }
             val isBlack = themeMode == AppThemeMode.BLACK || (isDark && amoledBlack)
+
+            // The app can force light/dark independently of the system, so the
+            // bars must follow the app theme rather than system night mode.
+            LaunchedEffect(isDark) {
+                WindowCompat.getInsetsController(window, window.decorView).apply {
+                    isAppearanceLightStatusBars = !isDark
+                    isAppearanceLightNavigationBars = !isDark
+                }
+            }
 
             val confirmCredentialLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.StartActivityForResult()
@@ -173,7 +184,7 @@ class MainActivity : ComponentActivity() {
 
             AppDesignSystemTheme(
                 darkTheme = isDark,
-                dynamicColor = false,
+                dynamicColor = dynamicColor,
                 amoledBlack = isBlack
             ) {
                 val selectedTool by toolsViewModel.selectedTool.collectAsStateWithLifecycle()

@@ -5,6 +5,38 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+### Added
+
+- **Dynamic Material You theming.** Colours are seeded from the wallpaper on Android 12+ (fixed
+  fallback elsewhere), with the black/AMOLED override preserved. The existing token layer is fed
+  from the generated scheme, so legacy screens pick up the same palette.
+- **Files-first two-tab navigation.** Home is now just Files and Tools; the Files screen owns the
+  storage readout, search and settings entry, and the bottom bar is a Material 3 navigation bar.
+- **New Files screen.** Recents and Browse share one header and one list/grid preference. Browse
+  drills into storage with breadcrumbs, sorting, hidden-file toggle and storage insights; folders
+  and files use real page/photo thumbnails.
+- **Selection and bulk actions.** Long-press enters multi-select with share, copy, cut, rename,
+  compress and recycle actions; the clipboard bar shows the pending operation and its destination
+  hint.
+- **Storage insights sheet** breaking usage down by category with a shortcut to the cleaner.
+
+### Changed
+
+- **Search, clipboard bar and folder chrome rewritten on Material 3.** The spotlight sheet is a
+  surface-based sheet with filter chips and thumbnails; the clipboard bar is an elevated surface
+  with a single-line summary.
+
+### Fixed
+
+- **Paste from a category view wrote into the last folder.** Copying a file and then opening a
+  category pasted into the previous directory and dropped the user on the browse hub. The clipboard
+  bar now only appears while browsing a real folder, and paste stays in that folder.
+- **New-folder button covered the Paste button.** The FAB steps aside while the clipboard bar is up.
+- **Opening a document reset Files to Recents.** The pane is restored from the view model, so
+  returning from the viewer lands back in the folder.
+- **System bars followed system night mode, not the app theme.** Status and navigation bar icon
+  appearance now tracks the app's chosen theme.
+
 ## [1.5.0] — 2026-11-02
 
 Range: `v1.4.6..v1.5.0`.

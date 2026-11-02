@@ -7,30 +7,29 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.ContentCut
 import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.ClipboardOperation
 import com.abhisheksati.mydoc.domain.model.ClipboardState
 
@@ -41,8 +40,7 @@ fun FileManagerClipboardBar(
     onPaste: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
+    val scheme = MaterialTheme.colorScheme
 
     AnimatedVisibility(
         visible = clipboardState != null,
@@ -51,53 +49,63 @@ fun FileManagerClipboardBar(
         modifier = modifier
     ) {
         clipboardState?.let { clip ->
-            Card(
-                shape = AppRadius.largeShape,
-                colors = CardDefaults.cardColors(containerColor = colors.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+            val isCopy = clip.operation == ClipboardOperation.COPY
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = scheme.surfaceContainerHigh,
+                shadowElevation = 6.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .padding(start = 16.dp, end = 10.dp, top = 10.dp, bottom = 10.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = if (clip.operation == ClipboardOperation.COPY) Icons.Outlined.ContentCopy else Icons.Outlined.ContentCut,
-                            contentDescription = null,
-                            tint = colors.accent,
-                            modifier = Modifier.size(24.dp)
+                    Icon(
+                        imageVector = if (isCopy) Icons.Outlined.ContentCopy else Icons.Outlined.ContentCut,
+                        contentDescription = null,
+                        tint = scheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (clip.items.size == 1) {
+                                "1 item ready to ${if (isCopy) "copy" else "move"}"
+                            } else {
+                                "${clip.items.size} items ready to ${if (isCopy) "copy" else "move"}"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = scheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "${clip.items.size} items ready to ${if (clip.operation == ClipboardOperation.COPY) "copy" else "move"}",
-                                style = typography.bodyStrong,
-                                color = colors.textPrimary
-                            )
-                            Text(
-                                text = "Navigate to destination folder",
-                                style = typography.micro,
-                                color = colors.textSecondary
-                            )
-                        }
+                        Text(
+                            text = "Go to a folder to paste",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = scheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = onCancel) {
-                            Text("Cancel", color = colors.textSecondary)
-                        }
-                        Button(
-                            onClick = onPaste,
-                            colors = ButtonDefaults.buttonColors(containerColor = colors.accent)
-                        ) {
-                            Icon(Icons.Outlined.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Paste")
-                        }
+                    TextButton(
+                        onClick = onCancel,
+                        contentPadding = PaddingValues(horizontal = 10.dp)
+                    ) {
+                        Text("Cancel", color = scheme.onSurfaceVariant)
+                    }
+                    Button(
+                        onClick = onPaste,
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+                    ) {
+                        Icon(
+                            Icons.Outlined.ContentPaste,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Paste")
                     }
                 }
             }
