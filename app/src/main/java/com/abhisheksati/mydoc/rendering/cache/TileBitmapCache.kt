@@ -35,21 +35,6 @@ class TileBitmapCache(
         cache.evictAll()
     }
 
-    fun evictFarPages(visibleRange: IntRange) {
-        val snapshot = cache.snapshot()
-        for ((key, bmp) in snapshot) {
-            val pageIdx = key.substringBefore('_').toIntOrNull() ?: continue
-            if (pageIdx !in (visibleRange.first - 3)..(visibleRange.last + 3)) {
-                cache.remove(key)
-                try {
-                    if (bmp != null && !bmp.isRecycled) {
-                        bmp.recycle()
-                    }
-                } catch (_: Throwable) {}
-            }
-        }
-    }
-
     fun recycleAll() {
         val snapshot = cache.snapshot()
         cache.evictAll()

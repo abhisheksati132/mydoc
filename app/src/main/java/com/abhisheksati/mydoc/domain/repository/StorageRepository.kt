@@ -8,7 +8,7 @@ import com.abhisheksati.mydoc.domain.model.StorageVolume
 import java.io.File
 
 interface StorageRepository {
-    fun getStorageVolumes(): List<StorageVolume>
+    suspend fun getStorageVolumes(): List<StorageVolume>
     suspend fun listDirectory(directory: File, showHidden: Boolean, sortOrder: FileSortOrder): List<StorageItem>
     suspend fun createDirectory(parent: File, name: String): Result<File>
     suspend fun createFile(parent: File, name: String): Result<File>

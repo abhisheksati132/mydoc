@@ -62,4 +62,42 @@ class SpreadsheetParserTest {
         assertEquals("200", sheet.getCellValue(1, 1))
         assertEquals("300", sheet.getCellValue(1, 2))
     }
+
+    @Test
+    fun parseHtmlTableNamedXls_extractsCellsCorrectly() = runBlocking {
+        val parser = SpreadsheetParser()
+        val html = "<html><body><table><tr><td>Col A</td><td>Col B</td></tr>" +
+            "<tr><td>1</td><td>2</td></tr></table></body></html>"
+
+        val model = parser.parse(ByteArrayInputStream(html.toByteArray(Charsets.UTF_8)), "xls")
+
+        val sheet = model.sheets[0]
+        assertEquals("Col A", sheet.getCellValue(0, 0))
+        assertEquals("Col B", sheet.getCellValue(0, 1))
+        assertEquals("1", sheet.getCellValue(1, 0))
+        assertEquals("2", sheet.getCellValue(1, 1))
+    }
+
+    @Test
+    fun parseHtmlTable_stripsMarkupAndDecodesEntities() = runBlocking {
+        val parser = SpreadsheetParser()
+        val html = "<TABLE><TR><TH><b>Total</b></TH><TD>A &amp; B&nbsp;2 &lt;3 &#65;</TD></TR></TABLE>"
+
+        val sheet = parser.parse(ByteArrayInputStream(html.toByteArray(Charsets.UTF_8)), "xls").sheets[0]
+
+        assertEquals("Total", sheet.getCellValue(0, 0))
+        assertEquals("A & B 2 <3 A", sheet.getCellValue(0, 1))
+    }
+
+    @Test
+    fun parseCsvNamedXls_extractsCellsCorrectly() = runBlocking {
+        val parser = SpreadsheetParser()
+        val csv = "Region,Spend\nEMEA,1200\nAPAC,900"
+
+        val sheet = parser.parse(ByteArrayInputStream(csv.toByteArray(Charsets.UTF_8)), "xls").sheets[0]
+
+        assertEquals("Region", sheet.getCellValue(0, 0))
+        assertEquals("Spend", sheet.getCellValue(0, 1))
+        assertEquals("1200", sheet.getCellValue(1, 1))
+    }
 }

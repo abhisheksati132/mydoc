@@ -457,6 +457,11 @@ fun DirectoryPane(
             }
         }
 
+        // Reading these two fields outside the item lambdas keeps a row's recomposition
+        // scoped to selection changes instead of every uiState change.
+        val inSelectionMode = uiState.isSelectionMode
+        val selectedFiles = uiState.selectedFiles
+
         if (items.isEmpty()) {
             FilesEmptyState(
                 icon = Icons.Outlined.FolderOpen,
@@ -476,11 +481,11 @@ fun DirectoryPane(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 items(items, key = { it.path }) { item ->
-                    val selected = uiState.selectedFiles.contains(item.file)
+                    val selected = selectedFiles.contains(item.file)
                     FileGridCell(
                         item = item,
                         isSelected = selected,
-                        isSelectionMode = uiState.isSelectionMode,
+                        isSelectionMode = inSelectionMode,
                         onClick = {
                             if (uiState.isSelectionMode) onToggleSelection(item) else onOpenItem(item)
                         },
@@ -495,11 +500,11 @@ fun DirectoryPane(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 items(items, key = { it.path }) { item ->
-                    val selected = uiState.selectedFiles.contains(item.file)
+                    val selected = selectedFiles.contains(item.file)
                     FileRow(
                         item = item,
                         isSelected = selected,
-                        isSelectionMode = uiState.isSelectionMode,
+                        isSelectionMode = inSelectionMode,
                         onClick = {
                             if (uiState.isSelectionMode) onToggleSelection(item) else onOpenItem(item)
                         },

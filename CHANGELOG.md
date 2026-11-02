@@ -64,6 +64,42 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   so the tool list and its bottom padding stay above the navigation bar.
 - **Splash and window background sat on the old paper palette.** The window background now matches
   the Material 3 light surface and AMOLED black, so app launch no longer flashes a different tone.
+- **Word documents opened as one blank page.** The offscreen WebView that was supposed to lay the
+  document out is never attached to a window, so its measured height was zero and the band slicer
+  emitted a single empty page and reported success. Word files now paginate through a native
+  renderer built on the existing DocxParser, honouring the document's own page size and margins.
+- **Legacy presentations and ebooks were reported as damaged.** `.ppt`, `.pps`, `.pot` and `.odp`
+  had no converter, so the raw package was handed to a PDF engine; `.epub`, `.cbz`, `.xps` and
+  `.fb2` routed to the text viewer because `DocumentCategory.EPUB` was an alias of `TEXT`. Both
+  now reach engines that parse them.
+- **Every reopen repaid the full conversion.** Cache keys were the file name alone, or the cached
+  PDF was deleted when the viewer closed. Keys now include a content or size+mtime stamp, writes
+  are staged and moved into place so a half-written PDF cannot be cached as valid, and failures
+  log instead of surfacing as "the file may be damaged".
+- **An HTML or CSV table saved as `.xls` opened as an empty grid.** The legacy reader only scraped
+  UTF-16 byte pairs, so a single-byte text file yielded no cells at all. Non-OLE2 payloads are now
+  read as an HTML table (markup stripped, entities decoded) or as delimited text first.
+- **Viewer content clipped the first spreadsheet row.** A fixed 64dp top pad was added under a bar
+  that already sits below the status bar.
+
+### Changed
+
+- **Startup and browsing no longer touch disk from the main thread.** Volume enumeration is a
+  suspend call, `LibraryItem` size and date strings are computed lazily off-main with a
+  thread-safe date formatter, and the recents, continue-reading and document flows `flowOn`
+  `Dispatchers.Default`.
+- **The landing junk scan is bounded.** The Files pane shows a reclaimable estimate, and the scan
+  that feeds it walked the whole volume with no limit; it now stops at 4,000 entries or 600 ms,
+  and opening the cleaner still scans everything.
+- **Trash and restore cost one MediaStore round trip instead of one per file.** The per-file
+  awaited scan capped every delete at 2 s; paths are now batched into a single call.
+- **Fewer recompositions and search storms.** Files list and grid rows read selection state
+  outside their item lambdas, document text search is debounced by 250 ms, the first screenful of
+  page sizes is primed off-main before the viewer publishes its state, and the zoom tile cache is
+  cleared when a viewer dies instead of outliving its document.
+- **Bitmap caches are bounded by bytes.** The document thumbnail cache moved from 64 entries to a
+  6 MB budget, library thumbnails no longer stage a source larger than 40 MB into cache for a
+  44 dp tile, and the unused far-page eviction pass was deleted.
 
 ## [1.5.0] — 2026-11-02
 

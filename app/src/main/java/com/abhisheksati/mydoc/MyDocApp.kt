@@ -46,17 +46,17 @@ class MyDocApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
-
-        // Initialize MuPDF Fitz native library synchronously before any document access
-        try {
-            com.artifex.mupdf.fitz.Context.init()
-        } catch (_: Throwable) {}
         database = AppDatabase.getInstance(this)
         documentRepository = DocumentRepositoryImpl(this, database)
         mediaRepository = MediaRepositoryImpl(this, database)
         storageRepository = StorageRepositoryImpl(this, database.trashDao())
         libraryRepository = com.abhisheksati.mydoc.data.repository.LibraryRepositoryImpl(documentRepository, mediaRepository, database)
         settingsRepository = SettingsRepository(this)
+        // FilesScreen builds a PinnedFoldersManager during its first composition; the
+        // SharedPreferences XML read blocks that frame unless it is already parsed.
+        applicationScope.launch {
+            getSharedPreferences("pinned_folders_prefs", MODE_PRIVATE)
+        }
     }
 
     override fun newImageLoader(): ImageLoader {

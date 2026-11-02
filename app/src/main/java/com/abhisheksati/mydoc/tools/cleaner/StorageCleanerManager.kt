@@ -42,6 +42,8 @@ class StorageCleanerManager {
 
     suspend fun scanDirectory(
         rootDir: File,
+        maxEntries: Int = Int.MAX_VALUE,
+        timeBudgetMs: Long = Long.MAX_VALUE,
         onProgress: (scannedCount: Int, currentName: String) -> Unit = { _, _ -> }
     ): StorageCleanScanResult = withContext(Dispatchers.IO) {
         val emptyFolders = mutableListOf<File>()
@@ -52,10 +54,19 @@ class StorageCleanerManager {
         // For duplicate detection: map size -> list of files
         val sizeCandidates = mutableMapOf<Long, MutableList<File>>()
 
+        val deadline = if (timeBudgetMs == Long.MAX_VALUE) Long.MAX_VALUE
+        else android.os.SystemClock.elapsedRealtime() + timeBudgetMs
+        var outOfBudget = false
+
         var fileCount = 0
         var dirCount = 0
 
         fun walk(dir: File) {
+            if (outOfBudget) return
+            if (fileCount + dirCount >= maxEntries || android.os.SystemClock.elapsedRealtime() > deadline) {
+                outOfBudget = true
+                return
+            }
             val entries = try {
                 dir.listFiles()
             } catch (_: Exception) {
@@ -69,6 +80,7 @@ class StorageCleanerManager {
 
             dirCount++
             for (entry in entries) {
+                if (outOfBudget) break
                 if (entry.isDirectory) {
                     val subEntries = try { entry.listFiles() } catch (_: Exception) { null }
                     if (subEntries != null && subEntries.isEmpty()) {
@@ -115,9 +127,11 @@ class StorageCleanerManager {
         val duplicateGroups = mutableListOf<DuplicateGroup>()
         for ((size, files) in sizeCandidates) {
             if (files.size < 2) continue
+            if (android.os.SystemClock.elapsedRealtime() > deadline) break
 
             val hashGroups = mutableMapOf<String, MutableList<File>>()
             for (file in files) {
+                if (android.os.SystemClock.elapsedRealtime() > deadline) break
                 val hash = calculateQuickSha256(file) ?: continue
                 hashGroups.getOrPut(hash) { mutableListOf() }.add(file)
             }

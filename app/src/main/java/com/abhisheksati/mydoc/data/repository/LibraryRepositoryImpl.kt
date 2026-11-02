@@ -10,6 +10,7 @@ import com.abhisheksati.mydoc.domain.repository.MediaRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
@@ -71,7 +72,7 @@ class LibraryRepositoryImpl(
         (docItems + mediaItems)
             .distinctBy { it.uri }
             .sortedByDescending { it.lastModified }
-    }
+    }.flowOn(Dispatchers.Default)
 
     override fun getItemsByKind(kind: MediaKind): Flow<List<LibraryItem>> {
         return getAllItems().map { list ->
@@ -144,7 +145,7 @@ class LibraryRepositoryImpl(
             .distinctBy { it.uri }
             .sortedByDescending { it.lastModified }
             .take(limit)
-    }
+    }.flowOn(Dispatchers.Default)
 
     override fun recentlyAdded(limit: Int): Flow<List<LibraryItem>> {
         return getAllItems().map { it.take(limit) }

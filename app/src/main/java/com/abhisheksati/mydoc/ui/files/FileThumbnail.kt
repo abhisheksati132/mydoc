@@ -74,7 +74,15 @@ fun getFileTypeIcon(type: StorageFileType): ImageVector = when (type) {
     StorageFileType.GENERIC -> Icons.AutoMirrored.Outlined.InsertDriveFile
 }
 
-private val pdfThumbnailCache = object : LruCache<String, ImageBitmap>(64) {}
+// A tile is ~220x293 ARGB, so a count cap of 64 could pin ~16 MB of bitmaps; the
+// bound is in bytes so the grid's footprint does not depend on tile size.
+private const val MAX_THUMBNAIL_CACHE_KB = 6 * 1024
+private const val MAX_THUMBNAIL_COPY_BYTES = 40L * 1024 * 1024
+
+private val pdfThumbnailCache = object : LruCache<String, ImageBitmap>(MAX_THUMBNAIL_CACHE_KB) {
+    override fun sizeOf(key: String, value: ImageBitmap): Int =
+        (value.width * value.height * 4 / 1024).coerceAtLeast(1)
+}
 private val textPreviewExtensions = setOf("txt", "md", "csv", "log", "json")
 
 private object TypeTint {
@@ -408,6 +416,8 @@ private fun findLibraryPdf(context: Context, item: LibraryItem): File? {
     val dir = File(context.cacheDir, "files_thumbs").apply { mkdirs() }
     val target = File(dir, "$key.pdf")
     if (target.exists() && target.length() > 0L) return target
+    // A 44 dp tile is not worth staging a whole scanned PDF into cache for.
+    if (item.sizeBytes > MAX_THUMBNAIL_COPY_BYTES) return null
     val stream = DocumentStreamResolver.openStream(context, Uri.parse(item.uri), item.name)
         ?: return null
     stream.use { input -> target.outputStream().use { input.copyTo(it) } }

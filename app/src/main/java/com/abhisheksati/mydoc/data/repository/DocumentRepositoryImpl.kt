@@ -17,6 +17,7 @@ import com.abhisheksati.mydoc.domain.repository.DocumentRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -71,7 +72,7 @@ class DocumentRepositoryImpl(
                     isFavorite = true
                 )
             }
-        }
+        }.flowOn(Dispatchers.Default)
     }
 
     override fun getAllDeviceDocuments(): Flow<List<DocumentFile>> = combine(
@@ -188,7 +189,7 @@ class DocumentRepositoryImpl(
 
             deviceDocs.distinctBy { it.uri }
         }
-    }
+    }.flowOn(Dispatchers.Default)
 
     override suspend fun registerOpenedDocument(uri: Uri): Result<DocumentFile> = withContext(Dispatchers.IO) {
         runCatching {

@@ -13,6 +13,14 @@ import java.util.zip.ZipInputStream
 
 class SpreadsheetParser {
 
+    private val htmlRowPattern =
+        Regex("<tr[^>]*>(.*?)</tr>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+    private val htmlCellPattern =
+        Regex("<t[dh][^>]*>(.*?)</t[dh]>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+    private val htmlTagPattern = Regex("<[^>]*>")
+    private val htmlLineBreakPattern = Regex("<br\\s*/?>", RegexOption.IGNORE_CASE)
+    private val whitespacePattern = Regex("\\s+")
+
     suspend fun parse(inputStream: InputStream, extension: String): SpreadsheetModel = withContext(Dispatchers.IO) {
         val bytes = inputStream.readBytes()
         if (bytes.isEmpty()) {
@@ -38,7 +46,110 @@ class SpreadsheetParser {
             }
         }
 
+        if (!isOle2(bytes)) {
+            // Web apps and CRMs export real spreadsheets as an HTML table or plain CSV
+            // with an .xls extension; only a BIFF byte-scan renders those as an empty grid.
+            val textModel = parseTextSheet(bytes)
+            if (textModel.sheets.any { it.cells.isNotEmpty() }) {
+                return@withContext textModel
+            }
+        }
+
         parseXlsFallback(bytes)
+    }
+
+    private fun isOle2(bytes: ByteArray): Boolean =
+        bytes.size >= 4 &&
+            bytes[0] == 0xD0.toByte() && bytes[1] == 0xCF.toByte() &&
+            bytes[2] == 0x11.toByte() && bytes[3] == 0xE0.toByte()
+
+    private fun parseTextSheet(bytes: ByteArray): SpreadsheetModel {
+        val text = String(bytes, Charsets.UTF_8).removePrefix("\uFEFF")
+        if (text.contains("<table", ignoreCase = true) || text.contains("<tr", ignoreCase = true)) {
+            val htmlModel = parseHtmlTable(text)
+            if (htmlModel.sheets.any { it.cells.isNotEmpty() }) return htmlModel
+        }
+        return parseCsv(bytes)
+    }
+
+    private fun parseHtmlTable(html: String): SpreadsheetModel {
+        val cells = mutableMapOf<Pair<Int, Int>, String>()
+        var maxRow = 0
+        var maxCol = 0
+        var rowIndex = -1
+
+        for (rowMatch in htmlRowPattern.findAll(html)) {
+            val rowHtml = rowMatch.groupValues[1]
+            val rowCells = htmlCellPattern.findAll(rowHtml).map { it.groupValues[1] }.toList()
+            if (rowCells.isEmpty()) continue
+            rowIndex++
+            rowCells.forEachIndexed { colIndex, rawCell ->
+                val value = htmlCellText(rawCell)
+                if (value.isNotEmpty()) {
+                    cells[Pair(rowIndex, colIndex)] = value
+                    if (rowIndex > maxRow) maxRow = rowIndex
+                    if (colIndex > maxCol) maxCol = colIndex
+                }
+            }
+        }
+
+        return SpreadsheetModel(
+            listOf(SheetData(name = "Sheet 1", maxRow = maxRow, maxCol = maxCol, cells = cells))
+        )
+    }
+
+    private fun htmlCellText(rawCell: String): String =
+        rawCell
+            .replace(htmlLineBreakPattern, "\n")
+            .let { htmlTagPattern.replace(it, " ") }
+            .let { decodeHtmlEntities(it) }
+            .lineSequence()
+            .map { line -> line.trim().replace(whitespacePattern, " ") }
+            .filter { it.isNotEmpty() }
+            .joinToString("\n")
+
+    private fun decodeHtmlEntities(text: String): String {
+        if (!text.contains('&')) return text
+        val out = StringBuilder(text.length)
+        var i = 0
+        while (i < text.length) {
+            val ch = text[i]
+            if (ch != '&') {
+                out.append(ch)
+                i++
+                continue
+            }
+            val semi = text.indexOf(';', i + 1)
+            if (semi < 0 || semi - i > 10) {
+                out.append(ch)
+                i++
+                continue
+            }
+            val body = text.substring(i + 1, semi)
+            val decoded = when {
+                body == "amp" -> "&"
+                body == "lt" -> "<"
+                body == "gt" -> ">"
+                body == "quot" -> "\""
+                body == "apos" -> "'"
+                body == "nbsp" -> " "
+                body.startsWith("#") -> {
+                    val code = if (body.startsWith("#x") || body.startsWith("#X"))
+                        body.drop(2).toIntOrNull(16)
+                    else body.drop(1).toIntOrNull()
+                    code?.takeIf { it in 0..0x10FFFF }?.let { String(Character.toChars(it)) }
+                }
+                else -> null
+            }
+            if (decoded != null) {
+                out.append(decoded)
+                i = semi + 1
+            } else {
+                out.append(ch)
+                i++
+            }
+        }
+        return out.toString()
     }
 
     private fun parseOds(bytes: ByteArray): SpreadsheetModel {

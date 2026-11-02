@@ -184,7 +184,7 @@ class FileManagerViewModelTest {
         val volumes: List<StorageVolume>,
         val filesInDir: List<StorageItem>
     ) : StorageRepository {
-        override fun getStorageVolumes(): List<StorageVolume> = volumes
+        override suspend fun getStorageVolumes(): List<StorageVolume> = volumes
 
         override suspend fun listDirectory(
             directory: File,

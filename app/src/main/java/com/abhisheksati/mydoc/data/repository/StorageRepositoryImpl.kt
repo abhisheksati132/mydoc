@@ -42,7 +42,7 @@ class StorageRepositoryImpl(
     private val trashDao: TrashDao? = null
 ) : StorageRepository {
 
-    override fun getStorageVolumes(): List<StorageVolume> {
+    override suspend fun getStorageVolumes(): List<StorageVolume> = withContext(Dispatchers.IO) {
         val volumes = mutableListOf<StorageVolume>()
 
         // 1. Primary Internal Storage
@@ -99,7 +99,7 @@ class StorageRepositoryImpl(
             android.util.Log.w("StorageRepository", "Error resolving secondary storage volumes", e)
         }
 
-        return volumes
+        volumes
     }
 
     private fun getVolumeRoot(externalFilesDir: File): File? {
@@ -681,10 +681,11 @@ class StorageRepositoryImpl(
         return trash
     }
 
-    private suspend fun scanFileAwait(context: Context, path: String) {
+    private suspend fun scanFilesAwait(context: Context, paths: List<String>) {
+        if (paths.isEmpty()) return
         withTimeoutOrNull(2000L) {
             suspendCancellableCoroutine { continuation ->
-                MediaScannerConnection.scanFile(context, arrayOf(path), null) { _, _ ->
+                MediaScannerConnection.scanFile(context, paths.toTypedArray(), null) { _, _ ->
                     if (continuation.isActive) {
                         continuation.resume(Unit)
                     }
@@ -703,6 +704,7 @@ class StorageRepositoryImpl(
         try {
             val trashDir = getTrashDir()
             val trashed = mutableListOf<TrashItem>()
+            val scannedPaths = mutableListOf<String>()
             val now = System.currentTimeMillis()
 
             for (file in files) {
@@ -722,7 +724,7 @@ class StorageRepositoryImpl(
                 }
 
                 if (moved) {
-                    try { scanFileAwait(context, file.absolutePath) } catch (_: Throwable) {}
+                    scannedPaths += file.absolutePath
                     val entity = TrashEntity(
                         originalPath = file.absolutePath,
                         trashPath = destTrashFile.absolutePath,
@@ -735,6 +737,9 @@ class StorageRepositoryImpl(
                     trashed.add(entity.copy(id = id).toDomain())
                 }
             }
+
+            // One awaited scan per file capped every delete at 2s; a batch costs one IPC.
+            scanFilesAwait(context, scannedPaths)
 
             // Purge items older than 30 days
             val thirtyDaysAgo = now - 30L * 24 * 60 * 60 * 1000
@@ -749,6 +754,7 @@ class StorageRepositoryImpl(
     override suspend fun restoreFromTrash(items: List<TrashItem>): Result<Int> = withContext(Dispatchers.IO) {
         try {
             var restoredCount = 0
+            val restoredPaths = mutableListOf<String>()
             for (item in items) {
                 val trashFile = item.trashFile
                 if (!trashFile.exists()) {
@@ -772,11 +778,12 @@ class StorageRepositoryImpl(
                 }
 
                 if (restored) {
-                    try { scanFileAwait(context, destFile.absolutePath) } catch (_: Throwable) {}
+                    restoredPaths += destFile.absolutePath
                     trashDao?.deleteByIds(listOf(item.id))
                     restoredCount++
                 }
             }
+            scanFilesAwait(context, restoredPaths)
             Result.success(restoredCount)
         } catch (e: Exception) {
             Result.failure(e)

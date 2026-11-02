@@ -66,12 +66,11 @@ class FileManagerViewModel(
         File("/")
     }
 
-    private var registeredVolumes: List<StorageVolume> = storageRepository.getStorageVolumes()
+    private var registeredVolumes: List<StorageVolume> = emptyList()
 
     private val _uiState = MutableStateFlow(
         FileManagerUiState(
             currentDirectory = initialDir,
-            storageVolumes = registeredVolumes,
             breadcrumbTrail = buildBreadcrumb(initialDir),
             isGridView = settingsRepository?.filesGridView?.value ?: false,
             showHiddenFiles = settingsRepository?.showHiddenFiles?.value ?: false
@@ -90,9 +89,11 @@ class FileManagerViewModel(
     }
 
     fun refreshVolumes() {
-        val volumes = storageRepository.getStorageVolumes()
-        registeredVolumes = volumes
-        _uiState.update { it.copy(storageVolumes = volumes) }
+        viewModelScope.launch {
+            val volumes = storageRepository.getStorageVolumes()
+            registeredVolumes = volumes
+            _uiState.update { it.copy(storageVolumes = volumes) }
+        }
     }
 
     fun startBrowsingStorage(directory: File = initialDir) {
@@ -116,8 +117,6 @@ class FileManagerViewModel(
     }
 
     fun loadDirectory(directory: File, addToHistory: Boolean = true) {
-        if (!directory.exists() || !directory.isDirectory) return
-
         if (addToHistory && directory.absolutePath != _uiState.value.currentDirectory.absolutePath) {
             backStack.push(_uiState.value.currentDirectory)
         }
@@ -813,8 +812,9 @@ class FileManagerViewModel(
 
     private fun hasParent(dir: File): Boolean {
         if (isRootDirectory(dir)) return false
-        val parent = dir.parentFile ?: return false
-        return parent.exists() && parent.canRead()
+        // Path math only: this feeds a back affordance, and a directory we are already
+        // showing necessarily exists. Statting here would put disk IO on the main thread.
+        return dir.parentFile != null
     }
 
     class Factory(

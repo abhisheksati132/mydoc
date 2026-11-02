@@ -49,7 +49,7 @@ data class LibraryItem(
         MediaKind.AUDIO -> extension.uppercase(Locale.ROOT).take(4).ifEmpty { "AUD" }
     }
 
-    val formattedSize: String = formatBytesPrecise(sizeBytes)
+    val formattedSize: String get() = formatBytesPrecise(sizeBytes)
 
     val formattedProgress: String
         get() = when (kind) {
@@ -65,10 +65,10 @@ data class LibraryItem(
                     posStr
                 }
             }
-            MediaKind.PHOTO -> DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(lastModified))
+            MediaKind.PHOTO -> mediumDateFormatter.get().format(Date(lastModified))
         }
 
-    val formattedLastModified: String = formatRelativeTimestamp(lastModified)
+    val formattedLastModified: String get() = formatRelativeTimestamp(lastModified)
 }
 
 fun LibraryItem.toMediaItem(): MediaItem {
@@ -89,6 +89,11 @@ fun LibraryItem.toMediaItem(): MediaItem {
     )
 }
 
+
+// DateFormat is not thread safe and these strings are now built off the main thread.
+private val mediumDateFormatter: ThreadLocal<DateFormat> = object : ThreadLocal<DateFormat>() {
+    override fun initialValue(): DateFormat = DateFormat.getDateInstance(DateFormat.MEDIUM)
+}
 
 fun formatBytesPrecise(sizeBytes: Long): String {
     if (sizeBytes <= 0) return "Unknown size"
@@ -116,6 +121,6 @@ fun formatRelativeTimestamp(lastModified: Long): String {
         diff < oneHour -> "${diff / oneMinute}m ago"
         diff < oneDay -> "${diff / oneHour}h ago"
         diff < 2 * oneDay -> "Yesterday"
-        else -> DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(lastModified))
+        else -> mediumDateFormatter.get().format(Date(lastModified))
     }
 }

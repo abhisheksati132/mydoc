@@ -17,6 +17,7 @@ import com.abhisheksati.mydoc.rendering.engine.SearchMatch
 import com.abhisheksati.mydoc.rendering.engine.TextSelectionResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.flow.StateFlow
@@ -61,6 +62,7 @@ class ViewerViewModel(
     val uiState: StateFlow<ViewerUiState> = _uiState.asStateFlow()
 
     private var renderer: DocumentRenderer? = null
+    private var searchJob: Job? = null
     private var activeDocumentFile: DocumentFile = documentFile
 
     val documentUri: String
@@ -124,7 +126,7 @@ class ViewerViewModel(
                     if (convertedPdfFile == null && ext in setOf("docx", "dotx", "pptx")) {
                         // These formats have exactly one engine: their converter. Passing the raw
                         // package to a PDF renderer only yields a false "damaged" report.
-                        android.util.Log.w("ViewerLoad", "no PDF produced for ${'$'}{activeDocumentFile.displayName}")
+                        android.util.Log.w("ViewerLoad", "no PDF produced for ${activeDocumentFile.displayName}")
                         val isWord = ext == "docx" || ext == "dotx"
                         _uiState.update {
                             it.copy(
@@ -260,6 +262,13 @@ class ViewerViewModel(
                         val defaultMode = (context.applicationContext as? com.abhisheksati.mydoc.MyDocApp)?.settingsRepository?.defaultReadingMode?.value ?: ReadingMode.NORMAL
                         val initialMode = savedState?.readingMode ?: defaultMode
                         val initialContinuous = savedState?.isContinuousScroll ?: true
+
+                        // PageItemView asks for each page's size while composing. Priming the
+                        // first screenful here turns those into cache hits instead of native
+                        // page loads on the main thread.
+                        for (p in initialPage until minOf(initialPage + 6, totalPages)) {
+                            activeRenderer.getPageSize(p)
+                        }
 
                         _uiState.update {
                             it.copy(
@@ -447,21 +456,26 @@ class ViewerViewModel(
 
     fun onSearchQueryChanged(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
-        if (query.length >= 2) {
-            viewModelScope.launch(Dispatchers.IO) {
-                val matches = renderer?.search(query) ?: emptyList()
-                _uiState.update {
-                    it.copy(
-                        searchMatches = matches,
-                        currentMatchIndex = if (matches.isNotEmpty()) 0 else -1
-                    )
-                }
-                if (matches.isNotEmpty()) {
-                    jumpToPage(matches[0].pageIndex)
-                }
-            }
-        } else {
+        searchJob?.cancel()
+        if (query.length < 2) {
+            searchJob = null
             _uiState.update { it.copy(searchMatches = emptyList(), currentMatchIndex = -1) }
+            return
+        }
+        // A full-document MuPDF text search is expensive enough that starting one per
+        // keystroke keeps the workers busy with queries the user has already abandoned.
+        searchJob = viewModelScope.launch(Dispatchers.IO) {
+            delay(250)
+            val matches = renderer?.search(query) ?: emptyList()
+            _uiState.update {
+                it.copy(
+                    searchMatches = matches,
+                    currentMatchIndex = if (matches.isNotEmpty()) 0 else -1
+                )
+            }
+            if (matches.isNotEmpty()) {
+                jumpToPage(matches[0].pageIndex)
+            }
         }
     }
 
@@ -522,6 +536,9 @@ class ViewerViewModel(
         prefetchJob = null
         renderer?.close()
         renderer = null
+        // The zoom tile cache is a process-wide singleton keyed by document URI, so its
+        // bitmaps would otherwise outlive the document they came from.
+        com.abhisheksati.mydoc.ui.viewer.controls.TileBitmapCache.clear()
         for (f in sessionTempFiles) {
             try { if (f.exists()) f.delete() } catch (_: Throwable) {}
         }

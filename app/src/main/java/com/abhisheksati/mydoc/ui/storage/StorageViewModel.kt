@@ -25,6 +25,14 @@ class StorageViewModel(
     private val storageRepository: StorageRepository
 ) : ViewModel() {
 
+    companion object {
+        // The Files landing pane shows a reclaimable estimate, so the junk scan runs at
+        // startup. Left unbounded it walks the whole volume and steals CPU from the
+        // first frame; the full sheet still scans everything on demand.
+        private const val QUICK_SCAN_MAX_ENTRIES = 4000
+        private const val QUICK_SCAN_BUDGET_MS = 600L
+    }
+
     private val _uiState = MutableStateFlow(StorageAnalysisUiState())
     val uiState: StateFlow<StorageAnalysisUiState> = _uiState.asStateFlow()
 
@@ -44,9 +52,7 @@ class StorageViewModel(
     fun refresh() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val volumes = withContext(Dispatchers.IO) {
-                storageRepository.getStorageVolumes()
-            }
+            val volumes = storageRepository.getStorageVolumes()
 
             if (volumes.isEmpty()) {
                 _uiState.update { it.copy(isLoading = false, errorMessage = "No storage volumes found") }
@@ -103,7 +109,11 @@ class StorageViewModel(
                 try {
                     val root = volume.file
                     if (root.canRead()) {
-                        val result = cleanerManager.scanDirectory(root)
+                        val result = cleanerManager.scanDirectory(
+                            rootDir = root,
+                            maxEntries = QUICK_SCAN_MAX_ENTRIES,
+                            timeBudgetMs = QUICK_SCAN_BUDGET_MS
+                        )
                         StorageCleanQuickSummary(
                             tempFilesCount = result.tempFiles.size,
                             tempFilesBytes = result.tempFiles.sumOf { it.length() },

@@ -39,14 +39,8 @@ object TileBitmapCache {
     }
 
     fun clear() = synchronized(cache) {
-        val snapshot = cache.snapshot()
+        // Evict without recycling: a page composable can still hold one of these bitmaps
+        // in state, and LRU eviction already leaves them to the GC.
         cache.evictAll()
-        for ((_, bmp) in snapshot) {
-            try {
-                if (bmp != null && !bmp.isRecycled) {
-                    bmp.recycle()
-                }
-            } catch (_: Throwable) {}
-        }
     }
 }

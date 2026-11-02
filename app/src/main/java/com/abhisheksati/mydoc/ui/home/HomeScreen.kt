@@ -87,6 +87,7 @@ fun HomeScreen(
     onShareDocument: (DocumentFile) -> Unit,
     modifier: Modifier = Modifier
 ) {
+
     val uiState by viewModel.uiState.collectAsState()
     val colors = AppTheme.colors
     val scope = rememberCoroutineScope()

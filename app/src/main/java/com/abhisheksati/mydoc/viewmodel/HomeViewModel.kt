@@ -13,11 +13,13 @@ import com.abhisheksati.mydoc.domain.model.LibraryItem
 import com.abhisheksati.mydoc.domain.model.MediaKind
 import com.abhisheksati.mydoc.domain.repository.DocumentRepository
 import com.abhisheksati.mydoc.domain.repository.LibraryRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -123,7 +125,8 @@ class HomeViewModel(
             isSearching = query.isNotBlank(),
             isLoading = false
         )
-    }.stateIn(
+    }.flowOn(Dispatchers.Default)
+     .stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = HomeUiState(isLoading = false)
