@@ -1,12 +1,9 @@
 package com.abhisheksati.mydoc.ui.settings
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -16,20 +13,16 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
-import com.abhisheksati.mydoc.designsystem.components.EditorialAction
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.update.UpdateManager
 import com.abhisheksati.mydoc.update.UpdateUiState
@@ -44,8 +37,8 @@ fun SettingsAboutSection(
     onCheckUpdatesOnLaunchChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
+    val scheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -98,43 +91,43 @@ fun SettingsAboutSection(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = AppSpacing.small)
+                        .padding(vertical = 8.dp)
                 ) {
                     Text(
                         text = "New version v${release.versionName}",
-                        style = typography.bodyLargeStrong,
-                        color = colors.ink
+                        style = typography.bodyLarge,
+                        color = scheme.onSurface
                     )
                     if (release.releaseNotes.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(AppSpacing.xSmall))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = release.releaseNotes.trim(),
-                            style = typography.caption,
-                            color = colors.inkMuted,
+                            style = typography.bodyMedium,
+                            color = scheme.onSurfaceVariant,
                             maxLines = 4
                         )
                     }
-                    Spacer(modifier = Modifier.height(AppSpacing.small))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.large)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         val sizeText = if (release.apkSizeBytes > 0) {
                             val mb = release.apkSizeBytes / (1024.0 * 1024.0)
                             String.format(Locale.US, " (%.1f MB)", mb)
                         } else ""
-                        EditorialAction(
-                            label = "Download & install$sizeText",
-                            onClick = { scope.launch { updateManager.downloadAndInstall(release) } }
-                        )
-                        Text(
-                            text = "Dismiss",
-                            style = typography.captionStrong,
-                            color = colors.inkMuted,
-                            modifier = Modifier
-                                .padding(vertical = AppSpacing.xSmall)
-                                .pressScaleEffect(onClick = { updateManager.dismissUpdate(release.tagName) })
-                        )
+                        TextButton(
+                            onClick = { scope.launch { updateManager.downloadAndInstall(release) } },
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)
+                        ) {
+                            Text("Download & install$sizeText")
+                        }
+                        TextButton(
+                            onClick = { updateManager.dismissUpdate(release.tagName) },
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)
+                        ) {
+                            Text("Dismiss", color = scheme.onSurfaceVariant)
+                        }
                     }
                 }
             }
@@ -143,34 +136,28 @@ fun SettingsAboutSection(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = AppSpacing.small)
+                        .padding(vertical = 8.dp)
                 ) {
                     Text(
                         text = "Downloading ${state.progressPercent}%",
-                        style = typography.caption.withTabularFigures(),
-                        color = colors.ink
+                        style = typography.bodyMedium.withTabularFigures(),
+                        color = scheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(AppSpacing.small))
-                    Box(
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = {
+                            if (state.totalBytes > 0) {
+                                (state.downloadedBytes.toFloat() / state.totalBytes).coerceIn(0f, 1f)
+                            } else {
+                                0f
+                            }
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(AppRadius.pillShape)
-                            .background(colors.track)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(
-                                    if (state.totalBytes > 0) {
-                                        (state.downloadedBytes.toFloat() / state.totalBytes).coerceIn(0f, 1f)
-                                    } else {
-                                        0f
-                                    }
-                                )
-                                .background(colors.accent)
-                        )
-                    }
+                            .height(6.dp),
+                        gapSize = 0.dp,
+                        drawStopIndicator = {}
+                    )
                 }
             }
 
@@ -210,43 +197,44 @@ private fun UpdateLine(
     onAction: (() -> Unit)?,
     leadingCheck: Boolean = false
 ) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
+    val scheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = AppSpacing.small),
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (leadingCheck) {
             Icon(
                 imageVector = Icons.Outlined.Check,
                 contentDescription = null,
-                tint = colors.accent,
+                tint = scheme.primary,
                 modifier = Modifier
-                    .padding(end = AppSpacing.small)
+                    .padding(end = 8.dp)
                     .size(18.dp)
             )
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = typography.bodyLargeStrong,
-                color = colors.ink
+                style = typography.bodyLarge,
+                color = scheme.onSurface
             )
             Text(
                 text = detail,
-                style = typography.caption,
-                color = colors.inkMuted
+                style = typography.bodyMedium,
+                color = scheme.onSurfaceVariant
             )
         }
         if (actionLabel != null && onAction != null) {
-            EditorialAction(
-                label = actionLabel,
+            TextButton(
                 onClick = onAction,
-                modifier = Modifier.padding(start = AppSpacing.medium)
-            )
+                modifier = Modifier.padding(start = 8.dp)
+            ) {
+                Text(actionLabel)
+            }
         }
     }
 }

@@ -6,8 +6,13 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -16,13 +21,16 @@ import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -30,9 +38,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.data.local.SettingsRepository
-import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.update.UpdateManager
 import java.util.Locale
 
@@ -48,7 +53,8 @@ fun SettingsScreen(
 ) {
     val updateState by updateManager.state.collectAsState()
     val context = LocalContext.current
-    val colors = LocalAppColors.current
+    val scheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
     val haptic = LocalHapticFeedback.current
 
     // LOOK
@@ -79,20 +85,45 @@ fun SettingsScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = colors.background,
+        containerColor = scheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            AppTabHeader(
-                title = "Settings",
-                navigationIcon = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = "Back",
-                            tint = colors.textPrimary
+                            tint = scheme.onSurface
+                        )
+                    }
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 4.dp)
+                    ) {
+                        Text(
+                            text = "Settings",
+                            style = typography.headlineSmall,
+                            color = scheme.onSurface
+                        )
+                        Text(
+                            text = "MyDoc ${updateManager.currentVersionName}",
+                            style = typography.bodySmall,
+                            color = scheme.onSurfaceVariant
                         )
                     }
                 }
-            )
+            }
         }
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
@@ -101,103 +132,104 @@ fun SettingsScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
-                    .padding(top = AppSpacing.small, bottom = AppSpacing.xLarge),
-                verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)
+                    .navigationBarsPadding()
+                    .padding(top = 4.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-            // 1. LOOK
-            SettingsAppearanceSection(
-                currentTheme = currentTheme,
-                amoledBlack = amoledBlack,
-                hapticFeedbackEnabled = hapticFeedbackEnabled,
-                onThemeChange = { settingsRepository.setThemeMode(it) },
-                onAmoledBlackChange = { settingsRepository.setAmoledBlack(it) },
-                onHapticFeedbackChange = { settingsRepository.setHapticFeedbackEnabled(it) }
-            )
+                // 1. LOOK
+                SettingsAppearanceSection(
+                    currentTheme = currentTheme,
+                    amoledBlack = amoledBlack,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
+                    onThemeChange = { settingsRepository.setThemeMode(it) },
+                    onAmoledBlackChange = { settingsRepository.setAmoledBlack(it) },
+                    onHapticFeedbackChange = { settingsRepository.setHapticFeedbackEnabled(it) }
+                )
 
-            // 2. READING
-            SettingsReadingSection(
-                currentReadingMode = currentReadingMode,
-                pdfFitMode = pdfFitMode,
-                highQualityPdf = highQualityPdf,
-                doubleTapZoom = doubleTapZoom,
-                keepScreenOn = keepScreenOn,
-                volumeKeyTurning = volumeKeyTurning,
-                onReadingModeChange = { settingsRepository.setDefaultReadingMode(it) },
-                onPdfFitModeChange = { settingsRepository.setPdfFitMode(it) },
-                onHighQualityPdfChange = { settingsRepository.setHighQualityPdf(it) },
-                onDoubleTapZoomChange = { settingsRepository.setDoubleTapZoom(it) },
-                onKeepScreenOnChange = { settingsRepository.setKeepScreenOn(it) },
-                onVolumeKeyTurningChange = { settingsRepository.setVolumeKeyPageTurning(it) }
-            )
+                // 2. READING
+                SettingsReadingSection(
+                    currentReadingMode = currentReadingMode,
+                    pdfFitMode = pdfFitMode,
+                    highQualityPdf = highQualityPdf,
+                    doubleTapZoom = doubleTapZoom,
+                    keepScreenOn = keepScreenOn,
+                    volumeKeyTurning = volumeKeyTurning,
+                    onReadingModeChange = { settingsRepository.setDefaultReadingMode(it) },
+                    onPdfFitModeChange = { settingsRepository.setPdfFitMode(it) },
+                    onHighQualityPdfChange = { settingsRepository.setHighQualityPdf(it) },
+                    onDoubleTapZoomChange = { settingsRepository.setDoubleTapZoom(it) },
+                    onKeepScreenOnChange = { settingsRepository.setKeepScreenOn(it) },
+                    onVolumeKeyTurningChange = { settingsRepository.setVolumeKeyPageTurning(it) }
+                )
 
-            // 3. MEDIA
-            SettingsMediaSection(
-                videoHwAccel = videoHwAccel,
-                autoResumeVideo = autoResumeVideo,
-                videoAutoLoop = videoAutoLoop,
-                onVideoHwAccelChange = { settingsRepository.setVideoHardwareAcceleration(it) },
-                onAutoResumeVideoChange = { settingsRepository.setAutoResumeVideo(it) },
-                onVideoAutoLoopChange = { settingsRepository.setVideoAutoLoop(it) }
-            )
+                // 3. MEDIA
+                SettingsMediaSection(
+                    videoHwAccel = videoHwAccel,
+                    autoResumeVideo = autoResumeVideo,
+                    videoAutoLoop = videoAutoLoop,
+                    onVideoHwAccelChange = { settingsRepository.setVideoHardwareAcceleration(it) },
+                    onAutoResumeVideoChange = { settingsRepository.setAutoResumeVideo(it) },
+                    onVideoAutoLoopChange = { settingsRepository.setVideoAutoLoop(it) }
+                )
 
-            // 4. LIBRARY & STORAGE
-            SettingsStorageSection(
-                startupTab = startupTab,
-                cacheSizeBytes = cacheSizeBytes,
-                onStartupTabChange = { settingsRepository.setDefaultStartupTab(it) },
-                onClearCacheClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    val freed = settingsRepository.clearCache(context)
-                    cacheSizeBytes = settingsRepository.getCacheSizeBytes(context)
-                    val freedMb = freed / (1024.0 * 1024.0)
-                    val toastText = if (freedMb >= 0.1) {
-                        String.format(Locale.US, "Freed %.1f MB", freedMb)
-                    } else {
-                        context.getString(R.string.cache_cleared)
-                    }
-                    Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
-                },
-                onClearRecentClick = onClearRecent?.let { clearAction ->
-                    {
+                // 4. LIBRARY & STORAGE
+                SettingsStorageSection(
+                    startupTab = startupTab,
+                    cacheSizeBytes = cacheSizeBytes,
+                    onStartupTabChange = { settingsRepository.setDefaultStartupTab(it) },
+                    onClearCacheClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        clearAction()
-                        Toast.makeText(context, context.getString(R.string.recent_history_cleared), Toast.LENGTH_SHORT).show()
-                    }
-                }
-            )
-
-            // 5. PRIVACY & SECURITY
-            SettingsCard(
-                title = "Privacy & security",
-                icon = Icons.Outlined.Security
-            ) {
-                SettingToggleRow(
-                    title = "Biometric App Lock",
-                    subtitle = "Require fingerprint or device PIN to open app",
-                    icon = Icons.Outlined.Security,
-                    checked = biometricLockEnabled,
-                    onCheckedChange = { isChecked ->
-                        if (isChecked) {
-                            val km = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
-                            if (km?.isDeviceSecure == false) {
-                                Toast.makeText(context, "Set a screen lock in device settings first", Toast.LENGTH_SHORT).show()
-                            } else {
-                                settingsRepository.setBiometricLockEnabled(true)
-                            }
+                        val freed = settingsRepository.clearCache(context)
+                        cacheSizeBytes = settingsRepository.getCacheSizeBytes(context)
+                        val freedMb = freed / (1024.0 * 1024.0)
+                        val toastText = if (freedMb >= 0.1) {
+                            String.format(Locale.US, "Freed %.1f MB", freedMb)
                         } else {
-                            settingsRepository.setBiometricLockEnabled(false)
+                            context.getString(R.string.cache_cleared)
+                        }
+                        Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
+                    },
+                    onClearRecentClick = onClearRecent?.let { clearAction ->
+                        {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            clearAction()
+                            Toast.makeText(context, context.getString(R.string.recent_history_cleared), Toast.LENGTH_SHORT).show()
                         }
                     }
                 )
-            }
 
-            // 6. ABOUT & UPDATES
-            SettingsAboutSection(
-                updateManager = updateManager,
-                updateState = updateState,
-                checkUpdatesOnLaunch = checkUpdatesOnLaunch,
-                onCheckUpdatesOnLaunchChange = { settingsRepository.setCheckUpdatesOnLaunch(it) }
-            )
+                // 5. PRIVACY & SECURITY
+                SettingsCard(
+                    title = "Privacy & security",
+                    icon = Icons.Outlined.Security
+                ) {
+                    SettingToggleRow(
+                        title = "Biometric App Lock",
+                        subtitle = "Require fingerprint or device PIN to open app",
+                        icon = Icons.Outlined.Security,
+                        checked = biometricLockEnabled,
+                        onCheckedChange = { isChecked ->
+                            if (isChecked) {
+                                val km = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+                                if (km?.isDeviceSecure == false) {
+                                    Toast.makeText(context, "Set a screen lock in device settings first", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    settingsRepository.setBiometricLockEnabled(true)
+                                }
+                            } else {
+                                settingsRepository.setBiometricLockEnabled(false)
+                            }
+                        }
+                    )
+                }
+
+                // 6. ABOUT & UPDATES
+                SettingsAboutSection(
+                    updateManager = updateManager,
+                    updateState = updateState,
+                    checkUpdatesOnLaunch = checkUpdatesOnLaunch,
+                    onCheckUpdatesOnLaunchChange = { settingsRepository.setCheckUpdatesOnLaunch(it) }
+                )
             }
         }
     }

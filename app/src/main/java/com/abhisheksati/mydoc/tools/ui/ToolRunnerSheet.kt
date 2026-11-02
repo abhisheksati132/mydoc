@@ -8,11 +8,11 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,19 +21,25 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.FileOpen
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -44,31 +50,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.abhisheksati.mydoc.designsystem.components.AppBottomSheet
-import com.abhisheksati.mydoc.designsystem.components.AppDivider
-import com.abhisheksati.mydoc.designsystem.components.VividIconTile
-import com.abhisheksati.mydoc.designsystem.components.VividRule
 import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
-import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
-import com.abhisheksati.mydoc.designsystem.tokens.glow
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
-import com.abhisheksati.mydoc.tools.model.formatByteSize
 import com.abhisheksati.mydoc.tools.model.PdfTool
-import com.abhisheksati.mydoc.tools.ui.components.ToolOptionsSection
 import com.abhisheksati.mydoc.tools.model.ToolExecutionResult
+import com.abhisheksati.mydoc.tools.model.formatByteSize
+import com.abhisheksati.mydoc.tools.ui.components.ToolOptionsSection
 import com.abhisheksati.mydoc.tools.viewmodel.ToolExecutionUiState
 import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
-import androidx.compose.material3.ExperimentalMaterial3Api
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,8 +82,8 @@ fun ToolRunnerSheet(
     val toolOptions by viewModel.toolOptions.collectAsState()
     val executionState by viewModel.executionState.collectAsState()
 
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
+    val scheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
     val haptics = rememberAppHaptics()
     val context = LocalContext.current
 
@@ -109,6 +106,12 @@ fun ToolRunnerSheet(
         if (uris.isNotEmpty()) {
             viewModel.setInputUris(uris)
         }
+    }
+
+    val addMorePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        uris.forEach { viewModel.addInputUri(it) }
     }
 
     // SAF Save Result Launcher
@@ -139,7 +142,6 @@ fun ToolRunnerSheet(
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = AppSpacing.paddingLarge)
         ) {
-            // Header: gradient tool plaque, title and close button
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -148,44 +150,33 @@ fun ToolRunnerSheet(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    VividIconTile(
-                        icon = tool.icon,
-                        family = familyForGroup(tool.group),
-                        size = 40.dp,
-                        iconSize = 20.dp,
-                        shape = AppRadius.largeShape
-                    )
-                    Spacer(modifier = Modifier.width(AppSpacing.paddingSmall))
+                    IconPlate(icon = tool.icon)
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = tool.title,
-                        style = typography.title,
-                        color = colors.textPrimary
+                        style = typography.titleLarge,
+                        color = scheme.onSurface
                     )
                 }
 
-                IconButton(
-                    onClick = {
-                        viewModel.closeTool()
-                    },
-                    modifier = Modifier.size(AppSpacing.minTouchTarget)
-                ) {
+                IconButton(onClick = { viewModel.closeTool() }) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
                         contentDescription = "Close",
-                        tint = colors.textSecondary
+                        tint = scheme.onSurfaceVariant
                     )
                 }
             }
 
             Text(
                 text = tool.description,
-                style = typography.caption,
-                color = colors.textSecondary,
-                modifier = Modifier.padding(top = AppSpacing.paddingSmall, bottom = AppSpacing.paddingMedium)
+                style = typography.bodyMedium,
+                color = scheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
             )
 
-            VividRule()
-            Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
+            HorizontalDivider(color = scheme.outlineVariant)
+            Spacer(modifier = Modifier.height(16.dp))
 
             // State-based content
             when (val state = executionState) {
@@ -203,10 +194,14 @@ fun ToolRunnerSheet(
                             val types = if (tool.acceptsNonPdfInput) arrayOf("*/*") else arrayOf("application/pdf")
                             multiplePickerLauncher.launch(types)
                         },
+                        onAddMore = {
+                            val types = if (tool.acceptsNonPdfInput) arrayOf("*/*") else arrayOf("application/pdf")
+                            addMorePickerLauncher.launch(types)
+                        },
                         onRemoveUri = { viewModel.removeInputUri(it) }
                     )
 
-                    Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     // Contextual Options Section
                     ToolOptionsSection(
@@ -219,51 +214,36 @@ fun ToolRunnerSheet(
                         onOptionsChange = { transform -> viewModel.updateOptions(transform) }
                     )
 
-                    Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                    // Action Button (Min 48dp touch target)
                     val canRun = when (tool) {
                         PdfTool.EXTRACT_PAGES -> inputUris.isNotEmpty() && toolOptions.pageRange.isNotBlank()
                         PdfTool.MERGE, PdfTool.COMPARE_PDF -> inputUris.size >= 2
                         else -> inputUris.isNotEmpty()
                     }
-                    Box(
+                    Button(
+                        onClick = {
+                            haptics.confirm()
+                            viewModel.runTool()
+                        },
+                        enabled = canRun,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(AppSpacing.minTouchTarget)
-                            .glow(
-                                VividGradients.glowColor(VividGradients.Family.BRAND),
-                                AppRadius.roundShape,
-                                elevation = if (canRun) 12.dp else 0.dp
-                            )
-                            .clip(AppRadius.roundShape)
-                            .background(if (canRun) VividGradients.brand else SolidColor(colors.surfaceVariant))
-                            .clickable(enabled = canRun) {
-                                haptics.confirm()
-                                viewModel.runTool()
-                            },
-                        contentAlignment = Alignment.Center
+                            .height(52.dp),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        Text(
-                            text = "Run ${tool.title}",
-                            style = typography.body,
-                            color = if (canRun) Color.White else colors.textSecondary
-                        )
+                        Text(text = "Run ${tool.title}", style = typography.titleSmall)
                     }
                 }
 
                 is ToolExecutionUiState.Running -> {
-                    // Running progress state
                     RunningProgressSection(
                         progress = state.progress,
-                        onCancel = {
-                            viewModel.cancelExecution()
-                        }
+                        onCancel = { viewModel.cancelExecution() }
                     )
                 }
 
                 is ToolExecutionUiState.Success -> {
-                    // Success & Before/After Verification Section
                     SuccessVerificationSection(
                         result = state.result,
                         onSaveSaf = {
@@ -292,49 +272,38 @@ fun ToolRunnerSheet(
                                 context.startActivity(Intent.createChooser(shareIntent, "Share result"))
                             }
                         },
-                        onDone = {
-                            viewModel.closeTool()
-                        }
+                        onDone = { viewModel.closeTool() }
                     )
                 }
 
                 is ToolExecutionUiState.Error -> {
-                    // Error state
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = AppSpacing.paddingMedium),
+                            .padding(vertical = 16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Warning,
+                            imageVector = Icons.Outlined.ErrorOutline,
                             contentDescription = null,
-                            tint = colors.error,
-                            modifier = Modifier.size(36.dp)
+                            tint = scheme.error,
+                            modifier = Modifier.size(40.dp)
                         )
-                        Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = state.message,
-                            style = typography.body,
-                            color = colors.textPrimary
+                            style = typography.bodyLarge,
+                            color = scheme.onSurface
                         )
-                        Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
-                        Box(
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Button(
+                            onClick = { viewModel.selectTool(tool) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(AppSpacing.minTouchTarget)
-                                .clip(AppRadius.roundShape)
-                                .background(VividGradients.brand)
-                                .clickable {
-                                    viewModel.selectTool(tool)
-                                },
-                            contentAlignment = Alignment.Center
+                                .height(52.dp),
+                            shape = RoundedCornerShape(16.dp)
                         ) {
-                            Text(
-                                text = "Try again",
-                                style = typography.body,
-                                color = Color.White
-                            )
+                            Text(text = "Try again", style = typography.titleSmall)
                         }
                     }
                 }
@@ -372,9 +341,29 @@ fun ToolRunnerSheet(
     if (showSignaturePad) {
         com.abhisheksati.mydoc.tools.ui.components.SignPdfSheet(
             onDismiss = { showSignaturePad = false },
-            onSignatureSaved = {
-                showSignaturePad = false
-            }
+            onSignatureSaved = { showSignaturePad = false }
+        )
+    }
+}
+
+@Composable
+private fun IconPlate(
+    icon: ImageVector,
+    modifier: Modifier = Modifier
+) {
+    val scheme = MaterialTheme.colorScheme
+    Box(
+        modifier = modifier
+            .size(40.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(scheme.surfaceContainerHigh),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = scheme.primary,
+            modifier = Modifier.size(21.dp)
         )
     }
 }
@@ -386,45 +375,45 @@ private fun InputFilesSection(
     context: Context,
     onPickSingle: () -> Unit,
     onPickMultiple: () -> Unit,
+    onAddMore: () -> Unit,
     onRemoveUri: (Uri) -> Unit
 ) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
+    val scheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = if (tool.requiresMultipleInputFiles) "INPUT DOCUMENTS" else "INPUT DOCUMENT",
-            style = typography.label,
-            color = colors.textSecondary
+            text = if (tool.requiresMultipleInputFiles) "Input documents" else "Input document",
+            style = typography.labelLarge,
+            color = scheme.onSurfaceVariant
         )
-        Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+        Spacer(modifier = Modifier.height(8.dp))
 
         if (uris.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(64.dp)
-                    .clip(AppRadius.cardShape)
-                    .background(colors.accent.copy(alpha = 0.10f))
-                    .border(1.dp, colors.accent.copy(alpha = 0.30f), AppRadius.cardShape)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(scheme.surfaceContainerHigh)
                     .clickable {
                         if (tool.requiresMultipleInputFiles) onPickMultiple() else onPickSingle()
                     }
-                    .padding(horizontal = AppSpacing.paddingMedium),
+                    .padding(horizontal = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Outlined.FileOpen,
                         contentDescription = null,
-                        tint = colors.accent,
+                        tint = scheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
-                    Spacer(modifier = Modifier.width(AppSpacing.paddingSmall))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = if (tool.requiresMultipleInputFiles) "Select 2 or more files" else "Select file to process",
-                        style = typography.body,
-                        color = colors.accent
+                        style = typography.bodyLarge,
+                        color = scheme.onSurface
                     )
                 }
             }
@@ -435,10 +424,9 @@ private fun InputFilesSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(AppSpacing.minTouchTarget + 8.dp)
-                        .clip(AppRadius.cardShape)
-                        .background(colors.surface)
-                        .border(1.dp, colors.line, AppRadius.cardShape)
-                        .padding(horizontal = AppSpacing.paddingMedium),
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(scheme.surfaceContainerHigh)
+                        .padding(start = 12.dp, end = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -446,52 +434,48 @@ private fun InputFilesSection(
                         modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        VividIconTile(
-                            icon = Icons.Outlined.Description,
-                            family = VividGradients.Family.OCEAN,
-                            size = 32.dp,
-                            iconSize = 16.dp,
-                            shape = AppRadius.microShape
-                        )
-                        Spacer(modifier = Modifier.width(AppSpacing.paddingSmall))
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(scheme.surfaceContainerHighest),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Description,
+                                contentDescription = null,
+                                tint = scheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = formatMiddleTruncated(fileName, 32),
-                            style = typography.body,
-                            color = colors.textPrimary,
+                            style = typography.bodyLarge,
+                            color = scheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
                         )
                     }
-                    IconButton(
-                        onClick = { onRemoveUri(uri) },
-                        modifier = Modifier.size(AppSpacing.minTouchTarget)
-                    ) {
+                    IconButton(onClick = { onRemoveUri(uri) }) {
                         Icon(
                             imageVector = Icons.Outlined.Close,
                             contentDescription = "Remove file",
-                            tint = colors.textSecondary
+                            tint = scheme.onSurfaceVariant
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             if (tool.requiresMultipleInputFiles) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(AppSpacing.minTouchTarget)
-                        .clip(AppRadius.cardShape)
-                        .border(1.dp, colors.accent.copy(alpha = 0.30f), AppRadius.cardShape)
-                        .clickable { onPickMultiple() },
-                    contentAlignment = Alignment.Center
+                OutlinedButton(
+                    onClick = onAddMore,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text(
-                        text = "+ Add more files",
-                        style = typography.body,
-                        color = colors.accent
-                    )
+                    Text(text = "Add more files", style = typography.titleSmall)
                 }
             }
         }
@@ -503,13 +487,13 @@ private fun RunningProgressSection(
     progress: com.abhisheksati.mydoc.tools.model.ToolProgress,
     onCancel: () -> Unit
 ) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
+    val scheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = AppSpacing.paddingLarge),
+            .padding(vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (progress.isIndeterminate) {
@@ -518,8 +502,8 @@ private fun RunningProgressSection(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(AppRadius.pillShape),
-                color = colors.accent,
-                trackColor = colors.track
+                color = scheme.primary,
+                trackColor = scheme.surfaceContainerHighest
             )
         } else {
             LinearProgressIndicator(
@@ -528,29 +512,27 @@ private fun RunningProgressSection(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(AppRadius.pillShape),
-                color = colors.accent,
-                trackColor = colors.track
+                color = scheme.primary,
+                trackColor = scheme.surfaceContainerHighest,
+                gapSize = 0.dp,
+                drawStopIndicator = {}
             )
         }
 
-        Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
+        Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = progress.message.ifEmpty { "Processing document..." },
-            style = typography.body,
-            color = colors.textPrimary
+            style = typography.bodyLarge,
+            color = scheme.onSurface
         )
 
-        Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(AppSpacing.minTouchTarget)
-                .clip(AppRadius.pillShape)
-                .border(1.dp, colors.line, AppRadius.pillShape)
-                .clickable { onCancel() },
-            contentAlignment = Alignment.Center
+        Spacer(modifier = Modifier.height(24.dp))
+        OutlinedButton(
+            onClick = onCancel,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Text(text = "Cancel", style = typography.body, color = colors.textPrimary)
+            Text(text = "Cancel", style = typography.titleSmall)
         }
     }
 }
@@ -563,47 +545,42 @@ private fun SuccessVerificationSection(
     onShare: () -> Unit,
     onDone: () -> Unit
 ) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
+    val scheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        // Verification Header
         Row(verticalAlignment = Alignment.CenterVertically) {
-            VividIconTile(
-                icon = Icons.Outlined.Check,
-                family = VividGradients.Family.FOREST,
-                size = 40.dp,
-                iconSize = 20.dp,
-                shape = AppRadius.largeShape
-            )
-            Spacer(modifier = Modifier.width(AppSpacing.paddingSmall))
+            IconPlate(icon = Icons.Outlined.Check)
+            Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = "Operation Completed",
-                style = typography.title,
-                color = colors.textPrimary
+                text = "Operation completed",
+                style = typography.titleLarge,
+                color = scheme.onSurface
             )
         }
 
-        Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Before / After verification card
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(AppRadius.cardShape)
-                .background(colors.surface)
-                .border(1.dp, colors.line, AppRadius.cardShape)
-                .padding(AppSpacing.paddingMedium)
+                .clip(RoundedCornerShape(16.dp))
+                .background(scheme.surfaceContainerHigh)
+                .padding(16.dp)
         ) {
-            Text(text = "VERIFICATION", style = typography.label, color = colors.textSecondary)
-            Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+            Text(
+                text = "Verification",
+                style = typography.labelLarge,
+                color = scheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "File size", style = typography.body, color = colors.textSecondary)
+                Text(text = "File size", style = typography.bodyMedium, color = scheme.onSurfaceVariant)
                 val diffBytes = result.outputSizeBytes - result.inputSizeBytes
                 val pct = if (result.inputSizeBytes > 0) {
                     kotlin.math.round((diffBytes.toDouble() / result.inputSizeBytes) * 100.0).toInt()
@@ -615,102 +592,91 @@ private fun SuccessVerificationSection(
                 }
                 Text(
                     text = "${formatByteSize(result.inputSizeBytes)} → ${formatByteSize(result.outputSizeBytes)}$deltaChip",
-                    style = typography.body,
-                    color = if (pct < 0) colors.accent else colors.textPrimary
+                    style = typography.bodyMedium,
+                    color = if (pct < 0) scheme.primary else scheme.onSurface
                 )
             }
 
             if (result.inputPages > 0) {
-                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "Pages", style = typography.body, color = colors.textSecondary)
+                    Text(text = "Pages", style = typography.bodyMedium, color = scheme.onSurfaceVariant)
                     Text(
                         text = "${result.inputPages} → ${result.outputPages}",
-                        style = typography.body,
-                        color = colors.textPrimary
+                        style = typography.bodyMedium,
+                        color = scheme.onSurface
                     )
                 }
             }
 
             if (result.warningNote != null) {
-                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
-                AppDivider()
-                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(color = scheme.outlineVariant)
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = result.warningNote,
-                    style = typography.caption,
-                    color = colors.textSecondary
+                    style = typography.bodySmall,
+                    color = scheme.onSurfaceVariant
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        // SAF "Save file" Action (Primary)
-        Box(
+        Button(
+            onClick = onSaveSaf,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(AppSpacing.minTouchTarget)
-                .glow(
-                    VividGradients.glowColor(VividGradients.Family.BRAND),
-                    AppRadius.roundShape,
-                    elevation = 12.dp
-                )
-                .clip(AppRadius.roundShape)
-                .background(VividGradients.brand)
-                .clickable { onSaveSaf() },
-            contentAlignment = Alignment.Center
+                .height(52.dp),
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Save, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(AppSpacing.paddingSmall))
-                Text(text = "Save to device", style = typography.body, color = Color.White)
+            Icon(Icons.Outlined.Save, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "Save to device", style = typography.titleSmall)
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                onClick = onOpen,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(52.dp),
+                shape = RoundedCornerShape(16.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp)
+            ) {
+                Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "Open", style = typography.titleSmall)
+            }
+
+            OutlinedButton(
+                onClick = onShare,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(52.dp),
+                shape = RoundedCornerShape(16.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp)
+            ) {
+                Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "Share", style = typography.titleSmall)
             }
         }
 
-        Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
-
-        // Secondary Actions: Open and Share
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
+        Spacer(modifier = Modifier.height(8.dp))
+        androidx.compose.material3.TextButton(
+            onClick = onDone,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(AppSpacing.minTouchTarget)
-                    .clip(AppRadius.cardShape)
-                    .background(colors.surface)
-                    .border(1.dp, colors.line, AppRadius.cardShape)
-                    .clickable { onOpen() },
-                contentAlignment = Alignment.Center
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null, tint = colors.textPrimary, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(AppSpacing.paddingSmall))
-                    Text(text = "Open result", style = typography.body, color = colors.textPrimary)
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(AppSpacing.minTouchTarget)
-                    .clip(AppRadius.cardShape)
-                    .background(colors.surface)
-                    .border(1.dp, colors.line, AppRadius.cardShape)
-                    .clickable { onShare() },
-                contentAlignment = Alignment.Center
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.Share, contentDescription = null, tint = colors.textPrimary, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(AppSpacing.paddingSmall))
-                    Text(text = "Share", style = typography.body, color = colors.textPrimary)
-                }
-            }
+            Text(text = "Done", style = typography.titleSmall)
         }
     }
 }

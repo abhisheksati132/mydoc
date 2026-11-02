@@ -1,10 +1,10 @@
 package com.abhisheksati.mydoc.ui.settings
 
-import com.abhisheksati.mydoc.designsystem.components.AppChip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.DarkMode
@@ -12,13 +12,13 @@ import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Vibration
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 
 @Composable
@@ -37,67 +37,54 @@ fun SettingsReadingSection(
     onVolumeKeyTurningChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
-
     SettingsCard(
         title = "Reading & documents",
         icon = Icons.AutoMirrored.Outlined.MenuBook,
         modifier = modifier
     ) {
-        Text(
-            text = "Default reading mode",
-            style = typography.caption,
-            color = colors.inkMuted,
-            modifier = Modifier.padding(top = AppSpacing.small, bottom = AppSpacing.small)
-        )
+        SettingsSectionLabel(text = "Default reading mode")
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            AppChip(
+            ChoiceChip(
                 label = "Normal",
                 selected = currentReadingMode == ReadingMode.NORMAL,
                 onClick = { onReadingModeChange(ReadingMode.NORMAL) }
             )
-            AppChip(
+            ChoiceChip(
                 label = "Dark",
-                leadingIcon = Icons.Outlined.DarkMode,
+                icon = Icons.Outlined.DarkMode,
                 selected = currentReadingMode == ReadingMode.INVERTED_DARK,
                 onClick = { onReadingModeChange(ReadingMode.INVERTED_DARK) }
             )
-            AppChip(
+            ChoiceChip(
                 label = "Sepia",
                 selected = currentReadingMode == ReadingMode.SEPIA,
                 onClick = { onReadingModeChange(ReadingMode.SEPIA) }
             )
         }
 
-        SettingsDivider()
+        SettingsDivider(modifier = Modifier.padding(top = 12.dp))
 
-        Text(
-            text = "PDF page scaling",
-            style = typography.caption,
-            color = colors.inkMuted,
-            modifier = Modifier.padding(top = AppSpacing.small, bottom = AppSpacing.small)
-        )
+        SettingsSectionLabel(text = "PDF page scaling")
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            AppChip(
+            ChoiceChip(
                 label = "Fit Width",
                 selected = pdfFitMode == "FIT_WIDTH",
                 onClick = { onPdfFitModeChange("FIT_WIDTH") }
             )
-            AppChip(
+            ChoiceChip(
                 label = "Fit Whole Page",
                 selected = pdfFitMode == "FIT_PAGE",
                 onClick = { onPdfFitModeChange("FIT_PAGE") }
             )
         }
 
-        SettingsDivider()
+        SettingsDivider(modifier = Modifier.padding(top = 12.dp))
 
         SettingToggleRow(
             title = "High-Quality Vector PDF",
@@ -137,4 +124,27 @@ fun SettingsReadingSection(
             onCheckedChange = onVolumeKeyTurningChange
         )
     }
+}
+
+@Composable
+private fun ChoiceChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    icon: ImageVector? = null
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+        leadingIcon = icon?.let {
+            {
+                Icon(
+                    imageVector = it,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    )
 }

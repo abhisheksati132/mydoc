@@ -1,7 +1,6 @@
 package com.abhisheksati.mydoc.ui.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,28 +11,24 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.components.PaperSurface
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
-import com.abhisheksati.mydoc.designsystem.tokens.PaperShape
-import com.abhisheksati.mydoc.designsystem.tokens.rememberSheetPalette
 
 /**
- * A settings section printed on one sheet: flat icon plate, heading, and the
- * section's rows inside the paper card.
+ * One settings group on a tonal card: a tinted icon plate, a heading and the
+ * section's rows.
  */
 @Composable
 fun SettingsCard(
@@ -42,46 +37,44 @@ fun SettingsCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val typography = LocalAppTypography.current
-    val paper = rememberSheetPalette()
+    val scheme = MaterialTheme.colorScheme
 
-    PaperSurface(
-        palette = paper,
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = AppSpacing.screenPadding),
-        elevation = 2.dp
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(24.dp),
+        color = scheme.surfaceContainerLow
     ) {
-        Column(modifier = Modifier.padding(AppSpacing.medium)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Box(
                     modifier = Modifier
                         .size(32.dp)
-                        .clip(PaperShape)
-                        .background(paper.sheetEdge)
-                        .border(1.dp, paper.rule, PaperShape),
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(scheme.surfaceContainerHigh),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = paper.accent,
+                        tint = scheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
                 Text(
                     text = title,
-                    style = typography.bodyLargeStrong,
-                    color = paper.ink
+                    style = MaterialTheme.typography.titleMedium,
+                    color = scheme.onSurface
                 )
             }
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = AppSpacing.xSmall),
+                    .padding(top = 4.dp),
                 content = content
             )
         }
@@ -92,11 +85,24 @@ fun SettingsCard(
 fun SettingsDivider(
     modifier: Modifier = Modifier
 ) {
-    val colors = LocalAppColors.current
     HorizontalDivider(
         modifier = modifier,
-        thickness = AppSpacing.hairline,
-        color = colors.line
+        thickness = Dp.Hairline,
+        color = MaterialTheme.colorScheme.outlineVariant
+    )
+}
+
+/** Small label above a chip row, e.g. "Theme" or "PDF page scaling". */
+@Composable
+fun SettingsSectionLabel(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.padding(top = 12.dp, bottom = 4.dp)
     )
 }
 
@@ -109,53 +115,45 @@ fun SettingToggleRow(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
+    val scheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
-            .defaultMinSize(minHeight = AppSpacing.listRowHeight)
-            .padding(vertical = AppSpacing.small),
+            .defaultMinSize(minHeight = 56.dp)
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = colors.accent,
+            tint = scheme.onSurfaceVariant,
             modifier = Modifier
-                .padding(end = AppSpacing.medium)
+                .padding(end = 16.dp)
                 .size(20.dp)
         )
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(end = AppSpacing.medium)
+                .padding(end = 12.dp)
         ) {
             Text(
                 text = title,
-                style = typography.bodyLargeStrong,
-                color = colors.ink
+                style = typography.bodyLarge,
+                color = scheme.onSurface
             )
             Text(
                 text = subtitle,
-                style = typography.caption,
-                color = colors.inkMuted,
+                style = typography.bodyMedium,
+                color = scheme.onSurfaceVariant,
                 maxLines = 2
             )
         }
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = colors.accent,
-                checkedBorderColor = colors.accent,
-                uncheckedThumbColor = colors.inkMuted,
-                uncheckedTrackColor = colors.background,
-                uncheckedBorderColor = colors.line
-            )
+            onCheckedChange = onCheckedChange
         )
     }
 }

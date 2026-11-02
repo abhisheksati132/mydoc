@@ -41,7 +41,6 @@ import com.abhisheksati.mydoc.designsystem.animation.documentHeroKey
 import com.abhisheksati.mydoc.designsystem.preview.DesignSystemPreviewScreen
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.PaperTheme
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.toMediaItem
 import com.abhisheksati.mydoc.security.AppLockScreen
@@ -283,19 +282,17 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
                                     ActiveScreen.Settings -> {
-                                        PaperTheme {
-                                            SettingsScreen(
-                                                updateManager = updateManager,
-                                                settingsRepository = app.settingsRepository,
-                                                onBackClick = { isSettingsOpen = false },
-                                                onDesignSystemPreviewClick = { isDesignSystemPreviewOpen = true },
-                                                onClearRecent = {
-                                                    lifecycleScope.launch {
-                                                        app.libraryRepository.clearAllRecents()
-                                                    }
+                                        SettingsScreen(
+                                            updateManager = updateManager,
+                                            settingsRepository = app.settingsRepository,
+                                            onBackClick = { isSettingsOpen = false },
+                                            onDesignSystemPreviewClick = { isDesignSystemPreviewOpen = true },
+                                            onClearRecent = {
+                                                lifecycleScope.launch {
+                                                    app.libraryRepository.clearAllRecents()
                                                 }
-                                            )
-                                        }
+                                            }
+                                        )
                                     }
                                     is ActiveScreen.Photo -> {
                                         com.abhisheksati.mydoc.ui.media.PhotoViewerScreen(
@@ -360,10 +357,6 @@ class MainActivity : ComponentActivity() {
                                             fileManagerViewModel = fileManagerViewModel,
                                             storageViewModel = storageViewModel,
                                             updateManager = updateManager,
-                                            onToggleTheme = {
-                                                val nextTheme = if (isDark) AppThemeMode.LIGHT else AppThemeMode.DARK
-                                                app.settingsRepository.setThemeMode(nextTheme)
-                                            },
                                             onLibraryItemClick = { item ->
                                                 when (item.kind) {
                                                     com.abhisheksati.mydoc.domain.model.MediaKind.DOCUMENT -> {

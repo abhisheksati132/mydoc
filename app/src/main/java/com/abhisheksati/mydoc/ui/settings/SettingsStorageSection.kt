@@ -9,8 +9,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,11 +21,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
-import com.abhisheksati.mydoc.designsystem.components.AppChip
-import com.abhisheksati.mydoc.designsystem.components.EditorialAction
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.HomeTab
 import java.util.Locale
@@ -36,34 +34,26 @@ fun SettingsStorageSection(
     onClearRecentClick: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
-
     SettingsCard(
         title = "Storage & files",
         icon = Icons.Outlined.Storage,
         modifier = modifier
     ) {
-        Text(
-            text = "Default startup destination",
-            style = typography.caption,
-            color = colors.inkMuted,
-            modifier = Modifier.padding(top = AppSpacing.small, bottom = AppSpacing.small)
-        )
+        SettingsSectionLabel(text = "Default startup destination")
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             HomeTab.entries.forEach { tab ->
-                AppChip(
-                    label = tab.label,
+                FilterChip(
                     selected = startupTab == tab,
-                    onClick = { onStartupTabChange(tab) }
+                    onClick = { onStartupTabChange(tab) },
+                    label = { Text(tab.label) }
                 )
             }
         }
 
-        SettingsDivider()
+        SettingsDivider(modifier = Modifier.padding(top = 12.dp))
 
         val formattedCache = if (cacheSizeBytes < 1024) {
             "$cacheSizeBytes B"
@@ -95,7 +85,7 @@ fun SettingsStorageSection(
 }
 
 /**
- * A settings row whose action is a word on the right, not a filled button.
+ * A settings row whose action is a text button on the right.
  */
 @Composable
 private fun SettingActionRow(
@@ -105,39 +95,40 @@ private fun SettingActionRow(
     actionLabel: String,
     onAction: () -> Unit
 ) {
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
+    val scheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = AppSpacing.small),
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = colors.inkMuted,
+            tint = scheme.onSurfaceVariant,
             modifier = Modifier
-                .padding(end = AppSpacing.medium)
+                .padding(end = 16.dp)
                 .size(20.dp)
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = typography.bodyLargeStrong,
-                color = colors.ink
+                style = typography.bodyLarge,
+                color = scheme.onSurface
             )
             Text(
                 text = subtitle,
-                style = typography.caption.withTabularFigures(),
-                color = colors.inkMuted
+                style = typography.bodyMedium.withTabularFigures(),
+                color = scheme.onSurfaceVariant
             )
         }
-        EditorialAction(
-            label = actionLabel,
+        TextButton(
             onClick = onAction,
-            modifier = Modifier.padding(start = AppSpacing.medium)
-        )
+            modifier = Modifier.padding(start = 12.dp)
+        ) {
+            Text(actionLabel)
+        }
     }
 }

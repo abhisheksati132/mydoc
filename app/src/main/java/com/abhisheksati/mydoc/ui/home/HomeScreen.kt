@@ -80,7 +80,6 @@ fun HomeScreen(
     fileManagerViewModel: FileManagerViewModel,
     storageViewModel: StorageViewModel,
     updateManager: UpdateManager? = null,
-    onToggleTheme: () -> Unit = {},
     onLibraryItemClick: (LibraryItem) -> Unit,
     onDocumentClick: (DocumentFile) -> Unit,
     onOpenFile: (File) -> Unit,
@@ -351,7 +350,6 @@ fun HomeScreen(
                                     }
                                 },
                                 onSettingsClick = onSettingsClick,
-                                onToggleTheme = onToggleTheme,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }

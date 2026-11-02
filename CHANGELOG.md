@@ -19,8 +19,16 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   compress and recycle actions; the clipboard bar shows the pending operation and its destination
   hint.
 - **Storage insights sheet** breaking usage down by category with a shortcut to the cleaner.
+- **Tools tab rebuilt on Material 3.** One searchable list grouped by task, a filter-chip strip,
+  search that focuses on open, and tool rows on tonal plates replacing the gradient tiles.
+- **Tool runner sheet on Material 3.** Header, input list, progress, result verification and the
+  save/open/share actions now use tonal surfaces and standard buttons; the "add more files" action
+  appends to the input list instead of replacing it.
 
 ### Changed
+
+- **Settings rewritten on Material 3.** Cards, section labels, theme and reading chips, toggles,
+  cache actions and the update section all use the generated scheme and M3 components.
 
 - **Search, clipboard bar and folder chrome rewritten on Material 3.** The spotlight sheet is a
   surface-based sheet with filter chips and thumbnails; the clipboard bar is an elevated surface
