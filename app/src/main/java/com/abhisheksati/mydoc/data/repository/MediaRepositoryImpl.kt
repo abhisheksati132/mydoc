@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.provider.OpenableColumns
+import android.util.Log
 import androidx.exifinterface.media.ExifInterface
 import com.abhisheksati.mydoc.data.local.AppDatabase
 import com.abhisheksati.mydoc.data.local.entity.MediaPlaybackEntity
@@ -13,6 +14,7 @@ import com.abhisheksati.mydoc.domain.model.ExifMetadata
 import com.abhisheksati.mydoc.domain.model.MediaFilter
 import com.abhisheksati.mydoc.domain.model.MediaItem
 import com.abhisheksati.mydoc.domain.repository.MediaRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -126,7 +128,10 @@ class MediaRepositoryImpl(
                     )
                 }
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w("MediaRepository", "Error querying media", e)
+        }
     }
 
     private fun queryVideos(target: MutableList<MediaItem>) {
@@ -202,7 +207,10 @@ class MediaRepositoryImpl(
                     )
                 }
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w("MediaRepository", "Error querying media", e)
+        }
     }
 
     private fun queryAudio(target: MutableList<MediaItem>) {
@@ -261,7 +269,10 @@ class MediaRepositoryImpl(
                     )
                 }
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w("MediaRepository", "Error querying media", e)
+        }
     }
 
     override suspend fun getMediaItem(uri: Uri): MediaItem? = withContext(Dispatchers.IO) {
@@ -282,7 +293,10 @@ class MediaRepositoryImpl(
                         if (dataIdx != -1) resolvedPath = cursor.getString(dataIdx)
                     }
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w("MediaRepository", "Error querying media", e)
+        }
         } else if (uri.scheme == "file") {
             val file = File(uri.path ?: "")
             name = file.name

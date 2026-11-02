@@ -113,7 +113,7 @@ fun PhotoInfoSheet(
                     }
 
                     if (exif.locationText != null) {
-                        InfoRow(label = "Coordinates", value = exif.locationText!!)
+                        InfoRow(label = "Coordinates", value = exif.locationText ?: "")
                     }
                 }
             }

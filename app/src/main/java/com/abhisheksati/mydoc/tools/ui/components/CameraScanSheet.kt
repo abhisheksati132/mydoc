@@ -197,12 +197,13 @@ fun CameraScanSheet(
         var isApplyingFilterAndSaving by remember { mutableStateOf(false) }
 
         // Perspective Free-Corners Cropper Dialog
-        if (editingPageForCrop != null) {
+        val cropTarget = editingPageForCrop
+        if (cropTarget != null) {
             FreeCornersCropperDialog(
-                bitmap = editingPageForCrop!!.second,
+                bitmap = cropTarget.second,
                 onDismiss = { editingPageForCrop = null },
                 onCropped = { croppedBitmap ->
-                    val pageIdx = editingPageForCrop!!.first
+                    val pageIdx = cropTarget.first
                     editingPageForCrop = null
                     scope.launch(Dispatchers.IO) {
                         try {

@@ -49,6 +49,7 @@ import com.artifex.mupdf.fitz.PDFAnnotation
 import com.artifex.mupdf.fitz.PDFDocument
 import com.artifex.mupdf.fitz.PDFPage
 import com.artifex.mupdf.fitz.Rect
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -192,6 +193,7 @@ class PdfToolsEngine(private val context: Context) {
                 durationMs = System.currentTimeMillis() - startTime
             )
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val msg = if (t is OutOfMemoryError) {
                 "Device ran out of memory while processing document. Try a smaller file or close background apps."
             } else {
@@ -366,7 +368,8 @@ class PdfToolsEngine(private val context: Context) {
             val pages = doc.countPages()
             doc.destroy()
             pages
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
             0
         }
     }

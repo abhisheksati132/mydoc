@@ -108,7 +108,7 @@ internal fun PageItemView(
     // Debounced region rendering: starts 150ms after gesture settles when zoom > 1.3x
     LaunchedEffect(pageIndex, readingMode, zoomScale > 1.3f, visibleRegion) {
         if (zoomScale > 1.3f && visibleRegion != null) {
-            val reg = visibleRegion!!
+            val reg = visibleRegion ?: return@LaunchedEffect
             if (reg.width() > 0.02f && reg.height() > 0.02f) {
                 delay(150) // Debounce 150ms
                 val docUri = viewModel.documentUri

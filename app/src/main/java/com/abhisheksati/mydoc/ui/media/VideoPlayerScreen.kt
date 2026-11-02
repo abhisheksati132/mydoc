@@ -375,7 +375,7 @@ fun VideoPlayerScreen(
                         Icon(icon, contentDescription = null, tint = colors.accent, modifier = Modifier.size(28.dp))
                     }
                     Text(
-                        text = gestureOverlayText!!,
+                        text = gestureOverlayText ?: "",
                         style = typography.titleSmall,
                         color = Color.White
                     )

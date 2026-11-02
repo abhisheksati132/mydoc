@@ -377,16 +377,16 @@ fun HomeScreen(
     }
 
     // Delete Confirmation Dialog
-    if (documentToDelete != null) {
-        val doc = documentToDelete!!
+    val docToDelete = documentToDelete
+    if (docToDelete != null) {
         AppDialog(
             isOpen = true,
             title = "Delete document",
-            message = "Remove \"${doc.displayName}\" from your documents list?",
+            message = "Remove \"${docToDelete.displayName}\" from your documents list?",
             confirmLabel = "Delete",
             dismissLabel = "Cancel",
             onConfirm = {
-                viewModel.removeFromRecents(doc)
+                viewModel.removeFromRecents(docToDelete)
                 documentToDelete = null
                 context.showMessage("Document removed")
             },

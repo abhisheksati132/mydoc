@@ -164,9 +164,10 @@ fun FilesScreen(
     val atStorageRoot = uiState.storageVolumes.any { it.path == uiState.currentDirectory.absolutePath } ||
             uiState.currentDirectory.absolutePath == "/storage/emulated/0"
 
+    val activeCategory = uiState.activeCategory
     val title = when {
         !insideBrowse -> "Files"
-        uiState.activeCategory != null -> uiState.activeCategory!!.displayName
+        activeCategory != null -> activeCategory.displayName
         atStorageRoot -> uiState.storageVolumes.firstOrNull {
             it.path == uiState.currentDirectory.absolutePath
         }?.title ?: "Internal storage"
@@ -229,9 +230,9 @@ fun FilesScreen(
 
     val breadcrumbs: List<Pair<String, () -> Unit>> = when {
         !insideBrowse -> emptyList()
-        uiState.activeCategory != null -> listOf(
+        activeCategory != null -> listOf(
             "Files" to { viewModel.selectCategory(null) },
-            uiState.activeCategory!!.displayName to {}
+            activeCategory.displayName to {}
         )
         else -> uiState.breadcrumbTrail.mapIndexed { index, crumb ->
             val volume = uiState.storageVolumes.firstOrNull { it.path == crumb.absolutePath }

@@ -13,6 +13,7 @@ import com.abhisheksati.mydoc.domain.model.FolderProperties
 import com.abhisheksati.mydoc.domain.model.StorageItem
 import com.abhisheksati.mydoc.domain.model.StorageVolume
 import com.abhisheksati.mydoc.domain.repository.StorageRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
@@ -184,6 +185,7 @@ class StorageRepositoryImpl(
                 Result.failure(Exception("Failed to create directory"))
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Result.failure(e)
         }
     }
@@ -203,6 +205,7 @@ class StorageRepositoryImpl(
                 Result.failure(Exception("Failed to create file"))
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Result.failure(e)
         }
     }
@@ -224,6 +227,7 @@ class StorageRepositoryImpl(
                 Result.failure(Exception("Rename failed"))
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Result.failure(e)
         }
     }
@@ -243,6 +247,7 @@ class StorageRepositoryImpl(
             }
             Result.success(count)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Result.failure(e)
         }
     }
@@ -279,6 +284,7 @@ class StorageRepositoryImpl(
             }
             Result.success(copied)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Result.failure(e)
         }
     }
@@ -325,6 +331,7 @@ class StorageRepositoryImpl(
             }
             Result.success(moved)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Result.failure(e)
         }
     }
@@ -396,6 +403,7 @@ class StorageRepositoryImpl(
             }
             hex.toString()
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             "Error: ${e.message}"
         }
     }
@@ -464,7 +472,7 @@ class StorageRepositoryImpl(
                 }
             }
             destFile
-        }
+        }.onFailure { if (it is CancellationException) throw it }
     }
 
     override suspend fun unzip(
@@ -520,7 +528,7 @@ class StorageRepositoryImpl(
                 }
             }
             destinationDir
-        }
+        }.onFailure { if (it is CancellationException) throw it }
     }
 
     override suspend fun queryCategory(category: FileCategory): List<StorageItem> = withContext(Dispatchers.IO) {
@@ -745,6 +753,7 @@ class StorageRepositoryImpl(
 
             Result.success(trashed)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Result.failure(e)
         }
     }
@@ -784,6 +793,7 @@ class StorageRepositoryImpl(
             scanFilesAwait(context, restoredPaths)
             Result.success(restoredCount)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Result.failure(e)
         }
     }
@@ -805,6 +815,7 @@ class StorageRepositoryImpl(
             }
             Result.success(deletedCount)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Result.failure(e)
         }
     }
@@ -824,6 +835,7 @@ class StorageRepositoryImpl(
             trashDao?.clearAll()
             Result.success(count)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Result.failure(e)
         }
     }

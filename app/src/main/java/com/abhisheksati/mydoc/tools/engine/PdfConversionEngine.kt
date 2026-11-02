@@ -26,6 +26,7 @@ import com.artifex.mupdf.fitz.PDFDocument
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.common.PDMetadata
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import java.io.BufferedOutputStream
@@ -536,7 +537,9 @@ class PdfConversionEngine(private val context: Context) {
                 }
             }
             return boxOutFile
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            android.util.Log.w("PdfConversionEngine", "PDFBox PDF/A conversion failed, falling back to MuPDF: ${e.message}")
             val srcDoc = Document.openDocument(file.absolutePath) as? PDFDocument
                 ?: throw IllegalArgumentException("Cannot open document")
             try {

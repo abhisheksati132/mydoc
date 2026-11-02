@@ -483,7 +483,7 @@ fun PhotoViewerScreen(
         // OCR Result Modal Bottom Sheet
         if (ocrExtractedText != null) {
             com.abhisheksati.mydoc.ocr.OcrResultSheet(
-                text = ocrExtractedText!!,
+                text = ocrExtractedText ?: "",
                 onDismiss = { ocrExtractedText = null }
             )
         }

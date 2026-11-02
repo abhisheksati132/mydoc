@@ -189,9 +189,10 @@ fun FastScrollbar(
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    if (liveThumbnail != null) {
+                    val thumb = liveThumbnail
+                    if (thumb != null) {
                         Image(
-                            bitmap = liveThumbnail!!.asImageBitmap(),
+                            bitmap = thumb.asImageBitmap(),
                             contentDescription = "Page ${lastHapticPage + 1}",
                             modifier = Modifier
                                 .size(width = 68.dp, height = 90.dp)

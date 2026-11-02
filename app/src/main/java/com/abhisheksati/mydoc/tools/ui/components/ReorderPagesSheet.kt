@@ -282,13 +282,14 @@ fun ReorderPagesSheet(
                         )
                     }
                 } else if (errorMessage != null) {
+                    val msg = errorMessage ?: ""
                     Column(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = errorMessage!!,
+                            text = msg,
                             style = typography.bodyMedium,
                             color = scheme.error
                         )

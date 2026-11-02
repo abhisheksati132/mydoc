@@ -207,15 +207,19 @@ class MainActivity : ComponentActivity() {
             ) {
                 val selectedTool by toolsViewModel.selectedTool.collectAsStateWithLifecycle()
 
+                val photo = currentPhoto
+                val video = currentVideo
+                val audio = currentAudio
+                val doc = currentDocument
                 val activeScreen: ActiveScreen = when {
                     !isAppUnlocked && isBiometricLockEnabled -> ActiveScreen.Lock
                     isDesignSystemPreviewOpen -> ActiveScreen.DesignSystemPreview
                     isSettingsOpen -> ActiveScreen.Settings
                     isSpotlightSearchOpen -> ActiveScreen.Search
-                    currentPhoto != null -> ActiveScreen.Photo(currentPhoto!!.first, currentPhoto!!.second)
-                    currentVideo != null -> ActiveScreen.Video(currentVideo!!)
-                    currentAudio != null -> ActiveScreen.Audio(currentAudio!!)
-                    currentDocument != null -> ActiveScreen.Document(currentDocument!!)
+                    photo != null -> ActiveScreen.Photo(photo.first, photo.second)
+                    video != null -> ActiveScreen.Video(video)
+                    audio != null -> ActiveScreen.Audio(audio)
+                    doc != null -> ActiveScreen.Document(doc)
                     else -> ActiveScreen.Home
                 }
 

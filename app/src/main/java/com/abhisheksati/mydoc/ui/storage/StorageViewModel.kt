@@ -174,7 +174,9 @@ class StorageViewModel(
                     }
                 }
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("StorageViewModel", "Failed to query MediaStore category", e)
+        }
 
         // 3. System & Other calculation
         val accountedBytes = images.bytes + videos.bytes + audio.bytes + documents.bytes + apks.bytes + archives.bytes + appBytes
@@ -302,7 +304,9 @@ class StorageViewModel(
                     count++
                 }
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("StorageViewModel", "Failed to query MediaStore category", e)
+        }
 
         return CategoryCountAndSize(bytes = totalBytes, count = count)
     }

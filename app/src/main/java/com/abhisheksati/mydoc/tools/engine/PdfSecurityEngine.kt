@@ -11,6 +11,7 @@ import com.artifex.mupdf.fitz.PDFPage
 import com.artifex.mupdf.fitz.Rect
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDDocumentInformation
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import java.io.File
@@ -115,7 +116,9 @@ class PdfSecurityEngine(private val context: Context) {
                     FileOutputStream(intermediate).use { fos -> doc.save(fos) }
                 }
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            android.util.Log.w("PdfSecurityEngine", "PDFBox metadata clear failed: ${e.message}")
             file.copyTo(intermediate, overwrite = true)
         }
 
