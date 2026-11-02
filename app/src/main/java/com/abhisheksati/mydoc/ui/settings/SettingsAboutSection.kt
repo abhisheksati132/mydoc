@@ -30,7 +30,6 @@ import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
-import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.update.UpdateManager
 import com.abhisheksati.mydoc.update.UpdateUiState
@@ -53,7 +52,6 @@ fun SettingsAboutSection(
     SettingsCard(
         title = "About & updates",
         icon = Icons.Outlined.Info,
-        family = VividGradients.Family.BRAND,
         modifier = modifier
     ) {
         SettingToggleRow(
@@ -170,7 +168,7 @@ fun SettingsAboutSection(
                                         0f
                                     }
                                 )
-                                .background(VividGradients.brand)
+                                .background(colors.accent)
                         )
                     }
                 }

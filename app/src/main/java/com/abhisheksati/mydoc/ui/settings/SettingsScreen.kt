@@ -31,10 +31,8 @@ import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.data.local.SettingsRepository
 import com.abhisheksati.mydoc.designsystem.components.AppTabHeader
-import com.abhisheksati.mydoc.designsystem.components.AuroraBackdrop
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
-import com.abhisheksati.mydoc.designsystem.tokens.VividGradients
 import com.abhisheksati.mydoc.update.UpdateManager
 import java.util.Locale
 
@@ -98,7 +96,6 @@ fun SettingsScreen(
         }
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
-            AuroraBackdrop(modifier = Modifier.fillMaxSize())
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -172,8 +169,7 @@ fun SettingsScreen(
             // 5. PRIVACY & SECURITY
             SettingsCard(
                 title = "Privacy & security",
-                icon = Icons.Outlined.Security,
-                family = VividGradients.Family.FIRE
+                icon = Icons.Outlined.Security
             ) {
                 SettingToggleRow(
                     title = "Biometric App Lock",

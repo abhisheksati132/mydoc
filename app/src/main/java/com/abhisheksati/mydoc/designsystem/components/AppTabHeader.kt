@@ -45,6 +45,7 @@ import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsDark
+import com.abhisheksati.mydoc.designsystem.tokens.LocalPaperPalette
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 
 /**
@@ -231,7 +232,17 @@ fun AppTabHeader(
         }
 
         // The gradient rule closes the page title, before any filters or content.
-        VividRule()
+        val paper = LocalPaperPalette.current
+        if (paper != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(AppSpacing.hairline)
+                    .background(paper.rule)
+            )
+        } else {
+            VividRule()
+        }
 
         // Search Field (animated slide down when active)
         if (searchContent != null) {

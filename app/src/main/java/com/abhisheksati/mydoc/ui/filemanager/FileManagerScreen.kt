@@ -43,7 +43,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.abhisheksati.mydoc.data.local.PinnedFoldersManager
 import com.abhisheksati.mydoc.data.local.StoragePermissionHelper
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
-import com.abhisheksati.mydoc.designsystem.components.AuroraBackdrop
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
@@ -218,7 +217,6 @@ fun FileManagerScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            AuroraBackdrop(modifier = Modifier.fillMaxSize())
             if (isHubMode) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     if (!hasPermission) {

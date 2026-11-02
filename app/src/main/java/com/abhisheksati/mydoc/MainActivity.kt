@@ -40,6 +40,7 @@ import com.abhisheksati.mydoc.designsystem.animation.documentHeroKey
 import com.abhisheksati.mydoc.designsystem.preview.DesignSystemPreviewScreen
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
+import com.abhisheksati.mydoc.designsystem.tokens.PaperTheme
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.toMediaItem
 import com.abhisheksati.mydoc.security.AppLockScreen
@@ -271,17 +272,19 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
                                     ActiveScreen.Settings -> {
-                                        SettingsScreen(
-                                            updateManager = updateManager,
-                                            settingsRepository = app.settingsRepository,
-                                            onBackClick = { isSettingsOpen = false },
-                                            onDesignSystemPreviewClick = { isDesignSystemPreviewOpen = true },
-                                            onClearRecent = {
-                                                lifecycleScope.launch {
-                                                    app.libraryRepository.clearAllRecents()
+                                        PaperTheme {
+                                            SettingsScreen(
+                                                updateManager = updateManager,
+                                                settingsRepository = app.settingsRepository,
+                                                onBackClick = { isSettingsOpen = false },
+                                                onDesignSystemPreviewClick = { isDesignSystemPreviewOpen = true },
+                                                onClearRecent = {
+                                                    lifecycleScope.launch {
+                                                        app.libraryRepository.clearAllRecents()
+                                                    }
                                                 }
-                                            }
-                                        )
+                                            )
+                                        }
                                     }
                                     is ActiveScreen.Photo -> {
                                         com.abhisheksati.mydoc.ui.media.PhotoViewerScreen(
