@@ -22,7 +22,12 @@ class SpreadsheetParser {
     private val whitespacePattern = Regex("\\s+")
 
     suspend fun parse(inputStream: InputStream, extension: String): SpreadsheetModel = withContext(Dispatchers.IO) {
-        val bytes = inputStream.readBytes()
+        val bytes = try {
+            inputStream.readBytes()
+        } catch (e: OutOfMemoryError) {
+            android.util.Log.e("SpreadsheetParser", "OOM reading spreadsheet", e)
+            return@withContext SpreadsheetModel(listOf(SheetData(name = "Sheet 1")))
+        }
         if (bytes.isEmpty()) {
             return@withContext SpreadsheetModel(listOf(SheetData(name = "Sheet 1")))
         }
@@ -159,7 +164,21 @@ class SpreadsheetParser {
             var entry: ZipEntry? = zis.nextEntry
             while (entry != null) {
                 if (!entry.isDirectory && entry.name.equals("content.xml", ignoreCase = true)) {
-                    contentXml = zis.readBytes()
+                    val buf = ByteArray(16_384)
+                    val baos = java.io.ByteArrayOutputStream()
+                    var entryRead = 0L
+                    val maxOdsEntry = 25L * 1024L * 1024L
+                    var n: Int
+                    while (zis.read(buf).also { n = it } != -1) {
+                        if (entryRead + n > maxOdsEntry) {
+                            android.util.Log.w("SpreadsheetParser", "ODS content.xml exceeds 25 MB limit")
+                            contentXml = null
+                            break
+                        }
+                        baos.write(buf, 0, n)
+                        entryRead += n
+                    }
+                    if (entryRead <= maxOdsEntry) contentXml = baos.toByteArray()
                     break
                 }
                 zis.closeEntry()

@@ -50,7 +50,21 @@ object PptxPlaceholderFix {
     }
 
     private fun patch(file: File): Map<String, ByteArray> = ZipFile(file).use { zip ->
-        fun read(path: String): ByteArray? = zip.getEntry(path)?.let { e -> zip.getInputStream(e).use { it.readBytes() } }
+        fun read(path: String): ByteArray? = zip.getEntry(path)?.let { e ->
+            val maxBytes = 25L * 1024L * 1024L
+            zip.getInputStream(e).use { stream ->
+                val baos = java.io.ByteArrayOutputStream()
+                val buf = ByteArray(16_384)
+                var total = 0L
+                var n: Int
+                while (stream.read(buf).also { n = it } != -1) {
+                    if (total + n > maxBytes) return@use null
+                    baos.write(buf, 0, n)
+                    total += n
+                }
+                baos.toByteArray()
+            }
+        }
         val docs = HashMap<String, Document?>()
         fun dom(path: String): Document? = docs.getOrPut(path) { read(path)?.let { parse(it) } }
         fun relTargets(path: String): List<String> {

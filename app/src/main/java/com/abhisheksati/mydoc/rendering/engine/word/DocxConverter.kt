@@ -19,11 +19,18 @@ object DocxConverter {
     suspend fun convertDocxToPdf(context: Context, uri: Uri, displayName: String): File? {
         val bytes = try {
             DocumentStreamResolver.openStream(context, uri, displayName)?.use { it.readBytes() }
+        } catch (e: OutOfMemoryError) {
+            Log.e(Tag, "OOM reading $displayName", e)
+            return null
         } catch (t: Throwable) {
             Log.w(Tag, "could not read $displayName", t)
             null
         } ?: return null
         if (bytes.isEmpty()) return null
+        if (bytes.size > 200 * 1024 * 1024) {
+            Log.w(Tag, "$displayName exceeds 200 MB — refusing to convert")
+            return null
+        }
 
         val cacheDir = File(context.cacheDir, "converted_docs").apply { mkdirs() }
         val targetPdf = File(cacheDir, "docx_${bytes.contentHashCode()}_${bytes.size}.pdf")

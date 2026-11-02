@@ -10,6 +10,7 @@ import kotlinx.coroutines.withContext
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
 import java.util.ArrayDeque
@@ -29,7 +30,12 @@ import java.util.zip.ZipInputStream
 class PptxParser {
 
     suspend fun parse(inputStream: InputStream, cacheDir: File? = null): PptxPresentation = withContext(Dispatchers.IO) {
-        val bytes = inputStream.readBytes()
+        val bytes = try {
+            inputStream.readBytes()
+        } catch (e: OutOfMemoryError) {
+            android.util.Log.e("PptxParser", "OOM reading presentation", e)
+            return@withContext emptyPresentation("File too large to open.")
+        }
         if (bytes.isEmpty()) {
             return@withContext emptyPresentation()
         }
@@ -80,14 +86,21 @@ class PptxParser {
         try {
             val zis = ZipInputStream(ByteArrayInputStream(bytes))
             var entry: ZipEntry? = zis.nextEntry
+            var entryCount = 0
+            var totalRead = 0L
             while (entry != null) {
+                entryCount++
+                if (entryCount > 10_000) throw SecurityException("Entry count limit exceeded")
                 if (!entry.isDirectory) {
                     val name = entry.name.replace('\\', '/').trimStart('/')
                     val lower = name.lowercase()
                     if (lower == "content.xml" || lower == "mimetype") {
-                        entryMap[lower] = zis.readBytes()
+                        val data = readBoundedEntry(zis, entry, totalRead)
+                        totalRead += data.size
+                        entryMap[lower] = data
                     } else if (lower.startsWith("pictures/")) {
-                        val imgData = zis.readBytes()
+                        val imgData = readBoundedEntry(zis, entry, totalRead)
+                        totalRead += imgData.size
                         picturesMap[name] = imgData
                         picturesMap[lower] = imgData
                     }
@@ -95,6 +108,9 @@ class PptxParser {
                 zis.closeEntry()
                 entry = zis.nextEntry
             }
+        } catch (e: SecurityException) {
+            android.util.Log.w("PptxParser", "Rejected ODP: ${e.message}")
+            return PptxPresentation(emptyList())
         } catch (_: Throwable) {
             return PptxPresentation(emptyList())
         }
@@ -413,9 +429,9 @@ class PptxParser {
         return PptxPresentation(slides = slides, aspectRatio = aspect)
     }
 
-    private fun emptyPresentation(): PptxPresentation {
-        val title = "Empty Presentation"
-        val lines = listOf("No slides found in this file.")
+    private fun emptyPresentation(message: String = "Empty Presentation"): PptxPresentation {
+        val title = message
+        val lines = listOf(if (message == "Empty Presentation") "No slides found in this file." else message)
         val visual = VisualElement(
             type = VisualElementType.TEXT_BOX,
             bounds = SlideBounds(0.08f, 0.35f, 0.84f, 0.30f),
@@ -463,7 +479,7 @@ class PptxParser {
                                     }
                                     mediaCount++
                                 }
-                                val data = zip.getInputStream(entry).readBytes()
+                                val data = readBoundedStream(zip.getInputStream(entry), entry)
                                 entryMap[norm] = data
                             }
                         }
@@ -487,7 +503,11 @@ class PptxParser {
             val zip = ZipInputStream(ByteArrayInputStream(bytes))
             var entry: ZipEntry? = zip.nextEntry
             var mediaCount = 0
+            var entryCount = 0
+            var totalRead = 0L
             while (entry != null) {
+                entryCount++
+                if (entryCount > 10_000) throw SecurityException("Entry count limit exceeded")
                 if (!entry.isDirectory) {
                     val norm = entry.name.replace('\\', '/').trimStart('/').lowercase()
                     if (norm.startsWith("ppt/media/")) {
@@ -498,15 +518,45 @@ class PptxParser {
                         }
                         mediaCount++
                     }
-                    val data = zip.readBytes()
+                    val data = readBoundedEntry(zip, entry, totalRead)
+                    totalRead += data.size
                     entryMap[norm] = data
                 }
                 zip.closeEntry()
                 entry = zip.nextEntry
             }
+        } catch (e: SecurityException) {
+            android.util.Log.w("PptxParser", "Rejected PPTX: ${e.message}")
         } catch (_: Throwable) {}
 
         return parseFromEntryMap(entryMap)
+    }
+
+    private val MAX_ENTRY_BYTES = 25L * 1024L * 1024L
+    private val MAX_TOTAL_BYTES = 200L * 1024L * 1024L
+
+    private fun readBoundedEntry(zip: ZipInputStream, entry: ZipEntry, currentTotal: Long): ByteArray {
+        val compressedSize = entry.compressedSize
+        if (compressedSize > 0 && entry.size > 0) {
+            val ratio = entry.size / compressedSize
+            if (ratio > 100L) throw SecurityException("Zip bomb in '${entry.name}': ratio=$ratio")
+        }
+        return readBoundedStream(zip, entry)
+    }
+
+    private fun readBoundedStream(input: InputStream, entry: ZipEntry? = null): ByteArray {
+        val baos = ByteArrayOutputStream(minOf(MAX_ENTRY_BYTES, 64 * 1024L).toInt())
+        val buf = ByteArray(16_384)
+        var entryRead = 0L
+        var n: Int
+        while (input.read(buf).also { n = it } != -1) {
+            if (entryRead + n > MAX_ENTRY_BYTES) {
+                throw SecurityException("Entry '${entry?.name}' exceeds ${MAX_ENTRY_BYTES / (1024*1024)} MB limit")
+            }
+            baos.write(buf, 0, n)
+            entryRead += n
+        }
+        return baos.toByteArray()
     }
 
     private fun optimizeImageBytes(raw: ByteArray): ByteArray {

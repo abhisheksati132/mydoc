@@ -48,7 +48,12 @@ class DocxParser {
     }
 
     suspend fun parse(inputStream: InputStream): DocxDocument = withContext(Dispatchers.IO) {
-        val bytes = inputStream.readBytes()
+        val bytes = try {
+            inputStream.readBytes()
+        } catch (e: OutOfMemoryError) {
+            android.util.Log.e("DocxParser", "OOM reading document", e)
+            return@withContext DocxDocument(listOf(DocxBlock.Paragraph(listOf(DocxRun("File too large to open.")))))
+        }
         if (bytes.isEmpty()) {
             return@withContext DocxDocument(listOf(DocxBlock.Paragraph(listOf(DocxRun("Document is empty.")))))
         }
@@ -61,7 +66,10 @@ class DocxParser {
             try {
                 val zis = ZipInputStream(ByteArrayInputStream(bytes))
                 var entry: ZipEntry? = zis.nextEntry
+                var entryCount = 0
                 while (entry != null) {
+                    entryCount++
+                    if (entryCount > 10_000) throw SecurityException("Entry count exceeds limit")
                     if (!entry.isDirectory) {
                         val norm = entry.name.replace('\\', '/').trimStart('/').lowercase()
                         if (norm == "word/document.xml" || norm == "content.xml") {
@@ -71,6 +79,9 @@ class DocxParser {
                     zis.closeEntry()
                     entry = zis.nextEntry
                 }
+            } catch (e: SecurityException) {
+                android.util.Log.w("DocxParser", "Rejected unsafe document: ${e.message}")
+                return@withContext DocxDocument(listOf(DocxBlock.Paragraph(listOf(DocxRun("File too large or unsupported.")))))
             } catch (_: Throwable) {}
 
             // 1. DOCX: word/document.xml
