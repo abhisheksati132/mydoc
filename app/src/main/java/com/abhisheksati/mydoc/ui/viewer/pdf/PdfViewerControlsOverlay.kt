@@ -35,9 +35,10 @@ fun BoxScope.PdfViewerControlsOverlay(
     onOpenOutlineDrawer: () -> Unit,
     onOpenThumbnailGrid: () -> Unit,
     onOpenReadingControls: () -> Unit,
-    onPageSelected: (Int) -> Unit
+    onPageSelected: (Int) -> Unit,
+    isCondensed: Boolean = false
 ) {
-    // Clean, uncluttered Top Toolbar
+    // Clean, condensing Top Toolbar on a GlassSurface
     ViewerTopBar(
         title = document.displayName,
         currentPage = state.currentPage,
@@ -48,6 +49,7 @@ fun BoxScope.PdfViewerControlsOverlay(
         onSearchClick = viewModel::openSearch,
         onToggleBookmark = onToggleBookmark,
         onShareClick = onShareClick,
+        isCondensed = isCondensed,
         onToolsClick = onToolsClick,
         onOcrClick = onOcrClick,
         onTtsClick = onTtsClick,
@@ -70,7 +72,7 @@ fun BoxScope.PdfViewerControlsOverlay(
         modifier = Modifier.align(Alignment.TopCenter)
     )
 
-    // Ergonomic Bottom Controls
+    // Ergonomic Glass Bottom Controls
     Column(
         modifier = Modifier
             .align(Alignment.BottomCenter)

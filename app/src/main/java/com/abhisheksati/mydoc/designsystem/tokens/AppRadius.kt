@@ -36,6 +36,7 @@ object AppRadius {
     val round: Dp = 999.dp
 
     val microShape = RoundedCornerShape(micro)
+    val smallShape = RoundedCornerShape(micro)
     val insetShape = RoundedCornerShape(inset)
     val pillShape = RoundedCornerShape(pill)
     val cardShape = RoundedCornerShape(card)

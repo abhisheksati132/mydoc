@@ -308,6 +308,17 @@ fun PdfViewerScreen(
         }
     }
 
+    // Condensing top bar calculation: collapses into floating glass pill on vertical scroll
+    val isCondensed by remember {
+        androidx.compose.runtime.derivedStateOf {
+            if (state.isContinuousScroll) {
+                lazyListState.firstVisibleItemIndex > 0 || lazyListState.firstVisibleItemScrollOffset > 80
+            } else {
+                pagerState.currentPage > 0
+            }
+        }
+    }
+
     val pageBgColor = when (state.readingMode) {
         ReadingMode.INVERTED_DARK -> DocumentCanvasColors.blackPage
         ReadingMode.SEPIA -> DocumentCanvasColors.sepiaPage
@@ -573,6 +584,7 @@ fun PdfViewerScreen(
             onOpenOutlineDrawer = { viewModel.setOutlineDrawerOpen(true) },
             onOpenThumbnailGrid = { isThumbnailGridOpen = true },
             onOpenReadingControls = { isReadingControlsOpen = true },
+            isCondensed = isCondensed,
             onPageSelected = { targetPage ->
                 viewModel.jumpToPage(targetPage)
                 coroutineScope.launch {

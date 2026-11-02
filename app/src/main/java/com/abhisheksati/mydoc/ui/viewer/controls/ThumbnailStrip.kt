@@ -23,8 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,6 +34,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.components.GlassSurface
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -48,6 +50,7 @@ fun ThumbnailStrip(
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
+    val colors = AppTheme.colors
 
     LaunchedEffect(currentPage) {
         if (visible && pageCount > 0) {
@@ -67,13 +70,11 @@ fun ThumbnailStrip(
         ) + fadeOut(spring(stiffness = Spring.StiffnessMediumLow)),
         modifier = modifier
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
+        GlassSurface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+            elevation = 6.dp
         ) {
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
             LazyRow(
                 state = listState,
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -100,16 +101,12 @@ fun ThumbnailStrip(
                                 .height(85.dp)
                                 .border(
                                     width = if (isSelected) 2.dp else 1.dp,
-                                    color = if (isSelected) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.outlineVariant
-                                    },
-                                    shape = MaterialTheme.shapes.small
+                                    color = if (isSelected) colors.accent else colors.inkMuted.copy(alpha = 0.3f),
+                                    shape = AppRadius.smallShape
                                 )
                                 .background(
-                                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                                    shape = MaterialTheme.shapes.small
+                                    color = colors.surface,
+                                    shape = AppRadius.smallShape
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
@@ -124,8 +121,8 @@ fun ThumbnailStrip(
                             } else {
                                 Text(
                                     text = "${pageIndex + 1}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    style = AppTheme.typography.metadata,
+                                    color = colors.inkMuted
                                 )
                             }
                         }
@@ -133,12 +130,8 @@ fun ThumbnailStrip(
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "${pageIndex + 1}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (isSelected) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            }
+                            style = AppTheme.typography.metadata,
+                            color = if (isSelected) colors.accent else colors.inkSecondary
                         )
                     }
                 }

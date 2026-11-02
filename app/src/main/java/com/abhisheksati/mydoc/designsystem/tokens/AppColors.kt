@@ -57,6 +57,7 @@ data class AppColors(
 
     // Semantic mappings
     val textPrimary: Color = ink,
+    val inkPrimary: Color = ink,
     val textSecondary: Color = inkMuted,
     val textSubtle: Color = inkMuted.copy(alpha = 0.72f),
     val inkSecondary: Color = inkMuted,
