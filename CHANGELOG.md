@@ -5,6 +5,23 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-11-02
+
+Range: `v1.4.6..v1.5.0`.
+
+### Changed
+
+- **New visual language: paper.** Home, Files and Settings now render as warm paper sheets with
+  ink text, a single blue accent, fibre grain, folded corners, flat icon plates and printed rules.
+  The gradient plaques, aurora backdrop, spectrum rules and gradient chips are gone from these
+  screens; the storage readout is a paper card with a square accent gauge.
+- **Shared chrome follows the host screen.** The tab header rule, section rules and filter chips
+  read a `PaperTheme` scope, so Tools and the viewer keep the vivid language while papered
+  screens stay on paper. Dark and AMOLED paper tones were lifted off pure black so sheets remain
+  visible.
+- **Home deck and Index list every recent.** The deck was stuck at 01 because continue-reading
+  items were filtered against the recents list they were merged into; all recents now appear once.
+
 ## [1.4.6] — 2026-11-02
 
 Range: `v1.4.5..v1.4.6`.
