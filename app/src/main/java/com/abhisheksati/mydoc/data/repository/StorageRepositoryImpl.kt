@@ -614,8 +614,6 @@ class StorageRepositoryImpl(
                     val sel = "${MediaStore.Files.FileColumns.SIZE} >= 52428800" // 50MB
                     Triple(sel, null, "${MediaStore.Files.FileColumns.SIZE} DESC")
                 }
-                // DOWNLOADS is handled above by short-circuit (directory listing), never reaches here
-                else -> return@withContext emptyList()
             }
 
             context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)?.use { cursor ->

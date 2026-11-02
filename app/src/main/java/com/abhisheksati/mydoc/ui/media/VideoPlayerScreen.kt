@@ -309,7 +309,9 @@ fun VideoPlayerScreen(
                                     val safeBrightness = if (currentBrightness < 0f) 0.5f else currentBrightness
                                     val delta = -dragAmount.y / (size.height * 0.7f)
                                     val newBrightness = (safeBrightness + delta).coerceIn(0.01f, 1.0f)
-                                    window?.attributes = window?.attributes?.apply { screenBrightness = newBrightness }
+                                    if (window != null) {
+                                        window.attributes = window.attributes.apply { screenBrightness = newBrightness }
+                                    }
                                     gestureOverlayText = "${(newBrightness * 100).toInt()}%"
                                     gestureOverlayIcon = Icons.Default.BrightnessMedium
                                 } else {

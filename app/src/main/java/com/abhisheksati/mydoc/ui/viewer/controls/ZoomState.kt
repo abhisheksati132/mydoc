@@ -122,9 +122,9 @@ class ZoomState(
             save = { listOf(it.scale, it.offset.x, it.offset.y) },
             restore = {
                 ZoomState(
-                    initialScale = it[0] as Float,
-                    initialOffsetX = it[1] as Float,
-                    initialOffsetY = it[2] as Float
+                    initialScale = it[0],
+                    initialOffsetX = it[1],
+                    initialOffsetY = it[2]
                 )
             }
         )

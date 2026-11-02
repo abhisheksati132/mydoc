@@ -128,16 +128,15 @@ object XlsxReader {
                     "dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink", "folHlink" ->
                         if (inScheme) current = n
                     "srgbClr" -> if (inScheme && current != null) {
-                        p.attr("val")?.let { XlsxColors.parseHex(it) }?.let { color ->
-                            current?.let { byName[it] = color }
-                        }
+                        p.attr("val")?.let { XlsxColors.parseHex(it) }?.let { color -> byName[current] = color }
                         current = null
                     }
                     "sysClr" -> if (inScheme && current != null) {
-                        (p.attr("lastClr") ?: if (p.attr("val") == "window") "FFFFFF" else "000000")
-                            .let { XlsxColors.parseHex(it) }?.let { color ->
-                                current?.let { byName[it] = color }
-                            }
+                        // lastClr is missing on some writers; fall back to the theme window colour
+                        // instead of dropping the entry, which an empty-string lastClr used to do.
+                        val hex = p.attr("lastClr")?.takeIf { it.isNotEmpty() }
+                            ?: if (p.attr("val") == "window") "FFFFFF" else "000000"
+                        XlsxColors.parseHex(hex)?.let { color -> byName[current] = color }
                         current = null
                     }
                 }

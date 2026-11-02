@@ -192,7 +192,7 @@ fun VisualSlideCard(
                                         )
 
                                         val containerBg = if (element.backgroundColor != null && element.backgroundColor != Color.Transparent) {
-                                            element.backgroundColor!!
+                                            element.backgroundColor
                                         } else {
                                             slideBg
                                         }

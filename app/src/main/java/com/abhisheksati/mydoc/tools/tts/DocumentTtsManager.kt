@@ -63,7 +63,12 @@ class DocumentTtsManager(private val context: Context) : TextToSpeech.OnInitList
                         }
                     }
 
+                    @Deprecated("Superseded by onError(String, Int); abstract in the base class.")
                     override fun onError(utteranceId: String?) {
+                        _playbackState.value = TtsPlaybackState.ERROR
+                    }
+
+                    override fun onError(utteranceId: String, errorCode: Int) {
                         _playbackState.value = TtsPlaybackState.ERROR
                     }
                 })

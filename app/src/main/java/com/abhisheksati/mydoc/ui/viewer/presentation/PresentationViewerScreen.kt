@@ -85,7 +85,7 @@ fun openPresentationInOfficeApp(context: Context, document: DocumentFile) {
         val mimeType = when (ext) {
             "pptx" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation"
             "ppt" -> "application/vnd.ms-powerpoint"
-            else -> document.mimeType ?: "application/vnd.ms-powerpoint"
+            else -> document.mimeType
         }
 
         val sharedDir = File(context.cacheDir, "shared").apply { mkdirs() }

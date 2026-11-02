@@ -428,7 +428,7 @@ class DocumentRepositoryImpl(
         }
 
         if (mimeType.isNullOrBlank()) {
-            val ext = displayName?.substringAfterLast('.', "")?.lowercase().orEmpty()
+            val ext = displayName.substringAfterLast('.', "").lowercase()
             mimeType = when (ext) {
                 "pdf" -> "application/pdf"
                 "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -444,7 +444,7 @@ class DocumentRepositoryImpl(
         }
 
         return DocumentMetadata(
-            displayName = displayName ?: "Document",
+            displayName = displayName,
             sizeBytes = sizeBytes,
             mimeType = mimeType
         )
