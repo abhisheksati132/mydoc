@@ -97,7 +97,8 @@ fun FilesScreen(
     onSettingsClick: () -> Unit,
     onSpotlightSearch: () -> Unit,
     modifier: Modifier = Modifier,
-    isActive: Boolean = true
+    isActive: Boolean = true,
+    onOpenInTools: ((File) -> Unit)? = null
 ) {
 
     val uiState by viewModel.uiState.collectAsState()
@@ -440,7 +441,8 @@ fun FilesScreen(
         singleItemActionTarget = actionTarget,
         onDismissSingleItemAction = { actionTarget = null },
         onRequestRename = { renameTarget = it },
-        onOpenFile = onOpenFile
+        onOpenFile = onOpenFile,
+        onOpenInTools = onOpenInTools
     )
 
     if (showInsights) {

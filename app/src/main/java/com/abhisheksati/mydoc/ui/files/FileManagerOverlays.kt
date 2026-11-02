@@ -41,7 +41,8 @@ fun FileManagerOverlays(
     singleItemActionTarget: StorageItem?,
     onDismissSingleItemAction: () -> Unit,
     onRequestRename: (File) -> Unit,
-    onOpenFile: (File) -> Unit
+    onOpenFile: (File) -> Unit,
+    onOpenInTools: ((File) -> Unit)? = null
 ) {
     val context = LocalContext.current
 
@@ -229,6 +230,12 @@ fun FileManagerOverlays(
             onShare = {
                 onDismissSingleItemAction()
                 shareFiles(context, listOf(item.file))
+            },
+            onOpenInTools = onOpenInTools?.let { callback ->
+                {
+                    onDismissSingleItemAction()
+                    callback(item.file)
+                }
             }
         )
     }

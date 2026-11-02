@@ -19,12 +19,12 @@ import org.junit.Test
 class PdfToolsTest {
 
     @Test
-    fun verifyAll29ToolsPresentAcross7Groups() {
+    fun verifyAll29ToolsPresentAcross6TaskGroups() {
         val tools = PdfTool.entries
         assertEquals(29, tools.size)
 
         val groups = tools.groupBy { it.group }
-        assertEquals(7, groups.size)
+        assertEquals(6, groups.size)
 
         // 1. Organize (7 tools)
         assertEquals(7, groups[ToolGroup.ORGANIZE]?.size)
@@ -36,27 +36,24 @@ class PdfToolsTest {
         assertTrue(tools.contains(PdfTool.ROTATE))
         assertTrue(tools.contains(PdfTool.CROP))
 
-        // 2. Optimize (2 tools)
-        assertEquals(2, groups[ToolGroup.OPTIMIZE]?.size)
+        // 2. Compress (2 tools)
+        assertEquals(2, groups[ToolGroup.COMPRESS]?.size)
         assertTrue(tools.contains(PdfTool.COMPRESS))
         assertTrue(tools.contains(PdfTool.REPAIR))
 
-        // 3. Convert To (3 tools)
-        assertEquals(3, groups[ToolGroup.CONVERT_TO]?.size)
+        // 3. Convert (8 tools)
+        assertEquals(8, groups[ToolGroup.CONVERT]?.size)
         assertTrue(tools.contains(PdfTool.IMAGE_TO_PDF))
         assertTrue(tools.contains(PdfTool.OFFICE_TO_PDF))
         assertTrue(tools.contains(PdfTool.TEXT_TO_PDF))
-
-        // 4. Convert From (5 tools)
-        assertEquals(5, groups[ToolGroup.CONVERT_FROM]?.size)
         assertTrue(tools.contains(PdfTool.PDF_TO_IMAGES))
         assertTrue(tools.contains(PdfTool.PDF_TO_TEXT_MD))
         assertTrue(tools.contains(PdfTool.PDF_TO_OFFICE))
         assertTrue(tools.contains(PdfTool.PDF_TO_PDFA))
         assertTrue(tools.contains(PdfTool.EXTRACT_ASSETS))
 
-        // 5. Edit (6 tools)
-        assertEquals(6, groups[ToolGroup.EDIT]?.size)
+        // 4. Edit & Sign (6 tools)
+        assertEquals(6, groups[ToolGroup.EDIT_SIGN]?.size)
         assertTrue(tools.contains(PdfTool.ANNOTATE))
         assertTrue(tools.contains(PdfTool.ADD_PAGE_NUMBERS))
         assertTrue(tools.contains(PdfTool.ADD_WATERMARK))
@@ -64,15 +61,14 @@ class PdfToolsTest {
         assertTrue(tools.contains(PdfTool.SIGN_PDF))
         assertTrue(tools.contains(PdfTool.COMPARE_PDF))
 
-        // 6. Security (4 tools)
-        assertEquals(4, groups[ToolGroup.SECURITY]?.size)
+        // 5. Secure (4 tools)
+        assertEquals(4, groups[ToolGroup.SECURE]?.size)
         assertTrue(tools.contains(PdfTool.PROTECT))
         assertTrue(tools.contains(PdfTool.UNLOCK))
         assertTrue(tools.contains(PdfTool.REDACT))
         assertTrue(tools.contains(PdfTool.STRIP_METADATA))
 
-        // 7. Scan & OCR (2 tools)
-        // 7. Scan & OCR (2 tools)
+        // 6. Scan (2 tools)
         assertEquals(2, groups[ToolGroup.SCAN]?.size)
         assertTrue(tools.contains(PdfTool.SCAN_TO_PDF))
         assertTrue(tools.contains(PdfTool.OCR_PDF))

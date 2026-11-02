@@ -102,11 +102,11 @@ fun DocumentToolsSheet(
     val filters = remember {
         listOf(
             ToolFilter(null, Icons.Outlined.AllInclusive, "All"),
-            ToolFilter(ToolGroup.EDIT, Icons.Outlined.Edit, "Edit & sign"),
             ToolFilter(ToolGroup.ORGANIZE, Icons.AutoMirrored.Outlined.CallSplit, "Organize"),
-            ToolFilter(ToolGroup.OPTIMIZE, Icons.Outlined.Compress, "Optimize"),
-            ToolFilter(ToolGroup.CONVERT_FROM, Icons.Outlined.Difference, "Export"),
-            ToolFilter(ToolGroup.SECURITY, Icons.Outlined.Security, "Security")
+            ToolFilter(ToolGroup.EDIT_SIGN, Icons.Outlined.Edit, "Edit & Sign"),
+            ToolFilter(ToolGroup.COMPRESS, Icons.Outlined.Compress, "Compress"),
+            ToolFilter(ToolGroup.CONVERT, Icons.Outlined.Difference, "Convert"),
+            ToolFilter(ToolGroup.SECURE, Icons.Outlined.Security, "Secure")
         )
     }
 

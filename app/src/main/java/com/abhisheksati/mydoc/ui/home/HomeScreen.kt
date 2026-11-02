@@ -181,6 +181,7 @@ fun HomeScreen(
                             onSettingsClick = onSettingsClick,
                             onSpotlightSearch = onSpotlightSearch,
                             isActive = currentTab == HomeTab.LIBRARY,
+                            onOpenInTools = { viewModel.selectTab(HomeTab.TOOLS) },
                             modifier = Modifier.fillMaxSize()
                         )
                     }

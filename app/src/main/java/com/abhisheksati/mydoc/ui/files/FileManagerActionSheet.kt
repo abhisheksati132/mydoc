@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.Bookmark
+import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.ContentCut
 import androidx.compose.material.icons.outlined.Delete
@@ -62,7 +63,8 @@ fun SingleItemActionBottomSheet(
     onCompressToZip: () -> Unit,
     onDetails: () -> Unit,
     onShare: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenInTools: (() -> Unit)? = null
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
@@ -118,6 +120,15 @@ fun SingleItemActionBottomSheet(
                 icon = Icons.Outlined.FolderOpen,
                 onClick = onOpen
             )
+
+            if (!item.isDirectory && onOpenInTools != null) {
+                ItemActionOption(
+                    title = "Open in PDF tools…",
+                    icon = Icons.Outlined.Build,
+                    tint = colors.accent,
+                    onClick = onOpenInTools
+                )
+            }
 
             ItemActionOption(
                 title = "Copy",

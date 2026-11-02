@@ -4,23 +4,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.CallSplit
 import androidx.compose.material.icons.automirrored.outlined.CompareArrows
 import androidx.compose.material.icons.automirrored.outlined.Grading
-import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.automirrored.outlined.MergeType
 import androidx.compose.material.icons.automirrored.outlined.RotateRight
-import androidx.compose.material.icons.outlined.AccountBox
-import androidx.compose.material.icons.outlined.AutoMode
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Compress
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Difference
 import androidx.compose.material.icons.outlined.Draw
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Extension
-import androidx.compose.material.icons.outlined.FileOpen
-import androidx.compose.material.icons.outlined.Filter
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.FormatColorText
 import androidx.compose.material.icons.outlined.FormatListNumbered
@@ -29,12 +23,7 @@ import androidx.compose.material.icons.outlined.Highlight
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
-import androidx.compose.material.icons.outlined.PhotoCamera
-import androidx.compose.material.icons.outlined.Pin
-import androidx.compose.material.icons.outlined.Print
-import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Shield
-import androidx.compose.material.icons.outlined.Slideshow
 import androidx.compose.material.icons.outlined.TableChart
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material.icons.outlined.Transform
@@ -42,14 +31,31 @@ import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.WaterDrop
 import androidx.compose.ui.graphics.vector.ImageVector
 
+/**
+ * 6 primary task groups for PDF tools:
+ * 1. Organize (Merge, Split, Remove, Reorder, Extract, Rotate, Crop)
+ * 2. Edit & Sign (Annotate, Page Numbers, Watermark, Fill Forms, Sign, Compare)
+ * 3. Compress (Compress PDF, Repair PDF)
+ * 4. Convert (Image/Office/Text to PDF, PDF to Images/Text/Office/PDFA, Extract Assets)
+ * 5. Secure (Protect, Unlock, Redact, Strip Metadata)
+ * 6. Scan (Scan to PDF, OCR PDF)
+ */
 enum class ToolGroup(val title: String) {
     ORGANIZE("Organize"),
-    OPTIMIZE("Optimize"),
-    CONVERT_TO("Convert to PDF"),
-    CONVERT_FROM("Convert from PDF"),
-    EDIT("Edit"),
-    SECURITY("Security"),
-    SCAN("Scan & OCR")
+    EDIT_SIGN("Edit & Sign"),
+    COMPRESS("Compress"),
+    CONVERT("Convert"),
+    SECURE("Secure"),
+    SCAN("Scan");
+
+    companion object {
+        // Backward-compatibility aliases
+        val OPTIMIZE = COMPRESS
+        val CONVERT_TO = CONVERT
+        val CONVERT_FROM = CONVERT
+        val EDIT = EDIT_SIGN
+        val SECURITY = SECURE
+    }
 }
 
 enum class PdfTool(
@@ -64,7 +70,7 @@ enum class PdfTool(
     val requiresMultipleInputFiles: Boolean = false,
     val acceptsNonPdfInput: Boolean = false
 ) {
-    // 1. Organize
+    // 1. Organize (7 tools)
     MERGE(
         id = "merge",
         title = "Merge PDF",
@@ -123,12 +129,12 @@ enum class PdfTool(
         defaultSuffix = "cropped"
     ),
 
-    // 2. Optimize
+    // 2. Compress (2 tools)
     COMPRESS(
         id = "compress",
         title = "Compress PDF",
         description = "Reduce file size",
-        group = ToolGroup.OPTIMIZE,
+        group = ToolGroup.COMPRESS,
         icon = Icons.Outlined.Compress,
         defaultSuffix = "compressed"
     ),
@@ -136,17 +142,17 @@ enum class PdfTool(
         id = "repair",
         title = "Repair PDF",
         description = "Fix damaged PDF structure",
-        group = ToolGroup.OPTIMIZE,
+        group = ToolGroup.COMPRESS,
         icon = Icons.Outlined.Build,
         defaultSuffix = "repaired"
     ),
 
-    // 3. Convert (to PDF)
+    // 3. Convert (8 tools: Convert To + Convert From)
     IMAGE_TO_PDF(
         id = "image_to_pdf",
         title = "Image to PDF",
         description = "Convert photos into a PDF",
-        group = ToolGroup.CONVERT_TO,
+        group = ToolGroup.CONVERT,
         icon = Icons.Outlined.Image,
         defaultSuffix = "from_image",
         acceptsNonPdfInput = true
@@ -155,7 +161,7 @@ enum class PdfTool(
         id = "office_to_pdf",
         title = "Office to PDF",
         description = "Convert Word, Excel, or slides to PDF",
-        group = ToolGroup.CONVERT_TO,
+        group = ToolGroup.CONVERT,
         icon = Icons.Outlined.Description,
         defaultSuffix = "converted",
         acceptsNonPdfInput = true
@@ -164,18 +170,16 @@ enum class PdfTool(
         id = "text_to_pdf",
         title = "Text / CSV to PDF",
         description = "Convert plain text or CSV into PDF",
-        group = ToolGroup.CONVERT_TO,
+        group = ToolGroup.CONVERT,
         icon = Icons.Outlined.TextFields,
         defaultSuffix = "from_text",
         acceptsNonPdfInput = true
     ),
-
-    // 4. Convert (from PDF)
     PDF_TO_IMAGES(
         id = "pdf_to_images",
         title = "PDF to JPG / PNG",
         description = "Export pages as JPG or PNG images",
-        group = ToolGroup.CONVERT_FROM,
+        group = ToolGroup.CONVERT,
         icon = Icons.Outlined.Image,
         defaultSuffix = "images",
         outputExtension = "zip",
@@ -185,7 +189,7 @@ enum class PdfTool(
         id = "pdf_to_text_md",
         title = "PDF to Text / Markdown",
         description = "Extract text and markdown",
-        group = ToolGroup.CONVERT_FROM,
+        group = ToolGroup.CONVERT,
         icon = Icons.Outlined.FormatColorText,
         defaultSuffix = "text",
         outputExtension = "md",
@@ -195,7 +199,7 @@ enum class PdfTool(
         id = "pdf_to_office",
         title = "PDF to Word / Excel",
         description = "Export to Word, Excel, or PowerPoint",
-        group = ToolGroup.CONVERT_FROM,
+        group = ToolGroup.CONVERT,
         icon = Icons.Outlined.TableChart,
         defaultSuffix = "office",
         outputExtension = "docx",
@@ -205,7 +209,7 @@ enum class PdfTool(
         id = "pdf_to_pdfa",
         title = "PDF to PDF/A",
         description = "Convert for long-term archiving",
-        group = ToolGroup.CONVERT_FROM,
+        group = ToolGroup.CONVERT,
         icon = Icons.Outlined.Shield,
         defaultSuffix = "pdfa"
     ),
@@ -213,19 +217,19 @@ enum class PdfTool(
         id = "extract_assets",
         title = "Extract images & text",
         description = "Save all embedded images and text",
-        group = ToolGroup.CONVERT_FROM,
+        group = ToolGroup.CONVERT,
         icon = Icons.Outlined.FolderZip,
         defaultSuffix = "assets",
         outputExtension = "zip",
         outputMimeType = "application/zip"
     ),
 
-    // 5. Edit
+    // 4. Edit & Sign (6 tools)
     ANNOTATE(
         id = "annotate",
         title = "Annotate PDF",
         description = "Add highlights, drawings, and notes",
-        group = ToolGroup.EDIT,
+        group = ToolGroup.EDIT_SIGN,
         icon = Icons.Outlined.Highlight,
         defaultSuffix = "annotated"
     ),
@@ -233,7 +237,7 @@ enum class PdfTool(
         id = "add_page_numbers",
         title = "Add page numbers",
         description = "Number pages at chosen positions",
-        group = ToolGroup.EDIT,
+        group = ToolGroup.EDIT_SIGN,
         icon = Icons.Outlined.FormatListNumbered,
         defaultSuffix = "numbered"
     ),
@@ -241,7 +245,7 @@ enum class PdfTool(
         id = "add_watermark",
         title = "Add watermark",
         description = "Add text or image watermark",
-        group = ToolGroup.EDIT,
+        group = ToolGroup.EDIT_SIGN,
         icon = Icons.Outlined.WaterDrop,
         defaultSuffix = "watermarked"
     ),
@@ -249,7 +253,7 @@ enum class PdfTool(
         id = "fill_form",
         title = "Fill forms",
         description = "Fill and save PDF form fields",
-        group = ToolGroup.EDIT,
+        group = ToolGroup.EDIT_SIGN,
         icon = Icons.Outlined.Edit,
         defaultSuffix = "filled"
     ),
@@ -257,7 +261,7 @@ enum class PdfTool(
         id = "sign_pdf",
         title = "Sign PDF",
         description = "Add your saved signature",
-        group = ToolGroup.EDIT,
+        group = ToolGroup.EDIT_SIGN,
         icon = Icons.Outlined.Draw,
         defaultSuffix = "signed"
     ),
@@ -265,18 +269,18 @@ enum class PdfTool(
         id = "compare_pdf",
         title = "Compare PDF",
         description = "Compare differences between two PDFs",
-        group = ToolGroup.EDIT,
+        group = ToolGroup.EDIT_SIGN,
         icon = Icons.AutoMirrored.Outlined.CompareArrows,
         defaultSuffix = "diff",
         requiresMultipleInputFiles = true
     ),
 
-    // 6. Security
+    // 5. Secure (4 tools)
     PROTECT(
         id = "protect",
         title = "Protect PDF",
         description = "Set password to lock document",
-        group = ToolGroup.SECURITY,
+        group = ToolGroup.SECURE,
         icon = Icons.Outlined.Lock,
         defaultSuffix = "protected"
     ),
@@ -284,7 +288,7 @@ enum class PdfTool(
         id = "unlock",
         title = "Unlock PDF",
         description = "Remove document password",
-        group = ToolGroup.SECURITY,
+        group = ToolGroup.SECURE,
         icon = Icons.Outlined.LockOpen,
         defaultSuffix = "unlocked"
     ),
@@ -292,7 +296,7 @@ enum class PdfTool(
         id = "redact",
         title = "Redact PDF",
         description = "Black out sensitive information",
-        group = ToolGroup.SECURITY,
+        group = ToolGroup.SECURE,
         icon = Icons.Outlined.VisibilityOff,
         defaultSuffix = "redacted"
     ),
@@ -300,12 +304,12 @@ enum class PdfTool(
         id = "strip_metadata",
         title = "Strip metadata",
         description = "Remove author and tracking details",
-        group = ToolGroup.SECURITY,
+        group = ToolGroup.SECURE,
         icon = Icons.AutoMirrored.Outlined.Grading,
         defaultSuffix = "cleaned"
     ),
 
-    // 7. Scan & OCR
+    // 6. Scan & OCR (2 tools)
     SCAN_TO_PDF(
         id = "scan_to_pdf",
         title = "Scan to PDF",
