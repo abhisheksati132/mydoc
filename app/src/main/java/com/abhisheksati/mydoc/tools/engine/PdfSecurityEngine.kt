@@ -76,7 +76,7 @@ class PdfSecurityEngine(private val context: Context) {
             for (p in 0 until totalPages) {
                 currentCoroutineContext().ensureActive()
                 val page = srcDoc.loadPage(p) as? PDFPage ?: continue
-                val quads = srcDoc.search(p, 0, query)
+                val quads = page.search(query)
                 if (quads != null && quads.isNotEmpty()) {
                     for (hit in quads) {
                         for (q in hit) {

@@ -5,6 +5,23 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+## [1.5.3] — 2026-11-02
+
+Range: `v1.5.2..v1.5.3`.
+
+### Changed
+
+- **Build toolchain migration:** Upgraded Android Gradle Plugin to 9.5.0, Gradle wrapper to 9.6.0, Kotlin Gradle Plugin to 2.3.21, KSP to 2.3.13, and Room to 2.8.5 with built-in Kotlin DSL.
+- **compileSdk raised to 37:** Updated to compileSdk 37 to support modern AndroidX 2026 releases while keeping runtime targetSdk at 35.
+- **Dependency modernization:** Bumped 20 dependencies across AndroidX, Compose BOM (2026.09.00), CameraX (1.6.2), Exifinterface (1.4.2), Media3 (1.11.1), Coroutines (1.11.0), and Testing libraries.
+- **MuPDF updated to 1.28.5:** Upgraded `com.artifex.mupdf:fitz` from 1.24.4 to 1.28.5, ensuring native libraries are 16 KB page-size aligned (`Aligned16KB`) for Android 15+.
+- **Hero transition animation:** Migrated deprecated `ResizeMode.ScaleToBounds` to `ResizeMode.RemeasureToBounds` for Compose 1.12.
+
+### Fixed
+
+- **MuPDF search API deprecation:** Updated search invocations in `PdfEditingEngine` and `PdfSecurityEngine` to use `Page.search(...)` resolving Fitz 1.28 symbol removals.
+- **Thread and locale lint hygiene:** Resolved 4 Lint 32 checks across `SignPdfSheet` (`ThreadConstraint`), `FileManagerDialogs` (`NonObservableLocale`), and `SettingsScreen` (`LocalContextGetResourceValueCall`).
+
 ## [1.5.2] — 2026-11-02
 
 Range: `v1.5.1..v1.5.2`.

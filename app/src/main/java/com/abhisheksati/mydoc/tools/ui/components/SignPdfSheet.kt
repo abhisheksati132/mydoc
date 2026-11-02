@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.tools.ui.components
 
+import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.Paint
 import android.graphics.Path
@@ -45,6 +46,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,11 +65,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.AppBottomSheet
+import com.abhisheksati.mydoc.designsystem.components.showMessage
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.tools.security.SignatureStorage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private data class SignatureStroke(
     val points: List<Offset>,
@@ -75,6 +81,7 @@ private data class SignatureStroke(
     val strokeWidth: Float
 )
 
+@SuppressLint("ThreadConstraint")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignPdfSheet(
@@ -86,6 +93,7 @@ fun SignPdfSheet(
     val scheme = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
     val haptics = rememberAppHaptics()
+    val saveScope = rememberCoroutineScope()
 
     var isDrawMode by remember { mutableStateOf(true) }
     var typedName by remember { mutableStateOf("") }
@@ -325,9 +333,17 @@ fun SignPdfSheet(
                         } else {
                             renderTextToBitmap(typedName, activeInkColor)
                         }
-                        SignatureStorage.saveSignature(context, bmp)
-                        bmp.recycle()
-                        onSignatureSaved()
+                        // Keystore-backed AES plus a disk write: this must not run on the click
+                        // thread, and the sheet only closes once the save actually landed.
+                        saveScope.launch(Dispatchers.IO) {
+                            val saved = SignatureStorage.saveSignature(context, bmp)
+                            bmp.recycle()
+                            if (saved) {
+                                withContext(Dispatchers.Main) { onSignatureSaved() }
+                            } else {
+                                context.showMessage("Could not save the signature")
+                            }
+                        }
                     },
                     enabled = hasContent,
                     modifier = Modifier

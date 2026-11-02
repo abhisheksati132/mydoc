@@ -33,7 +33,7 @@ fun Modifier.documentHero(key: String): Modifier {
             sharedContentState = rememberSharedContentState(key = key),
             animatedVisibilityScope = visibilityScope,
             boundsTransform = { _, _ -> AppMotion.heroBounds() },
-            resizeMode = SharedTransitionScope.ResizeMode.ScaleToBounds()
+            resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
         )
     }
 }

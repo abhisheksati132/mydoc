@@ -2,6 +2,7 @@ package com.abhisheksati.mydoc.ui.settings
 
 import android.app.KeyguardManager
 import android.content.Context
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +28,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -38,6 +40,7 @@ import com.abhisheksati.mydoc.update.UpdateManager
 import java.util.Locale
 import com.abhisheksati.mydoc.designsystem.components.showMessage
 
+@SuppressLint("LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -74,6 +77,10 @@ fun SettingsScreen(
     // LIBRARY
     val startupTab by settingsRepository.defaultStartupTab.collectAsState()
     var cacheSizeBytes by remember { mutableLongStateOf(settingsRepository.getCacheSizeBytes(context)) }
+    // Read through resources, not LocalContext, so a configuration change re-composes
+    // with the right values instead of leaving a stale string in the callback.
+    val cacheClearedMessage = stringResource(R.string.cache_cleared)
+    val recentHistoryClearedMessage = stringResource(R.string.recent_history_cleared)
 
     // ABOUT & SECURITY
     val biometricLockEnabled by settingsRepository.isBiometricLockEnabled.collectAsState()
@@ -150,7 +157,7 @@ fun SettingsScreen(
                         val toastText = if (freedMb >= 0.1) {
                             String.format(Locale.US, "Freed %.1f MB", freedMb)
                         } else {
-                            context.getString(R.string.cache_cleared)
+                            cacheClearedMessage
                         }
                         context.showMessage(toastText)
                     },
@@ -158,7 +165,7 @@ fun SettingsScreen(
                         {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             clearAction()
-                            context.showMessage(context.getString(R.string.recent_history_cleared))
+                            context.showMessage(recentHistoryClearedMessage)
                         }
                     }
                 )

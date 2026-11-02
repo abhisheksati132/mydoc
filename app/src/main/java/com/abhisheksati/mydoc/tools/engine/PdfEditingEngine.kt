@@ -67,7 +67,7 @@ class PdfEditingEngine(
                 val page = srcDoc.loadPage(p) as? PDFPage ?: continue
 
                 if (isHighlight) {
-                    val quads = srcDoc.search(p, 0, text)
+                    val quads = page.search(text)
                     if (quads != null && quads.isNotEmpty()) {
                         for (hit in quads) {
                             for (q in hit) {

@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.files
 
+import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -40,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -275,6 +277,7 @@ fun DeleteConfirmationDialog(
     )
 }
 
+@SuppressLint("NonObservableLocale")
 @Composable
 fun FilePropertiesDialog(
     properties: FolderProperties,
@@ -362,8 +365,13 @@ fun FilePropertiesDialog(
                     )
                 }
 
-                // Last Modified
-                val df = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.MEDIUM, Locale.getDefault())
+                // Last Modified — the locale comes from the configuration so a rotation or a
+                // locale change re-composes with the right format instead of keeping a stale one.
+                val df = DateFormat.getDateTimeInstance(
+                    DateFormat.MEDIUM,
+                    DateFormat.MEDIUM,
+                    LocalConfiguration.current.locales[0]
+                )
                 PropertyItem(title = "Last Modified", value = df.format(Date(file.lastModified())))
 
                 // Permissions

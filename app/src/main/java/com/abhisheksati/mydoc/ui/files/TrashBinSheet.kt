@@ -165,7 +165,7 @@ fun TrashBinSheet(
                             }
                         }
                     },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = colors.background
                     )
                 )
