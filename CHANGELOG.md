@@ -5,6 +5,10 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+## [1.5.1] — 2026-11-02
+
+Range: `v1.5.0..v1.5.1`.
+
 ### Added
 
 - **Dynamic Material You theming.** Colours are seeded from the wallpaper on Android 12+ (fixed
