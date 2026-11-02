@@ -6,10 +6,10 @@ enum class DocumentCategory(val label: String) {
     WORD("Word"),
     EXCEL("Excel"),
     PPT("PowerPoint"),
-    TEXT("Text");
+    TEXT("Text"),
+    EPUB("eBook");
 
     companion object {
         val FAVORITES = ALL
-        val EPUB = TEXT
     }
 }

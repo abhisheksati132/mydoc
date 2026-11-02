@@ -29,9 +29,9 @@ object PptxConverter {
         } ?: return null
 
         val cacheDir = File(context.cacheDir, "converted_presentations").apply { mkdirs() }
-        val targetPdf = File(cacheDir, "pptx_${displayName.hashCode()}_${bytes.size}.pdf")
+        val targetPdf = File(cacheDir, "pptx_${bytes.contentHashCode()}_${bytes.size}.pdf")
 
-        if (targetPdf.exists() && targetPdf.length() > 0L) {
+        if (targetPdf.isFile && targetPdf.length() > 0L) {
             return targetPdf
         }
 
@@ -45,17 +45,30 @@ object PptxConverter {
             fixed
         }.getOrDefault(bytes)
 
-        val renderResult = PptxRenderer.renderWithOutlines(processedBytes) ?: return null
-        slideOutlinesMap[targetPdf.absolutePath] = renderResult.outlines
-        OutlineCache.saveOutlines(targetPdf, renderResult.outlines)
+        val renderResult = PptxRenderer.renderWithOutlines(processedBytes) ?: run {
+            android.util.Log.w("PptxConvert", "no slides laid out for $displayName")
+            return null
+        }
 
+        // Staged then moved into place: a half-written cache file passes the size check above and
+        // would then be reused for every later open.
+        val staging = File(cacheDir, "${targetPdf.name}.writing")
         val pdfDoc = renderResult.doc
         return try {
-            FileOutputStream(targetPdf).use { out ->
+            FileOutputStream(staging).use { out ->
                 pdfDoc.writeTo(out)
+                out.flush()
             }
+            if (!staging.renameTo(targetPdf)) {
+                staging.copyTo(targetPdf, overwrite = true)
+                staging.delete()
+            }
+            slideOutlinesMap[targetPdf.absolutePath] = renderResult.outlines
+            OutlineCache.saveOutlines(targetPdf, renderResult.outlines)
             targetPdf
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            android.util.Log.w("PptxConvert", "could not write PDF for $displayName", t)
+            staging.delete()
             targetPdf.delete()
             null
         } finally {

@@ -339,6 +339,13 @@ class DocxParser {
                                 styleVal.contains("Heading3", ignoreCase = true) -> 3
                                 else -> 0
                             }
+                            // Word puts the numbering on the paragraph style most of the time, so a
+                            // list is usually recognisable only by its style name.
+                            if (styleVal.contains("ListBullet", ignoreCase = true) ||
+                                styleVal.contains("ListParagraph", ignoreCase = true)
+                            ) {
+                                isBullet = true
+                            }
                         }
                         "w:numPr" -> {
                             isBullet = true

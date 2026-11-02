@@ -46,7 +46,8 @@ data class ViewerUiState(
     val isPasswordIncorrect: Boolean = false,
     val isLoading: Boolean = true,
     val isPermissionExpired: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val needsReflowFallback: Boolean = false
 )
 
 class ViewerViewModel(
@@ -89,7 +90,9 @@ class ViewerViewModel(
 
     private fun loadDocument() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, isPermissionExpired = false, errorMessage = null) }
+            _uiState.update {
+                it.copy(isLoading = true, isPermissionExpired = false, errorMessage = null, needsReflowFallback = false)
+            }
 
             // Restore per-file view state from Room
             val savedState = repository.getViewState(activeDocumentFile.uri)
@@ -105,7 +108,7 @@ class ViewerViewModel(
                             uri = uri,
                             displayName = activeDocumentFile.displayName
                         )
-                        "docx" -> com.abhisheksati.mydoc.rendering.engine.word.DocxConverter.convertDocxToPdf(
+                        "docx", "dotx" -> com.abhisheksati.mydoc.rendering.engine.word.DocxConverter.convertDocxToPdf(
                             context = context,
                             uri = uri,
                             displayName = activeDocumentFile.displayName
@@ -117,7 +120,25 @@ class ViewerViewModel(
                         )
                         else -> null
                     }
-                    convertedPdfFile?.let { sessionTempFiles.add(it) }
+
+                    if (convertedPdfFile == null && ext in setOf("docx", "dotx", "pptx")) {
+                        // These formats have exactly one engine: their converter. Passing the raw
+                        // package to a PDF renderer only yields a false "damaged" report.
+                        android.util.Log.w("ViewerLoad", "no PDF produced for ${'$'}{activeDocumentFile.displayName}")
+                        val isWord = ext == "docx" || ext == "dotx"
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                needsReflowFallback = isWord,
+                                errorMessage = if (isWord) {
+                                    "This Word document could not be laid out as pages."
+                                } else {
+                                    "This presentation could not be laid out as slides."
+                                }
+                            )
+                        }
+                        return@withContext
+                    }
 
                     val cacheFile: java.io.File = convertedPdfFile ?: run {
                         val temp = java.io.File(context.cacheDir, "temp_view_${System.currentTimeMillis()}.$ext")

@@ -6,7 +6,10 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.os.ParcelFileDescriptor
+import android.database.Cursor
+import android.provider.DocumentsContract
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
@@ -66,6 +69,29 @@ object DocumentStreamResolver {
                 source = streamResult.source
             )
         }
+    }
+
+    /**
+     * Size and modification time of the document behind [uri]. Conversion caches key on this so a
+     * replaced or edited file can never be served the previous file's conversion.
+     */
+    fun sourceStamp(context: Context, uri: Uri): Pair<Long, Long> {
+        if (uri.scheme == "file") {
+            val file = uri.path?.let(::File)
+            if (file != null && file.isFile) return file.length() to file.lastModified()
+        }
+        return runCatching {
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (!cursor.moveToFirst()) return@runCatching 0L to 0L
+                readLongColumn(cursor, OpenableColumns.SIZE) to
+                    readLongColumn(cursor, DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+            } ?: (0L to 0L)
+        }.getOrDefault(0L to 0L)
+    }
+
+    private fun readLongColumn(cursor: Cursor, column: String): Long {
+        val index = cursor.getColumnIndex(column)
+        return if (index < 0 || cursor.isNull(index)) 0L else cursor.getLong(index)
     }
 
     fun openStream(

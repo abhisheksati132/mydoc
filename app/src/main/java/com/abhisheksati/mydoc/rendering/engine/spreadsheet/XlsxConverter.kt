@@ -22,10 +22,10 @@ object XlsxConverter {
     ): File? = withContext(Dispatchers.IO) {
         try {
             val safeName = displayName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-            val targetPdf = File(context.cacheDir, "xlsx_converted_${safeName.hashCode()}.pdf")
+            val stamp = DocumentStreamResolver.sourceStamp(context, uri)
+            val targetPdf = File(context.cacheDir, "xlsx_converted_${safeName.hashCode()}_${stamp.first}_${stamp.second}.pdf")
 
-            // Re-use cached conversion if available and valid (> 1KB)
-            if (targetPdf.exists() && targetPdf.length() > 1024) {
+            if (targetPdf.isFile && targetPdf.length() > 1024) {
                 return@withContext targetPdf
             }
 
@@ -52,22 +52,28 @@ object XlsxConverter {
             // Clean up temporary source file if created
             tempResolvedFile?.delete()
 
-            val renderResult = XlsxPdfRenderer.renderWithOutlines(workbook) ?: return@withContext null
-            sheetOutlinesMap[targetPdf.absolutePath] = renderResult.outlines
-            com.abhisheksati.mydoc.rendering.engine.OutlineCache.saveOutlines(targetPdf, renderResult.outlines)
+            val renderResult = XlsxPdfRenderer.renderWithOutlines(workbook) ?: run {
+                android.util.Log.w("XlsxConvert", "no printable range found in $displayName")
+                return@withContext null
+            }
 
-            FileOutputStream(targetPdf).use { out ->
+            // Staged then moved into place, so an interrupted write can never be cached as valid.
+            val staging = File(context.cacheDir, "xlsx_writing_${System.currentTimeMillis()}.pdf")
+            FileOutputStream(staging).use { out ->
                 renderResult.doc.writeTo(out)
                 out.flush()
             }
             renderResult.doc.close()
-
-            if (targetPdf.exists() && targetPdf.length() > 0) {
-                targetPdf
-            } else {
-                null
+            if (!staging.renameTo(targetPdf)) {
+                staging.copyTo(targetPdf, overwrite = true)
+                staging.delete()
             }
-        } catch (_: Throwable) {
+            sheetOutlinesMap[targetPdf.absolutePath] = renderResult.outlines
+            com.abhisheksati.mydoc.rendering.engine.OutlineCache.saveOutlines(targetPdf, renderResult.outlines)
+
+            if (targetPdf.isFile && targetPdf.length() > 0) targetPdf else null
+        } catch (t: Throwable) {
+            android.util.Log.w("XlsxConvert", "conversion failed for $displayName", t)
             null
         }
     }

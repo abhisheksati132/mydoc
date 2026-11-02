@@ -8,6 +8,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.domain.model.DocumentCategory
@@ -72,36 +73,12 @@ fun DocumentViewerScreen(
         // 3. Presentations (Document reading mode): Rendered page-by-page through vector pipeline
         // with pinch-to-zoom, search, and page scrubber, plus top-bar option to start slideshow.
         document.category == DocumentCategory.PPT || ext in setOf("ppt", "pptx", "pot", "potx", "pps", "ppsx", "odp", "fodp", "otp") -> {
-            val viewerViewModel: ViewerViewModel = viewModel(
-                key = document.uri,
-                factory = ViewerViewModel.Factory(context, app.documentRepository, document)
-            )
-            PdfViewerScreen(
-                document = document,
-                viewModel = viewerViewModel,
-                onBackClick = onBackClick,
-                onShareClick = onShareClick,
-                onToolsClick = onToolsClick,
-                onSelectTool = onSelectTool,
-                onDocumentUpdated = onDocumentUpdated,
-                onSlideshowClick = { isSlideshowActive = true },
-                modifier = modifier.fillMaxSize()
-            )
-        }
-
-        // 4. Word processing documents (.docx, .dotx, .doc, .odt, etc.):
-        // Supports both Paginated Vector Engine (crisp print fidelity) and Reflow Reading Mode (native text & TTS).
-        ext in setOf("docx", "dotx") || document.category == DocumentCategory.WORD || ext in setOf("doc", "dot", "rtf", "odt", "fodt", "ott", "wps", "wpd") -> {
-            if (isWordReflowActive || ext in setOf("doc", "dot", "rtf", "odt", "fodt", "ott", "wps", "wpd")) {
-                WordViewerScreen(
+            if (ext in setOf("ppt", "pps", "pot", "odp", "fodp", "otp")) {
+                // Only the presentation reader parses binary OLE2 decks and OpenDocument; the page
+                // pipeline has no converter for them and would report a healthy file as damaged.
+                PresentationViewerScreen(
                     document = document,
-                    onBackClick = {
-                        if (isWordReflowActive && ext in setOf("docx", "dotx")) {
-                            isWordReflowActive = false
-                        } else {
-                            onBackClick()
-                        }
-                    },
+                    onBackClick = onBackClick,
                     onShareClick = onShareClick,
                     modifier = modifier.fillMaxSize()
                 )
@@ -118,9 +95,51 @@ fun DocumentViewerScreen(
                     onToolsClick = onToolsClick,
                     onSelectTool = onSelectTool,
                     onDocumentUpdated = onDocumentUpdated,
-                    onReflowClick = { isWordReflowActive = true },
+                    onSlideshowClick = { isSlideshowActive = true },
                     modifier = modifier.fillMaxSize()
                 )
+            }
+        }
+
+        // 4. Word processing documents (.docx, .dotx, .doc, .odt, etc.):
+        // Supports both Paginated Vector Engine (crisp print fidelity) and Reflow Reading Mode (native text & TTS).
+        ext in setOf("docx", "dotx") || document.category == DocumentCategory.WORD || ext in setOf("doc", "dot", "rtf", "odt", "fodt", "ott", "wps", "wpd") -> {
+            val isReflowOnly = ext in setOf("doc", "dot", "rtf", "odt", "fodt", "ott", "wps", "wpd")
+            if (isReflowOnly) {
+                WordViewerScreen(
+                    document = document,
+                    onBackClick = onBackClick,
+                    onShareClick = onShareClick,
+                    modifier = modifier.fillMaxSize()
+                )
+            } else {
+                val viewerViewModel: ViewerViewModel = viewModel(
+                    key = document.uri,
+                    factory = ViewerViewModel.Factory(context, app.documentRepository, document)
+                )
+                val viewerState by viewerViewModel.uiState.collectAsStateWithLifecycle()
+                if (isWordReflowActive || viewerState.needsReflowFallback) {
+                    WordViewerScreen(
+                        document = document,
+                        onBackClick = {
+                            if (isWordReflowActive) isWordReflowActive = false else onBackClick()
+                        },
+                        onShareClick = onShareClick,
+                        modifier = modifier.fillMaxSize()
+                    )
+                } else {
+                    PdfViewerScreen(
+                        document = document,
+                        viewModel = viewerViewModel,
+                        onBackClick = onBackClick,
+                        onShareClick = onShareClick,
+                        onToolsClick = onToolsClick,
+                        onSelectTool = onSelectTool,
+                        onDocumentUpdated = onDocumentUpdated,
+                        onReflowClick = { isWordReflowActive = true },
+                        modifier = modifier.fillMaxSize()
+                    )
+                }
             }
         }
 
