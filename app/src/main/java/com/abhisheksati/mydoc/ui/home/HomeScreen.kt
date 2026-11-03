@@ -374,7 +374,7 @@ fun HomeScreen(
                                             val intent = updateManager.installerHelper.createManageUnknownAppSourcesIntent()
                                             context.startActivity(intent)
                                         } else {
-                                            updateManager.installerHelper.installApk(updateState.apkFile)
+                                            updateManager.install(updateState.apkFile)
                                         }
                                     },
                                     shape = AppRadius.cardShape,

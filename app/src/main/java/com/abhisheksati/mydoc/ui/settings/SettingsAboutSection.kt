@@ -171,7 +171,7 @@ fun SettingsAboutSection(
                             val intent = updateManager.installerHelper.createManageUnknownAppSourcesIntent()
                             context.startActivity(intent)
                         } else {
-                            updateManager.installerHelper.installApk(state.apkFile)
+                            updateManager.install(state.apkFile)
                         }
                     }
                 )

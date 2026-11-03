@@ -3,6 +3,35 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [1.5.12] — 2026-11-03
+
+Range: `v1.5.11..v1.5.12`.
+
+### Fixed
+
+- **CI could not start.** The `gradle/actions/setup-gradle` pin and the
+  `softprops/action-gh-release` pin pointed at commits that do not exist, so every workflow failed at
+  the Set up job step. Both now resolve to real tagged commits (v4.4.4 and v2.2.1).
+- **No instrumented tests in CI.** A second job boots an API 35 emulator with KVM and runs
+  `connectedDebugAndroidTest`, uploading the report.
+- **A rejected update no longer crashes the app.** A certificate mismatch in the manual Install
+  action threw `SecurityException` on the main thread; both Install entry points now surface it as an
+  error state.
+- **Debug builds offered an update they could not install.** Update checks are skipped in debug
+  builds, whose debug signing key can never accept a release APK.
+- **Legacy Word formats claimed full support.** `.doc`, `.rtf`, `.wpd` and similar fall back to
+  extracted text; the reader now says so instead of presenting it as formatted output.
+
+### Changed
+
+- The zoom-tile cache object was renamed `ZoomTileCache` to end the name collision with the
+  page-render cache in `rendering.cache`.
+
+### Verified
+
+- Every bundled native library is 16 KB aligned on both x86_64 and arm64 (ELF `PT_LOAD` alignment
+  `0x4000`), and the APKs pass `zipalign -c -P 16`.
+
 ## [1.5.11] — 2026-11-03
 
 Range: `v1.5.10..v1.5.11`.

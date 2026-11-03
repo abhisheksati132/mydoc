@@ -542,7 +542,7 @@ class ViewerViewModel(
         renderer = null
         // The zoom tile cache is a process-wide singleton keyed by document URI, so its
         // bitmaps would otherwise outlive the document they came from.
-        com.abhisheksati.mydoc.ui.viewer.controls.TileBitmapCache.clear()
+        com.abhisheksati.mydoc.ui.viewer.controls.ZoomTileCache.clear()
         for (f in sessionTempFiles) {
             try { if (f.exists()) f.delete() } catch (_: Throwable) {}
         }

@@ -37,7 +37,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import com.abhisheksati.mydoc.domain.model.ReadingMode
-import com.abhisheksati.mydoc.ui.viewer.controls.TileBitmapCache
+import com.abhisheksati.mydoc.ui.viewer.controls.ZoomTileCache
 import com.abhisheksati.mydoc.rendering.engine.SearchMatch
 import com.abhisheksati.mydoc.rendering.engine.TextSelectionResult
 import com.abhisheksati.mydoc.viewmodel.ViewerViewModel
@@ -113,8 +113,8 @@ internal fun PageItemView(
             if (reg.width() > 0.02f && reg.height() > 0.02f) {
                 delay(150) // Debounce 150ms
                 val docUri = viewModel.documentUri
-                val key = TileBitmapCache.makeKey(docUri, pageIndex, reg, zoomScale, readingMode)
-                val cached = TileBitmapCache.get(key)
+                val key = ZoomTileCache.makeKey(docUri, pageIndex, reg, zoomScale, readingMode)
+                val cached = ZoomTileCache.get(key)
                 if (cached != null) {
                     tileBitmap = cached
                     tileRegion = reg
@@ -149,7 +149,7 @@ internal fun PageItemView(
                             }
                         }
                         if (rendered != null) {
-                            TileBitmapCache.put(key, rendered)
+                            ZoomTileCache.put(key, rendered)
                             tileBitmap = rendered
                             tileRegion = reg
                         }

@@ -1,7 +1,7 @@
 # Document Engine Architecture & Improvement Plan
 
 > **Project Target:** `mydoc` (`com.abhisheksati.mydoc`)  
-> **Version:** 1.5.11 (minSdk 26, targetSdk 35)  
+> **Version:** 1.5.12 (minSdk 26, targetSdk 35)  
 > **Inspiration & Attribution:** Architecture and design paradigms adapted with credit to `ClearPDF-5.1` (`com.chethan616.clearpdf`).  
 > **Focus:** High-fidelity document loading, visual precision, untrusted-input safety, and memory-safe rendering for PDF, PPTX, DOCX, and XLSX files.
 

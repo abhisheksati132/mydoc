@@ -27,7 +27,8 @@ sealed class DocxBlock {
 }
 
 data class DocxDocument(
-    val blocks: List<DocxBlock>
+    val blocks: List<DocxBlock>,
+    val usedTextFallback: Boolean = false
 )
 
 class DocxParser {
@@ -103,15 +104,17 @@ class DocxParser {
         }
 
         // 3. Fallback for binary .doc (OLE2) or corrupted document streams
+        var usedTextFallback = false
         if (blocks.isEmpty()) {
             blocks.addAll(parseRawTextFallback(bytes))
+            usedTextFallback = blocks.isNotEmpty()
         }
 
         if (blocks.isEmpty()) {
             blocks.add(DocxBlock.Paragraph(listOf(DocxRun("Document is empty."))))
         }
 
-        DocxDocument(blocks)
+        DocxDocument(blocks, usedTextFallback)
     }
 
     private fun parseOdtXml(xmlBytes: ByteArray): List<DocxBlock> {

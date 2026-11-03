@@ -49,6 +49,12 @@ class UpdateManager(
     }
 
     suspend fun checkForUpdates(isLaunchCheck: Boolean = false) {
+        // Debug builds use the debug signing key, so a release APK can never install
+        // over them. Don't offer an update the device would reject.
+        if (BuildConfig.DEBUG) {
+            _state.value = UpdateUiState.Idle
+            return
+        }
         if (isLaunchCheck) {
             val lastCheckTime = prefs.getLong(KEY_LAST_CHECK_TIME, 0L)
             val now = System.currentTimeMillis()
@@ -140,6 +146,14 @@ class UpdateManager(
             cleanUpdatesCache()
             _state.value = UpdateUiState.Error(err.localizedMessage ?: "Download failed")
         }
+    }
+
+    fun install(apkFile: File) {
+        runCatching { installerHelper.installApk(apkFile) }
+            .onFailure { ex ->
+                cleanUpdatesCache()
+                _state.value = UpdateUiState.Error(ex.localizedMessage ?: "Installation verification failed")
+            }
     }
 
     fun isNewerVersion(remote: String, local: String): Boolean = Companion.isNewerVersion(remote, local)

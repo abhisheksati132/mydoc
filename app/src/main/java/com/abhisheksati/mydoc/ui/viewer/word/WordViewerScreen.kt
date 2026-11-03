@@ -286,6 +286,16 @@ fun WordViewerScreen(
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .padding(top = 64.dp, bottom = 64.dp)
             ) {
+                if (docxData?.usedTextFallback == true) {
+                    item {
+                        Text(
+                            text = "Limited preview: this format has no layout parser, so the text is shown unformatted.",
+                            color = secondaryTextColor,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                    }
+                }
                 items(filteredBlocks) { block ->
                     when (block) {
                         is DocxBlock.Heading -> {

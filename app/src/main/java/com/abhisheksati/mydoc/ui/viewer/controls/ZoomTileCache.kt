@@ -9,7 +9,7 @@ import com.abhisheksati.mydoc.domain.model.ReadingMode
  * High-performance LRU cache for high-scale regional zoom tiles.
  * Capped at 24MB to ensure flat memory usage across endless zooming.
  */
-object TileBitmapCache {
+object ZoomTileCache {
     private const val MAX_CACHE_BYTES = 24 * 1024 * 1024 // 24 MB
 
     private val cache = object : LruCache<String, Bitmap>(MAX_CACHE_BYTES) {
