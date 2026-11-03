@@ -113,14 +113,13 @@ class PdfEditingEngine(private val context: Context) {
 
     suspend fun addWatermark(file: File, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File {
         val outFile = createTempOutputFile("watermarked", "pdf")
-        val isDiagonal = kotlin.math.abs(options.watermarkRotation) > 10f
         PdfWatermarker.applyText(
             context = context,
             sourceFile = file,
             destinationFile = outFile,
             text = options.watermarkText,
             opacity = options.watermarkOpacity,
-            diagonal = isDiagonal
+            rotationDegrees = options.watermarkRotation
         ) { current, total ->
             val pct = 10 + ((current.toFloat() / total) * 85).toInt()
             onProgress(ToolProgress(current, total, pct, "Applying watermark to page $current of $total...", false))

@@ -174,6 +174,11 @@ class PdfToolsEngine(private val context: Context) {
                 }
             } else if (tool == PdfTool.PDF_TO_OFFICE) {
                 warningNote = "Best-effort offline conversion. Complex multi-column layouts and vector art will not match the original."
+            } else if (tool == PdfTool.REPAIR) {
+                if (finalPages < initialPages && initialPages > 0) {
+                    val lost = initialPages - finalPages
+                    warningNote = "Recovered $finalPages of $initialPages pages. $lost damaged page(s) could not be restored."
+                }
             }
 
             ToolExecutionResult(

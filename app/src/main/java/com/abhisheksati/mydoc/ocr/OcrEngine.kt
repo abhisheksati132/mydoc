@@ -7,12 +7,17 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.suspendCancellableCoroutine
+import java.io.Closeable
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class OcrEngine(private val context: Context) {
+class OcrEngine(private val context: Context) : Closeable {
 
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+
+    override fun close() {
+        runCatching { recognizer.close() }
+    }
 
     suspend fun recognizeText(bitmap: Bitmap): String = suspendCancellableCoroutine { cont ->
         try {

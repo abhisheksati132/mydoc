@@ -29,12 +29,27 @@ import java.util.zip.ZipInputStream
  */
 class PptxParser {
 
+    private fun readBoundedInputStream(inputStream: InputStream, maxBytes: Int = 50 * 1024 * 1024): ByteArray {
+        val buffer = ByteArray(16384)
+        val baos = java.io.ByteArrayOutputStream(minOf(maxBytes, 64 * 1024))
+        var totalRead = 0
+        var n: Int
+        while (inputStream.read(buffer).also { n = it } != -1) {
+            totalRead += n
+            if (totalRead > maxBytes) {
+                throw java.io.IOException("File size exceeds safety limit of ${maxBytes / (1024 * 1024)} MB.")
+            }
+            baos.write(buffer, 0, n)
+        }
+        return baos.toByteArray()
+    }
+
     suspend fun parse(inputStream: InputStream, cacheDir: File? = null): PptxPresentation = withContext(Dispatchers.IO) {
         val bytes = try {
-            inputStream.readBytes()
-        } catch (e: OutOfMemoryError) {
-            android.util.Log.e("PptxParser", "OOM reading presentation", e)
-            return@withContext emptyPresentation("File too large to open.")
+            readBoundedInputStream(inputStream, 50 * 1024 * 1024)
+        } catch (e: Exception) {
+            android.util.Log.e("PptxParser", "Error reading presentation", e)
+            return@withContext emptyPresentation("File too large or unreadable: ${e.message}")
         }
         if (bytes.isEmpty()) {
             return@withContext emptyPresentation()

@@ -206,7 +206,7 @@ enum class PdfTool(
     ANNOTATE(
         id = "annotate",
         title = "Annotate PDF",
-        description = "Add highlights, drawings, and notes",
+        description = "Add stamps and keyword highlights",
         group = ToolGroup.EDIT_SIGN,
         icon = Icons.Outlined.Highlight,
         defaultSuffix = "annotated"
@@ -222,7 +222,7 @@ enum class PdfTool(
     ADD_WATERMARK(
         id = "add_watermark",
         title = "Add watermark",
-        description = "Add text or image watermark",
+        description = "Add text watermark across pages",
         group = ToolGroup.EDIT_SIGN,
         icon = Icons.Outlined.WaterDrop,
         defaultSuffix = "watermarked"

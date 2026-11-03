@@ -99,6 +99,12 @@ fun PdfViewerScreen(
     var isOcrRunning by remember { mutableStateOf(false) }
     val ocrEngine = remember { com.abhisheksati.mydoc.ocr.OcrEngine(context) }
     val ttsManager = remember { com.abhisheksati.mydoc.tools.tts.DocumentTtsManager(context) }
+    DisposableEffect(ocrEngine, ttsManager) {
+        onDispose {
+            ocrEngine.close()
+            ttsManager.shutdown()
+        }
+    }
     var isTtsVisible by remember { mutableStateOf(false) }
     var currentTtsText by remember { mutableStateOf("") }
     var selectedPageForActions by remember { mutableStateOf<Int?>(null) }
@@ -415,6 +421,7 @@ fun PdfViewerScreen(
                                         viewModel = viewModel,
                                         readingMode = state.readingMode,
                                         zoomScale = zoomScale,
+                                        isFitPage = state.isFitPage,
                                         searchMatches = searchMatchesByPage[leftPage] ?: emptyList(),
                                         activeMatch = activeMatch,
                                         selection = if (selectedTextState?.first == leftPage) selectedTextState?.second else null,
@@ -429,6 +436,7 @@ fun PdfViewerScreen(
                                             viewModel = viewModel,
                                             readingMode = state.readingMode,
                                             zoomScale = zoomScale,
+                                            isFitPage = state.isFitPage,
                                             searchMatches = searchMatchesByPage[rightPage] ?: emptyList(),
                                             activeMatch = activeMatch,
                                             selection = if (selectedTextState?.first == rightPage) selectedTextState?.second else null,
@@ -453,6 +461,7 @@ fun PdfViewerScreen(
                                 viewModel = viewModel,
                                 readingMode = state.readingMode,
                                 zoomScale = zoomScale,
+                                isFitPage = state.isFitPage,
                                 searchMatches = searchMatchesByPage[pageIndex] ?: emptyList(),
                                 activeMatch = activeMatch,
                                 selection = if (selectedTextState?.first == pageIndex) selectedTextState?.second else null,
@@ -478,6 +487,7 @@ fun PdfViewerScreen(
                                 viewModel = viewModel,
                                 readingMode = state.readingMode,
                                 zoomScale = zoomScale,
+                                isFitPage = state.isFitPage,
                                 searchMatches = searchMatchesByPage[pageIndex] ?: emptyList(),
                                 activeMatch = activeMatch,
                                 selection = if (selectedTextState?.first == pageIndex) selectedTextState?.second else null,

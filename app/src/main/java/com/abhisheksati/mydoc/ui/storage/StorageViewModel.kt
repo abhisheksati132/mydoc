@@ -41,6 +41,8 @@ class StorageViewModel(
 
     private val cleanerManager = StorageCleanerManager()
 
+    private var scanJob: kotlinx.coroutines.Job? = null
+
     init {
         refresh()
     }
@@ -48,12 +50,17 @@ class StorageViewModel(
     fun selectVolume(index: Int) {
         if (index != _uiState.value.selectedVolumeIndex && index in _uiState.value.volumes.indices) {
             _uiState.update { it.copy(selectedVolumeIndex = index) }
-            analyzeStorage(_uiState.value.volumes[index])
+            val volume = _uiState.value.volumes[index]
+            scanJob?.cancel()
+            scanJob = viewModelScope.launch {
+                analyzeStorage(volume)
+            }
         }
     }
 
     fun refresh() {
-        viewModelScope.launch {
+        scanJob?.cancel()
+        scanJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val volumes = storageRepository.getStorageVolumes()
 
@@ -80,67 +87,63 @@ class StorageViewModel(
         }
     }
 
-    private fun analyzeStorage(volume: StorageVolume) {
-        viewModelScope.launch {
-            val (stats, appCount, appBytes, largeFilesBytes, largeFilesCount) = withContext(Dispatchers.IO) {
-                gatherStorageStats(volume)
-            }
-
-            _uiState.update { current ->
-                current.copy(
-                    isLoading = false,
-                    totalBytes = volume.totalBytes,
-                    usedBytes = volume.usedBytes,
-                    freeBytes = volume.freeBytes,
-                    usedRatio = volume.usedRatio,
-                    categories = stats,
-                    userAppCount = appCount,
-                    userAppBytes = appBytes,
-                    lastRefreshedMs = System.currentTimeMillis()
-                )
-            }
-
-            // Perform lightweight quick scan for junk cleaner recommendations
-            startQuickCleanScan(volume, largeFilesCount, largeFilesBytes)
+    private suspend fun analyzeStorage(volume: StorageVolume) {
+        val (stats, appCount, appBytes, largeFilesBytes, largeFilesCount) = withContext(Dispatchers.IO) {
+            gatherStorageStats(volume)
         }
+
+        _uiState.update { current ->
+            current.copy(
+                isLoading = false,
+                totalBytes = volume.totalBytes,
+                usedBytes = volume.usedBytes,
+                freeBytes = volume.freeBytes,
+                usedRatio = volume.usedRatio,
+                categories = stats,
+                userAppCount = appCount,
+                userAppBytes = appBytes,
+                lastRefreshedMs = System.currentTimeMillis()
+            )
+        }
+
+        // Perform lightweight quick scan for junk cleaner recommendations
+        startQuickCleanScan(volume, largeFilesCount, largeFilesBytes)
     }
 
-    private fun startQuickCleanScan(volume: StorageVolume, largeFilesCount: Int, largeFilesBytes: Long) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isScanningCleaner = true) }
-            val quickSummary = withContext(Dispatchers.IO) {
-                try {
-                    val root = volume.file
-                    if (root.canRead()) {
-                        val result = cleanerManager.scanDirectory(
-                            rootDir = root,
-                            maxEntries = QUICK_SCAN_MAX_ENTRIES,
-                            timeBudgetMs = QUICK_SCAN_BUDGET_MS
-                        )
-                        StorageCleanQuickSummary(
-                            tempFilesCount = result.tempFiles.size,
-                            tempFilesBytes = result.tempFiles.sumOf { it.length() },
-                            duplicateGroupsCount = result.duplicateGroups.size,
-                            duplicateWastedBytes = result.duplicateGroups.sumOf { it.wastedBytes },
-                            emptyFoldersCount = result.emptyFolders.size,
-                            largeFilesCount = largeFilesCount.coerceAtLeast(result.largeFiles.size),
-                            largeFilesBytes = if (largeFilesBytes > 0L) largeFilesBytes else result.largeFiles.sumOf { it.length() },
-                            totalReclaimableBytes = result.totalReclaimableBytes
-                        )
-                    } else {
-                        StorageCleanQuickSummary(largeFilesCount = largeFilesCount, largeFilesBytes = largeFilesBytes)
-                    }
-                } catch (_: Exception) {
+    private suspend fun startQuickCleanScan(volume: StorageVolume, largeFilesCount: Int, largeFilesBytes: Long) {
+        _uiState.update { it.copy(isScanningCleaner = true) }
+        val quickSummary = withContext(Dispatchers.IO) {
+            try {
+                val root = volume.file
+                if (root.canRead()) {
+                    val result = cleanerManager.scanDirectory(
+                        rootDir = root,
+                        maxEntries = QUICK_SCAN_MAX_ENTRIES,
+                        timeBudgetMs = QUICK_SCAN_BUDGET_MS
+                    )
+                    StorageCleanQuickSummary(
+                        tempFilesCount = result.tempFiles.size,
+                        tempFilesBytes = result.tempFiles.sumOf { it.length() },
+                        duplicateGroupsCount = result.duplicateGroups.size,
+                        duplicateWastedBytes = result.duplicateGroups.sumOf { it.wastedBytes },
+                        emptyFoldersCount = result.emptyFolders.size,
+                        largeFilesCount = largeFilesCount.coerceAtLeast(result.largeFiles.size),
+                        largeFilesBytes = if (largeFilesBytes > 0L) largeFilesBytes else result.largeFiles.sumOf { it.length() },
+                        totalReclaimableBytes = result.totalReclaimableBytes
+                    )
+                } else {
                     StorageCleanQuickSummary(largeFilesCount = largeFilesCount, largeFilesBytes = largeFilesBytes)
                 }
+            } catch (_: Exception) {
+                StorageCleanQuickSummary(largeFilesCount = largeFilesCount, largeFilesBytes = largeFilesBytes)
             }
+        }
 
-            _uiState.update {
-                it.copy(
-                    isScanningCleaner = false,
-                    cleanSummary = quickSummary
-                )
-            }
+        _uiState.update {
+            it.copy(
+                isScanningCleaner = false,
+                cleanSummary = quickSummary
+            )
         }
     }
 

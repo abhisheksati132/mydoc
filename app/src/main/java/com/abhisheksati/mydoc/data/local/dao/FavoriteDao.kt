@@ -14,9 +14,6 @@ interface FavoriteDao {
     fun getAllFavorites(): Flow<List<FavoriteDocumentEntity>>
 
     @Query("SELECT EXISTS(SELECT 1 FROM favorite_documents WHERE uri = :uri)")
-    fun isFavoriteFlow(uri: String): Flow<Boolean>
-
-    @Query("SELECT EXISTS(SELECT 1 FROM favorite_documents WHERE uri = :uri)")
     suspend fun isFavorite(uri: String): Boolean
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

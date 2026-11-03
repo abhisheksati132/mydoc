@@ -1,6 +1,10 @@
 package com.abhisheksati.mydoc.ui.files
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.abhisheksati.mydoc.data.local.PinnedFoldersManager
 import com.abhisheksati.mydoc.domain.model.StorageItem
@@ -45,6 +49,20 @@ fun FileManagerOverlays(
     onOpenInTools: ((File) -> Unit)? = null
 ) {
     val context = LocalContext.current
+    var singleItemPendingDelete by remember { mutableStateOf<File?>(null) }
+
+    singleItemPendingDelete?.let { file ->
+        DeleteConfirmationDialog(
+            count = 1,
+            fileNamePreview = file.name,
+            onDismiss = { singleItemPendingDelete = null },
+            onConfirm = {
+                val target = singleItemPendingDelete
+                singleItemPendingDelete = null
+                target?.let { viewModel.moveToTrashSingle(it) }
+            }
+        )
+    }
 
     if (showNewFolderDialog) {
         NewFolderDialog(
@@ -208,8 +226,9 @@ fun FileManagerOverlays(
                 onRequestRename(item.file)
             },
             onDelete = {
+                val targetFile = item.file
                 onDismissSingleItemAction()
-                viewModel.moveToTrashSingle(item.file)
+                singleItemPendingDelete = targetFile
             },
             onTogglePin = {
                 onDismissSingleItemAction()

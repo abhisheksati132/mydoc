@@ -30,7 +30,7 @@ data class DocumentFile(
         "cbz" -> "CBZ"
         "docx", "doc" -> "WORD"
         "xlsx", "xls" -> "EXCEL"
-        "pptx", "ppt", "ppsx", "pps", "potx", "pot" -> "PPT"
+        "pptx", "ppt", "ppsx", "pps", "potx", "pot", "pptm", "potm" -> "PPT"
         "txt" -> "TXT"
         "csv" -> "CSV"
         else -> extension.uppercase(Locale.ROOT).take(5).ifEmpty { "DOC" }
@@ -41,7 +41,7 @@ data class DocumentFile(
         "epub", "xps", "oxps", "cbz", "fb2" -> DocumentCategory.EPUB
         "docx", "doc" -> DocumentCategory.WORD
         "xlsx", "xls", "csv" -> DocumentCategory.EXCEL
-        "pptx", "ppt", "ppsx", "pps", "potx", "pot" -> DocumentCategory.PPT
+        "pptx", "ppt", "ppsx", "pps", "potx", "pot", "pptm", "potm" -> DocumentCategory.PPT
         "txt", "log", "md", "json", "xml", "yaml", "yml", "ini", "conf", "sh",
         "sql", "kt", "java", "py", "html", "css", "js", "ts", "c", "cpp", "h",
         "gradle", "properties", "bat" -> DocumentCategory.TEXT

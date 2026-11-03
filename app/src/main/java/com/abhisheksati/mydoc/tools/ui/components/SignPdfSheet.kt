@@ -394,31 +394,64 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawSmoothStroke(
 }
 
 private fun renderStrokesToBitmap(strokes: List<SignatureStroke>): Bitmap {
-    val width = 700
-    val height = 350
-    val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val targetWidth = 700
+    val targetHeight = 350
+    val bmp = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
     val canvas = android.graphics.Canvas(bmp)
+
+    val allPoints = strokes.flatMap { it.points }
+    if (allPoints.isEmpty()) return bmp
+
+    var minX = Float.MAX_VALUE
+    var minY = Float.MAX_VALUE
+    var maxX = Float.MIN_VALUE
+    var maxY = Float.MIN_VALUE
+    for (pt in allPoints) {
+        if (pt.x < minX) minX = pt.x
+        if (pt.y < minY) minY = pt.y
+        if (pt.x > maxX) maxX = pt.x
+        if (pt.y > maxY) maxY = pt.y
+    }
+
+    val strokeBoundWidth = (maxX - minX).coerceAtLeast(1f)
+    val strokeBoundHeight = (maxY - minY).coerceAtLeast(1f)
+
+    val padding = 30f
+    val availableWidth = (targetWidth - padding * 2).coerceAtLeast(1f)
+    val availableHeight = (targetHeight - padding * 2).coerceAtLeast(1f)
+
+    val scale = minOf(availableWidth / strokeBoundWidth, availableHeight / strokeBoundHeight, 2.0f)
+    val contentWidth = strokeBoundWidth * scale
+    val contentHeight = strokeBoundHeight * scale
+    val offsetX = padding + (availableWidth - contentWidth) / 2f - minX * scale
+    val offsetY = padding + (availableHeight - contentHeight) / 2f - minY * scale
 
     for (stroke in strokes) {
         if (stroke.points.isEmpty()) continue
         val paint = Paint().apply {
             color = stroke.color.toArgb()
-            strokeWidth = stroke.strokeWidth * 1.5f
+            strokeWidth = (stroke.strokeWidth * scale).coerceIn(2f, 16f)
             style = Paint.Style.STROKE
             strokeCap = Paint.Cap.ROUND
             strokeJoin = Paint.Join.ROUND
             isAntiAlias = true
         }
         val path = Path()
-        path.moveTo(stroke.points[0].x, stroke.points[0].y)
+        val firstX = stroke.points[0].x * scale + offsetX
+        val firstY = stroke.points[0].y * scale + offsetY
+        path.moveTo(firstX, firstY)
         for (i in 1 until stroke.points.size) {
-            val prev = stroke.points[i - 1]
-            val curr = stroke.points[i]
-            val midX = (prev.x + curr.x) / 2f
-            val midY = (prev.y + curr.y) / 2f
-            path.quadTo(prev.x, prev.y, midX, midY)
+            val prevX = stroke.points[i - 1].x * scale + offsetX
+            val prevY = stroke.points[i - 1].y * scale + offsetY
+            val currX = stroke.points[i].x * scale + offsetX
+            val currY = stroke.points[i].y * scale + offsetY
+            val midX = (prevX + currX) / 2f
+            val midY = (prevY + currY) / 2f
+            path.quadTo(prevX, prevY, midX, midY)
         }
-        path.lineTo(stroke.points.last().x, stroke.points.last().y)
+        val lastX = stroke.points.last().x * scale + offsetX
+        val lastY = stroke.points.last().y * scale + offsetY
+        path.lineTo(lastX, lastY)
         canvas.drawPath(path, paint)
     }
 

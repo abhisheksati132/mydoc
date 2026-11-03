@@ -252,7 +252,8 @@ class SettingsRepository(private val context: Context) {
     }
 
     fun getCacheSizeBytes(context: Context): Long {
-        return getFolderSize(context.cacheDir) + getFolderSize(context.externalCacheDir)
+        val savedDocsDir = File(context.filesDir, "saved_docs")
+        return getFolderSize(context.cacheDir) + getFolderSize(context.externalCacheDir) + getFolderSize(savedDocsDir)
     }
 
     fun clearCache(context: Context): Long {
@@ -261,6 +262,10 @@ class SettingsRepository(private val context: Context) {
             deleteRecursive(file)
         }
         context.externalCacheDir?.listFiles()?.forEach { file ->
+            deleteRecursive(file)
+        }
+        val savedDocsDir = File(context.filesDir, "saved_docs")
+        savedDocsDir.listFiles()?.forEach { file ->
             deleteRecursive(file)
         }
         return sizeBefore

@@ -34,8 +34,8 @@ fun ZoomableImage(
     isFlippedHorizontal: Boolean = false
 ) {
     val context = LocalContext.current
-    var scale by remember { mutableFloatStateOf(1f) }
-    var offset by remember { mutableStateOf(Offset.Zero) }
+    var scale by remember(item.uri) { mutableFloatStateOf(1f) }
+    var offset by remember(item.uri) { mutableStateOf(Offset.Zero) }
 
     val contentScale = if (isFillScale) ContentScale.Crop else ContentScale.Fit
 
@@ -49,7 +49,7 @@ fun ZoomableImage(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .pointerInput(Unit) {
+            .pointerInput(item.uri) {
                 detectTapGestures(
                     onTap = { onTap() },
                     onDoubleTap = {
@@ -58,7 +58,7 @@ fun ZoomableImage(
                     }
                 )
             }
-            .pointerInput(Unit) {
+            .pointerInput(item.uri) {
                 awaitEachGesture {
                     do {
                         val event = awaitPointerEvent()

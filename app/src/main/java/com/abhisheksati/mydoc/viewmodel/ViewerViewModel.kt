@@ -109,17 +109,17 @@ class ViewerViewModel(
                     val ext = activeDocumentFile.extension.lowercase().ifEmpty { "pdf" }
 
                     val convertedPdfFile: java.io.File? = when (ext) {
-                        "pptx" -> com.abhisheksati.mydoc.rendering.engine.presentation.PptxConverter.convertPptxToPdf(
+                        "pptx", "ppsx", "potx", "pps", "ppt", "odp" -> com.abhisheksati.mydoc.rendering.engine.presentation.PptxConverter.convertPptxToPdf(
                             context = context,
                             uri = uri,
                             displayName = activeDocumentFile.displayName
                         )
-                        "docx", "dotx" -> com.abhisheksati.mydoc.rendering.engine.word.DocxConverter.convertDocxToPdf(
+                        "docx", "dotx", "doc", "odt" -> com.abhisheksati.mydoc.rendering.engine.word.DocxConverter.convertDocxToPdf(
                             context = context,
                             uri = uri,
                             displayName = activeDocumentFile.displayName
                         )
-                        "xlsx", "xls" -> com.abhisheksati.mydoc.rendering.engine.spreadsheet.XlsxConverter.convertXlsxToPdf(
+                        "xlsx", "xls", "ods", "csv", "tsv" -> com.abhisheksati.mydoc.rendering.engine.spreadsheet.XlsxConverter.convertXlsxToPdf(
                             context = context,
                             uri = uri,
                             displayName = activeDocumentFile.displayName
@@ -127,11 +127,12 @@ class ViewerViewModel(
                         else -> null
                     }
 
-                    if (convertedPdfFile == null && ext in setOf("docx", "dotx", "pptx")) {
+                    val officeFormats = setOf("docx", "dotx", "doc", "odt", "pptx", "ppsx", "potx", "pps", "ppt", "odp")
+                    if (convertedPdfFile == null && ext in officeFormats) {
                         // These formats have exactly one engine: their converter. Passing the raw
                         // package to a PDF renderer only yields a false "damaged" report.
                         android.util.Log.w("ViewerLoad", "no PDF produced for ${activeDocumentFile.displayName}")
-                        val isWord = ext == "docx" || ext == "dotx"
+                        val isWord = ext in setOf("docx", "dotx", "doc", "odt")
                         _uiState.update {
                             it.copy(
                                 isLoading = false,

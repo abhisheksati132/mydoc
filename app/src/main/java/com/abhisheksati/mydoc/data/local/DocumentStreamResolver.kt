@@ -17,7 +17,8 @@ import java.io.InputStream
 data class ResolvedDocument(
     val file: File,
     val newResolvedUri: Uri? = null,
-    val source: String
+    val source: String,
+    val isFromOfflineCache: Boolean = (source == "saved_docs_key")
 )
 
 object DocumentStreamResolver {
@@ -28,17 +29,20 @@ object DocumentStreamResolver {
      * 2. Persistent internal offline cache (`filesDir/saved_docs`)
      * 3. MediaStore ID resolution from MediaDocumentsProvider URIs
      * 4. Primary storage relative path resolution
-     * 5. MediaStore DISPLAY_NAME query
-     * 6. Standard common storage directories (Downloads, Documents, root)
+     *
+     * Note: Arbitrary filename fallback in MediaStore/Downloads is strictly prohibited to prevent serving wrong documents.
      */
     fun resolveToCacheFile(
         context: Context,
-        uri: Uri,
+        uri: Uri?,
         displayName: String?,
         targetCacheFile: File
     ): Result<ResolvedDocument> {
+        if (uri == null) {
+            return Result.failure(java.io.FileNotFoundException("Unable to access or locate file stream for null Uri"))
+        }
         val streamResult = openStreamWithFallback(context, uri, displayName)
-            ?: return Result.failure(IllegalStateException("Unable to access or locate file stream for: $uri"))
+            ?: return Result.failure(java.io.FileNotFoundException("Unable to access or locate file stream for: $uri"))
 
         return runCatching {
             streamResult.stream.use { input ->
@@ -52,15 +56,20 @@ object DocumentStreamResolver {
                 throw java.io.IOException("File could not be loaded or is empty (0 bytes)")
             }
 
-            // Immediately cache into saved_docs as permanent backup if not already present
+            // Immediately cache into saved_docs as permanent backup if not already present,
+            // and overwrite cached copy when a fresh live stream is obtained from the original external source
             try {
                 val savedDocsDir = File(context.filesDir, "saved_docs").apply { mkdirs() }
                 val docKey = uri.toString().hashCode().toString(16)
                 val safeName = (displayName ?: "doc.pdf").replace(Regex("[^a-zA-Z0-9._-]"), "_")
                 val backupFile = File(savedDocsDir, "${docKey}_$safeName")
-                if (!backupFile.exists() || backupFile.length() == 0L) {
+                if (streamResult.source != "saved_docs_key") {
                     targetCacheFile.copyTo(backupFile, overwrite = true)
+                    backupFile.setLastModified(System.currentTimeMillis())
+                } else {
+                    backupFile.setLastModified(System.currentTimeMillis())
                 }
+                trimSavedDocsCache(savedDocsDir)
             } catch (_: Exception) {}
 
             ResolvedDocument(
@@ -75,7 +84,8 @@ object DocumentStreamResolver {
      * Size and modification time of the document behind [uri]. Conversion caches key on this so a
      * replaced or edited file can never be served the previous file's conversion.
      */
-    fun sourceStamp(context: Context, uri: Uri): Pair<Long, Long> {
+    fun sourceStamp(context: Context, uri: Uri?): Pair<Long, Long> {
+        if (uri == null) return 0L to 0L
         if (uri.scheme == "file") {
             val file = uri.path?.let(::File)
             if (file != null && file.isFile) return file.length() to file.lastModified()
@@ -96,9 +106,10 @@ object DocumentStreamResolver {
 
     fun openStream(
         context: Context,
-        uri: Uri,
+        uri: Uri?,
         displayName: String? = null
     ): InputStream? {
+        if (uri == null) return null
         return openStreamWithFallback(context, uri, displayName)?.stream
     }
 
@@ -126,20 +137,21 @@ object DocumentStreamResolver {
                     return StreamResult(FileInputStream(file), null, "direct_file")
                 }
             } else if (uri.scheme == "content") {
-                val stream = context.contentResolver.openInputStream(uri)
+                val cr = runCatching { context.contentResolver }.getOrNull()
+                val stream = runCatching { cr?.openInputStream(uri) }.getOrNull()
                 if (stream != null) {
                     return StreamResult(stream, null, "content_resolver")
                 }
-                val pfd = context.contentResolver.openFileDescriptor(uri, "r")
+                val pfd = runCatching { cr?.openFileDescriptor(uri, "r") }.getOrNull()
                 if (pfd != null) {
                     return StreamResult(ParcelFileDescriptor.AutoCloseInputStream(pfd), null, "pfd")
                 }
             }
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
             // Permission denial, revoked grant, or missing file
         }
 
-        // Tier 2: Internal persistent cache in saved_docs
+        // Tier 2: Internal persistent cache in saved_docs (exact docKey prefix match only)
         try {
             val savedDocsDir = File(context.filesDir, "saved_docs")
             if (savedDocsDir.exists() && savedDocsDir.isDirectory) {
@@ -148,20 +160,11 @@ object DocumentStreamResolver {
                 // Check by docKey prefix
                 val byKey = files.firstOrNull { it.name.startsWith(docKey) && it.length() > 0L }
                 if (byKey != null) {
+                    byKey.setLastModified(System.currentTimeMillis())
                     return StreamResult(FileInputStream(byKey), null, "saved_docs_key")
                 }
-
-                // Check by safeName suffix
-                if (!safeName.isNullOrBlank()) {
-                    val byName = files.firstOrNull {
-                        (it.name.endsWith(safeName, ignoreCase = true) || it.name.contains(safeName, ignoreCase = true)) && it.length() > 0L
-                    }
-                    if (byName != null) {
-                        return StreamResult(FileInputStream(byName), null, "saved_docs_name")
-                    }
-                }
             }
-        } catch (_: Throwable) {}
+        } catch (e: Throwable) {}
 
         // Tier 3: Parse MediaStore ID from MediaDocumentsProvider
         // e.g. content://com.android.providers.media.documents/document/document%3A9637 or document:9637
@@ -170,53 +173,56 @@ object DocumentStreamResolver {
                 val idStr = uriString.substringAfterLast("%3A").substringAfterLast(":")
                 val id = idStr.toLongOrNull()
                 if (id != null) {
-                    // Try MediaStore.Files
-                    val mediaUri = ContentUris.withAppendedId(MediaStore.Files.getContentUri("external"), id)
-                    try {
-                        val stream = context.contentResolver.openInputStream(mediaUri)
-                        if (stream != null) {
-                            return StreamResult(stream, mediaUri, "mediastore_files_id")
-                        }
-                    } catch (_: Throwable) {}
-
-                    // Try MediaStore.Downloads (API 29+)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val cr = runCatching { context.contentResolver }.getOrNull()
+                    if (cr != null) {
+                        // Try MediaStore.Files
+                        val mediaUri = ContentUris.withAppendedId(MediaStore.Files.getContentUri("external"), id)
                         try {
-                            val dlUri = ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, id)
-                            val stream = context.contentResolver.openInputStream(dlUri)
+                            val stream = cr.openInputStream(mediaUri)
                             if (stream != null) {
-                                return StreamResult(stream, dlUri, "mediastore_downloads_id")
+                                return StreamResult(stream, mediaUri, "mediastore_files_id")
                             }
-                        } catch (_: Throwable) {}
-                    }
+                        } catch (e: Throwable) {}
 
-                    // Query MediaStore for direct file path column _data
-                    try {
-                        val projection = arrayOf(MediaStore.Files.FileColumns.DATA)
-                        context.contentResolver.query(
-                            MediaStore.Files.getContentUri("external"),
-                            projection,
-                            "${MediaStore.Files.FileColumns._ID} = ?",
-                            arrayOf(id.toString()),
-                            null
-                        )?.use { cursor ->
-                            if (cursor.moveToFirst()) {
-                                val dataIdx = cursor.getColumnIndex(MediaStore.Files.FileColumns.DATA)
-                                if (dataIdx != -1) {
-                                    val dataPath = cursor.getString(dataIdx)
-                                    if (!dataPath.isNullOrBlank()) {
-                                        val f = File(dataPath)
-                                        if (f.exists() && f.canRead() && f.length() > 0L) {
-                                            return StreamResult(FileInputStream(f), Uri.fromFile(f), "mediastore_data_path")
+                        // Try MediaStore.Downloads (API 29+)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            try {
+                                val dlUri = ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, id)
+                                val stream = cr.openInputStream(dlUri)
+                                if (stream != null) {
+                                    return StreamResult(stream, dlUri, "mediastore_downloads_id")
+                                }
+                            } catch (e: Throwable) {}
+                        }
+
+                        // Query MediaStore for direct file path column _data
+                        try {
+                            val projection = arrayOf(MediaStore.Files.FileColumns.DATA)
+                            cr.query(
+                                MediaStore.Files.getContentUri("external"),
+                                projection,
+                                "${MediaStore.Files.FileColumns._ID} = ?",
+                                arrayOf(id.toString()),
+                                null
+                            )?.use { cursor ->
+                                if (cursor.moveToFirst()) {
+                                    val dataIdx = cursor.getColumnIndex(MediaStore.Files.FileColumns.DATA)
+                                    if (dataIdx != -1) {
+                                        val dataPath = cursor.getString(dataIdx)
+                                        if (!dataPath.isNullOrBlank()) {
+                                            val f = File(dataPath)
+                                            if (f.exists() && f.canRead() && f.length() > 0L) {
+                                                return StreamResult(FileInputStream(f), Uri.fromFile(f), "mediastore_data_path")
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-                    } catch (_: Throwable) {}
+                        } catch (e: Throwable) {}
+                    }
                 }
             }
-        } catch (_: Throwable) {}
+        } catch (e: Throwable) {}
 
         // Tier 4: Parse primary external storage relative path
         // e.g. content://com.android.externalstorage.documents/document/primary%3ADownload%2Freport-1.pdf
@@ -238,70 +244,31 @@ object DocumentStreamResolver {
                     }
                 }
             }
-        } catch (_: Throwable) {}
-
-        // Tier 5: MediaStore lookup by display name
-        if (!displayName.isNullOrBlank()) {
-            try {
-                val projection = arrayOf(
-                    MediaStore.Files.FileColumns._ID,
-                    MediaStore.Files.FileColumns.DATA
-                )
-                context.contentResolver.query(
-                    MediaStore.Files.getContentUri("external"),
-                    projection,
-                    "${MediaStore.Files.FileColumns.DISPLAY_NAME} = ?",
-                    arrayOf(displayName),
-                    null
-                )?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val idIdx = cursor.getColumnIndex(MediaStore.Files.FileColumns._ID)
-                        val dataIdx = cursor.getColumnIndex(MediaStore.Files.FileColumns.DATA)
-
-                        if (dataIdx != -1) {
-                            val path = cursor.getString(dataIdx)
-                            if (!path.isNullOrBlank()) {
-                                val f = File(path)
-                                if (f.exists() && f.canRead() && f.length() > 0L) {
-                                    return StreamResult(FileInputStream(f), Uri.fromFile(f), "mediastore_name_path")
-                                }
-                            }
-                        }
-
-                        if (idIdx != -1) {
-                            val id = cursor.getLong(idIdx)
-                            val mUri = ContentUris.withAppendedId(MediaStore.Files.getContentUri("external"), id)
-                            try {
-                                val s = context.contentResolver.openInputStream(mUri)
-                                if (s != null) {
-                                    return StreamResult(s, mUri, "mediastore_name_id")
-                                }
-                            } catch (_: Throwable) {}
-                        }
-                    }
-                }
-            } catch (_: Throwable) {}
-
-            // Tier 6: Common public directories
-            try {
-                val candidateDirs = listOf(
-                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
-                    File("/storage/emulated/0/Download"),
-                    File("/storage/emulated/0/Documents"),
-                    File("/storage/emulated/0")
-                )
-                for (dir in candidateDirs) {
-                    if (dir.exists() && dir.isDirectory) {
-                        val directFile = File(dir, displayName)
-                        if (directFile.exists() && directFile.canRead() && directFile.length() > 0L) {
-                            return StreamResult(FileInputStream(directFile), Uri.fromFile(directFile), "candidate_dir_direct")
-                        }
-                    }
-                }
-            } catch (_: Throwable) {}
-        }
+        } catch (e: Throwable) {}
 
         return null
+    }
+
+    const val MAX_SAVED_DOCS_COUNT = 50
+    const val MAX_SAVED_DOCS_BYTES = 100L * 1024 * 1024 // 100 MB
+
+    fun trimSavedDocsCache(savedDocsDir: File) {
+        val files = savedDocsDir.listFiles()?.filter { it.isFile } ?: return
+        var totalBytes = files.sumOf { it.length() }
+        var count = files.size
+        if (count <= MAX_SAVED_DOCS_COUNT && totalBytes <= MAX_SAVED_DOCS_BYTES) return
+
+        val sorted = files.sortedBy { it.lastModified() }
+        for (f in sorted) {
+            if (count > MAX_SAVED_DOCS_COUNT || totalBytes > MAX_SAVED_DOCS_BYTES) {
+                val len = f.length()
+                if (f.delete()) {
+                    totalBytes -= len
+                    count--
+                }
+            } else {
+                break
+            }
+        }
     }
 }

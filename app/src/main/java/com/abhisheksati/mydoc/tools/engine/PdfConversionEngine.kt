@@ -307,23 +307,24 @@ class PdfConversionEngine(private val context: Context) {
 
             // OCR fallback for scanned or image-only documents
             if (!hasAnyText) {
-                val ocrEngine = OcrEngine(context)
-                for (p in 0 until totalPages) {
-                    currentCoroutineContext().ensureActive()
-                    val page = srcDoc.loadPage(p)
-                    val pixmap = page.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, false)
-                    val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
-                    pixmap.destroy()
-                    page.destroy()
+                OcrEngine(context).use { ocrEngine ->
+                    for (p in 0 until totalPages) {
+                        currentCoroutineContext().ensureActive()
+                        val page = srcDoc.loadPage(p)
+                        val pixmap = page.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, false)
+                        val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
+                        pixmap.destroy()
+                        page.destroy()
 
-                    val ocrText = runCatching { ocrEngine.recognizeText(bmp) }.getOrDefault("")
-                    bmp.recycle()
+                        val ocrText = runCatching { ocrEngine.recognizeText(bmp) }.getOrDefault("")
+                        bmp.recycle()
 
-                    if (ocrText.isNotBlank()) {
-                        sb.append("## Page ${p + 1} (OCR)\n\n").append(ocrText).append("\n\n")
+                        if (ocrText.isNotBlank()) {
+                            sb.append("## Page ${p + 1} (OCR)\n\n").append(ocrText).append("\n\n")
+                        }
+                        val pct = 70 + (((p + 1).toFloat() / totalPages) * 25).toInt()
+                        onProgress(ToolProgress(p + 1, totalPages, pct, "Extracting text via OCR from page ${p + 1}...", false))
                     }
-                    val pct = 70 + (((p + 1).toFloat() / totalPages) * 25).toInt()
-                    onProgress(ToolProgress(p + 1, totalPages, pct, "Extracting text via OCR from page ${p + 1}...", false))
                 }
             }
 
@@ -366,25 +367,26 @@ class PdfConversionEngine(private val context: Context) {
 
             // OCR fallback for scanned or image-only PDFs
             if (paragraphs.isEmpty()) {
-                val ocrEngine = OcrEngine(context)
-                for (p in 0 until totalPages) {
-                    currentCoroutineContext().ensureActive()
-                    val page = srcDoc.loadPage(p)
-                    val pixmap = page.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, false)
-                    val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
-                    pixmap.destroy()
-                    page.destroy()
+                OcrEngine(context).use { ocrEngine ->
+                    for (p in 0 until totalPages) {
+                        currentCoroutineContext().ensureActive()
+                        val page = srcDoc.loadPage(p)
+                        val pixmap = page.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, false)
+                        val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
+                        pixmap.destroy()
+                        page.destroy()
 
-                    val ocrText = runCatching { ocrEngine.recognizeText(bmp) }.getOrDefault("")
-                    bmp.recycle()
+                        val ocrText = runCatching { ocrEngine.recognizeText(bmp) }.getOrDefault("")
+                        bmp.recycle()
 
-                    for (l in ocrText.lines()) {
-                        val trimmed = l.trim()
-                        if (trimmed.isNotBlank()) paragraphs.add(trimmed)
+                        for (l in ocrText.lines()) {
+                            val trimmed = l.trim()
+                            if (trimmed.isNotBlank()) paragraphs.add(trimmed)
+                        }
+
+                        val pct = 70 + (((p + 1).toFloat() / totalPages) * 25).toInt()
+                        onProgress(ToolProgress(p + 1, totalPages, pct, "Extracting text via OCR from page ${p + 1}...", false))
                     }
-
-                    val pct = 70 + (((p + 1).toFloat() / totalPages) * 25).toInt()
-                    onProgress(ToolProgress(p + 1, totalPages, pct, "Extracting text via OCR from page ${p + 1}...", false))
                 }
             }
 
@@ -482,51 +484,52 @@ class PdfConversionEngine(private val context: Context) {
                 }
 
                 // Step 2: Extract text and fallback renders if no embedded XObjects found
-                val ocrEngine = OcrEngine(context)
-                for (p in 0 until totalPages) {
-                    currentCoroutineContext().ensureActive()
-                    val page = srcDoc.loadPage(p)
-                    val st = page.toStructuredText()
+                OcrEngine(context).use { ocrEngine ->
+                    for (p in 0 until totalPages) {
+                        currentCoroutineContext().ensureActive()
+                        val page = srcDoc.loadPage(p)
+                        val st = page.toStructuredText()
 
-                    val pageTextSb = StringBuilder()
-                    for (b in st.blocks) {
-                        for (l in b.lines) {
-                            for (c in l.chars) pageTextSb.append(c.c.toChar())
-                            pageTextSb.append("\n")
-                        }
-                    }
-                    val pageText = pageTextSb.toString().trim()
-
-                    fullText.append("--- PAGE ${p + 1} ---\n")
-                    if (pageText.isNotBlank()) {
-                        fullText.append(pageText).append("\n\n")
-                    }
-
-                    // If document had no embedded individual images (e.g. raster scan), export full page
-                    if (extractedImagesCount == 0) {
-                        val pixmap = page.toPixmap(Matrix(2.0f, 2.0f), ColorSpace.DeviceRGB, false)
-                        val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
-
-                        zos.putNextEntry(ZipEntry(String.format(java.util.Locale.ROOT, "images/page_%03d.png", p + 1)))
-                        bmp.compress(Bitmap.CompressFormat.PNG, 95, zos)
-                        zos.closeEntry()
-
-                        if (pageText.isBlank()) {
-                            val ocrText = runCatching { ocrEngine.recognizeText(bmp) }.getOrDefault("")
-                            if (ocrText.isNotBlank()) {
-                                fullText.append(ocrText).append("\n\n")
+                        val pageTextSb = StringBuilder()
+                        for (b in st.blocks) {
+                            for (l in b.lines) {
+                                for (c in l.chars) pageTextSb.append(c.c.toChar())
+                                pageTextSb.append("\n")
                             }
                         }
+                        val pageText = pageTextSb.toString().trim()
 
-                        bmp.recycle()
-                        pixmap.destroy()
+                        fullText.append("--- PAGE ${p + 1} ---\n")
+                        if (pageText.isNotBlank()) {
+                            fullText.append(pageText).append("\n\n")
+                        }
+
+                        // If document had no embedded individual images (e.g. raster scan), export full page
+                        if (extractedImagesCount == 0) {
+                            val pixmap = page.toPixmap(Matrix(2.0f, 2.0f), ColorSpace.DeviceRGB, false)
+                            val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
+
+                            zos.putNextEntry(ZipEntry(String.format(java.util.Locale.ROOT, "images/page_%03d.png", p + 1)))
+                            bmp.compress(Bitmap.CompressFormat.PNG, 95, zos)
+                            zos.closeEntry()
+
+                            if (pageText.isBlank()) {
+                                val ocrText = runCatching { ocrEngine.recognizeText(bmp) }.getOrDefault("")
+                                if (ocrText.isNotBlank()) {
+                                    fullText.append(ocrText).append("\n\n")
+                                }
+                            }
+
+                            bmp.recycle()
+                            pixmap.destroy()
+                        }
+
+                        st.destroy()
+                        page.destroy()
+
+                        val pct = 20 + (((p + 1).toFloat() / totalPages) * 75).toInt()
+                        onProgress(ToolProgress(p + 1, totalPages, pct, "Extracting page ${p + 1} assets...", false))
                     }
-
-                    st.destroy()
-                    page.destroy()
-
-                    val pct = 20 + (((p + 1).toFloat() / totalPages) * 75).toInt()
-                    onProgress(ToolProgress(p + 1, totalPages, pct, "Extracting page ${p + 1} assets...", false))
                 }
 
                 // Step 3: Write extracted text file

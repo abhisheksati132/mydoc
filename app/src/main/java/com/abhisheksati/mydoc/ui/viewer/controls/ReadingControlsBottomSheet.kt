@@ -420,13 +420,20 @@ private fun ThemeOptionButton(
     FilterChip(
         selected = isSelected,
         onClick = onClick,
-        label = { Text(label, maxLines = 1) },
+        label = {
+            Text(
+                text = label,
+                maxLines = 1,
+                style = MaterialTheme.typography.labelMedium,
+                softWrap = false
+            )
+        },
         leadingIcon = if (icon != null) {
             {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(16.dp)
                 )
             }
         } else null,

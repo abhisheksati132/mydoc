@@ -11,4 +11,11 @@
 
     <!-- Exclude hardware-backed encrypted signature file: key in Android Keystore cannot be migrated -->
     <exclude domain="file" path="user_signature.enc" />
+
+    <!-- Exclude trash and cached offline documents from backups for privacy and storage hygiene -->
+    <exclude domain="file" path=".trash" />
+    <exclude domain="external" path=".trash" />
+    <exclude domain="external" path="Android/data/com.abhisheksati.mydoc/files/.trash" />
+    <exclude domain="file" path="saved_docs" />
+    <exclude domain="external" path="Android/data/com.abhisheksati.mydoc/files/saved_docs" />
 </full-backup-content>

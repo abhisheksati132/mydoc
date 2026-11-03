@@ -421,12 +421,19 @@ class MainActivity : ComponentActivity() {
                                                         viewModel = toolsViewModel,
                                                         onOpenResultFile = { file, _ ->
                                                             val uri = Uri.fromFile(file)
+                                                            val toolSuffix = selectedTool?.defaultSuffix ?: "result"
+                                                            val baseDocName = currentDocument?.displayName?.substringBeforeLast('.')
                                                             lifecycleScope.launch {
                                                                 val myApp = application as MyDocApp
                                                                 val res = myApp.documentRepository.registerOpenedDocument(uri)
                                                                 res.onSuccess { doc ->
+                                                                    val friendlyName = if (!baseDocName.isNullOrBlank()) {
+                                                                        "${baseDocName}_${toolSuffix}.${file.extension}"
+                                                                    } else {
+                                                                        doc.displayName
+                                                                    }
                                                                     toolsViewModel.closeTool()
-                                                                    currentDocument = doc
+                                                                    currentDocument = doc.copy(displayName = friendlyName)
                                                                 }
                                                             }
                                                         }
@@ -458,6 +465,15 @@ class MainActivity : ComponentActivity() {
                 }
                 }
             }
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        val app = application as MyDocApp
+        if (app.settingsRepository.isBiometricLockEnabled.value) {
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+            isAppUnlocked = false
         }
     }
 

@@ -2,6 +2,7 @@ package com.abhisheksati.mydoc.tools.ui.components
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.view.ViewGroup
@@ -702,8 +703,15 @@ fun CameraScanSheet(
                                         ContextCompat.getMainExecutor(context),
                                         object : ImageCapture.OnImageSavedCallback {
                                             override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                                                isCapturing = false
-                                                capturedFiles.add(tempFile)
+                                                scope.launch(Dispatchers.IO) {
+                                                    try {
+                                                        cropToAspectRatio(tempFile, selectedMode.ratio)
+                                                    } catch (_: Exception) {}
+                                                    withContext(Dispatchers.Main) {
+                                                        isCapturing = false
+                                                        capturedFiles.add(tempFile)
+                                                    }
+                                                }
                                             }
 
                                             override fun onError(exception: ImageCaptureException) {
@@ -797,4 +805,37 @@ fun CameraScanSheet(
             }
         }
     }
+}
+
+private fun cropToAspectRatio(file: File, targetRatio: Float) {
+    if (targetRatio <= 0f) return
+    val original = BitmapFactory.decodeFile(file.absolutePath) ?: return
+    val origW = original.width
+    val origH = original.height
+    val currentRatio = origW.toFloat() / origH.toFloat()
+
+    val cropW: Int
+    val cropH: Int
+    if (currentRatio > targetRatio) {
+        // Image is wider than target: crop width centered
+        cropH = origH
+        cropW = (origH * targetRatio).toInt().coerceIn(1, origW)
+    } else {
+        // Image is taller than target: crop height centered
+        cropW = origW
+        cropH = (origW / targetRatio).toInt().coerceIn(1, origH)
+    }
+
+    val startX = (origW - cropW) / 2
+    val startY = (origH - cropH) / 2
+
+    val cropped = Bitmap.createBitmap(original, startX, startY, cropW, cropH)
+    if (cropped !== original) {
+        original.recycle()
+    }
+    FileOutputStream(file).use { out ->
+        cropped.compress(Bitmap.CompressFormat.JPEG, 92, out)
+        out.flush()
+    }
+    cropped.recycle()
 }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -567,15 +568,94 @@ fun StorageCleanerSheet(
             onDismissRequest = { showConfirm = false },
             title = { Text("Move to Trash?") },
             text = {
-                Text(
-                    buildString {
-                        append("${selectedFiles.size} files (${formatSize(selectedBytesToFree)})")
-                        if (selectedEmptyDirs.isNotEmpty()) {
-                            append(" and ${selectedEmptyDirs.size} empty folders")
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 280.dp)
+                ) {
+                    Text(
+                        text = buildString {
+                            append("${selectedFiles.size} files (${formatSize(selectedBytesToFree)})")
+                            if (selectedEmptyDirs.isNotEmpty()) {
+                                append(" and ${selectedEmptyDirs.size} empty folders")
+                            }
+                            append(" will be processed. You can restore files from Files > Trash for 30 days.")
+                        },
+                        style = typography.caption,
+                        color = colors.textSecondary
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f, fill = false)
+                            .clip(AppRadius.smallShape)
+                            .background(colors.surfaceContainerHigh)
+                            .padding(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(selectedFiles) { file ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = file.name,
+                                        style = typography.micro,
+                                        color = colors.textPrimary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = file.absolutePath,
+                                        style = typography.micro,
+                                        color = colors.textSecondary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = formatSize(file.length()),
+                                    style = typography.micro,
+                                    color = colors.textSecondary
+                                )
+                            }
                         }
-                        append(" will be moved to Trash. You can restore files from Files > Trash for 30 days.")
+                        items(selectedEmptyDirs) { dir ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.FolderOff,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(12.dp),
+                                    tint = colors.textSecondary
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = dir.name,
+                                        style = typography.micro,
+                                        color = colors.textPrimary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = dir.absolutePath,
+                                        style = typography.micro,
+                                        color = colors.textSecondary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
                     }
-                )
+                }
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -591,9 +671,22 @@ fun StorageCleanerSheet(
                                 emptyList()
                             }
                         }
-                        cleanerManager.deleteEmptyDirectories(selectedEmptyDirs)
+                        val deletedDirs = cleanerManager.deleteEmptyDirectories(selectedEmptyDirs)
                         cleanedCount = moved.size
                         cleanedBytes = moved.sumOf { it.sizeBytes }
+
+                        val failedFiles = selectedFiles.size - moved.size
+                        val failedDirs = selectedEmptyDirs.size - deletedDirs
+                        if (failedFiles > 0 || failedDirs > 0) {
+                            val msg = buildString {
+                                append("Cleaned ${moved.size} files and $deletedDirs folders.")
+                                if (failedFiles > 0) append(" Failed to delete $failedFiles files.")
+                                if (failedDirs > 0) append(" Failed to delete $failedDirs folders.")
+                            }
+                            app.showMessage(msg)
+                        } else {
+                            app.showMessage("Cleaned ${moved.size} files and $deletedDirs folders (${formatSize(cleanedBytes ?: 0L)} freed).")
+                        }
                         isCleaning = false
                     }
                 }) { Text("Move to Trash") }

@@ -32,11 +32,19 @@ import com.abhisheksati.mydoc.data.local.dao.TrashDao
 import com.abhisheksati.mydoc.data.local.entity.TrashEntity
 import com.abhisheksati.mydoc.domain.model.TrashItem
 import kotlin.coroutines.resume
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
+
+enum class ZipCollisionStrategy {
+    RENAME,
+    SKIP,
+    REPLACE
+}
 
 class StorageRepositoryImpl(
     private val context: Context,
@@ -479,6 +487,13 @@ class StorageRepositoryImpl(
         zipFile: File,
         destinationDir: File,
         onProgress: (extractedFiles: Int) -> Unit
+    ): Result<File> = unzip(zipFile, destinationDir, ZipCollisionStrategy.RENAME, onProgress)
+
+    suspend fun unzip(
+        zipFile: File,
+        destinationDir: File,
+        collisionStrategy: ZipCollisionStrategy,
+        onProgress: (extractedFiles: Int) -> Unit = {}
     ): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
             if (!zipFile.exists() || !zipFile.isFile) throw IllegalArgumentException("Zip file does not exist")
@@ -489,6 +504,7 @@ class StorageRepositoryImpl(
             var totalExtractedBytes = 0L
             val maxAllowedBytes = 1024L * 1024L * 1024L // 1 GB uncompressed limit
             val maxAllowedFiles = 10_000 // 10,000 files limit
+            val zipFileSize = zipFile.length().coerceAtLeast(1024L)
             val buffer = ByteArray(32 * 1024)
 
             ZipInputStream(BufferedInputStream(FileInputStream(zipFile), 32 * 1024)).use { zis ->
@@ -508,18 +524,56 @@ class StorageRepositoryImpl(
                     }
 
                     if (entry.isDirectory) {
-                        outFile.mkdirs()
+                        if (!outFile.exists()) {
+                            outFile.mkdirs()
+                        }
                     } else {
-                        outFile.parentFile?.mkdirs()
-                        FileOutputStream(outFile).use { fos ->
-                            var len: Int
-                            while (zis.read(buffer).also { len = it } > 0) {
-                                totalExtractedBytes += len
-                                if (totalExtractedBytes > maxAllowedBytes) {
-                                    throw SecurityException("Zip extraction aborted: Total uncompressed content exceeds safe limit (1 GB).")
+                        val parent = outFile.parentFile ?: destinationDir
+                        val canonicalParent = parent.canonicalFile.canonicalPath
+                        if (!canonicalParent.startsWith(canonicalDest + File.separator) && canonicalParent != canonicalDest) {
+                            throw SecurityException("Zip entry parent is outside destination: ${entry.name}")
+                        }
+                        if (!parent.exists()) {
+                            parent.mkdirs()
+                        }
+
+                        val targetFile = if (outFile.exists()) {
+                            when (collisionStrategy) {
+                                ZipCollisionStrategy.SKIP -> {
+                                    zis.closeEntry()
+                                    entry = zis.nextEntry
+                                    continue
                                 }
-                                fos.write(buffer, 0, len)
+                                ZipCollisionStrategy.REPLACE -> outFile
+                                ZipCollisionStrategy.RENAME -> getNonConflictingFile(parent, outFile.name)
                             }
+                        } else {
+                            outFile
+                        }
+
+                        val tempFile = File(parent, ".tmp_${System.currentTimeMillis()}_${targetFile.name}")
+                        try {
+                            FileOutputStream(tempFile).use { fos ->
+                                var len: Int
+                                while (zis.read(buffer).also { len = it } > 0) {
+                                    totalExtractedBytes += len
+                                    if (totalExtractedBytes > maxAllowedBytes) {
+                                        throw SecurityException("Zip extraction aborted: Total uncompressed content exceeds safe limit (1 GB).")
+                                    }
+                                    // Check compression ratio once uncompressed content exceeds 5 MB (defend against zip bombs)
+                                    if (totalExtractedBytes > 5L * 1024 * 1024 && (totalExtractedBytes / zipFileSize) > 100L) {
+                                        throw SecurityException("Zip extraction aborted: Potential zip bomb detected (compression ratio exceeds 100:1).")
+                                    }
+                                    fos.write(buffer, 0, len)
+                                }
+                            }
+                            if (!tempFile.renameTo(targetFile)) {
+                                tempFile.copyTo(targetFile, overwrite = true)
+                                tempFile.delete()
+                            }
+                        } catch (e: Exception) {
+                            tempFile.delete()
+                            throw e
                         }
                         onProgress(extractedCount)
                     }
@@ -701,9 +755,63 @@ class StorageRepositoryImpl(
     }
 
     override fun getTrashItems(): Flow<List<TrashItem>> {
+        CoroutineScope(Dispatchers.IO).launch {
+            purgeExpiredTrash()
+        }
         return trashDao?.getAllTrashItems()?.map { list ->
             list.map { it.toDomain() }
         } ?: flowOf(emptyList())
+    }
+
+    suspend fun purgeExpiredTrash(): Result<Int> = withContext(Dispatchers.IO) {
+        runCatching {
+            val now = System.currentTimeMillis()
+            val thirtyDaysAgo = now - 30L * 24 * 60 * 60 * 1000
+            val expiredItems = trashDao?.getItemsOlderThan(thirtyDaysAgo) ?: emptyList()
+            val successfullyDeletedIds = mutableListOf<Long>()
+
+            for (expired in expiredItems) {
+                val file = File(expired.trashPath)
+                val deleted = try {
+                    if (!file.exists()) {
+                        true
+                    } else {
+                        if (file.isDirectory) file.deleteRecursively() else file.delete()
+                    }
+                } catch (_: Exception) {
+                    false
+                }
+                if (deleted) {
+                    successfullyDeletedIds.add(expired.id)
+                }
+            }
+
+            if (successfullyDeletedIds.isNotEmpty()) {
+                trashDao?.deleteByIds(successfullyDeletedIds)
+            }
+
+            // Safe reconciliation for orphaned trash files (files on disk without DB records)
+            try {
+                val trashDir = getTrashDir()
+                val allDbItems = trashDao?.getAllTrashItemsSync() ?: emptyList()
+                val knownTrashPaths = allDbItems.map { File(it.trashPath).canonicalPath }.toSet()
+                val diskFiles = trashDir.listFiles() ?: emptyArray()
+                for (diskFile in diskFiles) {
+                    val canonicalDiskPath = try { diskFile.canonicalPath } catch (_: Exception) { null } ?: continue
+                    if (canonicalDiskPath !in knownTrashPaths) {
+                        // Orphaned file on disk. Check age: if older than 24h, purge safely
+                        val fileAge = now - diskFile.lastModified()
+                        if (fileAge > 24L * 60 * 60 * 1000) {
+                            if (diskFile.isDirectory) diskFile.deleteRecursively() else diskFile.delete()
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                // Ignore reconciliation errors
+            }
+
+            successfullyDeletedIds.size
+        }
     }
 
     override suspend fun moveToTrash(files: List<File>): Result<List<TrashItem>> = withContext(Dispatchers.IO) {
@@ -747,9 +855,8 @@ class StorageRepositoryImpl(
             // One awaited scan per file capped every delete at 2s; a batch costs one IPC.
             scanFilesAwait(context, scannedPaths)
 
-            // Purge items older than 30 days
-            val thirtyDaysAgo = now - 30L * 24 * 60 * 60 * 1000
-            trashDao?.purgeOlderThan(thirtyDaysAgo)
+            // Transactional purge of expired items and orphaned files
+            purgeExpiredTrash()
 
             Result.success(trashed)
         } catch (e: Exception) {
@@ -801,17 +908,29 @@ class StorageRepositoryImpl(
     override suspend fun deletePermanently(items: List<TrashItem>): Result<Int> = withContext(Dispatchers.IO) {
         try {
             var deletedCount = 0
+            val deletedIds = mutableListOf<Long>()
             for (item in items) {
                 val trashFile = item.trashFile
-                if (trashFile.exists()) {
-                    val deleted = if (trashFile.isDirectory) {
-                        trashFile.deleteRecursively()
+                val deleted = try {
+                    if (trashFile.exists()) {
+                        if (trashFile.isDirectory) {
+                            trashFile.deleteRecursively()
+                        } else {
+                            trashFile.delete()
+                        }
                     } else {
-                        trashFile.delete()
+                        true
                     }
-                    if (deleted) deletedCount++
+                } catch (_: Exception) {
+                    false
                 }
-                trashDao?.deleteByIds(listOf(item.id))
+                if (deleted) {
+                    deletedCount++
+                    deletedIds.add(item.id)
+                }
+            }
+            if (deletedIds.isNotEmpty()) {
+                trashDao?.deleteByIds(deletedIds)
             }
             Result.success(deletedCount)
         } catch (e: Exception) {

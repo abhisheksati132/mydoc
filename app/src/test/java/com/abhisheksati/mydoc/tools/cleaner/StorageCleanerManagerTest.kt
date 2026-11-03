@@ -105,4 +105,56 @@ class StorageCleanerManagerTest {
         assertFalse(empty.exists())
         assertTrue(nonEmpty.exists())
     }
+
+    @Test
+    fun testActiveDownloadFilesNeverClassifiedAsTempOrDuplicate() = runBlocking {
+        val root = tempFolder.newFolder("clean_download_test")
+        val identicalBytes = ByteArray(8192) { (it % 100).toByte() }
+
+        val crdownload = File(root, "large_file.crdownload").apply { writeBytes(identicalBytes) }
+        val partFile = File(root, "movie.part").apply { writeBytes(identicalBytes) }
+        val normalFile = File(root, "normal.bin").apply { writeBytes(identicalBytes) }
+        val duplicateNormal = File(root, "normal_copy.bin").apply { writeBytes(identicalBytes) }
+
+        val result = cleanerManager.scanDirectory(root)
+
+        assertFalse(result.tempFiles.any { it.name.endsWith(".crdownload") })
+        assertFalse(result.tempFiles.any { it.name.endsWith(".part") })
+
+        val allDuplicates = result.duplicateGroups.flatMap { it.duplicates }
+        assertFalse(allDuplicates.any { it.name.endsWith(".crdownload") })
+        assertFalse(allDuplicates.any { it.name.endsWith(".part") })
+        assertTrue(allDuplicates.any { it.name == "normal_copy.bin" || it.name == "normal.bin" })
+    }
+
+    @Test
+    fun testDeleteEmptyDirectoriesRefusesToDeleteProtectedSystemDirectories() = runBlocking {
+        val root = tempFolder.newFolder("clean_protected_test")
+        val downloadDir = File(root, "Download").apply { mkdir() }
+        val dcimDir = File(root, "DCIM").apply { mkdir() }
+        val documentsDir = File(root, "Documents").apply { mkdir() }
+        val disposableDir = File(root, "Disposable").apply { mkdir() }
+
+        val removed = cleanerManager.deleteEmptyDirectories(
+            listOf(downloadDir, dcimDir, documentsDir, disposableDir)
+        )
+
+        assertEquals(1, removed)
+        assertTrue(downloadDir.exists())
+        assertTrue(dcimDir.exists())
+        assertTrue(documentsDir.exists())
+        assertFalse(disposableDir.exists())
+    }
+
+    @Test
+    fun testScanDirectoryDoesNotEscapeScanRoot() = runBlocking {
+        val root = tempFolder.newFolder("clean_root_bounds")
+        val subDir = File(root, "valid_sub").apply { mkdir() }
+        File(subDir, "sample.tmp").apply { writeBytes(ByteArray(1024)) }
+
+        val result = cleanerManager.scanDirectory(subDir)
+        for (f in result.tempFiles) {
+            assertTrue(f.canonicalPath.startsWith(subDir.canonicalPath))
+        }
+    }
 }

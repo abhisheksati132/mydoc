@@ -176,7 +176,9 @@ class ApkDownloader(private val context: Context) {
             setRequestProperty("User-Agent", "mydoc-android-updater")
         }
         if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-            val text = connection.inputStream.bufferedReader().use { it.readText() }
+            val buffer = CharArray(16384)
+            val readChars = connection.inputStream.bufferedReader().use { it.read(buffer) }
+            val text = if (readChars > 0) String(buffer, 0, readChars) else ""
             parseChecksumContent(text)
                 ?: throw IllegalStateException("Empty or invalid checksum content from $checksumUrl")
         } else {

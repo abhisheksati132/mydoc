@@ -10,7 +10,8 @@ object PdfBoxHelper {
         if (!isInitialized) {
             synchronized(this) {
                 if (!isInitialized) {
-                    PDFBoxResourceLoader.init(context.applicationContext)
+                    val app = runCatching { context.applicationContext }.getOrNull() ?: context
+                    runCatching { PDFBoxResourceLoader.init(app) }
                     isInitialized = true
                 }
             }

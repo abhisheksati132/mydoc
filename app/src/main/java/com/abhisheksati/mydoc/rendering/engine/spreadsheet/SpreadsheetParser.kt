@@ -4,6 +4,7 @@ import android.util.Xml
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.xmlpull.v1.XmlPullParser
+import org.xmlpull.v1.XmlPullParserFactory
 import java.io.BufferedReader
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -21,11 +22,26 @@ class SpreadsheetParser {
     private val htmlLineBreakPattern = Regex("<br\\s*/?>", RegexOption.IGNORE_CASE)
     private val whitespacePattern = Regex("\\s+")
 
+    private fun readBoundedInputStream(inputStream: InputStream, maxBytes: Int = 50 * 1024 * 1024): ByteArray {
+        val buffer = ByteArray(16384)
+        val baos = java.io.ByteArrayOutputStream(minOf(maxBytes, 64 * 1024))
+        var totalRead = 0
+        var n: Int
+        while (inputStream.read(buffer).also { n = it } != -1) {
+            totalRead += n
+            if (totalRead > maxBytes) {
+                throw java.io.IOException("File size exceeds safety limit of ${maxBytes / (1024 * 1024)} MB.")
+            }
+            baos.write(buffer, 0, n)
+        }
+        return baos.toByteArray()
+    }
+
     suspend fun parse(inputStream: InputStream, extension: String): SpreadsheetModel = withContext(Dispatchers.IO) {
         val bytes = try {
-            inputStream.readBytes()
-        } catch (e: OutOfMemoryError) {
-            android.util.Log.e("SpreadsheetParser", "OOM reading spreadsheet", e)
+            readBoundedInputStream(inputStream, 50 * 1024 * 1024)
+        } catch (e: Exception) {
+            android.util.Log.e("SpreadsheetParser", "Error reading spreadsheet", e)
             return@withContext SpreadsheetModel(listOf(SheetData(name = "Sheet 1")))
         }
         if (bytes.isEmpty()) {
@@ -328,27 +344,27 @@ class SpreadsheetParser {
         }
 
         val cells = mutableMapOf<Pair<Int, Int>, String>()
-        var row = 0
-        var col = 0
-        for (token in valid.take(200)) {
-            cells[Pair(row, col)] = token
-            col++
-            if (col >= 4) {
-                col = 0
-                row++
-            }
+        if (valid.isEmpty()) {
+            cells[Pair(0, 0)] = "Binary XLS format (.xls) requires conversion to XLSX for structured display."
+            return SpreadsheetModel(listOf(SheetData(name = "Notice", maxRow = 0, maxCol = 0, cells = cells)))
         }
 
-        return SpreadsheetModel(listOf(SheetData(name = "Sheet 1", maxRow = row, maxCol = 3, cells = cells)))
+        cells[Pair(0, 0)] = "Extracted Text (Legacy XLS layout preview — convert to .xlsx for full grid formatting)"
+        var row = 1
+        for (token in valid.take(200)) {
+            cells[Pair(row, 0)] = token
+            row++
+        }
+
+        return SpreadsheetModel(listOf(SheetData(name = "Extracted Data", maxRow = row - 1, maxCol = 0, cells = cells)))
     }
 
     private fun parseCsv(bytes: ByteArray): SpreadsheetModel {
-        val reader = BufferedReader(InputStreamReader(ByteArrayInputStream(bytes)))
-        val lines = reader.readLines()
-        if (lines.isEmpty()) return SpreadsheetModel(listOf(SheetData(name = "Sheet1")))
+        val text = String(bytes, Charsets.UTF_8).removePrefix("\uFEFF")
+        if (text.isEmpty()) return SpreadsheetModel(listOf(SheetData(name = "Sheet 1")))
 
         // Auto-detect delimiter
-        val sample = lines.take(5).joinToString("\n")
+        val sample = text.take(1000)
         val delimiter = when {
             sample.count { it == '\t' } > sample.count { it == ',' } -> '\t'
             sample.count { it == ';' } > sample.count { it == ',' } -> ';'
@@ -359,18 +375,87 @@ class SpreadsheetParser {
         var maxRow = 0
         var maxCol = 0
 
-        lines.forEachIndexed { rowIndex, line ->
-            if (line.isNotBlank()) {
-                val tokens = line.split(delimiter)
-                tokens.forEachIndexed { colIndex, token ->
-                    val cleanVal = token.trim().removeSurrounding("\"")
-                    if (cleanVal.isNotEmpty()) {
-                        cells[Pair(rowIndex, colIndex)] = cleanVal
+        var rowIndex = 0
+        var colIndex = 0
+        val currentField = StringBuilder()
+        var inQuotes = false
+        var i = 0
+        val len = text.length
+
+        while (i < len) {
+            val ch = text[i]
+            if (inQuotes) {
+                if (ch == '"') {
+                    if (i + 1 < len && text[i + 1] == '"') {
+                        currentField.append('"')
+                        i += 2
+                        continue
+                    } else {
+                        inQuotes = false
+                        i++
+                        continue
                     }
-                    if (colIndex > maxCol) maxCol = colIndex
+                } else {
+                    currentField.append(ch)
+                    i++
+                    continue
                 }
-                if (rowIndex > maxRow) maxRow = rowIndex
+            } else {
+                when (ch) {
+                    '"' -> {
+                        inQuotes = true
+                        i++
+                    }
+                    delimiter -> {
+                        val value = currentField.toString().trim()
+                        if (value.isNotEmpty()) {
+                            cells[Pair(rowIndex, colIndex)] = value
+                        }
+                        if (colIndex > maxCol) maxCol = colIndex
+                        currentField.clear()
+                        colIndex++
+                        i++
+                    }
+                    '\r' -> {
+                        if (i + 1 < len && text[i + 1] == '\n') i++
+                        val value = currentField.toString().trim()
+                        if (value.isNotEmpty()) {
+                            cells[Pair(rowIndex, colIndex)] = value
+                        }
+                        if (colIndex > maxCol) maxCol = colIndex
+                        if (rowIndex > maxRow) maxRow = rowIndex
+                        currentField.clear()
+                        colIndex = 0
+                        rowIndex++
+                        i++
+                    }
+                    '\n' -> {
+                        val value = currentField.toString().trim()
+                        if (value.isNotEmpty()) {
+                            cells[Pair(rowIndex, colIndex)] = value
+                        }
+                        if (colIndex > maxCol) maxCol = colIndex
+                        if (rowIndex > maxRow) maxRow = rowIndex
+                        currentField.clear()
+                        colIndex = 0
+                        rowIndex++
+                        i++
+                    }
+                    else -> {
+                        currentField.append(ch)
+                        i++
+                    }
+                }
             }
+        }
+
+        if (currentField.isNotEmpty() || colIndex > 0) {
+            val value = currentField.toString().trim()
+            if (value.isNotEmpty()) {
+                cells[Pair(rowIndex, colIndex)] = value
+            }
+            if (colIndex > maxCol) maxCol = colIndex
+            if (rowIndex > maxRow) maxRow = rowIndex
         }
 
         val sheet = SheetData(
@@ -383,24 +468,51 @@ class SpreadsheetParser {
     }
 
     private fun parseXlsx(bytes: ByteArray): SpreadsheetModel {
+        val entries = mutableMapOf<String, ByteArray>()
+        var totalBytesRead = 0L
+        val maxDecompressedBytes = 100L * 1024 * 1024
+
+        try {
+            ZipInputStream(ByteArrayInputStream(bytes)).use { zis ->
+                var ze = zis.nextEntry
+                while (ze != null) {
+                    if (!ze.isDirectory) {
+                        val baos = java.io.ByteArrayOutputStream()
+                        val buf = ByteArray(8192)
+                        var read: Int
+                        while (zis.read(buf).also { read = it } != -1) {
+                            totalBytesRead += read
+                            if (totalBytesRead > maxDecompressedBytes) break
+                            baos.write(buf, 0, read)
+                        }
+                        entries[ze.name] = baos.toByteArray()
+                    }
+                    zis.closeEntry()
+                    ze = zis.nextEntry
+                }
+            }
+        } catch (_: Exception) {}
+
         // Step 1: Extract shared strings
-        val sharedStrings = extractSharedStrings(bytes)
+        val sharedStringsBytes = entries["xl/sharedStrings.xml"]
+        val sharedStrings = if (sharedStringsBytes != null) {
+            extractSharedStrings(sharedStringsBytes)
+        } else {
+            emptyList()
+        }
 
         // Step 2: Extract sheets
         val sheets = mutableListOf<SheetData>()
-        val zip = ZipInputStream(ByteArrayInputStream(bytes))
-        var entry: ZipEntry? = zip.nextEntry
+        val sheetEntries = entries.keys
+            .filter { it.startsWith("xl/worksheets/sheet") && it.endsWith(".xml") }
+            .sorted()
 
         var sheetCounter = 1
-        while (entry != null) {
-            val name = entry.name
-            if (name.startsWith("xl/worksheets/sheet") && name.endsWith(".xml")) {
-                val sheetData = parseWorksheetXml(zip, "Sheet $sheetCounter", sharedStrings)
-                sheets.add(sheetData)
-                sheetCounter++
-            }
-            zip.closeEntry()
-            entry = zip.nextEntry
+        for (sheetName in sheetEntries) {
+            val sheetBytes = entries[sheetName] ?: continue
+            val sheetData = parseWorksheetXml(ByteArrayInputStream(sheetBytes), "Sheet $sheetCounter", sharedStrings)
+            sheets.add(sheetData)
+            sheetCounter++
         }
 
         if (sheets.isEmpty()) {
@@ -410,46 +522,44 @@ class SpreadsheetParser {
         return SpreadsheetModel(sheets)
     }
 
+    private fun createXmlParser(): XmlPullParser {
+        return try {
+            XmlPullParserFactory.newInstance().apply { isNamespaceAware = false }.newPullParser()
+        } catch (_: Throwable) {
+            Xml.newPullParser()
+        }
+    }
+
     private fun extractSharedStrings(bytes: ByteArray): List<String> {
         val strings = mutableListOf<String>()
-        val zip = ZipInputStream(ByteArrayInputStream(bytes))
-        var entry: ZipEntry? = zip.nextEntry
+        val parser = createXmlParser().apply {
+            setInput(ByteArrayInputStream(bytes), "UTF-8")
+        }
+        var event = parser.eventType
+        var inText = false
+        val currentText = StringBuilder()
 
-        while (entry != null) {
-            if (entry.name == "xl/sharedStrings.xml") {
-                val parser = Xml.newPullParser().apply {
-                    setInput(zip, "UTF-8")
-                }
-                var event = parser.eventType
-                var inText = false
-                val currentText = StringBuilder()
-
-                while (event != XmlPullParser.END_DOCUMENT) {
-                    when (event) {
-                        XmlPullParser.START_TAG -> {
-                            if (parser.name == "t") {
-                                inText = true
-                                currentText.clear()
-                            }
-                        }
-                        XmlPullParser.TEXT -> {
-                            if (inText) {
-                                currentText.append(parser.text)
-                            }
-                        }
-                        XmlPullParser.END_TAG -> {
-                            if (parser.name == "t") {
-                                inText = false
-                                strings.add(currentText.toString())
-                            }
-                        }
+        while (event != XmlPullParser.END_DOCUMENT) {
+            when (event) {
+                XmlPullParser.START_TAG -> {
+                    if (parser.name == "t") {
+                        inText = true
+                        currentText.clear()
                     }
-                    event = parser.next()
                 }
-                break
+                XmlPullParser.TEXT -> {
+                    if (inText) {
+                        currentText.append(parser.text)
+                    }
+                }
+                XmlPullParser.END_TAG -> {
+                    if (parser.name == "t") {
+                        inText = false
+                        strings.add(currentText.toString())
+                    }
+                }
             }
-            zip.closeEntry()
-            entry = zip.nextEntry
+            event = parser.next()
         }
         return strings
     }
@@ -459,7 +569,7 @@ class SpreadsheetParser {
         sheetName: String,
         sharedStrings: List<String>
     ): SheetData {
-        val parser = Xml.newPullParser().apply {
+        val parser = createXmlParser().apply {
             setInput(stream, "UTF-8")
         }
 

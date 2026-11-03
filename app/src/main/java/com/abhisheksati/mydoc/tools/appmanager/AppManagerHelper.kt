@@ -13,6 +13,8 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 data class AppInfoItem(
     val appName: String,
@@ -22,7 +24,9 @@ data class AppInfoItem(
     val apkSize: Long,
     val isSystemApp: Boolean,
     val installTime: Long,
-    val icon: Drawable?
+    val icon: Drawable?,
+    val isSplitApk: Boolean = false,
+    val splitApkFiles: List<File> = emptyList()
 )
 
 class AppManagerHelper(private val context: Context) {
@@ -53,6 +57,11 @@ class AppManagerHelper(private val context: Context) {
             val apkFile = File(info.sourceDir)
             if (!apkFile.exists()) continue
 
+            val splitDirs = info.splitSourceDirs ?: info.splitPublicSourceDirs
+            val splitFiles = splitDirs?.map { File(it) }?.filter { it.exists() } ?: emptyList()
+            val isSplit = splitFiles.isNotEmpty()
+            val totalSize = apkFile.length() + splitFiles.sumOf { it.length() }
+
             val appName = try {
                 pm.getApplicationLabel(info).toString()
             } catch (_: Exception) {
@@ -79,10 +88,12 @@ class AppManagerHelper(private val context: Context) {
                     packageName = info.packageName,
                     versionName = versionName,
                     apkFile = apkFile,
-                    apkSize = apkFile.length(),
+                    apkSize = totalSize,
                     isSystemApp = isSystem,
                     installTime = installTime,
-                    icon = icon
+                    icon = icon,
+                    isSplitApk = isSplit,
+                    splitApkFiles = splitFiles
                 )
             )
         }
@@ -101,15 +112,27 @@ class AppManagerHelper(private val context: Context) {
             }
 
             val sanitizedName = app.appName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-            val targetFile = File(targetDir, "${sanitizedName}_v${app.versionName}.apk")
-
-            FileInputStream(app.apkFile).use { input ->
-                FileOutputStream(targetFile).use { output ->
-                    input.copyTo(output)
+            if (app.isSplitApk && app.splitApkFiles.isNotEmpty()) {
+                val targetZip = File(targetDir, "${sanitizedName}_v${app.versionName}.apks")
+                val allApks = listOf(app.apkFile) + app.splitApkFiles
+                ZipOutputStream(FileOutputStream(targetZip)).use { zos ->
+                    for (apk in allApks) {
+                        if (!apk.exists()) continue
+                        zos.putNextEntry(ZipEntry(apk.name))
+                        FileInputStream(apk).use { it.copyTo(zos) }
+                        zos.closeEntry()
+                    }
                 }
+                Result.success(targetZip)
+            } else {
+                val targetFile = File(targetDir, "${sanitizedName}_v${app.versionName}.apk")
+                FileInputStream(app.apkFile).use { input ->
+                    FileOutputStream(targetFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                Result.success(targetFile)
             }
-
-            Result.success(targetFile)
         } catch (e: Exception) {
             Result.failure(e)
         }

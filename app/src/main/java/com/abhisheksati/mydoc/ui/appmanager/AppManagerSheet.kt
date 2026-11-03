@@ -312,11 +312,27 @@ private fun AppListItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = "${app.versionName} • ${formatFileSize(app.apkSize)}",
-                    style = typography.micro,
-                    color = colors.textSecondary
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "${app.versionName} • ${formatFileSize(app.apkSize)}",
+                        style = typography.micro,
+                        color = colors.textSecondary
+                    )
+                    if (app.isSplitApk) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            shape = AppRadius.pillShape,
+                            color = colors.accent.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "Split APK (${app.splitApkFiles.size + 1})",
+                                style = typography.micro,
+                                color = colors.accent,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+                }
                 Text(
                     text = app.packageName,
                     style = typography.micro,

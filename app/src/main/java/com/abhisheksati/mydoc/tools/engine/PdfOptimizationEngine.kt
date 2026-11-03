@@ -95,19 +95,35 @@ class PdfOptimizationEngine(private val context: Context) {
             pdfBoxSucceeded = false
         }
 
-        // Strategy B: Scanned / photo-heavy page compression via MuPDF & AndroidPdfDocument
-        val rasterOutFile = createTempOutputFile("compressed_raster", "pdf")
-        var rasterSucceeded = false
-
-        val srcDoc = Document.openDocument(file.absolutePath) as? PDFDocument
+        // Strategy C: Pure object and xref compaction via MuPDF
+        val cleanOutFile = createTempOutputFile("compressed_clean", "pdf")
+        val cleanParams = when (options.compressionLevel) {
+            CompressionLevel.LIGHT -> "compress,clean,garbage=2"
+            CompressionLevel.BALANCED -> "compress,deflate,clean,garbage=3"
+            CompressionLevel.STRONG -> "compress,deflate,clean,garbage=4"
+        }
+        val srcDoc = try {
+            Document.openDocument(file.absolutePath) as? PDFDocument
+        } catch (_: Throwable) {
+            null
+        }
         if (srcDoc != null) {
             try {
+                srcDoc.save(cleanOutFile.absolutePath, cleanParams)
+            } catch (_: Exception) {}
+        }
+
+        // Strategy B: Only as an extreme fallback for STRONG compression when vector-preserving
+        // methods cannot reduce size, to avoid destroying text searchability and vector quality.
+        val rasterOutFile = createTempOutputFile("compressed_raster", "pdf")
+        var rasterSucceeded = false
+        val nonDestructiveReduced = (pdfBoxSucceeded && boxOutFile.exists() && boxOutFile.length() < originalSize * 0.95f) ||
+                (cleanOutFile.exists() && cleanOutFile.length() > 0 && cleanOutFile.length() < originalSize * 0.95f)
+
+        if (srcDoc != null && options.compressionLevel == CompressionLevel.STRONG && !nonDestructiveReduced) {
+            try {
                 val totalPages = srcDoc.countPages()
-                val (renderScale, jpegQuality) = when (options.compressionLevel) {
-                    CompressionLevel.LIGHT -> Pair(1.5f, 75)
-                    CompressionLevel.BALANCED -> Pair(1.15f, 60)
-                    CompressionLevel.STRONG -> Pair(0.85f, 45)
-                }
+                val (renderScale, jpegQuality) = Pair(0.85f, 45)
 
                 val outDoc = AndroidPdfDocument()
                 for (p in 0 until totalPages) {
@@ -145,69 +161,80 @@ class PdfOptimizationEngine(private val context: Context) {
             } catch (_: Exception) {
                 rasterSucceeded = false
             }
+        }
+        srcDoc?.destroy()
 
-            // Strategy C: Pure object and xref compaction via MuPDF
-            val cleanOutFile = createTempOutputFile("compressed_clean", "pdf")
-            val cleanParams = when (options.compressionLevel) {
-                CompressionLevel.LIGHT -> "compress,clean,garbage=2"
-                CompressionLevel.BALANCED -> "compress,deflate,clean,garbage=3"
-                CompressionLevel.STRONG -> "compress,deflate,clean,garbage=4"
-            }
-            try {
-                srcDoc.save(cleanOutFile.absolutePath, cleanParams)
-            } catch (_: Exception) {}
-            srcDoc.destroy()
+        onProgress(ToolProgress(100, 100, 95, "Selecting most efficient compression...", false))
 
-            onProgress(ToolProgress(100, 100, 95, "Selecting most efficient compression...", false))
-
-            // Choose the smallest resulting file that is smaller than original!
-            val candidates = mutableListOf<File>()
-            if (pdfBoxSucceeded && boxOutFile.exists() && boxOutFile.length() > 0 && boxOutFile.length() < originalSize) {
-                candidates.add(boxOutFile)
-            }
-            if (rasterSucceeded && rasterOutFile.exists() && rasterOutFile.length() > 0 && rasterOutFile.length() < originalSize * 0.90f) {
-                candidates.add(rasterOutFile)
-            }
-            if (cleanOutFile.exists() && cleanOutFile.length() > 0 && cleanOutFile.length() < originalSize) {
-                candidates.add(cleanOutFile)
-            }
-
-            val bestFile = candidates.minByOrNull { it.length() }
-            if (bestFile != null) {
-                if (bestFile != boxOutFile && boxOutFile.exists()) boxOutFile.delete()
-                if (bestFile != rasterOutFile && rasterOutFile.exists()) rasterOutFile.delete()
-                if (bestFile != cleanOutFile && cleanOutFile.exists()) cleanOutFile.delete()
-                return bestFile
-            }
-
-            if (cleanOutFile.exists() && cleanOutFile.length() > 0 && cleanOutFile.length() <= originalSize) {
-                if (boxOutFile.exists()) boxOutFile.delete()
-                if (rasterOutFile.exists()) rasterOutFile.delete()
-                return cleanOutFile
-            }
+        // Choose the best candidate that preserves text/vector, or raster if strong compression succeeded
+        val nonDestructiveCandidates = mutableListOf<File>()
+        if (pdfBoxSucceeded && boxOutFile.exists() && boxOutFile.length() > 0 && boxOutFile.length() < originalSize) {
+            nonDestructiveCandidates.add(boxOutFile)
+        }
+        if (cleanOutFile.exists() && cleanOutFile.length() > 0 && cleanOutFile.length() < originalSize) {
+            nonDestructiveCandidates.add(cleanOutFile)
         }
 
-        if (boxOutFile.exists() && boxOutFile.length() > 0) return boxOutFile
-        return file
+        val bestNonDestructive = nonDestructiveCandidates.minByOrNull { it.length() }
+        if (bestNonDestructive != null) {
+            if (bestNonDestructive != boxOutFile && boxOutFile.exists()) boxOutFile.delete()
+            if (bestNonDestructive != cleanOutFile && cleanOutFile.exists()) cleanOutFile.delete()
+            if (rasterOutFile.exists()) rasterOutFile.delete()
+            return bestNonDestructive
+        }
+
+        if (rasterSucceeded && rasterOutFile.exists() && rasterOutFile.length() > 0 && rasterOutFile.length() < originalSize * 0.85f) {
+            if (boxOutFile.exists()) boxOutFile.delete()
+            if (cleanOutFile.exists()) cleanOutFile.delete()
+            return rasterOutFile
+        }
+
+        if (cleanOutFile.exists() && cleanOutFile.length() > 0 && cleanOutFile.length() <= originalSize) {
+            if (boxOutFile.exists()) boxOutFile.delete()
+            if (rasterOutFile.exists()) rasterOutFile.delete()
+            return cleanOutFile
+        }
+
+        // Guarantee a standalone new temp file is returned so caller's finally cleanup never deletes the result
+        val fallbackOut = createTempOutputFile("compressed_fallback", "pdf")
+        if (boxOutFile.exists() && boxOutFile.length() > 0) {
+            boxOutFile.copyTo(fallbackOut, overwrite = true)
+            boxOutFile.delete()
+        } else {
+            file.copyTo(fallbackOut, overwrite = true)
+        }
+        if (cleanOutFile.exists()) cleanOutFile.delete()
+        if (rasterOutFile.exists()) rasterOutFile.delete()
+        return fallbackOut
     }
 
     suspend fun repairPdf(file: File, onProgress: (ToolProgress) -> Unit): File {
-        onProgress(ToolProgress(1, 100, 20, "Rebuilding damaged xref tables...", false))
-        val srcDoc = Document.openDocument(file.absolutePath) as? PDFDocument
+        val srcDoc = try {
+            Document.openDocument(file.absolutePath) as? PDFDocument
+        } catch (_: Throwable) {
+            null
+        }
         if (srcDoc != null) {
             try {
                 val totalPages = srcDoc.countPages()
                 val destDoc = PDFDocument()
+                var recoveredPages = 0
 
                 for (p in 0 until totalPages) {
                     currentCoroutineContext().ensureActive()
                     try {
                         destDoc.graftPage(destDoc.countPages(), srcDoc, p)
+                        recoveredPages++
                     } catch (_: Exception) {
                         // Skip corrupt page gracefully
                     }
                     val pct = 20 + ((p.toFloat() / totalPages) * 70).toInt()
                     onProgress(ToolProgress(p + 1, totalPages, pct, "Recovering page ${p + 1}...", false))
+                }
+
+                if (recoveredPages == 0 || destDoc.countPages() == 0) {
+                    destDoc.destroy()
+                    throw IllegalStateException("Document repair failed: No readable pages could be recovered from this damaged file.")
                 }
 
                 val outFile = createTempOutputFile("repaired", "pdf")
@@ -221,10 +248,18 @@ class PdfOptimizationEngine(private val context: Context) {
             // Secondary PDFBox recovery fallback
             PdfBoxHelper.ensureInitialized(context)
             val outFile = createTempOutputFile("repaired_box", "pdf")
+            try {
             FileInputStream(file).use { fis ->
                 PDDocument.load(fis).use { doc ->
+                    if (doc.numberOfPages == 0) {
+                        throw IllegalStateException("Document repair failed: Recovered document has 0 pages.")
+                    }
                     FileOutputStream(outFile).use { fos -> doc.save(fos) }
                 }
+            }
+            } catch (e: Exception) {
+                if (e is IllegalStateException) throw e
+                throw IllegalStateException("Document repair failed: Corrupted PDF cannot be parsed or recovered.", e)
             }
             return outFile
         }

@@ -44,8 +44,29 @@ class StorageCleanerManager {
         const val FULL_SCAN_MAX_ENTRIES = 200_000
         const val FULL_SCAN_BUDGET_MS = 90_000L
         // "bak" deliberately excluded: backups are often the only copy a user has.
-        private val TEMP_EXTENSIONS = setOf("tmp", "temp", "log", "cache", "crdownload", "part")
+        // Active/partial downloads (.crdownload, .part) must NEVER be treated as disposable junk.
+        val ACTIVE_DOWNLOAD_EXTENSIONS = setOf("crdownload", "part", "download")
+        val TEMP_EXTENSIONS = setOf("tmp", "temp", "log", "cache")
+
+        val PROTECTED_DIR_NAMES = setOf(
+            "download", "downloads", "dcim", "documents", "movies", "music",
+            "pictures", "podcasts", "ringtones", "alarms", "notifications",
+            "android", "lost+found", ".trash", ".mydoc", "system volume information",
+            ".android_secure", ".recycle"
+        )
+
+        fun isProtectedDirectory(dir: File): Boolean {
+            val name = dir.name.lowercase()
+            if (name in PROTECTED_DIR_NAMES) return true
+            val canonicalName = try { dir.canonicalFile.name.lowercase() } catch (_: Exception) { name }
+            if (canonicalName in PROTECTED_DIR_NAMES) return true
+            val parentName = dir.parentFile?.name?.lowercase()
+            if (parentName == "storage" || parentName == "emulated") return true
+            return false
+        }
     }
+
+    fun isProtectedDirectory(dir: File): Boolean = Companion.isProtectedDirectory(dir)
 
     suspend fun scanDirectory(
         rootDir: File,
@@ -65,14 +86,19 @@ class StorageCleanerManager {
         val deadline = if (timeBudgetMs == Long.MAX_VALUE) Long.MAX_VALUE
         else android.os.SystemClock.elapsedRealtime() + timeBudgetMs
         var outOfBudget = false
-
         var fileCount = 0
         var dirCount = 0
+
+        val canonicalRoot = try { rootDir.canonicalFile.canonicalPath } catch (_: Exception) { rootDir.absolutePath }
 
         fun walk(dir: File) {
             if (outOfBudget) return
             if (scanJob?.isActive == false) {
                 outOfBudget = true
+                return
+            }
+            val canonicalDir = try { dir.canonicalFile.canonicalPath } catch (_: Exception) { null } ?: return
+            if (!canonicalDir.startsWith(canonicalRoot + File.separator) && canonicalDir != canonicalRoot) {
                 return
             }
             if (fileCount + dirCount >= maxEntries || android.os.SystemClock.elapsedRealtime() > deadline) {
@@ -86,17 +112,26 @@ class StorageCleanerManager {
             } ?: return
 
             if (entries.isEmpty()) {
-                emptyFolders.add(dir)
+                if (!isProtectedDirectory(dir)) {
+                    emptyFolders.add(dir)
+                }
                 return
             }
 
             dirCount++
             for (entry in entries) {
                 if (outOfBudget) break
+                val canonicalEntry = try { entry.canonicalFile.canonicalPath } catch (_: Exception) { null } ?: continue
+                if (!canonicalEntry.startsWith(canonicalRoot + File.separator) && canonicalEntry != canonicalRoot) {
+                    continue
+                }
+
                 if (entry.isDirectory) {
                     val subEntries = try { entry.listFiles() } catch (_: Exception) { null }
                     if (subEntries != null && subEntries.isEmpty()) {
-                        emptyFolders.add(entry)
+                        if (!isProtectedDirectory(entry)) {
+                            emptyFolders.add(entry)
+                        }
                     } else {
                         walk(entry)
                     }
@@ -108,6 +143,9 @@ class StorageCleanerManager {
 
                     val length = entry.length()
                     val ext = entry.extension.lowercase()
+                    val isDownload = ext in ACTIVE_DOWNLOAD_EXTENSIONS ||
+                        entry.name.endsWith(".crdownload", ignoreCase = true) ||
+                        entry.name.endsWith(".part", ignoreCase = true)
 
                     // Large file check
                     if (length >= LARGE_FILE_THRESHOLD_BYTES) {
@@ -119,13 +157,13 @@ class StorageCleanerManager {
                         apkFiles.add(entry)
                     }
 
-                    // Temp / junk files
-                    if (ext in TEMP_EXTENSIONS || entry.name.startsWith(".~") || entry.name.endsWith(".tmp")) {
+                    // Temp / junk files (exclude active/download files)
+                    if (!isDownload && (ext in TEMP_EXTENSIONS || entry.name.startsWith(".~") || entry.name.endsWith(".tmp", ignoreCase = true))) {
                         tempFiles.add(entry)
                     }
 
-                    // Potential duplicate candidate (files between 4KB and 500MB)
-                    if (length in 4096..(500L * 1024 * 1024)) {
+                    // Potential duplicate candidate (files between 4KB and 500MB, never active downloads)
+                    if (!isDownload && length in 4096..(500L * 1024 * 1024)) {
                         val list = sizeCandidates.getOrPut(length) { mutableListOf() }
                         list.add(entry)
                     }
@@ -190,6 +228,7 @@ class StorageCleanerManager {
         var removed = 0
         // Deepest first so a parent that only contains other empty parents also goes.
         for (dir in directories.sortedByDescending { it.absolutePath.length }) {
+            if (isProtectedDirectory(dir)) continue
             try {
                 if (dir.isDirectory && dir.listFiles()?.isEmpty() == true && dir.delete()) {
                     removed++

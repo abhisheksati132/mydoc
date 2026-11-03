@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
@@ -57,6 +58,7 @@ internal fun PageItemView(
     viewModel: ViewerViewModel,
     readingMode: ReadingMode,
     zoomScale: Float = 1f,
+    isFitPage: Boolean = false,
     searchMatches: List<SearchMatch>,
     activeMatch: SearchMatch? = null,
     selection: TextSelectionResult? = null,
@@ -176,38 +178,20 @@ internal fun PageItemView(
         ReadingMode.NORMAL -> DocumentCanvasColors.pdfPage
     }
 
-    val pageColorFilter = when (readingMode) {
-        ReadingMode.INVERTED_DARK -> androidx.compose.ui.graphics.ColorFilter.colorMatrix(
-            androidx.compose.ui.graphics.ColorMatrix(floatArrayOf(
-                -1f,  0f,  0f, 0f, 255f,
-                 0f, -1f,  0f, 0f, 255f,
-                 0f,  0f, -1f, 0f, 255f,
-                 0f,  0f,  0f, 1f,   0f
-            ))
-        )
-        ReadingMode.SEPIA -> androidx.compose.ui.graphics.ColorFilter.colorMatrix(
-            androidx.compose.ui.graphics.ColorMatrix(floatArrayOf(
-                0.393f, 0.769f, 0.189f, 0f, 0f,
-                0.349f, 0.686f, 0.168f, 0f, 0f,
-                0.272f, 0.534f, 0.131f, 0f, 0f,
-                0f,     0f,     0f,     1f, 0f
-            ))
-        )
-        ReadingMode.EYE_COMFORT -> androidx.compose.ui.graphics.ColorFilter.colorMatrix(
-            androidx.compose.ui.graphics.ColorMatrix(floatArrayOf(
-                1.0f,  0f,    0f,    0f, 0f,
-                0f,    0.93f, 0f,    0f, 0f,
-                0f,    0f,    0.82f, 0f, 0f,
-                0f,    0f,    0f,    1f, 0f
-            ))
-        )
-        ReadingMode.NORMAL -> null
-    }
+    // Bitmaps are already color-transformed at render time by MuPdfRenderer.
+    // Setting pageColorFilter = null prevents applying the filter a second time in Compose.
+    val pageColorFilter: androidx.compose.ui.graphics.ColorFilter? = null
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(aspectRatio)
+        modifier = (if (isFitPage) {
+            Modifier
+                .fillMaxHeight()
+                .aspectRatio(aspectRatio, matchHeightConstraintsFirst = true)
+        } else {
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(aspectRatio, matchHeightConstraintsFirst = false)
+        })
             .background(itemBg)
             .onGloballyPositioned { coordinates ->
                 pageLayoutCoordinates = coordinates

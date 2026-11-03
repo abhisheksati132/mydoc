@@ -220,14 +220,16 @@ class DocumentRepositoryImpl(
                 val docKey = uri.toString().hashCode().toString(16)
                 val safeName = metadata.displayName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
                 val localFile = java.io.File(savedDocsDir, "${docKey}_$safeName")
-                if (!localFile.exists() || localFile.length() == 0L) {
+                if (!localFile.exists() || localFile.length() == 0L || (metadata.sizeBytes > 0L && localFile.length() != metadata.sizeBytes)) {
                     com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri, metadata.displayName)?.use { input ->
                         localFile.outputStream().use { output ->
                             input.copyTo(output)
                         }
                     }
                 }
-                        } catch (e: java.io.IOException) {
+                localFile.setLastModified(System.currentTimeMillis())
+                com.abhisheksati.mydoc.data.local.DocumentStreamResolver.trimSavedDocsCache(savedDocsDir)
+            } catch (e: java.io.IOException) {
                 android.util.Log.w("DocumentRepository", "Failed caching local document copy", e)
             } catch (e: Exception) {
                 android.util.Log.w("DocumentRepository", "Unexpected error caching local document", e)

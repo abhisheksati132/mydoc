@@ -263,7 +263,28 @@ fun ToolRunnerSheet(
                     val resultExt = resultFile?.extension?.lowercase()
                         ?.takeIf { it.isNotBlank() } ?: tool.outputExtension
                     val resultMime = resultFile?.let(::mimeTypeFor) ?: tool.outputMimeType
-                    val defaultName = "${tool.defaultSuffix}_${System.currentTimeMillis()}.$resultExt"
+                    val sourceDocName = inputUris.firstOrNull()?.let { uri ->
+                        runCatching {
+                            var name: String? = null
+                            if (uri.scheme == "content") {
+                                context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                                    if (cursor.moveToFirst()) {
+                                        val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                                        if (idx != -1) name = cursor.getString(idx)
+                                    }
+                                }
+                            } else if (uri.scheme == "file") {
+                                name = File(uri.path ?: "").name
+                            }
+                            name ?: uri.lastPathSegment
+                        }.getOrNull()
+                    }?.substringBeforeLast('.')
+
+                    val defaultName = if (!sourceDocName.isNullOrBlank()) {
+                        "${sourceDocName}_${tool.defaultSuffix}.$resultExt"
+                    } else {
+                        "${tool.defaultSuffix}_${System.currentTimeMillis()}.$resultExt"
+                    }
 
                     SuccessVerificationSection(
                         result = state.result,

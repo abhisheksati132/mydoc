@@ -151,6 +151,8 @@ fun HomeScreen(
         viewModel.selectTab(HomeTab.HOME)
     }
 
+    val fileManagerState by fileManagerViewModel.uiState.collectAsStateWithLifecycle()
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -159,9 +161,11 @@ fun HomeScreen(
         // Root tabs share one horizontal axis with swipe gesture support and keep their own state
         // (scroll, search, selection) when you leave and come back.
         val tabStateHolder = rememberSaveableStateHolder()
+        val isPagerScrollEnabled = !(currentTab == HomeTab.LIBRARY && (fileManagerState.isSelectionMode || fileManagerState.isBrowsingStorage))
         HorizontalPager(
             state = pagerState,
             beyondViewportPageCount = 1,
+            userScrollEnabled = isPagerScrollEnabled,
             modifier = Modifier.fillMaxSize()
         ) { page ->
             val tab = tabs[page]
@@ -452,13 +456,37 @@ fun HomeScreen(
             viewModel = toolsViewModel,
             onOpenResultFile = { file, _ ->
                 val uri = Uri.fromFile(file)
+                val inputUri = toolsViewModel.inputUris.value.firstOrNull()
                 scope.launch {
                     val appInst = context.applicationContext as? MyDocApp
                     if (appInst != null) {
                         val res = appInst.documentRepository.registerOpenedDocument(uri)
                         res.onSuccess { doc ->
+                            val toolSuffix = selectedTool?.defaultSuffix ?: "result"
+                            val inputName = inputUri?.let { u ->
+                                runCatching {
+                                    var n: String? = null
+                                    if (u.scheme == "content") {
+                                        context.contentResolver.query(u, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                                            if (cursor.moveToFirst()) {
+                                                val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                                                if (idx != -1) n = cursor.getString(idx)
+                                            }
+                                        }
+                                    } else if (u.scheme == "file") {
+                                        n = File(u.path ?: "").name
+                                    }
+                                    n ?: u.lastPathSegment
+                                }.getOrNull()
+                            }?.substringBeforeLast('.')
+
+                            val friendlyName = if (!inputName.isNullOrBlank()) {
+                                "${inputName}_${toolSuffix}.${file.extension}"
+                            } else {
+                                doc.displayName
+                            }
                             toolsViewModel.closeTool()
-                            onDocumentClick(doc)
+                            onDocumentClick(doc.copy(displayName = friendlyName))
                         }
                     }
                 }

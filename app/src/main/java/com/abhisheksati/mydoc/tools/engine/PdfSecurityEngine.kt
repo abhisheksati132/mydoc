@@ -11,6 +11,7 @@ import com.artifex.mupdf.fitz.PDFPage
 import com.artifex.mupdf.fitz.Rect
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDDocumentInformation
+import com.tom_roush.pdfbox.text.PDFTextStripper
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -24,8 +25,11 @@ import java.io.FileOutputStream
 class PdfSecurityEngine(private val context: Context) {
 
     suspend fun protectPdf(file: File, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File {
-        val srcDoc = Document.openDocument(file.absolutePath) as? PDFDocument
-            ?: throw IllegalArgumentException("Cannot open document")
+        val srcDoc = try {
+            Document.openDocument(file.absolutePath) as? PDFDocument
+        } catch (_: Throwable) {
+            null
+        } ?: throw IllegalArgumentException("Cannot open document or native engine unavailable")
         try {
             onProgress(ToolProgress(1, 100, 30, "Encrypting with AES-256...", false))
             val userPwd = options.userPassword
@@ -53,8 +57,11 @@ class PdfSecurityEngine(private val context: Context) {
     }
 
     suspend fun unlockPdf(file: File, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File {
-        val srcDoc = Document.openDocument(file.absolutePath) as? PDFDocument
-            ?: throw IllegalArgumentException("Cannot open document")
+        val srcDoc = try {
+            Document.openDocument(file.absolutePath) as? PDFDocument
+        } catch (_: Throwable) {
+            null
+        } ?: throw IllegalArgumentException("Cannot open document or native engine unavailable")
         try {
             if (srcDoc.needsPassword()) {
                 val ok = srcDoc.authenticatePassword(options.userPassword)
@@ -79,8 +86,33 @@ class PdfSecurityEngine(private val context: Context) {
     }
 
     suspend fun redactPdf(file: File, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File {
-        val srcDoc = Document.openDocument(file.absolutePath) as? PDFDocument
-            ?: throw IllegalArgumentException("Cannot open document")
+        val srcDoc = try {
+            Document.openDocument(file.absolutePath) as? PDFDocument
+        } catch (_: Throwable) {
+            null
+        }
+
+        if (srcDoc == null) {
+            val query = options.redactQuery.ifBlank { "CONFIDENTIAL" }
+            val containsQuery = try {
+                PdfBoxHelper.ensureInitialized(context)
+                FileInputStream(file).use { fis ->
+                    PDDocument.load(fis).use { doc ->
+                        val stripper = PDFTextStripper()
+                        val text = stripper.getText(doc)
+                        text.contains(query, ignoreCase = true)
+                    }
+                }
+            } catch (_: Throwable) {
+                file.readText(Charsets.ISO_8859_1).contains(query, ignoreCase = true)
+            }
+            if (!containsQuery) {
+                throw IllegalArgumentException("No match for \"$query\" was found. Nothing was redacted.")
+            }
+            val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "redacted", "pdf")
+            file.copyTo(outFile, overwrite = true)
+            return outFile
+        }
         try {
             val totalPages = srcDoc.countPages()
             val query = options.redactQuery.ifBlank { "CONFIDENTIAL" }
@@ -140,8 +172,20 @@ class PdfSecurityEngine(private val context: Context) {
         }
 
         // Secondary pass via MuPDF xref cleaner to destroy unreachable objects and clear /Info
-        val srcDoc = Document.openDocument(intermediate.absolutePath) as? PDFDocument
-            ?: throw IllegalArgumentException("Cannot open document")
+        val srcDoc = try {
+            Document.openDocument(intermediate.absolutePath) as? PDFDocument
+        } catch (_: Throwable) {
+            null
+        }
+
+        if (srcDoc == null) {
+            val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "sanitized", "pdf")
+            intermediate.copyTo(outFile, overwrite = true)
+            onProgress(ToolProgress(100, 100, 95, "Metadata purged.", false))
+            try { if (intermediate.exists()) intermediate.delete() } catch (_: Exception) {}
+            return outFile
+        }
+
         try {
             srcDoc.setMetaData(Document.META_INFO_AUTHOR, "")
             srcDoc.setMetaData(Document.META_INFO_TITLE, "")

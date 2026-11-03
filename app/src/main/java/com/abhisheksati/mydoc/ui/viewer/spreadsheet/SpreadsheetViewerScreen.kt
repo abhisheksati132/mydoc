@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -193,20 +195,16 @@ fun SpreadsheetViewerScreen(
                                 }
                             }
 
-                            // Body Grid with Frozen Row Header Column
-                            Row(modifier = Modifier.fillMaxSize()) {
-                                // Frozen Row Headers (1, 2, 3...)
-                                Column(
-                                    modifier = Modifier
-                                        .width(headerColWidth)
-                                        .verticalScroll(verticalScrollState)
-                                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                                ) {
-                                    for (r in 0..maxRow) {
+                            // Body Grid with Virtualized Rows and Frozen Row Header
+                            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                                items(maxRow + 1) { r ->
+                                    Row(modifier = Modifier.height(rowHeight)) {
+                                        // Row Header (frozen horizontally)
                                         Box(
                                             modifier = Modifier
                                                 .width(headerColWidth)
-                                                .height(rowHeight)
+                                                .fillMaxHeight()
+                                                .background(MaterialTheme.colorScheme.surfaceVariant)
                                                 .border(0.5.dp, MaterialTheme.colorScheme.outline),
                                             contentAlignment = Alignment.Center
                                         ) {
@@ -217,52 +215,41 @@ fun SpreadsheetViewerScreen(
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
-                                    }
-                                }
 
-                                // Cells Grid
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .horizontalScroll(horizontalScrollState)
-                                        .verticalScroll(verticalScrollState)
-                                ) {
-                                    Column {
-                                        for (r in 0..maxRow) {
-                                            Row {
-                                                for (c in 0..maxCol) {
-                                                    val cellText = currentSheet.getCellValue(r, c)
-                                                    val isSelected = state.selectedCell == (r to c)
-                                                    val isMatch = state.searchQuery.isNotBlank() && cellText.contains(state.searchQuery, ignoreCase = true)
+                                        // Cells Row (horizontal scroll synchronized across all rows)
+                                        Row(modifier = Modifier.horizontalScroll(horizontalScrollState)) {
+                                            for (c in 0..maxCol) {
+                                                val cellText = currentSheet.getCellValue(r, c)
+                                                val isSelected = state.selectedCell == (r to c)
+                                                val isMatch = state.searchQuery.isNotBlank() && cellText.contains(state.searchQuery, ignoreCase = true)
 
-                                                    val cellBg = when {
-                                                        isSelected -> colors.accent.copy(alpha = 0.25f)
-                                                        isMatch -> DocumentCanvasColors.searchHighlight
-                                                        else -> Color.Transparent
-                                                    }
+                                                val cellBg = when {
+                                                    isSelected -> colors.accent.copy(alpha = 0.25f)
+                                                    isMatch -> DocumentCanvasColors.searchHighlight
+                                                    else -> Color.Transparent
+                                                }
 
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .width(colWidth)
-                                                            .height(rowHeight)
-                                                            .border(
-                                                                width = if (isSelected) 1.5.dp else 0.5.dp,
-                                                                color = if (isSelected) colors.accent else MaterialTheme.colorScheme.outlineVariant
-                                                            )
-                                                            .background(cellBg)
-                                                            .clickable { viewModel.selectCell(r, c) }
-                                                            .padding(horizontal = 6.dp),
-                                                        contentAlignment = Alignment.CenterStart
-                                                    ) {
-                                                        Text(
-                                                            text = cellText,
-                                                            style = MaterialTheme.typography.bodySmall,
-                                                            color = textColor,
-                                                            maxLines = 1,
-                                                            overflow = TextOverflow.Ellipsis,
-                                                            textAlign = TextAlign.Start
+                                                Box(
+                                                    modifier = Modifier
+                                                        .width(colWidth)
+                                                        .fillMaxHeight()
+                                                        .border(
+                                                            width = if (isSelected) 1.5.dp else 0.5.dp,
+                                                            color = if (isSelected) colors.accent else MaterialTheme.colorScheme.outlineVariant
                                                         )
-                                                    }
+                                                        .background(cellBg)
+                                                        .clickable { viewModel.selectCell(r, c) }
+                                                        .padding(horizontal = 6.dp),
+                                                    contentAlignment = Alignment.CenterStart
+                                                ) {
+                                                    Text(
+                                                        text = cellText,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = textColor,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                        textAlign = TextAlign.Start
+                                                    )
                                                 }
                                             }
                                         }

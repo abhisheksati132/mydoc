@@ -290,7 +290,12 @@ internal fun ToolOptionsSection(
 
             PdfTool.SIGN_PDF -> {
                 val hasSignature = SignatureStorage.hasSavedSignature(LocalContext.current)
-                Text(text = "DIGITAL SIGNATURE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = "SIGNATURE STAMP", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = "Applies a visual signature stamp to pages. For cryptographic integrity verification, use official certificates.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+                )
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 Row(
                     modifier = Modifier

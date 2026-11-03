@@ -42,6 +42,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -49,6 +50,9 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -94,6 +98,13 @@ fun ReorderPagesSheet(
         val thumbnailCache = remember { mutableStateMapOf<Int, Bitmap>() }
         val selectedIds = remember { mutableStateListOf<String>() }
 
+        DisposableEffect(Unit) {
+            onDispose {
+                thumbnailCache.values.forEach { it.recycle() }
+                thumbnailCache.clear()
+            }
+        }
+
         var isLoading by remember { mutableStateOf(true) }
         var isRenderingThumbnails by remember { mutableStateOf(false) }
         var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -103,8 +114,10 @@ fun ReorderPagesSheet(
             isLoading = true
             errorMessage = null
             withContext(Dispatchers.IO) {
+                var tempFile: File? = null
+                var doc: Document? = null
                 try {
-                    val tempFile = File.createTempFile("organizer_preview_", ".pdf", context.cacheDir)
+                    tempFile = File.createTempFile("organizer_preview_", ".pdf", context.cacheDir)
                     val stream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, pdfUri)
                         ?: context.contentResolver.openInputStream(pdfUri)
 
@@ -112,7 +125,7 @@ fun ReorderPagesSheet(
                         FileOutputStream(tempFile).use { output -> input.copyTo(output) }
                     }
 
-                    val doc = Document.openDocument(tempFile.absolutePath)
+                    doc = Document.openDocument(tempFile.absolutePath)
                     val total = doc.countPages()
 
                     withContext(Dispatchers.Main) {
@@ -124,8 +137,9 @@ fun ReorderPagesSheet(
                         isRenderingThumbnails = true
                     }
 
-                    // Render thumbnails sequentially to preserve memory
+                    // Render thumbnails sequentially to preserve memory using RGB_565 and bound cache
                     for (p in 0 until total) {
+                        currentCoroutineContext().ensureActive()
                         try {
                             val page = doc.loadPage(p)
                             val bounds = page.bounds
@@ -133,28 +147,36 @@ fun ReorderPagesSheet(
                             val scale = targetWidth / maxOf(bounds.x1 - bounds.x0, 100f)
                             val matrix = Matrix(scale, scale)
                             val pixmap = page.toPixmap(matrix, ColorSpace.DeviceRGB, true)
-                            val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
+                            val bmp = Bitmap.createBitmap(pixmap.width, pixmap.height, Bitmap.Config.RGB_565)
+                            bmp.setPixels(pixmap.pixels, 0, pixmap.width, 0, 0, pixmap.width, pixmap.height)
                             pixmap.destroy()
                             page.destroy()
 
                             withContext(Dispatchers.Main) {
+                                if (thumbnailCache.size >= 35) {
+                                    val evictKey = thumbnailCache.keys.maxByOrNull { kotlin.math.abs(it - p) }
+                                    if (evictKey != null) {
+                                        thumbnailCache.remove(evictKey)?.recycle()
+                                    }
+                                }
                                 thumbnailCache[p] = bmp
                             }
                         } catch (t: Throwable) {
+                            if (t is CancellationException) throw t
                             android.util.Log.w("ReorderPages", "Thumbnail render failed for page $p", t)
                         }
                     }
-
-                    doc.destroy()
-                    tempFile.delete()
-
-                    withContext(Dispatchers.Main) {
-                        isRenderingThumbnails = false
-                    }
                 } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                     withContext(Dispatchers.Main) {
                         isLoading = false
                         errorMessage = e.localizedMessage ?: "Failed to open document pages"
+                    }
+                } finally {
+                    try { doc?.destroy() } catch (_: Exception) {}
+                    try { tempFile?.delete() } catch (_: Exception) {}
+                    withContext(Dispatchers.Main) {
+                        isRenderingThumbnails = false
                     }
                 }
             }

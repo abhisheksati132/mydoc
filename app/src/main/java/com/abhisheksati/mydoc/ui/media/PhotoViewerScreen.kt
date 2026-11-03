@@ -46,6 +46,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.graphics.RectangleShape
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -135,6 +136,11 @@ fun PhotoViewerScreen(
     var ocrExtractedText by remember { mutableStateOf<String?>(null) }
     var isOcrRunning by remember { mutableStateOf(false) }
     val ocrEngine = remember { com.abhisheksati.mydoc.ocr.OcrEngine(context) }
+    DisposableEffect(ocrEngine) {
+        onDispose {
+            ocrEngine.close()
+        }
+    }
 
     // Intercept back key to exit slideshow first or close photo viewer
     BackHandler {

@@ -14,17 +14,14 @@ interface TrashDao {
     @Query("SELECT * FROM trash_items ORDER BY deletedTimestamp DESC")
     fun getAllTrashItems(): Flow<List<TrashEntity>>
 
-    @Query("SELECT * FROM trash_items WHERE id = :id LIMIT 1")
-    suspend fun getTrashItemById(id: Long): TrashEntity?
+    @Query("SELECT * FROM trash_items ORDER BY deletedTimestamp DESC")
+    suspend fun getAllTrashItemsSync(): List<TrashEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: TrashEntity): Long
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(items: List<TrashEntity>): List<Long>
-
-    @Delete
-    suspend fun delete(item: TrashEntity)
+    @Query("SELECT * FROM trash_items WHERE deletedTimestamp < :thresholdTimestamp")
+    suspend fun getItemsOlderThan(thresholdTimestamp: Long): List<TrashEntity>
 
     @Query("DELETE FROM trash_items WHERE id IN (:ids)")
     suspend fun deleteByIds(ids: List<Long>)

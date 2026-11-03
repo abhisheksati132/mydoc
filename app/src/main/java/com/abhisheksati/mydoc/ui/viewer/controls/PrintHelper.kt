@@ -16,6 +16,15 @@ import java.io.FileOutputStream
 object PrintHelper {
 
     fun printDocument(context: Context, document: DocumentFile) {
+        if (!document.extension.equals("pdf", ignoreCase = true)) {
+            android.widget.Toast.makeText(
+                context,
+                "Direct printing is only supported for PDF documents. Convert this document to PDF to print.",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
         val printManager = context.getSystemService(Context.PRINT_SERVICE) as? PrintManager ?: return
         val jobName = "${document.displayName} Print Job"
 
