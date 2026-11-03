@@ -91,7 +91,7 @@ fun FilesScreen(
     viewModel: FileManagerViewModel,
     homeViewModel: HomeViewModel,
     storageViewModel: StorageViewModel,
-    onOpenFile: (File) -> Unit,
+    onOpenFile: (File, List<File>?) -> Unit,
     onLibraryItemClick: (LibraryItem) -> Unit,
     onLibraryItemDetails: (LibraryItem) -> Unit,
     onSettingsClick: () -> Unit,
@@ -363,7 +363,13 @@ fun FilesScreen(
                                                 item.name.endsWith(".zip", ignoreCase = true) -> {
                                             actionTarget = item
                                         }
-                                        else -> onOpenFile(item.file)
+                                        item.fileType == StorageFileType.IMAGE -> {
+                                            val siblingImages = uiState.filteredItems
+                                                .filter { it.fileType == StorageFileType.IMAGE }
+                                                .map { it.file }
+                                            onOpenFile(item.file, siblingImages)
+                                        }
+                                        else -> onOpenFile(item.file, null)
                                     }
                                 },
                                 onMoreItem = { actionTarget = it },
@@ -441,7 +447,7 @@ fun FilesScreen(
         singleItemActionTarget = actionTarget,
         onDismissSingleItemAction = { actionTarget = null },
         onRequestRename = { renameTarget = it },
-        onOpenFile = onOpenFile,
+        onOpenFile = { file -> onOpenFile(file, null) },
         onOpenInTools = onOpenInTools
     )
 

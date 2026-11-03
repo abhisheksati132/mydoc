@@ -35,6 +35,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -410,13 +412,18 @@ fun VideoPlayerScreen(
                     .background(Color.Black.copy(alpha = 0.45f))
             ) {
                 // Top Action Bar
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                GlassSurface(
+                    shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
+                    elevation = 6.dp,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
@@ -489,6 +496,7 @@ fun VideoPlayerScreen(
                         Icon(Icons.Default.LockOpen, contentDescription = "Lock", tint = Color.White)
                     }
                 }
+            }
 
                 // Center Play/Pause & Fast-Seek Buttons
                 Row(
@@ -536,13 +544,19 @@ fun VideoPlayerScreen(
                 }
 
                 // Bottom Timeline and Playback Controls
-                Column(
+                GlassSurface(
+                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                    elevation = 10.dp,
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.BottomCenter)
-                        .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
                     // Timeline Slider & Time Labels
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -615,6 +629,7 @@ fun VideoPlayerScreen(
                         }
                     }
                 }
+            }
             }
         }
     }

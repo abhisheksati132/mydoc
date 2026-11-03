@@ -23,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -50,10 +51,9 @@ fun FileManagerClipboardBar(
     ) {
         clipboardState?.let { clip ->
             val isCopy = clip.operation == ClipboardOperation.COPY
-            Surface(
+            GlassSurface(
                 shape = AppRadius.largeShape,
-                color = scheme.surfaceContainerHigh,
-                shadowElevation = 6.dp,
+                elevation = 8.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(

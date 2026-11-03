@@ -43,6 +43,8 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.draw.clip
+import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -112,11 +114,13 @@ fun StorageOverviewCard(
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
-    Card(
-        onClick = onBrowse,
+    GlassSurface(
         shape = AppRadius.largeShape,
-        colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainerLow),
-        modifier = modifier.fillMaxWidth()
+        elevation = 3.dp,
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(AppRadius.largeShape)
+            .clickable(onClick = onBrowse)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

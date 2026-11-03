@@ -42,6 +42,7 @@ import java.text.NumberFormat
 import java.util.Locale
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.graphics.Brush
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.components.showMessage
 
@@ -65,8 +66,8 @@ fun DocumentDetailsDialog(
         containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
         modifier = Modifier.border(
             BorderStroke(
-                0.5.dp,
-                if (isOled) Color.White.copy(alpha = 0.08f) else colors.line
+                1.dp,
+                Brush.verticalGradient(listOf(colors.glassRimTop, colors.glassRimBottom))
             ),
             shape = AppRadius.modalShape
         ),

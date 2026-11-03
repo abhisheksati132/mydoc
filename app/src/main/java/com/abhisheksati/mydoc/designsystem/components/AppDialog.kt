@@ -17,6 +17,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
@@ -51,8 +52,8 @@ fun AppDialog(
         containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
         modifier = Modifier.border(
             BorderStroke(
-                0.5.dp,
-                if (isOled) Color.White.copy(alpha = 0.08f) else colors.line
+                1.dp,
+                Brush.verticalGradient(listOf(colors.glassRimTop, colors.glassRimBottom))
             ),
             shape = AppRadius.modalShape
         ),

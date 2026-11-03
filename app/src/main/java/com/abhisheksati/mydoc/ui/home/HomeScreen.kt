@@ -10,6 +10,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -81,7 +83,7 @@ fun HomeScreen(
     storageViewModel: StorageViewModel,
     onLibraryItemClick: (LibraryItem) -> Unit,
     onDocumentClick: (DocumentFile) -> Unit,
-    onOpenFile: (File) -> Unit,
+    onOpenFile: (File, List<File>?) -> Unit = { _, _ -> },
     onSettingsClick: () -> Unit,
     onSpotlightSearch: () -> Unit,
     onShareDocument: (DocumentFile) -> Unit,
@@ -116,6 +118,28 @@ fun HomeScreen(
 
     val hazeState = remember { dev.chrisbanes.haze.HazeState() }
 
+    val tabs = remember { listOf(HomeTab.HOME, HomeTab.LIBRARY, HomeTab.TOOLS) }
+    val pagerState = rememberPagerState(
+        initialPage = tabs.indexOf(currentTab).coerceAtLeast(0),
+        pageCount = { tabs.size }
+    )
+
+    // Sync pager swipe with ViewModel currentTab
+    LaunchedEffect(pagerState.currentPage) {
+        val targetTab = tabs.getOrNull(pagerState.currentPage)
+        if (targetTab != null && targetTab != currentTab) {
+            viewModel.selectTab(targetTab)
+        }
+    }
+
+    // Sync programmatic tab changes with pager
+    LaunchedEffect(currentTab) {
+        val targetPage = tabs.indexOf(currentTab)
+        if (targetPage >= 0 && pagerState.currentPage != targetPage) {
+            pagerState.animateScrollToPage(targetPage)
+        }
+    }
+
     // Navigate back to Home tab when pressing Back on other tabs
     BackHandler(
         enabled = currentTab != HomeTab.HOME &&
@@ -132,18 +156,15 @@ fun HomeScreen(
             .fillMaxSize()
             .background(colors.background)
     ) {
-        // Root tabs share one horizontal axis and keep their own state (scroll, search,
-        // selection) when you leave and come back.
+        // Root tabs share one horizontal axis with swipe gesture support and keep their own state
+        // (scroll, search, selection) when you leave and come back.
         val tabStateHolder = rememberSaveableStateHolder()
-        AnimatedContent(
-            targetState = currentTab,
-            modifier = Modifier.fillMaxSize(),
-            transitionSpec = {
-                val forward = targetState.ordinal > initialState.ordinal
-                AppMotion.peerEnter(forward) togetherWith AppMotion.peerExit(forward)
-            },
-            label = "rootTab"
-        ) { tab ->
+        HorizontalPager(
+            state = pagerState,
+            beyondViewportPageCount = 1,
+            modifier = Modifier.fillMaxSize()
+        ) { page ->
+            val tab = tabs[page]
             tabStateHolder.SaveableStateProvider(tab.name) {
                 when (tab) {
                     HomeTab.HOME -> {
@@ -180,7 +201,7 @@ fun HomeScreen(
                             },
                             onSettingsClick = onSettingsClick,
                             onSpotlightSearch = onSpotlightSearch,
-                            isActive = currentTab == HomeTab.LIBRARY,
+                            isActive = currentTab == HomeTab.LIBRARY && pagerState.currentPage == 1,
                             onOpenInTools = { viewModel.selectTab(HomeTab.TOOLS) },
                             modifier = Modifier.fillMaxSize()
                         )
@@ -374,7 +395,13 @@ fun HomeScreen(
 
             BottomNavBar(
                 currentTab = currentTab,
-                onTabSelected = { tab -> viewModel.selectTab(tab) },
+                onTabSelected = { tab ->
+                    val page = tabs.indexOf(tab)
+                    if (page >= 0 && page != pagerState.currentPage) {
+                        scope.launch { pagerState.animateScrollToPage(page) }
+                    }
+                    viewModel.selectTab(tab)
+                },
                 onScanClick = { documentScanner() },
                 hazeState = hazeState
             )

@@ -43,6 +43,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.RectangleShape
+import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -205,8 +207,9 @@ fun PhotoViewerScreen(
             exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
             modifier = Modifier.align(Alignment.TopCenter)
         ) {
-            Surface(
-                color = overlayBackground,
+            GlassSurface(
+                shape = RectangleShape,
+                elevation = 8.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -366,8 +369,9 @@ fun PhotoViewerScreen(
             exit = fadeOut() + slideOutVertically(targetOffsetY = { it }),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            Surface(
-                color = overlayBackground,
+            GlassSurface(
+                shape = RectangleShape,
+                elevation = 8.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(

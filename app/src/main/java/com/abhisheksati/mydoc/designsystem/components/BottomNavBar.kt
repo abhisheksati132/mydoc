@@ -23,7 +23,6 @@ import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.FolderCopy
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material.icons.outlined.AutoStories
-import androidx.compose.material.icons.outlined.DocumentScanner
 import androidx.compose.material.icons.outlined.FolderCopy
 import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.material3.Icon
@@ -110,35 +109,6 @@ fun BottomNavBar(
                         }
                     }
                 )
-
-                // Central Scan CTA Action
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .shadow(
-                            elevation = 4.dp,
-                            shape = CircleShape,
-                            ambientColor = colors.accent.copy(alpha = 0.35f),
-                            spotColor = colors.accent.copy(alpha = 0.50f)
-                        )
-                        .clip(CircleShape)
-                        .background(colors.accent)
-                        .clickable(
-                            role = Role.Button,
-                            onClick = {
-                                haptics.click()
-                                onScanClick()
-                            }
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.DocumentScanner,
-                        contentDescription = "Scan Document",
-                        tint = colors.onAccent,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
 
                 // Tools Tab
                 NavPillItem(

@@ -269,7 +269,12 @@ class MainActivity : ComponentActivity() {
                         }
                         com.abhisheksati.mydoc.domain.model.MediaKind.PHOTO -> {
                             val m = item.toMediaItem()
-                            currentPhoto = Pair(m, listOf(m))
+                            val currentHomeState = homeViewModel.uiState.value
+                            val allLibraryItems = currentHomeState.libraryItems.ifEmpty { currentHomeState.recentLibraryItems }
+                            val allPhotos = allLibraryItems
+                                .filter { it.kind == com.abhisheksati.mydoc.domain.model.MediaKind.PHOTO }
+                                .map { it.toMediaItem() }
+                            currentPhoto = Pair(m, if (allPhotos.any { it.uri == m.uri }) allPhotos else listOf(m))
                         }
                         com.abhisheksati.mydoc.domain.model.MediaKind.VIDEO -> {
                             currentVideo = item.toMediaItem()
@@ -425,7 +430,7 @@ class MainActivity : ComponentActivity() {
                                                 updateManager = updateManager,
                                                 onLibraryItemClick = openLibraryItem,
                                                 onDocumentClick = { doc -> currentDocument = doc },
-                                                onOpenFile = { file -> handleOpenFile(file) },
+                                                onOpenFile = { file, siblings -> handleOpenFile(file, siblings) },
                                                 onSettingsClick = { isSettingsOpen = true },
                                                 onSpotlightSearch = { isSpotlightSearchOpen = true },
                                                 onShareDocument = { doc -> shareDocument(doc) }
@@ -514,12 +519,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun handleOpenFile(file: File) {
+    private fun handleOpenFile(file: File, siblingFiles: List<File>? = null) {
         val uri = Uri.fromFile(file)
-        openUriOrFile(uri = uri, fileName = file.name, file = file)
+        openUriOrFile(uri = uri, fileName = file.name, file = file, siblingFiles = siblingFiles)
     }
 
-    private fun openUriOrFile(uri: Uri, mimeType: String? = null, fileName: String? = null, file: File? = null) {
+    private fun openUriOrFile(
+        uri: Uri,
+        mimeType: String? = null,
+        fileName: String? = null,
+        file: File? = null,
+        siblingFiles: List<File>? = null
+    ) {
         val detectedMime = mimeType ?: contentResolver.getType(uri) ?: when {
             fileName?.endsWith(".jpg", true) == true || fileName?.endsWith(".jpeg", true) == true -> "image/jpeg"
             fileName?.endsWith(".png", true) == true -> "image/png"
@@ -549,7 +560,55 @@ class MainActivity : ComponentActivity() {
                     dateAddedSec = System.currentTimeMillis() / 1000L,
                     filePath = file?.absolutePath ?: uri.path
                 )
-                currentPhoto = Pair(mediaItem, listOf(mediaItem))
+
+                val imageExts = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif")
+                val photos: List<com.abhisheksati.mydoc.domain.model.MediaItem> = when {
+                    !siblingFiles.isNullOrEmpty() -> {
+                        siblingFiles.map { f ->
+                            val fMime = when (f.extension.lowercase()) {
+                                "png" -> "image/png"
+                                "webp" -> "image/webp"
+                                "gif" -> "image/gif"
+                                else -> "image/jpeg"
+                            }
+                            com.abhisheksati.mydoc.domain.model.MediaItem(
+                                id = f.absolutePath.hashCode().toLong(),
+                                uri = Uri.fromFile(f),
+                                displayName = f.name,
+                                sizeBytes = f.length(),
+                                mimeType = fMime,
+                                dateAddedSec = f.lastModified() / 1000L,
+                                filePath = f.absolutePath
+                            )
+                        }
+                    }
+                    file != null && file.parentFile?.isDirectory == true -> {
+                        val parent = file.parentFile
+                        val siblings = parent?.listFiles { f ->
+                            f.isFile && !f.name.startsWith(".") && f.extension.lowercase() in imageExts
+                        }?.sortedBy { it.name.lowercase() }
+                        siblings?.map { f ->
+                            val fMime = when (f.extension.lowercase()) {
+                                "png" -> "image/png"
+                                "webp" -> "image/webp"
+                                "gif" -> "image/gif"
+                                else -> "image/jpeg"
+                            }
+                            com.abhisheksati.mydoc.domain.model.MediaItem(
+                                id = f.absolutePath.hashCode().toLong(),
+                                uri = Uri.fromFile(f),
+                                displayName = f.name,
+                                sizeBytes = f.length(),
+                                mimeType = fMime,
+                                dateAddedSec = f.lastModified() / 1000L,
+                                filePath = f.absolutePath
+                            )
+                        } ?: listOf(mediaItem)
+                    }
+                    else -> listOf(mediaItem)
+                }
+
+                currentPhoto = Pair(mediaItem, if (photos.any { it.uri == mediaItem.uri }) photos else listOf(mediaItem))
             }
             detectedMime.startsWith("video/") -> {
                 val mediaItem = com.abhisheksati.mydoc.domain.model.MediaItem(

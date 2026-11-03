@@ -67,14 +67,8 @@ fun SettingsAppearanceSection(
             ThemeChip(
                 label = "Dark",
                 icon = Icons.Outlined.DarkMode,
-                selected = currentTheme == AppThemeMode.DARK,
+                selected = currentTheme == AppThemeMode.DARK || currentTheme == AppThemeMode.BLACK,
                 onClick = { onThemeChange(AppThemeMode.DARK) }
-            )
-            ThemeChip(
-                label = "Black",
-                icon = Icons.Outlined.Contrast,
-                selected = currentTheme == AppThemeMode.BLACK,
-                onClick = { onThemeChange(AppThemeMode.BLACK) }
             )
         }
 

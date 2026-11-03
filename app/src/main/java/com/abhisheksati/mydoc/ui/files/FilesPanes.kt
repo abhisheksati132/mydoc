@@ -2,6 +2,7 @@ package com.abhisheksati.mydoc.ui.files
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,16 +38,18 @@ import androidx.compose.material.icons.outlined.SdCard
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.abhisheksati.mydoc.domain.model.StorageFileType
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -217,33 +220,23 @@ fun BrowseHomePane(
             )
         }
 
-        item(key = "browse_locations_header") {
-            FilesSectionHeader(title = "Locations")
-        }
-        item(key = "browse_internal") {
-            LocationRow(
-                title = "Internal storage",
-                meta = if (storageUiState.formattedTotal.isNotEmpty()) {
-                    "${storageUiState.formattedFree} free of ${storageUiState.formattedTotal}"
-                } else {
-                    "Open device storage"
-                },
-                icon = Icons.Outlined.Storage,
-                onClick = onBrowseInternal,
-                modifier = Modifier.padding(horizontal = 10.dp)
-            )
-        }
-        items(
-            items = volumes.filterNot { it.isPrimary },
-            key = { "vol_${it.path}" }
-        ) { volume ->
-            LocationRow(
-                title = volume.title,
-                meta = "${volume.formattedFree} free of ${volume.formattedTotal}",
-                icon = Icons.Outlined.SdCard,
-                onClick = { onBrowseVolume(volume) },
-                modifier = Modifier.padding(horizontal = 10.dp)
-            )
+        val secondaryVolumes = volumes.filterNot { it.isPrimary }
+        if (secondaryVolumes.isNotEmpty()) {
+            item(key = "browse_secondary_volumes_header") {
+                FilesSectionHeader(title = "External Storage")
+            }
+            items(
+                items = secondaryVolumes,
+                key = { "vol_${it.path}" }
+            ) { volume ->
+                LocationRow(
+                    title = volume.title,
+                    meta = "${volume.formattedFree} free of ${volume.formattedTotal}",
+                    icon = Icons.Outlined.SdCard,
+                    onClick = { onBrowseVolume(volume) },
+                    modifier = Modifier.padding(horizontal = 10.dp)
+                )
+            }
         }
 
         if (pinnedFolders.isNotEmpty()) {
@@ -385,6 +378,15 @@ private fun StorageBreakdown(
     }
 }
 
+enum class DocumentTypeFilter(val label: String) {
+    ALL("All"),
+    PDF("PDF"),
+    WORD("Word"),
+    EXCEL("Excel"),
+    PPT("PPT"),
+    TEXT("Text")
+}
+
 @Composable
 fun DirectoryPane(
     uiState: FileManagerUiState,
@@ -397,7 +399,26 @@ fun DirectoryPane(
 ) {
     val scheme = MaterialTheme.colorScheme
     var sortMenuOpen by remember { mutableStateOf(false) }
-    val items = uiState.filteredItems
+    var selectedDocFilter by remember { mutableStateOf(DocumentTypeFilter.ALL) }
+
+    val isDocumentsCategory = uiState.activeCategory == FileCategory.DOCUMENTS
+
+    val displayedItems = remember(uiState.filteredItems, isDocumentsCategory, selectedDocFilter) {
+        if (!isDocumentsCategory || selectedDocFilter == DocumentTypeFilter.ALL) {
+            uiState.filteredItems
+        } else {
+            uiState.filteredItems.filter { item ->
+                when (selectedDocFilter) {
+                    DocumentTypeFilter.ALL -> true
+                    DocumentTypeFilter.PDF -> item.fileType == StorageFileType.PDF
+                    DocumentTypeFilter.WORD -> item.fileType == StorageFileType.WORD
+                    DocumentTypeFilter.EXCEL -> item.fileType == StorageFileType.EXCEL
+                    DocumentTypeFilter.PPT -> item.fileType == StorageFileType.PPT
+                    DocumentTypeFilter.TEXT -> item.fileType == StorageFileType.CODE_TEXT
+                }
+            }
+        }
+    }
 
     Column(modifier = modifier) {
         Row(
@@ -449,17 +470,55 @@ fun DirectoryPane(
             }
         }
 
+        if (isDocumentsCategory) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                DocumentTypeFilter.entries.forEach { filter ->
+                    val count = when (filter) {
+                        DocumentTypeFilter.ALL -> uiState.filteredItems.size
+                        DocumentTypeFilter.PDF -> uiState.filteredItems.count { it.fileType == StorageFileType.PDF }
+                        DocumentTypeFilter.WORD -> uiState.filteredItems.count { it.fileType == StorageFileType.WORD }
+                        DocumentTypeFilter.EXCEL -> uiState.filteredItems.count { it.fileType == StorageFileType.EXCEL }
+                        DocumentTypeFilter.PPT -> uiState.filteredItems.count { it.fileType == StorageFileType.PPT }
+                        DocumentTypeFilter.TEXT -> uiState.filteredItems.count { it.fileType == StorageFileType.CODE_TEXT }
+                    }
+                    FilterChip(
+                        selected = selectedDocFilter == filter,
+                        onClick = { selectedDocFilter = filter },
+                        label = {
+                            Text(
+                                text = if (count > 0 && filter != DocumentTypeFilter.ALL) "${filter.label} ($count)" else filter.label,
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = scheme.primaryContainer,
+                            selectedLabelColor = scheme.onPrimaryContainer
+                        )
+                    )
+                }
+            }
+        }
+
         // Reading these two fields outside the item lambdas keeps a row's recomposition
         // scoped to selection changes instead of every uiState change.
         val inSelectionMode = uiState.isSelectionMode
         val selectedFiles = uiState.selectedFiles
 
-        if (items.isEmpty()) {
+        if (displayedItems.isEmpty()) {
             FilesEmptyState(
                 icon = Icons.Outlined.FolderOpen,
-                title = if (uiState.searchQuery.isNotEmpty()) "No matches" else "This folder is empty",
+                title = if (uiState.searchQuery.isNotEmpty()) "No matches" else if (isDocumentsCategory && selectedDocFilter != DocumentTypeFilter.ALL) "No ${selectedDocFilter.label} documents" else "This folder is empty",
                 message = if (uiState.searchQuery.isNotEmpty()) {
                     "Try a different search term."
+                } else if (isDocumentsCategory && selectedDocFilter != DocumentTypeFilter.ALL) {
+                    "No ${selectedDocFilter.label} files found in your documents."
                 } else {
                     "Create a folder or add files using the button below."
                 }
@@ -472,7 +531,7 @@ fun DirectoryPane(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                items(items, key = { it.path }) { item ->
+                items(displayedItems, key = { it.path }) { item ->
                     val selected = selectedFiles.contains(item.file)
                     FileGridCell(
                         item = item,
@@ -491,7 +550,7 @@ fun DirectoryPane(
                 contentPadding = PaddingValues(top = 4.dp, bottom = 120.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                items(items, key = { it.path }) { item ->
+                items(displayedItems, key = { it.path }) { item ->
                     val selected = selectedFiles.contains(item.file)
                     FileRow(
                         item = item,

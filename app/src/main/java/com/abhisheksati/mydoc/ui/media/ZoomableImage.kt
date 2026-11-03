@@ -1,7 +1,9 @@
 package com.abhisheksati.mydoc.ui.media
 
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -15,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
@@ -56,18 +59,34 @@ fun ZoomableImage(
                 )
             }
             .pointerInput(Unit) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    val newScale = (scale * zoom).coerceIn(1f, 5f)
-                    scale = newScale
-                    if (newScale > 1.02f) {
-                        val maxPan = 700f * (newScale - 1f)
-                        offset = Offset(
-                            x = (offset.x + pan.x).coerceIn(-maxPan, maxPan),
-                            y = (offset.y + pan.y).coerceIn(-maxPan, maxPan)
-                        )
-                    } else {
-                        offset = Offset.Zero
-                    }
+                awaitEachGesture {
+                    do {
+                        val event = awaitPointerEvent()
+                        val isMultiTouch = event.changes.size > 1
+                        val isZoomed = scale > 1.05f
+
+                        if (isMultiTouch || isZoomed) {
+                            val zoomChange = event.calculateZoom()
+                            val panChange = event.calculatePan()
+
+                            if (zoomChange != 1f || (isZoomed && panChange != Offset.Zero)) {
+                                val newScale = (scale * zoomChange).coerceIn(1f, 5f)
+                                scale = newScale
+                                if (newScale > 1.02f) {
+                                    val maxPan = 700f * (newScale - 1f)
+                                    offset = Offset(
+                                        x = (offset.x + panChange.x).coerceIn(-maxPan, maxPan),
+                                        y = (offset.y + panChange.y).coerceIn(-maxPan, maxPan)
+                                    )
+                                } else {
+                                    offset = Offset.Zero
+                                }
+                                event.changes.forEach {
+                                    if (it.positionChanged()) it.consume()
+                                }
+                            }
+                        }
+                    } while (event.changes.any { it.pressed })
                 }
             },
         contentAlignment = Alignment.Center
