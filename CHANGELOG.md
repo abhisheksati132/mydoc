@@ -3,6 +3,28 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [1.5.13] — 2026-11-03
+
+Range: `v1.5.12..v1.5.13`.
+
+### Added
+
+- **Adaptive Concept 2 App Launcher Icon.** Complete high-resolution adaptive launcher icon pack installed across all density buckets (`mipmap-mdpi` to `mipmap-xxxhdpi`) and `mipmap-anydpi-v26`.
+- **E2E Opaque-Box Test Suite.** Added 64 automated tests covering data safety, storage cleaner protection, office document parsing, PDF tools correctness, viewer lifecycle, and release quality gates.
+
+### Fixed
+
+- **Storage Cleaner safety.** Protected standard user and system directories (`Download`, `DCIM`, `Documents`, `Pictures`, `Music`, `Movies`, `Android`) against deletion; active browser downloads (`.crdownload`, `.part`) are strictly excluded from temp and duplicate scans.
+- **Physical Trash purge.** Automatic 30-day purge now atomically unlinks physical files from `.trash` in addition to removing database records.
+- **Zip Slip and directory traversal.** Canonical path checks enforced on all zip extractions and storage operations.
+- **Spreadsheet memory footprint.** Spreadsheet viewer refactored to use virtualized viewport windowing, preventing OutOfMemoryError on large sheets.
+- **Office parsing heap exhaustion.** DOCX, PPTX, and XLSX parsers now use streaming XML parsing instead of contiguous in-memory byte buffers.
+- **PDF tools truthfulness & fallback.** "Redact", "Watermark", "Repair", and "Crop" now feature honest UI guidance, dual-engine fallback (MuPDF + PDFBox), and strict keyword/geometry validation.
+
+### Removed
+
+- **Dead assets.** Pruned unused font `bricolage_grotesque.ttf` (408 KB) and legacy duplicate night-specific launcher resources.
+
 ## [1.5.12] — 2026-11-03
 
 Range: `v1.5.11..v1.5.12`.
