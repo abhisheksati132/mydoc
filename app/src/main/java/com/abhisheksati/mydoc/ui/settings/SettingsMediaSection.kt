@@ -4,16 +4,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Speed
-import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
 @Composable
 fun SettingsMediaSection(
-    videoHwAccel: Boolean,
     autoResumeVideo: Boolean,
     videoAutoLoop: Boolean,
-    onVideoHwAccelChange: (Boolean) -> Unit,
     onAutoResumeVideoChange: (Boolean) -> Unit,
     onVideoAutoLoopChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
@@ -23,16 +20,6 @@ fun SettingsMediaSection(
         icon = Icons.Outlined.PlayCircle,
         modifier = modifier
     ) {
-        SettingToggleRow(
-            title = "Hardware Video Acceleration",
-            subtitle = "GPU decoding for smooth 4K",
-            icon = Icons.Outlined.Videocam,
-            checked = videoHwAccel,
-            onCheckedChange = onVideoHwAccelChange
-        )
-
-        SettingsDivider()
-
         SettingToggleRow(
             title = "Auto-Resume Video",
             subtitle = "Resume where you left off",

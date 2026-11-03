@@ -16,6 +16,10 @@ Range: `v1.5.10..v1.5.11`.
   `DocumentFilterChips`, `EditorialMasthead`, `EditorialRow`, `PaperSurface`, `PaperTheme`,
   `RecentsPane`, the duplicate `ui/common/AppDivider` and the unused `ui/common/EmptyState`.
 - **Unused dependencies:** `zxing-core` (no QR feature exists) and `haze-materials`.
+- **Placebo settings.** "Hardware Video Acceleration" and "High-Quality Vector PDF" stored a
+  preference that no renderer or player read; both controls and their dead state are gone. Eleven
+  further preference keys that nothing consumed (granted folder, scan scope, confirm-before-delete,
+  photo export quality) were deleted.
 
 ### Fixed
 
@@ -41,6 +45,12 @@ Range: `v1.5.10..v1.5.11`.
   names from external intents are sanitized before writing to cache.
 - **CI action pins restored.** The release and build workflows use full commit SHAs again and
   `build.yml` declares read-only permissions.
+- **Settings now change what they promise.** PDF page scaling drives the live reader fit preference;
+  Auto-Resume and Auto-Loop video are honoured by the player; the haptic toggle silences app and
+  viewer feedback through a shared gate.
+- **The updater ignores the debug version suffix.** `1.5.11-debug` no longer parses as `1.5`, which
+  had made a 1.5.11 debug install show "Update available: v1.5.9" and offer a downgrade. A regression
+  test covers suffixed and plain versions.
 
 ### Changed
 

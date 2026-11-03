@@ -61,12 +61,6 @@ class SettingsRepository(private val context: Context) {
     private val _autoResumeVideo = MutableStateFlow(prefs.getBoolean(KEY_AUTO_RESUME_VIDEO, true))
     val autoResumeVideo: StateFlow<Boolean> = _autoResumeVideo.asStateFlow()
 
-    private val _scanFullDeviceStorage = MutableStateFlow(prefs.getBoolean(KEY_SCAN_FULL_DEVICE, true))
-    val scanFullDeviceStorage: StateFlow<Boolean> = _scanFullDeviceStorage.asStateFlow()
-
-    private val _highQualityPdf = MutableStateFlow(prefs.getBoolean(KEY_HIGH_QUALITY_PDF, true))
-    val highQualityPdf: StateFlow<Boolean> = _highQualityPdf.asStateFlow()
-
     private val _defaultReadingMode = MutableStateFlow(loadDefaultReadingMode())
     val defaultReadingMode: StateFlow<ReadingMode> = _defaultReadingMode.asStateFlow()
 
@@ -79,29 +73,14 @@ class SettingsRepository(private val context: Context) {
     private val _sortOrder = MutableStateFlow(loadSortOrder())
     val sortOrder: StateFlow<DocumentSortOrder> = _sortOrder.asStateFlow()
 
-    private val _grantedFolderUri = MutableStateFlow(prefs.getString(KEY_GRANTED_FOLDER_URI, null))
-    val grantedFolderUri: StateFlow<String?> = _grantedFolderUri.asStateFlow()
-
-    private val _grantedFolderName = MutableStateFlow(prefs.getString(KEY_GRANTED_FOLDER_NAME, null))
-    val grantedFolderName: StateFlow<String?> = _grantedFolderName.asStateFlow()
-
     private val _isBiometricLockEnabled = MutableStateFlow(prefs.getBoolean(KEY_BIOMETRIC_LOCK, false))
     val isBiometricLockEnabled: StateFlow<Boolean> = _isBiometricLockEnabled.asStateFlow()
 
     private val _volumeKeyPageTurning = MutableStateFlow(prefs.getBoolean(KEY_VOLUME_KEY_TURNING, true))
     val volumeKeyPageTurning: StateFlow<Boolean> = _volumeKeyPageTurning.asStateFlow()
 
-    private val _confirmBeforeDelete = MutableStateFlow(prefs.getBoolean(KEY_CONFIRM_BEFORE_DELETE, true))
-    val confirmBeforeDelete: StateFlow<Boolean> = _confirmBeforeDelete.asStateFlow()
-
-    private val _videoHardwareAcceleration = MutableStateFlow(prefs.getBoolean(KEY_VIDEO_HW_ACCEL, true))
-    val videoHardwareAcceleration: StateFlow<Boolean> = _videoHardwareAcceleration.asStateFlow()
-
     private val _videoAutoLoop = MutableStateFlow(prefs.getBoolean(KEY_VIDEO_AUTO_LOOP, true))
     val videoAutoLoop: StateFlow<Boolean> = _videoAutoLoop.asStateFlow()
-
-    private val _pdfFitMode = MutableStateFlow(prefs.getString(KEY_PDF_FIT_MODE, "FIT_WIDTH") ?: "FIT_WIDTH")
-    val pdfFitMode: StateFlow<String> = _pdfFitMode.asStateFlow()
 
     private val _doubleTapZoom = MutableStateFlow(prefs.getBoolean(KEY_DOUBLE_TAP_ZOOM, true))
     val doubleTapZoom: StateFlow<Boolean> = _doubleTapZoom.asStateFlow()
@@ -225,15 +204,6 @@ class SettingsRepository(private val context: Context) {
         return isNowBookmarked
     }
 
-    fun setGrantedFolder(uri: String?, name: String?) {
-        prefs.edit()
-            .putString(KEY_GRANTED_FOLDER_URI, uri)
-            .putString(KEY_GRANTED_FOLDER_NAME, name)
-            .apply()
-        _grantedFolderUri.value = uri
-        _grantedFolderName.value = name
-    }
-
     fun setDefaultStartupTab(tab: HomeTab) {
         prefs.edit().putString(KEY_DEFAULT_STARTUP_TAB, tab.name).apply()
         _defaultStartupTab.value = tab
@@ -254,34 +224,9 @@ class SettingsRepository(private val context: Context) {
         _autoResumeVideo.value = enabled
     }
 
-    fun setScanFullDeviceStorage(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_SCAN_FULL_DEVICE, enabled).apply()
-        _scanFullDeviceStorage.value = enabled
-    }
-
-    fun setHighQualityPdf(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_HIGH_QUALITY_PDF, enabled).apply()
-        _highQualityPdf.value = enabled
-    }
-
-    fun setConfirmBeforeDelete(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_CONFIRM_BEFORE_DELETE, enabled).apply()
-        _confirmBeforeDelete.value = enabled
-    }
-
-    fun setVideoHardwareAcceleration(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_VIDEO_HW_ACCEL, enabled).apply()
-        _videoHardwareAcceleration.value = enabled
-    }
-
     fun setVideoAutoLoop(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_VIDEO_AUTO_LOOP, enabled).apply()
         _videoAutoLoop.value = enabled
-    }
-
-    fun setPdfFitMode(mode: String) {
-        prefs.edit().putString(KEY_PDF_FIT_MODE, mode).apply()
-        _pdfFitMode.value = mode
     }
 
     fun setDoubleTapZoom(enabled: Boolean) {
@@ -390,25 +335,17 @@ class SettingsRepository(private val context: Context) {
         private const val KEY_HAPTIC_FEEDBACK = "haptic_feedback_enabled"
         private const val KEY_SHOW_HIDDEN_FILES = "show_hidden_files"
         private const val KEY_AUTO_RESUME_VIDEO = "auto_resume_video"
-        private const val KEY_HIGH_QUALITY_PDF = "high_quality_pdf"
         private const val KEY_DEFAULT_READING_MODE = "default_reading_mode"
         private const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
         private const val KEY_SORT_ORDER = "document_sort_order"
-        private const val KEY_GRANTED_FOLDER_URI = "granted_folder_uri"
-        private const val KEY_GRANTED_FOLDER_NAME = "granted_folder_name"
         private const val KEY_BIOMETRIC_LOCK = "biometric_lock_enabled"
         private const val KEY_VOLUME_KEY_TURNING = "volume_key_turning"
-        private const val KEY_CONFIRM_BEFORE_DELETE = "confirm_before_delete"
-        private const val KEY_PHOTO_EDITOR_QUALITY = "photo_editor_export_quality"
-        private const val KEY_VIDEO_HW_ACCEL = "video_hw_acceleration"
         private const val KEY_VIDEO_AUTO_LOOP = "video_auto_loop"
-        private const val KEY_PDF_FIT_MODE = "pdf_fit_mode"
         private const val KEY_DOUBLE_TAP_ZOOM = "double_tap_zoom"
         private const val KEY_DYNAMIC_COLOR = "dynamic_color_enabled"
         private const val KEY_FILES_GRID_VIEW = "files_grid_view"
         private const val KEY_AMOLED_BLACK = "amoled_black_enabled"
         private const val KEY_CHECK_UPDATES_ON_LAUNCH = "check_updates_on_launch"
-        private const val KEY_SCAN_FULL_DEVICE = "scan_full_device_storage"
         private const val KEY_READING_BRIGHTNESS = "reading_brightness"
         private const val KEY_READING_FONT_SCALE = "reading_font_scale"
         private const val KEY_READING_CONTINUOUS_SCROLL = "reading_continuous_scroll"

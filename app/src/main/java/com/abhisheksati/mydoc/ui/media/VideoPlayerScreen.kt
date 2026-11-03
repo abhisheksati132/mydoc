@@ -132,7 +132,9 @@ fun VideoPlayerScreen(
     item: MediaItem,
     mediaRepository: MediaRepository,
     onBackClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    autoResume: Boolean = true,
+    autoLoop: Boolean = true
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -147,7 +149,7 @@ fun VideoPlayerScreen(
     var currentPositionMs by remember { mutableLongStateOf(0L) }
     var totalDurationMs by remember { mutableLongStateOf(item.durationMs) }
     var areControlsVisible by remember { mutableStateOf(true) }
-    var isLooping by remember { mutableStateOf(false) }
+    var isLooping by remember { mutableStateOf(autoLoop) }
     var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
     var resizeModeIndex by remember { mutableIntStateOf(0) }
     var isScreenLocked by remember { mutableStateOf(false) }
@@ -184,10 +186,14 @@ fun VideoPlayerScreen(
             }
     }
 
+    LaunchedEffect(exoPlayer, isLooping) {
+        exoPlayer.repeatMode = if (isLooping) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+    }
+
     // Restore saved playback position
-    LaunchedEffect(item.uri) {
+    LaunchedEffect(item.uri, autoResume) {
         val savedPos = mediaRepository.getPlaybackPosition(item.uri.toString())
-        if (savedPos > 2000L) {
+        if (autoResume && savedPos > 2000L) {
             exoPlayer.seekTo(savedPos)
         }
     }

@@ -4,15 +4,38 @@ import android.os.Build
 import android.view.HapticFeedbackConstants
 import android.view.View
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
+
+/** Mirrors the "Haptic feedback" setting so every tactile cue can be switched off. */
+val LocalHapticsEnabled = compositionLocalOf { true }
+
+/** Direct Compose haptics, silenced when the user turns haptic feedback off. */
+@Composable
+fun rememberGatedHaptics(): HapticFeedback {
+    val haptic = LocalHapticFeedback.current
+    val enabled = LocalHapticsEnabled.current
+    return remember(haptic, enabled) { if (enabled) haptic else NoOpHaptics }
+}
+
+private object NoOpHaptics : HapticFeedback {
+    override fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType) = Unit
+}
 
 /**
  * Clean, subtle haptic feedback engine.
  * Only triggers tactile pulses on physical milestones (taking a photo, corner snapping, drag finish).
  * Does not vibrate on ordinary passive taps.
  */
-class AppHaptics(private val view: View) {
+class AppHaptics(private val view: View, private val enabled: Boolean = true) {
+
+    private fun perform(constant: Int) {
+        if (enabled) view.performHapticFeedback(constant)
+    }
 
     fun click() {
         tick()
@@ -23,9 +46,9 @@ class AppHaptics(private val view: View) {
      */
     fun tick() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            view.performHapticFeedback(HapticFeedbackConstants.SEGMENT_TICK)
+            perform(HapticFeedbackConstants.SEGMENT_TICK)
         } else {
-            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            perform(HapticFeedbackConstants.CLOCK_TICK)
         }
     }
 
@@ -34,7 +57,7 @@ class AppHaptics(private val view: View) {
      */
     fun snap() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            view.performHapticFeedback(HapticFeedbackConstants.GESTURE_END)
+            perform(HapticFeedbackConstants.GESTURE_END)
         }
     }
 
@@ -43,7 +66,7 @@ class AppHaptics(private val view: View) {
      */
     fun confirm() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+            perform(HapticFeedbackConstants.CONFIRM)
         }
     }
 
@@ -52,14 +75,14 @@ class AppHaptics(private val view: View) {
      */
     fun reject() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            view.performHapticFeedback(HapticFeedbackConstants.REJECT)
+            perform(HapticFeedbackConstants.REJECT)
         }
     }
 
     fun select() {
         // Reserved for deliberate long-press selection
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            view.performHapticFeedback(HapticFeedbackConstants.SEGMENT_TICK)
+            perform(HapticFeedbackConstants.SEGMENT_TICK)
         }
     }
 
@@ -78,5 +101,6 @@ class AppHaptics(private val view: View) {
 @Composable
 fun rememberAppHaptics(): AppHaptics {
     val view = LocalView.current
-    return remember(view) { AppHaptics(view) }
+    val enabled = LocalHapticsEnabled.current
+    return remember(view, enabled) { AppHaptics(view, enabled) }
 }

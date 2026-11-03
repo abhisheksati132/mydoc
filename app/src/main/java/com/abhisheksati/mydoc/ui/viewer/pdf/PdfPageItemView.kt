@@ -45,6 +45,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
+import com.abhisheksati.mydoc.designsystem.tokens.rememberGatedHaptics
 
 /**
  * High-performance PDF page renderer with debounced progressive rendering,
@@ -62,7 +63,7 @@ internal fun PageItemView(
     onLongPressPage: ((Int) -> Unit)? = null,
     onLongPressOffset: ((Int, Offset, Size) -> Unit)? = null
 ) {
-    val haptic = LocalHapticFeedback.current
+    val haptic = rememberGatedHaptics()
     val (origWidth, origHeight) = remember(pageIndex) { viewModel.getPageSize(pageIndex) }
     val rawRatio = if (origHeight > 0f && origWidth > 0f) origWidth / origHeight else 0.707f
     val aspectRatio = if (rawRatio.isFinite() && rawRatio > 0.05f) rawRatio else 0.707f

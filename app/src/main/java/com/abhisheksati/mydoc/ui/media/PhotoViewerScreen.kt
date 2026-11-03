@@ -73,6 +73,7 @@ import com.abhisheksati.mydoc.designsystem.tokens.DarkAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
+import com.abhisheksati.mydoc.designsystem.tokens.rememberGatedHaptics
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.domain.model.ExifMetadata
 import com.abhisheksati.mydoc.domain.model.MediaItem
@@ -101,7 +102,7 @@ fun PhotoViewerScreen(
     val context = LocalContext.current
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val haptic = rememberGatedHaptics()
     val coroutineScope = rememberCoroutineScope()
 
     val photoList = remember(items) { mutableStateListOf(*items.toTypedArray()) }

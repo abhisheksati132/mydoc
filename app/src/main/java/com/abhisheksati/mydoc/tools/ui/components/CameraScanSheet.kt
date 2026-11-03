@@ -77,7 +77,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -95,6 +94,7 @@ import com.abhisheksati.mydoc.designsystem.components.horizontalScrollWithFade
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.CaptureChromeColors
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
+import com.abhisheksati.mydoc.designsystem.tokens.rememberGatedHaptics
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.tools.scan.cropper.FreeCornersCropperDialog
 import com.abhisheksati.mydoc.tools.scan.filters.ScanFilter
@@ -146,7 +146,7 @@ fun CameraScanSheet(
         val context = LocalContext.current
         val lifecycleOwner = LocalLifecycleOwner.current
         val haptics = rememberAppHaptics()
-        val haptic = LocalHapticFeedback.current
+        val haptic = rememberGatedHaptics()
         val density = androidx.compose.ui.platform.LocalDensity.current
 
         // This dialog's window hands Compose zero insets (the platform dialog window is fitted

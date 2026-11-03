@@ -158,6 +158,9 @@ class MainActivity : ComponentActivity() {
             val amoledBlack by app.settingsRepository.amoledBlack.collectAsStateWithLifecycle()
             val dynamicColor by app.settingsRepository.dynamicColor.collectAsStateWithLifecycle()
             val glassEffectMode by app.settingsRepository.glassEffectMode.collectAsStateWithLifecycle()
+            val hapticsEnabled by app.settingsRepository.isHapticFeedbackEnabled.collectAsStateWithLifecycle()
+            val autoResumeVideo by app.settingsRepository.autoResumeVideo.collectAsStateWithLifecycle()
+            val videoAutoLoop by app.settingsRepository.videoAutoLoop.collectAsStateWithLifecycle()
             val isBiometricLockEnabled by app.settingsRepository.isBiometricLockEnabled.collectAsStateWithLifecycle()
             val isDark = when (themeMode) {
                 AppThemeMode.BLACK, AppThemeMode.DARK -> true
@@ -208,7 +211,10 @@ class MainActivity : ComponentActivity() {
                 dynamicColor = dynamicColor,
                 amoledBlack = isBlack
             ) {
-                CompositionLocalProvider(LocalGlassEffectMode provides glassEffectMode) {
+                CompositionLocalProvider(
+                    LocalGlassEffectMode provides glassEffectMode,
+                    com.abhisheksati.mydoc.designsystem.tokens.LocalHapticsEnabled provides hapticsEnabled
+                ) {
                     val selectedTool by toolsViewModel.selectedTool.collectAsStateWithLifecycle()
 
                 val photo = currentPhoto
@@ -383,6 +389,8 @@ class MainActivity : ComponentActivity() {
                                             com.abhisheksati.mydoc.ui.media.VideoPlayerScreen(
                                                 item = screen.item,
                                                 mediaRepository = app.mediaRepository,
+                                                autoResume = autoResumeVideo,
+                                                autoLoop = videoAutoLoop,
                                                 onBackClick = { currentVideo = null }
                                             )
                                         }

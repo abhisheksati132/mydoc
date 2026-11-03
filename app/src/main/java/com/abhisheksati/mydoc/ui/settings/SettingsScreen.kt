@@ -70,14 +70,13 @@ fun SettingsScreen(
 
     // READING
     val currentReadingMode by settingsRepository.defaultReadingMode.collectAsState()
-    val highQualityPdf by settingsRepository.highQualityPdf.collectAsState()
-    val pdfFitMode by settingsRepository.pdfFitMode.collectAsState()
+    val readingPrefs by settingsRepository.readingPrefs.collectAsState()
+    val pdfFitMode = if (readingPrefs.isFitPage) "FIT_PAGE" else "FIT_WIDTH"
     val doubleTapZoom by settingsRepository.doubleTapZoom.collectAsState()
     val keepScreenOn by settingsRepository.keepScreenOn.collectAsState()
     val volumeKeyTurning by settingsRepository.volumeKeyPageTurning.collectAsState()
 
     // MEDIA
-    val videoHwAccel by settingsRepository.videoHardwareAcceleration.collectAsState()
     val autoResumeVideo by settingsRepository.autoResumeVideo.collectAsState()
     val videoAutoLoop by settingsRepository.videoAutoLoop.collectAsState()
 
@@ -131,13 +130,15 @@ fun SettingsScreen(
                 SettingsReadingSection(
                     currentReadingMode = currentReadingMode,
                     pdfFitMode = pdfFitMode,
-                    highQualityPdf = highQualityPdf,
                     doubleTapZoom = doubleTapZoom,
                     keepScreenOn = keepScreenOn,
                     volumeKeyTurning = volumeKeyTurning,
                     onReadingModeChange = { settingsRepository.setDefaultReadingMode(it) },
-                    onPdfFitModeChange = { settingsRepository.setPdfFitMode(it) },
-                    onHighQualityPdfChange = { settingsRepository.setHighQualityPdf(it) },
+                    onPdfFitModeChange = { mode ->
+                        settingsRepository.updateReadingPrefs {
+                            it.copy(isFitPage = mode == "FIT_PAGE")
+                        }
+                    },
                     onDoubleTapZoomChange = { settingsRepository.setDoubleTapZoom(it) },
                     onKeepScreenOnChange = { settingsRepository.setKeepScreenOn(it) },
                     onVolumeKeyTurningChange = { settingsRepository.setVolumeKeyPageTurning(it) }
@@ -145,10 +146,8 @@ fun SettingsScreen(
 
                 // 3. MEDIA
                 SettingsMediaSection(
-                    videoHwAccel = videoHwAccel,
                     autoResumeVideo = autoResumeVideo,
                     videoAutoLoop = videoAutoLoop,
-                    onVideoHwAccelChange = { settingsRepository.setVideoHardwareAcceleration(it) },
                     onAutoResumeVideoChange = { settingsRepository.setAutoResumeVideo(it) },
                     onVideoAutoLoopChange = { settingsRepository.setVideoAutoLoop(it) }
                 )
@@ -159,7 +158,7 @@ fun SettingsScreen(
                     cacheSizeBytes = cacheSizeBytes,
                     onStartupTabChange = { settingsRepository.setDefaultStartupTab(it) },
                     onClearCacheClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        if (hapticFeedbackEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         val freed = settingsRepository.clearCache(context)
                         cacheSizeBytes = settingsRepository.getCacheSizeBytes(context)
                         val freedMb = freed / (1024.0 * 1024.0)
@@ -172,7 +171,7 @@ fun SettingsScreen(
                     },
                     onClearRecentClick = onClearRecent?.let { clearAction ->
                         {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            if (hapticFeedbackEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             clearAction()
                             context.showMessage(recentHistoryClearedMessage)
                         }

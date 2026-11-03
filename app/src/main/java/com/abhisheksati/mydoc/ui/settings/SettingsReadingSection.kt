@@ -9,7 +9,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
-import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Vibration
 import androidx.compose.material3.FilterChip
@@ -25,13 +24,11 @@ import com.abhisheksati.mydoc.domain.model.ReadingMode
 fun SettingsReadingSection(
     currentReadingMode: ReadingMode,
     pdfFitMode: String,
-    highQualityPdf: Boolean,
     doubleTapZoom: Boolean,
     keepScreenOn: Boolean,
     volumeKeyTurning: Boolean,
     onReadingModeChange: (ReadingMode) -> Unit,
     onPdfFitModeChange: (String) -> Unit,
-    onHighQualityPdfChange: (Boolean) -> Unit,
     onDoubleTapZoomChange: (Boolean) -> Unit,
     onKeepScreenOnChange: (Boolean) -> Unit,
     onVolumeKeyTurningChange: (Boolean) -> Unit,
@@ -85,16 +82,6 @@ fun SettingsReadingSection(
         }
 
         SettingsDivider(modifier = Modifier.padding(top = 12.dp))
-
-        SettingToggleRow(
-            title = "High-Quality Vector PDF",
-            subtitle = "Supersample text and vectors",
-            icon = Icons.Outlined.PictureAsPdf,
-            checked = highQualityPdf,
-            onCheckedChange = onHighQualityPdfChange
-        )
-
-        SettingsDivider()
 
         SettingToggleRow(
             title = "Double-Tap Quick Zoom",

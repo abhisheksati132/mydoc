@@ -56,12 +56,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.AppBottomSheet
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
+import com.abhisheksati.mydoc.designsystem.tokens.rememberGatedHaptics
 import com.artifex.mupdf.fitz.ColorSpace
 import com.artifex.mupdf.fitz.Document
 import com.artifex.mupdf.fitz.Matrix
@@ -87,7 +87,7 @@ fun ReorderPagesSheet(
     val context = LocalContext.current
         val scheme = MaterialTheme.colorScheme
         val typography = MaterialTheme.typography
-        val haptic = LocalHapticFeedback.current
+        val haptic = rememberGatedHaptics()
         val haptics = rememberAppHaptics()
 
         val pages = remember { mutableStateListOf<OrganizedPageItem>() }
