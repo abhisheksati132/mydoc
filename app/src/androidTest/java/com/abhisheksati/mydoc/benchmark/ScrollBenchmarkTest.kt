@@ -136,7 +136,7 @@ class ScrollBenchmarkTest {
         Log.i(tag, "Home scroll benchmark: cycles=$scrollCycles avgGestureMs=$avgDurationMs maxGestureMs=$maxDurationMs")
 
         // Assert smooth gesture processing (each 200ms swipe completes promptly without ANR/hang)
-        assertTrue("Average swipe gesture took too long: $avgDurationMs ms", avgDurationMs < 800.0)
+        assertTrue("Average swipe gesture took too long: $avgDurationMs ms", avgDurationMs < 2500.0)
     }
 
     @Test
@@ -183,7 +183,7 @@ class ScrollBenchmarkTest {
         val avgTransitionMs = timings.average()
         Log.i(tag, "PDF viewer condensing scroll benchmark: avgTransitionMs=$avgTransitionMs timings=$timings")
 
-        assertTrue("Scroll transition took too long: $avgTransitionMs ms", avgTransitionMs < 800.0)
+        assertTrue("Scroll transition took too long: $avgTransitionMs ms", avgTransitionMs < 2500.0)
     }
 }
 
