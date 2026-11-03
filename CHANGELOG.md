@@ -3,15 +3,32 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
-## [Unreleased]
+## [1.5.10] — 2026-11-03
+
+Range: `v1.5.9..v1.5.10`.
+
+### Changed
+
+- **Version catch-up.** Releases 1.5.4 through 1.5.9 shipped without changelog entries; their
+  sections are restored below from the commit history.
 
 ### Removed
 
-- **Five tools that could not do what their labels promised.** Office to PDF (no renderer available),
-  PDF/A export (PDFBox-Android has no PDF/A profile writer), Fill form (no form engine), Compare
-  (no diff algorithm) and OCR to PDF (the ML Kit output was never written back into a document) are
-  gone from the tool catalog, engine dispatch and tests. The Tools screen now reports 24 tools, and
-  non-PDF documents only show tools that actually accept them.
+- **Five tools whose behaviour was narrower than their labels.**
+  - *Office to PDF* had no working path into the tool engine: `OfficeToPdfConverter` was a standalone
+    DOCX/XLSX/PPTX text-and-table re-layout that only its own unit test called, and the bundled
+    `:office-engine` renderer was never wired to it.
+  - *PDF/A export* stamped a conformance marker into document metadata without validating the output
+    against any PDF/A profile.
+  - *Fill form* handled AcroForm text, checkbox and choice fields only; XFA forms and field-level
+    validation were unsupported.
+  - *Compare* diffed extracted text word sets per page, so image-only PDFs compared as empty and
+    layout changes were invisible.
+  - *OCR to PDF* wrote searchable text, but as invisible lines at approximate positions instead of
+    per-word coordinates, so selection and copy drifted from the printed text.
+
+  The five are gone from the tool catalog, engine dispatch and tests. The Tools screen now reports
+  24 tools, and non-PDF documents only show tools that accept them.
 - **Dead page-rotation controls in the visual page organizer.** The rotate buttons changed preview
   state only; `Apply & Save` sent page indices without rotation, so the rotation was silently
   discarded. Move left, move right, remove and apply now match what the engine executes.
@@ -27,10 +44,96 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 - **Privacy documentation matches the code.** The README, SECURITY and architecture docs now state
   that document processing is on-device while the updater checks GitHub and Play Services may fetch
   the ML Kit model, and that Android backup copies the saved-document store and Room database.
+- **Security documentation matches the code.** `SECURITY.md` no longer claims Apache POI conversion,
+  a live Office→PDF pipeline, or that `ZipSafeReader` guards every archive. It now names the limits
+  each OOXML parser actually applies and states that the shared guard is not yet wired.
 - **Integration tests can run again.** Room schemas are exposed to `androidTest` assets, the
   kotlinx-serialization runtime is aligned with Room 2.8.5's schema parser, the migration test passes
   `MIGRATION_3_5`, and two stale viewer-benchmark assertions match the current middle-truncated
   title and 1-based page counter. All 8 instrumented tests pass on `mydoc_api35`.
+
+## [1.5.9] — 2026-11-03
+
+Range: `v1.5.8..v1.5.9`.
+
+### Changed
+
+- **Liquid glass reached the remaining surfaces.** Cards, bottom sheets, sheet headers, toolbars,
+  the tools grid, file lists, storage cleaner, app manager, trash bin, photo info and presentation
+  chrome now render through `GlassSurface`; `AppBottomSheet` uses a transparent container so the
+  sheet content carries the glass.
+- Version 1.5.9 (159).
+
+### Known issues
+
+- Sheets receive no `hazeState`, so the glass is a translucent plate rather than a blurred backdrop,
+  and stacked sheets show the sheet beneath them.
+
+## [1.5.8] — 2026-11-03
+
+Range: `v1.5.7..v1.5.8`.
+
+### Changed
+
+- **App icon:** Concept 2, "Prismatic Document Prism", adopted as the official icon across all
+  densities. Version 1.5.8 (158).
+
+## [1.5.7] — 2026-11-03
+
+Range: `v1.5.6..v1.5.7`.
+
+### Changed
+
+- **New launcher identity:** the "Paper under glass" icon replaces the four-pill launcher icon in
+  every density. Version 1.5.7 (157).
+
+## [1.5.6] — 2026-11-03
+
+Range: `v1.5.5..v1.5.6`.
+
+### Added
+
+- Horizontal swipe between the Home and Files tabs.
+- Document-type filtering in the library.
+- Swipe navigation and reworked zoom in the photo viewer; updated video player controls.
+
+### Changed
+
+- Glass treatment extended to dialogs, the clipboard bar, file panes and spotlight search; the dead
+  bottom-nav code path was removed. Version 1.5.6 (156).
+
+## [1.5.5] — 2026-11-03
+
+Range: `v1.5.4..v1.5.5`.
+
+### Fixed
+
+- Startup crash caused by invalid `HazeStyle`/`LocalHazeStyle` background colours; ML Kit kept by
+  ProGuard so OCR still works in release builds. Version 1.5.5 (155).
+
+## [1.5.4] — 2026-11-03
+
+Range: `v1.5.3..v1.5.4`.
+
+### Added
+
+- **"Paper under glass" design system:** colour, typography and radius tokens, Fraunces and JetBrains
+  Mono, and the `GlassSurface` component.
+- Home feed with a hero card and recent grid, plus floating glass bottom navigation.
+- Unified library screen with the redundant browse tabs removed.
+- Viewer chrome: condensing glass top bar, glass bottom bar, search overlay and thumbnail strip.
+- Tools reorganized into six task groups; settings glass toggle and storage-tools relocation.
+- Scroll benchmark, `ViewerViewModel`/`UpdateManager` unit tests and a Room migration test skeleton.
+- **`:office-engine`** packaged as an internal Gradle module (native Office renderer, 2,042 Java
+  files). It is not referenced by any app code and is not wired to any tool.
+
+### Fixed
+
+- Hardening pass across document parsers: bounded reads, ZIP entry limits, typed `Result` for file
+  operations, `CancellationException` rethrown, empty catches removed.
+- Biometric guard, navigation insets, theme selector and accessibility follow-ups; debug
+  `applicationIdSuffix`; CI signing injection and test-report upload.
+- Test isolation: ViewModels created and cleared inside their test scopes.
 
 ## [1.5.3] — 2026-11-02
 

@@ -1,7 +1,7 @@
 # Document Engine Architecture & Improvement Plan
 
 > **Project Target:** `mydoc` (`com.abhisheksati.mydoc`)  
-> **Version:** 1.5.3 (minSdk 26, targetSdk 35)  
+> **Version:** 1.5.10 (minSdk 26, targetSdk 35)  
 > **Inspiration & Attribution:** Architecture and design paradigms adapted with credit to `ClearPDF-5.1` (`com.chethan616.clearpdf`).  
 > **Focus:** High-fidelity document loading, visual precision, untrusted-input safety, and memory-safe rendering for PDF, PPTX, DOCX, and XLSX files.
 
@@ -28,13 +28,13 @@ graph TD
     end
 
     subgraph Converters
-        DOCX_CONV["DocxConverter<br/>(Native OOXML & POI parser to PdfDocument)"]
+        DOCX_CONV["DocxConverter<br/>(Native OOXML parser to PdfDocument)"]
         PPTX_CONV["PptxConverter<br/>(OOXML Shape Tree + Layout/Master Inheritance to PdfDocument)"]
         XLSX_CONV["XlsxConverter<br/>(Banded Column Layout to PdfDocument)"]
     end
 
     subgraph Universal Document Engine
-        PDF_ENGINE["Unified PDF Engine<br/>• Viewport Tiling (renderRegion)<br/>• Thread-Safe Concurrency<br/>• OOM Protection (Throwable Catch & Recycle)<br/>• Continuous Vertical & Horizontal Pager<br/>• ZipSafeReader Bounded Zip Extraction"]
+        PDF_ENGINE["Unified PDF Engine<br/>• Viewport Tiling (renderRegion)<br/>• Thread-Safe Concurrency<br/>• OOM Protection (Throwable Catch & Recycle)<br/>• Continuous Vertical & Horizontal Pager<br/>• Bounded ZIP Extraction (per-parser limits)"]
     end
 
     PDF --> PDF_ENGINE
@@ -54,7 +54,7 @@ By adopting this architecture, every improvement made to PDF viewing (smooth zoo
 | **Word (.docx)** | **`DocxConverter`** native OOXML parser & `DocxPdfRenderer`; compiles directly to `PdfDocument`. | Authentic margins, typography, page breaks, and complex tables rendered accurately with zero WebView attack surface. |
 | **PowerPoint (.pptx)** | **`PptxConverter`** reads presentation XML, theme palettes (`a:clrScheme`), slide layout & master inheritance, painting directly to `PdfDocument`. | Authentic aspect ratios (`p:sldSz`), proper slide ordering via `<p:sldIdLst>`, and accurate color contrast. |
 | **Excel (.xlsx)** | **`XlsxConverter`** banded column and multi-sheet engine converting spreadsheets into crisp vector PDF pages. | Consistent mobile readability across large datasets without horizontal clipping. |
-| **Untrusted Zip Safety** | **`ZipSafeReader`** enforces bounds (≤25MB entry, ≤200MB total, ≤10,000 entries, ≤100:1 ratio). | Protects all OOXML and ZIP parsers from decompression bombs and entry count explosions. |
+| **Untrusted Zip Safety** | Each OOXML parser bounds decompression (25 MB per entry; 10,000 entries for DOCX/PPTX, 2,000 for XLSX; 100 MB total for XLSX; 100:1 ratio for PPTX). | Caps decompression bombs and entry-count explosions. The shared `ZipSafeReader` is not yet wired, so limits vary by format. |
 | **PDF Zoom & Resolution** | **`renderRegion`**: Renders only the active on-screen viewport at native screen DPI while zoomed in. | Zero pixelation at 5x–10x zoom without allocating giant full-page bitmaps. |
 | **Thread Safety & OOM** | Native rendering operations protected with explicit `Throwable` handling and bitmap recycling. | Eliminates native concurrency crashes during fast scrolling or low-memory conditions. |
 | **Slide Ordering** | Resolves authoritative order through `<p:sldIdLst>` in `ppt/presentation.xml`. | Guarantees authentic presentation sequence. |
@@ -84,7 +84,7 @@ override fun renderRegion(
 
 | Phase | Milestone | Deliverables | Status |
 | :--- | :--- | :--- | :--- |
-| **Phase 1** | **Untrusted-Input Safety** | `ZipSafeReader` bounded ZIP extraction, OOM guards in all parsers. | **Complete** |
+| **Phase 1** | **Untrusted-Input Safety** | `ZipSafeReader` added (shared guard, not yet wired), OOM guards in all parsers. | **Complete** |
 | **Phase 2** | **Build & Release Hardening** | Pinned GitHub actions, release keystore safety, ProGuard rules, debug suffixes. | **Complete** |
 | **Phase 3** | **Robustness & Cleanliness** | Eliminated all `!!` operators, cancellation propagation in coroutines. | **Complete** |
 | **Phase 4** | **UI/UX & Quality Fixes** | Biometric guard with `KeyguardManager`, system theme chip, navigation insets. | **Complete** |
