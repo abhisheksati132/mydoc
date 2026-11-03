@@ -45,10 +45,18 @@ class PdfSecurityEngine(private val context: Context) {
             require(ownerPwd.none { it == ',' || it.isISOControl() }) {
                 "Owner password cannot contain commas or control characters."
             }
-            val permTokens = mutableListOf<String>()
-            permTokens.add(if (options.allowPrinting) "print" else "no-print")
-            permTokens.add(if (options.allowCopying) "copy" else "no-copy")
-            val permissions = permTokens.joinToString(",")
+            // ISO 32000-1 user permissions bitmask (parsed as integer by MuPDF pdf-write.c: fz_lookup_option_integer)
+            // Default unrestricted standard mask is -4 (0xFFFFFFFC).
+            // Print: bit 3 (4) | bit 12 (2048)
+            // Copy: bit 5 (16) | bit 10 (512)
+            var permMask = -64
+            if (options.allowPrinting) {
+                permMask = permMask or 4 or 2048
+            }
+            if (options.allowCopying) {
+                permMask = permMask or 16 or 512
+            }
+            val permissions = permMask.toString()
 
             val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "protected", "pdf")
             srcDoc.save(outFile.absolutePath, "encryption=aes-256,user-password=$userPwd,owner-password=$ownerPwd,permissions=$permissions")

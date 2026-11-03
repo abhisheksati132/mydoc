@@ -97,20 +97,6 @@ class ViewerLifecycleExperienceE2ETest {
         assertTrue(modes.contains(ReadingMode.EYE_COMFORT))
     }
 
-    @Test
-    fun tier2_feature28_singleInversionColorMatrixNeverCancelsOut() {
-        // Mathematical proof of single inversion:
-        // A single inversion transforms white (255) to black (0): 255 - 255 = 0.
-        // If applied twice: 255 - (255 - 255) = 255 (cancels out to white!).
-        val initialPixel = 255 // White background
-        val singleInvert = 255 - initialPixel
-        assertEquals(0, singleInvert) // Correctly inverted to dark
-
-        val doubleInvert = 255 - singleInvert
-        assertFalse("Double inversion cancels out to light mode", doubleInvert == 0)
-        assertEquals("Double inversion bug yields original pixel", 255, doubleInvert)
-    }
-
     // =========================================================================
     // FEATURE 29: Reader Fit Page / Fit Width Scaling (Tier 1 & 2)
     // =========================================================================
@@ -151,111 +137,6 @@ class ViewerLifecycleExperienceE2ETest {
 
         assertTrue("Fit Page width must not exceed viewport width", fitWidth <= viewportWidth)
         assertTrue("Fit Page height must not exceed viewport height", fitHeight <= viewportHeight)
-    }
-
-    // =========================================================================
-    // FEATURE 30: Misleading UI Tools & Split APK Handling (Tier 1 & 2)
-    // =========================================================================
-
-    @Test
-    fun tier1_feature30_splitApkArchivingStructure() {
-        val tempApkDir = File(rootDir, "apks").apply { mkdirs() }
-        val baseApk = File(tempApkDir, "base.apk").apply { writeBytes(ByteArray(1024)) }
-        val splitConfigArm = File(tempApkDir, "split_config.arm64_v8a.apk").apply { writeBytes(ByteArray(512)) }
-        val splitConfigEn = File(tempApkDir, "split_config.en.apk").apply { writeBytes(ByteArray(256)) }
-
-        val allApks = listOf(baseApk, splitConfigArm, splitConfigEn)
-        assertEquals(3, allApks.size)
-        assertTrue("All split APK parts exist", allApks.all { it.exists() })
-    }
-
-    @Test
-    fun tier2_feature30_scannerViewfinderAspectRatioCroppingMath() {
-        // Full camera frame: 4000 x 3000 (4:3)
-        val frameWidth = 4000
-        val frameHeight = 3000
-
-        // Target Document Aspect Ratio (A4 = 1 : 1.414 or ~0.707)
-        val targetRatio = 1f / 1.414f
-
-        val cropWidth = (frameHeight * targetRatio).toInt()
-        val cropHeight = frameHeight
-        val cropX = (frameWidth - cropWidth) / 2
-        val cropY = 0
-
-        assertTrue("Cropped width must be within sensor bounds", cropWidth <= frameWidth)
-        assertTrue("Cropped height must be within sensor bounds", cropHeight <= frameHeight)
-        assertTrue("Crop X offset must be non-negative", cropX >= 0)
-        assertEquals("Cropped aspect ratio matches target A4 ratio", targetRatio, cropWidth.toFloat() / cropHeight, 0.01f)
-    }
-
-    // =========================================================================
-    // FEATURE 31: URI-Keyed Zoom and Gesture State (Tier 1 & 2)
-    // =========================================================================
-
-    @Test
-    fun tier1_feature31_zoomStateIsolatedPerDocumentUri() {
-        val zoomMap = mutableMapOf<String, Float>()
-        val offsetMap = mutableMapOf<String, Offset>()
-
-        val uriA = "content://media/external/images/101"
-        val uriB = "content://media/external/images/102"
-
-        // User zooms into image A
-        zoomMap[uriA] = 2.5f
-        offsetMap[uriA] = Offset(150f, -200f)
-
-        // Image B defaults to 1.0x scale and zero offset
-        val scaleB = zoomMap[uriB] ?: 1.0f
-        val offsetB = offsetMap[uriB] ?: Offset.Zero
-
-        assertEquals(2.5f, zoomMap[uriA] ?: 1.0f, 0.001f)
-        assertEquals(1.0f, scaleB, 0.001f)
-        assertEquals(Offset.Zero, offsetB)
-    }
-
-    @Test
-    fun tier2_feature31_swipingBetweenPagesResetsScaleAndOffset() {
-        var currentUri = "content://docs/page1"
-        var activeScale = 3.0f
-        var activeOffset = Offset(300f, 400f)
-
-        // On page transition to page 2:
-        val newUri = "content://docs/page2"
-        if (newUri != currentUri) {
-            currentUri = newUri
-            activeScale = 1.0f
-            activeOffset = Offset.Zero
-        }
-
-        assertEquals("content://docs/page2", currentUri)
-        assertEquals(1.0f, activeScale, 0.001f)
-        assertEquals(Offset.Zero, activeOffset)
-    }
-
-    // =========================================================================
-    // FEATURE 32: Organizer Lazy Thumbnail Rendering (Tier 1 & 2)
-    // =========================================================================
-
-    @Test
-    fun tier1_feature32_thumbnailCacheMaintainsBoundedWindow() {
-        val maxCachedThumbnails = 35
-        val thumbnailCache = mutableMapOf<Int, String>()
-
-        // Simulate scrolling through 100 pages
-        for (page in 0 until 100) {
-            if (thumbnailCache.size >= maxCachedThumbnails) {
-                // Evict page furthest from current viewport
-                val evictKey = thumbnailCache.keys.maxByOrNull { kotlin.math.abs(it - page) }
-                if (evictKey != null) {
-                    thumbnailCache.remove(evictKey)
-                }
-            }
-            thumbnailCache[page] = "ThumbnailBitmap_Page_$page"
-        }
-
-        assertTrue("Cache size must not exceed bounded limit", thumbnailCache.size <= maxCachedThumbnails)
-        assertTrue("Recent page thumbnail must reside in cache", thumbnailCache.containsKey(99))
     }
 
     // =========================================================================

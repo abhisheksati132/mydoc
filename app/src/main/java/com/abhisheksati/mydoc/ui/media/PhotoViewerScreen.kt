@@ -37,8 +37,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import com.abhisheksati.mydoc.designsystem.components.AppDropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -276,14 +276,9 @@ fun PhotoViewerScreen(
                             )
                         }
 
-                        DropdownMenu(
+                        AppDropdownMenu(
                             expanded = isMoreMenuOpen,
-                            onDismissRequest = { isMoreMenuOpen = false },
-                            shape = AppRadius.largeShape,
-                            containerColor = if (isDarkMode) DarkAppColors.surface else colors.surface,
-                            border = BorderStroke(1.dp, if (isDarkMode) Color.White.copy(alpha = 0.12f) else colors.cardBorder),
-                            shadowElevation = 8.dp,
-                            tonalElevation = 4.dp
+                            onDismissRequest = { isMoreMenuOpen = false }
                         ) {
                             DropdownMenuItem(
                                 text = { Text("Rotate 90°", color = colors.textPrimary) },

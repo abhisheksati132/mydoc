@@ -3,6 +3,29 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [1.5.15] — 2026-11-03
+
+Range: `v1.5.14..v1.5.15`.
+
+### Added
+
+- **AppDropdownMenu with Apple Liquid Glass.** Replaced standard flat opaque menus with translucent frosted glass dropdown surfaces, 16dp rounded card shapes, and 1dp luminous specular rims across all screens.
+- **Home Feed Error State Banner.** Added real-time error banner presentation in `HomeFeedPane` when document loading or recents flow encounters failures.
+- **Active TileBitmapCache Global Trim Registry.** Registered all active `TileBitmapCache` instances to automatically purge on system memory trim (`ComponentCallbacks2`).
+
+### Fixed
+
+- **MuPDF Permissions Integer Bitmask.** Computed ISO 32000-1 user permissions bitmask as a proper signed integer string (`permissions=$permMask`), fixing the parse failure in MuPDF's `fz_lookup_option_integer` so print and copy restrictions are genuinely applied.
+- **App Manager "Split APK" Badge Squeezing.** Moved the "Split APK" badge to a dedicated row below the version label with `maxLines = 1` and `softWrap = false`, eliminating horizontal compression that caused character-by-character vertical text wrapping.
+- **App Manager & Action Sheet Navigation Bar Overlap.** Configured `skipPartiallyExpanded = true`, full-height container filling, 45% scrim, and generous bottom content padding (`96dp`) so sheets cleanly sit above system bars and never show background content below.
+- **Single-Item Action Sheet Glass Styling.** Added tactile drag handle, translucent glass surface, IME padding, and consistent scrim overlay to `SingleItemActionBottomSheet`.
+- **Page Reorder Touch Targets.** Expanded all reorder buttons (Move Left, Delete, Move Right) to the standard minimum 48dp (`AppSpacing.minTouchTarget`), eliminating fat-finger deletion risks.
+- **PrintHelper Toast Elimination.** Wired `onMessage` snackbar callbacks to all `PrintHelper.printDocument` callers in `ReadingControlsBottomSheet` and `PresentationViewerScreen`.
+
+### Removed
+
+- **Pruned 8 Tautological Unit Tests.** Eliminated mock tests performing trivial arithmetic on local variables (`assertEquals(35, 35)`, `255 - 255 == 0`, and simulated loops) from the E2E quality gate suite.
+
 ## [1.5.14] — 2026-11-03
 
 Range: `v1.5.13..v1.5.14`.

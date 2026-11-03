@@ -15,6 +15,34 @@ class TileBitmapCache(
     private var currentBytes = 0
     private val cache = LinkedHashMap<String, Bitmap>(16, 0.75f, true)
 
+    init {
+        register(this)
+    }
+
+    companion object {
+        private val activeCaches = java.util.Collections.newSetFromMap(java.util.WeakHashMap<TileBitmapCache, Boolean>())
+
+        fun register(cache: TileBitmapCache) {
+            synchronized(activeCaches) {
+                activeCaches.add(cache)
+            }
+        }
+
+        fun trimAll(level: Int) {
+            val snapshot = synchronized(activeCaches) { activeCaches.toList() }
+            for (cache in snapshot) {
+                cache.onTrimMemory(level)
+            }
+        }
+
+        fun clearAll() {
+            val snapshot = synchronized(activeCaches) { activeCaches.toList() }
+            for (cache in snapshot) {
+                cache.clear()
+            }
+        }
+    }
+
     fun get(pageIndex: Int, scale: Float, mode: ReadingMode): Bitmap? = synchronized(lock) {
         val key = cacheKey(pageIndex, scale, mode)
         val bmp = cache[key]

@@ -21,8 +21,8 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material.icons.outlined.ViewCarousel
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import com.abhisheksati.mydoc.designsystem.components.AppDropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -188,7 +188,7 @@ fun PresentationTopBar(
                                 tint = secondaryTextColor
                             )
                         }
-                        DropdownMenu(
+                        AppDropdownMenu(
                             expanded = isMenuOpen,
                             onDismissRequest = { isMenuOpen = false }
                         ) {

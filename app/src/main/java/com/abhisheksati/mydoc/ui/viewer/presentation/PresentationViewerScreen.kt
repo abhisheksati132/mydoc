@@ -420,7 +420,11 @@ fun PresentationViewerScreen(
                 onOpenNotesSheet = { isNotesSheetOpen = true },
                 onShareClick = onShareClick,
                 onOpenInOfficeApp = { openPresentationInOfficeApp(context, document) },
-                onPrintClick = { PrintHelper.printDocument(context, document) },
+                onPrintClick = {
+                    PrintHelper.printDocument(context, document) { msg ->
+                        context.showMessage(msg)
+                    }
+                },
                 bgColor = bgColor,
                 textColor = textColor,
                 secondaryTextColor = secondaryTextColor

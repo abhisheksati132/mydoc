@@ -64,6 +64,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.AppBottomSheet
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.designsystem.tokens.rememberGatedHaptics
 import com.artifex.mupdf.fitz.ColorSpace
@@ -409,7 +410,7 @@ fun ReorderPagesSheet(
                                                 }
                                             },
                                             enabled = index > 0,
-                                            modifier = Modifier.size(40.dp)
+                                            modifier = Modifier.size(AppSpacing.minTouchTarget)
                                         ) {
                                             Icon(
                                                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
@@ -425,7 +426,7 @@ fun ReorderPagesSheet(
                                                 pages.removeAt(index)
                                                 selectedIds.remove(item.uniqueId)
                                             },
-                                            modifier = Modifier.size(40.dp)
+                                            modifier = Modifier.size(AppSpacing.minTouchTarget)
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Outlined.Delete,
@@ -445,7 +446,7 @@ fun ReorderPagesSheet(
                                                 }
                                             },
                                             enabled = index < pages.size - 1,
-                                            modifier = Modifier.size(40.dp)
+                                            modifier = Modifier.size(AppSpacing.minTouchTarget)
                                         ) {
                                             Icon(
                                                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,

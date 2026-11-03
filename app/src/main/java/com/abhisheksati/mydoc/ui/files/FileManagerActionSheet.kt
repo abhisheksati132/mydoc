@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.outlined.Archive
@@ -73,18 +75,19 @@ fun SingleItemActionBottomSheet(
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
         containerColor = Color.Transparent,
+        scrimColor = colors.scrim.copy(alpha = 0.45f),
         dragHandle = null,
         modifier = modifier
     ) {
         OverlaySystemBars()
         GlassSurface(
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            shape = AppRadius.sheetShape,
             elevation = 16.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -92,10 +95,21 @@ fun SingleItemActionBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
+                    .imePadding()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp, vertical = 10.dp)
             ) {
-            // Header
+                // Tactile Glass Drag Handle
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(bottom = 12.dp)
+                        .size(width = 36.dp, height = 4.dp)
+                        .clip(CircleShape)
+                        .background(colors.inkMuted.copy(alpha = 0.35f))
+                )
+
+                // Header
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium)

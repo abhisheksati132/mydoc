@@ -50,32 +50,4 @@ class ReleaseQualityGateE2ETest {
         assertEquals("Normalized extracted fingerprint must match expected", expectedSha256, extractedSha256)
         assertNotEquals("Wrong fingerprint must be rejected", wrongSha256, extractedSha256)
     }
-
-    @Test
-    fun tier2_feature11_pipefailIntegritySimulation() {
-        // Simulates pipe failure detection:
-        // In bash without pipefail, `cmd_fail | tee output` exits with tee's exit code (0).
-        // With `set -o pipefail`, if any stage in the pipeline fails, the exit code is non-zero.
-        val commandSuccess = true
-        val pipeStage = 0 // tee returns 0
-        val commandExitCode = if (commandSuccess) 0 else 1
-
-        val finalStatusWithoutPipefail = pipeStage
-        assertEquals(0, finalStatusWithoutPipefail)
-
-        val finalStatusWithPipefail = if (commandExitCode != 0) commandExitCode else pipeStage
-        assertEquals(0, finalStatusWithPipefail)
-
-        // When command fails:
-        val failedCommandExitCode = 1
-        val finalStatusFailedWithPipefail = if (failedCommandExitCode != 0) failedCommandExitCode else pipeStage
-        assertEquals("With pipefail, pipeline must fail when command fails", 1, finalStatusFailedWithPipefail)
-    }
-
-    @Test
-    fun tier1_feature34_featureInventoryMappingComplete() {
-        // Validate that all 35 features are accounted for in our inventory
-        val totalStabilizationFeatures = 35
-        assertEquals(35, totalStabilizationFeatures)
-    }
 }

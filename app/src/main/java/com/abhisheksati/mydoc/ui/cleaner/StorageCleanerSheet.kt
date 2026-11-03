@@ -81,6 +81,7 @@ fun StorageCleanerSheet(
     }
 
     val isOled = LocalIsOled.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val res = scanResult ?: StorageCleanScanResult()
     // Only the extra copies go; the kept original of every duplicate group stays.
@@ -95,22 +96,34 @@ fun StorageCleanerSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         containerColor = Color.Transparent,
+        scrimColor = colors.scrim.copy(alpha = 0.45f),
         dragHandle = null,
         modifier = Modifier.fillMaxHeight(0.92f)
     ) {
         OverlaySystemBars()
         GlassSurface(
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            shape = AppRadius.sheetShape,
             elevation = 16.dp,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().fillMaxHeight()
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 20.dp)
             ) {
-            // Header
+                // Tactile Glass Drag Handle
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(top = 10.dp, bottom = 12.dp)
+                        .size(width = 36.dp, height = 4.dp)
+                        .clip(CircleShape)
+                        .background(colors.inkMuted.copy(alpha = 0.35f))
+                )
+
+                // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,

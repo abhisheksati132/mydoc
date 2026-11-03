@@ -189,6 +189,8 @@ fun HomeScreen(
                             onSettingsClick = onSettingsClick,
                             onScanClick = { documentScanner() },
                             onNavigateToLibrary = { viewModel.selectTab(HomeTab.LIBRARY) },
+                            errorMessage = uiState.errorMessage,
+                            onDismissError = { viewModel.clearError() },
                             hazeState = hazeState,
                             modifier = Modifier.fillMaxSize()
                         )

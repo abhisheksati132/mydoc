@@ -35,12 +35,14 @@ data class HomeUiState(
     val countsByKind: Map<MediaKind, Pair<Int, Long>> = emptyMap(),
     val sortOrder: DocumentSortOrder = DocumentSortOrder.LAST_OPENED,
     val isSearching: Boolean = false,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null
 )
 
 private data class DocumentFilters(
     val query: String,
-    val sortOrder: DocumentSortOrder
+    val sortOrder: DocumentSortOrder,
+    val errorMessage: String? = null
 )
 
 class HomeViewModel(
@@ -53,14 +55,16 @@ class HomeViewModel(
     val currentTab: StateFlow<HomeTab> = _currentTab.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
+    private val _errorFlow = MutableStateFlow<String?>(null)
 
     private val _documentsSource = repository.getAllDeviceDocuments()
 
     private val _filterFlow = combine(
         _searchQuery,
-        settingsRepository.sortOrder
-    ) { query, sortOrder ->
-        DocumentFilters(query, sortOrder)
+        settingsRepository.sortOrder,
+        _errorFlow
+    ) { query, sortOrder, errorMessage ->
+        DocumentFilters(query, sortOrder, errorMessage)
     }
 
     val uiState: StateFlow<HomeUiState> = combine(
@@ -70,7 +74,7 @@ class HomeViewModel(
         libraryRepository.getAllItems(),
         libraryRepository.continueItems(10)
     ) { recents, allDocs, filters, allLibraryItems, continueItems ->
-        val (query, sortOrder) = filters
+        val (query, sortOrder, errorMessage) = filters
 
         val filteredDocs = allDocs.filter { doc ->
             if (query.isBlank()) true
@@ -123,7 +127,8 @@ class HomeViewModel(
             countsByKind = emptyMap(),
             sortOrder = sortOrder,
             isSearching = query.isNotBlank(),
-            isLoading = false
+            isLoading = false,
+            errorMessage = errorMessage
         )
     }.flowOn(Dispatchers.Default)
      .stateIn(
@@ -131,6 +136,14 @@ class HomeViewModel(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = HomeUiState(isLoading = false)
     )
+
+    fun clearError() {
+        _errorFlow.value = null
+    }
+
+    fun setError(message: String?) {
+        _errorFlow.value = message
+    }
 
     fun selectTab(tab: HomeTab) {
         _currentTab.value = tab

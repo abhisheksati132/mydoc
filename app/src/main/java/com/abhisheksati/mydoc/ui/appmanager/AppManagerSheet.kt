@@ -79,26 +79,39 @@ fun AppManagerSheet(
         }
     }
 
-        val isOled = LocalIsOled.current
+    val isOled = LocalIsOled.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         containerColor = Color.Transparent,
+        scrimColor = colors.scrim.copy(alpha = 0.45f),
         dragHandle = null,
         modifier = Modifier.fillMaxHeight(0.92f)
     ) {
         OverlaySystemBars()
         GlassSurface(
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            shape = AppRadius.sheetShape,
             elevation = 16.dp,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().fillMaxHeight()
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
             ) {
-            // Header
+                // Tactile Glass Drag Handle
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(top = 10.dp, bottom = 12.dp)
+                        .size(width = 36.dp, height = 4.dp)
+                        .clip(CircleShape)
+                        .background(colors.inkMuted.copy(alpha = 0.35f))
+                )
+
+                // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -209,7 +222,7 @@ fun AppManagerSheet(
                         .fillMaxWidth()
                         .weight(1f)
                         .navigationBarsPadding(),
-                    contentPadding = PaddingValues(bottom = 24.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(filteredApps, key = { it.packageName }) { app ->
@@ -312,25 +325,27 @@ private fun AppListItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "${app.versionName} • ${formatFileSize(app.apkSize)}",
-                        style = typography.micro,
-                        color = colors.textSecondary
-                    )
-                    if (app.isSplitApk) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Surface(
-                            shape = AppRadius.pillShape,
-                            color = colors.accent.copy(alpha = 0.15f)
-                        ) {
-                            Text(
-                                text = "Split APK (${app.splitApkFiles.size + 1})",
-                                style = typography.micro,
-                                color = colors.accent,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
-                            )
-                        }
+                Text(
+                    text = "${app.versionName} • ${formatFileSize(app.apkSize)}",
+                    style = typography.micro,
+                    color = colors.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (app.isSplitApk) {
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Surface(
+                        shape = AppRadius.pillShape,
+                        color = colors.accent.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            text = "Split APK (${app.splitApkFiles.size + 1})",
+                            style = typography.micro,
+                            color = colors.accent,
+                            maxLines = 1,
+                            softWrap = false,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
                     }
                 }
                 Text(

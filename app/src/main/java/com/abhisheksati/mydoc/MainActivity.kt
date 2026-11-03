@@ -715,5 +715,6 @@ class MainActivity : ComponentActivity() {
         if (level >= TRIM_MEMORY_MODERATE) {
             com.abhisheksati.mydoc.ui.viewer.controls.ZoomTileCache.clear()
         }
+        com.abhisheksati.mydoc.rendering.cache.TileBitmapCache.trimAll(level)
     }
 }

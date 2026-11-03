@@ -29,18 +29,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import com.abhisheksati.mydoc.designsystem.components.AppDropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
@@ -88,6 +91,8 @@ fun HomeFeedPane(
     onScanClick: () -> Unit,
     onNavigateToLibrary: () -> Unit,
     modifier: Modifier = Modifier,
+    errorMessage: String? = null,
+    onDismissError: (() -> Unit)? = null,
     hazeState: HazeState? = null,
     listState: LazyListState = rememberLazyListState()
 ) {
@@ -182,6 +187,44 @@ fun HomeFeedPane(
                             contentDescription = "Settings",
                             tint = colors.ink
                         )
+                    }
+                }
+            }
+        }
+
+        if (!errorMessage.isNullOrBlank()) {
+            item(key = "home_error_banner") {
+                GlassSurface(
+                    shape = AppRadius.cardShape,
+                    backgroundColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.85f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.ErrorOutline,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = errorMessage,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (onDismissError != null) {
+                            IconButton(onClick = onDismissError) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Close,
+                                    contentDescription = "Dismiss",
+                                    tint = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -477,7 +520,7 @@ private fun RecentPaperCard(
                         )
                     }
 
-                    DropdownMenu(
+                    AppDropdownMenu(
                         expanded = menuExpanded,
                         onDismissRequest = { menuExpanded = false }
                     ) {

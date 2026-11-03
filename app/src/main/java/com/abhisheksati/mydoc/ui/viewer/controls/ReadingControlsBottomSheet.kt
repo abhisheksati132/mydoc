@@ -390,7 +390,9 @@ fun ReadingControlsBottomSheet(
                     label = "Print",
                     onClick = {
                         onDismiss()
-                        PrintHelper.printDocument(context, document)
+                        PrintHelper.printDocument(context, document) { msg ->
+                            context.showMessage(msg)
+                        }
                     },
                     modifier = Modifier.weight(1f)
                 )
