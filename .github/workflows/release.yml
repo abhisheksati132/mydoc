@@ -120,6 +120,9 @@ jobs:
           fi
           ./gradlew assembleRelease --stacktrace
 
+      - name: Install apksigner
+        run: sudo apt-get update -y && sudo apt-get install -y apksigner
+
       - name: Verify Universal APK Signing Certificate
         env:
           EXPECTED_CERT_SHA256: ${{ secrets.MYDOC_RELEASE_CERT_SHA256 }}
@@ -137,18 +140,6 @@ jobs:
           fi
 
           echo "### Release APK Signing Certificate Verification" >> $GITHUB_STEP_SUMMARY
-          # Ensure apksigner is available: check PATH, Android SDK build-tools, or install via apt
-          if ! command -v apksigner &> /dev/null; then
-            SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
-            FOUND_APKSIGNER=$(find "$SDK_ROOT/build-tools" -name apksigner -type f 2>/dev/null | sort -V | tail -n 1)
-            if [ -n "$FOUND_APKSIGNER" ] && [ -x "$FOUND_APKSIGNER" ]; then
-              export PATH="$(dirname "$FOUND_APKSIGNER"):$PATH"
-            else
-              echo "Installing apksigner via apt-get..."
-              sudo apt-get update -y && sudo apt-get install -y apksigner
-            fi
-          fi
-          echo "Using apksigner at: $(which apksigner)"
           CERT_OUTPUT=$(apksigner verify --print-certs "$UNIVERSAL_APK")
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "$CERT_OUTPUT" >> $GITHUB_STEP_SUMMARY
