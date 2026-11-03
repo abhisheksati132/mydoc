@@ -78,6 +78,7 @@ fun GlassSurface(
     hazeState: HazeState? = null,
     elevation: Dp = 8.dp,
     tint: Color? = null,
+    backgroundColor: Color? = null,
     rimTop: Color? = null,
     rimBottom: Color? = null,
     innerShadowColor: Color? = null,
@@ -91,6 +92,7 @@ fun GlassSurface(
         isGlassEffectActive(context, mode)
     }
 
+    val actualBackground = backgroundColor ?: colors.surface
     val actualTint = tint ?: colors.glassTint
     val actualRimTop = rimTop ?: colors.glassRimTop
     val actualRimBottom = rimBottom ?: colors.glassRimBottom
@@ -116,6 +118,7 @@ fun GlassSurface(
             .hazeEffect(
                 state = hazeState,
                 style = HazeStyle(
+                    backgroundColor = actualBackground,
                     tint = HazeTint(actualTint),
                     blurRadius = 24.dp,
                     noiseFactor = 0f

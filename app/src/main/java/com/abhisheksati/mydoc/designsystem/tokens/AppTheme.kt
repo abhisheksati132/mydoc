@@ -175,7 +175,8 @@ fun AppDesignSystemTheme(
     CompositionLocalProvider(
         LocalAppColors provides colors,
         LocalIsDark provides darkTheme,
-        LocalIsOled provides (darkTheme && amoledBlack)
+        LocalIsOled provides (darkTheme && amoledBlack),
+        dev.chrisbanes.haze.LocalHazeStyle provides dev.chrisbanes.haze.HazeDefaults.style(backgroundColor = colors.surface)
     ) {
         MaterialTheme(
             colorScheme = materialColorScheme,

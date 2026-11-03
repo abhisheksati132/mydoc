@@ -44,6 +44,10 @@
 -dontwarn org.bouncycastle.**
 -dontwarn java.awt.**
 
+# Google MLKit component discovery and text recognition
+-keep class com.google.mlkit.** { *; }
+-dontwarn com.google.mlkit.**
+
 # Keep all native JNI methods
 -keepclasseswithmembernames class * {
     native <methods>;
