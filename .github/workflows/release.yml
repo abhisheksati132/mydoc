@@ -137,11 +137,18 @@ jobs:
           fi
 
           echo "### Release APK Signing Certificate Verification" >> $GITHUB_STEP_SUMMARY
-          # Ensure apksigner from Android SDK build-tools is available on PATH
-          APKSIGNER_CMD=$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" -name apksigner 2>/dev/null | sort -V | tail -n 1)
-          if [ -n "$APKSIGNER_CMD" ] && [ -x "$APKSIGNER_CMD" ]; then
-            export PATH="$(dirname "$APKSIGNER_CMD"):$PATH"
+          # Ensure apksigner is available: check PATH, Android SDK build-tools, or install via apt
+          if ! command -v apksigner &> /dev/null; then
+            SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+            FOUND_APKSIGNER=$(find "$SDK_ROOT/build-tools" -name apksigner -type f 2>/dev/null | sort -V | tail -n 1)
+            if [ -n "$FOUND_APKSIGNER" ] && [ -x "$FOUND_APKSIGNER" ]; then
+              export PATH="$(dirname "$FOUND_APKSIGNER"):$PATH"
+            else
+              echo "Installing apksigner via apt-get..."
+              sudo apt-get update -y && sudo apt-get install -y apksigner
+            fi
           fi
+          echo "Using apksigner at: $(which apksigner)"
           CERT_OUTPUT=$(apksigner verify --print-certs "$UNIVERSAL_APK")
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "$CERT_OUTPUT" >> $GITHUB_STEP_SUMMARY
