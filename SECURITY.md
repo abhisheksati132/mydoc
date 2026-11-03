@@ -9,7 +9,7 @@ Security fixes and updates are provided for the following releases:
 | 1.5.x   | :white_check_mark: |
 | < 1.5.0 | :x:                |
 
-Current version: **1.5.12**
+Current version: **1.5.13**
 
 Users are encouraged to always use the latest release from the [GitHub Releases](https://github.com/abhisheksati132/mydoc/releases) page.
 
