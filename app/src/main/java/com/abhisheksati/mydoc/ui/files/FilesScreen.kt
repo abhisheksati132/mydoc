@@ -65,6 +65,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.abhisheksati.mydoc.designsystem.animation.AppMotion
 import com.abhisheksati.mydoc.designsystem.components.AppTopBar
+import com.abhisheksati.mydoc.designsystem.components.GlassSurface
+import androidx.compose.ui.graphics.RectangleShape
 import com.abhisheksati.mydoc.data.local.PinnedFoldersManager
 import com.abhisheksati.mydoc.data.local.StoragePermissionHelper
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
@@ -259,71 +261,77 @@ fun FilesScreen(
             }
         },
         topBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
+            GlassSurface(
+                shape = RectangleShape,
+                elevation = 4.dp,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                if (uiState.isSelectionMode) {
-                    FilesSelectionBar(
-                        selectedCount = uiState.selectedFiles.size,
-                        totalCount = uiState.filteredItems.size,
-                        onClose = { viewModel.clearSelection() },
-                        onSelectAll = { viewModel.selectAll() },
-                        onShare = { shareFiles(context, uiState.selectedFiles.toList()) },
-                        onCopy = { viewModel.copySelected() },
-                        onCut = { viewModel.cutSelected() },
-                        onRename = if (uiState.selectedFiles.size == 1) {
-                            { renameTarget = uiState.selectedFiles.first() }
-                        } else null,
-                        onCompress = { showCompressDialog = true },
-                        onDelete = { showDeleteConfirm = true }
-                    )
-                } else {
-                    FilesHeader(
-                        title = title,
-                        subtitle = subtitle,
-                        isInsideFolder = insideBrowse,
-                        uiState = uiState,
-                        isSearchActive = isSearchActive,
-                        onBack = { viewModel.navigateUp() },
-                        onSearch = {
-                            if (insideBrowse) {
-                                isSearchActive = !isSearchActive
-                                if (!isSearchActive) viewModel.setSearchQuery("")
-                            } else {
-                                onSpotlightSearch()
-                            }
-                        },
-                        onSettingsClick = onSettingsClick,
-                        onToggleView = { viewModel.toggleViewMode() },
-                        onToggleHidden = { viewModel.toggleHiddenFiles() },
-                        onNewFolder = { showNewFolderDialog = true },
-                        onNewFile = { showNewFileDialog = true },
-                        onOpenTrash = { viewModel.openTrash() },
-                        onRefresh = {
-                            viewModel.loadDirectory(uiState.currentDirectory, addToHistory = false)
-                            viewModel.refreshVolumes()
-                            storageViewModel.refresh()
-                        }
-                    )
-
-                    if (isSearchActive) {
-                        OutlinedTextField(
-                            value = uiState.searchQuery,
-                            onValueChange = { viewModel.setSearchQuery(it) },
-                            placeholder = { Text("Search this folder") },
-                            leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
-                            singleLine = true,
-                            shape = AppRadius.pillShape,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                ) {
+                    if (uiState.isSelectionMode) {
+                        FilesSelectionBar(
+                            selectedCount = uiState.selectedFiles.size,
+                            totalCount = uiState.filteredItems.size,
+                            onClose = { viewModel.clearSelection() },
+                            onSelectAll = { viewModel.selectAll() },
+                            onShare = { shareFiles(context, uiState.selectedFiles.toList()) },
+                            onCopy = { viewModel.copySelected() },
+                            onCut = { viewModel.cutSelected() },
+                            onRename = if (uiState.selectedFiles.size == 1) {
+                                { renameTarget = uiState.selectedFiles.first() }
+                            } else null,
+                            onCompress = { showCompressDialog = true },
+                            onDelete = { showDeleteConfirm = true }
                         )
-                    }
+                    } else {
+                        FilesHeader(
+                            title = title,
+                            subtitle = subtitle,
+                            isInsideFolder = insideBrowse,
+                            uiState = uiState,
+                            isSearchActive = isSearchActive,
+                            onBack = { viewModel.navigateUp() },
+                            onSearch = {
+                                if (insideBrowse) {
+                                    isSearchActive = !isSearchActive
+                                    if (!isSearchActive) viewModel.setSearchQuery("")
+                                } else {
+                                    onSpotlightSearch()
+                                }
+                            },
+                            onSettingsClick = onSettingsClick,
+                            onToggleView = { viewModel.toggleViewMode() },
+                            onToggleHidden = { viewModel.toggleHiddenFiles() },
+                            onNewFolder = { showNewFolderDialog = true },
+                            onNewFile = { showNewFileDialog = true },
+                            onOpenTrash = { viewModel.openTrash() },
+                            onRefresh = {
+                                viewModel.loadDirectory(uiState.currentDirectory, addToHistory = false)
+                                viewModel.refreshVolumes()
+                                storageViewModel.refresh()
+                            }
+                        )
 
-                    if (breadcrumbs.size > 1) {
-                        BreadcrumbRow(crumbs = breadcrumbs)
+                        if (isSearchActive) {
+                            OutlinedTextField(
+                                value = uiState.searchQuery,
+                                onValueChange = { viewModel.setSearchQuery(it) },
+                                placeholder = { Text("Search this folder") },
+                                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+                                singleLine = true,
+                                shape = AppRadius.pillShape,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
+
+                        if (breadcrumbs.size > 1) {
+                            BreadcrumbRow(crumbs = breadcrumbs)
+                        }
                     }
                 }
             }

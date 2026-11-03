@@ -196,11 +196,12 @@ fun CategoryTile(
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
-    Card(
-        onClick = onClick,
+    GlassSurface(
         shape = AppRadius.cardShape,
-        colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainerLow),
+        elevation = 2.dp,
         modifier = modifier
+            .clip(AppRadius.cardShape)
+            .clickable(onClick = onClick)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Box(

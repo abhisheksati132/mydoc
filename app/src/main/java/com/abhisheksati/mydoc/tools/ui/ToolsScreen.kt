@@ -62,6 +62,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.tools.model.ToolGroup
 import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
@@ -155,49 +156,58 @@ fun ToolsScreen(
             enter = fadeIn(),
             exit = fadeOut()
         ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = {
-                    Text(
-                        "Search tools…",
-                        style = AppTheme.typography.body,
-                        color = colors.inkMuted
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        Icons.Outlined.Search,
-                        contentDescription = null,
-                        tint = colors.inkSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(
-                                Icons.Outlined.Close,
-                                contentDescription = "Clear search",
-                                tint = colors.inkSecondary
-                            )
-                        }
-                    }
-                },
-                singleLine = true,
+            GlassSurface(
                 shape = AppRadius.pillShape,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = colors.inkPrimary,
-                    unfocusedTextColor = colors.inkPrimary,
-                    focusedBorderColor = colors.accent,
-                    unfocusedBorderColor = colors.inkMuted.copy(alpha = 0.3f),
-                    cursorColor = colors.accent
-                ),
+                elevation = 2.dp,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 6.dp)
-                    .focusRequester(searchFocusRequester)
-            )
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = {
+                        Text(
+                            "Search tools…",
+                            style = AppTheme.typography.body,
+                            color = colors.inkMuted
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Outlined.Search,
+                            contentDescription = null,
+                            tint = colors.inkSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(
+                                    Icons.Outlined.Close,
+                                    contentDescription = "Clear search",
+                                    tint = colors.inkSecondary
+                                )
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = AppRadius.pillShape,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = colors.inkPrimary,
+                        unfocusedTextColor = colors.inkPrimary,
+                        focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                        unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                        focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                        unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                        cursorColor = colors.accent
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(searchFocusRequester)
+                )
+            }
         }
 
         // Horizontal Category Filter Pills
@@ -345,60 +355,61 @@ private fun ToolRow(
 ) {
     val colors = AppTheme.colors
 
-    Row(
+    GlassSurface(
+        shape = AppRadius.cardShape,
+        elevation = 2.dp,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .clip(AppRadius.cardShape)
-            .background(colors.surface)
-            .border(
-                width = 1.dp,
-                color = colors.inkMuted.copy(alpha = 0.12f),
-                shape = AppRadius.cardShape
-            )
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Box(
+        Row(
             modifier = Modifier
-                .size(42.dp)
-                .clip(AppRadius.insetShape)
-                .background(colors.accent.copy(alpha = 0.12f)),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(AppRadius.insetShape)
+                    .background(colors.accent.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = tool.icon,
+                    contentDescription = null,
+                    tint = colors.accent,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = tool.title,
+                    style = AppTheme.typography.titleSmall,
+                    color = colors.inkPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = tool.description,
+                    style = AppTheme.typography.caption,
+                    color = colors.inkMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
             Icon(
-                imageVector = tool.icon,
+                imageVector = Icons.Outlined.ChevronRight,
                 contentDescription = null,
-                tint = colors.accent,
-                modifier = Modifier.size(22.dp)
+                tint = colors.inkMuted,
+                modifier = Modifier.size(18.dp)
             )
         }
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = tool.title,
-                style = AppTheme.typography.titleSmall,
-                color = colors.inkPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = tool.description,
-                style = AppTheme.typography.caption,
-                color = colors.inkMuted,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
-        Icon(
-            imageVector = Icons.Outlined.ChevronRight,
-            contentDescription = null,
-            tint = colors.inkMuted,
-            modifier = Modifier.size(18.dp)
-        )
     }
 }
 

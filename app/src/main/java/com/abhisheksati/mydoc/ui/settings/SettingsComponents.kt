@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 
 /**
@@ -39,12 +40,12 @@ fun SettingsCard(
 ) {
     val scheme = MaterialTheme.colorScheme
 
-    Surface(
+    GlassSurface(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
         shape = AppRadius.modalShape,
-        color = scheme.surfaceContainerLow
+        elevation = 2.dp
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(

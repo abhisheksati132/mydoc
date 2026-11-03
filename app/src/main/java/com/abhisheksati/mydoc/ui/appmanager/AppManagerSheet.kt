@@ -29,6 +29,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
@@ -80,16 +83,21 @@ fun AppManagerSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = if (isOled) colors.surfaceContainerHigh else colors.surfaceContainerLow,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
+        containerColor = Color.Transparent,
+        dragHandle = null,
         modifier = Modifier.fillMaxHeight(0.92f)
     ) {
         OverlaySystemBars()
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp)
+        GlassSurface(
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            elevation = 16.dp,
+            modifier = Modifier.fillMaxWidth()
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
+            ) {
             // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -244,6 +252,7 @@ fun AppManagerSheet(
         }
     }
 }
+}
 
 @Composable
 private fun AppListItem(
@@ -257,10 +266,9 @@ private fun AppListItem(
     val typography = AppTheme.typography
     val iconBitmap = remember(app.icon) { app.icon?.toImageBitmap() }
 
-    Surface(
-        color = colors.surface,
+    GlassSurface(
         shape = AppRadius.cardShape,
-        tonalElevation = 1.dp,
+        elevation = 2.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(

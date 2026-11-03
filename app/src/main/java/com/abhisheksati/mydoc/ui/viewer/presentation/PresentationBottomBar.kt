@@ -34,6 +34,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxSlide
 
@@ -60,12 +62,16 @@ fun PresentationBottomBar(
 ) {
     val typography = MaterialTheme.typography
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(bgColor)
-            .navigationBarsPadding()
+    GlassSurface(
+        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+        elevation = 8.dp,
+        modifier = modifier.fillMaxWidth()
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+        ) {
         // Slide Thumbnail Carousel (when open)
         AnimatedVisibility(visible = isThumbnailStripOpen) {
             Column(
@@ -194,4 +200,5 @@ fun PresentationBottomBar(
             }
         }
     }
+}
 }

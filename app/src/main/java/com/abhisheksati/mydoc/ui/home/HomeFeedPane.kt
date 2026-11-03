@@ -43,6 +43,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -294,23 +295,18 @@ private fun ContinueReadingHeroCard(
 ) {
     val colors = AppTheme.colors
 
-    Box(
+    GlassSurface(
+        shape = RoundedCornerShape(16.dp),
+        elevation = 3.dp,
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 3.dp,
-                shape = RoundedCornerShape(16.dp),
-                ambientColor = colors.ink.copy(alpha = 0.08f),
-                spotColor = colors.ink.copy(alpha = 0.12f)
-            )
             .clip(RoundedCornerShape(16.dp))
-            .background(colors.surfaceElevated)
-            .border(width = 1.dp, color = colors.cardBorder, shape = RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
-            .padding(14.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -441,18 +437,12 @@ private fun RecentPaperCard(
     val colors = AppTheme.colors
     var menuExpanded by remember { mutableStateOf(false) }
 
-    Box(
+    GlassSurface(
+        shape = RoundedCornerShape(12.dp),
+        elevation = 2.dp,
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 2.dp,
-                shape = RoundedCornerShape(12.dp),
-                ambientColor = colors.ink.copy(alpha = 0.06f),
-                spotColor = colors.ink.copy(alpha = 0.10f)
-            )
             .clip(RoundedCornerShape(12.dp))
-            .background(colors.surface)
-            .border(width = 1.dp, color = colors.cardBorder, shape = RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -577,22 +567,15 @@ private fun FirstRunPaperCard(
 ) {
     val colors = AppTheme.colors
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 2.dp,
-                shape = RoundedCornerShape(16.dp),
-                ambientColor = colors.ink.copy(alpha = 0.06f),
-                spotColor = colors.ink.copy(alpha = 0.10f)
-            )
-            .clip(RoundedCornerShape(16.dp))
-            .background(colors.surfaceElevated)
-            .border(width = 1.dp, color = colors.cardBorder, shape = RoundedCornerShape(16.dp))
-            .padding(20.dp)
+    GlassSurface(
+        shape = RoundedCornerShape(16.dp),
+        elevation = 2.dp,
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -642,17 +625,21 @@ private fun ActionTile(
 ) {
     val colors = AppTheme.colors
 
-    Row(
+    GlassSurface(
+        shape = RoundedCornerShape(10.dp),
+        elevation = 1.dp,
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .background(colors.surface)
-            .border(width = 1.dp, color = colors.cardBorder, shape = RoundedCornerShape(10.dp))
             .clickable(onClick = onClick)
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
         Box(
             modifier = Modifier
                 .size(38.dp)
@@ -687,5 +674,6 @@ private fun ActionTile(
             tint = colors.inkMuted,
             modifier = Modifier.size(16.dp)
         )
+        }
     }
 }

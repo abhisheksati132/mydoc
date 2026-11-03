@@ -20,6 +20,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
@@ -74,16 +76,21 @@ fun StorageCleanerSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = if (isOled) colors.surfaceContainerHigh else colors.surfaceContainerLow,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
+        containerColor = Color.Transparent,
+        dragHandle = null,
         modifier = Modifier.fillMaxHeight(0.92f)
     ) {
         OverlaySystemBars()
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 20.dp)
+        GlassSurface(
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            elevation = 16.dp,
+            modifier = Modifier.fillMaxWidth()
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp)
+            ) {
             // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -546,6 +553,7 @@ fun StorageCleanerSheet(
         }
     }
 }
+}
 
 @Composable
 private fun CleanerCategoryCard(
@@ -562,15 +570,20 @@ private fun CleanerCategoryCard(
     val colors = AppTheme.colors
     val typography = AppTheme.typography
 
-    Row(
+    GlassSurface(
+        shape = AppRadius.cardShape,
+        elevation = 2.dp,
         modifier = Modifier
             .fillMaxWidth()
             .clip(AppRadius.cardShape)
-            .background(colors.surface)
             .clickable { onCheckedChange(!checked) }
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
     ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
         Box(
             modifier = Modifier
                 .size(38.dp)
@@ -615,6 +628,7 @@ private fun CleanerCategoryCard(
             )
         )
     }
+}
 }
 
 private fun formatSize(bytes: Long): String = com.abhisheksati.mydoc.domain.model.StorageVolume.formatBytes(bytes)

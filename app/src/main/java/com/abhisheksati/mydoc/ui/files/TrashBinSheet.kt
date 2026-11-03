@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
@@ -337,15 +338,9 @@ private fun TrashItemCard(
 
     val isOled = LocalIsOled.current
 
-    Card(
+    GlassSurface(
         shape = AppRadius.cardShape,
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) colors.accent.copy(alpha = 0.12f) else colors.surface
-        ),
-        border = BorderStroke(
-            1.dp,
-            if (isSelected) colors.accent else if (isOled) Color.White.copy(alpha = 0.06f) else colors.divider.copy(alpha = 0.5f)
-        ),
+        elevation = 2.dp,
         modifier = modifier
             .fillMaxWidth()
             .clip(AppRadius.cardShape)

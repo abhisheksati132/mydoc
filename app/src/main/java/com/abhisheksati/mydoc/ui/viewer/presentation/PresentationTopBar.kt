@@ -42,6 +42,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.RectangleShape
+import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.ui.viewer.controls.SearchOverlay
@@ -88,8 +90,13 @@ fun PresentationTopBar(
 
     var isMenuOpen by remember { mutableStateOf(false) }
 
-    Column(modifier = modifier.background(bgColor)) {
-        if (isSearchOpen) {
+    GlassSurface(
+        shape = RectangleShape,
+        elevation = 4.dp,
+        modifier = modifier
+    ) {
+        Column {
+            if (isSearchOpen) {
             SearchOverlay(
                 visible = true,
                 query = searchQuery,
@@ -292,9 +299,10 @@ fun PresentationTopBar(
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = bgColor)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
+}
 }

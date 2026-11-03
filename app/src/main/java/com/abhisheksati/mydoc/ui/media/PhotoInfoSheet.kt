@@ -17,6 +17,10 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
@@ -46,17 +50,22 @@ fun PhotoInfoSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
+        containerColor = Color.Transparent,
         dragHandle = null
     ) {
         OverlaySystemBars()
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = AppSpacing.paddingLarge, vertical = AppSpacing.paddingLarge)
-                .verticalScroll(rememberScrollState())
+        GlassSurface(
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            elevation = 16.dp,
+            modifier = Modifier.fillMaxWidth()
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = AppSpacing.paddingLarge, vertical = AppSpacing.paddingLarge)
+                    .verticalScroll(rememberScrollState())
+            ) {
             Text(
                 text = "Details",
                 style = typography.title,
@@ -121,6 +130,7 @@ fun PhotoInfoSheet(
             Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
         }
     }
+}
 }
 
 @Composable
