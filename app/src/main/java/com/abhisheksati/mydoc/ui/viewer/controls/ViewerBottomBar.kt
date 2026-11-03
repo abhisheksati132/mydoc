@@ -75,7 +75,8 @@ fun ViewerBottomBar(
     modifier: Modifier = Modifier,
     isCondensed: Boolean = false,
     sheetItems: List<OutlineItem> = emptyList(),
-    onSheetSelect: ((Int) -> Unit)? = null
+    onSheetSelect: ((Int) -> Unit)? = null,
+    hazeState: dev.chrisbanes.haze.HazeState? = null
 ) {
     val colors = AppTheme.colors
 
@@ -97,7 +98,8 @@ fun ViewerBottomBar(
         GlassSurface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-            elevation = 8.dp
+            elevation = 8.dp,
+            hazeState = hazeState
         ) {
             Column(
                 modifier = Modifier

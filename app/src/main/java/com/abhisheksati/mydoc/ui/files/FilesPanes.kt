@@ -19,7 +19,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -61,6 +63,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
+import com.abhisheksati.mydoc.designsystem.components.GlassMotionState
+import com.abhisheksati.mydoc.designsystem.components.TrackGlassMotion
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.FileSortField
@@ -70,6 +74,8 @@ import com.abhisheksati.mydoc.domain.model.StorageVolume
 import com.abhisheksati.mydoc.ui.storage.StorageAnalysisUiState
 import com.abhisheksati.mydoc.ui.storage.StorageCategoryType
 import com.abhisheksati.mydoc.viewmodel.FileManagerUiState
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
 import java.io.File
 
 private val shortcutCategories = listOf(
@@ -144,11 +150,18 @@ fun BrowseHomePane(
     onApps: () -> Unit,
     onInsights: () -> Unit,
     onClean: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    hazeState: HazeState? = null,
+    glassMotion: GlassMotionState? = null
 ) {
     val scheme = MaterialTheme.colorScheme
+    val listState = rememberLazyListState()
+    if (glassMotion != null) {
+        TrackGlassMotion(listState, glassMotion)
+    }
     LazyColumn(
-        modifier = modifier,
+        state = listState,
+        modifier = modifier.then(if (hazeState != null) Modifier.hazeSource(hazeState) else Modifier),
         contentPadding = PaddingValues(bottom = 120.dp)
     ) {
         if (!storageUiState.errorMessage.isNullOrBlank()) {
@@ -383,11 +396,20 @@ fun DirectoryPane(
     onToggleSelection: (StorageItem) -> Unit,
     onToggleView: () -> Unit,
     onSort: (FileSortField) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    hazeState: HazeState? = null,
+    glassMotion: GlassMotionState? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     var sortMenuOpen by remember { mutableStateOf(false) }
     var selectedDocFilter by remember { mutableStateOf(DocumentTypeFilter.ALL) }
+    val listState = rememberLazyListState()
+    val gridState = rememberLazyGridState()
+    if (glassMotion != null) {
+        TrackGlassMotion(listState, glassMotion)
+        TrackGlassMotion(gridState, glassMotion)
+    }
+    val hazeModifier = if (hazeState != null) Modifier.hazeSource(hazeState) else Modifier
 
     val isDocumentsCategory = uiState.activeCategory == FileCategory.DOCUMENTS
 
@@ -513,11 +535,14 @@ fun DirectoryPane(
             )
         } else if (uiState.isGridView) {
             LazyVerticalGrid(
+                state = gridState,
                 columns = GridCells.Adaptive(minSize = 108.dp),
                 contentPadding = PaddingValues(start = 10.dp, top = 4.dp, end = 10.dp, bottom = 120.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(hazeModifier)
             ) {
                 items(displayedItems, key = { it.path }) { item ->
                     val selected = selectedFiles.contains(item.file)
@@ -535,8 +560,11 @@ fun DirectoryPane(
             }
         } else {
             LazyColumn(
+                state = listState,
                 contentPadding = PaddingValues(top = 4.dp, bottom = 120.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(hazeModifier)
             ) {
                 items(displayedItems, key = { it.path }) { item ->
                     val selected = selectedFiles.contains(item.file)

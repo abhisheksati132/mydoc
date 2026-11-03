@@ -36,7 +36,8 @@ fun BoxScope.PdfViewerControlsOverlay(
     onOpenThumbnailGrid: () -> Unit,
     onOpenReadingControls: () -> Unit,
     onPageSelected: (Int) -> Unit,
-    isCondensed: Boolean = false
+    isCondensed: Boolean = false,
+    hazeState: dev.chrisbanes.haze.HazeState? = null
 ) {
     // Clean, condensing Top Toolbar on a GlassSurface
     ViewerTopBar(
@@ -56,6 +57,7 @@ fun BoxScope.PdfViewerControlsOverlay(
         onSlideshowClick = onSlideshowClick,
         onReflowClick = onReflowClick,
         onDocumentDetailsClick = onDocumentDetailsClick,
+        hazeState = hazeState,
         modifier = Modifier.align(Alignment.TopCenter)
     )
 
@@ -96,7 +98,8 @@ fun BoxScope.PdfViewerControlsOverlay(
             onAppearanceClick = onOpenReadingControls,
             onPageScrubbed = onPageSelected,
             sheetItems = state.outline,
-            onSheetSelect = onPageSelected
+            onSheetSelect = onPageSelected,
+            hazeState = hazeState
         )
     }
 }

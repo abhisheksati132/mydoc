@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.domain.model.HomeTab
@@ -58,6 +59,7 @@ fun BottomNavBar(
     onTabSelected: (HomeTab) -> Unit,
     modifier: Modifier = Modifier,
     hazeState: HazeState? = null,
+    motion: GlassMotionState? = null,
     onScanClick: () -> Unit = {}
 ) {
     val haptics = rememberAppHaptics()
@@ -71,8 +73,9 @@ fun BottomNavBar(
         contentAlignment = Alignment.Center
     ) {
         GlassSurface(
-            shape = RoundedCornerShape(32.dp),
+            shape = AppRadius.glassNavShape,
             hazeState = hazeState,
+            motion = motion,
             elevation = 10.dp,
             modifier = Modifier.wrapContentWidth()
         ) {

@@ -87,7 +87,7 @@ fun AppSectionHeader(
                     .background(paper.accent)
             )
         } else {
-            VividRule(
+            EditorialRule(
                 modifier = Modifier
                     .padding(start = AppSpacing.screenPadding, bottom = AppSpacing.small)
                     .width(40.dp)

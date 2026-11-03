@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import dev.chrisbanes.haze.hazeSource
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -191,6 +192,7 @@ fun PdfViewerScreen(
         initialPage = if (state.pageCount > 0) state.currentPage.coerceIn(0, state.pageCount - 1) else 0,
         pageCount = { state.pageCount.coerceAtLeast(1) }
     )
+    val viewerHazeState = remember { dev.chrisbanes.haze.HazeState() }
 
     // Reading immersion: hide system bars when controls are hidden, restore on exit
     val activity = context as? Activity
@@ -404,7 +406,9 @@ fun PdfViewerScreen(
                     LazyColumn(
                         state = lazyListState,
                         contentPadding = contentPaddingValues,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .hazeSource(viewerHazeState)
                     ) {
                         items(pairCount, key = { it }) { pairIndex ->
                             val leftPage = pairIndex * 2
@@ -453,7 +457,9 @@ fun PdfViewerScreen(
                     LazyColumn(
                         state = lazyListState,
                         contentPadding = contentPaddingValues,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .hazeSource(viewerHazeState)
                     ) {
                         items(state.pageCount, key = { it }) { pageIndex ->
                             PageItemView(
@@ -604,7 +610,8 @@ fun PdfViewerScreen(
                         pagerState.scrollToPage(targetPage)
                     }
                 }
-            }
+            },
+            hazeState = viewerHazeState
         )
 
         // Modal Sheets, Drawers & Dialogs

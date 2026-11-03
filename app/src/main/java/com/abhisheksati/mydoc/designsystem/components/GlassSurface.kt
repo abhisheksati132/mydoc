@@ -5,11 +5,18 @@ import android.content.Context
 import android.os.Build
 import android.os.PowerManager
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,12 +25,18 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.addOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.tokens.ContinuousCornerShape
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -63,20 +76,79 @@ fun isGlassEffectActive(context: Context, mode: GlassEffectMode): Boolean {
 }
 
 /**
+ * Scroll-driven glass response: 0f at rest, ramps to 1f over the first
+ * [RAMP_PX] of scroll. Drives progressive blur radius and tint density so
+ * chrome thickens like real glass under moving content.
+ */
+@Stable
+class GlassMotionState(initial: Float = 0f) {
+    var progress: Float by mutableFloatStateOf(initial)
+
+    companion object {
+        const val RAMP_PX = 240f
+    }
+}
+
+@Composable
+fun TrackGlassMotion(listState: LazyListState, motion: GlassMotionState) {
+    LaunchedEffect(listState, motion) {
+        snapshotFlow { listState.firstVisibleItemScrollOffset }
+            .collect { offset ->
+                motion.progress = (offset / GlassMotionState.RAMP_PX).coerceIn(0f, 1f)
+            }
+    }
+}
+
+@Composable
+fun TrackGlassMotion(gridState: LazyGridState, motion: GlassMotionState) {
+    LaunchedEffect(gridState, motion) {
+        snapshotFlow { gridState.firstVisibleItemScrollOffset }
+            .collect { offset ->
+                motion.progress = (offset / GlassMotionState.RAMP_PX).coerceIn(0f, 1f)
+            }
+    }
+}
+
+@Composable
+fun rememberGlassMotion(listState: LazyListState): GlassMotionState {
+    val motion = remember { GlassMotionState() }
+    TrackGlassMotion(listState, motion)
+    return motion
+}
+
+@Composable
+fun rememberGlassMotion(gridState: LazyGridState): GlassMotionState {
+    val motion = remember { GlassMotionState() }
+    TrackGlassMotion(gridState, motion)
+    return motion
+}
+
+/**
  * The core "Paper under glass" chrome surface.
- * Features:
- * 1. Live backdrop blur via Haze (when active and [hazeState] is supplied).
- * 2. Optical refraction tint ([tint] or [AppColors.glassTint]).
- * 3. 1dp specular gradient rim: bright reflection at top edge, soft occlusion at bottom.
- * 4. Subtle inner caustic glow to create tactile optical depth without visual clutter.
- * 5. Automatic solid fallback on API < 31, battery saver, or low-RAM environments.
+ *
+ * Optics model (Apple Liquid Glass anatomy):
+ * 1. Near-transparent base — the Haze style's backgroundColor is transparent so
+ *    the blurred content itself supplies the color (vibrancy), instead of an
+ *    opaque plate painted over the blur.
+ * 2. Low-alpha tint that thickens with scroll via [motion].
+ * 3. Fine noise (0.04) so large blurred fields don't band.
+ * 4. Directional specular edge: a top-arc highlight fading out mid-face, not a
+ *    uniform all-around stroke.
+ * 5. Inner shadow drawn UNDER content — occlusion, not a film on top.
+ * 6. Tinted drop shadows in light mode (accent-tinted spot).
+ * 7. Continuous-curvature corners by default ([ContinuousCornerShape]).
+ *
+ * Falls back to a solid plate on API < 31, battery saver, low-RAM, or when no
+ * [hazeState] is supplied (e.g. modal sheets, which live in their own window
+ * and cannot sample the app window behind them).
  */
 @Composable
 fun GlassSurface(
     modifier: Modifier = Modifier,
-    shape: Shape = AppRadius.largeShape,
+    shape: Shape = AppRadius.glassShape,
     hazeState: HazeState? = null,
     elevation: Dp = 8.dp,
+    motion: GlassMotionState? = null,
     tint: Color? = null,
     backgroundColor: Color? = null,
     rimTop: Color? = null,
@@ -98,21 +170,60 @@ fun GlassSurface(
     val actualRimBottom = rimBottom ?: colors.glassRimBottom
     val actualInnerShadow = innerShadowColor ?: colors.glassInnerShadow
 
-    val rimBrush = remember(actualRimTop, actualRimBottom) {
-        Brush.verticalGradient(
-            colors = listOf(actualRimTop, actualRimBottom)
-        )
-    }
+    val progress = motion?.progress ?: 0f
 
-    // Warm ink shadow on paper, deep scrim shadow on the dark canvas.
-    val shadowColor = if (AppTheme.isDark) colors.scrim else colors.ink
+    // Directional specular: bright top arc fading to nothing by mid-face,
+    // with only a whisper of occlusion along the bottom edge.
+    val specularAndInnerShadow = Modifier.drawWithCache {
+        val specular = Brush.verticalGradient(
+            colorStops = arrayOf(
+                0f to actualRimTop,
+                0.55f to Color.Transparent,
+                1f to actualRimBottom.copy(alpha = actualRimBottom.alpha * 0.5f)
+            )
+        )
+        val innerShadowHeight = 8.dp.toPx()
+        val innerShadow = Brush.verticalGradient(
+            colors = listOf(actualInnerShadow, Color.Transparent),
+            startY = 0f,
+            endY = innerShadowHeight
+        )
+        val outline = shape.createOutline(size, layoutDirection, this)
+        val outlinePath: Path? = when (outline) {
+            is Outline.Rounded -> Path().apply { addOutline(outline) }
+            is Outline.Generic -> outline.path
+            is Outline.Rectangle -> null
+        }
+        val stroke = Stroke(width = 1.dp.toPx())
+        onDrawWithContent {
+            // Inner shadow UNDER content: the glass edge occluding what lies below.
+            drawRect(
+                brush = innerShadow,
+                size = Size(size.width, innerShadowHeight)
+            )
+            drawContent()
+            if (outlinePath != null) {
+                drawPath(outlinePath, brush = specular, style = stroke)
+            } else {
+                drawRect(brush = specular, style = stroke)
+            }
+        }
+    }
 
     val baseModifier = modifier
         .shadow(
             elevation = elevation,
             shape = shape,
-            ambientColor = shadowColor.copy(alpha = if (AppTheme.isDark) 0.35f else 0.08f),
-            spotColor = shadowColor.copy(alpha = if (AppTheme.isDark) 0.50f else 0.12f)
+            ambientColor = if (AppTheme.isDark) {
+                colors.scrim.copy(alpha = 0.35f)
+            } else {
+                colors.ink.copy(alpha = 0.06f)
+            },
+            spotColor = if (AppTheme.isDark) {
+                colors.scrim.copy(alpha = 0.50f)
+            } else {
+                colors.accent.copy(alpha = 0.10f)
+            }
         )
         .clip(shape)
 
@@ -121,33 +232,25 @@ fun GlassSurface(
             .hazeEffect(
                 state = hazeState,
                 style = HazeStyle(
-                    backgroundColor = actualBackground,
-                    tint = HazeTint(actualTint),
-                    blurRadius = 24.dp,
-                    noiseFactor = 0f
+                    backgroundColor = Color.Transparent,
+                    tint = HazeTint(
+                        actualTint.copy(
+                            alpha = actualTint.alpha * (0.75f + 0.25f * progress)
+                        )
+                    ),
+                    blurRadius = lerp(12.dp, 28.dp, progress),
+                    noiseFactor = 0.04f
                 )
             )
-            .drawWithCache {
-                onDrawWithContent {
-                    drawContent()
-                    // Soft inner caustic shadow along top edge
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(actualInnerShadow, Color.Transparent),
-                            startY = 0f,
-                            endY = 16.dp.toPx()
-                        ),
-                        size = Size(size.width, 16.dp.toPx())
-                    )
-                }
-            }
-            .border(width = 1.dp, brush = rimBrush, shape = shape)
+            .then(specularAndInnerShadow)
     } else {
-        // High-performance fallback: fully opaque plate with the specular rim, so
-        // stacked sheets never ghost through and AMOLED keeps a readable surface.
+        // Solid fallback: plates the surface where live blur cannot run (old
+        // APIs, battery saver, or modal windows that cannot sample the app
+        // window behind them). Callers may pass a translucent
+        // [backgroundColor] to keep some depth.
         baseModifier
             .background(color = actualBackground, shape = shape)
-            .border(width = 1.dp, brush = rimBrush, shape = shape)
+            .then(specularAndInnerShadow)
     }
 
     Box(

@@ -38,7 +38,8 @@ fun AppTopBar(
     contentInsets: WindowInsets = TopAppBarDefaults.windowInsets,
     containerColor: Color? = null,
     isGlass: Boolean = true,
-    hazeState: HazeState? = null
+    hazeState: HazeState? = null,
+    motion: GlassMotionState? = null
 ) {
     val barColors = TopAppBarDefaults.topAppBarColors(
         containerColor = if (isGlass) Color.Transparent else (containerColor ?: MaterialTheme.colorScheme.surface),
@@ -96,6 +97,7 @@ fun AppTopBar(
             shape = RectangleShape,
             elevation = 4.dp,
             hazeState = hazeState,
+            motion = motion,
             backgroundColor = containerColor,
             modifier = modifier.fillMaxWidth()
         ) {

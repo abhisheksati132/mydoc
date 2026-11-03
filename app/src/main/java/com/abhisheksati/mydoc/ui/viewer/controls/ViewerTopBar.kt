@@ -76,7 +76,8 @@ fun ViewerTopBar(
     onTtsClick: (() -> Unit)? = null,
     onSlideshowClick: (() -> Unit)? = null,
     onReflowClick: (() -> Unit)? = null,
-    onDocumentDetailsClick: (() -> Unit)? = null
+    onDocumentDetailsClick: (() -> Unit)? = null,
+    hazeState: dev.chrisbanes.haze.HazeState? = null
 ) {
     val colors = AppTheme.colors
     var isMoreMenuOpen by remember { mutableStateOf(false) }
@@ -112,7 +113,8 @@ fun ViewerTopBar(
                 ) {
                     GlassSurface(
                         shape = AppRadius.roundShape,
-                        elevation = 8.dp
+                        elevation = 8.dp,
+                        hazeState = hazeState
                     ) {
                         Row(
                             modifier = Modifier
@@ -215,7 +217,8 @@ fun ViewerTopBar(
                 GlassSurface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
-                    elevation = 6.dp
+                    elevation = 6.dp,
+                    hazeState = hazeState
                 ) {
                     Column(
                         modifier = Modifier

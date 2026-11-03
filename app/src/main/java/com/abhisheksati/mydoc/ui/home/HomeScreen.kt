@@ -54,6 +54,8 @@ import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.designsystem.animation.AppMotion
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
 import com.abhisheksati.mydoc.designsystem.components.BottomNavBar
+import com.abhisheksati.mydoc.designsystem.components.GlassMotionState
+import com.abhisheksati.mydoc.designsystem.components.TrackGlassMotion
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.domain.model.DocumentFile
@@ -117,6 +119,9 @@ fun HomeScreen(
     }
 
     val hazeState = remember { dev.chrisbanes.haze.HazeState() }
+    val homeListState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val glassMotion = remember { GlassMotionState() }
+    TrackGlassMotion(homeListState, glassMotion)
 
     val tabs = remember { listOf(HomeTab.HOME, HomeTab.LIBRARY, HomeTab.TOOLS) }
     val pagerState = rememberPagerState(
@@ -192,6 +197,7 @@ fun HomeScreen(
                             errorMessage = uiState.errorMessage,
                             onDismissError = { viewModel.clearError() },
                             hazeState = hazeState,
+                            listState = homeListState,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -209,6 +215,8 @@ fun HomeScreen(
                             onSpotlightSearch = onSpotlightSearch,
                             isActive = currentTab == HomeTab.LIBRARY && pagerState.currentPage == 1,
                             onOpenInTools = { viewModel.selectTab(HomeTab.TOOLS) },
+                            hazeState = hazeState,
+                            glassMotion = glassMotion,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -223,6 +231,8 @@ fun HomeScreen(
                                 }
                             },
                             onSettingsClick = onSettingsClick,
+                            hazeState = hazeState,
+                            glassMotion = glassMotion,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -409,7 +419,8 @@ fun HomeScreen(
                     viewModel.selectTab(tab)
                 },
                 onScanClick = { documentScanner() },
-                hazeState = hazeState
+                hazeState = hazeState,
+                motion = glassMotion
             )
         }
     }

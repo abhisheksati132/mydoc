@@ -13,6 +13,14 @@ Range: `v1.5.14..v1.5.15`.
 - **Home Feed Error State Banner.** Added real-time error banner presentation in `HomeFeedPane` when document loading or recents flow encounters failures.
 - **Active TileBitmapCache Global Trim Registry.** Registered all active `TileBitmapCache` instances to automatically purge on system memory trim (`ComponentCallbacks2`).
 
+### Changed
+
+- **True Liquid Glass optics.** Rebuilt `GlassSurface` on the real Apple glass anatomy: transparent Haze base so blurred content supplies the color (vibrancy), low-alpha tint (0.42–0.55) instead of an 80% opaque plate, fine grain (noiseFactor 0.04), a directional top-arc specular edge replacing the uniform all-around rim, and the inner shadow moved under content at 8dp. Light mode now casts accent-tinted shadows.
+- **Continuous-curvature corners.** New `ContinuousCornerShape` (superellipse, exponent 4.5) for glass chrome and sheets so curvature ramps in like iOS instead of snapping at a circular arc.
+- **Live blur on every screen.** Haze sources now feed the navbar from the Home feed, Library browse/directory lists and grid, the Tools list, and the PDF viewer page column (top and bottom viewer bars included); previously only the Home feed could blur.
+- **Scroll-reactive glass.** `GlassMotionState` thickens the navbar glass as content scrolls: blur ramps 12→28dp and tint densifies over the first 240px of scroll.
+- **Color moved into content.** File-type inks now lift to tonal variants in dark themes; modal sheets use a translucent (94%) plate since cross-window blur is impossible.
+
 ### Fixed
 
 - **MuPDF Permissions Integer Bitmask.** Computed ISO 32000-1 user permissions bitmask as a proper signed integer string (`permissions=$permMask`), fixing the parse failure in MuPDF's `fz_lookup_option_integer` so print and copy restrictions are genuinely applied.
@@ -24,6 +32,7 @@ Range: `v1.5.14..v1.5.15`.
 
 ### Removed
 
+- **Rainbow layer deleted.** `VividGradients.kt` (7 unused Tailwind-default gradients) and `VividComponents.kt` removed; section headers fall back to a neutral editorial rule.
 - **Pruned 8 Tautological Unit Tests.** Eliminated mock tests performing trivial arithmetic on local variables (`assertEquals(35, 35)`, `255 - 255 == 0`, and simulated loops) from the E2E quality gate suite.
 
 ## [1.5.14] — 2026-11-03

@@ -132,11 +132,14 @@ data class AppColors(
             audioKind = if (isDark) Color(0xFF2DD4BF) else Color(0xFF14B8A6),
             onAudioKind = Color(0xFFFFFFFF),
             audioContainer = if (isDark) Color(0xFF042F2E) else Color(0xFFCCFBF1),
-            glassTint = if (isDark) Color(0xCC111827) else Color(0xCCFFFFFF),
-            // Visible bounding rims in both light and dark modes to guarantee complete roof and floor
-            glassRimTop = if (isDark) Color(0x38FFFFFF) else Color(0x1F000000),
+            // Low-alpha tint over a transparent Haze base: content supplies the
+            // color (vibrancy); the tint only densifies the glass slightly.
+            glassTint = scheme.surfaceContainerHighest.copy(alpha = if (isDark) 0.42f else 0.55f),
+            // White specular top arc in light (reflects light, not a dark stroke);
+            // bottom stop is halved again inside GlassSurface.
+            glassRimTop = if (isDark) Color(0x38FFFFFF) else Color(0x59FFFFFF),
             glassRimBottom = if (isDark) Color(0x20FFFFFF) else Color(0x14000000),
-            glassInnerShadow = if (isDark) Color(0x20000000) else Color(0x08000000),
+            glassInnerShadow = if (isDark) Color(0x0F000000) else Color(0x08000000),
             paperGrainColor = Color(0x00000000),
             textPrimary = scheme.onBackground,
             textSecondary = scheme.onSurfaceVariant,
@@ -191,8 +194,8 @@ val LightAppColors = AppColors(
     onAudioKind = Color(0xFFFFFFFF),
     audioContainer = Color(0xFFCCFBF1),
 
-    glassTint = Color(0xCCFFFFFF),
-    glassRimTop = Color(0x1F000000),
+    glassTint = Color(0x8CFFFFFF),
+    glassRimTop = Color(0x59FFFFFF),
     glassRimBottom = Color(0x14000000),
     glassInnerShadow = Color(0x08000000),
     paperGrainColor = Color(0x00000000)
@@ -230,10 +233,10 @@ val DarkAppColors = AppColors(
     onAudioKind = Color(0xFFFFFFFF),
     audioContainer = Color(0xFF042F2E),
 
-    glassTint = Color(0xCC111827),
+    glassTint = Color(0x6B1E283D),
     glassRimTop = Color(0x38FFFFFF),
     glassRimBottom = Color(0x20FFFFFF),
-    glassInnerShadow = Color(0x20000000),
+    glassInnerShadow = Color(0x0F000000),
     paperGrainColor = Color(0x00000000)
 )
 
@@ -246,10 +249,10 @@ val BlackAppColors = DarkAppColors.copy(
     ink = Color(0xFFF0F6FC),
     inkMuted = Color(0xFF8B949E),
     highlight = Color(0xFF1F242C),
-    glassTint = Color(0xE605070A),
+    glassTint = Color(0x6B161B22),
     glassRimTop = Color(0x40FFFFFF),
     glassRimBottom = Color(0x26FFFFFF),
-    glassInnerShadow = Color(0x30000000),
+    glassInnerShadow = Color(0x0F000000),
     surfaceContainer = Color(0xFF0D1117),
     surfaceContainerHigh = Color(0xFF161B22),
     surfaceContainerLow = Color(0xFF000000),

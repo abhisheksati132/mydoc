@@ -48,9 +48,13 @@ fun AppBottomSheet(
         dragHandle = null
     ) {
         OverlaySystemBars()
+        // Modal sheets live in their own window and cannot sample the app
+        // window behind them, so haze cannot blur here: use a translucent
+        // plate that lets the dimmed app ghost through instead.
         GlassSurface(
-            shape = AppRadius.sheetShape,
+            shape = AppRadius.glassSheetShape,
             elevation = 16.dp,
+            backgroundColor = AppTheme.colors.surface.copy(alpha = 0.94f),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(

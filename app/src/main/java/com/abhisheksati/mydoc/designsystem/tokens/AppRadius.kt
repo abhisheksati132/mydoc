@@ -45,4 +45,10 @@ object AppRadius {
     val modalShape = RoundedCornerShape(sheet)
     val xLargeShape = RoundedCornerShape(xLarge)
     val roundShape = RoundedCornerShape(round)
+
+    // Continuous-curvature (squircle) variants for glass and hero surfaces:
+    // curvature ramps in instead of snapping at a circular arc boundary.
+    val glassShape = ContinuousCornerShape(large)
+    val glassSheetShape = ContinuousCornerShape(sheet)
+    val glassNavShape = ContinuousCornerShape(xLarge)
 }

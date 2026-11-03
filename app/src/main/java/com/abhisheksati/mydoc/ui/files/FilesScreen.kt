@@ -101,7 +101,9 @@ fun FilesScreen(
     onSpotlightSearch: () -> Unit,
     modifier: Modifier = Modifier,
     isActive: Boolean = true,
-    onOpenInTools: ((File) -> Unit)? = null
+    onOpenInTools: ((File) -> Unit)? = null,
+    hazeState: dev.chrisbanes.haze.HazeState? = null,
+    glassMotion: com.abhisheksati.mydoc.designsystem.components.GlassMotionState? = null
 ) {
 
     val uiState by viewModel.uiState.collectAsState()
@@ -393,7 +395,9 @@ fun FilesScreen(
                                 onToggleSelection = { viewModel.toggleSelection(it.file) },
                                 onToggleView = { viewModel.toggleViewMode() },
                                 onSort = { field: FileSortField -> viewModel.toggleSort(field) },
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier.fillMaxSize(),
+                                hazeState = hazeState,
+                                glassMotion = glassMotion
                             )
                         } else {
                             BrowseHomePane(
@@ -413,7 +417,9 @@ fun FilesScreen(
                                 onApps = { showAppManager = true },
                                 onInsights = { showInsights = true },
                                 onClean = { showCleaner = true },
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier.fillMaxSize(),
+                                hazeState = hazeState,
+                                glassMotion = glassMotion
                             )
                         }
                     }

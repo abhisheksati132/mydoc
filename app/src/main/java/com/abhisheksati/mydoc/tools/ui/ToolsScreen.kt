@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -63,9 +64,13 @@ import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
+import com.abhisheksati.mydoc.designsystem.components.GlassMotionState
+import com.abhisheksati.mydoc.designsystem.components.TrackGlassMotion
 import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.tools.model.ToolGroup
 import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
 
 private data class ToolNavCategory(
     val group: ToolGroup?,
@@ -107,9 +112,15 @@ fun ToolsScreen(
     viewModel: ToolsViewModel,
     onToolClick: (PdfTool) -> Unit,
     modifier: Modifier = Modifier,
-    onSettingsClick: (() -> Unit)? = null
+    onSettingsClick: (() -> Unit)? = null,
+    hazeState: HazeState? = null,
+    glassMotion: GlassMotionState? = null
 ) {
     val colors = AppTheme.colors
+    val listState = rememberLazyListState()
+    if (glassMotion != null) {
+        TrackGlassMotion(listState, glassMotion)
+    }
 
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
@@ -250,8 +261,10 @@ fun ToolsScreen(
         }
 
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
+                .then(if (hazeState != null) Modifier.hazeSource(hazeState) else Modifier)
                 .navigationBarsPadding(),
             contentPadding = PaddingValues(top = 8.dp, bottom = 120.dp)
         ) {

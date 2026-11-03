@@ -97,9 +97,35 @@ private object TypeTint {
     val apk = Color(0xFF43604C)     // Olive ink
     val code = Color(0xFF4E565F)    // Charcoal
     val generic = Color(0xFF5D646D) // Neutral ink
+
+    // Dark themes lift the same hues to tonal variants so the format plates
+    // stay legible against dark containers instead of muddying into them.
+    val pdfDark = Color(0xFFE8734F)
+    val wordDark = Color(0xFF8FA6BC)
+    val excelDark = Color(0xFF7FBF9A)
+    val slidesDark = Color(0xFFD69A6C)
+    val imageDark = Color(0xFFA99FBE)
+    val videoDark = Color(0xFFC98FA6)
+    val audioDark = Color(0xFF7FBDBD)
+    val archiveDark = Color(0xFFBFAE87)
+    val apkDark = Color(0xFF8FBE99)
+    val codeDark = Color(0xFF9AA5B1)
+    val genericDark = Color(0xFFA7AEB8)
 }
 
-private fun tintFor(type: StorageFileType): Color = when (type) {
+private fun tintFor(type: StorageFileType, isDark: Boolean = false): Color = if (isDark) when (type) {
+    StorageFileType.PDF -> TypeTint.pdfDark
+    StorageFileType.WORD -> TypeTint.wordDark
+    StorageFileType.EXCEL -> TypeTint.excelDark
+    StorageFileType.PPT -> TypeTint.slidesDark
+    StorageFileType.IMAGE -> TypeTint.imageDark
+    StorageFileType.VIDEO -> TypeTint.videoDark
+    StorageFileType.AUDIO -> TypeTint.audioDark
+    StorageFileType.ARCHIVE -> TypeTint.archiveDark
+    StorageFileType.APK -> TypeTint.apkDark
+    StorageFileType.CODE_TEXT -> TypeTint.codeDark
+    StorageFileType.GENERIC, StorageFileType.DIRECTORY -> TypeTint.genericDark
+} else when (type) {
     StorageFileType.PDF -> TypeTint.pdf
     StorageFileType.WORD -> TypeTint.word
     StorageFileType.EXCEL -> TypeTint.excel
@@ -208,7 +234,7 @@ private fun TypePlate(
     badge: String? = null
 ) {
     val colors = com.abhisheksati.mydoc.designsystem.tokens.AppTheme.colors
-    val tint = if (type == StorageFileType.PDF) colors.accent else tintFor(type)
+    val tint = if (type == StorageFileType.PDF) colors.accent else tintFor(type, com.abhisheksati.mydoc.designsystem.tokens.AppTheme.isDark)
     val container = if (type == StorageFileType.PDF) colors.accentContainer else colors.surfaceMuted
     Box(
         modifier = modifier.clip(AppRadius.insetShape)
@@ -260,7 +286,7 @@ private fun PdfThumbnail(
             Icon(
                 imageVector = getFileTypeIcon(StorageFileType.PDF),
                 contentDescription = null,
-                tint = TypeTint.pdf,
+                tint = tintFor(StorageFileType.PDF, com.abhisheksati.mydoc.designsystem.tokens.AppTheme.isDark),
                 modifier = Modifier.size(22.dp)
             )
         }
@@ -295,7 +321,7 @@ private fun TextThumbnail(
             Icon(
                 imageVector = getFileTypeIcon(StorageFileType.CODE_TEXT),
                 contentDescription = null,
-                tint = TypeTint.code,
+                tint = tintFor(StorageFileType.CODE_TEXT, com.abhisheksati.mydoc.designsystem.tokens.AppTheme.isDark),
                 modifier = Modifier.size(22.dp)
             )
         }
