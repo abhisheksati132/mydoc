@@ -38,6 +38,7 @@ class PdfEditingEngine(private val context: Context) {
             val totalPages = srcDoc.countPages()
             val text = options.annotationText.ifBlank { "APPROVED" }
             val isHighlight = options.annotationType.equals("HIGHLIGHT", ignoreCase = true)
+            var applied = 0
 
             for (p in 0 until totalPages) {
                 currentCoroutineContext().ensureActive()
@@ -53,6 +54,7 @@ class PdfEditingEngine(private val context: Context) {
                                 annot.color = floatArrayOf(1.0f, 0.9f, 0.2f)
                                 annot.contents = text
                                 annot.update()
+                                applied++
                             }
                         }
                     }
@@ -73,11 +75,16 @@ class PdfEditingEngine(private val context: Context) {
                             else -> floatArrayOf(0.1f, 0.65f, 0.25f)
                         }
                         annot.update()
+                        applied++
                     }
                 }
                 page.destroy()
                 val pct = 10 + (((p + 1).toFloat() / totalPages) * 80).toInt()
                 onProgress(ToolProgress(p + 1, totalPages, pct, "Applying annotations...", false))
+            }
+
+            if (applied == 0) {
+                throw IllegalArgumentException("No match for \"$text\" was found. Nothing was annotated.")
             }
 
             val outFile = createTempOutputFile("annotated", "pdf")

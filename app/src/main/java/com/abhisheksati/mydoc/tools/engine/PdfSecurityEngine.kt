@@ -84,6 +84,7 @@ class PdfSecurityEngine(private val context: Context) {
         try {
             val totalPages = srcDoc.countPages()
             val query = options.redactQuery.ifBlank { "CONFIDENTIAL" }
+            var redacted = 0
 
             for (p in 0 until totalPages) {
                 currentCoroutineContext().ensureActive()
@@ -96,6 +97,7 @@ class PdfSecurityEngine(private val context: Context) {
                             annot.rect = Rect(q.ul_x, q.ul_y, q.lr_x, q.lr_y)
                             annot.color = floatArrayOf(0f, 0f, 0f)
                             annot.update()
+                            redacted++
                         }
                     }
                     // Burn redactions permanently
@@ -104,6 +106,10 @@ class PdfSecurityEngine(private val context: Context) {
                 page.destroy()
                 val pct = 10 + (((p + 1).toFloat() / totalPages) * 80).toInt()
                 onProgress(ToolProgress(p + 1, totalPages, pct, "Redacting page ${p + 1}...", false))
+            }
+
+            if (redacted == 0) {
+                throw IllegalArgumentException("No match for \"$query\" was found. Nothing was redacted.")
             }
 
             val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "redacted", "pdf")

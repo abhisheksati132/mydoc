@@ -1,19 +1,12 @@
 package com.abhisheksati.mydoc.ui.viewer.pdf
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.Close
@@ -24,11 +17,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.domain.model.ReadingMode
@@ -53,7 +44,6 @@ fun PdfFloatingContextualBar(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .windowInsetsPadding(WindowInsets.statusBars)
             .padding(top = 64.dp, start = 16.dp, end = 16.dp),
         contentAlignment = Alignment.TopCenter
     ) {
@@ -105,24 +95,12 @@ private fun FloatingPillItem(
     label: String,
     onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .clip(MaterialTheme.shapes.extraLarge)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    IconButton(onClick = onClick) {
         Icon(
             imageVector = icon,
-            contentDescription = null,
+            contentDescription = label,
             tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(18.dp)
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurface
+            modifier = Modifier.size(20.dp)
         )
     }
 }

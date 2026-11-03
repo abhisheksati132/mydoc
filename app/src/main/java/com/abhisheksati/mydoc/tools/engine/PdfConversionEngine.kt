@@ -41,6 +41,7 @@ class PdfConversionEngine(private val context: Context) {
     suspend fun imagesToPdf(files: List<File>, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File {
         val outDoc = AndroidPdfDocument()
         val total = files.size
+        var added = 0
 
         files.forEachIndexed { index, imgFile ->
             currentCoroutineContext().ensureActive()
@@ -70,9 +71,15 @@ class PdfConversionEngine(private val context: Context) {
             canvas.drawBitmap(bitmap, null, RectF(left, top, left + drawW, top + drawH), null)
             bitmap.recycle()
             outDoc.finishPage(page)
+            added++
 
             val pct = 10 + (((index + 1).toFloat() / total) * 80).toInt()
             onProgress(ToolProgress(index + 1, total, pct, "Adding image ${index + 1} of $total...", false))
+        }
+
+        if (added == 0) {
+            outDoc.close()
+            throw IllegalArgumentException("None of the selected files could be decoded as an image.")
         }
 
         val outFile = createTempOutputFile("converted", "pdf")

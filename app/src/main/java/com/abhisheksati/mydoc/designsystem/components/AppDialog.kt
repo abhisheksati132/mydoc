@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -98,9 +99,9 @@ fun AppDialog(
                     shape = AppRadius.pillShape,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isDestructive) colors.error else colors.accent,
-                        contentColor = if (isDestructive || !isOled) Color.White else Color.Black
+                        contentColor = if (isDestructive) MaterialTheme.colorScheme.onError else colors.onAccent
                     ),
-                    modifier = Modifier.defaultMinSize(minHeight = 38.dp)
+                    modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                 ) {
                     Text(
                         text = confirmLabel,
@@ -118,7 +119,7 @@ fun AppDialog(
                         0.5.dp,
                         if (isOled) Color.White.copy(alpha = 0.12f) else colors.line
                     ),
-                    modifier = Modifier.defaultMinSize(minHeight = 38.dp)
+                    modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                 ) {
                     Text(
                         text = dismissLabel,

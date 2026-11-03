@@ -104,12 +104,15 @@ fun GlassSurface(
         )
     }
 
+    // Warm ink shadow on paper, deep scrim shadow on the dark canvas.
+    val shadowColor = if (AppTheme.isDark) colors.scrim else colors.ink
+
     val baseModifier = modifier
         .shadow(
             elevation = elevation,
             shape = shape,
-            ambientColor = Color.Black.copy(alpha = if (AppTheme.isDark) 0.35f else 0.08f),
-            spotColor = Color.Black.copy(alpha = if (AppTheme.isDark) 0.50f else 0.12f)
+            ambientColor = shadowColor.copy(alpha = if (AppTheme.isDark) 0.35f else 0.08f),
+            spotColor = shadowColor.copy(alpha = if (AppTheme.isDark) 0.50f else 0.12f)
         )
         .clip(shape)
 
@@ -140,15 +143,10 @@ fun GlassSurface(
             }
             .border(width = 1.dp, brush = rimBrush, shape = shape)
     } else {
-        // High-performance fallback: semi-opaque solid tint with the specular rim
-        val fallbackBackground = if (AppTheme.isDark) {
-            colors.surface.copy(alpha = 0.94f)
-        } else {
-            colors.surface.copy(alpha = 0.96f)
-        }
-
+        // High-performance fallback: fully opaque plate with the specular rim, so
+        // stacked sheets never ghost through and AMOLED keeps a readable surface.
         baseModifier
-            .background(color = fallbackBackground, shape = shape)
+            .background(color = actualBackground, shape = shape)
             .border(width = 1.dp, brush = rimBrush, shape = shape)
     }
 

@@ -12,8 +12,8 @@ plugins {
 //   4. Tag & push: git tag v1.2.1 && git push origin v1.2.1
 //   5. Create GitHub Release with tag "v1.2.1" — the in-app updater reads this tag
 // -----------------------------------------------------------------------------
-val APP_VERSION_NAME = "1.5.10"
-val APP_VERSION_CODE = 160  // Increment by 1 every release, never decrease
+val APP_VERSION_NAME = "1.5.11"
+val APP_VERSION_CODE = 161  // Increment by 1 every release, never decrease
 
 android {
     namespace = "com.abhisheksati.mydoc"
@@ -124,7 +124,6 @@ android {
 
 dependencies {
     lintChecks(project(":lint-rules"))
-    implementation(project(":office-engine"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
@@ -157,9 +156,6 @@ dependencies {
     // ML Kit On-Device Text Recognition (Offline OCR)
     implementation(libs.mlkit.text.recognition)
 
-    // ZXing for Wi-Fi Transfer QR code generation
-    implementation(libs.zxing.core)
-
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.graphics)
@@ -169,7 +165,6 @@ dependencies {
 
     // Glass backdrop blur engine
     implementation(libs.haze)
-    implementation(libs.haze.materials)
 
     // Align serialization with Room 2.8's room-migration (kotlinx-serialization-json 1.8.1);
     // lifecycle otherwise pins the app classpath to 1.7.3 and Room's schema parser crashes.

@@ -32,7 +32,6 @@ import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.GridView
-import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.SdCard
 import androidx.compose.material.icons.outlined.Storage
@@ -81,50 +80,6 @@ private val shortcutCategories = listOf(
 )
 
 @Composable
-fun RecentsPane(
-    recentItems: List<LibraryItem>,
-    onOpenItem: (LibraryItem) -> Unit,
-    onItemDetails: (LibraryItem) -> Unit,
-    onBrowse: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    LazyColumn(
-        modifier = modifier,
-        contentPadding = PaddingValues(top = 8.dp, bottom = 120.dp)
-    ) {
-        item(key = "recent_header") {
-            FilesSectionHeader(
-                title = "Recent",
-                meta = if (recentItems.isNotEmpty()) "${recentItems.size}" else null
-            )
-        }
-
-        if (recentItems.isEmpty()) {
-            item(key = "recent_empty") {
-                FilesEmptyState(
-                    icon = Icons.Outlined.History,
-                    title = "No recent files",
-                    message = "Documents, photos and media you open will appear here.",
-                    actionLabel = "Browse storage",
-                    onAction = onBrowse
-                )
-            }
-        } else {
-            items(
-                items = recentItems,
-                key = { it.uri }
-            ) { item ->
-                RecentFileRow(
-                    item = item,
-                    onClick = { onOpenItem(item) },
-                    onMoreClick = { onItemDetails(item) }
-                )
-            }
-        }
-    }
-}
-
-@Composable
 fun RecentFileRow(
     item: LibraryItem,
     onClick: () -> Unit,
@@ -163,7 +118,7 @@ fun RecentFileRow(
                 overflow = TextOverflow.Ellipsis
             )
         }
-        IconButton(onClick = onMoreClick, modifier = Modifier.size(40.dp)) {
+        IconButton(onClick = onMoreClick, modifier = Modifier.size(48.dp)) {
             Icon(
                 imageVector = Icons.Outlined.MoreVert,
                 contentDescription = "Details",
@@ -428,12 +383,12 @@ fun DirectoryPane(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Spacer(modifier = Modifier.weight(1f))
-            IconButton(onClick = { sortMenuOpen = true }, modifier = Modifier.size(40.dp)) {
+            IconButton(onClick = { sortMenuOpen = true }, modifier = Modifier.size(48.dp)) {
                 Icon(Icons.AutoMirrored.Outlined.Sort, contentDescription = "Sort", tint = scheme.onSurfaceVariant)
             }
             IconButton(
                 onClick = onToggleView,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(48.dp)
             ) {
                 Icon(
                     imageVector = if (uiState.isGridView) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,

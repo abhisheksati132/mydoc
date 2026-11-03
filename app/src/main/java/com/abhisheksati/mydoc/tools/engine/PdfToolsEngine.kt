@@ -63,7 +63,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 /**
- * Robust, fully offline PDF Toolkit Engine implementing all 30 tools.
+ * Robust, fully offline PDF Toolkit Engine implementing all 24 tools.
  * Strict safety rules:
  * 1. Never modifies original files.
  * 2. Background processing with cooperative cancellation.
@@ -150,6 +150,9 @@ class PdfToolsEngine(private val context: Context) {
             }
 
             currentCoroutineContext().ensureActive()
+            if (!resultFile.exists() || resultFile.length() == 0L) {
+                throw IllegalStateException("The tool produced an empty output file.")
+            }
             onProgress(ToolProgress(100, 100, 100, "Completed.", false))
 
             val finalSizeBytes = resultFile.length()

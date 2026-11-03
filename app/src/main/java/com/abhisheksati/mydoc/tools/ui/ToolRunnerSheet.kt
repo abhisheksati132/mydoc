@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -112,23 +113,39 @@ fun ToolRunnerSheet(
         uris.forEach { viewModel.addInputUri(it) }
     }
 
-    // SAF Save Result Launcher
-    val saveDocumentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument(tool.outputMimeType)
-    ) { destUri ->
-        if (destUri != null) {
-            viewModel.saveResultToSaf(
-                context = context,
-                destinationUri = destUri,
-                onSuccess = {
-                    context.showMessage("Saved successfully.")
-                },
-                onError = { err ->
-                    context.showMessage(err, long = true)
-                }
-            )
-        }
+    fun saveResultTo(destUri: Uri?) {
+        if (destUri == null) return
+        viewModel.saveResultToSaf(
+            context = context,
+            destinationUri = destUri,
+            onSuccess = {
+                context.showMessage("Saved successfully.")
+            },
+            onError = { err ->
+                context.showMessage(err, long = true)
+            }
+        )
     }
+
+    // The result type is decided by the engine (a split may be one PDF or a ZIP,
+    // a long-image export is an image), so each type gets its own SAF contract.
+    val savePdfLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf")
+    ) { saveResultTo(it) }
+    val saveZipLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/zip")
+    ) { saveResultTo(it) }
+    val saveImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("image/*")
+    ) { saveResultTo(it) }
+    val saveMarkdownLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/markdown")
+    ) { saveResultTo(it) }
+    val saveDocxLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+    ) { saveResultTo(it) }
 
     AppBottomSheet(
         isOpen = true,
@@ -143,7 +160,7 @@ fun ToolRunnerSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(AppSpacing.minTouchTarget),
+                    .heightIn(min = 56.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -185,16 +202,13 @@ fun ToolRunnerSheet(
                         uris = inputUris,
                         context = context,
                         onPickSingle = {
-                            val types = if (tool.acceptsNonPdfInput) arrayOf("*/*") else arrayOf("application/pdf")
-                            singlePickerLauncher.launch(types)
+                            singlePickerLauncher.launch(pickerTypes(tool))
                         },
                         onPickMultiple = {
-                            val types = if (tool.acceptsNonPdfInput) arrayOf("*/*") else arrayOf("application/pdf")
-                            multiplePickerLauncher.launch(types)
+                            multiplePickerLauncher.launch(pickerTypes(tool))
                         },
                         onAddMore = {
-                            val types = if (tool.acceptsNonPdfInput) arrayOf("*/*") else arrayOf("application/pdf")
-                            addMorePickerLauncher.launch(types)
+                            addMorePickerLauncher.launch(pickerTypes(tool))
                         },
                         onRemoveUri = { viewModel.removeInputUri(it) }
                     )
@@ -245,28 +259,38 @@ fun ToolRunnerSheet(
                 }
 
                 is ToolExecutionUiState.Success -> {
+                    val resultFile = state.result.outputFile
+                    val resultExt = resultFile?.extension?.lowercase()
+                        ?.takeIf { it.isNotBlank() } ?: tool.outputExtension
+                    val resultMime = resultFile?.let(::mimeTypeFor) ?: tool.outputMimeType
+                    val defaultName = "${tool.defaultSuffix}_${System.currentTimeMillis()}.$resultExt"
+
                     SuccessVerificationSection(
                         result = state.result,
                         onSaveSaf = {
-                            val defaultName = "${tool.defaultSuffix}_${System.currentTimeMillis()}.${tool.outputExtension}"
-                            saveDocumentLauncher.launch(defaultName)
+                            when (resultExt) {
+                                "pdf" -> savePdfLauncher.launch(defaultName)
+                                "zip" -> saveZipLauncher.launch(defaultName)
+                                "jpg", "jpeg", "png", "webp" -> saveImageLauncher.launch(defaultName)
+                                "md", "txt" -> saveMarkdownLauncher.launch(defaultName)
+                                "docx" -> saveDocxLauncher.launch(defaultName)
+                                else -> savePdfLauncher.launch(defaultName)
+                            }
                         },
                         onOpen = {
-                            val f = state.result.outputFile
-                            if (f != null && f.exists()) {
-                                onOpenResultFile(f, tool.outputMimeType)
+                            if (resultFile != null && resultFile.exists()) {
+                                onOpenResultFile(resultFile, resultMime)
                             }
                         },
                         onShare = {
-                            val f = state.result.outputFile
-                            if (f != null && f.exists()) {
+                            if (resultFile != null && resultFile.exists()) {
                                 val uri = FileProvider.getUriForFile(
                                     context,
                                     "${context.packageName}.fileprovider",
-                                    f
+                                    resultFile
                                 )
                                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                    type = tool.outputMimeType
+                                    type = resultMime
                                     putExtra(Intent.EXTRA_STREAM, uri)
                                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
@@ -329,6 +353,24 @@ fun ToolRunnerSheet(
             onSignatureSaved = { showSignaturePad = false }
         )
     }
+}
+
+private fun pickerTypes(tool: PdfTool): Array<String> = when (tool) {
+    PdfTool.IMAGE_TO_PDF, PdfTool.SCAN_TO_PDF -> arrayOf("image/*")
+    PdfTool.TEXT_TO_PDF -> arrayOf("text/*", "text/csv", "application/csv", "application/json")
+    else -> if (tool.acceptsNonPdfInput) arrayOf("*/*") else arrayOf("application/pdf")
+}
+
+private fun mimeTypeFor(file: File): String = when (file.extension.lowercase()) {
+    "pdf" -> "application/pdf"
+    "zip" -> "application/zip"
+    "md" -> "text/markdown"
+    "txt" -> "text/plain"
+    "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    "jpg", "jpeg" -> "image/jpeg"
+    "png" -> "image/png"
+    "webp" -> "image/webp"
+    else -> "application/octet-stream"
 }
 
 @Composable

@@ -153,8 +153,15 @@ class UpdateManager(
         private const val KEY_IGNORED_TAG = "last_ignored_release_tag"
 
         fun isNewerVersion(remote: String, local: String): Boolean {
-            val remoteParts = remote.split('.').mapNotNull { it.toIntOrNull() }
-            val localParts = local.split('.').mapNotNull { it.toIntOrNull() }
+            fun parts(value: String) = value
+                .trim()
+                .removePrefix("v")
+                .substringBefore('-')
+                .split('.')
+                .mapNotNull { it.toIntOrNull() }
+
+            val remoteParts = parts(remote)
+            val localParts = parts(local)
 
             val maxLen = maxOf(remoteParts.size, localParts.size)
             for (i in 0 until maxLen) {

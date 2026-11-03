@@ -78,7 +78,7 @@ enum class PdfTool(
     SPLIT(
         id = "split",
         title = "Split PDF",
-        description = "Divide a document into separate files",
+        description = "Split every N pages into a ZIP, or keep a page range",
         group = ToolGroup.ORGANIZE,
         icon = Icons.AutoMirrored.Outlined.CallSplit,
         defaultSuffix = "split"
@@ -183,8 +183,8 @@ enum class PdfTool(
     ),
     PDF_TO_OFFICE(
         id = "pdf_to_office",
-        title = "PDF to Word / Excel",
-        description = "Export to Word, Excel, or PowerPoint",
+        title = "PDF to Word",
+        description = "Export text to an editable .docx",
         group = ToolGroup.CONVERT,
         icon = Icons.Outlined.TableChart,
         defaultSuffix = "office",

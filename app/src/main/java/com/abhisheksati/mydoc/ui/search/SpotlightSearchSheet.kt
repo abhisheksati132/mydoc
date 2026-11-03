@@ -30,7 +30,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -104,9 +103,9 @@ fun SpotlightSearchSheet(
             onBack = onDismiss,
             containerColor = scheme.background,
             titleContent = {
-                GlassSurface(
+                Surface(
                     shape = CircleShape,
-                    elevation = 4.dp,
+                    color = scheme.surfaceContainerHigh,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)

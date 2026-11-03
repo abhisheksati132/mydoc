@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -116,13 +116,13 @@ fun ViewerTopBar(
                     ) {
                         Row(
                             modifier = Modifier
-                                .height(44.dp)
+                                .heightIn(min = 48.dp)
                                 .padding(horizontal = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             IconButton(
                                 onClick = onBackClick,
-                                modifier = Modifier.size(36.dp)
+                                modifier = Modifier.size(48.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
@@ -138,7 +138,9 @@ fun ViewerTopBar(
                                 color = colors.inkPrimary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(horizontal = 6.dp)
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .padding(horizontal = 6.dp)
                             )
 
                             if (pageCount > 0) {
@@ -158,7 +160,7 @@ fun ViewerTopBar(
 
                             IconButton(
                                 onClick = onSearchClick,
-                                modifier = Modifier.size(36.dp)
+                                modifier = Modifier.size(48.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.Search,
@@ -170,7 +172,7 @@ fun ViewerTopBar(
 
                             IconButton(
                                 onClick = onToggleBookmark,
-                                modifier = Modifier.size(36.dp)
+                                modifier = Modifier.size(48.dp)
                             ) {
                                 Icon(
                                     imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
@@ -183,7 +185,7 @@ fun ViewerTopBar(
                             Box {
                                 IconButton(
                                     onClick = { isMoreMenuOpen = true },
-                                    modifier = Modifier.size(36.dp)
+                                    modifier = Modifier.size(48.dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Outlined.MoreVert,
@@ -223,8 +225,8 @@ fun ViewerTopBar(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(60.dp)
-                                .padding(horizontal = 6.dp),
+                                .heightIn(min = 60.dp)
+                                .padding(horizontal = 6.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             IconButton(onClick = onBackClick) {

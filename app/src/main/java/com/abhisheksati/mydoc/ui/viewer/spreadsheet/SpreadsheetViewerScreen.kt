@@ -49,7 +49,6 @@ import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingPrefs
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SheetData
-import com.abhisheksati.mydoc.ui.common.AppDivider
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerCapabilities
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerScaffold
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerThemeTokens

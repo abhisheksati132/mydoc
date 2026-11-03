@@ -9,7 +9,7 @@ Security fixes and updates are provided for the following releases:
 | 1.5.x   | :white_check_mark: |
 | < 1.5.0 | :x:                |
 
-Current version: **1.5.10**
+Current version: **1.5.11**
 
 Users are encouraged to always use the latest release from the [GitHub Releases](https://github.com/abhisheksati132/mydoc/releases) page.
 
@@ -57,7 +57,7 @@ All document reading, parsing, conversion, and compression operations are perfor
 - **Text Recognition:** Google ML Kit on-device text recognition. The model runs locally; on devices that do not ship it, Google Play Services may download the model once. The scanned document itself is never sent.
 - **Multimedia Engine:** Google AndroidX Media3 ExoPlayer (hardware-accelerated, zero JNI crash risk).
 
-Document and media content never leaves the device through MyDoc. The only outbound traffic is the optional GitHub update check/download described in section 5.
+Document and media content never leaves the device through MyDoc. Outbound traffic is limited to three paths: the optional GitHub update check and download described in section 5; the optional one-time Google Play Services download of the ML Kit text-recognition model on devices that do not ship it; and the metrics transport bundled by ML Kit's Google DataTransport/Firebase components (see section 4).
 
 ### 2. No WebView in Document Pipeline
 MyDoc does not use WebViews in its document rendering pipeline. Document parsing and layout are handled completely via native Kotlin and C++ vector renderers to prevent cross-site scripting (XSS), JavaScript injection, and WebView sandbox escape vulnerabilities.
@@ -72,7 +72,7 @@ Each OOXML parser applies its own bounds while decompressing (`.docx`, `.odt`, `
 The shared `ZipSafeReader` (entry, total-size, count and ratio limits) is implemented and unit-tested but is **not yet wired into the parsers**, so the limits differ per format and total uncompressed size is not capped uniformly.
 
 ### 4. Zero Telemetry & Tracking
-MyDoc contains zero advertising SDKs, zero user tracking libraries, and zero crash reporting telemetry. Nothing about how you use the app is reported to the developer or a third party.
+MyDoc contains zero advertising SDKs, zero user tracking libraries and zero crash reporting telemetry, and the app itself collects no analytics. The ML Kit text-recognition dependency does transitively bundle Google DataTransport/Firebase components in the merged manifest, which can emit Google metrics about model usage. If strict zero telemetry is required, that transport can be disabled or the ML Kit model bundled so Play Services is not contacted at runtime.
 
 ### 5. Transparent, Hardened Updates
 The application checks exclusively for updates against public GitHub Releases. This check:
@@ -83,8 +83,9 @@ The application checks exclusively for updates against public GitHub Releases. T
 
 ### 6. Least-Privilege Sandboxing & Encryption
 - **FileProvider**: Internal storage and root device paths are never exposed. File sharing is restricted to designated cache subdirectories (`cache/updates/`, `cache/shared/`, `cache/tools_output/`) and the offline document cache (`files/saved_docs/`). Shared and opened files are always handed to other apps as `content://` URIs, never `file://`.
-- **App Lock**: Biometric and screen lock protection is strictly guarded via `KeyguardManager.isDeviceSecure`.
-- **Hardware-Backed Keystore**: Signatures and sensitive data are encrypted on-device with AES-256-GCM using hardware-backed Android Keystore keys and excluded from automated cloud and device backups.
+- **App Lock**: Biometric and screen lock protection is requested via `KeyguardManager.isDeviceSecure`, but the guard fails open: when the device has no screen lock, `BiometricLockHelper` calls `onSuccess` without any authentication. The lock is also not re-applied when the app leaves the foreground — there is no re-lock on `onStop`, so an unlocked session stays unlocked until the process is recreated. Treat it as a convenience barrier, not a strong boundary against a local attacker.
+- **Android Keystore Encryption**: Signatures and sensitive data are encrypted on-device with AES-256-GCM using non-exportable Android Keystore keys, and the encrypted signature file is excluded from cloud and device backups. The code does not request StrongBox and does not verify at runtime that the key is hardware-backed, so on devices without a usable hardware keystore the key may be software-backed.
+- **Permissions**: `MANAGE_EXTERNAL_STORAGE` is user-granted all-files access, used to browse and open documents anywhere in shared storage; `WRITE_EXTERNAL_STORAGE` is declared with `maxSdkVersion="29"` for saving on pre-scoped-storage releases; `REQUEST_INSTALL_PACKAGES` exists solely so the in-app updater can hand a signature-verified APK to the system installer.
 
 ### 7. Android Backup & Device Transfer
-MyDoc opts into the platform backup system. If backup or device transfer is enabled by the user's Android settings, the OS may copy the app database (recent-document index) and offline document copies under `saved_docs/` to the user's own Google backup and onto a new device. This is OS behaviour, not an upload by MyDoc. Excluded from backup: app preference file (app-lock state), updater state, all cache directories, and the hardware-encrypted signature file. Users who do not want document copies in platform backup should disable backup for MyDoc in Android Settings.
+MyDoc opts into the platform backup system. If backup or device transfer is enabled by the user's Android settings, the OS may copy the app database (recent-document index), offline document copies under `saved_docs/`, and the user-pinned folder list in `pinned_folders_prefs.xml` to the user's own Google backup and onto a new device. This is OS behaviour, not an upload by MyDoc. Excluded from backup: `mydoc_settings.xml` (settings and app-lock state), `mydoc_updater.xml` (updater state), all cache directories, and the hardware-encrypted signature file. Users who do not want document copies in platform backup should disable backup for MyDoc in Android Settings.

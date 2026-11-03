@@ -90,13 +90,8 @@ fun PresentationTopBar(
 
     var isMenuOpen by remember { mutableStateOf(false) }
 
-    GlassSurface(
-        shape = RectangleShape,
-        elevation = 4.dp,
-        modifier = modifier
-    ) {
-        Column {
-            if (isSearchOpen) {
+    Column(modifier = modifier) {
+        if (isSearchOpen) {
             SearchOverlay(
                 visible = true,
                 query = searchQuery,
@@ -108,6 +103,10 @@ fun PresentationTopBar(
                 onCloseSearch = onCloseSearch
             )
         } else {
+            GlassSurface(
+                shape = RectangleShape,
+                elevation = 4.dp
+            ) {
             TopAppBar(
                 title = {
                     Column {
@@ -301,8 +300,8 @@ fun PresentationTopBar(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            }
         }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
-}
 }

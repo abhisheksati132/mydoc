@@ -3,6 +3,7 @@ package com.abhisheksati.mydoc.designsystem.components
 import android.content.Context
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
@@ -13,7 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -67,7 +68,14 @@ fun AppSnackbarHost(modifier: Modifier = Modifier) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         SnackbarHost(
             hostState = hostState,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+            modifier = Modifier
+                .navigationBarsPadding()
+                .padding(
+                    start = AppSpacing.medium,
+                    end = AppSpacing.medium,
+                    top = AppSpacing.medium,
+                    bottom = AppSpacing.navBarHeight + AppSpacing.medium
+                )
         )
     }
 }

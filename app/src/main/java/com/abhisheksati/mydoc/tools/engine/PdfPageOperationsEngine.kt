@@ -56,6 +56,26 @@ class PdfPageOperationsEngine(private val context: Context) {
             ?: throw IllegalArgumentException("Cannot open document")
         try {
             val totalPages = srcDoc.countPages()
+            val range = options.pageRange.trim()
+
+            // A typed range means "keep these pages in one PDF"; otherwise split every N pages.
+            if (range.isNotEmpty()) {
+                val indices = PdfToolUtils.parsePageRanges(range, totalPages)
+                if (indices.isEmpty()) {
+                    throw IllegalArgumentException("No pages matched the range \"$range\".")
+                }
+                val outDoc = PDFDocument()
+                for (p in indices) {
+                    currentCoroutineContext().ensureActive()
+                    outDoc.graftPage(outDoc.countPages(), srcDoc, p)
+                }
+                onProgress(ToolProgress(indices.size, indices.size, 85, "Saving selected pages...", false))
+                val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "split", "pdf")
+                outDoc.save(outFile.absolutePath, "compress")
+                outDoc.destroy()
+                return outFile
+            }
+
             val step = options.splitEveryNPages.coerceAtLeast(1)
 
             // If split results in multiple parts, package into ZIP
@@ -91,10 +111,10 @@ class PdfPageOperationsEngine(private val context: Context) {
                 }
                 return zipFile
             } else {
-                // Single extracted part
+                // Single part: every page in one file
                 val outDoc = PDFDocument()
-                val indices = PdfToolUtils.parsePageRanges(options.pageRange, totalPages)
-                for (p in indices) {
+                for (p in 0 until totalPages) {
+                    currentCoroutineContext().ensureActive()
                     outDoc.graftPage(outDoc.countPages(), srcDoc, p)
                 }
                 val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "split", "pdf")

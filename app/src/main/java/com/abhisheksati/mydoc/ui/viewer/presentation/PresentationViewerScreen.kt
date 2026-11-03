@@ -89,7 +89,14 @@ fun openPresentationInOfficeApp(context: Context, document: DocumentFile) {
         }
 
         val sharedDir = File(context.cacheDir, "shared").apply { mkdirs() }
-        val targetFile = File(sharedDir, document.displayName)
+        // displayName comes from an external SEND/VIEW intent: keep only a leaf file name.
+        val leafName = File(document.displayName.filterNot { it.isISOControl() }.replace('\\', '/')).name
+        val safeName = if (leafName.isBlank() || leafName == "." || leafName == "..") {
+            "presentation_${System.currentTimeMillis()}.${document.extension.lowercase().ifBlank { "pptx" }}"
+        } else {
+            leafName
+        }
+        val targetFile = File(sharedDir, safeName)
 
         if (!targetFile.exists() || targetFile.length() == 0L) {
             val stream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri, document.displayName)

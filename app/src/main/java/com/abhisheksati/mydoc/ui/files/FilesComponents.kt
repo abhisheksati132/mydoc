@@ -331,7 +331,7 @@ fun FileRow(
                 modifier = Modifier.size(22.dp)
             )
         } else {
-            IconButton(onClick = onMoreClick, modifier = Modifier.size(40.dp)) {
+            IconButton(onClick = onMoreClick, modifier = Modifier.size(48.dp)) {
                 Icon(
                     imageVector = Icons.Outlined.MoreVert,
                     contentDescription = "More",

@@ -3,6 +3,50 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [1.5.11] — 2026-11-03
+
+Range: `v1.5.10..v1.5.11`.
+
+### Removed
+
+- **`:office-engine` module.** 2,042 Java files and ~472k LOC that no app code referenced, kept in the
+  release by its own consumer ProGuard rule (~4.5 MB of dex). Its PDF path was disabled and several
+  bundled files carried no licence grant. Removed with its Gradle wiring.
+- **Dead UI and safety code:** `ZipSafeReader` (never called), `AppTabHeader`, unused Vivid components,
+  `DocumentFilterChips`, `EditorialMasthead`, `EditorialRow`, `PaperSurface`, `PaperTheme`,
+  `RecentsPane`, the duplicate `ui/common/AppDivider` and the unused `ui/common/EmptyState`.
+- **Unused dependencies:** `zxing-core` (no QR feature exists) and `haze-materials`.
+
+### Fixed
+
+- **Tool results are saved with their real type.** Save, Open and Share now use the output file's
+  actual extension and MIME instead of the tool's static metadata. A multi-part split is saved as a
+  ZIP (not a corrupt `.pdf`) and a stitched long image as JPG/PNG (not a `.zip`).
+- **Split honours a typed page range.** The range field previously only applied when the document
+  produced a single part; it now exports exactly the selected pages as one PDF.
+- **No false success.** The engine rejects empty outputs, image-to-PDF fails when no selected file
+  decodes, and Annotate/Redact report an error when the search text is not found instead of returning
+  the input unchanged.
+- **PDF to Word is labelled honestly.** The tool no longer claims Excel/PowerPoint output it never
+  produced, and the file picker offers images for image-to-PDF and text types for text-to-PDF.
+- **Glass surfaces are legible.** The no-blur fallback is now opaque instead of 94–96 % alpha, so
+  stacked sheets no longer ghost through each other and cards remain visible on AMOLED; the sheet
+  scrim and shadows follow the theme.
+- **Bottom chrome no longer overlaps.** Snackbars (including the Files UNDO) and the Files FAB clear
+  the floating navigation pill; the PDF contextual bar no longer applies the status-bar inset twice.
+- **Accessibility and large-font layout:** file action sheets scroll, dialog buttons use the theme
+  contrast colour, fixed-height headers grow with font scale, and the remaining sub-48 dp touch
+  targets were raised.
+- **Release-only hardening:** `DesignSystemPreviewScreen` is reachable only in debug builds; file
+  names from external intents are sanitized before writing to cache.
+- **CI action pins restored.** The release and build workflows use full commit SHAs again and
+  `build.yml` declares read-only permissions.
+
+### Changed
+
+- `SECURITY.md` now documents the ML Kit metrics transport, the app-lock fail-open path, the actual
+  backup exclusions and the requested permissions instead of overstating protection.
+
 ## [1.5.10] — 2026-11-03
 
 Range: `v1.5.9..v1.5.10`.

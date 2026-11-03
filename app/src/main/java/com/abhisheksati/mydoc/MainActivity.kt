@@ -217,7 +217,7 @@ class MainActivity : ComponentActivity() {
                 val doc = currentDocument
                 val activeScreen: ActiveScreen = when {
                     !isAppUnlocked && isBiometricLockEnabled -> ActiveScreen.Lock
-                    isDesignSystemPreviewOpen -> ActiveScreen.DesignSystemPreview
+                    isDesignSystemPreviewOpen && BuildConfig.DEBUG -> ActiveScreen.DesignSystemPreview
                     isSettingsOpen -> ActiveScreen.Settings
                     isSpotlightSearchOpen -> ActiveScreen.Search
                     photo != null -> ActiveScreen.Photo(photo.first, photo.second)
@@ -345,7 +345,11 @@ class MainActivity : ComponentActivity() {
                                                 updateManager = updateManager,
                                                 settingsRepository = app.settingsRepository,
                                                 onBackClick = { isSettingsOpen = false },
-                                                onDesignSystemPreviewClick = { isDesignSystemPreviewOpen = true },
+                                                onDesignSystemPreviewClick = if (BuildConfig.DEBUG) {
+                                                    { isDesignSystemPreviewOpen = true }
+                                                } else {
+                                                    {}
+                                                },
                                                 onClearRecent = {
                                                     lifecycleScope.launch {
                                                         app.libraryRepository.clearAllRecents()

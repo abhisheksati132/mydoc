@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,7 +42,7 @@ fun AppBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = Color.Transparent,
-        scrimColor = Color.Black.copy(alpha = 0.45f),
+        scrimColor = AppTheme.colors.scrim.copy(alpha = 0.45f),
         dragHandle = null
     ) {
         OverlaySystemBars()

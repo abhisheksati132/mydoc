@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -65,11 +67,10 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.abhisheksati.mydoc.designsystem.animation.AppMotion
 import com.abhisheksati.mydoc.designsystem.components.AppTopBar
-import com.abhisheksati.mydoc.designsystem.components.GlassSurface
-import androidx.compose.ui.graphics.RectangleShape
 import com.abhisheksati.mydoc.data.local.PinnedFoldersManager
 import com.abhisheksati.mydoc.data.local.StoragePermissionHelper
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.domain.model.FileSortField
 import com.abhisheksati.mydoc.domain.model.LibraryItem
 import com.abhisheksati.mydoc.domain.model.StorageFileType
@@ -240,7 +241,17 @@ fun FilesScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState) { data ->
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .navigationBarsPadding()
+                    .padding(
+                        start = AppSpacing.medium,
+                        end = AppSpacing.medium,
+                        top = AppSpacing.medium,
+                        bottom = AppSpacing.navBarHeight + AppSpacing.medium
+                    )
+            ) { data ->
                 Snackbar(
                     snackbarData = data,
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -253,6 +264,7 @@ fun FilesScreen(
             if (isBrowsingFolder && !uiState.isSelectionMode && uiState.clipboardState == null) {
                 FloatingActionButton(
                     onClick = { showNewFolderDialog = true },
+                    modifier = Modifier.padding(bottom = AppSpacing.navBarHeight + AppSpacing.medium),
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ) {
@@ -261,17 +273,14 @@ fun FilesScreen(
             }
         },
         topBar = {
-            GlassSurface(
-                shape = RectangleShape,
-                elevation = 4.dp,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                ) {
-                    if (uiState.isSelectionMode) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                if (uiState.isSelectionMode) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .statusBarsPadding()
+                    ) {
                         FilesSelectionBar(
                             selectedCount = uiState.selectedFiles.size,
                             totalCount = uiState.filteredItems.size,
@@ -286,8 +295,9 @@ fun FilesScreen(
                             onCompress = { showCompressDialog = true },
                             onDelete = { showDeleteConfirm = true }
                         )
-                    } else {
-                        FilesHeader(
+                    }
+                } else {
+                    FilesHeader(
                             title = title,
                             subtitle = subtitle,
                             isInsideFolder = insideBrowse,
@@ -332,7 +342,6 @@ fun FilesScreen(
                         if (breadcrumbs.size > 1) {
                             BreadcrumbRow(crumbs = breadcrumbs)
                         }
-                    }
                 }
             }
         }
@@ -495,7 +504,6 @@ private fun FilesHeader(
         title = title,
         subtitle = subtitle,
         onBack = if (isInsideFolder) onBack else null,
-        contentInsets = WindowInsets(0),
         actions = {
             IconButton(onClick = onSearch) {
                 Icon(

@@ -24,6 +24,15 @@ class UpdateManagerTest {
     }
 
     @Test
+    fun isNewerVersion_ignoresDebugVersionNameSuffix() {
+        // Debug builds append "-debug" to versionName; it must not truncate the patch number.
+        assertFalse(UpdateManager.isNewerVersion("1.5.9", "1.5.11-debug"))
+        assertTrue(UpdateManager.isNewerVersion("1.5.12", "1.5.11-debug"))
+        assertTrue(UpdateManager.isNewerVersion("v1.5.12", "1.5.11"))
+        assertFalse(UpdateManager.isNewerVersion("v1.5.11", "1.5.11-debug"))
+    }
+
+    @Test
     fun isValidTag_sanitizesReleaseTagsStrictly() {
         assertTrue(GitHubUpdateService.isValidTag("v1.0.0"))
         assertTrue(GitHubUpdateService.isValidTag("1.0.0"))
