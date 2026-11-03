@@ -20,6 +20,9 @@ Range: `v1.5.14..v1.5.15`.
 - **Live blur on every screen.** Haze sources now feed the navbar from the Home feed, Library browse/directory lists and grid, the Tools list, and the PDF viewer page column (top and bottom viewer bars included); previously only the Home feed could blur.
 - **Scroll-reactive glass.** `GlassMotionState` thickens the navbar glass as content scrolls: blur ramps 12→28dp and tint densifies over the first 240px of scroll.
 - **Color moved into content.** File-type inks now lift to tonal variants in dark themes; modal sheets use a translucent (94%) plate since cross-window blur is impossible.
+- **Vibrancy on live glass.** A luminance-preserving saturation lift (1.18x) is applied to the blurred layer so content color reads louder through the glass instead of muted, approximating Apple's vibrancy pass.
+- **Spring-settled nav glass.** Tab changes kick a damped spring through `GlassMotionState.interaction`, thickening the navbar blur momentarily before it relaxes, so glass responds to touch as well as scroll.
+- **Tertiary support accent.** Storage capacity bars and the App Manager "Split APK" badge now use `tertiary`/`tertiaryContainer` semantic containers: one primary accent for action, one support accent for resource metrics.
 
 ### Fixed
 

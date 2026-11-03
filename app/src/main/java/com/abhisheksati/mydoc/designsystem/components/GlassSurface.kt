@@ -25,10 +25,13 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.addOutline
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
@@ -41,6 +44,7 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
+import kotlin.math.max
 
 /**
  * User control for glass effects:
@@ -83,6 +87,7 @@ fun isGlassEffectActive(context: Context, mode: GlassEffectMode): Boolean {
 @Stable
 class GlassMotionState(initial: Float = 0f) {
     var progress: Float by mutableFloatStateOf(initial)
+    var interaction: Float by mutableFloatStateOf(0f)
 
     companion object {
         const val RAMP_PX = 240f
@@ -142,6 +147,17 @@ fun rememberGlassMotion(gridState: LazyGridState): GlassMotionState {
  * [hazeState] is supplied (e.g. modal sheets, which live in their own window
  * and cannot sample the app window behind them).
  */
+// Vibrancy: luminance-preserving saturation lift (s = 1.18) applied to the live
+// blur so content color reads louder through the glass instead of muted.
+private val Vibrancy = ColorMatrix(
+    floatArrayOf(
+        1.14166f, -0.12870f, -0.01296f, 0f, 0f,
+        -0.03834f, 1.05130f, -0.01296f, 0f, 0f,
+        -0.03834f, -0.12870f, 1.16704f, 0f, 0f,
+        0f, 0f, 0f, 1f, 0f
+    )
+)
+
 @Composable
 fun GlassSurface(
     modifier: Modifier = Modifier,
@@ -170,7 +186,7 @@ fun GlassSurface(
     val actualRimBottom = rimBottom ?: colors.glassRimBottom
     val actualInnerShadow = innerShadowColor ?: colors.glassInnerShadow
 
-    val progress = motion?.progress ?: 0f
+    val progress = max(motion?.progress ?: 0f, (motion?.interaction ?: 0f) * 0.6f)
 
     // Directional specular: bright top arc fading to nothing by mid-face,
     // with only a whisper of occlusion along the bottom edge.
@@ -242,6 +258,7 @@ fun GlassSurface(
                     noiseFactor = 0.04f
                 )
             )
+            .graphicsLayer { colorFilter = ColorFilter.colorMatrix(Vibrancy) }
             .then(specularAndInnerShadow)
     } else {
         // Solid fallback: plates the surface where live blur cannot run (old

@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import androidx.compose.material3.MaterialTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.tools.appmanager.AppInfoItem
@@ -336,12 +337,12 @@ private fun AppListItem(
                     Spacer(modifier = Modifier.height(3.dp))
                     Surface(
                         shape = AppRadius.pillShape,
-                        color = colors.accent.copy(alpha = 0.15f)
+                        color = MaterialTheme.colorScheme.tertiaryContainer
                     ) {
                         Text(
                             text = "Split APK (${app.splitApkFiles.size + 1})",
                             style = typography.micro,
-                            color = colors.accent,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
                             maxLines = 1,
                             softWrap = false,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)

@@ -158,7 +158,7 @@ fun StorageOverviewCard(
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(CircleShape),
-                color = scheme.primary,
+                color = scheme.tertiary,
                 trackColor = scheme.surfaceVariant,
                 gapSize = 0.dp,
                 drawStopIndicator = {}
