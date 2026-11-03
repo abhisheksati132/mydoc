@@ -3,6 +3,32 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [1.5.14] — 2026-11-03
+
+Range: `v1.5.13..v1.5.14`.
+
+### Added
+
+- **Material You Dynamic Themed Icon.** Added `<monochrome>` adaptive icon vector layer so MyDoc dynamically tints with system wallpaper colors on Android 13+.
+- **User-Facing PDF Security Permissions.** Wired `allowPrinting` and `allowCopying` toggle controls into Protect PDF tool UI and MuPDF permission strings.
+- **Watermark Angle Controls.** Added interactive rotation chips (-45° diagonal, 0° horizontal, +45°, 90° vertical) in Add Watermark tool.
+- **Storage Failure Recovery.** Added proactive error state cards in Library browse pane when storage analysis or volume inspection fails.
+- **Memory Pressure Trimming.** Integrated `onTrimMemory` hooks across `TileBitmapCache` and `MainActivity` to purge and resize bitmap caches under OS memory pressure.
+
+### Fixed
+
+- **Eliminated Fake Redaction & Sanitization.** `redactPdf` and `stripMetadata` now strictly throw on engine failure instead of copying unredacted files or claiming metadata was purged.
+- **Edge-to-Edge Keyboard Blindness.** Added `android:windowSoftInputMode="adjustResize"` and `.imePadding()` across `AppBottomSheet`, `ToolRunnerSheet`, and `SpotlightSearchSheet` so input fields and action buttons never hide behind the software keyboard.
+- **Card Roof/Floor Disappearance & Liquid Glass Overhaul.** Replaced fading directional gradient borders with continuous, luminous 1dp bounding rims across light, dark, and AMOLED modes.
+- **Vibrant Modern Palette.** Replaced muddy ivory/brown tones with radiant slate-white `#F8FAFC`, deep sapphire `#0066FF`, and vivid semantic badge colors.
+- **Splash Screen Parity.** Splash screen animated icon now points directly to `@mipmap/ic_launcher` instead of legacy line art.
+- **Library Tab Divider Inconsistency.** Removed unwanted horizontal border divider from Library header to match Home and Tools headers.
+- **Touch Targets & Text Clipping.** Expanded page reorder buttons and search clear buttons to standard touch targets (≥40-48dp); fixed "Landscap" truncation with `TextOverflow.Ellipsis`.
+
+### Removed
+
+- **Dead Code Sweep.** Pruned 19 unused files and assets, including 10 dead mipmap PNGs, uncalled `AudioExtractor`, legacy splash XMLs, unreferenced `AppChip`, and unused color/typography tokens.
+
 ## [1.5.13] — 2026-11-03
 
 Range: `v1.5.12..v1.5.13`.
