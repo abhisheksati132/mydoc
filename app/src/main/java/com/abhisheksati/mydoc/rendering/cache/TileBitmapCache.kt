@@ -55,6 +55,19 @@ class TileBitmapCache(
         currentBytes = 0
     }
 
+    fun onTrimMemory(level: Int) = synchronized(lock) {
+        when {
+            level >= android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE ||
+                level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> {
+                clear()
+            }
+            level >= android.content.ComponentCallbacks2.TRIM_MEMORY_MODERATE ||
+                level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> {
+                trimToSize(maxMemoryBytes / 2)
+            }
+        }
+    }
+
     fun recycleAll() = synchronized(lock) {
         val bitmaps = cache.values.toList()
         cache.clear()

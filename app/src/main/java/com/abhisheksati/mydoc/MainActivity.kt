@@ -709,4 +709,11 @@ class MainActivity : ComponentActivity() {
             showMessage("No app available to share this file")
         }
     }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= TRIM_MEMORY_MODERATE) {
+            com.abhisheksati.mydoc.ui.viewer.controls.ZoomTileCache.clear()
+        }
+    }
 }

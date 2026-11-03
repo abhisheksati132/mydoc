@@ -472,6 +472,12 @@ private fun renderTextToBitmap(text: String, color: Color): Bitmap {
         textAlign = Paint.Align.CENTER
     }
 
+    val maxTextWidth = (width - 64).toFloat()
+    val measuredWidth = paint.measureText(text)
+    if (measuredWidth > maxTextWidth && maxTextWidth > 0f) {
+        paint.textSize = (paint.textSize * (maxTextWidth / measuredWidth)).coerceAtLeast(24f)
+    }
+
     val x = width / 2f
     val y = (height / 2f) - ((paint.descent() + paint.ascent()) / 2f)
     canvas.drawText(text, x, y, paint)

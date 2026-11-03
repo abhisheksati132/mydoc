@@ -20,6 +20,7 @@ import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -100,6 +101,24 @@ internal fun ToolOptionsSection(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
+                Text(text = "ROTATION", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScrollWithFade(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
+                ) {
+                    val angles = listOf(-45f to "Diagonal (-45°)", 0f to "Horizontal (0°)", 45f to "Diagonal (+45°)", 90f to "Vertical (90°)")
+                    angles.forEach { (angle, label) ->
+                        AppFilterChip(
+                            label = label,
+                            isSelected = options.watermarkRotation == angle,
+                            onClick = { onOptionsChange { it.copy(watermarkRotation = angle) } }
+                        )
+                    }
+                }
             }
 
             PdfTool.ADD_PAGE_NUMBERS -> {
@@ -136,6 +155,35 @@ internal fun ToolOptionsSection(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 )
+                Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
+                Text(text = "PERMISSIONS", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "Allow Printing", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                    Switch(
+                        checked = options.allowPrinting,
+                        onCheckedChange = { allowed -> onOptionsChange { it.copy(allowPrinting = allowed) } }
+                    )
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "Allow Copying text & media", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                    Switch(
+                        checked = options.allowCopying,
+                        onCheckedChange = { allowed -> onOptionsChange { it.copy(allowCopying = allowed) } }
+                    )
+                }
             }
 
             PdfTool.UNLOCK -> {

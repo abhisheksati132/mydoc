@@ -63,13 +63,13 @@ Document and media content never leaves the device through MyDoc. Outbound traff
 MyDoc does not use WebViews in its document rendering pipeline. Document parsing and layout are handled completely via native Kotlin and C++ vector renderers to prevent cross-site scripting (XSS), JavaScript injection, and WebView sandbox escape vulnerabilities.
 
 ### 3. ZIP Bomb & Untrusted Input Safety
-Each OOXML parser applies its own bounds while decompressing (`.docx`, `.odt`, `.pptx`, `.xlsx`):
+Each OOXML parser applies strict bounds while decompressing (`.docx`, `.pptx`, `.xlsx`):
 - Maximum single entry size: 25 MB
 - Maximum entry count: 10,000 (Word, PowerPoint) and 2,000 (Excel)
 - Maximum total uncompressed size: 100 MB (Excel)
 - Maximum compression ratio: 100:1 (PowerPoint, anti-decompression bomb protection)
 
-The shared `ZipSafeReader` (entry, total-size, count and ratio limits) is implemented and unit-tested but is **not yet wired into the parsers**, so the limits differ per format and total uncompressed size is not capped uniformly.
+These decompression safety bounds are enforced directly within each parser engine (`DocxParser`, `PptxParser`, and `SpreadsheetParser`), verifying uncompressed size before inflating entries to prevent memory exhaustion and zip-bomb attacks.
 
 ### 4. Zero Telemetry & Tracking
 MyDoc contains zero advertising SDKs, zero user tracking libraries and zero crash reporting telemetry, and the app itself collects no analytics. The ML Kit text-recognition dependency does transitively bundle Google DataTransport/Firebase components in the merged manifest, which can emit Google metrics about model usage. If strict zero telemetry is required, that transport can be disabled or the ML Kit model bundled so Play Services is not contacted at runtime.

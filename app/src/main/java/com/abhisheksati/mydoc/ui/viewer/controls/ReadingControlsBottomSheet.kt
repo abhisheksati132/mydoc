@@ -220,7 +220,7 @@ fun ReadingControlsBottomSheet(
                     text = if (currentBrightness < 0f) "Auto" else "${(currentBrightness * 100).toInt()}%",
                     style = typography.caption,
                     color = colors.textSecondary,
-                    modifier = Modifier.width(40.dp)
+                    modifier = Modifier.width(48.dp)
                 )
             }
 
@@ -424,8 +424,8 @@ private fun ThemeOptionButton(
             Text(
                 text = label,
                 maxLines = 1,
-                style = MaterialTheme.typography.labelMedium,
-                softWrap = false
+                style = MaterialTheme.typography.labelSmall,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
         },
         leadingIcon = if (icon != null) {

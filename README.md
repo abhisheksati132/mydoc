@@ -32,7 +32,7 @@
 ## ✨ Features
 
 ### 📖 High-Performance Universal Reader
-* **Sub-Pixel Vector PDF Engine**: Backed by MuPDF C++ native core with crisp text anti-aliasing, continuous vertical or horizontal scrolling, and fluid zoom up to 500%.
+* **Sub-Pixel Vector PDF Engine**: Backed by MuPDF C++ native core with crisp text anti-aliasing, continuous vertical or horizontal scrolling, and fluid zoom up to 600%.
 * **Streaming Office Reader**: Native, zero-OOM parsers for `.docx`, `.xlsx`, and `.pptx` powered by streaming pull parsers and virtualized Compose layouts.
 * **E-Books & Text**: Integrated EPUB reader with adjustable typography and instant plain text (`.txt`, `.log`, `.md`) rendering.
 * **Reading Continuity & State Restoration**: Automatically saves and restores page numbers, scroll offsets, zoom levels, and recent file timestamps.
@@ -171,7 +171,7 @@ MYDOC_RELEASE_CERT_SHA256=*** \
 * **PDF Core**: [Artifex MuPDF Fitz](https://mupdf.com/) (Native JNI bindings)
 * **Secondary PDF Core**: [PDFBox-Android](https://github.com/TomRoush/PdfBox-Android)
 * **Media**: [AndroidX Media3 ExoPlayer](https://developer.android.com/media/media3)
-* **Database**: [Jetpack Room 2.7.0-alpha13](https://developer.android.com/training/data-storage/room)
+* **Database**: [Jetpack Room 2.8.5](https://developer.android.com/training/data-storage/room)
 * **Image Loading**: [Coil 3](https://coil-kt.github.io/coil/)
 
 ---

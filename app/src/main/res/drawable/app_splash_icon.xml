@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- The masked plate is painted with the splash surface, not left transparent: a
-         transparent layer composites as black on Android 12+, which puts a dark disc
-         behind the mark. Matching the window background makes the plate disappear. -->
-    <background android:drawable="@color/splash_plate" />
-    <foreground android:drawable="@drawable/app_splash_foreground" />
-</adaptive-icon>
-

@@ -45,7 +45,10 @@ class PdfSecurityEngine(private val context: Context) {
             require(ownerPwd.none { it == ',' || it.isISOControl() }) {
                 "Owner password cannot contain commas or control characters."
             }
-            val permissions = if (options.allowPrinting) "print" else "no-print"
+            val permTokens = mutableListOf<String>()
+            permTokens.add(if (options.allowPrinting) "print" else "no-print")
+            permTokens.add(if (options.allowCopying) "copy" else "no-copy")
+            val permissions = permTokens.joinToString(",")
 
             val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "protected", "pdf")
             srcDoc.save(outFile.absolutePath, "encryption=aes-256,user-password=$userPwd,owner-password=$ownerPwd,permissions=$permissions")
@@ -86,6 +89,7 @@ class PdfSecurityEngine(private val context: Context) {
     }
 
     suspend fun redactPdf(file: File, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File {
+        val query = options.redactQuery.ifBlank { "CONFIDENTIAL" }
         val srcDoc = try {
             Document.openDocument(file.absolutePath) as? PDFDocument
         } catch (_: Throwable) {
@@ -93,7 +97,6 @@ class PdfSecurityEngine(private val context: Context) {
         }
 
         if (srcDoc == null) {
-            val query = options.redactQuery.ifBlank { "CONFIDENTIAL" }
             val containsQuery = try {
                 PdfBoxHelper.ensureInitialized(context)
                 FileInputStream(file).use { fis ->
@@ -109,9 +112,7 @@ class PdfSecurityEngine(private val context: Context) {
             if (!containsQuery) {
                 throw IllegalArgumentException("No match for \"$query\" was found. Nothing was redacted.")
             }
-            val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "redacted", "pdf")
-            file.copyTo(outFile, overwrite = true)
-            return outFile
+            throw IllegalStateException("Cannot securely redact document: native redaction engine failed to process document structure.")
         }
         try {
             val totalPages = srcDoc.countPages()
@@ -157,12 +158,14 @@ class PdfSecurityEngine(private val context: Context) {
         PdfBoxHelper.ensureInitialized(context)
         val intermediate = PdfToolUtils.createTempOutputFile(context.cacheDir, "pdfbox_stripped", "pdf")
 
+        var pdfBoxSucceeded = false
         try {
             FileInputStream(file).use { fis ->
                 PDDocument.load(fis).use { doc ->
                     doc.documentCatalog?.metadata = null
                     doc.documentInformation = PDDocumentInformation()
                     FileOutputStream(intermediate).use { fos -> doc.save(fos) }
+                    pdfBoxSucceeded = true
                 }
             }
         } catch (e: Exception) {
@@ -179,6 +182,10 @@ class PdfSecurityEngine(private val context: Context) {
         }
 
         if (srcDoc == null) {
+            if (!pdfBoxSucceeded) {
+                try { if (intermediate.exists()) intermediate.delete() } catch (_: Exception) {}
+                throw IllegalStateException("Failed to sanitize metadata: document structure could not be processed by sanitization engines.")
+            }
             val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "sanitized", "pdf")
             intermediate.copyTo(outFile, overwrite = true)
             onProgress(ToolProgress(100, 100, 95, "Metadata purged.", false))

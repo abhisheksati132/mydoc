@@ -15,13 +15,14 @@ import java.io.FileOutputStream
 
 object PrintHelper {
 
-    fun printDocument(context: Context, document: DocumentFile) {
+    fun printDocument(context: Context, document: DocumentFile, onMessage: ((String) -> Unit)? = null) {
         if (!document.extension.equals("pdf", ignoreCase = true)) {
-            android.widget.Toast.makeText(
-                context,
-                "Direct printing is only supported for PDF documents. Convert this document to PDF to print.",
-                android.widget.Toast.LENGTH_LONG
-            ).show()
+            val msg = "Direct printing is only supported for PDF documents. Convert this document to PDF to print."
+            if (onMessage != null) {
+                onMessage(msg)
+            } else {
+                android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
+            }
             return
         }
 

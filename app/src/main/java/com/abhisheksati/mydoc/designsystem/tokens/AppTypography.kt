@@ -64,9 +64,6 @@ val InterFontFamily: FontFamily = variableFamily(R.font.inter, interWeights, Fon
 val FrauncesFontFamily: FontFamily = variableFamily(R.font.fraunces, frauncesWeights, FontFamily.Serif)
 val JetBrainsMonoFontFamily: FontFamily = variableFamily(R.font.jetbrains_mono, monoWeights, FontFamily.Monospace)
 
-// Backward compatibility alias for Bricolage
-val BricolageFontFamily: FontFamily = FrauncesFontFamily
-
 @Immutable
 data class AppTypography(
     // --- Fraunces Serif Display Tier ---

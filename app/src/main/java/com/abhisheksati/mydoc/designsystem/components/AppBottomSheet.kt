@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -25,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,7 +49,7 @@ fun AppBottomSheet(
     ) {
         OverlaySystemBars()
         GlassSurface(
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            shape = AppRadius.sheetShape,
             elevation = 16.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -55,6 +57,7 @@ fun AppBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
+                    .imePadding()
                     .padding(horizontal = 24.dp, vertical = 12.dp)
             ) {
                 // Tactile Glass Drag Handle

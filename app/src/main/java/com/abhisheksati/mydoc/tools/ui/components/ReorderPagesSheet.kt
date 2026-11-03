@@ -409,12 +409,28 @@ fun ReorderPagesSheet(
                                                 }
                                             },
                                             enabled = index > 0,
-                                            modifier = Modifier.size(28.dp)
+                                            modifier = Modifier.size(40.dp)
                                         ) {
                                             Icon(
                                                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
                                                 contentDescription = "Move left",
                                                 tint = if (index > 0) scheme.onSurfaceVariant else scheme.onSurfaceVariant.copy(alpha = 0.38f),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+
+                                        IconButton(
+                                            onClick = {
+                                                haptics.tick()
+                                                pages.removeAt(index)
+                                                selectedIds.remove(item.uniqueId)
+                                            },
+                                            modifier = Modifier.size(40.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Delete,
+                                                contentDescription = "Remove page",
+                                                tint = scheme.error,
                                                 modifier = Modifier.size(18.dp)
                                             )
                                         }
@@ -429,29 +445,13 @@ fun ReorderPagesSheet(
                                                 }
                                             },
                                             enabled = index < pages.size - 1,
-                                            modifier = Modifier.size(28.dp)
+                                            modifier = Modifier.size(40.dp)
                                         ) {
                                             Icon(
                                                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                                                 contentDescription = "Move right",
                                                 tint = if (index < pages.size - 1) scheme.onSurfaceVariant else scheme.onSurfaceVariant.copy(alpha = 0.38f),
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-
-                                        IconButton(
-                                            onClick = {
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                pages.removeAt(index)
-                                                selectedIds.remove(item.uniqueId)
-                                            },
-                                            modifier = Modifier.size(28.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.Close,
-                                                contentDescription = "Remove page",
-                                                tint = scheme.error,
-                                                modifier = Modifier.size(16.dp)
+                                                modifier = Modifier.size(20.dp)
                                             )
                                         }
                                     }

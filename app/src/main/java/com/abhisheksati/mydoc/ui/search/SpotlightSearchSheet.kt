@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -43,6 +44,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextOverflow
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.AppTopBar
 import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
@@ -97,6 +99,7 @@ fun SpotlightSearchSheet(
             .fillMaxSize()
             .background(scheme.background)
             .navigationBarsPadding()
+            .imePadding()
     ) {
         AppTopBar(
             title = "",
@@ -148,7 +151,7 @@ fun SpotlightSearchSheet(
                         if (query.isNotEmpty()) {
                             IconButton(
                                 onClick = { query = "" },
-                                modifier = Modifier.size(28.dp)
+                                modifier = Modifier.size(AppSpacing.minTouchTarget)
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.Close,
