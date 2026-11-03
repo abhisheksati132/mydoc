@@ -52,6 +52,11 @@ android {
         unitTests.isReturnDefaultValues = true
     }
 
+    sourceSets {
+        // Room's MigrationTestHelper loads schemas from the test assets.
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
+
     defaultConfig {
         applicationId = "com.abhisheksati.mydoc"
         minSdk = 26
@@ -165,6 +170,10 @@ dependencies {
     // Glass backdrop blur engine
     implementation(libs.haze)
     implementation(libs.haze.materials)
+
+    // Align serialization with Room 2.8's room-migration (kotlinx-serialization-json 1.8.1);
+    // lifecycle otherwise pins the app classpath to 1.7.3 and Room's schema parser crashes.
+    implementation(platform(libs.kotlinx.serialization.bom))
 
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)

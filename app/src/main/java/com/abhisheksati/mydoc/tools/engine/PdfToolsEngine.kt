@@ -25,7 +25,6 @@ import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.tools.model.ToolExecutionResult
 import com.abhisheksati.mydoc.tools.model.ToolOptions
 import com.abhisheksati.mydoc.tools.model.ToolProgress
-import com.abhisheksati.mydoc.tools.pdf.form.PdfFormService
 import com.abhisheksati.mydoc.tools.pdf.pagenumber.PdfPageNumberer
 import com.abhisheksati.mydoc.tools.pdf.watermark.PdfWatermarker
 import com.abhisheksati.mydoc.ocr.OcrEngine
@@ -126,23 +125,19 @@ class PdfToolsEngine(private val context: Context) {
 
                 // 3. Convert (to PDF)
                 PdfTool.IMAGE_TO_PDF -> imagesToPdf(inputFiles, options, onProgress)
-                PdfTool.OFFICE_TO_PDF -> officeToPdf(requirePrimaryFile(), onProgress)
                 PdfTool.TEXT_TO_PDF -> textOrCsvToPdf(requirePrimaryFile(), onProgress)
 
                 // 4. Convert (from PDF)
                 PdfTool.PDF_TO_IMAGES -> pdfToImagesZip(requirePrimaryFile(), options, onProgress)
                 PdfTool.PDF_TO_TEXT_MD -> pdfToTextOrMarkdown(requirePrimaryFile(), onProgress)
                 PdfTool.PDF_TO_OFFICE -> pdfToOfficeDocument(requirePrimaryFile(), onProgress)
-                PdfTool.PDF_TO_PDFA -> pdfToPdfA(requirePrimaryFile(), onProgress)
                 PdfTool.EXTRACT_ASSETS -> extractAssetsZip(requirePrimaryFile(), onProgress)
 
                 // 5. Edit
                 PdfTool.ANNOTATE -> annotatePdf(requirePrimaryFile(), options, onProgress)
                 PdfTool.ADD_PAGE_NUMBERS -> addPageNumbers(requirePrimaryFile(), options, onProgress)
                 PdfTool.ADD_WATERMARK -> addWatermark(requirePrimaryFile(), options, onProgress)
-                PdfTool.FILL_FORM -> fillFormFields(requirePrimaryFile(), options, onProgress)
                 PdfTool.SIGN_PDF -> signPdf(requirePrimaryFile(), options, onProgress)
-                PdfTool.COMPARE_PDF -> comparePdfs(inputFiles, onProgress)
 
                 // 6. Security
                 PdfTool.PROTECT -> protectPdf(requirePrimaryFile(), options, onProgress)
@@ -150,9 +145,8 @@ class PdfToolsEngine(private val context: Context) {
                 PdfTool.REDACT -> redactPdf(requirePrimaryFile(), options, onProgress)
                 PdfTool.STRIP_METADATA -> stripMetadata(requirePrimaryFile(), onProgress)
 
-                // 7. Scan & OCR
+                // 7. Scan
                 PdfTool.SCAN_TO_PDF -> imagesToPdf(inputFiles, options, onProgress)
-                PdfTool.OCR_PDF -> ocrPdf(requirePrimaryFile(), onProgress)
             }
 
             currentCoroutineContext().ensureActive()
@@ -175,10 +169,8 @@ class PdfToolsEngine(private val context: Context) {
                         "${String.format(java.util.Locale.US, "%.1f", savingsPercent.coerceAtLeast(0f))}%." +
                         " Images in this document are already optimized."
                 }
-            } else if (tool == PdfTool.OFFICE_TO_PDF || tool == PdfTool.PDF_TO_OFFICE) {
+            } else if (tool == PdfTool.PDF_TO_OFFICE) {
                 warningNote = "Best-effort offline conversion. Complex multi-column layouts and vector art will not match the original."
-            } else if (tool == PdfTool.PDF_TO_PDFA) {
-                warningNote = "PDF/A-style, not validated. Formatted for archival compatibility without online external profile verification."
             }
 
             ToolExecutionResult(
@@ -263,14 +255,8 @@ class PdfToolsEngine(private val context: Context) {
     private suspend fun imagesToPdf(files: List<File>, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File =
         conversionEngine.imagesToPdf(files, options, onProgress)
 
-    private suspend fun officeToPdf(file: File, onProgress: (ToolProgress) -> Unit): File =
-        conversionEngine.officeToPdf(file, onProgress)
-
     private suspend fun textOrCsvToPdf(file: File, onProgress: (ToolProgress) -> Unit): File =
         conversionEngine.textOrCsvToPdf(file, onProgress)
-
-    private suspend fun renderTextToPdf(lines: List<String>, onProgress: (ToolProgress) -> Unit): File =
-        conversionEngine.renderTextToPdf(lines, onProgress)
 
     private suspend fun pdfToImagesZip(file: File, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File =
         conversionEngine.pdfToImagesZip(file, options, onProgress)
@@ -281,9 +267,6 @@ class PdfToolsEngine(private val context: Context) {
     private suspend fun pdfToOfficeDocument(file: File, onProgress: (ToolProgress) -> Unit): File =
         conversionEngine.pdfToOfficeDocument(file, onProgress)
 
-    private suspend fun pdfToPdfA(file: File, onProgress: (ToolProgress) -> Unit): File =
-        conversionEngine.pdfToPdfA(file, onProgress)
-
     private suspend fun extractAssetsZip(file: File, onProgress: (ToolProgress) -> Unit): File =
         conversionEngine.extractAssetsZip(file, onProgress)
 
@@ -292,7 +275,7 @@ class PdfToolsEngine(private val context: Context) {
     // 5. Edit (Non-Destructive)
     // -------------------------------------------------------------
 
-    private val editingEngine by lazy { PdfEditingEngine(context, conversionEngine) }
+    private val editingEngine by lazy { PdfEditingEngine(context) }
 
     private suspend fun annotatePdf(file: File, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File =
         editingEngine.annotatePdf(file, options, onProgress)
@@ -303,14 +286,8 @@ class PdfToolsEngine(private val context: Context) {
     private suspend fun addWatermark(file: File, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File =
         editingEngine.addWatermark(file, options, onProgress)
 
-    private suspend fun fillFormFields(file: File, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File =
-        editingEngine.fillFormFields(file, options, onProgress)
-
     private suspend fun signPdf(file: File, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File =
         editingEngine.signPdf(file, options, onProgress)
-
-    private suspend fun comparePdfs(files: List<File>, onProgress: (ToolProgress) -> Unit): File =
-        editingEngine.comparePdfs(files, onProgress)
 
     // -------------------------------------------------------------
     // 6. Security
@@ -329,15 +306,6 @@ class PdfToolsEngine(private val context: Context) {
 
     private suspend fun stripMetadata(file: File, onProgress: (ToolProgress) -> Unit): File =
         securityEngine.stripMetadata(file, onProgress)
-
-    // -------------------------------------------------------------
-    // 7. Scan & OCR
-    // -------------------------------------------------------------
-
-    private val scanOcrEngine by lazy { PdfScanOcrEngine(context) }
-
-    private suspend fun ocrPdf(file: File, onProgress: (ToolProgress) -> Unit): File =
-        scanOcrEngine.ocrPdf(file, onProgress)
 
     // -------------------------------------------------------------
     // Helper Methods

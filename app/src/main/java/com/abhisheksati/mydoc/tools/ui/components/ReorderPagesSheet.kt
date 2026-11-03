@@ -2,7 +2,6 @@ package com.abhisheksati.mydoc.tools.ui.components
 
 import android.graphics.Bitmap
 import android.net.Uri
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,7 +26,6 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.outlined.RotateRight
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Close
@@ -56,7 +54,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -76,8 +73,7 @@ import kotlinx.coroutines.withContext
 
 data class OrganizedPageItem(
     val uniqueId: String = UUID.randomUUID().toString(),
-    val originalPageIndex: Int,
-    var rotationDegrees: Int = 0
+    val originalPageIndex: Int
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -224,22 +220,6 @@ fun ReorderPagesSheet(
                     if (selectedIds.isNotEmpty()) {
                         IconButton(
                             onClick = {
-                                pages.forEachIndexed { idx, item ->
-                                    if (item.uniqueId in selectedIds) {
-                                        pages[idx] = item.copy(rotationDegrees = (item.rotationDegrees + 90) % 360)
-                                    }
-                                }
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.RotateRight,
-                                contentDescription = "Rotate Selected",
-                                tint = scheme.primary
-                            )
-                        }
-
-                        IconButton(
-                            onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 pages.removeAll { it.uniqueId in selectedIds }
                                 selectedIds.clear()
@@ -317,7 +297,6 @@ fun ReorderPagesSheet(
                         itemsIndexed(pages, key = { _, item -> item.uniqueId }) { index, item ->
                             val bmp = thumbnailCache[item.originalPageIndex]
                             val isSelected = item.uniqueId in selectedIds
-                            val rotation by animateFloatAsState(targetValue = item.rotationDegrees.toFloat(), label = "pageRot")
 
                             Surface(
                                 modifier = Modifier
@@ -380,9 +359,7 @@ fun ReorderPagesSheet(
                                             Image(
                                                 bitmap = bmp.asImageBitmap(),
                                                 contentDescription = "Page ${index + 1}",
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .graphicsLayer { rotationZ = rotation }
+                                                modifier = Modifier.fillMaxSize()
                                             )
                                         } else {
                                             CircularProgressIndicator(
@@ -394,7 +371,7 @@ fun ReorderPagesSheet(
 
                                     Spacer(modifier = Modifier.height(6.dp))
 
-                                    // Card controls: move left, rotate, move right, delete
+                                    // Card controls: move left, move right, remove
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -417,20 +394,6 @@ fun ReorderPagesSheet(
                                                 contentDescription = "Move left",
                                                 tint = if (index > 0) scheme.onSurfaceVariant else scheme.onSurfaceVariant.copy(alpha = 0.38f),
                                                 modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-
-                                        IconButton(
-                                            onClick = {
-                                                pages[index] = item.copy(rotationDegrees = (item.rotationDegrees + 90) % 360)
-                                            },
-                                            modifier = Modifier.size(28.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.AutoMirrored.Outlined.RotateRight,
-                                                contentDescription = "Rotate 90°",
-                                                tint = scheme.primary,
-                                                modifier = Modifier.size(16.dp)
                                             )
                                         }
 

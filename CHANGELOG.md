@@ -5,6 +5,33 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+### Removed
+
+- **Five tools that could not do what their labels promised.** Office to PDF (no renderer available),
+  PDF/A export (PDFBox-Android has no PDF/A profile writer), Fill form (no form engine), Compare
+  (no diff algorithm) and OCR to PDF (the ML Kit output was never written back into a document) are
+  gone from the tool catalog, engine dispatch and tests. The Tools screen now reports 24 tools, and
+  non-PDF documents only show tools that actually accept them.
+- **Dead page-rotation controls in the visual page organizer.** The rotate buttons changed preview
+  state only; `Apply & Save` sent page indices without rotation, so the rotation was silently
+  discarded. Move left, move right, remove and apply now match what the engine executes.
+
+### Fixed
+
+- **Protect PDF requires a password.** An empty user password produced an unopenable file with no
+  error, and raw passwords were interpolated into MuPDF's comma-separated option string. Passwords
+  are now validated (non-blank, no comma or control characters) in both the UI and the engine.
+- **No more `file://` URIs leaving the app.** Share, Open with and Set-as-wallpaper now resolve
+  through the app's FileProvider (with a cache copy fallback), closing the
+  `FileUriExposedException` crash and the broken share targets on API 24+.
+- **Privacy documentation matches the code.** The README, SECURITY and architecture docs now state
+  that document processing is on-device while the updater checks GitHub and Play Services may fetch
+  the ML Kit model, and that Android backup copies the saved-document store and Room database.
+- **Integration tests can run again.** Room schemas are exposed to `androidTest` assets, the
+  kotlinx-serialization runtime is aligned with Room 2.8.5's schema parser, the migration test passes
+  `MIGRATION_3_5`, and two stale viewer-benchmark assertions match the current middle-truncated
+  title and 1-based page counter. All 8 instrumented tests pass on `mydoc_api35`.
+
 ## [1.5.3] — 2026-11-02
 
 Range: `v1.5.2..v1.5.3`.

@@ -98,7 +98,7 @@ private fun friendlyHeader(group: ToolGroup): String = when (group) {
 
 /**
  * Editorial "Paper under glass" tool index:
- * - 29 PDF tools organized into 6 clear task categories.
+ * - 24 PDF tools organized into 6 clear task categories.
  * - Stamp Vermilion accent indicators.
  * - Tactile paper card tool rows with monospace metadata.
  */

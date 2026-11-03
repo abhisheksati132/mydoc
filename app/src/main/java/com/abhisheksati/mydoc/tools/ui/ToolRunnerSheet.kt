@@ -87,7 +87,6 @@ fun ToolRunnerSheet(
     val context = LocalContext.current
 
     var showVisualPageOrganizer by remember { mutableStateOf(false) }
-    var showFillFormSheet by remember { mutableStateOf(false) }
     var showSignaturePad by remember { mutableStateOf(false) }
 
     // SAF Document Pickers
@@ -208,7 +207,6 @@ fun ToolRunnerSheet(
                         options = toolOptions,
                         uris = inputUris,
                         onOpenOrganizer = { showVisualPageOrganizer = true },
-                        onOpenFormFiller = { showFillFormSheet = true },
                         onOpenSignPad = { showSignaturePad = true },
                         onOptionsChange = { transform -> viewModel.updateOptions(transform) }
                     )
@@ -217,7 +215,11 @@ fun ToolRunnerSheet(
 
                     val canRun = when (tool) {
                         PdfTool.EXTRACT_PAGES -> inputUris.isNotEmpty() && toolOptions.pageRange.isNotBlank()
-                        PdfTool.MERGE, PdfTool.COMPARE_PDF -> inputUris.size >= 2
+                        PdfTool.MERGE -> inputUris.size >= 2
+                        PdfTool.PROTECT -> inputUris.isNotEmpty() &&
+                            toolOptions.userPassword.isNotBlank() &&
+                            toolOptions.userPassword.none { it == ',' || it.isISOControl() } &&
+                            toolOptions.ownerPassword.none { it == ',' || it.isISOControl() }
                         else -> inputUris.isNotEmpty()
                     }
                     Button(
@@ -317,22 +319,6 @@ fun ToolRunnerSheet(
             onApplyOrder = { newOrder ->
                 showVisualPageOrganizer = false
                 viewModel.updateOptions { it.copy(reorderedPageIndices = newOrder) }
-            }
-        )
-    }
-
-    if (showFillFormSheet && inputUris.isNotEmpty()) {
-        com.abhisheksati.mydoc.tools.ui.components.FillFormSheet(
-            sourceUri = inputUris.first(),
-            onDismiss = { showFillFormSheet = false },
-            onSaveValues = { values, flatten ->
-                showFillFormSheet = false
-                viewModel.updateOptions {
-                    it.copy(
-                        formFieldValues = values,
-                        flattenForm = flatten
-                    )
-                }
             }
         )
     }

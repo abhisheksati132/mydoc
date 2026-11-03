@@ -3,7 +3,6 @@ package com.abhisheksati.mydoc.ui.media
 import android.app.Activity
 import android.app.PictureInPictureParams
 import android.content.Context
-import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.graphics.Rect
 import android.media.AudioManager
@@ -107,6 +106,7 @@ import kotlin.math.abs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.abhisheksati.mydoc.designsystem.components.showMessage
+import com.abhisheksati.mydoc.util.shareFile
 
 @androidx.annotation.OptIn(UnstableApi::class)
 enum class VideoResizeMode(val label: String, val mode: Int) {
@@ -478,12 +478,9 @@ fun VideoPlayerScreen(
 
                     // Share Video
                     IconButton(onClick = {
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = item.mimeType
-                            putExtra(Intent.EXTRA_STREAM, item.uri)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        if (!shareFile(context, item.uri, item.mimeType, "Share video")) {
+                            context.showMessage("No app available to share this video")
                         }
-                        context.startActivity(Intent.createChooser(shareIntent, "Share video"))
                     }) {
                         Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
                     }

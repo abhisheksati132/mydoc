@@ -19,9 +19,9 @@ import org.junit.Test
 class PdfToolsTest {
 
     @Test
-    fun verifyAll29ToolsPresentAcross6TaskGroups() {
+    fun verifyAll24ToolsPresentAcross6TaskGroups() {
         val tools = PdfTool.entries
-        assertEquals(29, tools.size)
+        assertEquals(24, tools.size)
 
         val groups = tools.groupBy { it.group }
         assertEquals(6, groups.size)
@@ -41,25 +41,21 @@ class PdfToolsTest {
         assertTrue(tools.contains(PdfTool.COMPRESS))
         assertTrue(tools.contains(PdfTool.REPAIR))
 
-        // 3. Convert (8 tools)
-        assertEquals(8, groups[ToolGroup.CONVERT]?.size)
+        // 3. Convert (6 tools)
+        assertEquals(6, groups[ToolGroup.CONVERT]?.size)
         assertTrue(tools.contains(PdfTool.IMAGE_TO_PDF))
-        assertTrue(tools.contains(PdfTool.OFFICE_TO_PDF))
         assertTrue(tools.contains(PdfTool.TEXT_TO_PDF))
         assertTrue(tools.contains(PdfTool.PDF_TO_IMAGES))
         assertTrue(tools.contains(PdfTool.PDF_TO_TEXT_MD))
         assertTrue(tools.contains(PdfTool.PDF_TO_OFFICE))
-        assertTrue(tools.contains(PdfTool.PDF_TO_PDFA))
         assertTrue(tools.contains(PdfTool.EXTRACT_ASSETS))
 
-        // 4. Edit & Sign (6 tools)
-        assertEquals(6, groups[ToolGroup.EDIT_SIGN]?.size)
+        // 4. Edit & Sign (4 tools)
+        assertEquals(4, groups[ToolGroup.EDIT_SIGN]?.size)
         assertTrue(tools.contains(PdfTool.ANNOTATE))
         assertTrue(tools.contains(PdfTool.ADD_PAGE_NUMBERS))
         assertTrue(tools.contains(PdfTool.ADD_WATERMARK))
-        assertTrue(tools.contains(PdfTool.FILL_FORM))
         assertTrue(tools.contains(PdfTool.SIGN_PDF))
-        assertTrue(tools.contains(PdfTool.COMPARE_PDF))
 
         // 5. Secure (4 tools)
         assertEquals(4, groups[ToolGroup.SECURE]?.size)
@@ -68,10 +64,9 @@ class PdfToolsTest {
         assertTrue(tools.contains(PdfTool.REDACT))
         assertTrue(tools.contains(PdfTool.STRIP_METADATA))
 
-        // 6. Scan (2 tools)
-        assertEquals(2, groups[ToolGroup.SCAN]?.size)
+        // 6. Scan (1 tool)
+        assertEquals(1, groups[ToolGroup.SCAN]?.size)
         assertTrue(tools.contains(PdfTool.SCAN_TO_PDF))
-        assertTrue(tools.contains(PdfTool.OCR_PDF))
     }
 
     @Test

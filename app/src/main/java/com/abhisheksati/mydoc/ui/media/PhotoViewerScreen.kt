@@ -83,6 +83,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.abhisheksati.mydoc.designsystem.components.showMessage
+import com.abhisheksati.mydoc.util.openFile
+import com.abhisheksati.mydoc.util.shareFile
+import com.abhisheksati.mydoc.util.toShareableUri
 
 @Composable
 fun PhotoViewerScreen(
@@ -312,13 +315,7 @@ fun PhotoViewerScreen(
                                 },
                                 onClick = {
                                     isMoreMenuOpen = false
-                                    val openIntent = Intent(Intent.ACTION_VIEW).apply {
-                                        setDataAndType(currentItem.uri, currentItem.mimeType)
-                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    }
-                                    try {
-                                        context.startActivity(Intent.createChooser(openIntent, "Open with"))
-                                    } catch (_: Exception) {
+                                    if (!openFile(context, currentItem.uri, currentItem.mimeType)) {
                                         context.showMessage("No app found to open this image")
                                     }
                                 }
@@ -330,15 +327,20 @@ fun PhotoViewerScreen(
                                 },
                                 onClick = {
                                     isMoreMenuOpen = false
-                                    val setAsIntent = Intent(Intent.ACTION_ATTACH_DATA).apply {
-                                        setDataAndType(currentItem.uri, currentItem.mimeType)
-                                        putExtra("mimeType", currentItem.mimeType)
-                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    }
-                                    try {
-                                        context.startActivity(Intent.createChooser(setAsIntent, "Set as"))
-                                    } catch (_: Exception) {
+                                    val safeUri = currentItem.uri.toShareableUri(context)
+                                    if (safeUri == null) {
                                         context.showMessage("Unable to set wallpaper")
+                                    } else {
+                                        val setAsIntent = Intent(Intent.ACTION_ATTACH_DATA).apply {
+                                            setDataAndType(safeUri, currentItem.mimeType)
+                                            putExtra("mimeType", currentItem.mimeType)
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        try {
+                                            context.startActivity(Intent.createChooser(setAsIntent, "Set as"))
+                                        } catch (_: Exception) {
+                                            context.showMessage("Unable to set wallpaper")
+                                        }
                                     }
                                 }
                             )
@@ -432,12 +434,9 @@ fun PhotoViewerScreen(
                             label = "Share",
                             tint = contentColor,
                             onClick = {
-                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                    type = currentItem.mimeType
-                                    putExtra(Intent.EXTRA_STREAM, currentItem.uri)
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                if (!shareFile(context, currentItem.uri, currentItem.mimeType, "Share image")) {
+                                    context.showMessage("No app available to share this image")
                                 }
-                                context.startActivity(Intent.createChooser(shareIntent, "Share image"))
                             },
                             modifier = Modifier.weight(1f)
                         )

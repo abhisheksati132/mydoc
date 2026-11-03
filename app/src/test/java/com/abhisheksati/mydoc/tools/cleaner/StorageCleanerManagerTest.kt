@@ -72,15 +72,37 @@ class StorageCleanerManagerTest {
     }
 
     @Test
-    fun testCleanFilesDeletesTargetFiles() = runBlocking {
-        val root = tempFolder.newFolder("clean_action_test")
-        val junk1 = File(root, "junk1.tmp").apply { writeBytes(ByteArray(5000)) }
-        val junk2 = File(root, "junk2.tmp").apply { writeBytes(ByteArray(3000)) }
+    fun testDuplicateDetectionComparesWholeFileNotJustPrefix() = runBlocking {
+        val root = tempFolder.newFolder("clean_prefix_test")
+        // Same size and an identical 2 MB prefix, different tail. A prefix-only hash
+        // would call these duplicates and the cleaner would have deleted one.
+        val sharedPrefix = ByteArray(2 * 1024 * 1024) { (it % 251).toByte() }
+        val file1 = File(root, "keep.bin").apply {
+            writeBytes(sharedPrefix + ByteArray(1024 * 1024) { 1 })
+        }
+        val file2 = File(root, "keep_too.bin").apply {
+            writeBytes(sharedPrefix + ByteArray(1024 * 1024) { 2 })
+        }
 
-        val freed = cleanerManager.cleanFiles(listOf(junk1, junk2))
+        val result = cleanerManager.scanDirectory(root)
 
-        assertEquals(8000L, freed)
-        assertFalse(junk1.exists())
-        assertFalse(junk2.exists())
+        assertTrue(result.duplicateGroups.isEmpty())
+        assertTrue(file1.exists() && file2.exists())
+    }
+
+    @Test
+    fun testDeleteEmptyDirectoriesLeavesNonEmptyAlone() = runBlocking {
+        val root = tempFolder.newFolder("clean_dir_test")
+        val empty = File(root, "empty").apply { mkdir() }
+        val nonEmpty = File(root, "non_empty").apply {
+            mkdir()
+            File(this, "keep.txt").writeText("keep")
+        }
+
+        val removed = cleanerManager.deleteEmptyDirectories(listOf(empty, nonEmpty))
+
+        assertEquals(1, removed)
+        assertFalse(empty.exists())
+        assertTrue(nonEmpty.exists())
     }
 }

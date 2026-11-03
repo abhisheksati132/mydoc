@@ -1,7 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
 import android.app.Activity
-import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -61,6 +60,7 @@ import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
+import com.abhisheksati.mydoc.util.openFile
 import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 /**
@@ -378,14 +378,8 @@ fun ReadingControlsBottomSheet(
                     label = "Open with",
                     onClick = {
                         onDismiss()
-                        val sendIntent = Intent(Intent.ACTION_VIEW).apply {
-                            val mime = document.mimeType.ifEmpty { "application/pdf" }
-                            setDataAndType(Uri.parse(document.uri), mime)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
-                        try {
-                            context.startActivity(Intent.createChooser(sendIntent, "Open with"))
-                        } catch (_: Exception) {
+                        val mime = document.mimeType.ifEmpty { "application/pdf" }
+                        if (!openFile(context, Uri.parse(document.uri), mime)) {
                             context.showMessage("No app available to open file")
                         }
                     },

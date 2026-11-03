@@ -4,4 +4,6 @@
     <cache-path name="updates" path="updates/" />
     <cache-path name="shared" path="shared/" />
     <cache-path name="tools_output" path="tools_output/" />
+    <!-- Offline document copies: shared/open targets must be content:// URIs -->
+    <files-path name="saved_docs" path="saved_docs/" />
 </paths>

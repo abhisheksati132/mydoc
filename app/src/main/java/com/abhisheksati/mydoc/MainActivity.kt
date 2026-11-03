@@ -56,6 +56,7 @@ import com.abhisheksati.mydoc.ui.search.SpotlightSearchSheet
 import com.abhisheksati.mydoc.ui.settings.SettingsScreen
 import com.abhisheksati.mydoc.ui.viewer.DocumentViewerScreen
 import com.abhisheksati.mydoc.update.UpdateManager
+import com.abhisheksati.mydoc.util.shareFile
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import java.io.File
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -676,11 +677,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun shareDocument(document: DocumentFile) {
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = document.mimeType
-            putExtra(Intent.EXTRA_STREAM, Uri.parse(document.uri))
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        if (!shareFile(this, Uri.parse(document.uri), document.mimeType, "Share ${document.displayName}")) {
+            showMessage("No app available to share this file")
         }
-        startActivity(Intent.createChooser(shareIntent, "Share ${document.displayName}"))
     }
 }

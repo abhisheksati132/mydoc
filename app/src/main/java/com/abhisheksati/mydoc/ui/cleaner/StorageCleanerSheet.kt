@@ -16,13 +16,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
+import com.abhisheksati.mydoc.designsystem.components.showMessage
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
@@ -43,19 +46,23 @@ fun StorageCleanerSheet(
     val typography = AppTheme.typography
     val coroutineScope = rememberCoroutineScope()
     val cleanerManager = remember { StorageCleanerManager() }
+    val app = LocalContext.current.applicationContext as MyDocApp
 
     var isScanning by remember { mutableStateOf(true) }
     var scannedCount by remember { mutableIntStateOf(0) }
     var currentScannedName by remember { mutableStateOf("") }
     var scanResult by remember { mutableStateOf<StorageCleanScanResult?>(null) }
     var isCleaning by remember { mutableStateOf(false) }
+    var showConfirm by remember { mutableStateOf(false) }
     var cleanedBytes by remember { mutableStateOf<Long?>(null) }
+    var cleanedCount by remember { mutableIntStateOf(0) }
 
-    // Category selection states
-    var cleanTempFiles by remember { mutableStateOf(true) }
-    var cleanApks by remember { mutableStateOf(true) }
-    var cleanDuplicates by remember { mutableStateOf(true) }
-    var cleanEmptyFolders by remember { mutableStateOf(true) }
+    // Nothing is selected by default: the user has to opt in to every category before
+    // anything leaves its original folder, even for a reversible move to Trash.
+    var cleanTempFiles by remember { mutableStateOf(false) }
+    var cleanApks by remember { mutableStateOf(false) }
+    var cleanDuplicates by remember { mutableStateOf(false) }
+    var cleanEmptyFolders by remember { mutableStateOf(false) }
 
     // Expanded states
     var expandDuplicates by remember { mutableStateOf(false) }
@@ -73,6 +80,17 @@ fun StorageCleanerSheet(
     }
 
     val isOled = LocalIsOled.current
+
+    val res = scanResult ?: StorageCleanScanResult()
+    // Only the extra copies go; the kept original of every duplicate group stays.
+    val selectedFiles = buildList {
+        if (cleanTempFiles) addAll(res.tempFiles)
+        if (cleanApks) addAll(res.apkFiles)
+        if (cleanDuplicates) res.duplicateGroups.forEach { addAll(it.duplicates) }
+    }.distinctBy { it.absolutePath }
+    val selectedEmptyDirs = if (cleanEmptyFolders) res.emptyFolders else emptyList()
+    val selectedBytesToFree = selectedFiles.sumOf { it.length() }
+    val hasSelection = selectedFiles.isNotEmpty() || selectedEmptyDirs.isNotEmpty()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -203,15 +221,17 @@ fun StorageCleanerSheet(
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Clean Up Complete!",
+                            text = "Moved to Trash",
                             style = typography.heading,
                             color = colors.textPrimary
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Successfully freed ${formatSize(cleanedBytes ?: 0L)} of storage space",
+                            text = "$cleanedCount items (${formatSize(cleanedBytes ?: 0L)}) moved to Trash. " +
+                                "Empty Trash to actually free the space.",
                             style = typography.body,
-                            color = colors.textSecondary
+                            color = colors.textSecondary,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(24.dp))
                         Button(
@@ -224,13 +244,6 @@ fun StorageCleanerSheet(
                     }
                 }
             } else {
-                val res = scanResult ?: StorageCleanScanResult()
-
-                // Calculate currently selected bytes to free
-                val selectedBytesToFree = (if (cleanTempFiles) res.tempFiles.sumOf { it.length() } else 0L) +
-                        (if (cleanApks) res.apkFiles.sumOf { it.length() } else 0L) +
-                        (if (cleanDuplicates) res.duplicateGroups.sumOf { it.wastedBytes } else 0L)
-
                 // Results list
                 LazyColumn(
                     modifier = Modifier
@@ -263,6 +276,14 @@ fun StorageCleanerSheet(
                                     style = typography.micro,
                                     color = colors.textSecondary
                                 )
+                                if (res.truncated) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Scan stopped at the safety limit — some files were not checked.",
+                                        style = typography.micro,
+                                        color = colors.warning
+                                    )
+                                }
                             }
                         }
                     }
@@ -493,7 +514,7 @@ fun StorageCleanerSheet(
                 }
 
                 // Bottom Action Button
-                if (selectedBytesToFree > 0 || cleanEmptyFolders && res.emptyFolders.isNotEmpty()) {
+                if (res.tempFiles.isNotEmpty() || res.apkFiles.isNotEmpty() || res.duplicateGroups.isNotEmpty() || res.emptyFolders.isNotEmpty()) {
                     Surface(
                         color = if (isOled) colors.surfaceContainerHigh else colors.surface,
                         border = androidx.compose.foundation.BorderStroke(1.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider),
@@ -504,25 +525,8 @@ fun StorageCleanerSheet(
                             .padding(bottom = 16.dp, top = 8.dp)
                     ) {
                         Button(
-                            onClick = {
-                                coroutineScope.launch {
-                                    isCleaning = true
-                                    val filesToDelete = mutableListOf<File>()
-                                    if (cleanTempFiles) filesToDelete.addAll(res.tempFiles)
-                                    if (cleanApks) filesToDelete.addAll(res.apkFiles)
-                                    if (cleanDuplicates) {
-                                        for (group in res.duplicateGroups) {
-                                            filesToDelete.addAll(group.duplicates)
-                                        }
-                                    }
-                                    if (cleanEmptyFolders) filesToDelete.addAll(res.emptyFolders)
-
-                                    val freed = cleanerManager.cleanFiles(filesToDelete)
-                                    cleanedBytes = freed
-                                    isCleaning = false
-                                }
-                            },
-                            enabled = !isCleaning,
+                            onClick = { showConfirm = true },
+                            enabled = !isCleaning && hasSelection,
                             colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
                             shape = AppRadius.cardShape,
                             modifier = Modifier
@@ -541,7 +545,12 @@ fun StorageCleanerSheet(
                                 Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.onAccent)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Clean Selected (${formatSize(selectedBytesToFree)})",
+                                    text = when {
+                                        !hasSelection -> "Select a category to clean"
+                                        selectedFiles.isEmpty() ->
+                                            "Remove ${selectedEmptyDirs.size} empty folders"
+                                        else -> "Move to Trash (${formatSize(selectedBytesToFree)})"
+                                    },
                                     style = typography.bodyStrong,
                                     color = colors.onAccent
                                 )
@@ -551,6 +560,48 @@ fun StorageCleanerSheet(
                 }
             }
         }
+    }
+
+    if (showConfirm) {
+        AlertDialog(
+            onDismissRequest = { showConfirm = false },
+            title = { Text("Move to Trash?") },
+            text = {
+                Text(
+                    buildString {
+                        append("${selectedFiles.size} files (${formatSize(selectedBytesToFree)})")
+                        if (selectedEmptyDirs.isNotEmpty()) {
+                            append(" and ${selectedEmptyDirs.size} empty folders")
+                        }
+                        append(" will be moved to Trash. You can restore files from Files > Trash for 30 days.")
+                    }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showConfirm = false
+                    coroutineScope.launch {
+                        isCleaning = true
+                        val moved: List<com.abhisheksati.mydoc.domain.model.TrashItem> =
+                            if (selectedFiles.isEmpty()) {
+                                emptyList()
+                            } else {
+                            app.storageRepository.moveToTrash(selectedFiles).getOrElse { error ->
+                                app.showMessage("Could not move files: ${error.message}")
+                                emptyList()
+                            }
+                        }
+                        cleanerManager.deleteEmptyDirectories(selectedEmptyDirs)
+                        cleanedCount = moved.size
+                        cleanedBytes = moved.sumOf { it.sizeBytes }
+                        isCleaning = false
+                    }
+                }) { Text("Move to Trash") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirm = false }) { Text("Cancel") }
+            }
+        )
     }
 }
 }

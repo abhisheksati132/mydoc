@@ -103,7 +103,7 @@ override fun renderRegion(
 
 ## 5. Verification & Quality Guardrails
 
-1. **Zero Telemetry & Offline Processing:** All document operations run strictly on-device; no cloud dependencies.
+1. **On-Device Processing, No Telemetry:** All document operations run on-device and no usage data is collected. Network access is limited to the optional GitHub update check/download and Google Play Services fetching the ML Kit OCR model on first use; document content is never uploaded.
 2. **Pure AMOLED Aesthetics:** Maintain `#000000` AMOLED Black and clean high-contrast themes.
 3. **Mandatory Build Checks:**
    - `./gradlew testDebugUnitTest` (100% green)

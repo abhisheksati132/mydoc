@@ -21,7 +21,7 @@ class MigrationTest {
         // Create version 3 database
         helper.createDatabase("test-db", 3).apply { close() }
         // Run migrations to version 5
-        val db = helper.runMigrationsAndValidate("test-db", 5, true)
+        val db = helper.runMigrationsAndValidate("test-db", 5, true, MIGRATION_3_5)
         db.close()
     }
 }

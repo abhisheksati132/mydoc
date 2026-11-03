@@ -30,6 +30,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.domain.model.LibraryItem
@@ -152,8 +153,9 @@ class ScrollBenchmarkTest {
         }
 
         compose.waitForIdle()
-        // Top bar expanded initially: full title is visible
-        compose.onNodeWithText("Quarterly Financial Analysis 2026.pdf").assertIsDisplayed()
+        // Top bar expanded initially: title is visible, middle-truncated to fit
+        val expandedTitle = formatMiddleTruncated("Quarterly Financial Analysis 2026.pdf", maxChars = 28)
+        compose.onNodeWithText(expandedTitle).assertIsDisplayed()
 
         val timings = mutableListOf<Long>()
 
@@ -168,7 +170,7 @@ class ScrollBenchmarkTest {
         // Verify condensed state triggered
         assertTrue("Toolbar did not condense upon scroll", isCondensedState)
         // Condensed pill displays monospace page indicator
-        compose.onNodeWithText("4 / 40").assertIsDisplayed()
+        compose.onNodeWithText("5/40").assertIsDisplayed()
 
         // Fling scroll back to top: expands back to full Fraunces masthead
         val t1 = SystemClock.elapsedRealtime()

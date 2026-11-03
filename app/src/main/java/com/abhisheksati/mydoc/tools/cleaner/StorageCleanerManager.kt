@@ -1,10 +1,12 @@
 package com.abhisheksati.mydoc.tools.cleaner
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.security.MessageDigest
+import kotlin.coroutines.coroutineContext
 
 data class DuplicateGroup(
     val checksum: String,
@@ -22,7 +24,9 @@ data class StorageCleanScanResult(
     val apkFiles: List<File> = emptyList(),
     val tempFiles: List<File> = emptyList(),
     val totalScannedFiles: Int = 0,
-    val totalScannedDirectories: Int = 0
+    val totalScannedDirectories: Int = 0,
+    /** True when the entry or time budget stopped the walk before it finished. */
+    val truncated: Boolean = false
 ) {
     val totalReclaimableBytes: Long
         get() {
@@ -37,15 +41,19 @@ class StorageCleanerManager {
 
     companion object {
         const val LARGE_FILE_THRESHOLD_BYTES = 50L * 1024 * 1024 // 50MB
-        private val TEMP_EXTENSIONS = setOf("tmp", "temp", "log", "bak", "cache", "crdownload", "part")
+        const val FULL_SCAN_MAX_ENTRIES = 200_000
+        const val FULL_SCAN_BUDGET_MS = 90_000L
+        // "bak" deliberately excluded: backups are often the only copy a user has.
+        private val TEMP_EXTENSIONS = setOf("tmp", "temp", "log", "cache", "crdownload", "part")
     }
 
     suspend fun scanDirectory(
         rootDir: File,
-        maxEntries: Int = Int.MAX_VALUE,
-        timeBudgetMs: Long = Long.MAX_VALUE,
+        maxEntries: Int = FULL_SCAN_MAX_ENTRIES,
+        timeBudgetMs: Long = FULL_SCAN_BUDGET_MS,
         onProgress: (scannedCount: Int, currentName: String) -> Unit = { _, _ -> }
     ): StorageCleanScanResult = withContext(Dispatchers.IO) {
+        val scanJob = coroutineContext[Job]
         val emptyFolders = mutableListOf<File>()
         val largeFiles = mutableListOf<File>()
         val apkFiles = mutableListOf<File>()
@@ -63,6 +71,10 @@ class StorageCleanerManager {
 
         fun walk(dir: File) {
             if (outOfBudget) return
+            if (scanJob?.isActive == false) {
+                outOfBudget = true
+                return
+            }
             if (fileCount + dirCount >= maxEntries || android.os.SystemClock.elapsedRealtime() > deadline) {
                 outOfBudget = true
                 return
@@ -128,11 +140,15 @@ class StorageCleanerManager {
         for ((size, files) in sizeCandidates) {
             if (files.size < 2) continue
             if (android.os.SystemClock.elapsedRealtime() > deadline) break
+            if (scanJob?.isActive == false) break
 
             val hashGroups = mutableMapOf<String, MutableList<File>>()
             for (file in files) {
                 if (android.os.SystemClock.elapsedRealtime() > deadline) break
-                val hash = calculateQuickSha256(file) ?: continue
+                if (scanJob?.isActive == false) break
+                // Full-file hash. A prefix hash calls distinct files duplicates and the
+                // cleaner then deletes one of them, so partial hashing is not acceptable.
+                val hash = calculateSha256(file) ?: continue
                 hashGroups.getOrPut(hash) { mutableListOf() }.add(file)
             }
 
@@ -161,41 +177,38 @@ class StorageCleanerManager {
             apkFiles = apkFiles,
             tempFiles = tempFiles,
             totalScannedFiles = fileCount,
-            totalScannedDirectories = dirCount
+            totalScannedDirectories = dirCount,
+            truncated = outOfBudget
         )
     }
 
-    suspend fun cleanFiles(files: List<File>): Long = withContext(Dispatchers.IO) {
-        var freedBytes = 0L
-        for (file in files) {
+    /**
+     * Removes directories that are still empty at the moment of the call. Files are never
+     * touched here: the cleaner moves them to Trash so they can be restored.
+     */
+    suspend fun deleteEmptyDirectories(directories: List<File>): Int = withContext(Dispatchers.IO) {
+        var removed = 0
+        // Deepest first so a parent that only contains other empty parents also goes.
+        for (dir in directories.sortedByDescending { it.absolutePath.length }) {
             try {
-                if (file.isDirectory) {
-                    file.delete()
-                } else {
-                    val len = file.length()
-                    if (file.delete()) {
-                        freedBytes += len
-                    }
+                if (dir.isDirectory && dir.listFiles()?.isEmpty() == true && dir.delete()) {
+                    removed++
                 }
             } catch (_: Exception) {
-                // Ignore single file failures
+                // Ignore single directory failures.
             }
         }
-        freedBytes
+        removed
     }
 
-    private fun calculateQuickSha256(file: File): String? {
+    private fun calculateSha256(file: File): String? {
         return try {
             val digest = MessageDigest.getInstance("SHA-256")
             FileInputStream(file).use { fis ->
-                val buffer = ByteArray(8192)
+                val buffer = ByteArray(64 * 1024)
                 var bytesRead: Int
-                // For speed on big files, read up to first 2MB + last 64KB if > 2MB
-                var totalRead = 0
                 while (fis.read(buffer).also { bytesRead = it } != -1) {
                     digest.update(buffer, 0, bytesRead)
-                    totalRead += bytesRead
-                    if (totalRead > 2 * 1024 * 1024) break
                 }
             }
             digest.digest().joinToString("") { "%02x".format(it) }

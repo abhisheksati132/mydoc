@@ -1,6 +1,5 @@
 package com.abhisheksati.mydoc.ui.home
 
-import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -38,6 +37,7 @@ import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.DocumentFile
+import com.abhisheksati.mydoc.util.openFile
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -136,14 +136,8 @@ fun DocumentDetailsDialog(
                         label = "Open with",
                         onClick = {
                             onDismiss()
-                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                val mime = document.mimeType.ifEmpty { "application/pdf" }
-                                setDataAndType(Uri.parse(document.uri), mime)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            try {
-                                context.startActivity(Intent.createChooser(intent, "Open with"))
-                            } catch (_: Exception) {
+                            val mime = document.mimeType.ifEmpty { "application/pdf" }
+                            if (!openFile(context, Uri.parse(document.uri), mime)) {
                                 context.showMessage("No app available")
                             }
                         },

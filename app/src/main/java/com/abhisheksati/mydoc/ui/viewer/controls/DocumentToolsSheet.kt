@@ -89,12 +89,9 @@ fun DocumentToolsSheet(
             // PDF supports all tools except image_to_pdf
             PdfTool.entries.filter { it != PdfTool.IMAGE_TO_PDF }
         } else {
-            // Non-PDF documents: offer conversion to PDF first, plus text export
+            // Only plain-text formats have a working conversion path
             listOfNotNull(
-                if (ext in setOf("docx", "doc", "xlsx", "xls", "pptx", "ppt")) PdfTool.OFFICE_TO_PDF else null,
-                if (ext in setOf("txt", "md", "csv", "json", "xml", "log")) PdfTool.TEXT_TO_PDF else null,
-                PdfTool.COMPRESS,
-                PdfTool.PROTECT
+                if (ext in setOf("txt", "md", "csv", "json", "xml", "log")) PdfTool.TEXT_TO_PDF else null
             )
         }
     }
@@ -211,6 +208,15 @@ fun DocumentToolsSheet(
                             onSelectTool(tool)
                         }
                     )
+                }
+                if (filteredTools.isEmpty()) {
+                    item {
+                        Text(
+                            text = "No in-app tools for this format yet.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }

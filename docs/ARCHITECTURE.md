@@ -118,11 +118,12 @@ MyDoc follows standard Android architectural best practices with clean layered s
 
 4. **Document Engine Layer (`rendering/`, `converter/`, `tools/`)**:
    - **PDF Engine**: Powered by Artifex MuPDF Fitz JNI with sub-pixel rendering and viewport tile slicing (`renderRegion`).
-   - **Word Engine**: Sandboxed `DocxWebRenderer` executing `docx-preview.js` in an offline WebView to generate vector PDF pages.
+   - **Word Engine**: Native `DocxParser` + `DocxPdfRenderer` producing vector PDF pages with no WebView involved.
    - **Presentation Engine**: Dependency-free OOXML vector parser converting slides into crisp Android `PdfDocument` pages.
    - **Spreadsheet Engine**: Banded table parser with formula text evaluation.
 
 5. **Security & Privacy Boundary**:
-   - **100% On-Device Processing**: Documents, photos, and media are parsed and manipulated strictly in-process.
-   - **Restricted FileProvider**: Root storage and external directory access are forbidden. URIs are granted exclusively from private cache subdirectories (`updates/`, `shared/`, `tools_output/`).
+   - **On-Device Processing**: Documents, photos, and media are parsed and manipulated strictly in-process.
+   - **Restricted FileProvider**: Root storage and external directory access are forbidden. URIs are granted exclusively from private cache subdirectories (`updates/`, `shared/`, `tools_output/`) and the app-private document cache (`saved_docs/`). Sharing and open-with always use `content://`, never `file://`.
+   - **Platform Backup**: Standard Android backup may include the Room database and `saved_docs/` copies; app-lock prefs, updater state, caches, and the encrypted signature are excluded.
    - **Cryptographic Updater**: Automatic updates query public GitHub Releases with domain allowlisting, 200 MB caps, mandatory SHA-256 validation, and release certificate pinning.

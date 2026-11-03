@@ -9,9 +9,9 @@ A modern, distraction-free document reader & PDF toolkit for Android.
 
 [![Latest Release](https://img.shields.io/github/v/release/abhisheksati132/mydoc?style=for-the-badge&color=2563EB)](https://github.com/abhisheksati132/mydoc/releases/latest)
 [![Android](https://img.shields.io/badge/Android-API%2026%2B%20(Android%208.0%2B)-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Compose](https://img.shields.io/badge/Jetpack%20Compose-M3-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
-[![Privacy](https://img.shields.io/badge/Privacy-100%25%20On--Device-success?style=for-the-badge&logo=shield)](SECURITY.md)
+[![Privacy](https://img.shields.io/badge/Privacy-On--Device%20Processing-success?style=for-the-badge&logo=shield)](SECURITY.md)
 
 <br/>
 
@@ -41,9 +41,12 @@ A modern, distraction-free document reader & PDF toolkit for Android.
 - **OLED Ready**: Clean Light, Dark, and Pure AMOLED Black (`#000000`) modes.
 
 ### 🔒 Privacy-First Architecture
-- **100% On-Device Processing**: 100% of document parsing, rendering, and manipulation happens locally on your device.
-- **Zero Telemetry**: No analytics, no crash reporters, no tracking IDs, and no third-party network pings.
-- **Transparent Network Policy**: The only network request made is an optional, user-controllable update check against public GitHub Releases (`api.github.com/repos/abhisheksati132/mydoc/releases/latest`). This can be toggled off at any time in Settings.
+- **On-Device Document Processing**: Document parsing, rendering, conversion, OCR and PDF manipulation all run locally. Document and media content is never uploaded by MyDoc.
+- **No Telemetry**: No analytics, no crash reporters, no tracking IDs, no advertising SDKs.
+- **Network Use Is Explicit**: MyDoc itself makes two kinds of requests:
+  1. An update check against public GitHub Releases (`api.github.com/repos/abhisheksati132/mydoc/releases/latest`), enabled by default and switchable off in Settings; downloading an update fetches the APK from GitHub.
+  2. Google Play Services may download the ML Kit text-recognition model the first time OCR runs on a device that does not already have it. Only the model is fetched; the scanned document stays on-device.
+- **Android Backup**: If Android backup or device transfer is enabled on your device, the OS may copy the app database (recent-document index) and the offline document cache under `saved_docs/` as part of your own Google backup. Excluded: app-lock settings, updater state, caches, and the encrypted signature file. MyDoc does not upload anything itself.
 - **Zero Ads**: Free and open for everyone.
 
 ---

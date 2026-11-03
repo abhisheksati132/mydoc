@@ -28,8 +28,19 @@ class PdfSecurityEngine(private val context: Context) {
             ?: throw IllegalArgumentException("Cannot open document")
         try {
             onProgress(ToolProgress(1, 100, 30, "Encrypting with AES-256...", false))
-            val userPwd = options.userPassword.ifEmpty { "1234" }
-            val ownerPwd = options.ownerPassword.ifEmpty { userPwd }
+            val userPwd = options.userPassword
+            require(userPwd.isNotBlank()) {
+                "Enter a password before protecting the document."
+            }
+            // MuPDF takes these as a comma-separated option string, so a comma would
+            // let a password rewrite the rest of the options (for example permissions).
+            require(userPwd.none { it == ',' || it.isISOControl() }) {
+                "Password cannot contain commas or control characters."
+            }
+            val ownerPwd = options.ownerPassword.ifBlank { userPwd }
+            require(ownerPwd.none { it == ',' || it.isISOControl() }) {
+                "Owner password cannot contain commas or control characters."
+            }
             val permissions = if (options.allowPrinting) "print" else "no-print"
 
             val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "protected", "pdf")

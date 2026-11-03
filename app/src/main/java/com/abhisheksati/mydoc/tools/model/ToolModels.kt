@@ -111,8 +111,6 @@ data class ToolOptions(
     val watermarkText: String = "CONFIDENTIAL",
     val watermarkOpacity: Float = 0.25f,
     val watermarkRotation: Float = -45f,
-    val flattenForm: Boolean = true,
-    val formFieldValues: Map<String, String> = emptyMap(),
     val signatureBitmapFile: File? = null,
     val signaturePage: Int = 0,
     val signatureXPercent: Float = 0.5f,

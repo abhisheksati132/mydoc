@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Draw
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material3.Icon
@@ -47,7 +46,6 @@ internal fun ToolOptionsSection(
     options: com.abhisheksati.mydoc.tools.model.ToolOptions,
     uris: List<Uri>,
     onOpenOrganizer: () -> Unit,
-    onOpenFormFiller: () -> Unit = {},
     onOpenSignPad: () -> Unit = {},
     onOptionsChange: ((com.abhisheksati.mydoc.tools.model.ToolOptions) -> com.abhisheksati.mydoc.tools.model.ToolOptions) -> Unit
 ) {
@@ -124,6 +122,7 @@ internal fun ToolOptionsSection(
             }
 
             PdfTool.PROTECT -> {
+                val passwordHasInvalidChar = options.userPassword.any { it == ',' || it.isISOControl() }
                 Text(text = "DOCUMENT PASSWORD", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 OutlinedTextField(
@@ -131,6 +130,10 @@ internal fun ToolOptionsSection(
                     onValueChange = { p -> onOptionsChange { it.copy(userPassword = p) } },
                     placeholder = { Text("Enter password to open file") },
                     singleLine = true,
+                    isError = passwordHasInvalidChar,
+                    supportingText = {
+                        Text(if (passwordHasInvalidChar) "Commas are not allowed" else "Required")
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -202,38 +205,6 @@ internal fun ToolOptionsSection(
                     }
                 } else {
                     Text("Select a PDF document above to view and organize its pages.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-
-            PdfTool.FILL_FORM -> {
-                Text(text = "FORM FIELDS", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
-                if (uris.isNotEmpty()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(MaterialTheme.shapes.medium)
-                            .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium)
-                            .clickable { onOpenFormFiller() }
-                            .padding(vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Open Interactive Form Editor", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
-                    }
-                    if (options.formFieldValues.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "${options.formFieldValues.size} fields filled ${if (options.flattenForm) "(Will be flattened)" else "(Editable)"}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                } else {
-                    Text("Select a PDF above to detect and fill form fields.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
@@ -478,22 +449,6 @@ internal fun ToolOptionsSection(
                 } else {
                     Text(
                         text = "${uris.size} documents will be combined in the order listed above.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            PdfTool.COMPARE_PDF -> {
-                if (uris.size < 2) {
-                    Text(
-                        text = "Select 2 documents above to perform a side-by-side comparison.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                } else {
-                    Text(
-                        text = "Documents will be analyzed page-by-page for text differences.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

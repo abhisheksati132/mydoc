@@ -1,6 +1,5 @@
 package com.abhisheksati.mydoc.ui.media
 
-import android.content.Intent
 import android.media.MediaPlayer
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -68,6 +67,7 @@ import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.abhisheksati.mydoc.designsystem.components.showMessage
+import com.abhisheksati.mydoc.util.shareFile
 
 @Composable
 fun AudioPlayerScreen(
@@ -200,12 +200,9 @@ fun AudioPlayerScreen(
             IconButton(
                 onClick = {
                     haptics.tap()
-                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                        type = item.mimeType.ifEmpty { "audio/*" }
-                        putExtra(Intent.EXTRA_STREAM, item.uri)
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    if (!shareFile(context, item.uri, item.mimeType.ifEmpty { "audio/*" }, "Share Audio")) {
+                        context.showMessage("No app available to share this audio")
                     }
-                    context.startActivity(Intent.createChooser(shareIntent, "Share Audio"))
                 },
                 modifier = Modifier.size(48.dp)
             ) {

@@ -49,15 +49,15 @@ Please do not open public issues detailing reproducible exploit details before a
 
 ## Core Security & Architecture Principles
 
-### 1. 100% On-Device Processing
+### 1. On-Device Document Processing
 All document reading, parsing, conversion, and compression operations are performed locally using embedded native rendering libraries:
 - **PDF Rendering:** MuPDF 1.28.5 Fitz native vector engine with viewport tiling and thread-safe locking.
 - **Office Conversion:** Apache POI & custom high-performance engine for Word (`.doc`, `.docx`), Excel (`.xls`, `.xlsx`), and PowerPoint (`.ppt`, `.pptx`).
 - **PDF Manipulation & Tools:** Apache PDFBox 2.0.27.0 (merge, split, compress, watermark, reorder, sign).
-- **Text Recognition:** Google ML Kit on-device text recognition (100% offline OCR).
+- **Text Recognition:** Google ML Kit on-device text recognition. The model runs locally; on devices that do not ship it, Google Play Services may download the model once. The scanned document itself is never sent.
 - **Multimedia Engine:** Google AndroidX Media3 ExoPlayer (hardware-accelerated, zero JNI crash risk).
 
-User documents and media never leave the device.
+Document and media content never leaves the device through MyDoc. The only outbound traffic is the optional GitHub update check/download described in section 5.
 
 ### 2. No WebView in Document Pipeline
 MyDoc does not use WebViews in its document rendering pipeline. Document parsing and layout are handled completely via native Kotlin and C++ vector renderers to prevent cross-site scripting (XSS), JavaScript injection, and WebView sandbox escape vulnerabilities.
@@ -70,16 +70,19 @@ All ZIP/OOXML archive parsing (`.docx`, `.pptx`, `.xlsx`, `.odp`, `.odt`) is str
 - Maximum compression ratio: 100:1 (anti-decompression bomb protection)
 
 ### 4. Zero Telemetry & Tracking
-MyDoc contains zero advertising SDKs, zero user tracking libraries, and zero crash reporting telemetry.
+MyDoc contains zero advertising SDKs, zero user tracking libraries, and zero crash reporting telemetry. Nothing about how you use the app is reported to the developer or a third party.
 
 ### 5. Transparent, Hardened Updates
-The application checks exclusively for updates against public GitHub Releases. This check is:
-- **Optional**: Can be completely disabled in the app's Settings under *Check for updates on launch*.
+The application checks exclusively for updates against public GitHub Releases. This check:
+- **Defaults On**: Enabled by default and can be switched off in the app's Settings under *Check for updates on launch*.
 - **Domain Restricted**: Connections are strictly limited to `api.github.com`, `github.com`, and `*.githubusercontent.com`.
 - **Integrity Verified**: Downloaded APKs require matching SHA-256 checksums from corresponding `.sha256` release assets.
 - **Signature Enforced**: In release builds, the updater cryptographically validates the downloaded APK's signing certificate against pinned release fingerprints (`RELEASE_CERT_SHA256`) before installation.
 
 ### 6. Least-Privilege Sandboxing & Encryption
-- **FileProvider**: Internal storage and root device paths are never exposed. File sharing is restricted to designated, temporary cache subdirectories (`cache/updates/`, `cache/shared/`, `cache/tools_output/`).
+- **FileProvider**: Internal storage and root device paths are never exposed. File sharing is restricted to designated cache subdirectories (`cache/updates/`, `cache/shared/`, `cache/tools_output/`) and the offline document cache (`files/saved_docs/`). Shared and opened files are always handed to other apps as `content://` URIs, never `file://`.
 - **App Lock**: Biometric and screen lock protection is strictly guarded via `KeyguardManager.isDeviceSecure`.
 - **Hardware-Backed Keystore**: Signatures and sensitive data are encrypted on-device with AES-256-GCM using hardware-backed Android Keystore keys and excluded from automated cloud and device backups.
+
+### 7. Android Backup & Device Transfer
+MyDoc opts into the platform backup system. If backup or device transfer is enabled by the user's Android settings, the OS may copy the app database (recent-document index) and offline document copies under `saved_docs/` to the user's own Google backup and onto a new device. This is OS behaviour, not an upload by MyDoc. Excluded from backup: app preference file (app-lock state), updater state, all cache directories, and the hardware-encrypted signature file. Users who do not want document copies in platform backup should disable backup for MyDoc in Android Settings.

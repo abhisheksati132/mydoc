@@ -10,10 +10,6 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument as AndroidPdfDocument
 import com.abhisheksati.mydoc.ocr.OcrEngine
-import com.abhisheksati.mydoc.rendering.engine.presentation.PptxParser
-import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SpreadsheetParser
-import com.abhisheksati.mydoc.rendering.engine.word.DocxBlock
-import com.abhisheksati.mydoc.rendering.engine.word.DocxParser
 import com.abhisheksati.mydoc.tools.model.PageMargin
 import com.abhisheksati.mydoc.tools.model.PageSizeFormat
 import com.abhisheksati.mydoc.tools.model.ToolOptions
@@ -22,11 +18,8 @@ import com.abhisheksati.mydoc.tools.pdf.internal.PdfBoxHelper
 import com.artifex.mupdf.fitz.ColorSpace
 import com.artifex.mupdf.fitz.Document
 import com.artifex.mupdf.fitz.Matrix
-import com.artifex.mupdf.fitz.PDFDocument
 import com.tom_roush.pdfbox.pdmodel.PDDocument
-import com.tom_roush.pdfbox.pdmodel.common.PDMetadata
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import java.io.BufferedOutputStream
@@ -86,52 +79,6 @@ class PdfConversionEngine(private val context: Context) {
         FileOutputStream(outFile).use { outDoc.writeTo(it) }
         outDoc.close()
         return outFile
-    }
-
-    suspend fun officeToPdf(file: File, onProgress: (ToolProgress) -> Unit): File {
-        onProgress(ToolProgress(1, 100, 20, "Extracting document content...", false))
-        val ext = file.extension.lowercase()
-
-        val textBlocks = mutableListOf<String>()
-        if (ext == "docx") {
-            val parsed = FileInputStream(file).use { DocxParser().parse(it) }
-            for (b in parsed.blocks) {
-                when (b) {
-                    is DocxBlock.Heading -> textBlocks.add("## ${b.text}")
-                    is DocxBlock.Paragraph -> textBlocks.add(b.runs.joinToString("") { it.text })
-                    is DocxBlock.Bullet -> textBlocks.add("• " + b.runs.joinToString("") { it.text })
-                    is DocxBlock.Table -> {
-                        for (r in b.rows) textBlocks.add(r.joinToString(" | "))
-                    }
-                }
-            }
-        } else if (ext == "xlsx" || ext == "xls") {
-            val parsed = FileInputStream(file).use { SpreadsheetParser().parse(it, ext) }
-            for (sheet in parsed.sheets) {
-                textBlocks.add("[Sheet: ${sheet.name}]")
-                val maxR = sheet.maxRow.coerceAtMost(200)
-                val maxC = sheet.maxCol.coerceAtMost(25)
-                for (r in 0..maxR) {
-                    val rowCells = mutableListOf<String>()
-                    for (c in 0..maxC) {
-                        val v = sheet.getCellValue(r, c)
-                        if (v.isNotBlank()) rowCells.add(v)
-                    }
-                    if (rowCells.isNotEmpty()) {
-                        textBlocks.add(rowCells.joinToString(" | "))
-                    }
-                }
-            }
-        } else if (ext == "pptx") {
-            val parsed = FileInputStream(file).use { PptxParser().parse(it) }
-            for (slide in parsed.slides) {
-                textBlocks.add("[Slide ${slide.slideNumber}: ${slide.title}]")
-                textBlocks.addAll(slide.content)
-            }
-        }
-
-        // Layout extracted blocks into standard paginated PDF
-        return renderTextToPdf(textBlocks, onProgress)
     }
 
     suspend fun textOrCsvToPdf(file: File, onProgress: (ToolProgress) -> Unit): File {
@@ -477,79 +424,6 @@ class PdfConversionEngine(private val context: Context) {
             return outFile
         } finally {
             srcDoc.destroy()
-        }
-    }
-
-    suspend fun pdfToPdfA(file: File, onProgress: (ToolProgress) -> Unit): File {
-        onProgress(ToolProgress(1, 100, 30, "Injecting PDF/A-1b metadata schema...", false))
-        PdfBoxHelper.ensureInitialized(context)
-        val boxOutFile = createTempOutputFile("pdfa_temp", "pdf")
-
-        try {
-            FileInputStream(file).use { fis ->
-                PDDocument.load(fis).use { doc ->
-                    val cat = doc.documentCatalog ?: throw IllegalStateException("Invalid PDF catalog")
-
-                    val xmp = """<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
-<x:xmpmeta xmlns:x="adobe:ns:meta/">
-  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-    <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
-      <pdfaid:part>1</pdfaid:part>
-      <pdfaid:conformance>B</pdfaid:conformance>
-    </rdf:Description>
-    <rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">
-      <dc:format>application/pdf</dc:format>
-      <dc:title>
-        <rdf:Alt>
-          <rdf:li xml:lang="x-default">${sanitizeXml(file.nameWithoutExtension)}</rdf:li>
-        </rdf:Alt>
-      </dc:title>
-    </rdf:Description>
-    <rdf:Description rdf:about="" xmlns:pdf="http://ns.adobe.com/pdf/1.3/">
-      <pdf:Producer>MyDoc Archival Engine (PDF/A-1b Profile)</pdf:Producer>
-    </rdf:Description>
-  </rdf:RDF>
-</x:xmpmeta>
-<?xpacket end="w"?>"""
-
-                    val metadataStream = PDMetadata(doc)
-                    metadataStream.createOutputStream().use { os ->
-                        os.write(xmp.toByteArray(Charsets.UTF_8))
-                    }
-                    cat.metadata = metadataStream
-
-                    doc.documentInformation?.producer = "MyDoc Archival Engine (PDF/A-1b Profile)"
-
-                    FileOutputStream(boxOutFile).use { fos -> doc.save(fos) }
-                }
-            }
-
-            // Compact xref table
-            val srcDoc = Document.openDocument(boxOutFile.absolutePath) as? PDFDocument
-            if (srcDoc != null) {
-                try {
-                    val finalOut = createTempOutputFile("pdfa_archival", "pdf")
-                    srcDoc.save(finalOut.absolutePath, "compress,clean,garbage=3")
-                    return finalOut
-                } finally {
-                    srcDoc.destroy()
-                    try { if (boxOutFile.exists()) boxOutFile.delete() } catch (_: Exception) {}
-                }
-            }
-            return boxOutFile
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            android.util.Log.w("PdfConversionEngine", "PDFBox PDF/A conversion failed, falling back to MuPDF: ${e.message}")
-            val srcDoc = Document.openDocument(file.absolutePath) as? PDFDocument
-                ?: throw IllegalArgumentException("Cannot open document")
-            try {
-                srcDoc.setMetaData(Document.META_INFO_PRODUCER, "MyDoc Archival Engine (PDF/A-1b Profile)")
-                val outFile = createTempOutputFile("pdfa_archival", "pdf")
-                srcDoc.save(outFile.absolutePath, "compress,clean,garbage=4")
-                return outFile
-            } finally {
-                srcDoc.destroy()
-            }
         }
     }
 

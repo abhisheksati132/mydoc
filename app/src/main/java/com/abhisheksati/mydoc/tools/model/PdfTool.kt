@@ -2,7 +2,6 @@ package com.abhisheksati.mydoc.tools.model
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.CallSplit
-import androidx.compose.material.icons.automirrored.outlined.CompareArrows
 import androidx.compose.material.icons.automirrored.outlined.Grading
 import androidx.compose.material.icons.automirrored.outlined.MergeType
 import androidx.compose.material.icons.automirrored.outlined.RotateRight
@@ -11,9 +10,7 @@ import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Compress
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Draw
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.FormatColorText
@@ -23,10 +20,8 @@ import androidx.compose.material.icons.outlined.Highlight
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
-import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.TableChart
 import androidx.compose.material.icons.outlined.TextFields
-import androidx.compose.material.icons.outlined.Transform
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.WaterDrop
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -34,11 +29,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 /**
  * 6 primary task groups for PDF tools:
  * 1. Organize (Merge, Split, Remove, Reorder, Extract, Rotate, Crop)
- * 2. Edit & Sign (Annotate, Page Numbers, Watermark, Fill Forms, Sign, Compare)
+ * 2. Edit & Sign (Annotate, Page Numbers, Watermark, Sign)
  * 3. Compress (Compress PDF, Repair PDF)
- * 4. Convert (Image/Office/Text to PDF, PDF to Images/Text/Office/PDFA, Extract Assets)
+ * 4. Convert (Image/Text to PDF, PDF to Images/Text/Office, Extract Assets)
  * 5. Secure (Protect, Unlock, Redact, Strip Metadata)
- * 6. Scan (Scan to PDF, OCR PDF)
+ * 6. Scan (Scan to PDF)
  */
 enum class ToolGroup(val title: String) {
     ORGANIZE("Organize"),
@@ -99,7 +94,7 @@ enum class PdfTool(
     REORDER_PAGES(
         id = "reorder_pages",
         title = "Reorder pages",
-        description = "Rearrange or rotate pages visually",
+        description = "Rearrange pages visually",
         group = ToolGroup.ORGANIZE,
         icon = Icons.Outlined.GridOn,
         defaultSuffix = "organized"
@@ -147,7 +142,7 @@ enum class PdfTool(
         defaultSuffix = "repaired"
     ),
 
-    // 3. Convert (8 tools: Convert To + Convert From)
+    // 3. Convert (6 tools: Convert To + Convert From)
     IMAGE_TO_PDF(
         id = "image_to_pdf",
         title = "Image to PDF",
@@ -155,15 +150,6 @@ enum class PdfTool(
         group = ToolGroup.CONVERT,
         icon = Icons.Outlined.Image,
         defaultSuffix = "from_image",
-        acceptsNonPdfInput = true
-    ),
-    OFFICE_TO_PDF(
-        id = "office_to_pdf",
-        title = "Office to PDF",
-        description = "Convert Word, Excel, or slides to PDF",
-        group = ToolGroup.CONVERT,
-        icon = Icons.Outlined.Description,
-        defaultSuffix = "converted",
         acceptsNonPdfInput = true
     ),
     TEXT_TO_PDF(
@@ -205,14 +191,6 @@ enum class PdfTool(
         outputExtension = "docx",
         outputMimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     ),
-    PDF_TO_PDFA(
-        id = "pdf_to_pdfa",
-        title = "PDF to PDF/A",
-        description = "Convert for long-term archiving",
-        group = ToolGroup.CONVERT,
-        icon = Icons.Outlined.Shield,
-        defaultSuffix = "pdfa"
-    ),
     EXTRACT_ASSETS(
         id = "extract_assets",
         title = "Extract images & text",
@@ -224,7 +202,7 @@ enum class PdfTool(
         outputMimeType = "application/zip"
     ),
 
-    // 4. Edit & Sign (6 tools)
+    // 4. Edit & Sign (4 tools)
     ANNOTATE(
         id = "annotate",
         title = "Annotate PDF",
@@ -249,14 +227,6 @@ enum class PdfTool(
         icon = Icons.Outlined.WaterDrop,
         defaultSuffix = "watermarked"
     ),
-    FILL_FORM(
-        id = "fill_form",
-        title = "Fill forms",
-        description = "Fill and save PDF form fields",
-        group = ToolGroup.EDIT_SIGN,
-        icon = Icons.Outlined.Edit,
-        defaultSuffix = "filled"
-    ),
     SIGN_PDF(
         id = "sign_pdf",
         title = "Sign PDF",
@@ -264,15 +234,6 @@ enum class PdfTool(
         group = ToolGroup.EDIT_SIGN,
         icon = Icons.Outlined.Draw,
         defaultSuffix = "signed"
-    ),
-    COMPARE_PDF(
-        id = "compare_pdf",
-        title = "Compare PDF",
-        description = "Compare differences between two PDFs",
-        group = ToolGroup.EDIT_SIGN,
-        icon = Icons.AutoMirrored.Outlined.CompareArrows,
-        defaultSuffix = "diff",
-        requiresMultipleInputFiles = true
     ),
 
     // 5. Secure (4 tools)
@@ -309,7 +270,7 @@ enum class PdfTool(
         defaultSuffix = "cleaned"
     ),
 
-    // 6. Scan & OCR (2 tools)
+    // 6. Scan (1 tool)
     SCAN_TO_PDF(
         id = "scan_to_pdf",
         title = "Scan to PDF",
@@ -318,13 +279,5 @@ enum class PdfTool(
         icon = Icons.Outlined.CameraAlt,
         defaultSuffix = "scanned",
         acceptsNonPdfInput = true
-    ),
-    OCR_PDF(
-        id = "ocr_pdf",
-        title = "OCR PDF",
-        description = "Make scanned text searchable",
-        group = ToolGroup.SCAN,
-        icon = Icons.Outlined.Transform,
-        defaultSuffix = "ocr"
     )
 }
