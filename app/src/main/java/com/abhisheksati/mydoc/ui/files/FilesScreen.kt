@@ -504,6 +504,8 @@ private fun FilesHeader(
         title = title,
         subtitle = subtitle,
         onBack = if (isInsideFolder) onBack else null,
+        isGlass = false,
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         actions = {
             IconButton(onClick = onSearch) {
                 Icon(
