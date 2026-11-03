@@ -3,15 +3,9 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
-## [1.5.15] — 2026-11-03
+## [1.5.16] — 2026-11-04
 
-Range: `v1.5.14..v1.5.15`.
-
-### Added
-
-- **AppDropdownMenu with Apple Liquid Glass.** Replaced standard flat opaque menus with translucent frosted glass dropdown surfaces, 16dp rounded card shapes, and 1dp luminous specular rims across all screens.
-- **Home Feed Error State Banner.** Added real-time error banner presentation in `HomeFeedPane` when document loading or recents flow encounters failures.
-- **Active TileBitmapCache Global Trim Registry.** Registered all active `TileBitmapCache` instances to automatically purge on system memory trim (`ComponentCallbacks2`).
+Range: `v1.5.15..v1.5.16`.
 
 ### Changed
 
@@ -24,6 +18,20 @@ Range: `v1.5.14..v1.5.15`.
 - **Spring-settled nav glass.** Tab changes kick a damped spring through `GlassMotionState.interaction`, thickening the navbar blur momentarily before it relaxes, so glass responds to touch as well as scroll.
 - **Tertiary support accent.** Storage capacity bars and the App Manager "Split APK" badge now use `tertiary`/`tertiaryContainer` semantic containers: one primary accent for action, one support accent for resource metrics.
 
+### Removed
+
+- **Rainbow layer deleted.** `VividGradients.kt` (7 unused Tailwind-default gradients) and `VividComponents.kt` removed; section headers fall back to a neutral editorial rule.
+
+## [1.5.15] — 2026-11-03
+
+Range: `v1.5.14..v1.5.15`.
+
+### Added
+
+- **AppDropdownMenu with Apple Liquid Glass.** Replaced standard flat opaque menus with translucent frosted glass dropdown surfaces, 16dp rounded card shapes, and 1dp luminous specular rims across all screens.
+- **Home Feed Error State Banner.** Added real-time error banner presentation in `HomeFeedPane` when document loading or recents flow encounters failures.
+- **Active TileBitmapCache Global Trim Registry.** Registered all active `TileBitmapCache` instances to automatically purge on system memory trim (`ComponentCallbacks2`).
+
 ### Fixed
 
 - **MuPDF Permissions Integer Bitmask.** Computed ISO 32000-1 user permissions bitmask as a proper signed integer string (`permissions=$permMask`), fixing the parse failure in MuPDF's `fz_lookup_option_integer` so print and copy restrictions are genuinely applied.
@@ -35,7 +43,6 @@ Range: `v1.5.14..v1.5.15`.
 
 ### Removed
 
-- **Rainbow layer deleted.** `VividGradients.kt` (7 unused Tailwind-default gradients) and `VividComponents.kt` removed; section headers fall back to a neutral editorial rule.
 - **Pruned 8 Tautological Unit Tests.** Eliminated mock tests performing trivial arithmetic on local variables (`assertEquals(35, 35)`, `255 - 255 == 0`, and simulated loops) from the E2E quality gate suite.
 
 ## [1.5.14] — 2026-11-03
