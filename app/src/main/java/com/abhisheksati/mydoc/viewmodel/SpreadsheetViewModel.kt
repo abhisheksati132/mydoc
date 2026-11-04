@@ -37,12 +37,28 @@ data class SpreadsheetUiState(
 class SpreadsheetViewModel(
     // Application, not Context: this outlives the Activity that creates it.
     private val context: Application,
-    private val documentFile: DocumentFile,
+    private val initialDocument: DocumentFile,
     private val parser: SpreadsheetParser = SpreadsheetParser()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SpreadsheetUiState())
     val uiState: StateFlow<SpreadsheetUiState> = _uiState.asStateFlow()
+
+    private var activeDocument: DocumentFile = initialDocument
+    private var parsedFor: String? = null
+
+    /**
+     * Shows another spreadsheet in this session and lets go of the parsed model of the previous
+     * one. Keying the model to a fresh view model per document used to mean every workbook that
+     * was ever opened stayed in memory until the Activity's store was cleared.
+     */
+    fun open(document: DocumentFile) {
+        if (document.uri == activeDocument.uri && parsedFor == document.uri) return
+        activeDocument = document
+        parsedFor = null
+        _uiState.value = SpreadsheetUiState()
+        loadSpreadsheet()
+    }
 
     init {
         loadSpreadsheet()
@@ -52,13 +68,14 @@ class SpreadsheetViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true, errorMessage = null, failure = null) }
             try {
-                val uri = Uri.parse(documentFile.uri)
+                val uri = Uri.parse(activeDocument.uri)
                 val inputStream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri)
                     ?: throw IllegalStateException("Could not open input stream")
 
-                val model = inputStream.use { parser.parse(it, documentFile.extension) }
+                val model = inputStream.use { parser.parse(it, activeDocument.extension) }
                 val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
-                val savedState = app?.documentRepository?.getViewState(documentFile.uri)
+                val savedState = app?.documentRepository?.getViewState(activeDocument.uri)
+                parsedFor = activeDocument.uri
                 val initialSheet = savedState?.lastPage?.coerceIn(0, maxOf(0, model.sheets.size - 1)) ?: 0
 
                 _uiState.update {
@@ -89,10 +106,10 @@ class SpreadsheetViewModel(
             _uiState.update { it.copy(selectedSheetIndex = index, selectedCell = null) }
             viewModelScope.launch {
                 val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
-                app?.documentRepository?.updatePageProgress(documentFile.uri, index, _uiState.value.model.sheets.size)
+                app?.documentRepository?.updatePageProgress(activeDocument.uri, index, _uiState.value.model.sheets.size)
                 app?.documentRepository?.saveViewState(
                     com.abhisheksati.mydoc.domain.model.ViewState(
-                        uri = documentFile.uri,
+                        uri = activeDocument.uri,
                         lastPage = index
                     )
                 )

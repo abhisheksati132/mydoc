@@ -25,6 +25,16 @@ data class TextSelectionResult(
 interface DocumentRenderer {
     val pageCount: Int
     val isPasswordProtected: Boolean
+
+    /**
+     * Whether this engine can be handed a password at all. The OS `PdfRenderer` cannot open an
+     * encrypted file under any password, so a locked document that reaches it is not damaged — it
+     * is simply beyond this engine. Callers must not offer a password prompt from a renderer that
+     * answers false, and must not call the document corrupt merely because it would not open.
+     */
+    val supportsPasswordAuthentication: Boolean
+        get() = false
+
     fun authenticatePassword(password: String): Boolean
     fun getPageSize(pageIndex: Int): Pair<Float, Float>
     fun renderPage(pageIndex: Int, scale: Float, mode: ReadingMode): Bitmap?

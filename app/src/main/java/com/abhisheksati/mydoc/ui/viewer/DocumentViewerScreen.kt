@@ -3,6 +3,7 @@ package com.abhisheksati.mydoc.ui.viewer
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -91,10 +92,15 @@ fun DocumentViewerScreen(
 
     when (viewer) {
         ViewerKind.SPREADSHEET_GRID -> {
+            // One view model for the viewer, not one per document URI: a keyed instance is kept by
+            // the store until the Activity's store is cleared, so every file opened during a
+            // session kept its engine and its parsed model alive beside the next one.
             val spreadsheetViewModel: SpreadsheetViewModel = viewModel(
-                key = document.uri,
                 factory = SpreadsheetViewModel.Factory(context, document)
             )
+            LaunchedEffect(document.uri) {
+                spreadsheetViewModel.open(document)
+            }
             SpreadsheetViewerScreen(
                 document = document,
                 viewModel = spreadsheetViewModel,
@@ -135,9 +141,11 @@ fun DocumentViewerScreen(
 
         ViewerKind.CONVERTED_PAGES, ViewerKind.PDF_PAGES -> {
             val viewerViewModel: ViewerViewModel = viewModel(
-                key = document.uri,
                 factory = ViewerViewModel.Factory(context, app.documentRepository, document)
             )
+            LaunchedEffect(document.uri) {
+                viewerViewModel.open(document)
+            }
             val viewerState by viewerViewModel.uiState.collectAsStateWithLifecycle()
             val family = descriptor?.family
             val isWord = family == DocumentFamily.WORD

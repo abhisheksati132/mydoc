@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -171,6 +172,7 @@ fun TextViewerScreen(
     val colors = LocalAppColors.current
 
     var lines by remember { mutableStateOf<List<String>>(emptyList()) }
+    var truncated by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var loadFailure by remember { mutableStateOf<LoadFailure?>(null) }
@@ -193,22 +195,25 @@ fun TextViewerScreen(
         isLoading = true
         errorMessage = null
         loadFailure = null
-        withContext(Dispatchers.IO) {
-            try {
-                val uri = Uri.parse(document.uri)
-                val inputStream = DocumentStreamResolver.openStream(context, uri)
-                    ?: throw IllegalStateException("Could not open input stream")
-                val loadedLines = inputStream.use { BufferedReader(InputStreamReader(it)).readLines() }
-                lines = loadedLines
-                isLoading = false
-            } catch (e: Exception) {
-                errorMessage = UserMessages.readFailure("TextViewer", e)
-                loadFailure = if (UserMessages.isPermissionFailure(e)) {
-                    LoadFailure.PERMISSION_EXPIRED
-                } else {
-                    LoadFailure.CORRUPT_DOCUMENT
-                }
-                isLoading = false
+        val outcome = withContext(Dispatchers.IO) {
+            TextViewerModel.load(openStream = {
+                DocumentStreamResolver.openStream(context, Uri.parse(document.uri))
+            })
+        }
+        isLoading = false
+        when (outcome) {
+            is TextLoadOutcome.Loaded -> {
+                lines = outcome.lines
+                truncated = outcome.truncated
+            }
+
+            is TextLoadOutcome.Failed -> {
+                errorMessage = (outcome.error as? com.abhisheksati.mydoc.domain.model.DocumentLoadException)?.message
+                    ?: UserMessages.readFailure(
+                        "TextViewer",
+                        outcome.error ?: IllegalStateException(TextViewerModel.COULD_NOT_OPEN)
+                    )
+                loadFailure = outcome.failure
             }
         }
     }
@@ -271,9 +276,11 @@ fun TextViewerScreen(
     }
 
     val matchingLineIndices = remember(searchQuery, lines) {
-        if (searchQuery.isBlank()) emptyList()
-        else lines.mapIndexedNotNull { index, line -> if (line.contains(searchQuery, ignoreCase = true)) index else null }
+        TextViewerModel.matchingLines(lines, searchQuery)
     }
+    // The match the overlay is on: its line is tinted so "3 of 7" has something next to it.
+    val activeMatchLine = if (searchQuery.isBlank()) null
+    else matchingLineIndices.getOrNull(currentMatchIndex.coerceIn(0, (matchingLineIndices.size - 1).coerceAtLeast(0)))
 
     val isMarkdown = document.displayName.lowercase().endsWith(".md") ||
         document.mimeType.contains("markdown")
@@ -282,7 +289,23 @@ fun TextViewerScreen(
         else lines.mapIndexedNotNull { index, raw -> parseMarkdownLine(raw, index) }
     }
 
+    // The read-aloud string is a second full copy of the document, so it is built only while the
+    // reader has the speak bar open.
+    val ttsText = remember(lines, isTtsVisible) {
+        if (isTtsVisible) lines.joinToString("\n") else ""
+    }
+
     val coroutineScope = rememberCoroutineScope()
+
+    /**
+     * Next and previous have to move the reader, not just a number. Advancing the index without
+     * scrolling is what made the controls look alive and behave like dead weight.
+     */
+    fun moveToMatch(index: Int) {
+        val target = matchingLineIndices.getOrNull(index) ?: return
+        currentMatchIndex = index
+        coroutineScope.launch { listState.scrollToItem(target) }
+    }
 
     ViewerScaffold(
         document = document,
@@ -302,6 +325,7 @@ fun TextViewerScreen(
         onSearchClick = { isSearchOpen = true },
         onTtsClick = { isTtsVisible = true },
         readingPrefs = readingPrefs,
+        fidelityNotes = if (truncated) listOf(TextBudget.noteFor(TextBudget.DEFAULT)) else emptyList(),
         onPageScrubbed = { page ->
             if (lines.isNotEmpty()) {
                 val target = page.coerceIn(0, lines.size - 1)
@@ -315,19 +339,20 @@ fun TextViewerScreen(
                 visible = isSearchOpen,
                 query = searchQuery,
                 matchCount = matchingLineIndices.size,
-                currentMatchIndex = currentMatchIndex,
+                currentMatchIndex = if (matchingLineIndices.isEmpty()) 0
+                else currentMatchIndex.coerceIn(0, matchingLineIndices.size - 1),
                 onQueryChanged = {
                     searchQuery = it
                     currentMatchIndex = 0
                 },
                 onNextMatch = {
                     if (matchingLineIndices.isNotEmpty()) {
-                        currentMatchIndex = (currentMatchIndex + 1) % matchingLineIndices.size
+                        moveToMatch((currentMatchIndex + 1) % matchingLineIndices.size)
                     }
                 },
                 onPreviousMatch = {
                     if (matchingLineIndices.isNotEmpty()) {
-                        currentMatchIndex = (currentMatchIndex - 1 + matchingLineIndices.size) % matchingLineIndices.size
+                        moveToMatch((currentMatchIndex - 1 + matchingLineIndices.size) % matchingLineIndices.size)
                     }
                 },
                 onCloseSearch = {
@@ -465,7 +490,14 @@ fun TextViewerScreen(
                     }
                 } else {
                     itemsIndexed(lines) { index, line ->
-                    Row(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                if (index == activeMatchLine) DocumentCanvasColors.activeHighlight.copy(alpha = 0.3f)
+                                else Color.Transparent
+                            )
+                    ) {
                         if (showLineNumbers) {
                             Text(
                                 text = "${index + 1}",

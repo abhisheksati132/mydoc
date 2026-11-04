@@ -74,6 +74,10 @@ class MuPdfRenderer(
     override val isPasswordProtected: Boolean
         get() = lock.withLock { document?.needsPassword() == true }
 
+    /** Fitz takes the password itself and then reads the document, so it is the engine that can. */
+    override val supportsPasswordAuthentication: Boolean
+        get() = true
+
     override fun authenticatePassword(password: String): Boolean {
         return lock.withLock {
             val doc = document ?: return@withLock false

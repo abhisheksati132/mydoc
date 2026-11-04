@@ -68,7 +68,9 @@ class ViewerViewModel(
     private val _uiState = MutableStateFlow(ViewerUiState())
     val uiState: StateFlow<ViewerUiState> = _uiState.asStateFlow()
 
-    private var renderer: DocumentRenderer? = null
+    private val rendererSlot = com.abhisheksati.mydoc.rendering.engine.RendererSlot()
+    private val renderer: DocumentRenderer?
+        get() = rendererSlot.current
     private var searchJob: Job? = null
     private var activeDocumentFile: DocumentFile = documentFile
 
@@ -76,6 +78,17 @@ class ViewerViewModel(
         get() = activeDocumentFile.uri
 
     init {
+        loadDocument()
+    }
+
+    /**
+     * Shows another document in this same viewer session. The engine that was reading the previous
+     * one is given back before the new one is opened, so opening a run of documents cannot leave a
+     * native MuPDF document alive for every file that was ever looked at.
+     */
+    fun open(document: DocumentFile) {
+        if (document.uri == activeDocumentFile.uri && _uiState.value.pageCount > 0) return
+        activeDocumentFile = document
         loadDocument()
     }
 
@@ -98,6 +111,7 @@ class ViewerViewModel(
     }
 
     private fun loadDocument() {
+        releaseSession()
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
@@ -223,24 +237,28 @@ class ViewerViewModel(
 
                     // 1. Primary Engine: MuPDF Fitz Native Vector Engine
                     // Unlocks sub-pixel vector rendering, structured text extraction, fast quad search, and TOC outlines
+                    var mupdf: MuPdfRenderer? = null
                     try {
-                        val mupdf = MuPdfRenderer(
+                        val opened = MuPdfRenderer(
                             filePath = cacheFile.absolutePath,
                             mimeType = "application/pdf"
                         )
-                        if (mupdf.isPasswordProtected) {
-                            activeRenderer = mupdf
-                        } else if (mupdf.pageCount > 0) {
-                            val size = mupdf.getPageSize(0)
+                        mupdf = opened
+                        if (opened.isPasswordProtected) {
+                            activeRenderer = opened
+                        } else if (opened.pageCount > 0) {
+                            val size = opened.getPageSize(0)
                             if (size.first > 0 && size.second > 0) {
-                                activeRenderer = mupdf
-                            } else {
-                                mupdf.close()
+                                activeRenderer = opened
                             }
-                        } else {
-                            mupdf.close()
                         }
                     } catch (_: Throwable) {
+                        // A throw after the document was opened used to leave the native handle
+                        // with nothing pointing at it.
+                    }
+                    if (activeRenderer !== mupdf) {
+                        mupdf?.close()
+                        mupdf = null
                     }
 
                     // 2. Resilient Fallback Engine: Android OS Native PdfRenderer with PDFBox text stripper & outline
@@ -259,30 +277,65 @@ class ViewerViewModel(
                         }
                     }
 
-                    if (activeRenderer == null || activeRenderer.pageCount == 0) {
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                isPermissionExpired = false,
-                                errorMessage = "This document format is damaged or could not be rendered."
-                            )
+                    // Android's PdfRenderer cannot open an encrypted document at all, so on this
+                    // path a locked file looks empty rather than locked. Establish protection
+                    // before trusting the page count.
+                    val encryptedOnDisk = activeRenderer?.isPasswordProtected != true &&
+                        isEncryptedPdf(cacheFile)
+                    when (PdfOpenDecision.choose(
+                            rendererOpened = activeRenderer != null,
+                            passwordProtected = activeRenderer?.isPasswordProtected == true,
+                            canAskForPassword = activeRenderer?.supportsPasswordAuthentication == true,
+                            pageCount = activeRenderer?.pageCount ?: 0,
+                            encryptedOnDisk = encryptedOnDisk
+                        )) {
+                        PdfOpenOutcome.DAMAGED, PdfOpenOutcome.EMPTY_DOCUMENT -> {
+                            activeRenderer?.close()
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    isPermissionExpired = false,
+                                    errorMessage = "This document format is damaged or could not be rendered.",
+                                    failure = com.abhisheksati.mydoc.domain.model.LoadFailure.CORRUPT_DOCUMENT
+                                )
+                            }
+                            return@withContext
                         }
-                        return@withContext
+
+                        PdfOpenOutcome.PASSWORD_UNAVAILABLE -> {
+                            activeRenderer?.close()
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    isPermissionExpired = false,
+                                    isPasswordRequired = false,
+                                    errorMessage = "This document is password protected, and the rendering " +
+                                        "engine available here cannot open protected files.",
+                                    failure = com.abhisheksati.mydoc.domain.model.LoadFailure.PASSWORD_PROTECTED
+                                )
+                            }
+                            return@withContext
+                        }
+
+                        PdfOpenOutcome.ASK_PASSWORD, PdfOpenOutcome.RENDER -> Unit
                     }
 
-                    renderer?.close()
-                    renderer = activeRenderer
+                    val chosen = activeRenderer ?: return@withContext
+                    rendererSlot.replace(chosen)
 
-                    if (activeRenderer.isPasswordProtected) {
+                    if (chosen.isPasswordProtected) {
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
+                                errorMessage = null,
+                                failure = null,
+                                pageCount = chosen.pageCount,
                                 isPasswordRequired = true
                             )
                         }
                     } else {
-                        val totalPages = activeRenderer.pageCount
-                        val rawOutline = activeRenderer.getOutline()
+                        val totalPages = chosen.pageCount
+                        val rawOutline = chosen.getOutline()
                         val outline = if (rawOutline.isNotEmpty()) {
                             rawOutline
                         } else {
@@ -302,7 +355,7 @@ class ViewerViewModel(
                         // first screenful here turns those into cache hits instead of native
                         // page loads on the main thread.
                         for (p in initialPage until minOf(initialPage + 6, totalPages)) {
-                            activeRenderer.getPageSize(p)
+                            chosen.getPageSize(p)
                         }
 
                         _uiState.update {
@@ -333,25 +386,66 @@ class ViewerViewModel(
         }
     }
 
+    /**
+     * Whether the file's trailer mentions an encryption dictionary. This decides which message a
+     * reader sees when the fallback engine could not open a document; it is not used to decide
+     * whether anything is safe, because the only engine that can honour a password here is MuPDF.
+     */
+    private fun isEncryptedPdf(file: java.io.File): Boolean = try {
+        val length = file.length()
+        if (length <= 0L) false else {
+            val window = minOf(length, 64L * 1024L).toInt()
+            java.io.RandomAccessFile(file, "r").use { raf ->
+                raf.seek(length - window)
+                val tail = ByteArray(window)
+                raf.readFully(tail)
+                String(tail, Charsets.ISO_8859_1).contains("/Encrypt")
+            }
+        }
+    } catch (_: Throwable) {
+        false
+    }
+
     fun authenticatePassword(password: String) {
         val rend = renderer ?: return
         viewModelScope.launch(ioDispatcher) {
             val success = rend.authenticatePassword(password)
-            if (success) {
-                val totalPages = rend.pageCount
-                val outline = rend.getOutline()
+            if (!success) {
+                _uiState.update { it.copy(isPasswordIncorrect = true) }
+                return@launch
+            }
+            val totalPages = rend.pageCount
+            if (totalPages <= 0) {
+                // Authenticated, but there is nothing to show. Say so instead of opening an
+                // empty reader, and give the native document back.
+                rendererSlot.release()
                 _uiState.update {
                     it.copy(
                         isPasswordRequired = false,
                         isPasswordIncorrect = false,
-                        pageCount = totalPages,
-                        outline = outline
+                        isLoading = false,
+                        errorMessage = "This document opened but contains no pages.",
+                        failure = com.abhisheksati.mydoc.domain.model.LoadFailure.EMPTY_DOCUMENT
                     )
                 }
-                repository.updatePageProgress(activeDocumentFile.uri, 0, totalPages)
-            } else {
-                _uiState.update { it.copy(isPasswordIncorrect = true) }
+                return@launch
             }
+            val outline = rend.getOutline()
+            // The saved reading position belongs to this document whether or not the password
+            // was needed to reach it; writing page 0 here used to erase it on every unlock.
+            val resume = (repository.getViewState(activeDocumentFile.uri)?.lastPage ?: 0)
+                .coerceIn(0, totalPages - 1)
+            _uiState.update {
+                it.copy(
+                    isPasswordRequired = false,
+                    isPasswordIncorrect = false,
+                    pageCount = totalPages,
+                    currentPage = resume,
+                    outline = outline
+                )
+            }
+            repository.updatePageProgress(activeDocumentFile.uri, resume, totalPages)
+            prefetchSurroundingPages(resume)
         }
     }
     fun getCachedPageBitmap(pageIndex: Int, scale: Float): Bitmap? {
@@ -568,12 +662,17 @@ class ViewerViewModel(
         renderer?.getDocumentText()
     }
 
-    override fun onCleared() {
-        super.onCleared()
+    /**
+     * Gives back everything that belongs to the document currently on screen. Called when a new
+     * document replaces it and when the session ends, so a native engine handle is never alive
+     * without a document behind it.
+     */
+    private fun releaseSession() {
         prefetchJob?.cancel()
         prefetchJob = null
-        renderer?.close()
-        renderer = null
+        searchJob?.cancel()
+        searchJob = null
+        rendererSlot.release()
         // The zoom tile cache is a process-wide singleton keyed by document URI, so its
         // bitmaps would otherwise outlive the document they came from.
         com.abhisheksati.mydoc.ui.viewer.controls.ZoomTileCache.clear()
@@ -581,6 +680,11 @@ class ViewerViewModel(
             try { if (f.exists()) f.delete() } catch (_: Throwable) {}
         }
         sessionTempFiles.clear()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        releaseSession()
     }
 
     class Factory(

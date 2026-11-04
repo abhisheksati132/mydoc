@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -112,25 +112,24 @@ fun WordViewerScreen(
         isLoading = true
         errorMessage = null
         loadFailure = null
-        withContext(Dispatchers.IO) {
-            try {
-                val uri = Uri.parse(document.uri)
-                val inputStream = DocumentStreamResolver.openStream(context, uri)
-                    ?: throw IllegalStateException("Could not open input stream")
-                val parsed = inputStream.use { DocxParser().parse(it) }
-                docxData = parsed
-                isLoading = false
-            } catch (e: com.abhisheksati.mydoc.domain.model.DocumentLoadException) {
-                errorMessage = e.message
-                loadFailure = e.failure
-            } catch (e: Exception) {
-                errorMessage = UserMessages.readFailure("WordViewer", e)
-                loadFailure = if (UserMessages.isPermissionFailure(e)) {
-                    com.abhisheksati.mydoc.domain.model.LoadFailure.PERMISSION_EXPIRED
-                } else {
-                    com.abhisheksati.mydoc.domain.model.LoadFailure.CORRUPT_DOCUMENT
-                }
-                isLoading = false
+        val outcome = withContext(Dispatchers.IO) {
+            WordDocumentLoader.load(
+                openStream = { DocumentStreamResolver.openStream(context, Uri.parse(document.uri)) },
+                parse = { stream -> DocxParser().parse(stream) }
+            )
+        }
+        // Every terminal path clears the spinner. The typed-failure branch used to set the message
+        // and leave `isLoading` true, so a damaged DOCX spun forever over an empty page.
+        isLoading = false
+        when (outcome) {
+            is WordLoadOutcome.Loaded -> docxData = outcome.document
+            is WordLoadOutcome.Failed -> {
+                loadFailure = outcome.failure
+                errorMessage = (outcome.error as? com.abhisheksati.mydoc.domain.model.DocumentLoadException)?.message
+                    ?: UserMessages.readFailure(
+                        "WordViewer",
+                        outcome.error ?: IllegalStateException(WordDocumentLoader.COULD_NOT_OPEN)
+                    )
             }
         }
     }
@@ -139,30 +138,31 @@ fun WordViewerScreen(
     val secondaryTextColor = ViewerThemeTokens.getSecondaryTextColor(readingPrefs.readingMode, colors.textSecondary)
 
     val blocks = docxData?.blocks ?: emptyList()
-    val filteredBlocks = if (searchQuery.isBlank()) {
-        blocks
-    } else {
-        blocks.filter { block ->
-            when (block) {
-                is DocxBlock.Heading -> block.text.contains(searchQuery, ignoreCase = true)
-                is DocxBlock.Paragraph -> block.fullText.contains(searchQuery, ignoreCase = true)
-                is DocxBlock.Bullet -> block.runs.any { it.text.contains(searchQuery, ignoreCase = true) }
-                is DocxBlock.Table -> block.rows.any { row -> row.any { it.contains(searchQuery, ignoreCase = true) } }
-            }
-        }
-    }
+    // Search navigates the document; it does not replace it. Filtering the block list used to
+    // renumber every block, so the reading position saved while searching pointed at a different
+    // paragraph once the search was closed.
+    val matches = remember(blocks, searchQuery) { WordViewerModel.matches(blocks, searchQuery) }
+    val activeMatchBlock = if (searchQuery.isBlank()) null else matches.getOrNull(currentMatchIndex)?.blockIndex
 
     val lazyListState = rememberLazyListState()
     // Scroll position is a frequently-changing state object; reading it straight in
     // composition subscribes the whole viewer to every frame. Derive the index once.
     val visibleBlockIndex by remember { derivedStateOf { lazyListState.firstVisibleItemIndex } }
 
+    val coroutineScope = rememberCoroutineScope()
+
+    fun moveToMatch(index: Int) {
+        val match = matches.getOrNull(index) ?: return
+        currentMatchIndex = index
+        coroutineScope.launch { lazyListState.scrollToItem(match.blockIndex) }
+    }
+
     // Smart Resume: Restore position
-    LaunchedEffect(filteredBlocks.size) {
-        if (filteredBlocks.isNotEmpty()) {
+    LaunchedEffect(blocks.size) {
+        if (blocks.isNotEmpty()) {
             withContext(Dispatchers.IO) {
                 val saved = app?.documentRepository?.getViewState(document.uri)
-                val targetIndex = saved?.lastPage?.coerceIn(0, filteredBlocks.size - 1) ?: 0
+                val targetIndex = saved?.lastPage?.coerceIn(0, blocks.size - 1) ?: 0
                 if (targetIndex > 0) {
                     withContext(Dispatchers.Main) {
                         lazyListState.scrollToItem(targetIndex)
@@ -173,13 +173,13 @@ fun WordViewerScreen(
     }
 
     // Smart Resume: Persist progress
-    LaunchedEffect(filteredBlocks.size) {
-        if (filteredBlocks.isEmpty()) return@LaunchedEffect
+    LaunchedEffect(blocks.size) {
+        if (blocks.isEmpty()) return@LaunchedEffect
         snapshotFlow { lazyListState.firstVisibleItemIndex }
             .distinctUntilChanged()
             .collect { index ->
                 withContext(Dispatchers.IO) {
-                    app?.documentRepository?.updatePageProgress(document.uri, index, filteredBlocks.size)
+                    app?.documentRepository?.updatePageProgress(document.uri, index, blocks.size)
                     app?.documentRepository?.saveViewState(
                         ViewState(
                             uri = document.uri,
@@ -192,12 +192,12 @@ fun WordViewerScreen(
     }
 
     // Volume key page turning
-    LaunchedEffect(filteredBlocks.size) {
-        if (filteredBlocks.isNotEmpty()) {
+    LaunchedEffect(blocks.size) {
+        if (blocks.isNotEmpty()) {
             MainActivity.pageTurnEvents.collect { isNext ->
                 val current = lazyListState.firstVisibleItemIndex
                 val target = if (isNext) {
-                    (current + 5).coerceAtMost(filteredBlocks.size - 1)
+                    (current + 5).coerceAtMost(blocks.size - 1)
                 } else {
                     (current - 5).coerceAtLeast(0)
                 }
@@ -207,17 +207,8 @@ fun WordViewerScreen(
     }
 
     val fullDocumentText = remember(blocks) {
-        blocks.joinToString("\n\n") { block ->
-            when (block) {
-                is DocxBlock.Heading -> block.text
-                is DocxBlock.Paragraph -> block.fullText
-                is DocxBlock.Bullet -> block.runs.joinToString("") { it.text }
-                is DocxBlock.Table -> block.rows.joinToString("\n") { it.joinToString(" | ") }
-            }
-        }
+        blocks.joinToString("\n\n") { WordViewerModel.plainText(it) }
     }
-
-    val coroutineScope = rememberCoroutineScope()
 
     ViewerScaffold(
         document = document,
@@ -229,8 +220,8 @@ fun WordViewerScreen(
             supportsTts = true,
             supportsZoom = false
         ),
-        currentPage = if (filteredBlocks.isNotEmpty()) visibleBlockIndex else 0,
-        pageCount = filteredBlocks.size.coerceAtLeast(1),
+        currentPage = if (blocks.isNotEmpty()) visibleBlockIndex else 0,
+        pageCount = blocks.size.coerceAtLeast(1),
         isControlsVisible = !isSearchOpen,
         onBackClick = onBackClick,
         onShareClick = onShareClick,
@@ -243,8 +234,8 @@ fun WordViewerScreen(
             RenderFidelity.STRUCTURED_REFLOW
         },
         onPageScrubbed = { page ->
-            if (filteredBlocks.isNotEmpty()) {
-                val target = page.coerceIn(0, filteredBlocks.size - 1)
+            if (blocks.isNotEmpty()) {
+                val target = page.coerceIn(0, blocks.size - 1)
                 coroutineScope.launch {
                     lazyListState.scrollToItem(target)
                 }
@@ -254,20 +245,20 @@ fun WordViewerScreen(
             SearchOverlay(
                 visible = isSearchOpen,
                 query = searchQuery,
-                matchCount = filteredBlocks.size,
-                currentMatchIndex = currentMatchIndex,
+                matchCount = matches.size,
+                currentMatchIndex = if (matches.isEmpty()) 0 else currentMatchIndex.coerceIn(0, matches.size - 1),
                 onQueryChanged = {
                     searchQuery = it
                     currentMatchIndex = 0
                 },
                 onNextMatch = {
-                    if (filteredBlocks.isNotEmpty()) {
-                        currentMatchIndex = (currentMatchIndex + 1) % filteredBlocks.size
+                    if (matches.isNotEmpty()) {
+                        moveToMatch((currentMatchIndex + 1) % matches.size)
                     }
                 },
                 onPreviousMatch = {
-                    if (filteredBlocks.isNotEmpty()) {
-                        currentMatchIndex = (currentMatchIndex - 1 + filteredBlocks.size) % filteredBlocks.size
+                    if (matches.isNotEmpty()) {
+                        moveToMatch((currentMatchIndex - 1 + matches.size) % matches.size)
                     }
                 },
                 onCloseSearch = {
@@ -315,14 +306,19 @@ fun WordViewerScreen(
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .padding(top = ViewerChrome.topBarHeight, bottom = ViewerChrome.bottomBarHeight)
             ) {
-                items(filteredBlocks) { block ->
+                itemsIndexed(blocks) { index, block ->
+                    val ranges = WordViewerModel.rangesIn(blocks, index, matches)
+                    val isActiveBlock = activeMatchBlock == index
                     when (block) {
                         is DocxBlock.Heading -> {
-                            Text(
-                                text = block.text,
+                            DocxRunsView(
+                                runs = listOf(DocxRun(block.text)),
+                                textColor = textColor,
                                 fontSize = DocumentReadingType.heading(block.level) * readingPrefs.fontScale,
-                                fontWeight = FontWeight.Bold,
-                                color = textColor,
+                                bold = true,
+                                ranges = ranges,
+                                active = isActiveBlock,
+                                lineHeight = null,
                                 modifier = Modifier.padding(vertical = 8.dp)
                             )
                         }
@@ -332,7 +328,8 @@ fun WordViewerScreen(
                                 paragraph = block,
                                 textColor = textColor,
                                 fontScale = readingPrefs.fontScale,
-                                searchQuery = searchQuery
+                                ranges = ranges,
+                                active = isActiveBlock
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                         }
@@ -348,8 +345,11 @@ fun WordViewerScreen(
                                 DocxRunsView(
                                     runs = block.runs,
                                     textColor = textColor,
-                                    fontScale = readingPrefs.fontScale,
-                                    searchQuery = searchQuery
+                                    fontSize = DocumentReadingType.body * readingPrefs.fontScale,
+                                    bold = false,
+                                    ranges = ranges,
+                                    active = isActiveBlock,
+                                    lineHeight = DocumentReadingType.bodyLineHeight * readingPrefs.fontScale
                                 )
                             }
                         }
@@ -358,7 +358,8 @@ fun WordViewerScreen(
                             DocxTableView(
                                 table = block,
                                 textColor = textColor,
-                                secondaryTextColor = secondaryTextColor
+                                secondaryTextColor = secondaryTextColor,
+                                highlightActive = isActiveBlock && ranges.isNotEmpty()
                             )
                             Spacer(modifier = Modifier.height(10.dp))
                         }
@@ -374,7 +375,8 @@ private fun DocxParagraphView(
     paragraph: DocxBlock.Paragraph,
     textColor: Color,
     fontScale: Float,
-    searchQuery: String
+    ranges: List<IntRange>,
+    active: Boolean
 ) {
     if (paragraph.runs.isEmpty()) {
         Spacer(modifier = Modifier.height(4.dp))
@@ -383,29 +385,45 @@ private fun DocxParagraphView(
     DocxRunsView(
         runs = paragraph.runs,
         textColor = textColor,
-        fontScale = fontScale,
-        searchQuery = searchQuery
+        fontSize = DocumentReadingType.body * fontScale,
+        bold = false,
+        ranges = ranges,
+        active = active,
+        lineHeight = DocumentReadingType.bodyLineHeight * fontScale
     )
 }
 
+/**
+ * [ranges] are the character offsets in this block that the search matched; [active] marks the
+ * block holding the match the overlay is currently on, so "3 of 7" has something next to it.
+ */
 @Composable
 private fun DocxRunsView(
     runs: List<DocxRun>,
     textColor: Color,
-    fontScale: Float,
-    searchQuery: String
+    fontSize: androidx.compose.ui.unit.TextUnit,
+    bold: Boolean,
+    ranges: List<IntRange>,
+    active: Boolean,
+    lineHeight: androidx.compose.ui.unit.TextUnit?,
+    modifier: Modifier = Modifier
 ) {
+    val offsets = WordViewerModel.runOffsets(runs)
     val annotatedString = buildAnnotatedString {
-        runs.forEach { run ->
+        runs.forEachIndexed { position, run ->
+            val span = offsets[position]
+            val hit = ranges.any { it.first <= span.last && it.last >= span.first }
             val spanStyle = SpanStyle(
-                fontWeight = if (run.isBold) FontWeight.Bold else FontWeight.Normal,
+                fontWeight = if (bold) FontWeight.Bold else if (run.isBold) FontWeight.Bold else FontWeight.Normal,
                 fontStyle = if (run.isItalic) FontStyle.Italic else FontStyle.Normal,
                 textDecoration = if (run.isUnderline) TextDecoration.Underline else TextDecoration.None,
                 color = textColor,
-                fontSize = DocumentReadingType.body * fontScale,
-                background = if (searchQuery.isNotBlank() && run.text.contains(searchQuery, ignoreCase = true)) {
-                    DocumentCanvasColors.searchHighlight
-                } else Color.Transparent
+                fontSize = fontSize,
+                background = when {
+                    !hit -> Color.Transparent
+                    active -> DocumentCanvasColors.activeHighlight
+                    else -> DocumentCanvasColors.searchHighlight
+                }
             )
             pushStyle(spanStyle)
             append(run.text)
@@ -415,20 +433,24 @@ private fun DocxRunsView(
 
     Text(
         text = annotatedString,
-        lineHeight = DocumentReadingType.bodyLineHeight * fontScale
+        modifier = modifier,
+        lineHeight = lineHeight ?: androidx.compose.ui.unit.TextUnit.Unspecified
     )
 }
 
+/** Tables are matched and scrolled to; a hit inside a cell tints the cell block rather than a range. */
 @Composable
 private fun DocxTableView(
     table: DocxBlock.Table,
     textColor: Color,
-    secondaryTextColor: Color
+    secondaryTextColor: Color,
+    highlightActive: Boolean
 ) {
     val borderColor = secondaryTextColor.copy(alpha = 0.3f)
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .background(if (highlightActive) DocumentCanvasColors.activeHighlight.copy(alpha = 0.35f) else Color.Transparent)
             .border(1.dp, borderColor, MaterialTheme.shapes.extraSmall)
     ) {
         table.rows.forEachIndexed { rowIndex, row ->

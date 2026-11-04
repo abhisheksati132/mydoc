@@ -61,6 +61,10 @@ class AndroidPdfRenderer(
         return runCatching { PDDocument.load(file) }.getOrNull()?.also { pdfBoxDocument = it }
     }
 
+    // The OS renderer refuses an encrypted file at open time and never tells the caller why, so
+    // this engine reports no knowledge of protection rather than a false positive: `supports
+    // PasswordAuthentication` (default false) is what tells the viewer that a locked document on
+    // this path is a capability limit, not a damaged file.
     override val isPasswordProtected: Boolean
         get() = false
 

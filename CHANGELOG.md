@@ -59,6 +59,38 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 - The Protect sheet states that permissions are a request other readers honour and do not stop
   someone printing a picture of a page.
 
+- **A damaged DOCX spun forever (N-24).** In `WordViewerScreen`, the branch catching a typed
+  `DocumentLoadException` set the message and the failure kind but never cleared `isLoading`, so a
+  half-written archive left a spinner over an empty page and the problem screen was unreachable.
+  Loading now goes through `WordDocumentLoader`, which always returns a terminal outcome and never
+  turns a cancellation into a failure; the viewer clears the spinner for every outcome.
+- **A locked PDF could be reported as a broken one (H-4).** The viewer's fallback engine, Android's
+  `PdfRenderer`, cannot open an encrypted file under any password and reports zero pages, which the
+  page-count gate read as corruption. The order is now stated in `PdfOpenDecision`: protection is
+  established before page counting is trusted, and a file whose trailer carries `/Encrypt` but that
+  no available engine can unlock is reported as password protected, with the reason, not as damaged.
+  Every early return closes the engine it is abandoning.
+- **Unlocking a protected PDF erased the reading position.** `authenticatePassword` wrote page 0 as
+  the progress of the document it had just opened. It restores the saved page, clamped to the real
+  page count, and prefetches around it like any other open.
+- **Search next and previous did not move the reader (N-26).** Both the text and Word viewers
+  advanced an index and re-rendered the counter while the document stayed exactly where it was. The
+  controls now scroll to the matched line or block, and the block or line holding the current match
+  is tinted so "3 of 7" points at something.
+- **Word search renumbered the document and corrupted what was saved (N-28).** Searching filtered
+  the block list, so the reading position persisted while searching was a different block's index
+  once the search closed. The block list is no longer filtered: matches are occurrences counted across
+  runs and tables, and progress is written against the whole document.
+- **The text viewer read files of any size into memory (N-27).** `readLines()` on an unbounded stream
+  copied a whole log into the heap and then copied it again for read-aloud. There is now a stated
+  budget — 8 MB, 50 000 lines, 10 000 characters per line — read in chunks, cancellable, decoding
+  malformed UTF-8 rather than failing on it, and a reader who hits the limit is told they are looking
+  at a prefix instead of being shown a partial file as the whole thing.
+- **Opening fifteen PDFs kept fifteen native documents alive (N-25).** Both `ViewerViewModel` and
+  `SpreadsheetViewModel` were keyed by document URI, so each opened file got its own instance and the
+  store kept them, with their native MuPDF handles, until the Activity was destroyed. One view model
+  now serves the viewer and `RendererSlot` owns at most one engine, closing what it replaces.
+
 ### Tests
 
 - `StorageMoveTrashSafetyTest` — 13 JVM tests over an injected `EntryMutator` seam: a
@@ -85,6 +117,21 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 - Measured and now asserted: MuPDF reports the real page count of an encrypted PDF *before* any
   password is offered, so "zero pages" is a damage signal rather than an encryption one, and
   `needsPassword()` is what decides whether to ask.
+
+- `PdfOpenDecisionTest` — 6 tests over the encrypted-versus-damaged decision.
+- `WordViewerModelTest` — 13 tests over the loader's terminal outcomes (typed failure, permission,
+  unreadable file, missing stream, cancellation, retry, stream closed) and over occurrence counting.
+- `TextViewerModelTest` — 13 tests over the budget: small file, empty file, byte and line caps, a
+  single very long line, multibyte content, invalid encoding, cancellation and stream closure.
+- `RendererSlotTest` — 6 tests that open fifteen engines in a row and assert one is alive and
+  fourteen were closed, plus re-release, same-engine replace and a close that throws.
+- `WordViewerOnDeviceTest` — 6 instrumented tests that build real DOCX archives (whole, truncated,
+  wrong format), load them through the same path the viewer uses, and assert the match sequence the
+  search controls navigate.
+
+Not device-verified: the Compose interaction itself — that tapping next moves the list, and that the
+truncation notice is legible in both themes. Those are wired to the functions above but were not
+driven on screen in this batch.
 
 ## [1.7.2] — 2026-11-04
 
