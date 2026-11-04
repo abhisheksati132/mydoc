@@ -3,9 +3,14 @@ package com.abhisheksati.mydoc.rendering.engine.word
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import com.abhisheksati.mydoc.data.local.DocumentStreamResolver
-import com.abhisheksati.mydoc.util.DocumentIdentity
+import com.abhisheksati.mydoc.domain.model.LoadFailure
+import com.abhisheksati.mydoc.rendering.engine.OfficeConversion
+import com.abhisheksati.mydoc.rendering.engine.OfficeSource
+import com.abhisheksati.mydoc.rendering.engine.OfficeSourceReader
 import com.abhisheksati.mydoc.rendering.engine.OutlineCache
+import com.abhisheksati.mydoc.rendering.engine.asConversionFailure
+import com.abhisheksati.mydoc.util.DocumentIdentity
+import kotlinx.coroutines.CancellationException
 import java.io.File
 import java.io.FileOutputStream
 
@@ -17,41 +22,36 @@ object DocxConverter {
      * Converts a .docx into a paginated vector PDF and caches it under a content-keyed name, so an
      * edited or replaced document never reuses the previous conversion.
      */
-    suspend fun convertDocxToPdf(context: Context, uri: Uri, displayName: String): File? {
-        val bytes = try {
-            DocumentStreamResolver.openStream(context, uri)?.use { it.readBytes() }
-        } catch (e: OutOfMemoryError) {
-            Log.e(Tag, "OOM reading $displayName", e)
-            return null
-        } catch (t: Throwable) {
-            Log.w(Tag, "could not read $displayName", t)
-            null
-        } ?: return null
-        if (bytes.isEmpty()) return null
-        if (bytes.size > 200 * 1024 * 1024) {
-            Log.w(Tag, "$displayName exceeds 200 MB — refusing to convert")
-            return null
+    suspend fun convertDocxToPdf(context: Context, uri: Uri, displayName: String): OfficeConversion {
+        val source = OfficeSourceReader.read(context, uri, displayName)
+        val bytes = when (source) {
+            is OfficeSource.Ready -> source.bytes
+            is OfficeSource.Failed -> return source.asConversionFailure()
         }
 
         val cacheDir = File(context.cacheDir, "converted_docs").apply { mkdirs() }
         val targetPdf = File(cacheDir, "docx_${DocumentIdentity.ofBytes(bytes)}_${bytes.size}.pdf")
-        if (targetPdf.isFile && targetPdf.length() > 0L) return targetPdf
+        if (targetPdf.isFile && targetPdf.length() > 0L) return OfficeConversion.Success(targetPdf)
 
         val blocks = try {
             DocxParser().parse(bytes.inputStream()).blocks
+        } catch (e: CancellationException) {
+            throw e
         } catch (t: Throwable) {
             Log.w(Tag, "could not parse $displayName", t)
-            return null
+            return layoutFailure()
         }
 
         val rendered = try {
             DocxPdfRenderer.render(blocks, bytes)
+        } catch (e: CancellationException) {
+            throw e
         } catch (t: Throwable) {
             Log.w(Tag, "could not lay out $displayName", t)
             null
         } ?: run {
             Log.w(Tag, "no pages produced for $displayName")
-            return null
+            return layoutFailure()
         }
 
         // Written aside and moved into place, because a half-written cache file looks valid to the
@@ -67,14 +67,20 @@ object DocxConverter {
                 staging.delete()
             }
             OutlineCache.saveOutlines(targetPdf, rendered.outlines)
-            targetPdf
+            OfficeConversion.Success(targetPdf)
         } catch (t: Throwable) {
             Log.w(Tag, "could not write PDF for $displayName", t)
             staging.delete()
             targetPdf.delete()
-            null
+            layoutFailure()
         } finally {
             rendered.doc.close()
         }
     }
+
+    /** The file was read but produced no pages; only the converter knows it lays out pages. */
+    private fun layoutFailure() = OfficeConversion.Failure(
+        LoadFailure.CONVERSION_FAILED,
+        "MyDoc read the file but could not lay out its pages. You can read it as reflowed text instead."
+    )
 }

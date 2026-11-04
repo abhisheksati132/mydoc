@@ -417,8 +417,8 @@ private suspend fun convertOfficeToPdf(
     uri: Uri,
     displayName: String
 ): File? = when (extension) {
-    "docx" -> DocxConverter.convertDocxToPdf(context, uri, displayName)
-    "pptx" -> PptxConverter.convertPptxToPdf(context, uri, displayName)
+    "docx" -> DocxConverter.convertDocxToPdf(context, uri, displayName).pdfFile
+    "pptx" -> PptxConverter.convertPptxToPdf(context, uri, displayName).pdfFile
     "xlsx" -> XlsxConverter.convertXlsxToPdf(context, uri, displayName)
     else -> null
 }

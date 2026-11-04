@@ -137,29 +137,50 @@ class ViewerViewModel(
                     // single-engine format whose converter failed must not fall through to MuPDF,
                     // which would report a healthy file as damaged.
                     val converter = com.abhisheksati.mydoc.domain.model.DocumentFormats.converterFor(ext)
-                    val convertedPdfFile: java.io.File? = when (converter) {
-                        com.abhisheksati.mydoc.domain.model.ConverterKind.PPTX_TO_PDF ->
-                            com.abhisheksati.mydoc.rendering.engine.presentation.PptxConverter.convertPptxToPdf(
-                                context = context,
-                                uri = uri,
-                                displayName = activeDocumentFile.displayName
-                            )
+                    // The office converters report *why* they produced nothing: a document over the
+                    // size budget must not be announced as one using unimplemented features.
+                    val conversion: com.abhisheksati.mydoc.rendering.engine.OfficeConversion? =
+                        when (converter) {
+                            com.abhisheksati.mydoc.domain.model.ConverterKind.PPTX_TO_PDF ->
+                                com.abhisheksati.mydoc.rendering.engine.presentation.PptxConverter.convertPptxToPdf(
+                                    context = context,
+                                    uri = uri,
+                                    displayName = activeDocumentFile.displayName
+                                )
 
-                        com.abhisheksati.mydoc.domain.model.ConverterKind.DOCX_TO_PDF ->
-                            com.abhisheksati.mydoc.rendering.engine.word.DocxConverter.convertDocxToPdf(
-                                context = context,
-                                uri = uri,
-                                displayName = activeDocumentFile.displayName
-                            )
+                            com.abhisheksati.mydoc.domain.model.ConverterKind.DOCX_TO_PDF ->
+                                com.abhisheksati.mydoc.rendering.engine.word.DocxConverter.convertDocxToPdf(
+                                    context = context,
+                                    uri = uri,
+                                    displayName = activeDocumentFile.displayName
+                                )
 
-                        com.abhisheksati.mydoc.domain.model.ConverterKind.XLSX_TO_PDF ->
-                            com.abhisheksati.mydoc.rendering.engine.spreadsheet.XlsxConverter.convertXlsxToPdf(
-                                context = context,
-                                uri = uri,
-                                displayName = activeDocumentFile.displayName
-                            )
+                            com.abhisheksati.mydoc.domain.model.ConverterKind.XLSX_TO_PDF ->
+                                com.abhisheksati.mydoc.rendering.engine.spreadsheet.XlsxConverter.convertXlsxToPdf(
+                                    context = context,
+                                    uri = uri,
+                                    displayName = activeDocumentFile.displayName
+                                )?.let { com.abhisheksati.mydoc.rendering.engine.OfficeConversion.Success(it) }
 
-                        com.abhisheksati.mydoc.domain.model.ConverterKind.NONE -> null
+                            com.abhisheksati.mydoc.domain.model.ConverterKind.NONE -> null
+                        }
+                    val convertedPdfFile: java.io.File? = conversion?.pdfFile
+
+                    if (conversion is com.abhisheksati.mydoc.rendering.engine.OfficeConversion.Failure) {
+                        android.util.Log.w(
+                            "ViewerLoad",
+                            "${activeDocumentFile.displayName} not converted: ${conversion.message}"
+                        )
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                needsReflowFallback = com.abhisheksati.mydoc.domain.model.DocumentFormats
+                                    .familyOf(ext) == com.abhisheksati.mydoc.domain.model.DocumentFamily.WORD,
+                                failure = conversion.failure,
+                                errorMessage = conversion.message
+                            )
+                        }
+                        return@withContext
                     }
 
                     if (convertedPdfFile == null && converter != com.abhisheksati.mydoc.domain.model.ConverterKind.NONE) {

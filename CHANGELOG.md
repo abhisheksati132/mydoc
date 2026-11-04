@@ -140,10 +140,25 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   with no way to abandon it. Measured on the emulator, a folder of 5,001 files took 1,143 ms — a
   visible stall on every document open, and worse on a slow device or a big Downloads folder. The scan
   moved to `DocumentSiblings.readableDocumentsIn()`, which runs on `Dispatchers.IO`, checks
-  cancellation every 256 entries, and leaves hidden files, subfolders and unsupported types out. A
+  cancellation every 128 entries, and leaves hidden files, subfolders and unsupported types out. A
   scan whose reader has already moved on is now discarded rather than published, so it cannot
   overwrite the swipe chain of the document the user actually opened. A failed enumeration yields an
   empty chain instead of throwing through the effect.
+- **Office conversions buffered the whole document before checking its size (H-7).** `DocxConverter`
+  called `readBytes()` first and compared against its documented 200 MB limit afterwards, so the
+  limit could only ever be reached by dying; `PptxConverter` had no limit at all and additionally
+  round-tripped the document through a temp file and back (`bytes` + temp + re-read) before rendering.
+  Both now read through `OfficeSourceReader`, which consults the reported length before allocating,
+  sizes one buffer from it, caps growth at the budget instead of doubling past it (a provider that
+  understates the length cannot make the reader allocate past the budget), and keeps the deck's
+  placeholder-recovered copy inside the same budget.
+- **A document that was too large was announced as an unsupported one (H-7).** Both converters
+  returned `null` for every failure and the viewer turned that into "could not lay out its pages …
+  features our converter does not implement" — a memory limit dressed up as a missing feature, and a
+  `catch (_: Throwable)` that swallowed `CancellationException` along with everything else. The
+  converters now return `OfficeConversion`: over budget or out of memory → `EXCEEDS_LIMITS` naming the
+  budget or the device, unreadable → `CONVERSION_FAILED`, and only a genuine layout failure keeps the
+  reflow wording. Cancellation is rethrown, not reported.
 
 ### Tests
 
@@ -214,11 +229,30 @@ Known limitation, measured rather than assumed: a worksheet part that is simply 
 still parses without error, so it is not reported as failed — the parser reaches end-of-document
 quietly. Detecting that needs a terminator check in the worksheet loop, not just an exception.
 
-- `DocumentSiblingsOnDeviceTest` — 4 instrumented tests on the real filesystem: 5,001 files enumerate
-  in name order with their real sizes inside a 2.5 s bound (measured 1,143 ms on `mydoc_api35`),
-  hidden files / unsupported types / subfolders stay out, an already-gone caller receives nothing
-  (`withTimeoutOrNull(0)` returns null), and a missing folder yields an empty chain instead of
-  throwing.
+- `DocumentSiblingsOnDeviceTest` — 5 instrumented tests on the real filesystem: 5,001 files enumerate
+  in name order with their real sizes inside a 2.5 s bound (measured ~1.1 s on `mydoc_api35`), hidden
+  files / unsupported types / subfolders stay out, an already-gone caller receives nothing
+  (`withTimeoutOrNull(0)` returns null), a missing folder yields an empty chain instead of throwing,
+  and a scan dispatched from Main keeps the main looper ticking (the test posts a 20 ms ticker and
+  fails if the looper did not get at least one tick per 40 ms of a scan measured to take >400 ms —
+  a scan that held the main thread could not satisfy it).
+- `OfficeSourceReaderTest` — 8 JVM tests on the bounded reader: a claim that matches the stream, a
+  claim that is too long (only the bytes that exist are returned), a claim that is too short (it
+  grows and still reads in full), a stream past the budget refused rather than buffered, an absurd
+  10 GB claim against a 1 KB budget that must not drive the allocation, empty distinguished from
+  unreadable, and the failure mapping (neither a size limit nor an out-of-memory may be announced as
+  unimplemented features).
+- `OfficeConversionBudgetOnDeviceTest` — 3 instrumented tests on real files: a sparse 250 MB `.docx`
+  refused in under a second without its bytes ever being buffered, a real DOCX still converting to a
+  cached PDF that the second open reuses rather than re-rendering, and an empty document refused
+  rather than announced as a valid one.
+
+Known gaps, measured rather than assumed: a 0-byte `.docx` is reported by the reader as unreadable
+rather than empty, because the stream resolver returns no stream for it — the message is still
+truthful ("could not read"), just not as specific as the JVM path. And a 37-byte plain-text file
+named `.docx` produced a *successful* PDF: `DocxParser` accepts bytes it cannot parse as a Word
+archive and the renderer lays out an empty page. That is a format-validation gap, not a memory one,
+and is left for the correctness batch.
 
 ## [1.7.2] — 2026-11-04
 
