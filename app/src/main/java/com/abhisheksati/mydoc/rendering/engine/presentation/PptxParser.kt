@@ -63,13 +63,13 @@ class PptxParser {
         if (isZip) {
             // 1. Try ODP parser (OpenDocument Presentation)
             val odpPres = parseOdpZip(bytes)
-            if (odpPres.slides.isNotEmpty() && odpPres.slides.first().title != "Empty Presentation") {
+            if (!odpPres.isEmpty) {
                 return@withContext odpPres
             }
 
             // 2. Try PPTX OpenXML parser
             val pres = parsePptxZip(bytes, cacheDir)
-            if (pres.slides.isNotEmpty() && pres.slides.first().title != "Empty Presentation") {
+            if (pres.slides.isNotEmpty()) {
                 return@withContext pres
             }
         }
@@ -77,15 +77,20 @@ class PptxParser {
         if (isOle2) {
             // 3. Try legacy binary PPT parser
             val olePres = parseBinaryPpt(bytes)
-            if (olePres.slides.isNotEmpty() && olePres.slides.first().title != "Empty Presentation") {
+            if (olePres.slides.isNotEmpty()) {
                 return@withContext olePres
             }
         }
 
-        // 4. Fallback: If not recognized or standard parser failed, attempt binary PPT extraction
-        val fallbackPres = parseBinaryPpt(bytes)
-        if (fallbackPres.slides.isNotEmpty() && fallbackPres.slides.first().title != "Empty Presentation") {
-            return@withContext fallbackPres
+        // 4. Last resort for OLE2 containers whose record layer produced nothing structured.
+        // Gated on the CFBF signature: previously this ran on any file, so a corrupt or
+        // unsupported deck was byte-scraped into six-strings-per-slide slides and presented as
+        // a successfully parsed presentation.
+        if (isOle2) {
+            val fallbackPres = parseBinaryPpt(bytes)
+            if (fallbackPres.slides.isNotEmpty()) {
+                return@withContext fallbackPres.copy(recovered = true)
+            }
         }
 
         parseBinaryPptFallback(bytes)
@@ -131,11 +136,10 @@ class PptxParser {
         }
 
         val contentXml = entryMap["content.xml"] ?: return PptxPresentation(emptyList())
-        val contentStr = runCatching { String(contentXml, 0, minOf(contentXml.size, 2048), Charsets.UTF_8) }.getOrNull() ?: ""
-        if (!contentStr.contains("draw:page") && !contentStr.contains("presentation") && !contentStr.contains("office:document-content")) {
-            return PptxPresentation(emptyList())
-        }
-
+        // The old sniff looked for "draw:page" in the first 2048 bytes. Real ODP files put
+        // draw:page after office:automatic-styles, which routinely exceeds that window, so
+        // genuine decks were rejected and reported as "No slides found". Parse instead, and
+        // treat an empty result as the answer rather than guessing from a header.
         return parseOdpContentXml(contentXml, picturesMap)
     }
 
@@ -444,30 +448,8 @@ class PptxParser {
         return PptxPresentation(slides = slides, aspectRatio = aspect)
     }
 
-    private fun emptyPresentation(message: String = "Empty Presentation"): PptxPresentation {
-        val title = message
-        val lines = listOf(if (message == "Empty Presentation") "No slides found in this file." else message)
-        val visual = VisualElement(
-            type = VisualElementType.TEXT_BOX,
-            bounds = SlideBounds(0.08f, 0.35f, 0.84f, 0.30f),
-            paragraphs = listOf(
-                SlideParagraph(runs = listOf(SlideTextRun(text = title, fontSizeSp = 22f, isBold = true))),
-                SlideParagraph(runs = listOf(SlideTextRun(text = lines.first(), fontSizeSp = 15f)))
-            )
-        )
-        return PptxPresentation(
-            slides = listOf(
-                PptxSlide(
-                    slideNumber = 1,
-                    title = title,
-                    content = lines,
-                    visualElements = listOf(visual),
-                    aspectRatio = 16f / 9f
-                )
-            ),
-            aspectRatio = 16f / 9f
-        )
-    }
+    private fun emptyPresentation(reason: String = "No slides found in this file"): PptxPresentation =
+        PptxPresentation(emptyList(), emptyReason = reason)
 
     /* =========================================================================
      * SECTION 1: MODERN OPENXML (.pptx) PARSER
@@ -1566,32 +1548,46 @@ class PptxParser {
                             isTag(tagName, "off") -> {
                                 val x = parser.getAttributeValue(null, "x")?.toLongOrNull() ?: 0L
                                 val y = parser.getAttributeValue(null, "y")?.toLongOrNull() ?: 0L
-                                curOffX = x; curOffY = y
+                                // A group's own offset arrives in its grpSpPr before any shape inside
+                                // it, so `inShape` is what tells this off apart from a shape's.
+                                // Writing it to curOffX left the group at zero extent and every
+                                // grouped shape was placed in the group's raw child space.
+                                if (!inShape && groupTransformStack.isNotEmpty()) {
+                                    val top = groupTransformStack.removeLast()
+                                    groupTransformStack.addLast(top.copy(offX = x, offY = y))
+                                } else {
+                                    curOffX = x; curOffY = y
+                                }
                             }
 
                             isTag(tagName, "ext") -> {
                                 val cx = parser.getAttributeValue(null, "cx")?.toLongOrNull() ?: 0L
                                 val cy = parser.getAttributeValue(null, "cy")?.toLongOrNull() ?: 0L
                                 if (cx > 0L && cy > 0L) {
-                                    curExtX = cx; curExtY = cy
+                                    if (!inShape && groupTransformStack.isNotEmpty()) {
+                                        val top = groupTransformStack.removeLast()
+                                        groupTransformStack.addLast(top.copy(extX = cx, extY = cy))
+                                    } else {
+                                        curExtX = cx; curExtY = cy
+                                    }
                                 }
                             }
 
                             isTag(tagName, "chOff") -> {
-                                if (!groupTransformStack.isEmpty()) {
-                                    val top = groupTransformStack.pop()
+                                if (groupTransformStack.isNotEmpty()) {
+                                    val top = groupTransformStack.removeLast()
                                     val cx = parser.getAttributeValue(null, "x")?.toLongOrNull() ?: 0L
                                     val cy = parser.getAttributeValue(null, "y")?.toLongOrNull() ?: 0L
-                                    groupTransformStack.push(top.copy(chOffX = cx, chOffY = cy))
+                                    groupTransformStack.addLast(top.copy(chOffX = cx, chOffY = cy))
                                 }
                             }
 
                             isTag(tagName, "chExt") -> {
-                                if (!groupTransformStack.isEmpty()) {
-                                    val top = groupTransformStack.pop()
+                                if (groupTransformStack.isNotEmpty()) {
+                                    val top = groupTransformStack.removeLast()
                                     val cx = parser.getAttributeValue(null, "cx")?.toLongOrNull() ?: 0L
                                     val cy = parser.getAttributeValue(null, "cy")?.toLongOrNull() ?: 0L
-                                    groupTransformStack.push(top.copy(chExtX = cx, chExtY = cy))
+                                    groupTransformStack.addLast(top.copy(chExtX = cx, chExtY = cy))
                                 }
                             }
 

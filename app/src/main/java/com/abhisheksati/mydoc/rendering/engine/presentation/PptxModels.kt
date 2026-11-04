@@ -67,5 +67,15 @@ data class PptxSlide(
 
 data class PptxPresentation(
     val slides: List<PptxSlide>,
-    val aspectRatio: Float = 16f / 9f
-)
+    val aspectRatio: Float = 16f / 9f,
+    /**
+     * Why nothing was laid out. Previously an empty result was encoded as a fabricated slide
+     * titled "Empty Presentation", which a genuine slide with that title would defeat, and which
+     * callers then had to string-compare to decide whether the deck loaded.
+     */
+    val emptyReason: String? = null,
+    /** True when slides came from a byte-level text scrape rather than a real parse. */
+    val recovered: Boolean = false
+) {
+    val isEmpty: Boolean get() = slides.isEmpty()
+}

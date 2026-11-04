@@ -3,6 +3,7 @@ package com.abhisheksati.mydoc.rendering.engine.presentation
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -17,11 +18,14 @@ class PptxParserTest {
     private val parser = PptxParser()
 
     @Test
-    fun `parse empty stream returns empty presentation`() = runBlocking {
-        val emptyInput = ByteArrayInputStream(ByteArray(0))
-        val pres = parser.parse(emptyInput)
-        assertEquals(1, pres.slides.size)
-        assertEquals("Empty Presentation", pres.slides[0].title)
+    fun `parse empty stream reports emptiness instead of inventing a slide`() = runBlocking {
+        val pres = parser.parse(ByteArrayInputStream(ByteArray(0)))
+        // This used to return one fabricated slide titled "Empty Presentation" carrying a
+        // "No slides found" text box, so callers could not tell a real slide from a placeholder
+        // and the viewer showed the placeholder as content.
+        assertTrue(pres.isEmpty)
+        assertEquals(0, pres.slides.size)
+        assertNotNull(pres.emptyReason)
     }
 
     @Test
@@ -68,12 +72,10 @@ class PptxParserTest {
     }
 
     @Test
-    fun `empty presentation has visual element and non-empty content`() = runBlocking {
+    fun `empty presentation renders nothing`() = runBlocking {
         val pres = parser.parse(ByteArrayInputStream(ByteArray(0)))
-        assertEquals(1, pres.slides.size)
-        val slide = pres.slides[0]
-        assertTrue(slide.visualElements.isNotEmpty())
-        assertEquals("Empty Presentation", slide.title)
+        assertTrue(pres.isEmpty)
+        assertTrue(pres.slides.none { it.visualElements.isNotEmpty() })
     }
 
     private fun createSyntheticPptxZip(): ByteArray {

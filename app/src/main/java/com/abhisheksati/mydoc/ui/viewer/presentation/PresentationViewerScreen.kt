@@ -205,12 +205,15 @@ fun PresentationViewerScreen(
                     android.util.Log.w("PresentationViewer", "Native parser failed: ${e.message}")
                 }
 
-                // If native failed or had 0 slides, perform deep raw string/image fallback extraction
-                if (presentationData == null || presentationData?.slides.isNullOrEmpty() || presentationData?.slides?.firstOrNull()?.title == "Empty Presentation") {
+                // A binary .ppt whose record layer produced nothing still holds readable strings.
+                // Recover them only for CFBF containers: this used to run on any zero-slide file,
+                // so a corrupt or unsupported deck was scraped into fabricated slides and shown
+                // as if it had parsed.
+                if (presentationData?.isEmpty != false && isCompoundFile(tempFile)) {
                     try {
                         val fallback = PptxParser().parseBinaryPptFallback(tempFile.readBytes())
-                        if (fallback.slides.isNotEmpty() && fallback.slides.firstOrNull()?.title != "Empty Presentation") {
-                            presentationData = fallback
+                        if (fallback.slides.isNotEmpty()) {
+                            presentationData = fallback.copy(recovered = true)
                         }
                     } catch (_: Throwable) {}
                 }
@@ -225,7 +228,7 @@ fun PresentationViewerScreen(
     }
 
     val rawSlides = presentationData?.slides ?: emptyList()
-    val isNativeEmpty = rawSlides.isEmpty() || (rawSlides.size == 1 && rawSlides.first().title == "Empty Presentation")
+    val isNativeEmpty = presentationData?.isEmpty ?: true
     val effectiveSlideCount = if (!isNativeEmpty) rawSlides.size else 0
     val pagerState = rememberPagerState(pageCount = { effectiveSlideCount.coerceAtLeast(1) })
     val lazyListState = rememberLazyListState()
@@ -675,4 +678,13 @@ fun PresentationViewerScreen(
             )
         }
     }
+}
+
+/** OLE2 / CFBF magic: the only containers a binary PowerPoint record scrape can legitimately be. */
+private fun isCompoundFile(file: java.io.File): Boolean {
+    val header = ByteArray(8)
+    val read = runCatching { file.inputStream().use { it.read(header) } }.getOrDefault(-1)
+    return read == 8 &&
+        header[0] == 0xD0.toByte() && header[1] == 0xCF.toByte() &&
+        header[2] == 0x11.toByte() && header[3] == 0xE0.toByte()
 }
