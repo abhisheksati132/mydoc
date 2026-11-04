@@ -3,7 +3,9 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
-## [Unreleased] — `fix/office-document-rendering`
+## [1.7.1] — 2026-11-04
+
+Range: `v1.7.0..v1.7.1`. Merged from `fix/office-document-rendering`.
 
 Office document loading, parsing, routing and failure reporting. No UI redesign; the Ink & Seal
 identity is untouched.
