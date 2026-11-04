@@ -25,7 +25,9 @@ data class SpreadsheetUiState(
     val selectedCell: Pair<Int, Int>? = null,
     val searchQuery: String = "",
     val isLoading: Boolean = true,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    /** Why loading stopped, so the screen can name the cause instead of showing an empty grid. */
+    val failure: com.abhisheksati.mydoc.domain.model.LoadFailure? = null
 ) {
     val currentSheet: SheetData?
         get() = model.sheets.getOrNull(selectedSheetIndex)
@@ -47,7 +49,7 @@ class SpreadsheetViewModel(
 
     private fun loadSpreadsheet() {
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, failure = null) }
             try {
                 val uri = Uri.parse(documentFile.uri)
                 val inputStream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri, documentFile.displayName)
@@ -65,11 +67,16 @@ class SpreadsheetViewModel(
                         isLoading = false
                     )
                 }
+            } catch (e: com.abhisheksati.mydoc.domain.model.DocumentLoadException) {
+                _uiState.update {
+                    it.copy(isLoading = false, errorMessage = e.message, failure = e.failure)
+                }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = e.localizedMessage ?: "Failed to parse spreadsheet"
+                        errorMessage = e.localizedMessage ?: "Failed to parse spreadsheet",
+                        failure = com.abhisheksati.mydoc.domain.model.LoadFailure.CORRUPT_DOCUMENT
                     )
                 }
             }

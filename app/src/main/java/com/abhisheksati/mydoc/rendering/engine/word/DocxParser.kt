@@ -1,4 +1,5 @@
 package com.abhisheksati.mydoc.rendering.engine.word
+import com.abhisheksati.mydoc.rendering.engine.EngineXml
 
 import android.util.Xml
 import kotlinx.coroutines.Dispatchers
@@ -34,18 +35,7 @@ data class DocxDocument(
 class DocxParser {
 
     private fun createPullParser(xmlBytes: ByteArray): XmlPullParser {
-        return try {
-            Xml.newPullParser().apply {
-                setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
-                setInput(ByteArrayInputStream(xmlBytes), "UTF-8")
-            }
-        } catch (_: Throwable) {
-            XmlPullParserFactory.newInstance().apply {
-                isNamespaceAware = false
-            }.newPullParser().apply {
-                setInput(ByteArrayInputStream(xmlBytes), "UTF-8")
-            }
-        }
+        return EngineXml.newPullParser(ByteArrayInputStream(xmlBytes))
     }
 
     private fun readBoundedInputStream(inputStream: InputStream, maxBytes: Int = 50 * 1024 * 1024): ByteArray {

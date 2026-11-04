@@ -1,7 +1,10 @@
 package com.abhisheksati.mydoc.rendering.engine.spreadsheet
 
 import android.util.Xml
+import com.abhisheksati.mydoc.domain.model.DocumentLoadException
+import com.abhisheksati.mydoc.domain.model.LoadFailure
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
@@ -37,46 +40,103 @@ class SpreadsheetParser {
         return baos.toByteArray()
     }
 
+    /**
+     * Reads a spreadsheet into the grid model.
+     *
+     * Failure is reported, never papered over: this used to return a blank "Sheet 1" whenever the
+     * file was unreadable, oversized, or an XLSB whose binary worksheets it could not find, and the
+     * viewer showed that empty grid as a loaded workbook.
+     */
     suspend fun parse(inputStream: InputStream, extension: String): SpreadsheetModel = withContext(Dispatchers.IO) {
-        val bytes = try {
-            readBoundedInputStream(inputStream, 50 * 1024 * 1024)
-        } catch (e: Exception) {
-            android.util.Log.e("SpreadsheetParser", "Error reading spreadsheet", e)
-            return@withContext SpreadsheetModel(listOf(SheetData(name = "Sheet 1")))
-        }
-        if (bytes.isEmpty()) {
-            return@withContext SpreadsheetModel(listOf(SheetData(name = "Sheet 1")))
+        val ext = extension.lowercase().removePrefix(".")
+        if (ext == "xlsb") {
+            throw DocumentLoadException(
+                LoadFailure.UNSUPPORTED_FORMAT,
+                "Excel Binary Workbook (.xlsb) stores its sheets in a binary format MyDoc cannot read. " +
+                    "Save it as .xlsx to open it here."
+            )
         }
 
-        val ext = extension.lowercase().removePrefix(".")
-        if (ext in setOf("csv", "tsv", "txt")) {
-            return@withContext parseCsv(bytes)
+        val bytes = try {
+            readBoundedInputStream(inputStream, 50 * 1024 * 1024)
+        } catch (e: java.io.IOException) {
+            throw DocumentLoadException(LoadFailure.EXCEEDS_LIMITS, "This spreadsheet is larger than the 50 MB limit MyDoc reads.", e)
+        } catch (e: SecurityException) {
+            throw DocumentLoadException(LoadFailure.EXCEEDS_LIMITS, "This spreadsheet exceeds the safety limits MyDoc applies.", e)
+        }
+        ensureActive()
+
+        if (bytes.isEmpty()) {
+            throw DocumentLoadException(LoadFailure.EMPTY_DOCUMENT, "This file is empty (0 bytes).")
         }
 
         val isZip = bytes.size >= 4 && bytes[0] == 0x50.toByte() && bytes[1] == 0x4B.toByte()
+        val model = when {
+            ext == "xlsx" || ext == "xlsm" -> readOoxmlWorkbook(bytes, isZip)
 
+            ext == "ods" || ext == "ots" -> parseOds(bytes).ifEmpty {
+                throw DocumentLoadException(LoadFailure.CORRUPT_DOCUMENT, "This OpenDocument spreadsheet has no readable sheets.")
+            }
+
+            ext == "csv" || ext == "tsv" || ext == "txt" -> parseCsv(bytes)
+
+            // Legacy BIFF8 and mislabelled files keep the existing content sniffing, but a
+            // completely unreadable result is now an error rather than an empty grid.
+            else -> sniffAny(bytes, isZip).ifEmpty {
+                throw DocumentLoadException(
+                    LoadFailure.CORRUPT_DOCUMENT,
+                    if (isZip) "This file is a zip archive with no spreadsheet inside."
+                    else "This file is not a spreadsheet MyDoc can read."
+                )
+            }
+        }
+
+        if (model.sheets.isEmpty()) {
+            throw DocumentLoadException(LoadFailure.EMPTY_DOCUMENT, "This workbook contains no sheets.")
+        }
+        model
+    }
+
+    /** OOXML first, then ODF for archives mislabelled as .xlsx. */
+    private fun readOoxmlWorkbook(bytes: ByteArray, isZip: Boolean): SpreadsheetModel {
+        if (!isZip) {
+            throw DocumentLoadException(
+                LoadFailure.CORRUPT_DOCUMENT,
+                "This .xlsx file is not a valid package — its contents are truncated or damaged."
+            )
+        }
+        val workbook = try {
+            XlsxReader.read(bytes)
+        } catch (e: SecurityException) {
+            throw DocumentLoadException(LoadFailure.EXCEEDS_LIMITS, "This spreadsheet exceeds the safety limits MyDoc applies.", e)
+        } catch (e: Throwable) {
+            throw DocumentLoadException(LoadFailure.CORRUPT_DOCUMENT, "The Excel package could not be parsed.", e)
+        }
+        if (workbook.sheets.isEmpty()) {
+            val ods = parseOds(bytes)
+            if (ods.sheets.isNotEmpty()) return ods
+            throw DocumentLoadException(LoadFailure.EMPTY_DOCUMENT, "This workbook contains no sheets.")
+        }
+        return workbook.toSpreadsheetModel()
+    }
+
+    private fun SpreadsheetModel.ifEmpty(block: () -> Nothing): SpreadsheetModel =
+        if (sheets.isNotEmpty() && sheets.any { it.cells.isNotEmpty() }) this else block()
+
+    private fun sniffAny(bytes: ByteArray, isZip: Boolean): SpreadsheetModel {
         if (isZip) {
-            val odsModel = parseOds(bytes)
-            if (odsModel.sheets.isNotEmpty() && odsModel.sheets.any { it.cells.isNotEmpty() }) {
-                return@withContext odsModel
-            }
-
-            val xlsxModel = parseXlsx(bytes)
-            if (xlsxModel.sheets.isNotEmpty() && xlsxModel.sheets.any { it.cells.isNotEmpty() }) {
-                return@withContext xlsxModel
-            }
+            val ods = parseOds(bytes)
+            if (ods.sheets.isNotEmpty() && ods.sheets.any { it.cells.isNotEmpty() }) return ods
+            val workbook = runCatching { XlsxReader.read(bytes).toSpreadsheetModel() }.getOrNull()
+            if (workbook != null && workbook.sheets.any { it.cells.isNotEmpty() }) return workbook
         }
-
         if (!isOle2(bytes)) {
-            // Web apps and CRMs export real spreadsheets as an HTML table or plain CSV
-            // with an .xls extension; only a BIFF byte-scan renders those as an empty grid.
-            val textModel = parseTextSheet(bytes)
-            if (textModel.sheets.any { it.cells.isNotEmpty() }) {
-                return@withContext textModel
-            }
+            // Web apps and CRMs export real spreadsheets as an HTML table or plain CSV with an
+            // .xls extension; only a BIFF byte-scan renders those as an empty grid.
+            val text = parseTextSheet(bytes)
+            if (text.sheets.any { it.cells.isNotEmpty() }) return text
         }
-
-        parseXlsFallback(bytes)
+        return parseXlsFallback(bytes)
     }
 
     private fun isOle2(bytes: ByteArray): Boolean =
@@ -208,10 +268,7 @@ class SpreadsheetParser {
 
         val sheets = mutableListOf<SheetData>()
         try {
-            val parser = Xml.newPullParser().apply {
-                setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
-                setInput(ByteArrayInputStream(contentXml), "UTF-8")
-            }
+            val parser = com.abhisheksati.mydoc.rendering.engine.EngineXml.newPullParser(ByteArrayInputStream(contentXml))
             var eventType = parser.eventType
 
             var currentSheetName = "Sheet 1"
@@ -523,11 +580,7 @@ class SpreadsheetParser {
     }
 
     private fun createXmlParser(): XmlPullParser {
-        return try {
-            XmlPullParserFactory.newInstance().apply { isNamespaceAware = false }.newPullParser()
-        } catch (_: Throwable) {
-            Xml.newPullParser()
-        }
+        return com.abhisheksati.mydoc.rendering.engine.EngineXml.newPullParser()
     }
 
     private fun extractSharedStrings(bytes: ByteArray): List<String> {

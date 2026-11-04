@@ -273,6 +273,12 @@ object SyntheticDocumentFactory {
             </Relationships>
         """.trimIndent()
 
+        val workbookRels = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+            </Relationships>
+        """.trimIndent()
+
         val workbookXml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
             <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
                 <sheets><sheet name="Sheet1" sheetId="1" r:id="rId1" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/></sheets>
@@ -311,6 +317,7 @@ object SyntheticDocumentFactory {
                 "[Content_Types].xml" to contentTypes.toByteArray(Charsets.UTF_8),
                 "_rels/.rels" to rels.toByteArray(Charsets.UTF_8),
                 "xl/workbook.xml" to workbookXml.toByteArray(Charsets.UTF_8),
+                "xl/_rels/workbook.xml.rels" to workbookRels.toByteArray(Charsets.UTF_8),
                 "xl/worksheets/sheet1.xml" to sheetXml.toByteArray(Charsets.UTF_8)
             )
         )

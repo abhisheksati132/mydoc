@@ -48,6 +48,8 @@ import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
+import com.abhisheksati.mydoc.domain.model.LoadFailure
+import com.abhisheksati.mydoc.ui.viewer.DocumentProblemScreen
 import com.abhisheksati.mydoc.domain.model.ReadingPrefs
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SheetData
@@ -141,22 +143,21 @@ fun SpreadsheetViewerScreen(
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             } else if (state.errorMessage != null) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = state.errorMessage ?: "Failed to open sheet",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
+                DocumentProblemScreen(
+                    failure = state.failure ?: LoadFailure.CORRUPT_DOCUMENT,
+                    extension = document.extension,
+                    onBackClick = onBackClick
+                )
             } else {
                 val currentSheet = state.currentSheet
                 if (currentSheet != null) {
                     val maxRow = maxOf(25, currentSheet.maxRow + 5)
                     val maxCol = maxOf(10, currentSheet.maxCol + 3)
-                    val colWidth = 110.dp
                     val rowHeight = 36.dp
                     val headerColWidth = 44.dp
+                    // Widths come from the workbook itself; 110dp is only the fallback for
+                    // columns the file never sized.
+                    fun widthFor(c: Int) = currentSheet.columnWidths[c]?.dp ?: 110.dp
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         Column(modifier = Modifier.fillMaxSize()) {
@@ -179,7 +180,7 @@ fun SpreadsheetViewerScreen(
                                     for (c in 0..maxCol) {
                                         Box(
                                             modifier = Modifier
-                                                .width(colWidth)
+                                                .width(widthFor(c))
                                                 .height(rowHeight)
                                                 .border(0.5.dp, MaterialTheme.colorScheme.outline),
                                             contentAlignment = Alignment.Center
@@ -223,15 +224,19 @@ fun SpreadsheetViewerScreen(
                                                 val isSelected = state.selectedCell == (r to c)
                                                 val isMatch = state.searchQuery.isNotBlank() && cellText.contains(state.searchQuery, ignoreCase = true)
 
+                                                val isCovered = currentSheet.isMergedNonAnchor(r, c)
                                                 val cellBg = when {
                                                     isSelected -> colors.accent.copy(alpha = 0.25f)
                                                     isMatch -> DocumentCanvasColors.searchHighlight
+                                                    // A merged range keeps its value in the anchor cell;
+                                                    // shading the rest shows the span rather than a gap.
+                                                    isCovered -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                                                     else -> Color.Transparent
                                                 }
 
                                                 Box(
                                                     modifier = Modifier
-                                                        .width(colWidth)
+                                                        .width(widthFor(c))
                                                         .fillMaxHeight()
                                                         .border(
                                                             width = if (isSelected) 1.5.dp else 0.5.dp,

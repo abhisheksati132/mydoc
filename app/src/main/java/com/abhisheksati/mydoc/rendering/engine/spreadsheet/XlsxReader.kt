@@ -7,7 +7,7 @@ import java.util.zip.ZipInputStream
 object XlsxReader {
 
     @Volatile
-    var parserFactory: () -> XmlPullParser = { android.util.Xml.newPullParser() }
+    var parserFactory: () -> XmlPullParser = { com.abhisheksati.mydoc.rendering.engine.EngineXml.newPullParser() }
 
     const val MaxRows = 20_000
     const val MaxColumns = 1024
@@ -53,9 +53,17 @@ object XlsxReader {
         val wbSheets = entries["xl/workbook.xml"]?.let { parseWorkbookSheets(it) } ?: emptyList()
         val rels = entries["xl/_rels/workbook.xml.rels"]?.let { parseRels(it) } ?: emptyMap()
 
+        val worksheetPaths = entries.keys
+            .filter { it.startsWith("xl/worksheets/") && it.endsWith(".xml") && !it.contains("_rels") }
+            .sortedBy { Regex("sheet(\\d+)").find(it)?.groupValues?.get(1)?.toIntOrNull() ?: Int.MAX_VALUE }
+
         val ordered: List<Triple<String, String, Boolean>> = if (wbSheets.isNotEmpty()) {
-            wbSheets.mapNotNull { (name, rId, hidden) ->
-                val target = rels[rId] ?: return@mapNotNull null
+            wbSheets.mapIndexedNotNull { index, sheet ->
+                val (name, rId, hidden) = sheet
+                // A workbook whose relationship part is missing or stale still names its sheets in
+                // order; resolving by position keeps the real names instead of dropping the sheet
+                // and reporting an empty workbook.
+                val target = rels[rId] ?: worksheetPaths.getOrNull(index) ?: return@mapIndexedNotNull null
                 val path = if (target.startsWith("/")) target.drop(1) else "xl/" + target.removePrefix("./")
                 if (entries.containsKey(path)) Triple(name, path, hidden) else null
             }

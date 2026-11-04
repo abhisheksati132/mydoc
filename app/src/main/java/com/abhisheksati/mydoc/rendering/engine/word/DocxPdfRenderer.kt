@@ -289,10 +289,7 @@ internal object DocxPdfRenderer {
         if (xml.isEmpty()) return defaultSection()
 
         return runCatching {
-            val parser = Xml.newPullParser().apply {
-                setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
-                setInput(ByteArrayInputStream(xml), "UTF-8")
-            }
+            val parser = com.abhisheksati.mydoc.rendering.engine.EngineXml.newPullParser(ByteArrayInputStream(xml))
             var width = 0
             var height = 0
             var top = 0f

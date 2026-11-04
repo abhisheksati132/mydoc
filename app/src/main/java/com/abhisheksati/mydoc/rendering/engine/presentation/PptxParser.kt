@@ -2651,18 +2651,7 @@ class PptxParser {
         }
 
         fun createPullParser(inputStream: InputStream): XmlPullParser {
-            return try {
-                android.util.Xml.newPullParser().apply {
-                    setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
-                    setInput(inputStream, "UTF-8")
-                }
-            } catch (_: Throwable) {
-                XmlPullParserFactory.newInstance().apply {
-                    isNamespaceAware = false
-                }.newPullParser().apply {
-                    setInput(inputStream, "UTF-8")
-                }
-            }
+            return com.abhisheksati.mydoc.rendering.engine.EngineXml.newPullParser(inputStream)
         }
     }
 }

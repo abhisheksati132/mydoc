@@ -39,10 +39,7 @@ internal class OoxmlNode(val name: String, val attrs: Map<String, String>) {
 
     companion object {
         fun parse(stream: InputStream): OoxmlNode? = runCatching {
-            val parser = Xml.newPullParser().apply {
-                setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
-                setInput(stream, "UTF-8")
-            }
+            val parser = com.abhisheksati.mydoc.rendering.engine.EngineXml.newPullParser(stream)
             var root: OoxmlNode? = null
             val stack = ArrayDeque<OoxmlNode>()
             var event = parser.eventType
