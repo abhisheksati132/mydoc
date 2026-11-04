@@ -1,23 +1,23 @@
 <div align="center">
 
-<img src="app/src/main/res/ic_launcher-web.png" width="128" height="128" alt="MyDoc App Icon" style="border-radius: 28px; box-shadow: 0 8px 24px rgba(0,0,0,0.18);" />
+<img src="assets/brand/mydoc-seal.png" width="128" height="128" alt="MyDoc Seal" style="border-radius: 28px; box-shadow: 0 8px 24px rgba(0,0,0,0.18);" />
 
 # MyDoc
 
-**Ultra-fast. 100% Private. Built with Liquid Glass.**  
-*A modern, distraction-free document reader, office viewer, and on-device PDF toolkit for Android.*
+**Every document. On your device. Yours.**
+*The private, local-first reader, office viewer, and on-device PDF toolkit for Android — built in the "Ink & Seal" design language.*
 
-[![Latest Release](https://img.shields.io/github/v/release/abhisheksati132/mydoc?style=for-the-badge&color=2563EB&label=Release)](https://github.com/abhisheksati132/mydoc/releases/latest)
+[![Latest Release](https://img.shields.io/github/v/release/abhisheksati132/mydoc?style=for-the-badge&color=0E5C57&label=Release)](https://github.com/abhisheksati132/mydoc/releases/latest)
 [![Android](https://img.shields.io/badge/Android-API%2026%2B%20(8.0%2B)-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Compose](https://img.shields.io/badge/Jetpack%20Compose-M3-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
 [![Privacy](https://img.shields.io/badge/Privacy-100%25%20On--Device-success?style=for-the-badge&logo=shield)](SECURITY.md)
-[![Tests](https://img.shields.io/badge/Quality%20Gate-189%2F189%20Passed-brightgreen?style=for-the-badge&logo=checkmarx)](https://github.com/abhisheksati132/mydoc/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/abhisheksati132/mydoc/ci.yml?style=for-the-badge&label=CI&color=0E5C57)](https://github.com/abhisheksati132/mydoc/actions)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg?style=for-the-badge)](LICENSE)
 
 <br/>
 
-[📥 **Download Latest APK (v1.5.15)**](https://github.com/abhisheksati132/mydoc/releases/latest) • [✨ **Features**](#-features) • [🛡️ **Security & Integrity**](#-security--cryptographic-verification) • [📊 **Supported Formats**](#-format-support-matrix) • [🛠️ **Build & Test**](#-building-from-source)
+[📥 **Download Latest APK (v1.6.0)**](https://github.com/abhisheksati132/mydoc/releases/latest) • [✨ **Features**](#-features) • [🎨 **Brand & Design**](#-brand--design) • [🛡️ **Security & Integrity**](#-security--cryptographic-verification) • [📊 **Supported Formats**](#-format-support-matrix) • [🛠️ **Build & Test**](#-building-from-source)
 
 </div>
 
@@ -25,7 +25,19 @@
 
 ## 🌟 What is MyDoc?
 
-**MyDoc** is an all-in-one Android document reader and utility engineered from the ground up for speed, offline privacy, and tactile elegance. Powered by the **Artifex MuPDF Fitz** rendering engine, streaming Office parsers, and modern Jetpack Compose with liquid glass aesthetic styling, MyDoc delivers lightning-fast file reading and advanced PDF operations—completely on-device without telemetry, accounts, or cloud reliance.
+**MyDoc** is an all-in-one Android document reader and utility engineered from the ground up for speed, offline privacy, and tactile elegance. Powered by the **Artifex MuPDF Fitz** rendering engine, streaming Office parsers, and modern Jetpack Compose with a translucent "Liquid Glass" surface system, MyDoc delivers fast file reading and advanced PDF operations — completely on-device, with no telemetry, no accounts, and no cloud reliance. It is the local-first alternative to Office / Drive / WPS: your documents stay yours.
+
+---
+
+## 🎨 Brand & Design
+
+MyDoc follows a documented design system — **"Ink & Seal"** — a quiet-luxury, restrained visual language. The full source of truth is [`docs/brand-identity.md`](docs/brand-identity.md).
+
+- **Positioning:** calm, private, every-format. Restraint over density; one accent, used with intent.
+- **Color:** warm bone / graphite chrome, a single **Seal-teal** accent (`#0E5C57` light, `#4FB0A6` dark) and a **brass** micro-accent (`#A67C3D`) reserved for the seal and premium touches. Format colors are desaturated to warm letterpress tones.
+- **Type:** Fraunces (display) + Inter (UI) + JetBrains Mono (metadata).
+- **Mark:** a wax-seal emblem — a teal rounded square holding a cream folded-corner document — used as the launcher, splash, and monochrome icon.
+- **Guardrails:** no gradients/aurora/glow, no emoji icons, color is never the only signal, motion respects the system reduced-motion setting.
 
 ---
 
@@ -129,7 +141,8 @@ Compare the `Signer #1 certificate SHA-256 digest` with the fingerprint publishe
 
 ### Prerequisites
 - **JDK 21** (e.g. Eclipse Temurin 21)
-- **Android SDK** (API 35 platform, build-tools 35.0.0+)
+- **Android SDK** (compileSdk 37 platform, build-tools 36.0.0+)
+- **Gradle** via the wrapper (Gradle 9.6.0, AGP 9.5.0)
 - **Git**
 
 ### Build Commands
@@ -139,7 +152,7 @@ Compare the `Signer #1 certificate SHA-256 digest` with the fingerprint publishe
 git clone https://github.com/abhisheksati132/mydoc.git
 cd mydoc
 
-# 2. Run complete unit and E2E test suite (201 tests)
+# 2. Run the unit test suite
 ./gradlew testDebugUnitTest
 
 # 3. Run Android Lint inspection
@@ -147,6 +160,9 @@ cd mydoc
 
 # 4. Assemble Debug APK (all ABIs & universal)
 ./gradlew assembleDebug
+
+# 5. (optional) Run instrumented UI tests on a booted API 35+ device/emulator
+./gradlew connectedDebugAndroidTest
 
 # Output APKs will be generated in:
 # app/build/outputs/apk/debug/app-universal-debug.apk
@@ -167,12 +183,13 @@ MYDOC_RELEASE_CERT_SHA256=*** \
 ## 🧱 Tech Stack & Dependencies
 
 * **Language**: [Kotlin 2.3.21](https://kotlinlang.org/) (Coroutines, Flow, Serialization)
-* **UI**: [Jetpack Compose](https://developer.android.com/jetpack/compose) with Material Design 3
+* **Build**: [AGP 9.5.0](https://developer.android.com/build) + [Gradle 9.6.0](https://gradle.org/), KSP 2.3.13, compileSdk 37 / targetSdk 35 / minSdk 26
+* **UI**: [Jetpack Compose](https://developer.android.com/jetpack/compose) (BOM 2026.09.00) with Material Design 3 + [Haze](https://github.com/chrisbanes/haze) live backdrop blur
 * **PDF Core**: [Artifex MuPDF Fitz](https://mupdf.com/) (Native JNI bindings)
 * **Secondary PDF Core**: [PDFBox-Android](https://github.com/TomRoush/PdfBox-Android)
-* **Media**: [AndroidX Media3 ExoPlayer](https://developer.android.com/media/media3)
+* **Media**: [AndroidX Media3 ExoPlayer 1.11.1](https://developer.android.com/media/media3)
 * **Database**: [Jetpack Room 2.8.5](https://developer.android.com/training/data-storage/room)
-* **Image Loading**: [Coil 3](https://coil-kt.github.io/coil/)
+* **Image Loading**: [Coil 2.7.0](https://coil-kt.github.io/coil/)
 
 ---
 
