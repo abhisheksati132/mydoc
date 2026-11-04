@@ -309,7 +309,8 @@ class DataIntegrityCleanerE2ETest {
         val decoyFile = File(downloadsDir, "report.pdf").apply { writeText("Decoy in Downloads") }
 
         val inaccessibleUri = android.net.Uri.parse("content://nonexistent.authority/docs/99999")
-        val stream = DocumentStreamResolver.openStream(mockContext, inaccessibleUri, "report.pdf")
+        // The resolver no longer accepts a display name at all: a name cannot steer it anywhere.
+        val stream = DocumentStreamResolver.openStream(mockContext, inaccessibleUri)
 
         // Must NOT return the decoy file from Downloads
         if (stream != null) {

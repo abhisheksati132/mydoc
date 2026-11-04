@@ -2,7 +2,7 @@ package com.abhisheksati.mydoc.rendering.engine.presentation
 
 import android.content.Context
 import android.net.Uri
-import com.abhisheksati.mydoc.rendering.engine.ConversionKey
+import com.abhisheksati.mydoc.util.DocumentIdentity
 import com.abhisheksati.mydoc.rendering.engine.OutlineCache
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import java.io.File
@@ -22,7 +22,7 @@ object PptxConverter {
      */
     fun convertPptxToPdf(context: Context, uri: Uri, displayName: String): File? {
         val bytes = try {
-            com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri, displayName)?.use {
+            com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri)?.use {
                 it.readBytes()
             }
         } catch (_: Throwable) {
@@ -30,7 +30,7 @@ object PptxConverter {
         } ?: return null
 
         val cacheDir = File(context.cacheDir, "converted_presentations").apply { mkdirs() }
-        val targetPdf = File(cacheDir, "pptx_${ConversionKey.of(bytes)}_${bytes.size}.pdf")
+        val targetPdf = File(cacheDir, "pptx_${DocumentIdentity.ofBytes(bytes)}_${bytes.size}.pdf")
 
         if (targetPdf.isFile && targetPdf.length() > 0L) {
             return targetPdf

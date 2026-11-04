@@ -4,7 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import com.abhisheksati.mydoc.data.local.DocumentStreamResolver
-import com.abhisheksati.mydoc.rendering.engine.ConversionKey
+import com.abhisheksati.mydoc.util.DocumentIdentity
 import com.abhisheksati.mydoc.rendering.engine.OutlineCache
 import java.io.File
 import java.io.FileOutputStream
@@ -19,7 +19,7 @@ object DocxConverter {
      */
     suspend fun convertDocxToPdf(context: Context, uri: Uri, displayName: String): File? {
         val bytes = try {
-            DocumentStreamResolver.openStream(context, uri, displayName)?.use { it.readBytes() }
+            DocumentStreamResolver.openStream(context, uri)?.use { it.readBytes() }
         } catch (e: OutOfMemoryError) {
             Log.e(Tag, "OOM reading $displayName", e)
             return null
@@ -34,7 +34,7 @@ object DocxConverter {
         }
 
         val cacheDir = File(context.cacheDir, "converted_docs").apply { mkdirs() }
-        val targetPdf = File(cacheDir, "docx_${ConversionKey.of(bytes)}_${bytes.size}.pdf")
+        val targetPdf = File(cacheDir, "docx_${DocumentIdentity.ofBytes(bytes)}_${bytes.size}.pdf")
         if (targetPdf.isFile && targetPdf.length() > 0L) return targetPdf
 
         val blocks = try {

@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.data.repository
 
+import com.abhisheksati.mydoc.util.DocumentIdentity
 import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
@@ -217,15 +218,14 @@ class DocumentRepositoryImpl(
             // Cache an internal offline copy so documents remain readable even if Android revokes transient URI grants
             try {
                 val savedDocsDir = java.io.File(context.filesDir, "saved_docs").apply { mkdirs() }
-                val docKey = uri.toString().hashCode().toString(16)
-                val safeName = metadata.displayName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-                val localFile = java.io.File(savedDocsDir, "${docKey}_$safeName")
+                val cacheName = DocumentIdentity.savedDocsName(uri.toString(), metadata.displayName)
+                val localFile = java.io.File(savedDocsDir, cacheName)
                 if (!localFile.exists() || localFile.length() == 0L || (metadata.sizeBytes > 0L && localFile.length() != metadata.sizeBytes)) {
                     // Write to a temp file then rename: opening localFile's own outputStream would
                     // truncate it to 0 before the copy, destroying the backup when the resolved
                     // stream is this same saved_docs file (tier-2 fallback).
-                    val tmpFile = java.io.File(savedDocsDir, "${docKey}_$safeName.tmp")
-                    com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri, metadata.displayName)?.use { input ->
+                    val tmpFile = java.io.File(savedDocsDir, "$cacheName.tmp")
+                    com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri)?.use { input ->
                         tmpFile.outputStream().use { output ->
                             input.copyTo(output)
                         }

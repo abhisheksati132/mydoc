@@ -43,6 +43,12 @@ object UserMessages {
      */
     fun actionFailed(action: String, cause: Throwable?, tag: String = "Files"): String {
         Log.w(tag, "$action failed", cause)
+        if (cause is com.abhisheksati.mydoc.domain.model.PartialStorageOperationException) {
+            // Some items did land. Saying only "failed" would send people back to retry work
+            // that is already done, and hide that half a batch is now sitting in the folder.
+            val total = cause.completed + cause.failed
+            return "$action completed for ${cause.completed} of $total items — ${cause.failed} could not be completed."
+        }
         val text = cause?.message.orEmpty()
         val reason = when {
             cause is SecurityException || text.contains("EACCES") ||

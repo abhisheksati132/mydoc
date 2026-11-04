@@ -13,6 +13,7 @@ import android.provider.OpenableColumns
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
+import com.abhisheksati.mydoc.util.DocumentIdentity
 
 data class ResolvedDocument(
     val file: File,
@@ -41,7 +42,7 @@ object DocumentStreamResolver {
         if (uri == null) {
             return Result.failure(java.io.FileNotFoundException("Unable to access or locate file stream for null Uri"))
         }
-        val streamResult = openStreamWithFallback(context, uri, displayName)
+        val streamResult = openStreamWithFallback(context, uri)
             ?: return Result.failure(java.io.FileNotFoundException("Unable to access or locate file stream for: $uri"))
 
         return runCatching {
@@ -60,9 +61,7 @@ object DocumentStreamResolver {
             // and overwrite cached copy when a fresh live stream is obtained from the original external source
             try {
                 val savedDocsDir = File(context.filesDir, "saved_docs").apply { mkdirs() }
-                val docKey = uri.toString().hashCode().toString(16)
-                val safeName = (displayName ?: "doc.pdf").replace(Regex("[^a-zA-Z0-9._-]"), "_")
-                val backupFile = File(savedDocsDir, "${docKey}_$safeName")
+                val backupFile = File(savedDocsDir, DocumentIdentity.savedDocsName(uri.toString(), displayName))
                 if (streamResult.source != "saved_docs_key") {
                     targetCacheFile.copyTo(backupFile, overwrite = true)
                     backupFile.setLastModified(System.currentTimeMillis())
@@ -106,11 +105,10 @@ object DocumentStreamResolver {
 
     fun openStream(
         context: Context,
-        uri: Uri?,
-        displayName: String? = null
+        uri: Uri?
     ): InputStream? {
         if (uri == null) return null
-        return openStreamWithFallback(context, uri, displayName)?.stream
+        return openStreamWithFallback(context, uri)?.stream
     }
 
     private data class StreamResult(
@@ -121,12 +119,9 @@ object DocumentStreamResolver {
 
     private fun openStreamWithFallback(
         context: Context,
-        uri: Uri,
-        displayName: String?
+        uri: Uri
     ): StreamResult? {
         val uriString = uri.toString()
-        val docKey = uriString.hashCode().toString(16)
-        val safeName = displayName?.replace(Regex("[^a-zA-Z0-9._-]"), "_")
 
         // Tier 1: Direct File or ContentResolver
         try {
@@ -151,14 +146,15 @@ object DocumentStreamResolver {
             // Permission denial, revoked grant, or missing file
         }
 
-        // Tier 2: Internal persistent cache in saved_docs (exact docKey prefix match only)
+        // Tier 2: Internal persistent cache in saved_docs, matched on the URI digest only
         try {
             val savedDocsDir = File(context.filesDir, "saved_docs")
             if (savedDocsDir.exists() && savedDocsDir.isDirectory) {
                 val files = savedDocsDir.listFiles() ?: emptyArray()
 
-                // Check by docKey prefix
-                val byKey = files.firstOrNull { it.name.startsWith("${docKey}_") && it.length() > 0L }
+                // Only a copy whose name carries this exact URI identity counts; a similar
+                // display name never matches.
+                val byKey = files.firstOrNull { DocumentIdentity.isSavedCopyOf(it, uriString) }
                 if (byKey != null) {
                     byKey.setLastModified(System.currentTimeMillis())
                     return StreamResult(FileInputStream(byKey), null, "saved_docs_key")

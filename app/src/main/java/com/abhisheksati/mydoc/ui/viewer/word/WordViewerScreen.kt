@@ -112,7 +112,7 @@ fun WordViewerScreen(
         withContext(Dispatchers.IO) {
             try {
                 val uri = Uri.parse(document.uri)
-                val inputStream = DocumentStreamResolver.openStream(context, uri, document.displayName)
+                val inputStream = DocumentStreamResolver.openStream(context, uri)
                     ?: throw IllegalStateException("Could not open input stream")
                 val parsed = inputStream.use { DocxParser().parse(it) }
                 docxData = parsed

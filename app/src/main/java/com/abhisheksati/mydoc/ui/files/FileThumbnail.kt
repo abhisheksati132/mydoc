@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.files
 
+import com.abhisheksati.mydoc.util.DocumentIdentity
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -516,10 +517,10 @@ private fun findLibraryPdf(context: Context, item: LibraryItem): File? {
         val direct = uri.path?.let(::File)
         if (direct != null && direct.exists() && direct.length() > 0L) return direct
     }
-    val key = item.uri.hashCode().toString(16)
+    val key = DocumentIdentity.ofText(item.uri)
     File(context.filesDir, "saved_docs")
         .listFiles()
-        ?.firstOrNull { it.name.startsWith(key) && it.length() > 0L }
+        ?.firstOrNull { DocumentIdentity.isSavedCopyOf(it, item.uri) }
         ?.let { return it }
 
     val dir = File(context.cacheDir, "files_thumbs").apply { mkdirs() }
@@ -527,14 +528,14 @@ private fun findLibraryPdf(context: Context, item: LibraryItem): File? {
     if (target.exists() && target.length() > 0L) return target
     // A 44 dp tile is not worth staging a whole scanned PDF into cache for.
     if (item.sizeBytes > MAX_THUMBNAIL_COPY_BYTES) return null
-    val stream = DocumentStreamResolver.openStream(context, Uri.parse(item.uri), item.name)
+    val stream = DocumentStreamResolver.openStream(context, Uri.parse(item.uri))
         ?: return null
     stream.use { input -> target.outputStream().use { input.copyTo(it) } }
     return target.takeIf { it.length() > 0L }
 }
 
 private fun readLibraryText(context: Context, item: LibraryItem): String? = runCatching {
-    DocumentStreamResolver.openStream(context, Uri.parse(item.uri), item.name)?.use { stream ->
+    DocumentStreamResolver.openStream(context, Uri.parse(item.uri))?.use { stream ->
         val buffer = CharArray(1200)
         val read = stream.reader().use { reader -> reader.read(buffer) }
         if (read <= 0) null else String(buffer, 0, read).trim()

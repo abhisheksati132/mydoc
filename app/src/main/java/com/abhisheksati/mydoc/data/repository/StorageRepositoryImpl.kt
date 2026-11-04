@@ -10,10 +10,15 @@ import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.FileSortField
 import com.abhisheksati.mydoc.domain.model.FileSortOrder
 import com.abhisheksati.mydoc.domain.model.FolderProperties
+import com.abhisheksati.mydoc.domain.model.PartialStorageOperationException
 import com.abhisheksati.mydoc.domain.model.StorageItem
 import com.abhisheksati.mydoc.domain.model.StorageVolume
 import com.abhisheksati.mydoc.domain.repository.StorageRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
@@ -52,6 +57,17 @@ class StorageRepositoryImpl(
     private val context: Context,
     private val trashDao: TrashDao? = null
 ) : StorageRepository {
+
+    /**
+     * One lock for every mutating batch. Two pastes aimed at the same folder used to race on
+     * the auto-rename probe, so both could pick "report (1).pdf" and one overwrote the other.
+     */
+    private val mutationLock = Mutex()
+
+    private companion object {
+        /** A write that fills the last of a volume leaves a file that cannot be told from a good one. */
+        const val RESERVED_FREE_BYTES = 16L * 1024 * 1024
+    }
 
     override suspend fun getStorageVolumes(): List<StorageVolume> = withContext(Dispatchers.IO) {
         val volumes = mutableListOf<StorageVolume>()
@@ -267,16 +283,28 @@ class StorageRepositoryImpl(
         targetDir: File,
         onProgress: (current: Int, total: Int) -> Unit
     ): Result<Int> = withContext(Dispatchers.IO) {
-        try {
-            if (!targetDir.exists() || !targetDir.isDirectory) {
-                return@withContext Result.failure(IllegalArgumentException("Target must be a directory"))
-            }
+        if (!targetDir.exists() || !targetDir.isDirectory) {
+            return@withContext Result.failure(IllegalArgumentException("Target must be a directory"))
+        }
+        if (!hasRoomFor(targetDir, totalBytesOf(sources))) {
+            return@withContext Result.failure(
+                java.io.IOException("Not enough free space on ${targetDir.name} for this copy")
+            )
+        }
 
-            var copied = 0
-            val total = sources.size
-            val targetCanon = targetDir.canonicalPath
+        val total = sources.size
+        var copied = 0
+        var failed = 0
+        var firstError: Throwable? = null
+        val targetCanon = targetDir.canonicalPath
+
+        mutationLock.withLock {
             for (src in sources) {
-                if (!src.exists()) continue
+                currentCoroutineContext().ensureActive()
+                if (!src.exists()) {
+                    failed++
+                    continue
+                }
                 if (src.isDirectory) {
                     val srcCanon = src.canonicalPath
                     if (targetCanon == srcCanon || targetCanon.startsWith(srcCanon + File.separator)) {
@@ -284,19 +312,21 @@ class StorageRepositoryImpl(
                     }
                 }
                 val dest = getNonConflictingFile(targetDir, src.name)
-                if (src.isDirectory) {
-                    src.copyRecursively(dest, overwrite = true)
-                } else {
-                    src.copyTo(dest, overwrite = true)
+                // One bad item must not abort the batch or hide what was already written.
+                runCatching {
+                    if (src.isDirectory) src.copyRecursively(dest, overwrite = true)
+                    else src.copyTo(dest, overwrite = true)
+                }.onSuccess {
+                    copied++
+                    onProgress(copied, total)
+                }.onFailure { error ->
+                    discardPartial(dest)
+                    failed++
+                    firstError = firstError ?: error
                 }
-                copied++
-                onProgress(copied, total)
             }
-            Result.success(copied)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Result.failure(e)
         }
+        batchResult(copied, failed, firstError, "Nothing was copied")
     }
 
     override suspend fun move(
@@ -304,16 +334,28 @@ class StorageRepositoryImpl(
         targetDir: File,
         onProgress: (current: Int, total: Int) -> Unit
     ): Result<Int> = withContext(Dispatchers.IO) {
-        try {
-            if (!targetDir.exists() || !targetDir.isDirectory) {
-                return@withContext Result.failure(IllegalArgumentException("Target must be a directory"))
-            }
+        if (!targetDir.exists() || !targetDir.isDirectory) {
+            return@withContext Result.failure(IllegalArgumentException("Target must be a directory"))
+        }
+        if (!hasRoomFor(targetDir, totalBytesOf(sources))) {
+            return@withContext Result.failure(
+                java.io.IOException("Not enough free space on ${targetDir.name} for this move")
+            )
+        }
 
-            var moved = 0
-            val total = sources.size
-            val targetCanon = targetDir.canonicalPath
+        val total = sources.size
+        var moved = 0
+        var failed = 0
+        var firstError: Throwable? = null
+        val targetCanon = targetDir.canonicalPath
+
+        mutationLock.withLock {
             for (src in sources) {
-                if (!src.exists()) continue
+                currentCoroutineContext().ensureActive()
+                if (!src.exists()) {
+                    failed++
+                    continue
+                }
                 if (src.isDirectory) {
                     val srcCanon = src.canonicalPath
                     if (targetCanon == srcCanon || targetCanon.startsWith(srcCanon + File.separator)) {
@@ -322,28 +364,67 @@ class StorageRepositoryImpl(
                 }
                 val dest = getNonConflictingFile(targetDir, src.name)
 
-                // Try quick filesystem atomic rename first
-                val renamed = src.renameTo(dest)
-                if (renamed) {
+                if (src.renameTo(dest)) {
                     moved++
-                } else {
-                    // Fallback to copy + delete across mount boundaries
-                    if (src.isDirectory) {
-                        src.copyRecursively(dest, overwrite = true)
-                        src.deleteRecursively()
-                    } else {
-                        src.copyTo(dest, overwrite = true)
-                        src.delete()
-                    }
-                    moved++
+                    onProgress(moved, total)
+                    continue
                 }
-                onProgress(moved, total)
+
+                // Cross-volume fallback. A copy whose source survives is two files, not one move,
+                // so the source is verified gone; if it is not, the copy is withdrawn and the
+                // original stays where it was.
+                val outcome = runCatching {
+                    if (src.isDirectory) src.copyRecursively(dest, overwrite = true)
+                    else src.copyTo(dest, overwrite = true)
+                    (if (src.isDirectory) src.deleteRecursively() else src.delete()) && !src.exists()
+                }
+                when {
+                    outcome.getOrDefault(false) -> {
+                        moved++
+                        onProgress(moved, total)
+                    }
+                    else -> {
+                        discardPartial(dest)
+                        failed++
+                        firstError = firstError ?: outcome.exceptionOrNull()
+                            ?: java.io.IOException("Could not remove ${src.name} after copying it")
+                    }
+                }
             }
-            Result.success(moved)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Result.failure(e)
         }
+        batchResult(moved, failed, firstError, "Nothing was moved")
+    }
+
+    /**
+     * A batch result. A fully successful run reports the count; a run where nothing completed
+     * reports the real error; a split reports both counts so the UI cannot say "Pasted 10 items"
+     * after three of them failed.
+     */
+    private fun batchResult(
+        completed: Int,
+        failed: Int,
+        firstError: Throwable?,
+        nothingDoneMessage: String
+    ): Result<Int> = when {
+        failed == 0 -> Result.success(completed)
+        completed == 0 -> Result.failure(firstError ?: IllegalStateException(nothingDoneMessage))
+        else -> Result.failure(PartialStorageOperationException(completed, failed, firstError))
+    }
+
+    /** Bytes the sources will occupy. Checked before writing: a copy that dies at 98% full
+     *  leaves a truncated file the user cannot tell from a complete one. */
+    private fun totalBytesOf(sources: List<File>): Long = sources.sumOf { src ->
+        if (!src.exists()) 0L
+        else if (src.isDirectory) src.walkTopDown().filter { it.isFile }.map { it.length() }.sum()
+        else src.length()
+    }
+
+    private fun hasRoomFor(dir: File, bytes: Long): Boolean =
+        bytes <= 0L || dir.usableSpace - RESERVED_FREE_BYTES > bytes
+
+    /** Remove whatever a failed write left behind, so a partial file is never mistaken for the item. */
+    private fun discardPartial(dest: File) {
+        runCatching { if (dest.isDirectory) dest.deleteRecursively() else dest.delete() }
     }
 
     private fun getNonConflictingFile(parent: File, originalName: String): File {
@@ -457,7 +538,10 @@ class StorageRepositoryImpl(
             val total = entriesToCompress.size
             var current = 0
 
-            ZipOutputStream(BufferedOutputStream(FileOutputStream(destFile), 32 * 1024)).use { zos ->
+            // Build the archive under a private name. A compression that dies halfway used to
+            // leave a real .zip on disk that opens as a truncated archive.
+            val staging = File(parentDir, ".${destFile.name}.tmp")
+            ZipOutputStream(BufferedOutputStream(FileOutputStream(staging), 32 * 1024)).use { zos ->
                 val buffer = ByteArray(32 * 1024)
                 for (task in entriesToCompress) {
                     if (task.file.isDirectory) {
@@ -479,11 +563,18 @@ class StorageRepositoryImpl(
                         zos.closeEntry()
                     }
                     current++
+                    currentCoroutineContext().ensureActive()
                     onProgress(current, total)
                 }
             }
+            if (!staging.renameTo(destFile)) {
+                staging.copyTo(destFile, overwrite = true)
+                staging.delete()
+            }
             destFile
-        }.onFailure { if (it is CancellationException) throw it }
+        }.onFailure { error ->
+            if (error is CancellationException) throw error
+        }
     }
 
     override suspend fun unzip(
@@ -498,6 +589,11 @@ class StorageRepositoryImpl(
         collisionStrategy: ZipCollisionStrategy,
         onProgress: (extractedFiles: Int) -> Unit = {}
     ): Result<File> = withContext(Dispatchers.IO) {
+        // Hoisted out of runCatching so the failure path below can see what this run created.
+        // One token per extraction: millisecond timestamps collide when two archives are unpacked
+        // together, and a shared temp name corrupts both results.
+        val stagingToken = java.util.UUID.randomUUID().toString()
+        val createdDuringRun = mutableListOf<File>()
         runCatching {
             if (!zipFile.exists() || !zipFile.isFile) throw IllegalArgumentException("Zip file does not exist")
             if (!destinationDir.exists()) destinationDir.mkdirs()
@@ -513,6 +609,7 @@ class StorageRepositoryImpl(
             ZipInputStream(BufferedInputStream(FileInputStream(zipFile), 32 * 1024)).use { zis ->
                 var entry = zis.nextEntry
                 while (entry != null) {
+                    currentCoroutineContext().ensureActive()
                     extractedCount++
                     if (extractedCount > maxAllowedFiles) {
                         throw SecurityException("Zip extraction aborted: Archive exceeds maximum allowed file count ($maxAllowedFiles).")
@@ -529,6 +626,7 @@ class StorageRepositoryImpl(
                     if (entry.isDirectory) {
                         if (!outFile.exists()) {
                             outFile.mkdirs()
+                            createdDuringRun += outFile
                         }
                     } else {
                         val parent = outFile.parentFile ?: destinationDir
@@ -538,8 +636,10 @@ class StorageRepositoryImpl(
                         }
                         if (!parent.exists()) {
                             parent.mkdirs()
+                            createdDuringRun += parent
                         }
 
+                        val wasNew = !outFile.exists()
                         val targetFile = if (outFile.exists()) {
                             when (collisionStrategy) {
                                 ZipCollisionStrategy.SKIP -> {
@@ -554,7 +654,7 @@ class StorageRepositoryImpl(
                             outFile
                         }
 
-                        val tempFile = File(parent, ".tmp_${System.currentTimeMillis()}_${targetFile.name}")
+                        val tempFile = File(parent, ".tmp_${stagingToken}_${targetFile.name}")
                         try {
                             FileOutputStream(tempFile).use { fos ->
                                 var len: Int
@@ -574,6 +674,10 @@ class StorageRepositoryImpl(
                                 tempFile.copyTo(targetFile, overwrite = true)
                                 tempFile.delete()
                             }
+                            // Only a file this run created is rolled back: under REPLACE the
+                            // target already existed, so deleting it would take the user's own
+                            // file as well as ours.
+                            if (wasNew) createdDuringRun += targetFile
                         } catch (e: Exception) {
                             tempFile.delete()
                             throw e
@@ -585,7 +689,14 @@ class StorageRepositoryImpl(
                 }
             }
             destinationDir
-        }.onFailure { if (it is CancellationException) throw it }
+        }.onFailure { error ->
+            if (error is CancellationException) throw error
+            // An archive that failed halfway used to leave the earlier entries behind while the
+            // UI reported failure; the folder looked half-extracted with nothing saying so.
+            for (created in createdDuringRun.asReversed()) {
+                runCatching { if (created.isDirectory) created.deleteRecursively() else created.delete() }
+            }
+        }
     }
 
     override suspend fun queryCategory(category: FileCategory): List<StorageItem> = withContext(Dispatchers.IO) {
@@ -796,24 +907,29 @@ class StorageRepositoryImpl(
                 trashDao?.deleteByIds(successfullyDeletedIds)
             }
 
-            // Safe reconciliation for orphaned trash files (files on disk without DB records)
+            // Orphan accounting. A file in .trash with no row used to be deleted after 24 hours,
+            // which turned a crash between move and insert into permanent data loss. Rows are now
+            // reserved before the move, so an orphan means something unexpected happened; keeping
+            // it costs disk, deleting it can cost a document, so it is logged and left alone.
             try {
                 val trashDir = getTrashDir()
-                val allDbItems = trashDao?.getAllTrashItemsSync() ?: emptyList()
-                val knownTrashPaths = allDbItems.map { File(it.trashPath).canonicalPath }.toSet()
-                val diskFiles = trashDir.listFiles() ?: emptyArray()
-                for (diskFile in diskFiles) {
-                    val canonicalDiskPath = try { diskFile.canonicalPath } catch (_: Exception) { null } ?: continue
-                    if (canonicalDiskPath !in knownTrashPaths) {
-                        // Orphaned file on disk. Check age: if older than 24h, purge safely
-                        val fileAge = now - diskFile.lastModified()
-                        if (fileAge > 24L * 60 * 60 * 1000) {
-                            if (diskFile.isDirectory) diskFile.deleteRecursively() else diskFile.delete()
-                        }
-                    }
+                val knownTrashPaths = (trashDao?.getAllTrashItemsSync() ?: emptyList())
+                    .mapNotNull { runCatching { File(it.trashPath).canonicalPath }.getOrNull() }
+                    .toSet()
+                val orphans = (trashDir.listFiles() ?: emptyArray()).filter { diskFile ->
+                    val canonical = runCatching { diskFile.canonicalPath }.getOrNull()
+                    canonical != null && canonical !in knownTrashPaths
                 }
-            } catch (_: Exception) {
-                // Ignore reconciliation errors
+                if (orphans.isNotEmpty()) {
+                    android.util.Log.w(
+                        "TrashReconciliation",
+                        "Keeping ${orphans.size} trash file(s) with no database record; " +
+                            "empty the Recycle Bin to reclaim them"
+                    )
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                android.util.Log.w("TrashReconciliation", "Orphan accounting failed", e)
             }
 
             successfullyDeletedIds.size
@@ -827,8 +943,12 @@ class StorageRepositoryImpl(
             val scannedPaths = mutableListOf<String>()
             val now = System.currentTimeMillis()
 
+            var failed = 0
             for (file in files) {
-                if (!file.exists()) continue
+                if (!file.exists()) {
+                    failed++
+                    continue
+                }
                 // now is computed once per batch, so same-basename files would collide and
                 // overwrite each other (two DB rows sharing one trashPath). Make the name unique.
                 var trashFileName = "${now}_${file.name}"
@@ -840,33 +960,35 @@ class StorageRepositoryImpl(
                     collisionIndex++
                 }
 
+                val entity = TrashEntity(
+                    originalPath = file.absolutePath,
+                    trashPath = destTrashFile.absolutePath,
+                    displayName = file.name,
+                    sizeBytes = if (file.isDirectory) 0L else file.length(),
+                    deletedTimestamp = now,
+                    isDirectory = file.isDirectory
+                )
+                // The row is reserved before the file moves. Moving first meant a crash in
+                // between left a file in .trash with no row: Restore could not see it and the
+                // reconciliation in purgeExpiredTrash deleted it, so trashing a file could
+                // destroy it outright.
+                val rowId = trashDao?.insert(entity) ?: 0L
+
                 val moved = file.renameTo(destTrashFile) || run {
-                    if (file.isDirectory) {
-                        file.copyRecursively(destTrashFile, overwrite = true)
-                        file.deleteRecursively()
-                    } else {
-                        file.copyTo(destTrashFile, overwrite = true)
-                        file.delete()
-                    }
-                    destTrashFile.exists()
+                    if (file.isDirectory) file.copyRecursively(destTrashFile, overwrite = true)
+                    else file.copyTo(destTrashFile, overwrite = true)
+                    // Same rule as move(): a copy whose source survives is not a trash.
+                    (if (file.isDirectory) file.deleteRecursively() else file.delete()) && !file.exists()
                 }
 
                 if (moved) {
-                    // Stamp the trash copy with the trash time so the orphan reconciliation in
-                    // purgeExpiredTrash (which keys on mtime) never treats a just-trashed file,
-                    // whose DB insert may still be in flight, as an old orphan and deletes it.
                     destTrashFile.setLastModified(now)
                     scannedPaths += file.absolutePath
-                    val entity = TrashEntity(
-                        originalPath = file.absolutePath,
-                        trashPath = destTrashFile.absolutePath,
-                        displayName = file.name,
-                        sizeBytes = if (destTrashFile.isDirectory) 0L else destTrashFile.length(),
-                        deletedTimestamp = now,
-                        isDirectory = destTrashFile.isDirectory
-                    )
-                    val id = trashDao?.insert(entity) ?: 0L
-                    trashed.add(entity.copy(id = id).toDomain())
+                    trashed.add(entity.copy(id = rowId).toDomain())
+                } else {
+                    failed++
+                    if (rowId != 0L) runCatching { trashDao?.deleteByIds(listOf(rowId)) }
+                    discardPartial(destTrashFile)
                 }
             }
 
@@ -876,7 +998,11 @@ class StorageRepositoryImpl(
             // Transactional purge of expired items and orphaned files
             purgeExpiredTrash()
 
-            Result.success(trashed)
+            if (trashed.isEmpty() && failed > 0) {
+                Result.failure(IllegalStateException("Nothing could be moved to the Recycle Bin"))
+            } else {
+                Result.success(trashed)
+            }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Result.failure(e)

@@ -8,6 +8,7 @@ import com.abhisheksati.mydoc.domain.model.ClipboardOperation
 import com.abhisheksati.mydoc.util.UserMessages
 import com.abhisheksati.mydoc.domain.model.ClipboardState
 import com.abhisheksati.mydoc.domain.model.FileCategory
+import com.abhisheksati.mydoc.domain.model.PartialStorageOperationException
 import com.abhisheksati.mydoc.domain.model.FileSortField
 import com.abhisheksati.mydoc.domain.model.FileSortOrder
 import com.abhisheksati.mydoc.domain.model.FolderProperties
@@ -319,6 +320,12 @@ class FileManagerViewModel(
                         userMessage = UserMessages.actionFailed("Paste", err)
                     )
                 }
+                // A partial batch really did write the items that succeeded; leaving the listing
+                // stale would tell the reader nothing arrived.
+                if (err is PartialStorageOperationException) {
+                    loadDirectory(targetDir, addToHistory = false)
+                }
+                refreshVolumes()
             }
         }
     }

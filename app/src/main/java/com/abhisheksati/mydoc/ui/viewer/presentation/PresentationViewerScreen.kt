@@ -103,7 +103,7 @@ fun openPresentationInOfficeApp(context: Context, document: DocumentFile) {
         val targetFile = File(sharedDir, safeName)
 
         if (!targetFile.exists() || targetFile.length() == 0L) {
-            val stream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri, document.displayName)
+            val stream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri)
             stream?.use { input ->
                 targetFile.outputStream().use { output ->
                     input.copyTo(output)
@@ -193,7 +193,7 @@ fun PresentationViewerScreen(
                 val tempFile = File(cacheDir, "pres_${System.currentTimeMillis()}.$ext")
                 cachedFileOnDisk = tempFile
 
-                val inputStream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri, document.displayName)
+                val inputStream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri)
                     ?: throw IllegalStateException("Could not open presentation stream")
                 inputStream.use { input ->
                     tempFile.outputStream().use { output ->
