@@ -145,7 +145,9 @@ class MuPdfRenderer(
                 }
                 page.destroy()
 
-                val finalBitmap = when (mode) {
+                if (baseBitmap == null) return@withLock null
+
+            val finalBitmap = when (mode) {
                     ReadingMode.INVERTED_DARK -> {
                         val converted = AndroidPdfRenderer.invertBitmapColors(baseBitmap)
                         if (converted !== baseBitmap && !baseBitmap.isRecycled) {
@@ -196,8 +198,7 @@ class MuPdfRenderer(
             val bounds = page.bounds
             val srcW = (bounds.x1 - bounds.x0).coerceAtLeast(1f)
             val s = pageWidthPx / srcW
-            val pageHeightPx = (bounds.y1 - bounds.y0) * s
-            val matrix = Matrix(s).translate(-region.left * pageWidthPx, -region.top * pageHeightPx)
+            val matrix = Matrix(s)
             val raw = try {
                 com.artifex.mupdf.fitz.android.AndroidDrawDevice.drawPage(page, matrix)
             } catch (_: Throwable) {
@@ -214,15 +215,30 @@ class MuPdfRenderer(
             }
             page.destroy()
 
-            baseBitmap = if (raw != null && (raw.width != outWidth || raw.height != outHeight)) {
-                val scaled = Bitmap.createScaledBitmap(raw, outWidth, outHeight, true)
-                if (scaled !== raw && !raw.isRecycled) {
-                    raw.recycle()
+            // Draw the whole page at scale s, then crop the requested region and resize to the
+            // tile. Previously the translate-in-matrix + createScaledBitmap squashed the entire
+            // page into the tile, so zoom tiles showed a shrunk full page instead of the region.
+            baseBitmap = if (raw != null) {
+                val rw = raw.width
+                val rh = raw.height
+                val cx = (region.left * rw).toInt().coerceIn(0, (rw - 1).coerceAtLeast(0))
+                val cy = (region.top * rh).toInt().coerceIn(0, (rh - 1).coerceAtLeast(0))
+                val cw = (region.width() * rw).toInt().coerceIn(1, (rw - cx).coerceAtLeast(1))
+                val ch = (region.height() * rh).toInt().coerceIn(1, (rh - cy).coerceAtLeast(1))
+                val cropped = Bitmap.createBitmap(raw, cx, cy, cw, ch)
+                if (cropped !== raw && !raw.isRecycled) raw.recycle()
+                if (cropped.width != outWidth || cropped.height != outHeight) {
+                    val scaled = Bitmap.createScaledBitmap(cropped, outWidth, outHeight, true)
+                    if (scaled !== cropped && !cropped.isRecycled) cropped.recycle()
+                    scaled
+                } else {
+                    cropped
                 }
-                scaled
             } else {
-                raw
+                null
             }
+
+            if (baseBitmap == null) return@withLock null
 
             val finalBitmap = when (mode) {
                 ReadingMode.INVERTED_DARK -> {

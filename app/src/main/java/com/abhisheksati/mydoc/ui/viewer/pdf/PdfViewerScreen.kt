@@ -60,8 +60,10 @@ import com.abhisheksati.mydoc.ui.viewer.controls.FastScrollbar
 import com.abhisheksati.mydoc.ui.viewer.controls.ZoomableViewport
 import com.abhisheksati.mydoc.ui.viewer.controls.rememberZoomState
 import com.abhisheksati.mydoc.viewmodel.ViewerViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -194,6 +196,23 @@ fun PdfViewerScreen(
     )
     val viewerHazeState = remember { dev.chrisbanes.haze.HazeState() }
 
+    // Dual-page renders a LazyColumn keyed by PAIR index, so navigation must target the pager
+    // (single page), the continuous list (page), or the dual list (page / 2) accordingly.
+    suspend fun scrollViewerTo(targetPage: Int, animate: Boolean) {
+        when {
+            state.isDualPageView -> {
+                val pair = (targetPage / 2).coerceAtLeast(0)
+                if (animate) lazyListState.animateScrollToItem(pair) else lazyListState.scrollToItem(pair)
+            }
+            state.isContinuousScroll -> {
+                if (animate) lazyListState.animateScrollToItem(targetPage) else lazyListState.scrollToItem(targetPage)
+            }
+            else -> {
+                if (animate) pagerState.animateScrollToPage(targetPage) else pagerState.scrollToPage(targetPage)
+            }
+        }
+    }
+
     // Reading immersion: hide system bars when controls are hidden, restore on exit
     val activity = context as? Activity
     val window = activity?.window
@@ -242,11 +261,7 @@ fun PdfViewerScreen(
             }
             if (target != state.currentPage) {
                 viewModel.jumpToPage(target)
-                if (state.isContinuousScroll) {
-                    lazyListState.animateScrollToItem(target)
-                } else {
-                    pagerState.animateScrollToPage(target)
-                }
+                scrollViewerTo(target, animate = true)
             }
         }
     }
@@ -276,11 +291,7 @@ fun PdfViewerScreen(
     LaunchedEffect(state.currentMatchIndex) {
         if (state.currentMatchIndex in state.searchMatches.indices) {
             val targetPage = state.searchMatches[state.currentMatchIndex].pageIndex
-            if (state.isContinuousScroll) {
-                lazyListState.animateScrollToItem(targetPage)
-            } else {
-                pagerState.animateScrollToPage(targetPage)
-            }
+            scrollViewerTo(targetPage, animate = true)
         }
     }
 
@@ -290,11 +301,7 @@ fun PdfViewerScreen(
         if (!state.isLoading && state.pageCount > 0 && !hasRestoredSavedPosition) {
             val target = state.currentPage.coerceIn(0, state.pageCount - 1)
             if (target > 0) {
-                if (state.isContinuousScroll) {
-                    lazyListState.scrollToItem(target)
-                } else {
-                    pagerState.scrollToPage(target)
-                }
+                scrollViewerTo(target, animate = false)
             }
             hasRestoredSavedPosition = true
         }
@@ -319,7 +326,7 @@ fun PdfViewerScreen(
     // Condensing top bar calculation: collapses into floating glass pill on vertical scroll
     val isCondensed by remember {
         androidx.compose.runtime.derivedStateOf {
-            if (state.isContinuousScroll) {
+            if (state.isContinuousScroll || state.isDualPageView) {
                 lazyListState.firstVisibleItemIndex > 0 || lazyListState.firstVisibleItemScrollOffset > 80
             } else {
                 pagerState.currentPage > 0
@@ -513,11 +520,7 @@ fun PdfViewerScreen(
                 onPageSelected = { targetPage ->
                     viewModel.jumpToPage(targetPage)
                     coroutineScope.launch {
-                        if (state.isContinuousScroll) {
-                            lazyListState.scrollToItem(targetPage)
-                        } else {
-                            pagerState.scrollToPage(targetPage)
-                        }
+                        scrollViewerTo(targetPage, animate = false)
                     }
                 },
                 modifier = Modifier
@@ -555,7 +558,7 @@ fun PdfViewerScreen(
                     context.showMessage("Extracting text from page ${state.currentPage + 1}...")
                     coroutineScope.launch {
                         try {
-                            val pageBmp = viewModel.renderPageBitmap(state.currentPage, 2.0f)
+                            val pageBmp = withContext(Dispatchers.Default) { viewModel.renderPageBitmap(state.currentPage, 2.0f) }
                             if (pageBmp != null) {
                                 val text = ocrEngine.recognizeText(pageBmp)
                                 if (text.isBlank()) {
@@ -581,7 +584,7 @@ fun PdfViewerScreen(
                         currentTtsText = pageText
                         isTtsVisible = true
                     } else {
-                        val pageBmp = viewModel.renderPageBitmap(state.currentPage, 1.5f)
+                        val pageBmp = withContext(Dispatchers.Default) { viewModel.renderPageBitmap(state.currentPage, 1.5f) }
                         if (pageBmp != null) {
                             val ocr = ocrEngine.recognizeText(pageBmp)
                             if (ocr.isNotBlank()) {
@@ -604,11 +607,7 @@ fun PdfViewerScreen(
             onPageSelected = { targetPage ->
                 viewModel.jumpToPage(targetPage)
                 coroutineScope.launch {
-                    if (state.isContinuousScroll) {
-                        lazyListState.scrollToItem(targetPage)
-                    } else {
-                        pagerState.scrollToPage(targetPage)
-                    }
+                    scrollViewerTo(targetPage, animate = false)
                 }
             },
             hazeState = viewerHazeState
@@ -640,11 +639,7 @@ fun PdfViewerScreen(
             onPageSelected = { targetPage ->
                 viewModel.jumpToPage(targetPage)
                 coroutineScope.launch {
-                    if (state.isContinuousScroll) {
-                        lazyListState.scrollToItem(targetPage)
-                    } else {
-                        pagerState.scrollToPage(targetPage)
-                    }
+                    scrollViewerTo(targetPage, animate = false)
                 }
             },
             renderThumbnail = { p, s -> viewModel.renderPageBitmap(p, s) },
@@ -653,22 +648,14 @@ fun PdfViewerScreen(
             onJumpToPage = { targetPage ->
                 viewModel.jumpToPage(targetPage)
                 coroutineScope.launch {
-                    if (state.isContinuousScroll) {
-                        lazyListState.scrollToItem(targetPage)
-                    } else {
-                        pagerState.scrollToPage(targetPage)
-                    }
+                    scrollViewerTo(targetPage, animate = false)
                 }
             },
             onDismissOutlineDrawer = { viewModel.setOutlineDrawerOpen(false) },
             onSelectOutlineItem = { page ->
                 viewModel.jumpToPage(page)
                 coroutineScope.launch {
-                    if (state.isContinuousScroll) {
-                        lazyListState.scrollToItem(page)
-                    } else {
-                        pagerState.scrollToPage(page)
-                    }
+                    scrollViewerTo(page, animate = false)
                 }
             },
             onRemoveBookmark = { page ->

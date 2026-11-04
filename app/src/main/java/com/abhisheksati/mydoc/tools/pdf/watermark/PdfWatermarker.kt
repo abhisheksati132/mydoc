@@ -88,7 +88,7 @@ object PdfWatermarker {
                         val originX = boxRect.lowerLeftX
                         val originY = boxRect.lowerLeftY
 
-                        val targetW = (min(w, h) * 0.7f).coerceIn(100f, w)
+                        val targetW = (min(w, h) * 0.7f).coerceIn(1f, w.coerceAtLeast(1f))
                         val targetH = targetW * (pdImage.height.toFloat() / pdImage.width.toFloat())
                         val cx = originX + w / 2f
                         val cy = originY + h / 2f

@@ -107,10 +107,14 @@ class PdfOptimizationEngine(private val context: Context) {
         } catch (_: Throwable) {
             null
         }
+        var cleanSucceeded = false
         if (srcDoc != null) {
             try {
                 srcDoc.save(cleanOutFile.absolutePath, cleanParams)
-            } catch (_: Exception) {}
+                cleanSucceeded = true
+            } catch (_: Exception) {
+                cleanOutFile.delete()
+            }
         }
 
         // Strategy B: Only as an extreme fallback for STRONG compression when vector-preserving

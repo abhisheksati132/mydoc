@@ -221,10 +221,22 @@ class DocumentRepositoryImpl(
                 val safeName = metadata.displayName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
                 val localFile = java.io.File(savedDocsDir, "${docKey}_$safeName")
                 if (!localFile.exists() || localFile.length() == 0L || (metadata.sizeBytes > 0L && localFile.length() != metadata.sizeBytes)) {
+                    // Write to a temp file then rename: opening localFile's own outputStream would
+                    // truncate it to 0 before the copy, destroying the backup when the resolved
+                    // stream is this same saved_docs file (tier-2 fallback).
+                    val tmpFile = java.io.File(savedDocsDir, "${docKey}_$safeName.tmp")
                     com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri, metadata.displayName)?.use { input ->
-                        localFile.outputStream().use { output ->
+                        tmpFile.outputStream().use { output ->
                             input.copyTo(output)
                         }
+                    }
+                    if (tmpFile.exists() && tmpFile.length() > 0L) {
+                        if (!tmpFile.renameTo(localFile)) {
+                            tmpFile.copyTo(localFile, overwrite = true)
+                            tmpFile.delete()
+                        }
+                    } else {
+                        tmpFile.delete()
                     }
                 }
                 localFile.setLastModified(System.currentTimeMillis())

@@ -583,7 +583,7 @@ fun PresentationViewerScreen(
                             }
                             .then(
                                 if (zoomScale > 1.05f) {
-                                    Modifier.pointerInput(zoomScale) {
+                                    Modifier.pointerInput(Unit) {
                                         detectTransformGestures { _, pan, zoom, _ ->
                                             zoomScale = (zoomScale * zoom).coerceIn(1f, 5f)
                                             if (zoomScale > 1f) {

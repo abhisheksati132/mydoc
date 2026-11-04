@@ -34,7 +34,9 @@ import com.abhisheksati.mydoc.domain.model.TrashItem
 import kotlin.coroutines.resume
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -754,14 +756,17 @@ class StorageRepositoryImpl(
         }
     }
 
-    override fun getTrashItems(): Flow<List<TrashItem>> {
-        CoroutineScope(Dispatchers.IO).launch {
-            purgeExpiredTrash()
+    override fun getTrashItems(): Flow<List<TrashItem>> = flow {
+        // Purge runs in the collector's scope (cancellable, caller-managed) rather than an
+        // unmanaged CoroutineScope that could fire destructive deletes racing move/restore.
+        purgeExpiredTrash()
+        val dao = trashDao
+        if (dao == null) {
+            emit(emptyList())
+        } else {
+            dao.getAllTrashItems().collect { list -> emit(list.map { it.toDomain() }) }
         }
-        return trashDao?.getAllTrashItems()?.map { list ->
-            list.map { it.toDomain() }
-        } ?: flowOf(emptyList())
-    }
+    }.flowOn(Dispatchers.IO)
 
     suspend fun purgeExpiredTrash(): Result<Int> = withContext(Dispatchers.IO) {
         runCatching {
@@ -823,8 +828,16 @@ class StorageRepositoryImpl(
 
             for (file in files) {
                 if (!file.exists()) continue
-                val trashFileName = "${now}_${file.name}"
-                val destTrashFile = File(trashDir, trashFileName)
+                // now is computed once per batch, so same-basename files would collide and
+                // overwrite each other (two DB rows sharing one trashPath). Make the name unique.
+                var trashFileName = "${now}_${file.name}"
+                var destTrashFile = File(trashDir, trashFileName)
+                var collisionIndex = 1
+                while (destTrashFile.exists()) {
+                    trashFileName = "${now}_${collisionIndex}_${file.name}"
+                    destTrashFile = File(trashDir, trashFileName)
+                    collisionIndex++
+                }
 
                 val moved = file.renameTo(destTrashFile) || run {
                     if (file.isDirectory) {
@@ -838,6 +851,10 @@ class StorageRepositoryImpl(
                 }
 
                 if (moved) {
+                    // Stamp the trash copy with the trash time so the orphan reconciliation in
+                    // purgeExpiredTrash (which keys on mtime) never treats a just-trashed file,
+                    // whose DB insert may still be in flight, as an old orphan and deletes it.
+                    destTrashFile.setLastModified(now)
                     scannedPaths += file.absolutePath
                     val entity = TrashEntity(
                         originalPath = file.absolutePath,

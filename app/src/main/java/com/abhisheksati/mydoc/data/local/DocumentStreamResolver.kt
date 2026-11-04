@@ -158,7 +158,7 @@ object DocumentStreamResolver {
                 val files = savedDocsDir.listFiles() ?: emptyArray()
 
                 // Check by docKey prefix
-                val byKey = files.firstOrNull { it.name.startsWith(docKey) && it.length() > 0L }
+                val byKey = files.firstOrNull { it.name.startsWith("${docKey}_") && it.length() > 0L }
                 if (byKey != null) {
                     byKey.setLastModified(System.currentTimeMillis())
                     return StreamResult(FileInputStream(byKey), null, "saved_docs_key")

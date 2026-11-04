@@ -3,6 +3,32 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [1.5.18] — 2026-11-04
+
+Range: `v1.5.17..v1.5.18`.
+
+Full-codebase bug audit follow-up. Fixes are grouped by the area they affect.
+
+### Fixed
+
+- **Legacy `.ppt`/OLE2 parsing.** The FAT sector filter compared against `0xFFFFFFFD.toInt()` (which is `-3` in Kotlin), so no sector was ever registered and every legacy PowerPoint stream decoded to garbage. Corrected the signed comparison.
+- **XLSX shared strings.** Text is now accumulated per `<si>` (joining rich-text runs) instead of per `<t>`, which had shifted every later cell's referenced string and shown wrong text throughout a sheet.
+- **PDF "Compress" corrupt output.** A failed MuPDF save no longer leaves a truncated file eligible as the returned "compressed" result.
+- **Clear cache no longer wipes offline backups.** "Thumbnail & render cache" stopped deleting `filesDir/saved_docs`, the copies that keep revoked-grant documents readable.
+- **Bulk-trash Undo.** The trashed set is captured and restored from that list, so UNDO after a bulk move no longer silently does nothing.
+- **Extracted-APK path traversal.** `versionName` (attacker-controlled APK metadata) is now sanitized before being used in the output filename.
+- **Backup privacy.** The Room database (`mydoc.db`) and pinned-folders prefs are excluded from cloud backup and device transfer, matching the app's stated privacy intent.
+- **PDF dual-page navigation.** Search, jump, bookmark, outline and volume-key navigation now target the dual-page list (by pair index) instead of the never-composed pager.
+- **Presentation pinch-zoom.** The gesture detector no longer restarts mid-pinch (was keyed on the value it mutates).
+- **Main-thread rendering / IO.** Scrollbar live thumbnails, OCR/TTS page renders, spreadsheet loading and viewer state writes moved off the UI thread; viewer progress now persists under the active (re-picked) document URI.
+- **Redact safety.** Redact requires a non-blank query instead of silently redacting the hardcoded default term.
+- **Offline-cache correctness.** `saved_docs` lookup matches the full `${docKey}_` prefix (no cross-document hash-prefix collisions), and the backup copy is written via temp+rename so the source is never truncated mid-copy.
+- **Recycle Bin safety.** Same-batch trash names are made unique (no overwrite / shared-path loss), the expired-trash purge runs in a cancellable caller scope, and freshly-trashed files are mtime-stamped so reconciliation cannot delete them as old orphans.
+- **XLSX writer / renderer robustness.** Malformed worksheet parsing no longer throws `StringIndexOutOfBounds`; empty-range host no longer throws on `lastKey()`; XLSX→PDF page count is capped (OOM guard); Excel number formatting uses `Locale.US` symbols.
+- **PPTX zip-bomb guard.** The aggregate decompressed-size limit is now actually enforced.
+- **MuPDF zoom tiles.** Region rendering crops the requested tile region instead of squashing the whole page into it.
+- **Misc.** Text-viewer input stream is closed (no descriptor leak), search close cancels the in-flight query, the updater only stamps its 24h throttle on a successful fetch, TypeScript `.ts` no longer classifies as video, and the watermark size clamp no longer crashes on sub-100pt pages.
+
 ## [1.5.17] — 2026-11-04
 
 Range: `v1.5.16..v1.5.17`.

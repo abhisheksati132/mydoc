@@ -50,7 +50,7 @@ data class StorageItem(
                 "xls", "xlsx", "csv", "tsv" -> StorageFileType.EXCEL
                 "ppt", "pptx", "pps", "ppsx" -> StorageFileType.PPT
                 "jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "svg" -> StorageFileType.IMAGE
-                "mp4", "mkv", "webm", "avi", "mov", "3gp", "ts" -> StorageFileType.VIDEO
+                "mp4", "mkv", "webm", "avi", "mov", "3gp" -> StorageFileType.VIDEO
                 "mp3", "wav", "aac", "flac", "ogg", "m4a", "wma" -> StorageFileType.AUDIO
                 "zip", "rar", "7z", "tar", "gz", "bz2", "xz" -> StorageFileType.ARCHIVE
                 "apk", "xapk", "apks" -> StorageFileType.APK

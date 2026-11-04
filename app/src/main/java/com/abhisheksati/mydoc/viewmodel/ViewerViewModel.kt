@@ -318,7 +318,7 @@ class ViewerViewModel(
                         outline = outline
                     )
                 }
-                repository.updatePageProgress(documentFile.uri, 0, totalPages)
+                repository.updatePageProgress(activeDocumentFile.uri, 0, totalPages)
             } else {
                 _uiState.update { it.copy(isPasswordIncorrect = true) }
             }
@@ -384,7 +384,7 @@ class ViewerViewModel(
             persistViewState()
             prefetchSurroundingPages(page)
             viewModelScope.launch {
-                repository.updatePageProgress(documentFile.uri, page, _uiState.value.pageCount)
+                repository.updatePageProgress(activeDocumentFile.uri, page, _uiState.value.pageCount)
             }
         }
     }
@@ -449,6 +449,8 @@ class ViewerViewModel(
     }
 
     fun closeSearch() {
+        searchJob?.cancel()
+        searchJob = null
         _uiState.update {
             it.copy(
                 isSearchOpen = false,
@@ -509,7 +511,7 @@ class ViewerViewModel(
         viewModelScope.launch {
             repository.saveViewState(
                 ViewState(
-                    uri = documentFile.uri,
+                    uri = activeDocumentFile.uri,
                     lastPage = _uiState.value.currentPage,
                     zoomScale = _uiState.value.zoomScale,
                     readingMode = _uiState.value.readingMode,

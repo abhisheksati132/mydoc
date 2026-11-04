@@ -133,7 +133,7 @@ class XlsxWorkbook(
         val range = XlsxRefs.parseRange(f.removePrefix("=")) ?: return emptyList()
         sheet ?: return emptyList()
         val out = ArrayList<String>()
-        val rLast = minOf(range.r2, sheet.rows.lastKey() ?: range.r1, range.r1 + 500)
+        val rLast = minOf(range.r2, if (sheet.rows.isEmpty()) range.r1 else sheet.rows.lastKey(), range.r1 + 500)
         for (r in range.r1..rLast) for (c in range.c1..minOf(range.c2, range.c1 + 50)) {
             sheet.cell(r, c)?.let { cd -> display(cd).takeIf { it.isNotBlank() }?.let(out::add) }
         }

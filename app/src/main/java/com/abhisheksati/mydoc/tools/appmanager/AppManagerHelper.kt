@@ -112,8 +112,9 @@ class AppManagerHelper(private val context: Context) {
             }
 
             val sanitizedName = app.appName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+            val sanitizedVersion = app.versionName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
             if (app.isSplitApk && app.splitApkFiles.isNotEmpty()) {
-                val targetZip = File(targetDir, "${sanitizedName}_v${app.versionName}.apks")
+                val targetZip = File(targetDir, "${sanitizedName}_v${sanitizedVersion}.apks")
                 val allApks = listOf(app.apkFile) + app.splitApkFiles
                 ZipOutputStream(FileOutputStream(targetZip)).use { zos ->
                     for (apk in allApks) {
@@ -125,7 +126,7 @@ class AppManagerHelper(private val context: Context) {
                 }
                 Result.success(targetZip)
             } else {
-                val targetFile = File(targetDir, "${sanitizedName}_v${app.versionName}.apk")
+                val targetFile = File(targetDir, "${sanitizedName}_v${sanitizedVersion}.apk")
                 FileInputStream(app.apkFile).use { input ->
                     FileOutputStream(targetFile).use { output ->
                         input.copyTo(output)

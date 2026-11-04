@@ -69,7 +69,11 @@ fun AppManagerSheet(
     }
 
     LaunchedEffect(showSystemApps) {
-        loadApps()
+        // Run in the effect's own scope so a toggle cancels the prior scan instead of launching an
+        // unowned coroutine that races it (stale list / isLoading).
+        isLoading = true
+        apps = appHelper.getInstalledApps(includeSystemApps = showSystemApps)
+        isLoading = false
     }
 
     val filteredApps = remember(apps, searchQuery) {

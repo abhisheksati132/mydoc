@@ -21,6 +21,7 @@ object XlsxPdfRenderer {
     private const val Margin = 28f
     private const val MinScale = 0.5f
     private const val TitleH = 22f
+    private const val MAX_PAGES = 4000
 
     fun renderWithOutlines(wb: XlsxWorkbook): XlsxRenderResult? {
         val sheets = wb.sheets.filter { !it.hidden && it.maxRow >= 0 }
@@ -54,8 +55,9 @@ object XlsxPdfRenderer {
                 start = end + 1
             }
             for (band in bands) {
+                if (pageNo > MAX_PAGES) break
                 var r = 0
-                while (r < usedRows) {
+                while (r < usedRows && pageNo <= MAX_PAGES) {
                     val page = doc.startPage(PdfDocument.PageInfo.Builder(PageW, PageH, pageNo++).create())
                     val canvas = page.canvas
                     canvas.drawColor(0xFFFFFFFF.toInt())

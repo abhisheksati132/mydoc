@@ -18,4 +18,11 @@
     <exclude domain="external" path="Android/data/com.abhisheksati.mydoc/files/.trash" />
     <exclude domain="file" path="saved_docs" />
     <exclude domain="external" path="Android/data/com.abhisheksati.mydoc/files/saved_docs" />
+
+    <!-- Exclude the Room database and pinned-folders prefs: they contain recent docs, favorites,
+         trash entries, reading positions and file paths, which must not leave the device. -->
+    <exclude domain="database" path="mydoc.db" />
+    <exclude domain="database" path="mydoc.db-wal" />
+    <exclude domain="database" path="mydoc.db-shm" />
+    <exclude domain="sharedpref" path="pinned_folders_prefs.xml" />
 </full-backup-content>

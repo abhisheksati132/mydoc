@@ -41,7 +41,9 @@ import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 /**
  * Draggable fast scrollbar positioned on the right edge of the viewer.
@@ -67,7 +69,7 @@ fun FastScrollbar(
 
     LaunchedEffect(isDragging, lastHapticPage) {
         if (isDragging && renderThumbnail != null) {
-            liveThumbnail = renderThumbnail(lastHapticPage, 0.45f)
+            liveThumbnail = withContext(Dispatchers.Default) { renderThumbnail(lastHapticPage, 0.45f) }
         } else if (!isDragging) {
             liveThumbnail = null
         }

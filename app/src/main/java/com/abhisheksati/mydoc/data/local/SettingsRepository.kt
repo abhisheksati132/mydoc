@@ -252,8 +252,7 @@ class SettingsRepository(private val context: Context) {
     }
 
     fun getCacheSizeBytes(context: Context): Long {
-        val savedDocsDir = File(context.filesDir, "saved_docs")
-        return getFolderSize(context.cacheDir) + getFolderSize(context.externalCacheDir) + getFolderSize(savedDocsDir)
+        return getFolderSize(context.cacheDir) + getFolderSize(context.externalCacheDir)
     }
 
     fun clearCache(context: Context): Long {
@@ -264,10 +263,8 @@ class SettingsRepository(private val context: Context) {
         context.externalCacheDir?.listFiles()?.forEach { file ->
             deleteRecursive(file)
         }
-        val savedDocsDir = File(context.filesDir, "saved_docs")
-        savedDocsDir.listFiles()?.forEach { file ->
-            deleteRecursive(file)
-        }
+        // NOTE: filesDir/saved_docs (offline document backups) is intentionally NOT cleared here —
+        // this row is labelled "Thumbnail & render cache" and must not destroy readable-offline copies.
         return sizeBefore
     }
 

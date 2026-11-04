@@ -267,11 +267,13 @@ internal class SheetXml(text: String) {
             while (s >= 0 && !isTagStart(body, s, rowTag)) s = body.indexOf(rowTag, s + 1)
             if (s < 0) break
             val gt = body.indexOf('>', s)
+            if (gt < 0) break
             val self = body[gt - 1] == '/'
             val attrs = Attrs.parse(body.substring(s + rowTag.length, if (self) gt - 1 else gt))
             val content: String
             if (self) { content = ""; i = gt + 1 } else {
                 val close = body.indexOf(rowClose, gt)
+                if (close < 0) break
                 content = body.substring(gt + 1, close)
                 i = close + rowClose.length
             }
@@ -296,11 +298,13 @@ internal class SheetXml(text: String) {
             if (s < 0) { extra.append(content, i, content.length); break }
             extra.append(content, i, s)
             val gt = content.indexOf('>', s)
+            if (gt < 0) { extra.append(content, s, content.length); break }
             val self = content[gt - 1] == '/'
             val attrs = Attrs.parse(content.substring(s + tag.length, if (self) gt - 1 else gt))
             val inner: String?
             if (self) { inner = null; i = gt + 1 } else {
                 val e = content.indexOf(close, gt)
+                if (e < 0) { extra.append(content, s, content.length); break }
                 inner = content.substring(gt + 1, e)
                 i = e + close.length
             }

@@ -229,6 +229,8 @@ fun ToolRunnerSheet(
 
                     val canRun = when (tool) {
                         PdfTool.EXTRACT_PAGES -> inputUris.isNotEmpty() && toolOptions.pageRange.isNotBlank()
+                        PdfTool.REMOVE_PAGES, PdfTool.CROP -> inputUris.isNotEmpty() && toolOptions.pageRange.isNotBlank()
+                        PdfTool.REDACT -> inputUris.isNotEmpty() && toolOptions.redactQuery.isNotBlank()
                         PdfTool.MERGE -> inputUris.size >= 2
                         PdfTool.PROTECT -> inputUris.isNotEmpty() &&
                             toolOptions.userPassword.isNotBlank() &&

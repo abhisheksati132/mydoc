@@ -11,6 +11,7 @@ import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SheetData
 import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SpreadsheetModel
 import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SpreadsheetParser
 import androidx.compose.runtime.Immutable
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,7 +46,7 @@ class SpreadsheetViewModel(
     }
 
     private fun loadSpreadsheet() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
                 val uri = Uri.parse(documentFile.uri)

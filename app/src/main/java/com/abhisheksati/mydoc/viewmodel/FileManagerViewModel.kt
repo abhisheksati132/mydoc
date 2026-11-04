@@ -477,7 +477,10 @@ class FileManagerViewModel(
     }
 
     fun undoLastTrash() {
-        val items = _uiState.value.lastTrashedItems
+        undoTrash(_uiState.value.lastTrashedItems)
+    }
+
+    fun undoTrash(items: List<com.abhisheksati.mydoc.domain.model.TrashItem>) {
         if (items.isEmpty()) return
 
         viewModelScope.launch {

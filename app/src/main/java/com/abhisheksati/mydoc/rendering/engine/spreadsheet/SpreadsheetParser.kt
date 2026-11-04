@@ -537,25 +537,31 @@ class SpreadsheetParser {
         }
         var event = parser.eventType
         var inText = false
-        val currentText = StringBuilder()
+        val currentString = StringBuilder()
+        var inSi = false
 
         while (event != XmlPullParser.END_DOCUMENT) {
             when (event) {
                 XmlPullParser.START_TAG -> {
-                    if (parser.name == "t") {
-                        inText = true
-                        currentText.clear()
+                    when (parser.name.substringAfter(':')) {
+                        "si" -> {
+                            inSi = true
+                            currentString.setLength(0)
+                        }
+                        // A <t> inside an <si> (plain or inside an <r> rich run) contributes text.
+                        "t" -> if (inSi) inText = true
                     }
                 }
                 XmlPullParser.TEXT -> {
-                    if (inText) {
-                        currentText.append(parser.text)
-                    }
+                    if (inText) currentString.append(parser.text)
                 }
                 XmlPullParser.END_TAG -> {
-                    if (parser.name == "t") {
-                        inText = false
-                        strings.add(currentText.toString())
+                    when (parser.name.substringAfter(':')) {
+                        "t" -> inText = false
+                        "si" -> {
+                            strings.add(currentString.toString())
+                            inSi = false
+                        }
                     }
                 }
             }

@@ -265,7 +265,7 @@ internal object ExcelCellFormat {
         }
         val text = pattern.toString()
         if (text.none { it == '#' || it == '0' }) return trimTrailingZeros(value)
-        return DecimalFormat(text).format(if (value < 0) -value else value).let { if (value < 0) "-$it" else it }
+        return DecimalFormat(text, java.text.DecimalFormatSymbols(java.util.Locale.US)).format(if (value < 0) -value else value).let { if (value < 0) "-$it" else it }
     }
 
     private fun trimTrailingZeros(value: Double): String =

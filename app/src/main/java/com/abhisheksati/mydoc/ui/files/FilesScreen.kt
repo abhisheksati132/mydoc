@@ -190,7 +190,7 @@ fun FilesScreen(
                 actionLabel = "UNDO",
                 duration = SnackbarDuration.Short
             )
-            if (result == SnackbarResult.ActionPerformed) viewModel.undoLastTrash()
+            if (result == SnackbarResult.ActionPerformed) viewModel.undoTrash(trashed)
         }
     }
 

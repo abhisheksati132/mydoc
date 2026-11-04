@@ -40,7 +40,7 @@ internal class Ole2File(private val data: ByteArray) {
             val off = 76 + (i * 4)
             if (off + 4 <= 512) {
                 val sec = getIntLE(data, off)
-                if (sec >= 0 && sec < 0xFFFFFFFD.toInt()) fatSectorLocations.add(sec)
+                if (sec >= 0) fatSectorLocations.add(sec)
             }
         }
 
@@ -55,7 +55,7 @@ internal class Ole2File(private val data: ByteArray) {
                 if (offset + sectorSize > data.size) break
                 for (i in 0 until difatEntriesPerSector) {
                     val sec = getIntLE(data, offset + (i * 4))
-                    if (sec >= 0 && sec < 0xFFFFFFFD.toInt()) {
+                    if (sec >= 0) {
                         fatSectorLocations.add(sec)
                     }
                 }

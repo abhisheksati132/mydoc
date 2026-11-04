@@ -63,13 +63,15 @@ class UpdateManager(
                 // Throttle launch checks to max once every 24 hours
                 return
             }
-            prefs.edit().putLong(KEY_LAST_CHECK_TIME, now).apply()
         }
 
         _state.value = UpdateUiState.Checking
 
         val result = updateService.fetchLatestRelease()
         result.onSuccess { release ->
+            // Only stamp the launch-check throttle on a successful fetch, so a transient failure
+            // (offline, GitHub hiccup) does not suppress checks for the next 24 hours.
+            if (isLaunchCheck) prefs.edit().putLong(KEY_LAST_CHECK_TIME, System.currentTimeMillis()).apply()
             if (release == null) {
                 _state.value = UpdateUiState.NoUpdate(currentVersionName, null)
                 return

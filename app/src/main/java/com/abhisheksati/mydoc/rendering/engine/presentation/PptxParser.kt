@@ -551,6 +551,7 @@ class PptxParser {
     private val MAX_TOTAL_BYTES = 200L * 1024L * 1024L
 
     private fun readBoundedEntry(zip: ZipInputStream, entry: ZipEntry, currentTotal: Long): ByteArray {
+        if (currentTotal >= MAX_TOTAL_BYTES) throw SecurityException("Aggregate decompressed content exceeds ${MAX_TOTAL_BYTES / (1024 * 1024)} MB limit")
         val compressedSize = entry.compressedSize
         if (compressedSize > 0 && entry.size > 0) {
             val ratio = entry.size / compressedSize

@@ -100,8 +100,7 @@ fun TextViewerScreen(
                 val uri = Uri.parse(document.uri)
                 val inputStream = DocumentStreamResolver.openStream(context, uri, document.displayName)
                     ?: throw IllegalStateException("Could not open input stream")
-                val reader = BufferedReader(InputStreamReader(inputStream))
-                val loadedLines = reader.readLines()
+                val loadedLines = inputStream.use { BufferedReader(InputStreamReader(it)).readLines() }
                 lines = loadedLines
                 isLoading = false
             } catch (e: Exception) {
