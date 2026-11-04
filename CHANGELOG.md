@@ -3,6 +3,54 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [Unreleased]
+
+### Fixed
+
+- **Moving a folder could destroy the only complete copy (H-1).** The cross-volume
+  fallback in `StorageRepositoryImpl.move()` copied with `copyRecursively()`, then deleted
+  the source tree with `deleteRecursively()`. A copy that threw part-way through left a
+  truncated destination, and a delete that failed part-way through left a source that no
+  longer matched it — the two branches then discarded the destination and reported plain
+  failure, so the user's files existed in neither place intact. Move now copies to a
+  staged destination, verifies it entry by entry against a snapshot of the source, and
+  only then deletes the source one entry at a time, deepest first. The destination is
+  discarded *only* while the source is provably byte-for-byte untouched; anything else
+  keeps both copies and reports `PartialStorageOperationException` with the names of the
+  entries still in their original location.
+- **Trash and restore had the same defect (H-1).** `moveToTrash()` staged the same way.
+  `emptyTrash()` cleared every `TrashEntity` row whether or not the corresponding content
+  was deleted, so a refused deletion left an invisible file on storage with no record to
+  retry it; rows now go only with content confirmed gone. `restoreFromTrash()` returned
+  success for a bin entry that no longer exists and kept going after the bin volume
+  became unreadable; the two cases are now distinct — an unreadable bin fails early and
+  keeps every record, a missing entry is counted as a failure.
+- **"Moved N items" counted the request, not the result (H-2).** The message used
+  `files.size` while the repository returned the number actually trashed, so a partially
+  failed batch announced more success than had happened. It reports `trashed.size`.
+- **Partial failures were reported as unqualified success (H-3).** `UserMessages` appends
+  which items were retained where they were, so a partial move says what is still in the
+  original location rather than implying the operation completed.
+- **Release smoke test failed with an unlabeled infrastructure error.** The emulator boot
+  timeout was the action's 600 s default while an API 35 system image may need downloading
+  mid-step; it is now an explicit 2 400 s. A failed smoke no longer looks like a product
+  defect: a judge step distinguishes "Timeout waiting for emulator to boot" (re-run the
+  job) from a `FATAL EXCEPTION` in logcat (this build is broken), and a failed smoke
+  still blocks publication.
+
+### Tests
+
+- `StorageMoveTrashSafetyTest` — 11 JVM tests over an injected `EntryMutator` seam: a
+  folder move keeps the copy the source can no longer hold, an untouched source takes the
+  copy back, nothing is deleted before the complete copy exists, nested and empty folder
+  moves, a vanished source, bin-emptying that keeps a record for content it could not
+  delete, restore that reports failures, an unavailable bin volume, and a cancelled move
+  that never destroys the only complete copy.
+- `StorageMoveTrashOnDeviceTest` — 4 instrumented tests on API 35 that move, trash,
+  restore and empty real directories and assert the resulting bytes and database rows.
+- `DataIntegrityCleanerE2ETest.tier2_feature6` asserted the silent-skip behaviour H-3
+  removes (`isSuccess` with zero restored); it now asserts the reported failure.
+
 ## [1.7.2] — 2026-11-04
 
 Range: `v1.7.1..v1.7.2`. Four commits: one consistency pass, the two engineering-audit
