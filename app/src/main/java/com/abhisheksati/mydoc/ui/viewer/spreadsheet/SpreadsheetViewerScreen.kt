@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -54,6 +55,7 @@ import com.abhisheksati.mydoc.domain.model.ReadingPrefs
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SheetData
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerCapabilities
+import com.abhisheksati.mydoc.ui.viewer.controls.edgeFlingToDocument
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerChrome
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerScaffold
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerThemeTokens
@@ -70,7 +72,9 @@ fun SpreadsheetViewerScreen(
     viewModel: SpreadsheetViewModel,
     onBackClick: () -> Unit,
     onShareClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSwipeToNextDocument: (() -> Unit)? = null,
+    onSwipeToPreviousDocument: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp
@@ -79,6 +83,7 @@ fun SpreadsheetViewerScreen(
     val state by viewModel.uiState.collectAsState()
     var isSearchOpen by remember { mutableStateOf(false) }
 
+    val gridState = rememberLazyListState()
     val horizontalScrollState = rememberScrollState()
     val verticalScrollState = rememberScrollState()
 
@@ -122,6 +127,20 @@ fun SpreadsheetViewerScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .edgeFlingToDocument(
+                    atFirstPage = {
+                        state.selectedSheetIndex == 0 &&
+                            gridState.firstVisibleItemIndex == 0 &&
+                            gridState.firstVisibleItemScrollOffset == 0 &&
+                            horizontalScrollState.value == 0
+                    },
+                    atLastPage = {
+                        state.selectedSheetIndex == state.model.sheets.size - 1 &&
+                            !gridState.canScrollForward
+                    },
+                    onPrevious = onSwipeToPreviousDocument,
+                    onNext = onSwipeToNextDocument
+                )
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(top = ViewerChrome.topBarHeight, bottom = ViewerChrome.bottomBarHeight)
         ) {
@@ -203,7 +222,7 @@ fun SpreadsheetViewerScreen(
                             }
 
                             // Body Grid with Virtualized Rows and Frozen Row Header
-                            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            LazyColumn(state = gridState, modifier = Modifier.fillMaxSize()) {
                                 items(maxRow + 1) { r ->
                                     Row(modifier = Modifier.height(rowHeight)) {
                                         // Row Header (frozen horizontally)

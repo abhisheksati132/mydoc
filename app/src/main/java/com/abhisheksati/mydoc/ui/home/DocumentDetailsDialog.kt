@@ -32,6 +32,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsDark
+import com.abhisheksati.mydoc.designsystem.tokens.glassRimBrush
 import com.abhisheksati.mydoc.designsystem.components.AppDivider
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
@@ -61,6 +63,7 @@ fun DocumentDetailsDialog(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val isOled = LocalIsOled.current
+    val isDark = LocalIsDark.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -69,7 +72,7 @@ fun DocumentDetailsDialog(
         modifier = Modifier.border(
             BorderStroke(
                 1.dp,
-                Brush.verticalGradient(listOf(colors.glassRimTop, colors.glassRimBottom))
+                glassRimBrush(colors, isDark)
             ),
             shape = AppRadius.modalShape
         ),

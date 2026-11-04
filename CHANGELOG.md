@@ -111,12 +111,66 @@ so they are not re-reported as open work.
 - Dropped the `AppSpacing as Spacing` alias from the four files that used it.
 - Deleting a photo that cannot be moved to the Recycle Bin says it was deleted, instead of promising a recovery that does not exist.
 
+### Fixed — browsing, selection and dark chrome
+
+Seven reports from using the app on a phone, each verified on `mydoc_api35` in light, dark and
+pure AMOLED.
+
+- **A folder inside a Library category opens.** Tapping `Download/Knowledge` from the Downloads
+  category bounced back to the Library tab: `loadDirectory()` cleared `activeCategory` without
+  recording where the browse had come from, so the pane fell back to the category surface. The
+  originating category now goes on the back stack and the browse flag is derived from it, so the
+  folder opens and Back returns to the category that contained it.
+- **The category and filter survive opening a document.** `activeCategory` already lived in the
+  view model; the document-type chips did not. `docTypeFilter` moved out of a `remember` in
+  `DirectoryPane` — a pane that leaves composition the moment a viewer opens — into
+  `FileManagerUiState`. Documents → PDF → open a file → back still shows four PDFs with the chip lit.
+- **Swiping past the first or last page changes document in every viewer.** Word reflow, the
+  spreadsheet grid and the slide deck had no sibling-swipe wiring at all, and the shared detector
+  restarted mid-gesture because `pointerInput` was keyed on the callback lambdas that continuous
+  recomposition keeps replacing — so even where it was wired, the fling was dropped. It keys on
+  `Unit` and reads the latest callbacks through `rememberUpdatedState`. The sibling list was also
+  built from the *grandparent* folder (`documentSiblingsFor()` took a directory and called
+  `parentFile` on it again), so a document opened from a folder found no neighbours. Both
+  directions confirmed on device: `sample.pdf → sample.ppt → sample.txt` and back.
+- **Half-boxes in dark and AMOLED are gone.** One rule now decides the glass rim: `glassRimBrush()`
+  keeps the directional specular on ivory and uses one even hairline (`colors.line`) on dark. That
+  removes the lit top edge that read as a leaking box boundary in the search field, under the
+  viewer chrome and across every card, and `GlassSurface`, `AppDialog`, `DocumentDetailsDialog` and
+  `AppDropdownMenu` share it instead of each re-typing the gradient.
+- **The storage cleaner reads.** The disabled "Select a category to clean" button painted its own
+  label and icon with `colors.onAccent` whatever its state, so a disabled button kept accent text
+  on a muted container; the explicit colors are gone and the button's content color decides. The
+  reclaimable figure, scan count and truncation warning moved to the roles they should use, the
+  category rows got a real hairline, and the sheet has bottom padding so the action no longer sits
+  against the navigation bar.
+- **Multi-select in Home recents.** Long-pressing a recent card enters selection, taps toggle, and
+  a floating bar offers Select all / Share / Remove from recents. The selection lives in
+  `HomeViewModel` because the Home pane leaves composition when you change tabs, and a selection
+  that evaporates on return is not a selection. Sharing several documents needed `shareUris()` —
+  `ACTION_SEND_MULTIPLE` with every URI in the clip data, so a receiver gets a read grant for all
+  of them, not just the first.
+- **The photo viewer says it once.** Info was in the top bar and in the bottom pill row; the top
+  one is gone. Flip horizontal and Slideshow are removed completely: both menu items, the
+  `isFlippedHorizontal` / `isSlideshowActive` / `slideshowIntervalSec` state, the auto-advance
+  timer, the slideshow branch of the back handler and the `scaleX` mirror in `ZoomableImage`.
+- **Bold is a signal again.** One rule: bold marks a name, an active or selected state, or a
+  primary action. Audio and video time counters, the read-aloud status line, update copy, the
+  cleaner's truncation warning and unselected filter/tool chips went back to regular; the selected
+  chip, the non-default playback speed and the selected viewer tool now take the emphasis they
+  lacked. Three dialog labels and the video speed list used a raw `FontWeight.Bold` instead of the
+  type scale.
+
 ### Not done, deliberately
 
 - 13 raw `AlertDialog`s still live outside `AppDialog`; their titles match, porting them is a
   separate sweep. The 11 list-row metric variants (leading wells from 36 to 72.dp, icons 18-24.dp)
   and the off-scale spacing/radius literals are untouched. The fidelity strip floats over the
   first rows of a dense grid instead of reserving space — tap to hide the chrome, or scroll.
+- Swipe-to-neighbouring-document needs a folder of readable files. A document opened from a
+  MediaStore category or from recents arrives as a `content://` URI with no sibling list to walk,
+  so there the gesture stays a page turn. Wiring it means carrying the visible list through the
+  open path, not just scanning a directory.
 - CI now installs and launches the signed release APK and fails the publish if it crashes, but does not exercise its screens. The reference-rendering fidelity corpus the audit asks for does not exist yet; `MANAGE_EXTERNAL_STORAGE` policy eligibility and a SAF-only mode are product decisions; the large-class splits (`MainActivity`, `StorageRepositoryImpl`, `PptxParser`, `VideoPlayerScreen`) are deferred.
 
 ## [1.7.1] — 2026-11-04

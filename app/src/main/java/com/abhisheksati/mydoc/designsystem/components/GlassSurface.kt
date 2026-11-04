@@ -41,6 +41,7 @@ import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.ContinuousCornerShape
+import com.abhisheksati.mydoc.designsystem.tokens.glassRimBrush
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -194,16 +195,11 @@ fun GlassSurface(
         max(motion?.progress ?: 0f, (motion?.interaction ?: 0f) * 0.6f)
     }
 
-    // Directional specular: bright top arc fading to nothing by mid-face,
-    // with only a whisper of occlusion along the bottom edge.
+    // Specular rim. The rule lives in glassRimBrush so sheets, dialogs and menus cannot drift
+    // from surfaces: even hairline on dark and AMOLED, directional glass on ivory.
+    val rimBrush: Brush = glassRimBrush(colors, AppTheme.isDark, actualRimTop, actualRimBottom)
+
     val specularAndInnerShadow = Modifier.drawWithCache {
-        val specular = Brush.verticalGradient(
-            colorStops = arrayOf(
-                0f to actualRimTop,
-                0.55f to Color.Transparent,
-                1f to actualRimBottom.copy(alpha = actualRimBottom.alpha * 0.5f)
-            )
-        )
         val innerShadowHeight = 8.dp.toPx()
         val innerShadow = Brush.verticalGradient(
             colors = listOf(actualInnerShadow, Color.Transparent),
@@ -225,9 +221,9 @@ fun GlassSurface(
             )
             drawContent()
             if (outlinePath != null) {
-                drawPath(outlinePath, brush = specular, style = stroke)
+                drawPath(outlinePath, brush = rimBrush, style = stroke)
             } else {
-                drawRect(brush = specular, style = stroke)
+                drawRect(brush = rimBrush, style = stroke)
             }
         }
     }

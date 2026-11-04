@@ -22,6 +22,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
+import com.abhisheksati.mydoc.designsystem.tokens.LocalIsDark
+import com.abhisheksati.mydoc.designsystem.tokens.glassRimBrush
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
@@ -45,6 +47,7 @@ fun AppDialog(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val isOled = LocalIsOled.current
+    val isDark = LocalIsDark.current
     val effectiveDismiss = onDismissRequest ?: onDismiss ?: {}
 
     AlertDialog(
@@ -54,7 +57,7 @@ fun AppDialog(
         modifier = Modifier.border(
             BorderStroke(
                 1.dp,
-                Brush.verticalGradient(listOf(colors.glassRimTop, colors.glassRimBottom))
+                glassRimBrush(colors, isDark)
             ),
             shape = AppRadius.modalShape
         ),

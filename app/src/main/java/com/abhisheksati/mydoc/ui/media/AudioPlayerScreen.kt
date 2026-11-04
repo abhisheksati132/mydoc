@@ -312,12 +312,12 @@ fun AudioPlayerScreen(
                 val displayPos = if (isSeeking) seekPositionMs else currentPositionMs
                 Text(
                     text = formatAudioTime(displayPos),
-                    style = typography.captionStrong.withTabularFigures(),
+                    style = typography.caption.withTabularFigures(),
                     color = colors.inkMuted
                 )
                 Text(
                     text = formatAudioTime(totalDurationMs),
-                    style = typography.captionStrong.withTabularFigures(),
+                    style = typography.caption.withTabularFigures(),
                     color = colors.inkMuted
                 )
             }
@@ -445,7 +445,8 @@ fun AudioPlayerScreen(
             ) {
                 Text(
                     text = "${playbackSpeed}x Speed",
-                    style = typography.captionStrong.withTabularFigures(),
+                    style = (if (playbackSpeed != 1.0f) typography.captionStrong else typography.caption)
+                        .withTabularFigures(),
                     color = if (playbackSpeed != 1.0f) onMintContainer else colors.ink,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
                 )
@@ -476,7 +477,7 @@ fun AudioPlayerScreen(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = if (isLooping) "Looping" else "Loop Off",
-                        style = typography.captionStrong,
+                        style = if (isLooping) typography.captionStrong else typography.caption,
                         color = if (isLooping) onMintContainer else colors.ink
                     )
                 }

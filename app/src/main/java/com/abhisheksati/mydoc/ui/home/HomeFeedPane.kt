@@ -2,7 +2,14 @@ package com.abhisheksati.mydoc.ui.home
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -15,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -32,6 +40,11 @@ import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.RadioButtonUnchecked
+import androidx.compose.material.icons.outlined.SelectAll
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
@@ -91,6 +104,12 @@ fun HomeFeedPane(
     onLibraryItemDetails: (LibraryItem) -> Unit,
     onRemoveFromRecents: (LibraryItem) -> Unit,
     onShareDocument: (LibraryItem) -> Unit,
+    selectedRecentUris: Set<String>,
+    onToggleRecentSelection: (LibraryItem) -> Unit,
+    onSelectAllRecents: (List<LibraryItem>) -> Unit,
+    onClearRecentSelection: () -> Unit,
+    onShareSelectedRecents: (List<LibraryItem>) -> Unit,
+    onRemoveSelectedRecents: (List<LibraryItem>) -> Unit,
     onSpotlightSearch: () -> Unit,
     onSettingsClick: () -> Unit,
     onScanClick: () -> Unit,
@@ -156,209 +175,240 @@ fun HomeFeedPane(
         recentItems
     }
 
+    val isRecentsSelectionActive = selectedRecentUris.isNotEmpty()
+    val selectedRecents = remainingRecents.filter { it.uri in selectedRecentUris }
+
     val scrollModifier = if (hazeState != null) {
-        modifier.hazeSource(state = hazeState)
+        Modifier.hazeSource(state = hazeState)
     } else {
-        modifier
+        Modifier
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = scrollModifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = AppSpacing.medium,
-            end = AppSpacing.medium,
-            top = 0.dp,
-            bottom = 96.dp // Ample space for floating glass bottom navigation
-        ),
-        verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)
-    ) {
-        // TOP EDITORIAL HEADER
-        item(key = "header") {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(top = 8.dp, bottom = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Brand lockup: Seal + wordmark, per docs/brand-identity.md §3.
-                    SealMark(modifier = Modifier.size(30.dp))
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "MyDoc",
-                        style = AppTheme.typography.display,
-                        color = colors.ink
-                    )
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    IconButton(
-                        onClick = {
-                            haptics.tick()
-                            onSpotlightSearch()
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Search,
-                            contentDescription = "Search documents",
-                            tint = colors.ink
+    Box(modifier = modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = scrollModifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = AppSpacing.medium,
+                end = AppSpacing.medium,
+                top = 0.dp,
+                bottom = 96.dp // Ample space for floating glass bottom navigation
+            ),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)
+        ) {
+            // TOP EDITORIAL HEADER
+            item(key = "header") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(top = 8.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Brand lockup: Seal + wordmark, per docs/brand-identity.md §3.
+                        SealMark(modifier = Modifier.size(30.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "MyDoc",
+                            style = AppTheme.typography.display,
+                            color = colors.ink
                         )
                     }
-                    IconButton(
-                        onClick = {
-                            haptics.tick()
-                            onSettingsClick()
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        IconButton(
+                            onClick = {
+                                haptics.tick()
+                                onSpotlightSearch()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Search,
+                                contentDescription = "Search documents",
+                                tint = colors.ink
+                            )
                         }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = "Settings",
-                            tint = colors.ink
-                        )
+                        IconButton(
+                            onClick = {
+                                haptics.tick()
+                                onSettingsClick()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Settings,
+                                contentDescription = "Settings",
+                                tint = colors.ink
+                            )
+                        }
                     }
                 }
             }
-        }
 
-        if (!errorMessage.isNullOrBlank()) {
-            item(key = "home_error_banner") {
-                GlassSurface(
-                    shape = AppRadius.cardShape,
-                    backgroundColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.85f),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+            if (!errorMessage.isNullOrBlank()) {
+                item(key = "home_error_banner") {
+                    GlassSurface(
+                        shape = AppRadius.cardShape,
+                        backgroundColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.85f),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.ErrorOutline,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = errorMessage,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.weight(1f)
-                        )
-                        if (onDismissError != null) {
-                            IconButton(onClick = onDismissError) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Close,
-                                    contentDescription = "Dismiss",
-                                    tint = MaterialTheme.colorScheme.onErrorContainer
-                                )
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.ErrorOutline,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = errorMessage,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (onDismissError != null) {
+                                IconButton(onClick = onDismissError) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Close,
+                                        contentDescription = "Dismiss",
+                                        tint = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
-        }
 
-        // CONTINUE READING HERO CARD
-        if (isLoading) {
-            item(key = "feed_skeleton") {
-                HomeFeedSkeleton()
+            // CONTINUE READING HERO CARD
+            if (isLoading) {
+                item(key = "feed_skeleton") {
+                    HomeFeedSkeleton()
+                }
+            } else if (heroItem != null) {
+                item(key = "hero_continue_reading") {
+                    ContinueReadingHeroCard(
+                        item = heroItem,
+                        onClick = {
+                            haptics.click()
+                            onLibraryItemClick(heroItem)
+                        }
+                    )
+                }
+            } else {
+                // CURATED FIRST-RUN EMPTY STATE
+                item(key = "first_run_empty_state") {
+                    FirstRunPaperCard(
+                        onOpenFile = { filePickerLauncher.launch(arrayOf("*/*")) },
+                        onScan = { onScanClick() },
+                        onBrowse = { onNavigateToLibrary() }
+                    )
+                }
             }
-        } else if (heroItem != null) {
-            item(key = "hero_continue_reading") {
-                ContinueReadingHeroCard(
-                    item = heroItem,
-                    onClick = {
-                        haptics.click()
-                        onLibraryItemClick(heroItem)
-                    }
-                )
-            }
-        } else {
-            // CURATED FIRST-RUN EMPTY STATE
-            item(key = "first_run_empty_state") {
-                FirstRunPaperCard(
-                    onOpenFile = { filePickerLauncher.launch(arrayOf("*/*")) },
-                    onScan = { onScanClick() },
-                    onBrowse = { onNavigateToLibrary() }
-                )
-            }
-        }
 
-        // RECENT DOCUMENTS SECTION
-        if (remainingRecents.isNotEmpty()) {
-            item(key = "recents_header") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp, bottom = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            // RECENT DOCUMENTS SECTION
+            if (remainingRecents.isNotEmpty()) {
+                item(key = "recents_header") {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp, bottom = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Recent Documents",
-                            style = AppTheme.typography.heading,
-                            color = colors.ink
-                        )
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(colors.surfaceMuted)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = "${remainingRecents.size}",
-                                style = AppTheme.typography.metadata,
-                                color = colors.inkSecondary
+                                text = "Recent Documents",
+                                style = AppTheme.typography.heading,
+                                color = colors.ink
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(colors.surfaceMuted)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "${remainingRecents.size}",
+                                    style = AppTheme.typography.metadata,
+                                    color = colors.inkSecondary
+                                )
+                            }
+                        }
+
+                        TextButton(onClick = onNavigateToLibrary) {
+                            Text(
+                                text = "View all",
+                                style = AppTheme.typography.captionStrong,
+                                color = colors.accent
                             )
                         }
                     }
-
-                    TextButton(onClick = onNavigateToLibrary) {
-                        Text(
-                            text = "View all",
-                            style = AppTheme.typography.captionStrong,
-                            color = colors.accent
-                        )
-                    }
                 }
-            }
 
-            // 2-Column Grid of Paper Cards (chunked in pairs)
-            val chunkedRecents = remainingRecents.chunked(2)
-            items(
-                items = chunkedRecents,
-                key = { chunk -> chunk.joinToString(",") { it.uri } }
-            ) { pair ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
-                ) {
-                    pair.forEach { docItem ->
-                        Box(modifier = Modifier.weight(1f)) {
-                            RecentPaperCard(
-                                item = docItem,
-                                onClick = {
-                                    haptics.click()
-                                    onLibraryItemClick(docItem)
-                                },
-                                onDetails = { onLibraryItemDetails(docItem) },
-                                onShare = { onShareDocument(docItem) },
-                                onRemove = { onRemoveFromRecents(docItem) }
-                            )
+                // 2-Column Grid of Paper Cards (chunked in pairs)
+                val chunkedRecents = remainingRecents.chunked(2)
+                items(
+                    items = chunkedRecents,
+                    key = { chunk -> chunk.joinToString(",") { it.uri } }
+                ) { pair ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
+                    ) {
+                        pair.forEach { docItem ->
+                            Box(modifier = Modifier.weight(1f)) {
+                                RecentPaperCard(
+                                    item = docItem,
+                                    isSelected = docItem.uri in selectedRecentUris,
+                                    isSelectionMode = isRecentsSelectionActive,
+                                    onClick = {
+                                        haptics.click()
+                                        if (isRecentsSelectionActive) {
+                                            onToggleRecentSelection(docItem)
+                                        } else {
+                                            onLibraryItemClick(docItem)
+                                        }
+                                    },
+                                    onLongClick = {
+                                        haptics.snap()
+                                        onToggleRecentSelection(docItem)
+                                    },
+                                    onDetails = { onLibraryItemDetails(docItem) },
+                                    onShare = { onShareDocument(docItem) },
+                                    onRemove = { onRemoveFromRecents(docItem) }
+                                )
+                            }
+                        }
+                        if (pair.size == 1) {
+                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
-                    if (pair.size == 1) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
                 }
             }
+        }
+
+        AnimatedVisibility(
+            visible = isRecentsSelectionActive,
+            enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
+            exit = fadeOut() + slideOutVertically(targetOffsetY = { it }),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            HomeRecentsSelectionBar(
+                selectedCount = selectedRecents.size,
+                totalCount = remainingRecents.size,
+                onClose = onClearRecentSelection,
+                onSelectAll = { onSelectAllRecents(remainingRecents) },
+                onShare = { onShareSelectedRecents(selectedRecents) },
+                onRemove = { onRemoveSelectedRecents(selectedRecents) }
+            )
         }
     }
 }
@@ -504,10 +554,14 @@ private fun ContinueReadingHeroCard(
  * 2-Column Recent Paper Card:
  * Tactile paper surface + real thumbnail + Fraunces title + JetBrains Mono metadata.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun RecentPaperCard(
     item: LibraryItem,
+    isSelected: Boolean,
+    isSelectionMode: Boolean,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     onDetails: () -> Unit,
     onShare: () -> Unit,
     onRemove: () -> Unit
@@ -521,7 +575,7 @@ private fun RecentPaperCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Document thumbnail preview
@@ -537,49 +591,71 @@ private fun RecentPaperCard(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // More options button (top right overlay)
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(4.dp)
-                ) {
-                    IconButton(
-                        onClick = { menuExpanded = true },
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.MoreVert,
-                            contentDescription = "Options",
-                            tint = colors.inkSecondary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
+                if (isSelected) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(colors.accent.copy(alpha = 0.18f))
+                    )
+                }
 
-                    AppDropdownMenu(
-                        expanded = menuExpanded,
-                        onDismissRequest = { menuExpanded = false }
+                // In selection mode the check replaces the per-card menu; the two compete for
+                // the same corner and only one gesture set should be live at a time.
+                if (isSelectionMode) {
+                    Icon(
+                        imageVector = if (isSelected) Icons.Rounded.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+                        contentDescription = if (isSelected) "Selected" else "Not selected",
+                        tint = if (isSelected) colors.accent else colors.inkSecondary,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(6.dp)
+                            .size(22.dp)
+                            .background(colors.surface, CircleShape)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(4.dp)
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("Details", style = AppTheme.typography.body) },
-                            onClick = {
-                                menuExpanded = false
-                                onDetails()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Share", style = AppTheme.typography.body) },
-                            onClick = {
-                                menuExpanded = false
-                                onShare()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Remove from recents", style = AppTheme.typography.body) },
-                            onClick = {
-                                menuExpanded = false
-                                onRemove()
-                            }
-                        )
+                        IconButton(
+                            onClick = { menuExpanded = true },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.MoreVert,
+                                contentDescription = "Options",
+                                tint = colors.inkSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+
+                        AppDropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Details", style = AppTheme.typography.body) },
+                                onClick = {
+                                    menuExpanded = false
+                                    onDetails()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Share", style = AppTheme.typography.body) },
+                                onClick = {
+                                    menuExpanded = false
+                                    onShare()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Remove from recents", style = AppTheme.typography.body) },
+                                onClick = {
+                                    menuExpanded = false
+                                    onRemove()
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -752,6 +828,81 @@ private fun ActionTile(
             tint = colors.inkMuted,
             modifier = Modifier.size(16.dp)
         )
+        }
+    }
+}
+
+/**
+ * Bulk-action bar for the Home recents grid: the same set of actions the Library offers for a
+ * multi-selection, narrowed to the two that mean something for a recents list.
+ */
+@Composable
+private fun HomeRecentsSelectionBar(
+    selectedCount: Int,
+    totalCount: Int,
+    onClose: () -> Unit,
+    onSelectAll: () -> Unit,
+    onShare: () -> Unit,
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = AppTheme.colors
+    val typography = AppTheme.typography
+
+    GlassSurface(
+        shape = AppRadius.cardShape,
+        elevation = 6.dp,
+        modifier = modifier
+            .navigationBarsPadding()
+            .padding(
+                start = AppSpacing.medium,
+                end = AppSpacing.medium,
+                bottom = AppSpacing.navBarHeight + AppSpacing.small
+            )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = AppSpacing.small, vertical = AppSpacing.extraSmall),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onClose) {
+                Icon(
+                    imageVector = Icons.Outlined.Close,
+                    contentDescription = "Close selection",
+                    tint = colors.ink
+                )
+            }
+            Text(
+                text = "$selectedCount selected",
+                style = typography.bodyStrong,
+                color = colors.ink,
+                maxLines = 1,
+                modifier = Modifier.weight(1f)
+            )
+            if (selectedCount < totalCount) {
+                IconButton(onClick = onSelectAll) {
+                    Icon(
+                        imageVector = Icons.Outlined.SelectAll,
+                        contentDescription = "Select all",
+                        tint = colors.ink
+                    )
+                }
+            }
+            IconButton(onClick = onShare) {
+                Icon(
+                    imageVector = Icons.Outlined.Share,
+                    contentDescription = "Share selected",
+                    tint = colors.ink
+                )
+            }
+            IconButton(onClick = onRemove) {
+                Icon(
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = "Remove selected from recents",
+                    tint = colors.error
+                )
+            }
         }
     }
 }

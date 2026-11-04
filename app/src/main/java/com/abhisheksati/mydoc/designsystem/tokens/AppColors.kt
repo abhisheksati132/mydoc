@@ -3,8 +3,35 @@ package com.abhisheksati.mydoc.designsystem.tokens
 import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import com.abhisheksati.mydoc.domain.model.MediaKind
+
+/**
+ * The rim every glass surface, sheet, dialog and menu draws.
+ *
+ * On ivory a directional specular reads as glass: lit along the top, gone by mid-face, a whisper
+ * at the bottom. On dark and AMOLED that same fade leaves a bright top edge and no bottom edge,
+ * so every box looks half-drawn and the top line leaks across whatever sits behind the chrome.
+ * There the rim is one even hairline around the whole shape.
+ */
+fun glassRimBrush(
+    colors: AppColors,
+    isDark: Boolean,
+    top: Color = colors.glassRimTop,
+    bottom: Color = colors.glassRimBottom
+): Brush = if (isDark) {
+    SolidColor(colors.line)
+} else {
+    Brush.verticalGradient(
+        colorStops = arrayOf(
+            0f to top,
+            0.55f to Color.Transparent,
+            1f to bottom.copy(alpha = bottom.alpha * 0.5f)
+        )
+    )
+}
 
 /**
  * Single source of truth for MyDoc color. "Paper under glass" design identity:

@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @Immutable
@@ -56,6 +57,11 @@ class HomeViewModel(
 
     private val _searchQuery = MutableStateFlow("")
     private val _errorFlow = MutableStateFlow<String?>(null)
+
+    // Recents selection lives here, not in the feed composable: switching tabs disposes the
+    // Home pane, and a selection that evaporates on return makes bulk actions unusable.
+    private val _selectedRecentUris = MutableStateFlow<Set<String>>(emptySet())
+    val selectedRecentUris: StateFlow<Set<String>> = _selectedRecentUris.asStateFlow()
 
     private val _documentsSource = repository.getAllDeviceDocuments()
 
@@ -160,7 +166,28 @@ class HomeViewModel(
     fun removeFromRecents(document: DocumentFile) {
         viewModelScope.launch {
             repository.removeFromRecents(document.uri)
+            _selectedRecentUris.update { it - document.uri }
         }
+    }
+
+    fun removeFromRecents(documents: List<DocumentFile>) {
+        if (documents.isEmpty()) return
+        viewModelScope.launch {
+            documents.forEach { repository.removeFromRecents(it.uri) }
+            clearRecentSelection()
+        }
+    }
+
+    fun toggleRecentSelection(uri: String) {
+        _selectedRecentUris.update { if (uri in it) it - uri else it + uri }
+    }
+
+    fun selectAllRecents(uris: List<String>) {
+        _selectedRecentUris.value = uris.toSet()
+    }
+
+    fun clearRecentSelection() {
+        _selectedRecentUris.value = emptySet()
     }
 
     fun clearAllRecents() {

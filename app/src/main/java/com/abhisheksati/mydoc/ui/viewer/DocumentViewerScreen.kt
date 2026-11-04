@@ -82,6 +82,8 @@ fun DocumentViewerScreen(
             document = document,
             onBackClick = { isSlideshowActive = false },
             onShareClick = onShareClick,
+            onSwipeToNextDocument = onSwipeToNextDocument,
+            onSwipeToPreviousDocument = onSwipeToPreviousDocument,
             modifier = modifier.fillMaxSize()
         )
         return
@@ -98,6 +100,8 @@ fun DocumentViewerScreen(
                 viewModel = spreadsheetViewModel,
                 onBackClick = onBackClick,
                 onShareClick = onShareClick,
+                onSwipeToNextDocument = onSwipeToNextDocument,
+                onSwipeToPreviousDocument = onSwipeToPreviousDocument,
                 modifier = modifier.fillMaxSize()
             )
         }
@@ -106,6 +110,8 @@ fun DocumentViewerScreen(
             document = document,
             onBackClick = onBackClick,
             onShareClick = onShareClick,
+            onSwipeToNextDocument = onSwipeToNextDocument,
+            onSwipeToPreviousDocument = onSwipeToPreviousDocument,
             modifier = modifier.fillMaxSize()
         )
 
@@ -113,6 +119,8 @@ fun DocumentViewerScreen(
             document = document,
             onBackClick = onBackClick,
             onShareClick = onShareClick,
+            onSwipeToNextDocument = onSwipeToNextDocument,
+            onSwipeToPreviousDocument = onSwipeToPreviousDocument,
             modifier = modifier.fillMaxSize()
         )
 
@@ -141,6 +149,8 @@ fun DocumentViewerScreen(
                         if (isWordReflowActive) isWordReflowActive = false else onBackClick()
                     },
                     onShareClick = onShareClick,
+                    onSwipeToNextDocument = onSwipeToNextDocument,
+                    onSwipeToPreviousDocument = onSwipeToPreviousDocument,
                     modifier = modifier.fillMaxSize()
                 )
             } else {

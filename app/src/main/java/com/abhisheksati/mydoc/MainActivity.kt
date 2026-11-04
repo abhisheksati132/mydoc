@@ -320,7 +320,7 @@ class MainActivity : ComponentActivity() {
                 // Sibling list is recomputed on every document change, so every open path —
                 // library, recents, browse, intent — gets the same swipe-to-next-document behaviour.
                 LaunchedEffect(currentDocument?.uri) {
-                    docSiblings = documentSiblingsFor(currentDocument?.uri?.toPathFile()?.parentFile)
+                    docSiblings = documentSiblingsFor(currentDocument?.uri?.toPathFile())
                 }
 
                 Surface(

@@ -44,6 +44,32 @@ fun shareFile(context: Context, uri: Uri, mimeType: String, title: String): Bool
     return runCatching { context.startActivity(Intent.createChooser(intent, title)) }.isSuccess
 }
 
+/**
+ * Multiple attachments need ACTION_SEND_MULTIPLE, but receivers only get read grants for the
+ * URIs the chooser can see, so every URI goes into the clip data as well as the extra.
+ */
+fun shareUris(context: Context, uris: List<Uri>, title: String): Boolean {
+    val safeUris = uris.mapNotNull { it.toShareableUri(context) }
+    if (safeUris.isEmpty()) return false
+    val intent = if (safeUris.size == 1) {
+        Intent(Intent.ACTION_SEND).apply {
+            type = "*/*"
+            putExtra(Intent.EXTRA_STREAM, safeUris[0])
+            clipData = ClipData.newRawUri(null, safeUris[0])
+        }
+    } else {
+        Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+            type = "*/*"
+            putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(safeUris))
+            clipData = ClipData("Shared documents", arrayOf("*/*"), ClipData.Item(safeUris[0])).apply {
+                safeUris.drop(1).forEach { addItem(ClipData.Item(it)) }
+            }
+        }
+    }
+    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    return runCatching { context.startActivity(Intent.createChooser(intent, title)) }.isSuccess
+}
+
 fun openFile(context: Context, uri: Uri, mimeType: String, title: String = "Open with"): Boolean {
     val safeUri = uri.toShareableUri(context) ?: return false
     val intent = Intent(Intent.ACTION_VIEW).apply {

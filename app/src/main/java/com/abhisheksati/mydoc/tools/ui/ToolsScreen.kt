@@ -239,7 +239,7 @@ fun ToolsScreen(
                     label = {
                         Text(
                             text = category.label,
-                            style = AppTheme.typography.captionStrong
+                            style = if (selected) AppTheme.typography.captionStrong else AppTheme.typography.caption
                         )
                     },
                     leadingIcon = {

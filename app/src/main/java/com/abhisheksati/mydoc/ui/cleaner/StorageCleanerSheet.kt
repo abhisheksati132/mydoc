@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.abhisheksati.mydoc.MyDocApp
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import androidx.compose.foundation.layout.PaddingValues
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
@@ -265,6 +267,7 @@ fun StorageCleanerSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
+                    contentPadding = PaddingValues(bottom = AppSpacing.paddingLarge),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     // Summary card
@@ -277,7 +280,7 @@ fun StorageCleanerSheet(
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                     text = "Reclaimable Storage",
-                                    style = typography.caption,
+                                    style = typography.overline,
                                     color = colors.textSecondary
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -289,14 +292,14 @@ fun StorageCleanerSheet(
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "${res.totalScannedFiles} files scanned across ${res.totalScannedDirectories} folders",
-                                    style = typography.micro,
+                                    style = typography.metadata,
                                     color = colors.textSecondary
                                 )
                                 if (res.truncated) {
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = "Scan stopped at the safety limit — some files were not checked.",
-                                        style = typography.micro,
+                                        style = typography.caption,
                                         color = colors.warning
                                     )
                                 }
@@ -386,7 +389,7 @@ fun StorageCleanerSheet(
                                                 }
                                                 Text(
                                                     text = formatSize(group.wastedBytes),
-                                                    style = typography.captionStrong,
+                                                    style = typography.metadataStrong,
                                                     color = colors.warning
                                                 )
                                             }
@@ -483,7 +486,7 @@ fun StorageCleanerSheet(
                                                 Spacer(modifier = Modifier.width(8.dp))
                                                 Text(
                                                     text = formatSize(file.length()),
-                                                    style = typography.captionStrong,
+                                                    style = typography.metadataStrong,
                                                     color = colors.error
                                                 )
                                             }
@@ -511,7 +514,7 @@ fun StorageCleanerSheet(
                 if (res.tempFiles.isNotEmpty() || res.apkFiles.isNotEmpty() || res.duplicateGroups.isNotEmpty() || res.emptyFolders.isNotEmpty()) {
                     Surface(
                         color = if (isOled) colors.surfaceContainerHigh else colors.surface,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.line),
                         tonalElevation = 4.dp,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -521,22 +524,28 @@ fun StorageCleanerSheet(
                         Button(
                             onClick = { showConfirm = true },
                             enabled = !isCleaning && hasSelection,
-                            colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colors.accent,
+                                contentColor = colors.onAccent,
+                                disabledContainerColor = colors.surfaceMuted,
+                                disabledContentColor = colors.textSecondary
+                            ),
                             shape = AppRadius.cardShape,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(52.dp)
                         ) {
+                            // No explicit colors: the button's own content color is the one
+                            // that knows whether this label is live or disabled.
                             if (isCleaning) {
                                 CircularProgressIndicator(
-                                    color = colors.onAccent,
                                     strokeWidth = 2.dp,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
-                                Text("Cleaning...", style = typography.bodyStrong, color = colors.onAccent)
+                                Text("Cleaning...", style = typography.bodyStrong)
                             } else {
-                                Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = colors.onAccent)
+                                Icon(Icons.Outlined.DeleteSweep, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = when {
@@ -545,8 +554,7 @@ fun StorageCleanerSheet(
                                             "Remove ${selectedEmptyDirs.size} empty folders"
                                         else -> "Move to Trash (${formatSize(selectedBytesToFree)})"
                                     },
-                                    style = typography.bodyStrong,
-                                    color = colors.onAccent
+                                    style = typography.bodyStrong
                                 )
                             }
                         }

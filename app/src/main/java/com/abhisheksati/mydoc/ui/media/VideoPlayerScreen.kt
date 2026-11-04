@@ -79,7 +79,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -676,10 +675,10 @@ fun VideoPlayerScreen(
                         Text(
                             text = if (spd == 1.0f) "1.0x (Normal)" else "${spd}x",
                             color = if (playbackSpeed == spd) colors.accent else Color.White,
-                            fontWeight = if (playbackSpeed == spd) FontWeight.Bold else FontWeight.Normal
+                            style = if (playbackSpeed == spd) typography.bodyStrong else typography.body
                         )
                         if (playbackSpeed == spd) {
-                            Text("Active", color = colors.accent, style = AppTheme.typography.captionStrong)
+                            Text("Active", color = colors.accent, style = typography.caption)
                         }
                     }
                 }

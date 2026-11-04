@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.tokens.glassRimBrush
 
 /**
  * Apple Liquid Glass styled DropdownMenu:
@@ -32,9 +33,8 @@ fun AppDropdownMenu(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val colors = AppTheme.colors
-    val rimBrush = remember(colors.glassRimTop, colors.glassRimBottom) {
-        Brush.verticalGradient(listOf(colors.glassRimTop, colors.glassRimBottom))
-    }
+    val isDark = AppTheme.isDark
+    val rimBrush = remember(colors, isDark) { glassRimBrush(colors, isDark) }
 
     DropdownMenu(
         expanded = expanded,

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.abhisheksati.mydoc.domain.model.ClipboardOperation
 import com.abhisheksati.mydoc.util.UserMessages
 import com.abhisheksati.mydoc.domain.model.ClipboardState
+import com.abhisheksati.mydoc.domain.model.DocumentTypeFilter
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.PartialStorageOperationException
 import com.abhisheksati.mydoc.domain.model.FileSortField
@@ -41,6 +42,7 @@ data class FileManagerUiState(
     val showHiddenFiles: Boolean = false,
     val searchQuery: String = "",
     val activeCategory: FileCategory? = null,
+    val docTypeFilter: DocumentTypeFilter = DocumentTypeFilter.ALL,
     val isBrowsingStorage: Boolean = false,
     val isLoading: Boolean = false,
     val activeOperation: String? = null,
@@ -119,8 +121,11 @@ class FileManagerViewModel(
     }
 
     fun loadDirectory(directory: File, addToHistory: Boolean = true) {
+        val originCategory = _uiState.value.activeCategory
         if (addToHistory && directory.absolutePath != _uiState.value.currentDirectory.absolutePath) {
-            backStack.push(_uiState.value.currentDirectory)
+            // Coming out of a category view, the level above is that category's own folder, not
+            // whatever directory the hub happened to be pointing at.
+            backStack.push(originCategory?.let(::categoryDirectory) ?: _uiState.value.currentDirectory)
         }
 
         viewModelScope.launch {
@@ -128,6 +133,10 @@ class FileManagerViewModel(
                 it.copy(
                     currentDirectory = directory,
                     breadcrumbTrail = buildBreadcrumb(directory),
+                    // A category view is kept on screen by `activeCategory` alone. Clearing it here
+                    // without claiming the directory surface unmounted the pane mid-navigation, so
+                    // tapping a folder inside Downloads bounced straight back to the Library hub.
+                    isBrowsingStorage = it.isBrowsingStorage || originCategory != null,
                     activeCategory = null,
                     isLoading = true,
                     selectedFiles = emptySet(),
@@ -578,6 +587,10 @@ class FileManagerViewModel(
         _uiState.update { it.copy(isTrashOpen = false) }
     }
 
+    fun setDocTypeFilter(filter: DocumentTypeFilter) {
+        _uiState.update { it.copy(docTypeFilter = filter) }
+    }
+
     fun selectCategory(category: FileCategory?) {
         if (category == null) {
             _uiState.update { it.copy(activeCategory = null, canGoBack = _uiState.value.isBrowsingStorage) }
@@ -812,6 +825,16 @@ class FileManagerViewModel(
             curr = curr.parentFile
         }
         return crumbs
+    }
+
+    /**
+     * The real folder behind a category, for the categories that are directory listings rather
+     * than MediaStore queries. Downloads is the one that shows folders at all, so it is the only
+     * case where a folder can be drilled into from a category.
+     */
+    private fun categoryDirectory(category: FileCategory): File = when (category) {
+        FileCategory.DOWNLOADS -> Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        else -> _uiState.value.currentDirectory
     }
 
     private fun isRootDirectory(dir: File): Boolean {

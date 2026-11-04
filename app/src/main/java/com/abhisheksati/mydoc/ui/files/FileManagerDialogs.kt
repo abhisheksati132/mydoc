@@ -44,13 +44,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.FolderProperties
@@ -266,7 +266,7 @@ fun DeleteConfirmationDialog(
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Delete", color = colors.error, fontWeight = FontWeight.Bold)
+                Text("Delete", color = colors.error, style = AppTheme.typography.bodyStrong)
             }
         },
         dismissButton = {
@@ -498,7 +498,7 @@ fun CompressDialog(
                     }
                 }
             ) {
-                Text("Compress", color = colors.accent, fontWeight = FontWeight.Bold)
+                Text("Compress", color = colors.accent, style = AppTheme.typography.bodyStrong)
             }
         },
         dismissButton = {
@@ -537,7 +537,7 @@ fun ExtractConfirmDialog(
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Extract", color = colors.accent, fontWeight = FontWeight.Bold)
+                Text("Extract", color = colors.accent, style = AppTheme.typography.bodyStrong)
             }
         },
         dismissButton = {

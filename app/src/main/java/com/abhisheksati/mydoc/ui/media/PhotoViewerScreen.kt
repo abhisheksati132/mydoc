@@ -30,10 +30,8 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.RotateRight
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Flip
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Image
@@ -50,7 +48,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -128,10 +125,7 @@ fun PhotoViewerScreen(
     var isInfoSheetOpen by remember { mutableStateOf(false) }
     var isFillScale by remember { mutableStateOf(false) }
     var rotationAngle by remember { mutableFloatStateOf(0f) }
-    var isFlippedHorizontal by remember { mutableStateOf(false) }
     var isMoreMenuOpen by remember { mutableStateOf(false) }
-    var isSlideshowActive by remember { mutableStateOf(false) }
-    var slideshowIntervalSec by remember { mutableIntStateOf(3) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var ocrExtractedText by remember { mutableStateOf<String?>(null) }
     var isOcrRunning by remember { mutableStateOf(false) }
@@ -142,29 +136,12 @@ fun PhotoViewerScreen(
         }
     }
 
-    // Intercept back key to exit slideshow first or close photo viewer
-    BackHandler {
-        if (isSlideshowActive) {
-            isSlideshowActive = false
-        } else {
-            onBackClick()
-        }
-    }
+    // The viewer is an overlay, not a nav destination: back must close it, not pop the tab.
+    BackHandler(enabled = true) { onBackClick() }
 
-    // Reset rotation and flip when swiping to another photo
+    // Reset rotation when swiping to another photo.
     LaunchedEffect(pagerState.currentPage) {
         rotationAngle = 0f
-        isFlippedHorizontal = false
-    }
-
-    // Slideshow auto-advance timer
-    LaunchedEffect(isSlideshowActive, pagerState.currentPage, slideshowIntervalSec, photoList.size) {
-        if (isSlideshowActive && photoList.isNotEmpty()) {
-            areControlsVisible = false
-            delay(slideshowIntervalSec * 1000L)
-            val next = (pagerState.currentPage + 1) % photoList.size
-            pagerState.animateScrollToPage(next)
-        }
     }
 
     // Query EXIF on-demand for current photo
@@ -197,15 +174,7 @@ fun PhotoViewerScreen(
                     item = item,
                     isFillScale = isFillScale,
                     displayRotation = if (page == pagerState.currentPage) rotationAngle else 0f,
-                    isFlippedHorizontal = if (page == pagerState.currentPage) isFlippedHorizontal else false,
-                    onTap = {
-                        if (isSlideshowActive) {
-                            isSlideshowActive = false
-                            areControlsVisible = true
-                        } else {
-                            areControlsVisible = !areControlsVisible
-                        }
-                    }
+                    onTap = { areControlsVisible = !areControlsVisible }
                 )
             }
         }
@@ -259,13 +228,7 @@ fun PhotoViewerScreen(
                         }
                     }
 
-                    IconButton(onClick = { isInfoSheetOpen = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = "Info",
-                            tint = contentColor
-                        )
-                    }
+                    // Info lives in the bottom pill row; the top bar carries identity only.
 
                     Box {
                         IconButton(onClick = { isMoreMenuOpen = true }) {
@@ -288,26 +251,6 @@ fun PhotoViewerScreen(
                                 onClick = {
                                     isMoreMenuOpen = false
                                     rotationAngle = (rotationAngle + 90f) % 360f
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Flip horizontal", color = colors.textPrimary) },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Flip, contentDescription = null, tint = colors.textPrimary)
-                                },
-                                onClick = {
-                                    isMoreMenuOpen = false
-                                    isFlippedHorizontal = !isFlippedHorizontal
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(if (isSlideshowActive) "Stop slideshow" else "Slideshow (3s)", color = colors.textPrimary) },
-                                leadingIcon = {
-                                    Icon(Icons.Default.PlayArrow, contentDescription = null, tint = colors.textPrimary)
-                                },
-                                onClick = {
-                                    isMoreMenuOpen = false
-                                    isSlideshowActive = !isSlideshowActive
                                 }
                             )
                             DropdownMenuItem(

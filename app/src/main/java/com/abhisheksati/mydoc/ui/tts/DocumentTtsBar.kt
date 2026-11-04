@@ -94,7 +94,7 @@ fun DocumentTtsBar(
                                 TtsPlaybackState.ERROR -> "Voice error"
                                 else -> "Read Aloud Ready"
                             },
-                            style = typography.captionStrong,
+                            style = typography.caption,
                             color = colors.textPrimary
                         )
                     }
@@ -182,7 +182,7 @@ fun DocumentTtsBar(
                     ) {
                         Text(
                             text = "${speed}x",
-                            style = typography.captionStrong,
+                            style = if (speed != 1.0f) typography.captionStrong else typography.caption,
                             color = colors.accent
                         )
                     }

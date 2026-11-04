@@ -63,6 +63,7 @@ import com.abhisheksati.mydoc.rendering.engine.word.DocxRun
 import com.abhisheksati.mydoc.tools.tts.DocumentTtsManager
 import com.abhisheksati.mydoc.ui.tts.DocumentTtsBar
 import com.abhisheksati.mydoc.ui.viewer.controls.SearchOverlay
+import com.abhisheksati.mydoc.ui.viewer.controls.edgeFlingToDocument
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerCapabilities
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerChrome
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerScaffold
@@ -81,7 +82,9 @@ fun WordViewerScreen(
     document: DocumentFile,
     onBackClick: () -> Unit,
     onShareClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSwipeToNextDocument: (() -> Unit)? = null,
+    onSwipeToPreviousDocument: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp
@@ -301,6 +304,13 @@ fun WordViewerScreen(
                 state = lazyListState,
                 modifier = Modifier
                     .fillMaxSize()
+                    .edgeFlingToDocument(
+                        atFirstPage = { lazyListState.firstVisibleItemIndex == 0 &&
+                            lazyListState.firstVisibleItemScrollOffset == 0 },
+                        atLastPage = { !lazyListState.canScrollForward },
+                        onPrevious = onSwipeToPreviousDocument,
+                        onNext = onSwipeToNextDocument
+                    )
                     .padding(horizontal = AppSpacing.paddingMedium)
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .padding(top = ViewerChrome.topBarHeight, bottom = ViewerChrome.bottomBarHeight)

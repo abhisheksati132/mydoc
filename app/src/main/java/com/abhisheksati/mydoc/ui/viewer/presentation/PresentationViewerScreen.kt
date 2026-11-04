@@ -76,6 +76,7 @@ import com.abhisheksati.mydoc.rendering.engine.presentation.VisualElementType
 import com.abhisheksati.mydoc.util.UserMessages
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.ui.viewer.controls.PageJumpDialog
+import com.abhisheksati.mydoc.ui.viewer.controls.edgeFlingToDocument
 import com.abhisheksati.mydoc.ui.viewer.controls.PrintHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -149,7 +150,9 @@ fun PresentationViewerScreen(
     document: DocumentFile,
     onBackClick: () -> Unit,
     onShareClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSwipeToNextDocument: (() -> Unit)? = null,
+    onSwipeToPreviousDocument: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -506,6 +509,13 @@ fun PresentationViewerScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .edgeFlingToDocument(
+                    atFirstPage = { currentSlideIndex == 0 },
+                    atLastPage = { currentSlideIndex >= effectiveSlideCount - 1 },
+                    // Presenting is its own mode; a stray fling must not walk out of the deck.
+                    onPrevious = if (isSlideshowMode) null else onSwipeToPreviousDocument,
+                    onNext = if (isSlideshowMode) null else onSwipeToNextDocument
+                )
                 .padding(if (isSlideshowMode) PaddingValues(0.dp) else innerPadding)
                 .background(bgColor),
             contentAlignment = Alignment.Center

@@ -395,6 +395,7 @@ fun FilesScreen(
                                 onToggleSelection = { viewModel.toggleSelection(it.file) },
                                 onToggleView = { viewModel.toggleViewMode() },
                                 onSort = { field: FileSortField -> viewModel.toggleSort(field) },
+                                onDocFilter = { viewModel.setDocTypeFilter(it) },
                                 modifier = Modifier.fillMaxSize(),
                                 hazeState = hazeState,
                                 glassMotion = glassMotion

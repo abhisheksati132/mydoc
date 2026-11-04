@@ -76,6 +76,7 @@ import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import java.io.File
 import kotlinx.coroutines.launch
 import com.abhisheksati.mydoc.designsystem.components.showMessage
+import com.abhisheksati.mydoc.util.shareUris
 
 @Composable
 fun HomeScreen(
@@ -99,6 +100,7 @@ fun HomeScreen(
     val context = LocalContext.current
 
     val currentTab by viewModel.currentTab.collectAsStateWithLifecycle()
+    val selectedRecentUris by viewModel.selectedRecentUris.collectAsStateWithLifecycle()
 
     var showCameraScanner by remember { mutableStateOf(false) }
     var showSignaturePad by remember { mutableStateOf(false) }
@@ -145,6 +147,11 @@ fun HomeScreen(
         }
     }
 
+    // Back exits a recents selection before it exits the tab, same as the Library.
+    BackHandler(enabled = currentTab == HomeTab.HOME && selectedRecentUris.isNotEmpty()) {
+        viewModel.clearRecentSelection()
+    }
+
     // Navigate back to Home tab when pressing Back on other tabs
     BackHandler(
         enabled = currentTab != HomeTab.HOME &&
@@ -166,7 +173,11 @@ fun HomeScreen(
         // Root tabs share one horizontal axis with swipe gesture support and keep their own state
         // (scroll, search, selection) when you leave and come back.
         val tabStateHolder = rememberSaveableStateHolder()
-        val isPagerScrollEnabled = !(currentTab == HomeTab.LIBRARY && (fileManagerState.isSelectionMode || fileManagerState.isBrowsingStorage))
+        val isPagerScrollEnabled = when {
+            currentTab == HomeTab.HOME -> selectedRecentUris.isEmpty()
+            currentTab == HomeTab.LIBRARY -> !(fileManagerState.isSelectionMode || fileManagerState.isBrowsingStorage)
+            else -> true
+        }
         HorizontalPager(
             state = pagerState,
             beyondViewportPageCount = 1,
@@ -189,6 +200,21 @@ fun HomeScreen(
                             },
                             onShareDocument = { item ->
                                 onShareDocument(item.toDocumentFile())
+                            },
+                            selectedRecentUris = selectedRecentUris,
+                            onToggleRecentSelection = { item -> viewModel.toggleRecentSelection(item.uri) },
+                            onSelectAllRecents = { items ->
+                                viewModel.selectAllRecents(items.map { it.uri })
+                            },
+                            onClearRecentSelection = { viewModel.clearRecentSelection() },
+                            onShareSelectedRecents = { items ->
+                                val uris = items.map { Uri.parse(it.uri) }
+                                if (!shareUris(context, uris, "Share documents")) {
+                                    context.showMessage("These documents could not be shared.")
+                                }
+                            },
+                            onRemoveSelectedRecents = { items ->
+                                viewModel.removeFromRecents(items.map { it.toDocumentFile() })
                             },
                             onSpotlightSearch = onSpotlightSearch,
                             onSettingsClick = onSettingsClick,
@@ -284,7 +310,7 @@ fun HomeScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = "Update available: v${release.versionName}",
-                                        style = AppTheme.typography.bodyStrong,
+                                        style = AppTheme.typography.body,
                                         color = colors.ink
                                     )
                                     Text(
@@ -334,7 +360,7 @@ fun HomeScreen(
                                     )
                                     Text(
                                         text = "${updateState.progressPercent}%",
-                                        style = AppTheme.typography.captionStrong,
+                                        style = AppTheme.typography.metadata,
                                         color = colors.accent
                                     )
                                 }
@@ -375,7 +401,7 @@ fun HomeScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = "Update downloaded!",
-                                        style = AppTheme.typography.bodyStrong,
+                                        style = AppTheme.typography.body,
                                         color = colors.ink
                                     )
                                     Text(
