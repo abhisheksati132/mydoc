@@ -477,7 +477,7 @@ class FileManagerViewModel(
                 _uiState.update {
                     it.copy(
                         lastTrashedItems = trashed,
-                        userMessage = "Moved ${files.size} items to Recycle Bin"
+                        userMessage = "Moved ${trashed.size} items to Recycle Bin"
                     )
                 }
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)

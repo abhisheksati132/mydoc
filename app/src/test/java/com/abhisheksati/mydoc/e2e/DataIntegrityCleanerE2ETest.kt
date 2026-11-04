@@ -274,10 +274,19 @@ class DataIntegrityCleanerE2ETest {
         // Simulate physical file deleted by external cleaner
         trashedItems[0].trashFile.delete()
 
-        // restoreFromTrash should handle missing physical file gracefully without crashing
+        // Missing content must be handled without crashing, and must not be reported as a
+        // restore that worked. It used to return success(0), which let the UI say "Restored"
+        // for an item whose content had been destroyed out of band.
         val restoreResult = storageRepo.restoreFromTrash(trashedItems)
-        assertTrue(restoreResult.isSuccess)
-        assertEquals(0, restoreResult.getOrThrow())
+        val error = restoreResult.exceptionOrNull()
+        assertTrue(
+            "a missing bin entry is a reported failure, not a silent zero: $error",
+            error is com.abhisheksati.mydoc.domain.model.PartialStorageOperationException
+        )
+        error as com.abhisheksati.mydoc.domain.model.PartialStorageOperationException
+        assertEquals(0, error.completed)
+        assertEquals(1, error.failed)
+        assertEquals(listOf("ghost.pdf"), error.retainedSources)
     }
 
     // =========================================================================

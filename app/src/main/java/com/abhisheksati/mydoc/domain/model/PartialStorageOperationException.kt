@@ -10,5 +10,11 @@ package com.abhisheksati.mydoc.domain.model
 class PartialStorageOperationException(
     val completed: Int,
     val failed: Int,
-    cause: Throwable? = null
+    cause: Throwable? = null,
+    /**
+     * Items that ended up in two places: copied to the destination while part of the original
+     * could not be removed. Deleting the copy there would destroy the parts already removed from
+     * the source, so both remain and the UI has to say so.
+     */
+    val retainedSources: List<String> = emptyList()
 ) : Exception("$completed of ${completed + failed} items completed", cause)

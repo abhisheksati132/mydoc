@@ -55,7 +55,13 @@ enum class ZipCollisionStrategy {
 
 class StorageRepositoryImpl(
     private val context: Context,
-    private val trashDao: TrashDao? = null
+    private val trashDao: TrashDao? = null,
+    /**
+     * The one place a file is removed from the disk. Injected so the partial-deletion cases that
+     * used to destroy data can be reproduced on any filesystem: whether an OS refuses a delete is
+     * not something a test can rely on, but whether the code survives one is.
+     */
+    private val entryMutator: EntryMutator = DefaultEntryMutator
 ) : StorageRepository {
 
     /**
@@ -68,6 +74,7 @@ class StorageRepositoryImpl(
         /** A write that fills the last of a volume leaves a file that cannot be told from a good one. */
         const val RESERVED_FREE_BYTES = 16L * 1024 * 1024
     }
+
 
     override suspend fun getStorageVolumes(): List<StorageVolume> = withContext(Dispatchers.IO) {
         val volumes = mutableListOf<StorageVolume>()
@@ -347,6 +354,7 @@ class StorageRepositoryImpl(
         var moved = 0
         var failed = 0
         var firstError: Throwable? = null
+        val retained = mutableListOf<String>()
         val targetCanon = targetDir.canonicalPath
 
         mutationLock.withLock {
@@ -364,35 +372,43 @@ class StorageRepositoryImpl(
                 }
                 val dest = getNonConflictingFile(targetDir, src.name)
 
-                if (src.renameTo(dest)) {
+                if (entryMutator.rename(src, dest)) {
                     moved++
                     onProgress(moved, total)
                     continue
                 }
 
-                // Cross-volume fallback. A copy whose source survives is two files, not one move,
-                // so the source is verified gone; if it is not, the copy is withdrawn and the
-                // original stays where it was.
-                val outcome = runCatching {
-                    if (src.isDirectory) src.copyRecursively(dest, overwrite = true)
-                    else src.copyTo(dest, overwrite = true)
-                    (if (src.isDirectory) src.deleteRecursively() else src.delete()) && !src.exists()
+                // Cross-volume or locked-source fallback, in three stages: copy, prove the copy,
+                // then delete the original entry by entry. The copy is taken back only while the
+                // original is provably untouched; if part of the original was already removed, the
+                // copy is the surviving version of that part and destroying it was the data-loss
+                // bug this replaces.
+                val copyError = copyAndVerify(src, dest)
+                if (copyError != null) {
+                    discardPartial(dest)
+                    failed++
+                    firstError = firstError ?: copyError
+                    continue
                 }
-                when {
-                    outcome.getOrDefault(false) -> {
-                        moved++
-                        onProgress(moved, total)
-                    }
-                    else -> {
-                        discardPartial(dest)
-                        failed++
-                        firstError = firstError ?: outcome.exceptionOrNull()
-                            ?: java.io.IOException("Could not remove ${src.name} after copying it")
+                val before = snapshotSource(src)
+                val survivors = deleteSourceEntries(src)
+                if (survivors.isEmpty()) {
+                    moved++
+                    onProgress(moved, total)
+                } else {
+                    failed++
+                    if (!resolvePartialSource(src, dest, before)) {
+                        retained += src.name
+                        firstError = firstError ?: java.io.IOException(
+                            "Copied ${src.name} but ${survivors.first().name} could not be removed from ${src.parent}"
+                        )
+                    } else {
+                        firstError = firstError ?: java.io.IOException("Could not remove ${src.name}")
                     }
                 }
             }
         }
-        batchResult(moved, failed, firstError, "Nothing was moved")
+        batchResult(moved, failed, firstError, "Nothing was moved", retained)
     }
 
     /**
@@ -404,11 +420,15 @@ class StorageRepositoryImpl(
         completed: Int,
         failed: Int,
         firstError: Throwable?,
-        nothingDoneMessage: String
+        nothingDoneMessage: String,
+        retainedSources: List<String> = emptyList()
     ): Result<Int> = when {
         failed == 0 -> Result.success(completed)
-        completed == 0 -> Result.failure(firstError ?: IllegalStateException(nothingDoneMessage))
-        else -> Result.failure(PartialStorageOperationException(completed, failed, firstError))
+        completed == 0 && retainedSources.isEmpty() ->
+            Result.failure(firstError ?: IllegalStateException(nothingDoneMessage))
+        else -> Result.failure(
+            PartialStorageOperationException(completed, failed, firstError, retainedSources)
+        )
     }
 
     /** Bytes the sources will occupy. Checked before writing: a copy that dies at 98% full
@@ -424,7 +444,79 @@ class StorageRepositoryImpl(
 
     /** Remove whatever a failed write left behind, so a partial file is never mistaken for the item. */
     private fun discardPartial(dest: File) {
-        runCatching { if (dest.isDirectory) dest.deleteRecursively() else dest.delete() }
+        if (dest.isDirectory) dest.walkBottomUp().forEach { entryMutator.delete(it) }
+        else entryMutator.delete(dest)
+    }
+
+    /**
+     * Every entry under [root] with its length, keyed by relative path. Taken before a source is
+     * deleted so that, if deletion fails, the code can tell "the original is untouched" from
+     * "the original has been half-removed" — the difference between a redundant copy and the only
+     * complete copy that exists.
+     */
+    private fun snapshotSource(root: File): Map<String, Long> {
+        if (!root.isDirectory) return mapOf("" to if (root.isFile) root.length() else -1L)
+        return root.walkTopDown().associate { node ->
+            node.relativeTo(root).path to if (node.isDirectory) -1L else node.length()
+        }
+    }
+
+    /**
+     * Copies [src] into [dest] and proves the copy is whole before anything is deleted. A
+     * recursive copy that stopped early is still reported as success by some filesystems, so a
+     * directory is verified entry by entry rather than by the return value.
+     */
+    private fun copyAndVerify(src: File, dest: File): Throwable? =
+        runCatching {
+            if (src.isDirectory) src.copyRecursively(dest, overwrite = true) else src.copyTo(dest, overwrite = true)
+            verifyCopy(src, dest)
+        }.fold(onSuccess = { null }, onFailure = { it })
+
+    private fun verifyCopy(src: File, dest: File) {
+        if (src.isDirectory) {
+            src.walkTopDown().forEach { node ->
+                val rel = node.relativeTo(src).path
+                val mirror = if (rel.isEmpty()) dest else File(dest, rel)
+                if (!mirror.exists()) throw java.io.IOException("Copied tree is missing $rel")
+                if (node.isFile && mirror.length() != node.length()) {
+                    throw java.io.IOException("Copy of $rel is ${mirror.length()} bytes, source is ${node.length()}")
+                }
+            }
+        } else if (!dest.isFile || dest.length() != src.length()) {
+            throw java.io.IOException("Copied file size does not match ${src.name}")
+        }
+    }
+
+    /**
+     * Removes the source one entry at a time, deepest first, and returns what survived. Deleting a
+     * tree in a single call used to hide the partial case, and the partial case is the only one
+     * where discarding the destination destroys data.
+     */
+    private suspend fun deleteSourceEntries(src: File): List<File> {
+        if (!src.isDirectory) return if (entryMutator.delete(src)) emptyList() else listOf(src)
+        val survivors = mutableListOf<File>()
+        src.walkTopDown().filter { it != src }
+            .sortedByDescending { it.absolutePath.length }
+            .forEach { node ->
+                currentCoroutineContext().ensureActive()
+                if (!entryMutator.delete(node)) survivors += node
+            }
+        if (!entryMutator.delete(src)) survivors += src
+        return survivors
+    }
+
+    /**
+     * The decision the old fallback got backwards. A verified copy is redundant only while the
+     * original still stands exactly as it was; once any part of the original is gone, the copy is
+     * the surviving version of those parts and taking it back would delete user data.
+     */
+    private fun resolvePartialSource(src: File, dest: File, before: Map<String, Long>): Boolean {
+        val after = snapshotSource(src)
+        if (after == before) {
+            discardPartial(dest)
+            return true
+        }
+        return false
     }
 
     private fun getNonConflictingFile(parent: File, originalName: String): File {
@@ -944,6 +1036,8 @@ class StorageRepositoryImpl(
             val now = System.currentTimeMillis()
 
             var failed = 0
+            var firstError: Throwable? = null
+            val retained = mutableListOf<String>()
             for (file in files) {
                 if (!file.exists()) {
                     failed++
@@ -974,14 +1068,30 @@ class StorageRepositoryImpl(
                 // destroy it outright.
                 val rowId = trashDao?.insert(entity) ?: 0L
 
-                val moved = file.renameTo(destTrashFile) || run {
-                    if (file.isDirectory) file.copyRecursively(destTrashFile, overwrite = true)
-                    else file.copyTo(destTrashFile, overwrite = true)
-                    // Same rule as move(): a copy whose source survives is not a trash.
-                    (if (file.isDirectory) file.deleteRecursively() else file.delete()) && !file.exists()
+                var trashedNow = entryMutator.rename(file, destTrashFile)
+                var retainedSource = false
+                if (!trashedNow) {
+                    val copyError = copyAndVerify(file, destTrashFile)
+                    if (copyError != null) {
+                        discardPartial(destTrashFile)
+                        if (rowId != 0L) runCatching { trashDao?.deleteByIds(listOf(rowId)) }
+                        failed++
+                        firstError = firstError ?: copyError
+                        continue
+                    }
+                    val before = snapshotSource(file)
+                    val survivors = deleteSourceEntries(file)
+                    trashedNow = survivors.isEmpty()
+                    if (!trashedNow) {
+                        // The copy in the Recycle Bin stays, and so does its row: some of the
+                        // original has already been removed, so this is the only complete version
+                        // of those parts. The user is told the item is in both places.
+                        retainedSource = true
+                        retained += file.name
+                    }
                 }
 
-                if (moved) {
+                if (trashedNow || retainedSource) {
                     destTrashFile.setLastModified(now)
                     scannedPaths += file.absolutePath
                     trashed.add(entity.copy(id = rowId).toDomain())
@@ -999,7 +1109,13 @@ class StorageRepositoryImpl(
             purgeExpiredTrash()
 
             if (trashed.isEmpty() && failed > 0) {
-                Result.failure(IllegalStateException("Nothing could be moved to the Recycle Bin"))
+                Result.failure(firstError ?: IllegalStateException("Nothing could be moved to the Recycle Bin"))
+            } else if (retained.isNotEmpty()) {
+                // Reporting the full list as "trashed" would claim the originals are gone when
+                // they are not, so the partial result carries both counts.
+                Result.failure(
+                    PartialStorageOperationException(trashed.size, failed, firstError, retained)
+                )
             } else {
                 Result.success(trashed)
             }
@@ -1012,37 +1128,75 @@ class StorageRepositoryImpl(
     override suspend fun restoreFromTrash(items: List<TrashItem>): Result<Int> = withContext(Dispatchers.IO) {
         try {
             var restoredCount = 0
+            var failedCount = 0
+            val unresolved = mutableListOf<String>()
             val restoredPaths = mutableListOf<String>()
+            val trashDir = getTrashDir()
+            // An unreadable bin may mean the volume is simply away. The records stay so the
+            // restore can be retried; only a readable bin that lacks the item proves the content
+            // is gone.
+            if (!trashDir.isDirectory || !trashDir.canRead()) {
+                return@withContext Result.failure(
+                    java.io.IOException("The Recycle Bin storage is unavailable; nothing was restored.")
+                )
+            }
             for (item in items) {
+                currentCoroutineContext().ensureActive()
                 val trashFile = item.trashFile
                 if (!trashFile.exists()) {
+                    failedCount++
+                    unresolved += item.displayName
                     trashDao?.deleteByIds(listOf(item.id))
                     continue
                 }
 
-                val originalParent = item.originalFile.parentFile ?: continue
-                if (!originalParent.exists()) originalParent.mkdirs()
+                val originalParent = item.originalFile.parentFile
+                if (originalParent == null || (!originalParent.exists() && !originalParent.mkdirs())) {
+                    // Nowhere to put it back: keep the record so the item stays recoverable.
+                    failedCount++
+                    unresolved += item.displayName
+                    continue
+                }
 
                 val destFile = getNonConflictingFile(originalParent, item.displayName)
-                val restored = trashFile.renameTo(destFile) || run {
-                    if (trashFile.isDirectory) {
-                        trashFile.copyRecursively(destFile, overwrite = true)
-                        trashFile.deleteRecursively()
-                    } else {
-                        trashFile.copyTo(destFile, overwrite = true)
-                        trashFile.delete()
+                var restored = entryMutator.rename(trashFile, destFile)
+                if (!restored) {
+                    if (copyAndVerify(trashFile, destFile) != null) {
+                        discardPartial(destFile)
+                        failedCount++
+                        unresolved += item.displayName
+                        continue
                     }
-                    destFile.exists()
+                    val before = snapshotSource(trashFile)
+                    val survivors = deleteSourceEntries(trashFile)
+                    restored = survivors.isEmpty()
+                    if (!restored && !resolvePartialSource(trashFile, destFile, before)) {
+                        // Part of the bin copy is already gone, so the restored copy is the only
+                        // complete version. Count it and leave the record for the survivor.
+                        restoredCount++
+                        restoredPaths += destFile.absolutePath
+                        continue
+                    }
                 }
 
                 if (restored) {
                     restoredPaths += destFile.absolutePath
                     trashDao?.deleteByIds(listOf(item.id))
                     restoredCount++
+                } else {
+                    discardPartial(destFile)
+                    failedCount++
+                    unresolved += item.displayName
                 }
             }
             scanFilesAwait(context, restoredPaths)
-            Result.success(restoredCount)
+            if (failedCount == 0) {
+                Result.success(restoredCount)
+            } else {
+                Result.failure(
+                    PartialStorageOperationException(restoredCount, failedCount, null, unresolved)
+                )
+            }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Result.failure(e)
@@ -1086,17 +1240,50 @@ class StorageRepositoryImpl(
     override suspend fun emptyTrash(): Result<Int> = withContext(Dispatchers.IO) {
         try {
             val trashDir = getTrashDir()
-            val files = trashDir.listFiles() ?: emptyArray()
-            var count = 0
+            val files = trashDir.listFiles()
+            if (files == null) {
+                return@withContext Result.failure(
+                    java.io.IOException("The Recycle Bin folder could not be read.")
+                )
+            }
+            // Rows are removed only for content that is provably gone. Clearing the whole table
+            // after a partial sweep left files sitting in .trash with no record: nothing in the UI
+            // could see them, nothing could retry them, and the space was never reclaimed.
+            val rows = trashDao?.getAllTrashItemsSync().orEmpty()
+            val idsToRemove = mutableListOf<Long>()
+            var deleted = 0
+            var failed = 0
+            val stuck = mutableListOf<String>()
             for (f in files) {
-                if (f.isDirectory) {
-                    if (f.deleteRecursively()) count++
+                currentCoroutineContext().ensureActive()
+                val gone = try {
+                    if (f.isDirectory) {
+                        f.walkTopDown().sortedByDescending { it.absolutePath.length }
+                            .forEach { node -> entryMutator.delete(node) }
+                    } else {
+                        entryMutator.delete(f)
+                    }
+                    !f.exists()
+                } catch (_: Exception) {
+                    false
+                }
+                if (gone) {
+                    deleted++
+                    rows.firstOrNull { it.trashPath == f.absolutePath }?.let { idsToRemove += it.id }
                 } else {
-                    if (f.delete()) count++
+                    failed++
+                    stuck += f.name
                 }
             }
-            trashDao?.clearAll()
-            Result.success(count)
+            // A record whose file is already missing describes nothing recoverable, so it goes too.
+            rows.filter { it.id !in idsToRemove && !File(it.trashPath).exists() }
+                .forEach { idsToRemove += it.id }
+            if (idsToRemove.isNotEmpty()) trashDao?.deleteByIds(idsToRemove)
+            if (failed == 0) {
+                Result.success(deleted)
+            } else {
+                Result.failure(PartialStorageOperationException(deleted, failed, null, stuck))
+            }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Result.failure(e)

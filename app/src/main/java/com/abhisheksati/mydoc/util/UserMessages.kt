@@ -47,7 +47,14 @@ object UserMessages {
             // Some items did land. Saying only "failed" would send people back to retry work
             // that is already done, and hide that half a batch is now sitting in the folder.
             val total = cause.completed + cause.failed
-            return "$action completed for ${cause.completed} of $total items — ${cause.failed} could not be completed."
+            val base = "$action completed for ${cause.completed} of $total items — ${cause.failed} could not be completed."
+            if (cause.retainedSources.isEmpty()) return base
+            // The copies were kept because part of the original was already removed. Saying only
+            // "could not be completed" would send people to delete the duplicate by hand.
+            val plural = cause.retainedSources.size > 1
+            return base + " " + cause.retainedSources.size.toString() +
+                (if (plural) " items are also still in their original location, so their copies were kept too."
+                 else " item is also still in its original location, so its copy was kept too.")
         }
         val text = cause?.message.orEmpty()
         val reason = when {
