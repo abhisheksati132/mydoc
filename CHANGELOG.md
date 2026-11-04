@@ -3,9 +3,16 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
-## [Unreleased]
+## [1.7.2] — 2026-11-04
 
-Consistency pass across screens, plus closing the disclosure gap v1.7.1's registry opened.
+Range: `v1.7.1..v1.7.2`. Four commits: one consistency pass, the two engineering-audit
+follow-ups, and a device-report pass over browsing, selection and dark-mode chrome.
+
+Screens disclose and describe failures the same way, cached document content is keyed on
+what it actually is rather than a 32-bit hash, file operations report partial results
+instead of lying, and the browsing state that had to survive opening a document moved to
+the view models that own it. The Ink & Seal identity is untouched; the visual changes are
+corrections to it.
 
 ### Added
 
