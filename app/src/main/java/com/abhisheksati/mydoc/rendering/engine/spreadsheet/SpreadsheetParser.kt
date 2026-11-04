@@ -17,6 +17,11 @@ import java.util.zip.ZipInputStream
 
 class SpreadsheetParser {
 
+    private companion object {
+        const val SAMPLE_BYTES = 4000
+    }
+
+
     private val htmlRowPattern =
         Regex("<tr[^>]*>(.*?)</tr>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
     private val htmlCellPattern =
@@ -76,6 +81,10 @@ class SpreadsheetParser {
 
             ext == "ods" || ext == "ots" -> parseOds(bytes).ifEmpty {
                 throw DocumentLoadException(LoadFailure.CORRUPT_DOCUMENT, "This OpenDocument spreadsheet has no readable sheets.")
+            }
+
+            ext == "fods" -> parseFods(bytes).ifEmpty {
+                throw DocumentLoadException(LoadFailure.CORRUPT_DOCUMENT, "This flat ODF spreadsheet has no readable tables.")
             }
 
             ext == "csv" || ext == "tsv" || ext == "txt" -> parseCsv(bytes)
@@ -234,6 +243,18 @@ class SpreadsheetParser {
     }
 
     private fun parseOds(bytes: ByteArray): SpreadsheetModel {
+        val contentXml = extractOdfContent(bytes) ?: return SpreadsheetModel(emptyList())
+        return parseOdfContent(contentXml)
+    }
+
+    /**
+     * Flat OpenDocument Spreadsheet (.fods) is the ODF document XML with no zip around it.
+     * It previously fell through to the CSV reader, which split every tag on commas and
+     * produced a grid of markup fragments.
+     */
+    private fun parseFods(bytes: ByteArray): SpreadsheetModel = parseOdfContent(bytes)
+
+    private fun extractOdfContent(bytes: ByteArray): ByteArray? {
         var contentXml: ByteArray? = null
         try {
             val zis = ZipInputStream(ByteArrayInputStream(bytes))
@@ -261,11 +282,12 @@ class SpreadsheetParser {
                 entry = zis.nextEntry
             }
         } catch (_: Throwable) {
-            return SpreadsheetModel(emptyList())
+            return null
         }
+        return contentXml
+    }
 
-        if (contentXml == null) return SpreadsheetModel(emptyList())
-
+    private fun parseOdfContent(contentXml: ByteArray): SpreadsheetModel {
         val sheets = mutableListOf<SheetData>()
         try {
             val parser = com.abhisheksati.mydoc.rendering.engine.EngineXml.newPullParser(ByteArrayInputStream(contentXml))
@@ -416,112 +438,125 @@ class SpreadsheetParser {
         return SpreadsheetModel(listOf(SheetData(name = "Extracted Data", maxRow = row - 1, maxCol = 0, cells = cells)))
     }
 
+    /**
+     * RFC 4180 reader with the practical extras: BOM and UTF-16 detection, a cp1252 fallback for
+     * files that are not valid UTF-8, delimiter detection that ignores quoted content, and quoted
+     * fields that keep their padding while bare fields are trimmed the way a spreadsheet would.
+     */
     private fun parseCsv(bytes: ByteArray): SpreadsheetModel {
-        val text = String(bytes, Charsets.UTF_8).removePrefix("\uFEFF")
-        if (text.isEmpty()) return SpreadsheetModel(listOf(SheetData(name = "Sheet 1")))
+        val text = decodeText(bytes)
+        if (text.isBlank()) return SpreadsheetModel(listOf(SheetData(name = "Data")))
 
-        // Auto-detect delimiter
-        val sample = text.take(1000)
-        val delimiter = when {
-            sample.count { it == '\t' } > sample.count { it == ',' } -> '\t'
-            sample.count { it == ';' } > sample.count { it == ',' } -> ';'
-            else -> ','
-        }
-
-        val cells = mutableMapOf<Pair<Int, Int>, String>()
-        var maxRow = 0
-        var maxCol = 0
-
+        val delimiter = detectDelimiter(text)
+        val cells = LinkedHashMap<Pair<Int, Int>, String>()
+        val field = StringBuilder()
         var rowIndex = 0
         var colIndex = 0
-        val currentField = StringBuilder()
-        var inQuotes = false
+        var maxRow = 0
+        var maxCol = 0
+        var quoted = false
+        var fieldWasQuoted = false
         var i = 0
         val len = text.length
 
+        fun endField() {
+            // A quoted field keeps its characters exactly; a bare one is trimmed as a
+            // spreadsheet would. `quoted` is already false by the time the closing quote is
+            // consumed, so the decision needs its own flag.
+            val value = if (fieldWasQuoted) field.toString() else field.toString().trim()
+            if (value.isNotEmpty()) cells[rowIndex to colIndex] = value
+            if (colIndex > maxCol) maxCol = colIndex
+            field.setLength(0)
+            quoted = false
+            fieldWasQuoted = false
+            colIndex++
+        }
+
+        fun endRow() {
+            endField()
+            if (rowIndex > maxRow) maxRow = rowIndex
+            colIndex = 0
+            rowIndex++
+        }
+
         while (i < len) {
             val ch = text[i]
-            if (inQuotes) {
-                if (ch == '"') {
-                    if (i + 1 < len && text[i + 1] == '"') {
-                        currentField.append('"')
-                        i += 2
-                        continue
-                    } else {
-                        inQuotes = false
-                        i++
-                        continue
-                    }
-                } else {
-                    currentField.append(ch)
-                    i++
-                    continue
+            if (quoted) {
+                when {
+                    ch == '"' && i + 1 < len && text[i + 1] == '"' -> { field.append('"'); i += 2 }
+                    ch == '"' -> { quoted = false; i++ }
+                    else -> { field.append(ch); i++ }
                 }
-            } else {
-                when (ch) {
-                    '"' -> {
-                        inQuotes = true
-                        i++
-                    }
-                    delimiter -> {
-                        val value = currentField.toString().trim()
-                        if (value.isNotEmpty()) {
-                            cells[Pair(rowIndex, colIndex)] = value
-                        }
-                        if (colIndex > maxCol) maxCol = colIndex
-                        currentField.clear()
-                        colIndex++
-                        i++
-                    }
-                    '\r' -> {
-                        if (i + 1 < len && text[i + 1] == '\n') i++
-                        val value = currentField.toString().trim()
-                        if (value.isNotEmpty()) {
-                            cells[Pair(rowIndex, colIndex)] = value
-                        }
-                        if (colIndex > maxCol) maxCol = colIndex
-                        if (rowIndex > maxRow) maxRow = rowIndex
-                        currentField.clear()
-                        colIndex = 0
-                        rowIndex++
-                        i++
-                    }
-                    '\n' -> {
-                        val value = currentField.toString().trim()
-                        if (value.isNotEmpty()) {
-                            cells[Pair(rowIndex, colIndex)] = value
-                        }
-                        if (colIndex > maxCol) maxCol = colIndex
-                        if (rowIndex > maxRow) maxRow = rowIndex
-                        currentField.clear()
-                        colIndex = 0
-                        rowIndex++
-                        i++
-                    }
-                    else -> {
-                        currentField.append(ch)
-                        i++
-                    }
+                continue
+            }
+            when {
+                // A quote only opens a field at its start; elsewhere it is literal content,
+                // so one stray quote cannot swallow the remainder of the line.
+                ch == '"' && field.isEmpty() -> { quoted = true; fieldWasQuoted = true; i++ }
+                ch == delimiter -> { endField(); i++ }
+                ch == '\r' -> {
+                    if (i + 1 < len && text[i + 1] == '\n') i++
+                    endRow(); i++
                 }
+                ch == '\n' -> { endRow(); i++ }
+                else -> { field.append(ch); i++ }
             }
         }
+        if (quoted) field.append('"')
+        if (field.isNotEmpty() || colIndex > 0) endRow()
 
-        if (currentField.isNotEmpty() || colIndex > 0) {
-            val value = currentField.toString().trim()
-            if (value.isNotEmpty()) {
-                cells[Pair(rowIndex, colIndex)] = value
-            }
-            if (colIndex > maxCol) maxCol = colIndex
-            if (rowIndex > maxRow) maxRow = rowIndex
-        }
-
-        val sheet = SheetData(
-            name = "Data",
-            maxRow = maxRow,
-            maxCol = maxCol,
-            cells = cells
+        return SpreadsheetModel(
+            listOf(SheetData(name = "Data", maxRow = maxRow, maxCol = maxCol, cells = cells))
         )
-        return SpreadsheetModel(listOf(sheet))
+    }
+
+    /** Decodes a delimited file by its byte-order mark, falling back to cp1252 for legacy exports. */
+    private fun decodeText(bytes: ByteArray): String {
+        if (bytes.size >= 3 && bytes[0] == 0xEF.toByte() && bytes[1] == 0xBB.toByte() && bytes[2] == 0xBF.toByte()) {
+            return String(bytes, 3, bytes.size - 3, Charsets.UTF_8)
+        }
+        if (bytes.size >= 2 && bytes[0] == 0xFF.toByte() && bytes[1] == 0xFE.toByte()) {
+            return String(bytes, 2, bytes.size - 2, Charsets.UTF_16LE)
+        }
+        if (bytes.size >= 2 && bytes[0] == 0xFE.toByte() && bytes[1] == 0xFF.toByte()) {
+            return String(bytes, 2, bytes.size - 2, Charsets.UTF_16BE)
+        }
+        return try {
+            java.nio.charset.Charset.forName("UTF-8").newDecoder()
+                .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+                .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+                .decode(java.nio.ByteBuffer.wrap(bytes)).toString()
+        } catch (_: java.nio.charset.CharacterCodingException) {
+            // Western-European CSV exports from Excel are routinely cp1252, which UTF-8 cannot
+            // decode; reading them as UTF-8 turned every accented character into U+FFFD.
+            String(bytes, java.nio.charset.Charset.forName("windows-1252"))
+        }
+    }
+
+    /** Counts candidate separators outside quoted fields; comma wins a tie. */
+    private fun detectDelimiter(text: String): Char {
+        val candidates = charArrayOf(',', ';', '\t', '|')
+        val counts = HashMap<Char, Int>()
+        var inQuotes = false
+        var scanned = 0
+        for (ch in text) {
+            if (scanned++ > SAMPLE_BYTES) break
+            when {
+                ch == '"' -> inQuotes = !inQuotes
+                inQuotes -> Unit
+                ch in candidates -> counts[ch] = (counts[ch] ?: 0) + 1
+            }
+        }
+        var best = ','
+        var bestCount = 0
+        for (c in candidates) {
+            val n = counts[c] ?: 0
+            if (n > bestCount) {
+                best = c
+                bestCount = n
+            }
+        }
+        return best
     }
 
     private fun parseXlsx(bytes: ByteArray): SpreadsheetModel {
