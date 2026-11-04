@@ -3,6 +3,16 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [1.6.1] — 2026-11-04
+
+Range: `v1.6.0..v1.6.1`.
+
+### Fixed
+
+- **Video player controls legible in light mode.** The player's top and bottom control bars used the theme-adaptive `GlassSurface`, which falls back to a warm near-white plate in light mode — so the white icons and text vanished and the bars clashed with the black video. They now use a fixed dark scrim, so controls are always visible and the player looks identical in light and dark.
+- **Settings top bar artifact.** The Settings top bar rendered as a glass plate with a specular rim and elevation shadow, which in dark mode read as a stray "box with a line" over the black background. It now uses the same flat, transparent top bar as Library.
+- **Tools top bar consistency.** The Tools screen used a bespoke header (different title style and icon tint from the rest of the app). It now uses the shared `AppTopBar`, so Tools, Library and Home share one top-navigation treatment.
+
 ## [1.6.0] — 2026-11-04
 
 Range: `v1.5.19..v1.6.0`.

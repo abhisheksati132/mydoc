@@ -100,7 +100,9 @@ fun SettingsScreen(
             AppTopBar(
                 title = "Settings",
                 subtitle = "MyDoc ${updateManager.currentVersionName}",
-                onBack = onBackClick
+                onBack = onBackClick,
+                isGlass = false,
+                containerColor = androidx.compose.ui.graphics.Color.Transparent
             )
         }
     ) { innerPadding ->

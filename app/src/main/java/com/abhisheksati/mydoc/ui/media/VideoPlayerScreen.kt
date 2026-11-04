@@ -417,10 +417,12 @@ fun VideoPlayerScreen(
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.45f))
             ) {
-                // Top Action Bar
-                GlassSurface(
+                // Top Action Bar — fixed dark scrim (the video surface is always black,
+                // so theme-adaptive glass would flip to a light plate in light mode and
+                // make the white icons invisible).
+                Surface(
+                    color = Color.Black.copy(alpha = 0.6f),
                     shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
-                    elevation = 6.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -546,10 +548,10 @@ fun VideoPlayerScreen(
                     }
                 }
 
-                // Bottom Timeline and Playback Controls
-                GlassSurface(
+                // Bottom Timeline and Playback Controls — fixed dark scrim (see top bar note).
+                Surface(
+                    color = Color.Black.copy(alpha = 0.6f),
                     shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-                    elevation = 10.dp,
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.BottomCenter)

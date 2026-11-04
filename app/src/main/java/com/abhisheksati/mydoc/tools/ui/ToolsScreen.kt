@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,6 +42,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -57,12 +59,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
+import com.abhisheksati.mydoc.designsystem.components.AppTopBar
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.components.GlassMotionState
 import com.abhisheksati.mydoc.designsystem.components.TrackGlassMotion
@@ -316,49 +320,32 @@ private fun ToolsHeader(
     onSearch: () -> Unit,
     onSettingsClick: (() -> Unit)?
 ) {
-    val colors = AppTheme.colors
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = "Tools",
-                style = AppTheme.typography.wordmark,
-                color = colors.inkPrimary
-            )
-            Text(
-                text = "$toolCount tools · 6 tasks",
-                style = AppTheme.typography.metadata,
-                color = colors.inkMuted,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
-        IconButton(onClick = onSearch) {
-            Icon(
-                imageVector = Icons.Outlined.Search,
-                contentDescription = "Search tools",
-                tint = if (isSearchActive) colors.accent else colors.inkSecondary
-            )
-        }
-
-        if (onSettingsClick != null) {
-            IconButton(onClick = onSettingsClick) {
+    val scheme = MaterialTheme.colorScheme
+    AppTopBar(
+        title = "Tools",
+        subtitle = "$toolCount tools · 6 tasks",
+        isGlass = false,
+        containerColor = Color.Transparent,
+        contentInsets = WindowInsets(0, 0, 0, 0),
+        actions = {
+            IconButton(onClick = onSearch) {
                 Icon(
-                    Icons.Outlined.Settings,
-                    contentDescription = "Settings",
-                    tint = colors.inkSecondary
+                    imageVector = Icons.Outlined.Search,
+                    contentDescription = "Search tools",
+                    tint = if (isSearchActive) scheme.primary else scheme.onSurface
                 )
             }
+            if (onSettingsClick != null) {
+                IconButton(onClick = onSettingsClick) {
+                    Icon(
+                        imageVector = Icons.Outlined.Settings,
+                        contentDescription = "Settings",
+                        tint = scheme.onSurface
+                    )
+                }
+            }
         }
-    }
+    )
 }
 
 @Composable
