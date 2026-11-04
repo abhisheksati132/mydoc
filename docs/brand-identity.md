@@ -175,7 +175,10 @@ what's next; never hype.
 
 ## 9. Anti-slop guardrails (hard rules)
 
-1. No gradients, aurora blooms, or glow shadows anywhere.
+1. No gradients, aurora blooms, or glow shadows anywhere. **One exception:** the glass chrome
+   (`GlassSurface`) uses short vertical gradients for the 1dp specular rim and the inner shadow.
+   Those model light on a physical edge, they are not decorative fills, and they are the only
+   gradients permitted. Nothing else — no hero gradients, no tinted washes, no glow.
 2. Exactly one UI accent (Seal teal). Brass is a badge/seal micro-accent, never a control color.
 3. No emoji as icons. One vector icon family, consistent stroke.
 4. Max two typefaces (+ mono for data).

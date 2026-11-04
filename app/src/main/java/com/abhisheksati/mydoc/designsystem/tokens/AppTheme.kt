@@ -180,6 +180,7 @@ fun AppDesignSystemTheme(
     ) {
         MaterialTheme(
             colorScheme = materialColorScheme,
+            typography = brandMaterialTypography(),
             content = {
                 CompositionLocalProvider(
                     LocalAppTypography provides appTypographyFromMaterial(MaterialTheme.typography)

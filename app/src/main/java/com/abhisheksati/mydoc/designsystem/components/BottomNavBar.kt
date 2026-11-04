@@ -3,7 +3,7 @@ package com.abhisheksati.mydoc.designsystem.components
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -39,7 +40,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.spring
 import androidx.compose.runtime.LaunchedEffect
 import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
@@ -49,13 +49,16 @@ import com.abhisheksati.mydoc.domain.model.HomeTab
 import dev.chrisbanes.haze.HazeState
 
 /**
- * Floating glass pill bottom navigation bar with central Scan CTA.
+ * Floating glass pill navigation for the three root tabs: Home, Library, Tools.
  *
- * Implements "Paper under glass" chrome identity:
+ * Part of the "Ink & Seal" chrome:
  * - Backdrop blur via [GlassSurface] and [HazeState]
  * - 1dp specular rim highlight + soft inner shadow
- * - One accent color (Stamp Vermilion) for active selection and central Scan action
+ * - Seal teal marks the active tab; the pill itself carries the selection
  * - High-performance solid fallback when glass effects are disabled
+ *
+ * Each item is a real tab: selectable semantics for TalkBack and a 48dp touch
+ * target, which the visual pill alone would not provide.
  */
 @Composable
 fun BottomNavBar(
@@ -174,15 +177,17 @@ private fun NavPillItem(
 
     Row(
         modifier = Modifier
+            .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(containerColor)
-            .clickable(
+            .selectable(
+                selected = selected,
                 role = Role.Tab,
-                indication = null,
                 interactionSource = remember { MutableInteractionSource() },
+                indication = null,
                 onClick = onClick
             )
-            .padding(horizontal = 12.dp, vertical = 7.dp),
+            .padding(horizontal = 14.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {

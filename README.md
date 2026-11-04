@@ -17,7 +17,7 @@
 
 <br/>
 
-[📥 **Download Latest APK (v1.6.0)**](https://github.com/abhisheksati132/mydoc/releases/latest) • [✨ **Features**](#-features) • [🎨 **Brand & Design**](#-brand--design) • [🛡️ **Security & Integrity**](#-security--cryptographic-verification) • [📊 **Supported Formats**](#-format-support-matrix) • [🛠️ **Build & Test**](#-building-from-source)
+[📥 **Download Latest APK (v1.7.0)**](https://github.com/abhisheksati132/mydoc/releases/latest) • [✨ **Features**](#-features) • [🎨 **Brand & Design**](#-brand--design) • [🛡️ **Security & Integrity**](#-security--cryptographic-verification) • [📊 **Supported Formats**](#-format-support-matrix) • [🛠️ **Build & Test**](#-building-from-source)
 
 </div>
 
@@ -35,9 +35,9 @@ MyDoc follows a documented design system — **"Ink & Seal"** — a quiet-luxury
 
 - **Positioning:** calm, private, every-format. Restraint over density; one accent, used with intent.
 - **Color:** warm bone / graphite chrome, a single **Seal-teal** accent (`#0E5C57` light, `#4FB0A6` dark) and a **brass** micro-accent (`#A67C3D`) reserved for the seal and premium touches. Format colors are desaturated to warm letterpress tones.
-- **Type:** Fraunces (display) + Inter (UI) + JetBrains Mono (metadata).
-- **Mark:** a wax-seal emblem — a teal rounded square holding a cream folded-corner document — used as the launcher, splash, and monochrome icon.
-- **Guardrails:** no gradients/aurora/glow, no emoji icons, color is never the only signal, motion respects the system reduced-motion setting.
+- **Type:** Fraunces (display) + Inter (UI) + JetBrains Mono (metadata), supplied to `MaterialTheme` as a Material 3 `Typography`, so both `MaterialTheme.typography.*` and the app's own role tokens resolve to the brand faces.
+- **Mark:** the Seal — a rounded square whose negative space forms an `M` with a folded-paper corner — drawn in-app beside the wordmark, tinted per theme. The launcher, splash and monochrome icon still carry the earlier document-sheet mark.
+- **Guardrails:** no gradients/aurora/glow (the glass rim and inner shadow are the one documented exception), no emoji icons, color is never the only signal, motion respects the system reduced-motion setting.
 
 ---
 
@@ -48,6 +48,9 @@ MyDoc follows a documented design system — **"Ink & Seal"** — a quiet-luxury
 * **Streaming Office Reader**: Native, zero-OOM parsers for `.docx`, `.xlsx`, and `.pptx` powered by streaming pull parsers and virtualized Compose layouts.
 * **E-Books & Text**: Integrated EPUB reader with adjustable typography and instant plain text (`.txt`, `.log`, `.md`) rendering.
 * **Reading Continuity & State Restoration**: Automatically saves and restores page numbers, scroll offsets, zoom levels, and recent file timestamps.
+* **Document-to-Document Swiping**: A fling past the first or last page steps to the neighbouring file in the same folder — across PDF, Word, Excel, Slide, EPUB and text — while mid-document swipes still turn pages.
+* **Real Office Thumbnails**: Word, Excel and Slide tiles render their actual first page by reusing the viewer's own converter, instead of a flat format plate.
+* **Markdown Typography**: `.md` files render headings, bold/italic/code spans, lists, quotes and rules rather than raw markers.
 * **Multi-Format Tab Categorization**: Library automatically segregates documents into intuitive sub-groups (`PDF`, `Word`, `Excel`, `PPT`, `Text`).
 
 ### 🛠️ On-Device PDF Toolkit

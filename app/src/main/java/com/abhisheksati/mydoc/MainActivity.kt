@@ -116,6 +116,7 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var updateManager: UpdateManager
     private var currentDocument by mutableStateOf<DocumentFile?>(null)
+    private var docSiblings by mutableStateOf<List<DocumentFile>>(emptyList())
     private var currentPhoto by mutableStateOf<Pair<com.abhisheksati.mydoc.domain.model.MediaItem, List<com.abhisheksati.mydoc.domain.model.MediaItem>>?>(null)
     private var currentVideo by mutableStateOf<com.abhisheksati.mydoc.domain.model.MediaItem?>(null)
     private var currentAudio by mutableStateOf<com.abhisheksati.mydoc.domain.model.MediaItem?>(null)
@@ -296,6 +297,12 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                // Sibling list is recomputed on every document change, so every open path —
+                // library, recents, browse, intent — gets the same swipe-to-next-document behaviour.
+                LaunchedEffect(currentDocument?.uri) {
+                    docSiblings = documentSiblingsFor(currentDocument?.uri?.toPathFile()?.parentFile)
+                }
+
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = LocalAppColors.current.background
@@ -411,6 +418,8 @@ class MainActivity : ComponentActivity() {
                                                     document = activeDoc,
                                                     onBackClick = { currentDocument = null },
                                                     onShareClick = { shareDocument(activeDoc) },
+                                                    onSwipeToNextDocument = { openSiblingDocument(1) },
+                                                    onSwipeToPreviousDocument = { openSiblingDocument(-1) },
                                                     onDocumentUpdated = { newDoc ->
                                                         currentDocument = newDoc
                                                     },
@@ -556,6 +565,57 @@ class MainActivity : ComponentActivity() {
         val uri = Uri.fromFile(file)
         openUriOrFile(uri = uri, fileName = file.name, file = file, siblingFiles = siblingFiles)
     }
+
+    /**
+     * Readable documents from the same folder, name-sorted. Swiping past the first or last page
+     * of a document walks this list, so one gesture chain covers a whole folder of files.
+     */
+    private fun documentSiblingsFor(file: File?): List<DocumentFile> {
+        val dir = file?.parentFile ?: return emptyList()
+        val readableExt = setOf(
+            "pdf", "epub", "xps", "oxps", "cbz",
+            "doc", "dot", "docx", "dotx", "rtf", "odt", "fodt", "ott", "wps", "wpd",
+            "ppt", "pps", "pot", "pptx", "potx", "ppsx", "odp", "fodp", "otp",
+            "xls", "xlsx", "xlsm", "xlsb", "csv", "tsv", "ods", "fods", "ots",
+            "txt", "md", "log", "json", "xml", "yaml", "yml", "ini", "conf", "sh", "sql"
+        )
+        val files = runCatching {
+            dir.listFiles { f -> f.isFile && !f.name.startsWith(".") && f.extension.lowercase() in readableExt }
+                ?.sortedBy { it.name.lowercase() }
+        }.getOrNull() ?: return emptyList()
+        return files.map { f ->
+            DocumentFile(
+                uri = Uri.fromFile(f).toString(),
+                displayName = f.name,
+                sizeBytes = f.length(),
+                mimeType = "",
+                lastOpenedTimestamp = f.lastModified(),
+            )
+        }
+    }
+
+    /** Steps to the neighbouring document; false when the current one is already at the end of the folder. */
+    private fun openSiblingDocument(delta: Int): Boolean {
+        val current = currentDocument ?: return false
+        val siblings = docSiblings
+        if (siblings.size < 2) return false
+        // The opened document can carry a content:// or file:// URI while the sibling list is
+        // built from File objects, so the two never agree on `uri` — path, then name, is the
+        // only identity they share.
+        val currentPath = runCatching { Uri.parse(current.uri).path }.getOrNull()
+        val index = siblings.indexOfFirst { sib ->
+            val sibPath = runCatching { Uri.parse(sib.uri).path }.getOrNull()
+            (currentPath != null && sibPath == currentPath) || sib.displayName == current.displayName
+        }
+        if (index < 0) return false
+        val next = siblings.getOrNull(index + delta) ?: return false
+        currentDocument = next
+        return true
+    }
+
+    /** A real on-disk path for a URI string, or null for content:// URIs, which have no sibling folder to walk. */
+    private fun String.toPathFile(): File? =
+        runCatching { Uri.parse(this).path?.let(::File) }.getOrNull()?.takeIf { it.isFile }
 
     private fun openUriOrFile(
         uri: Uri,

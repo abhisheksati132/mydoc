@@ -89,7 +89,7 @@ fun DesignSystemPreviewScreen(
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     AppTopBar(
-                        title = "Paper under Glass",
+                        title = "Ink & Seal",
                         onBack = onBackClick,
                         actions = {
                             IconButton(
@@ -129,7 +129,7 @@ fun DesignSystemPreviewScreen(
                             ColorSwatchRow("line / rule", colors.line, if (isDarkTheme) "#263043 (1dp rule)" else "#E5DFD3 (Dry rule)")
                             ColorSwatchRow("ink (textPrimary)", colors.textPrimary, if (isDarkTheme) "#F2F5F8 (Bleached)" else "#191614 (Carbon ink)")
                             ColorSwatchRow("inkMuted", colors.textSecondary, if (isDarkTheme) "#8C9AB0 (Slate mist)" else "#6B645C (Pencil)")
-                            ColorSwatchRow("accent (Stamp Vermilion)", colors.accent, if (isDarkTheme) "#F05435 (Warm seal)" else "#D94324 (Red stamp)")
+                            ColorSwatchRow("accent (Seal teal)", colors.accent, if (isDarkTheme) "#4FB0A6 (Lifted teal)" else "#0E5C57 (Seal teal)")
                             ColorSwatchRow("glassTint", colors.glassTint, "Refraction backing")
                             ColorSwatchRow("glassRimTop", colors.glassRimTop, "1dp Specular highlight")
                         }
@@ -284,7 +284,7 @@ fun DesignSystemPreviewScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Stamp Vermilion PDF Badge
+                                    // Seal teal PDF Badge
                                     Box(
                                         modifier = Modifier
                                             .size(44.dp)

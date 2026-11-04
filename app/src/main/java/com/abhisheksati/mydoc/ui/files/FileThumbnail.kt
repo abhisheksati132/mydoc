@@ -49,6 +49,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.abhisheksati.mydoc.data.local.DocumentStreamResolver
+import com.abhisheksati.mydoc.rendering.engine.presentation.PptxConverter
+import com.abhisheksati.mydoc.rendering.engine.spreadsheet.XlsxConverter
+import com.abhisheksati.mydoc.rendering.engine.word.DocxConverter
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.domain.model.LibraryItem
@@ -84,6 +87,12 @@ private val pdfThumbnailCache = object : LruCache<String, ImageBitmap>(MAX_THUMB
         (value.width * value.height * 4 / 1024).coerceAtLeast(1)
 }
 private val textPreviewExtensions = setOf("txt", "md", "csv", "log", "json")
+private val officePreviewExtensions = setOf("docx", "pptx", "xlsx")
+
+// A grid of Word/Excel/Slide tiles would otherwise stampede the parsers on first paint;
+// one page of tiles is enough to keep the list feeling alive.
+private const val MAX_CONCURRENT_OFFICE_CONVERSIONS = 2
+private val officeConversionsInFlight = java.util.concurrent.atomic.AtomicInteger(0)
 
 private object TypeTint {
     val pdf = Color(0xFF8C3B34)      // brick
@@ -140,15 +149,17 @@ private fun tintFor(type: StorageFileType, isDark: Boolean = false): Color = if 
 }
 
 /**
- * A real preview where one exists: image content, a rendered PDF first page,
- * or the opening lines of a text file. Everything else is a quiet format plate
- * so the list never invents a page.
+ * A real preview where one exists: image content, a rendered PDF first page, the opening lines
+ * of a text file, or the first page of a Word/Excel/Slide document run through the same
+ * converter the viewer uses. Everything else is a quiet format plate so the list never
+ * invents a page.
  */
 @Composable
 fun StorageThumbnail(
     item: StorageItem,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     when {
         item.fileType == StorageFileType.IMAGE -> Box(
             modifier = modifier.clip(AppRadius.insetShape)
@@ -169,6 +180,15 @@ fun StorageThumbnail(
             key = item.path,
             modifier = modifier,
             load = { readTextFile(item.file) }
+        )
+        item.extension in officePreviewExtensions -> OfficeThumbnail(
+            key = item.path,
+            modifier = modifier,
+            badgeType = item.fileType,
+            convert = { context ->
+                val uri = Uri.fromFile(item.file)
+                convertOfficeToPdf(context, item.extension, uri, item.name)
+            }
         )
         else -> TypePlate(
             type = item.fileType,
@@ -203,6 +223,15 @@ fun LibraryThumbnail(
             key = item.uri,
             modifier = modifier,
             load = { readLibraryText(context, item) }
+        )
+        item.extension in officePreviewExtensions -> OfficeThumbnail(
+            key = item.uri,
+            modifier = modifier,
+            badgeType = genericTypeFor(item.extension),
+            badge = item.typeBadge,
+            convert = { ctx ->
+                convertOfficeToPdf(ctx, item.extension, Uri.parse(item.uri), item.name)
+            }
         )
         else -> TypePlate(
             type = when (item.kind) {
@@ -326,6 +355,67 @@ private fun TextThumbnail(
             )
         }
     }
+}
+
+@Composable
+private fun OfficeThumbnail(
+    key: String,
+    modifier: Modifier,
+    badgeType: StorageFileType,
+    badge: String? = null,
+    convert: suspend (Context) -> File?
+) {
+    val context = LocalContext.current
+    var bitmap by remember(key) { mutableStateOf(pdfThumbnailCache.get(key)) }
+    LaunchedEffect(key) {
+        if (bitmap == null) bitmap = loadOfficeThumbnail(key) { convert(context) }
+    }
+    if (bitmap == null) {
+        TypePlate(type = badgeType, badge = badge, modifier = modifier)
+    } else {
+        Box(
+            modifier = modifier
+                .clip(AppRadius.insetShape)
+                .background(Color.White),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                bitmap = bitmap!!,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
+}
+
+private suspend fun loadOfficeThumbnail(key: String, convert: suspend () -> File?): ImageBitmap? =
+    withContext(Dispatchers.IO) {
+        pdfThumbnailCache.get(key)?.let { return@withContext it }
+        while (officeConversionsInFlight.get() >= MAX_CONCURRENT_OFFICE_CONVERSIONS) {
+            kotlinx.coroutines.delay(80)
+        }
+        officeConversionsInFlight.incrementAndGet()
+        try {
+            if (pdfThumbnailCache.get(key) != null) return@withContext pdfThumbnailCache.get(key)
+            val pdf = runCatching { convert() }.getOrNull() ?: return@withContext null
+            val bitmap = renderFirstPage(pdf) ?: return@withContext null
+            bitmap.asImageBitmap().also { pdfThumbnailCache.put(key, it) }
+        } finally {
+            officeConversionsInFlight.decrementAndGet()
+        }
+    }
+
+private suspend fun convertOfficeToPdf(
+    context: Context,
+    extension: String,
+    uri: Uri,
+    displayName: String
+): File? = when (extension) {
+    "docx" -> DocxConverter.convertDocxToPdf(context, uri, displayName)
+    "pptx" -> PptxConverter.convertPptxToPdf(context, uri, displayName)
+    "xlsx" -> XlsxConverter.convertXlsxToPdf(context, uri, displayName)
+    else -> null
 }
 
 private suspend fun loadPdfThumbnail(key: String, load: () -> File?): ImageBitmap? =

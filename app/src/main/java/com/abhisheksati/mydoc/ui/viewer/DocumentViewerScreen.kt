@@ -34,7 +34,9 @@ fun DocumentViewerScreen(
     modifier: Modifier = Modifier,
     onToolsClick: (() -> Unit)? = null,
     onSelectTool: ((PdfTool) -> Unit)? = null,
-    onDocumentUpdated: ((DocumentFile) -> Unit)? = null
+    onDocumentUpdated: ((DocumentFile) -> Unit)? = null,
+    onSwipeToNextDocument: (() -> Unit)? = null,
+    onSwipeToPreviousDocument: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as MyDocApp
@@ -96,6 +98,8 @@ fun DocumentViewerScreen(
                     onSelectTool = onSelectTool,
                     onDocumentUpdated = onDocumentUpdated,
                     onSlideshowClick = { isSlideshowActive = true },
+                    onSwipeToNextDocument = onSwipeToNextDocument,
+                    onSwipeToPreviousDocument = onSwipeToPreviousDocument,
                     modifier = modifier.fillMaxSize()
                 )
             }
@@ -137,6 +141,8 @@ fun DocumentViewerScreen(
                         onSelectTool = onSelectTool,
                         onDocumentUpdated = onDocumentUpdated,
                         onReflowClick = { isWordReflowActive = true },
+                        onSwipeToNextDocument = onSwipeToNextDocument,
+                        onSwipeToPreviousDocument = onSwipeToPreviousDocument,
                         modifier = modifier.fillMaxSize()
                     )
                 }
@@ -154,6 +160,8 @@ fun DocumentViewerScreen(
                 document = document,
                 onBackClick = onBackClick,
                 onShareClick = onShareClick,
+                onSwipeToNextDocument = onSwipeToNextDocument,
+                onSwipeToPreviousDocument = onSwipeToPreviousDocument,
                 modifier = modifier.fillMaxSize()
             )
         }

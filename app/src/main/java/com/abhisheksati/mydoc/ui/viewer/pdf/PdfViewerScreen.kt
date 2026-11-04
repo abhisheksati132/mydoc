@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.abhisheksati.mydoc.ui.viewer.controls.edgeFlingToDocument
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalContext
@@ -78,7 +79,9 @@ fun PdfViewerScreen(
     onSelectTool: ((PdfTool) -> Unit)? = null,
     onDocumentUpdated: ((DocumentFile) -> Unit)? = null,
     onSlideshowClick: (() -> Unit)? = null,
-    onReflowClick: (() -> Unit)? = null
+    onReflowClick: (() -> Unit)? = null,
+    onSwipeToNextDocument: (() -> Unit)? = null,
+    onSwipeToPreviousDocument: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp
@@ -466,6 +469,12 @@ fun PdfViewerScreen(
                         contentPadding = contentPaddingValues,
                         modifier = Modifier
                             .fillMaxSize()
+                            .edgeFlingToDocument(
+                                atFirstPage = { lazyListState.firstVisibleItemIndex == 0 },
+                                atLastPage = { !lazyListState.canScrollForward },
+                                onPrevious = onSwipeToPreviousDocument,
+                                onNext = onSwipeToNextDocument
+                            )
                             .hazeSource(viewerHazeState)
                     ) {
                         items(state.pageCount, key = { it }) { pageIndex ->
@@ -489,7 +498,14 @@ fun PdfViewerScreen(
                         state = pagerState,
                         key = { it },
                         contentPadding = contentPaddingValues,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .edgeFlingToDocument(
+                                atFirstPage = { pagerState.currentPage == 0 },
+                                atLastPage = { pagerState.currentPage == state.pageCount - 1 },
+                                onPrevious = onSwipeToPreviousDocument,
+                                onNext = onSwipeToNextDocument
+                            )
                     ) { pageIndex ->
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -704,3 +720,4 @@ fun PdfViewerScreen(
         )
     }
 }
+

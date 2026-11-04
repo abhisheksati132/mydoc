@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.R
 
 /**
- * Editorial "Paper under glass" type system:
+ * Editorial "Ink & Seal" type system:
  * - Fraunces Serif carries the editorial voice (display, titles, document names)
  * - Inter Grotesk carries the interface (body, labels, captions, buttons)
  * - JetBrains Mono carries the metadata (file size, page counts, timestamps, technical info)
@@ -248,6 +248,32 @@ fun appTypographyFromMaterial(base: Typography): AppTypography = AppTypography(
     micro = base.labelSmall,
     headline = base.titleLarge
 )
+
+/**
+ * The brand scale expressed in Material 3's own roles, so `MaterialTheme.typography.*` resolves
+ * to Fraunces / Inter / JetBrains Mono instead of the framework default. Without this the whole
+ * app renders Roboto and only components that opt into AppTypography get the editorial voice.
+ */
+fun brandMaterialTypography(): Typography {
+    val brand = AppTypography()
+    return Typography(
+        displayLarge = brand.display,
+        displayMedium = brand.display.copy(fontSize = 28.sp, lineHeight = 34.sp),
+        displaySmall = brand.display.copy(fontSize = 24.sp, lineHeight = 30.sp),
+        headlineLarge = brand.title,
+        headlineMedium = brand.screenTitle,
+        headlineSmall = brand.title,
+        titleLarge = brand.heading,
+        titleMedium = brand.documentName,
+        titleSmall = brand.bodyLargeStrong,
+        bodyLarge = brand.bodyLarge,
+        bodyMedium = brand.body,
+        bodySmall = brand.caption,
+        labelLarge = brand.label,
+        labelMedium = brand.captionStrong,
+        labelSmall = brand.overline,
+    )
+}
 
 /**
  * Extension helper to apply OpenType Tabular Figures (tnum) to any TextStyle.

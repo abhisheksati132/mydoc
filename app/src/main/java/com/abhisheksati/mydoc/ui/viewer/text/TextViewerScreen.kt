@@ -3,12 +3,14 @@ package com.abhisheksati.mydoc.ui.viewer.text
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,10 +36,14 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
@@ -51,6 +57,7 @@ import com.abhisheksati.mydoc.domain.model.ViewState
 import com.abhisheksati.mydoc.tools.tts.DocumentTtsManager
 import com.abhisheksati.mydoc.ui.tts.DocumentTtsBar
 import com.abhisheksati.mydoc.ui.viewer.controls.SearchOverlay
+import com.abhisheksati.mydoc.ui.viewer.controls.edgeFlingToDocument
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerCapabilities
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerScaffold
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerThemeTokens
@@ -58,6 +65,89 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
+
+private sealed class MdNode {
+    data class Heading(val level: Int, val raw: String, val originalIndex: Int) : MdNode()
+    data class Paragraph(val raw: String, val originalIndex: Int) : MdNode()
+    data class ListItem(val raw: String, val ordered: Boolean, val marker: String, val originalIndex: Int) : MdNode()
+    data class BlockQuote(val raw: String, val originalIndex: Int) : MdNode()
+    data class Rule(val originalIndex: Int) : MdNode()
+}
+
+private val mdHeadingRegex = Regex("^(#{1,6})\\s+(.*)$")
+private val mdOrderedListRegex = Regex("^\\s*(\\d+)[.)]\\s+(.*)$")
+private val mdUnorderedListRegex = Regex("^\\s*[-*+]\\s+(.*)$")
+private val mdRuleRegex = Regex("^\\s*([-*_])(\\s*\\1){2,}\\s*$")
+private val mdInlineRegex = Regex("\\*\\*\\*.+?\\*\\*\\*|\\*\\*.+?\\*\\*|__.+?__|~~.+?~~|\\*[^*\\s].*?\\*|`[^`]+`")
+
+private fun parseMarkdownLine(raw: String, index: Int): MdNode? {
+    val trimmed = raw.trim()
+    if (trimmed.isEmpty()) return null
+    mdHeadingRegex.find(trimmed)?.let { return MdNode.Heading(it.groupValues[1].length, it.groupValues[2], index) }
+    if (mdRuleRegex.matches(trimmed)) return MdNode.Rule(index)
+    mdOrderedListRegex.find(trimmed)?.let { return MdNode.ListItem(it.groupValues[2], ordered = true, marker = "${it.groupValues[1]}.", index) }
+    mdUnorderedListRegex.find(trimmed)?.let { return MdNode.ListItem(it.groupValues[1], ordered = false, marker = "•", index) }
+    if (trimmed.startsWith("> ")) return MdNode.BlockQuote(trimmed.substring(2), index)
+    return MdNode.Paragraph(trimmed, index)
+}
+
+/** Inline `**bold**`, `*italic*`, `` `code` `` and `~~strike~~` spans, with search hits kept on top. */
+private fun buildInlineSpan(
+    raw: String,
+    query: String,
+    base: SpanStyle,
+    mono: FontFamily,
+    highlight: SpanStyle,
+): AnnotatedString = buildAnnotatedString {
+    val lowerQuery = query.lowercase()
+    var plainFrom = 0
+    fun appendPlain(end: Int) {
+        if (end <= plainFrom) return
+        val segment = raw.substring(plainFrom, end)
+        var from = 0
+        while (from < segment.length) {
+            val hit = if (query.isNotBlank()) segment.lowercase().indexOf(lowerQuery, from) else -1
+            if (hit == -1) {
+                withStyle(base) { append(segment.substring(from)) }
+                break
+            }
+            if (hit > from) withStyle(base) { append(segment.substring(from, hit)) }
+            withStyle(base.copy(background = highlight.background, color = highlight.color)) {
+                append(segment.substring(hit, hit + query.length))
+            }
+            from = hit + query.length
+        }
+    }
+    mdInlineRegex.findAll(raw).forEach { match ->
+        appendPlain(match.range.first)
+        val token = match.value
+        val body = when {
+            token.startsWith("***") && token.endsWith("***") && token.length > 6 ->
+                Triple(token.substring(3, token.length - 3), true, true)
+            token.startsWith("**") && token.endsWith("**") && token.length > 4 ->
+                Triple(token.substring(2, token.length - 2), true, false)
+            token.startsWith("__") && token.endsWith("__") && token.length > 4 ->
+                Triple(token.substring(2, token.length - 2), true, false)
+            token.startsWith("~~") && token.endsWith("~~") && token.length > 4 ->
+                Triple(token.substring(2, token.length - 2), false, false)
+            token.startsWith("`") && token.endsWith("`") && token.length > 2 ->
+                Triple(token.substring(1, token.length - 1), false, false)
+            else -> Triple(token.substring(1, token.length - 1), false, true)
+        }
+        val (text, strong, emphasis) = body
+        val style = when {
+            token.startsWith("`") -> base.copy(fontFamily = mono)
+            else -> base.copy(
+                fontWeight = if (strong) FontWeight.Bold else base.fontWeight,
+                fontStyle = if (emphasis) androidx.compose.ui.text.font.FontStyle.Italic else base.fontStyle,
+                textDecoration = if (token.startsWith("~~")) TextDecoration.LineThrough else base.textDecoration,
+            )
+        }
+        withStyle(style) { append(text) }
+        plainFrom = match.range.last + 1
+    }
+    appendPlain(raw.length)
+}
 
 /**
  * Modern plain text and source code viewer wrapped in unified ViewerScaffold.
@@ -68,7 +158,9 @@ fun TextViewerScreen(
     document: DocumentFile,
     onBackClick: () -> Unit,
     onShareClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSwipeToNextDocument: (() -> Unit)? = null,
+    onSwipeToPreviousDocument: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp
@@ -172,6 +264,13 @@ fun TextViewerScreen(
         else lines.mapIndexedNotNull { index, line -> if (line.contains(searchQuery, ignoreCase = true)) index else null }
     }
 
+    val isMarkdown = document.displayName.lowercase().endsWith(".md") ||
+        document.mimeType.contains("markdown")
+    val markdownNodes = remember(lines) {
+        if (!isMarkdown) emptyList()
+        else lines.mapIndexedNotNull { index, raw -> parseMarkdownLine(raw, index) }
+    }
+
     val coroutineScope = rememberCoroutineScope()
 
     ViewerScaffold(
@@ -256,11 +355,107 @@ fun TextViewerScreen(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
+                    .edgeFlingToDocument(
+                        atFirstPage = { listState.firstVisibleItemIndex == 0 },
+                        atLastPage = { !listState.canScrollForward },
+                        onPrevious = onSwipeToPreviousDocument,
+                        onNext = onSwipeToNextDocument
+                    )
                     .padding(horizontal = 16.dp)
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .padding(top = 64.dp, bottom = 64.dp)
             ) {
-                itemsIndexed(lines) { index, line ->
+                if (isMarkdown) {
+                    val scale = readingPrefs.fontScale
+                    fun styled(raw: String, size: Float, weight: FontWeight = FontWeight.Normal): Pair<AnnotatedString, TextUnit> =
+                        buildInlineSpan(
+                            raw = raw,
+                            query = searchQuery.trim(),
+                            base = SpanStyle(
+                                color = textColor,
+                                fontSize = (size * scale).sp,
+                                fontWeight = weight,
+                            ),
+                            mono = FontFamily.Monospace,
+                            highlight = SpanStyle(background = DocumentCanvasColors.searchHighlight, color = textColor),
+                        ) to (size * 1.6f * scale).sp
+                    itemsIndexed(markdownNodes) { _, node ->
+                        when (node) {
+                            is MdNode.Heading -> {
+                                val size = when (node.level) {
+                                    1 -> 28
+                                    2 -> 23
+                                    3 -> 20
+                                    else -> 17
+                                }
+                                val (text, lineHeight) = styled(node.raw, size.toFloat(), FontWeight.Bold)
+                                Column(modifier = Modifier.padding(top = if (node.level <= 2) 20.dp else 12.dp, bottom = 8.dp)) {
+                                    Text(text = text, lineHeight = lineHeight)
+                                    if (node.level == 1) {
+                                        Box(
+                                            modifier = Modifier
+                                                .padding(top = 6.dp)
+                                                .width(44.dp)
+                                                .height(3.dp)
+                                                .background(colors.accent)
+                                        )
+                                    }
+                                }
+                            }
+                            is MdNode.Paragraph -> {
+                                val (text, lineHeight) = styled(node.raw, 16f)
+                                Text(
+                                    text = text,
+                                    lineHeight = lineHeight,
+                                    modifier = Modifier.padding(bottom = 14.dp),
+                                )
+                            }
+                            is MdNode.ListItem -> {
+                                val (text, lineHeight) = styled(node.raw, 16f)
+                                Row(modifier = Modifier.padding(bottom = 6.dp)) {
+                                    Text(
+                                        text = node.marker,
+                                        color = colors.accent,
+                                        fontSize = (16 * scale).sp,
+                                        fontWeight = if (node.ordered) FontWeight.SemiBold else FontWeight.Normal,
+                                        modifier = Modifier.width(if (node.ordered) 30.dp else 22.dp),
+                                    )
+                                    Text(
+                                        text = text,
+                                        lineHeight = lineHeight,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                            }
+                            is MdNode.BlockQuote -> {
+                                val (text, lineHeight) = styled(node.raw, 16f)
+                                Row(modifier = Modifier.padding(bottom = 14.dp)) {
+                                    Box(
+                                        modifier = Modifier
+                                            .padding(end = 12.dp, top = 4.dp)
+                                            .width(3.dp)
+                                            .height(22.dp)
+                                            .background(colors.accent.copy(alpha = 0.6f))
+                                    )
+                                    Text(
+                                        text = text,
+                                        color = secondaryTextColor,
+                                        lineHeight = lineHeight,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                            }
+                            is MdNode.Rule -> Box(
+                                modifier = Modifier
+                                    .padding(vertical = 18.dp)
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(colors.divider)
+                            )
+                        }
+                    }
+                } else {
+                    itemsIndexed(lines) { index, line ->
                     Row(modifier = Modifier.fillMaxWidth()) {
                         if (showLineNumbers) {
                             Text(
@@ -306,6 +501,7 @@ fun TextViewerScreen(
                             fontFamily = FontFamily.Monospace,
                             lineHeight = (20 * readingPrefs.fontScale).sp
                         )
+                    }
                     }
                 }
             }

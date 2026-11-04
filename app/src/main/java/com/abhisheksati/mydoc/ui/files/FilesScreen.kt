@@ -521,7 +521,10 @@ private fun FilesHeader(
                 )
             }
 
-            Box {
+            // The overflow menu (view toggle, hidden files, new folder/file, recycle bin,
+            // refresh) is a folder-browsing affordance — only show it inside internal storage,
+            // not on the Library landing / all tab.
+            if (isInsideFolder) Box {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(Icons.Outlined.MoreVert, contentDescription = "More options", tint = scheme.onSurface)
                 }

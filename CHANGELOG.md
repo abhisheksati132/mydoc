@@ -3,6 +3,74 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [1.7.0] — 2026-11-04
+
+Range: `v1.6.1..v1.7.0`.
+
+The "Ink & Seal" identity is now actually rendered, not just documented. The design-system audit
+of v1.6.1 found that the brand type scale existed but never reached the screen; this release closes
+that gap and the four other confirmed findings, plus the reader and library work that came with it.
+
+### Fixed
+
+- **Brand typography reaches the UI.** `AppTheme` never passed a `typography` argument to
+  `MaterialTheme`, and `appTypographyFromMaterial()` mapped the brand roles onto the framework
+  default — so ~130 `MaterialTheme.typography.*` call sites rendered Roboto while Fraunces, Inter
+  and JetBrains Mono sat unused in `AppTypography`. Added `brandMaterialTypography()`, which
+  expresses the brand tiers in Material 3's own roles, and supplied it to `MaterialTheme`. Screen
+  titles and document names are now Fraunces, UI text Inter, and metadata (`p. 1/3 · 1.4 KB`)
+  JetBrains Mono. Font scaling is untouched.
+- **Bottom navigation touch targets and semantics.** Nav items were ~33dp tall and used
+  `clickable(role = Role.Tab)` with no selected state. They now use `selectable` with a 48dp
+  minimum applied outside the padding, so the clickable bounds themselves grow rather than just
+  the visual pill. Measured on device: 48dp tall, and the active tab reports `selected = true`.
+- **Library overflow menu shown where it belongs.** The 3-dot menu (view toggle, hidden files,
+  new folder/file, recycle bin, refresh) appeared on the Library landing page, where every item
+  targets a folder that is not open. It now appears only while browsing internal storage.
+- **Tools and Library top bars align.** The Tools screen applied the status-bar inset twice — once
+  on its root column and again by passing zero insets to the shared bar — so its title sat lower
+  than Library's. Both are now identical.
+- **File picker metadata.** The first-run picker accepted `*/*` but labelled every result
+  `application/pdf`, 0 bytes, DOCUMENT. It now resolves the real MIME type, display name, size,
+  timestamp and media kind from the picked URI, so icons, badges and viewer routing stay honest.
+
+### Added
+
+- **Office document thumbnails.** Word, Excel and Slide tiles in Recents and Library were flat
+  "WORD"/"PPT" plates. They now run through the same converter the viewer uses and show the real
+  first page, falling back to the plate when a file cannot be converted. Conversions are capped at
+  two in flight so a grid of documents cannot stampede the parsers on first paint. Legacy binary
+  `.ppt`/`.xls` keep plates — there is no converter for them.
+- **Swipe between documents.** The viewer's pager only ever walked pages inside one file. A fling
+  past the first or last page now steps to the neighbouring document in the same folder, across
+  PDF, Word, Excel, Slide, EPUB and text. Mid-document swipes still turn pages, and tab swiping
+  stays on the outer screens. The gesture observer never consumes events, so it cannot steal a
+  page turn.
+- **Markdown rendering.** `.md` files opened as raw monospace with visible `#` and `**` markers.
+  The text viewer now renders headings with a real type scale, bold/italic/code/strikethrough
+  spans, bullets and ordered lists, block quotes and rules, with search highlighting preserved.
+- **Home brand lockup.** The header was a text-only wordmark. The Seal — a rounded square whose
+  negative space forms an M with a folded-paper corner, as specified in `docs/brand-identity.md`
+  §4 — now sits beside it. It is drawn rather than a drawable, because the app's theme is chosen
+  independently of system night mode, so it tracks Seal teal on paper and lifted teal on graphite.
+
+### Changed
+
+- **Stale brand language removed.** Comments and the design-system preview still described Stamp
+  Vermilion, ink navy and "Paper under glass", and the preview's accent swatch printed `#D94324`
+  for a color that is `#0E5C57`. Corrected across seven files.
+- **Glass gradients are now an explicit exception.** The brand rule said "no gradients anywhere"
+  while `GlassSurface` uses short vertical gradients for the specular rim and inner shadow. The
+  rule in `docs/brand-identity.md` now carves out optical edge lighting specifically, instead of
+  the docs and the code contradicting each other.
+
+### Known gaps
+
+- The launcher and splash still use the older document-sheet mark; only the in-app lockup uses the
+  Seal M. Re-cutting the launcher icon is deliberately out of scope here.
+- Not yet verified on device: update-banner overlap with the last list item, PDF reader chrome
+  density, photo-viewer contrast over bright images, and glass cost on low-RAM hardware.
+
 ## [1.6.1] — 2026-11-04
 
 Range: `v1.6.0..v1.6.1`.

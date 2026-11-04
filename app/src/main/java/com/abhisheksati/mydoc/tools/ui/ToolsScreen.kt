@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -106,9 +105,9 @@ private fun friendlyHeader(group: ToolGroup): String = when (group) {
 }
 
 /**
- * Editorial "Paper under glass" tool index:
+ * Editorial "Ink & Seal" tool index:
  * - 24 PDF tools organized into 6 clear task categories.
- * - Stamp Vermilion accent indicators.
+ * - Seal teal accent indicators.
  * - Tactile paper card tool rows with monospace metadata.
  */
 @Composable
@@ -154,7 +153,6 @@ fun ToolsScreen(
         modifier = modifier
             .fillMaxSize()
             .background(colors.background)
-            .statusBarsPadding()
     ) {
         ToolsHeader(
             toolCount = allTools.size,
@@ -326,7 +324,6 @@ private fun ToolsHeader(
         subtitle = "$toolCount tools · 6 tasks",
         isGlass = false,
         containerColor = Color.Transparent,
-        contentInsets = WindowInsets(0, 0, 0, 0),
         actions = {
             IconButton(onClick = onSearch) {
                 Icon(

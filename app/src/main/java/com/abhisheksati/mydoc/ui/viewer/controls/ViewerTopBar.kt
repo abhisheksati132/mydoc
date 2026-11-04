@@ -54,7 +54,7 @@ import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 
 /**
- * Editorial "Paper under glass" viewer masthead:
+ * Editorial "Ink & Seal" viewer masthead:
  * - Expanded: full-width glass header with Fraunces serif document title, JetBrains Mono page counter, and actions.
  * - Condensed: collapses on vertical scroll into a floating glass pill with truncated title, monospace page badge, and quick actions.
  */

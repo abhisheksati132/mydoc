@@ -53,11 +53,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import android.provider.DocumentsContract
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.abhisheksati.mydoc.designsystem.components.SealMark
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.animation.documentHero
@@ -73,9 +77,9 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
 /**
- * Editorial "Paper under glass" Home feed:
+ * Editorial "Ink & Seal" Home feed:
  * - Wordmark header with Fraunces serif
- * - "Continue Reading" Hero paper card with real page thumbnail & Stamp Vermilion progress
+ * - "Continue Reading" Hero paper card with real page thumbnail & Seal teal progress
  * - 2-column Recent Documents paper cards grid with monospace metadata
  * - Curated first-run state with common quick actions
  */
@@ -100,19 +104,46 @@ fun HomeFeedPane(
 ) {
     val colors = AppTheme.colors
     val haptics = rememberAppHaptics()
+    val pickerContext = LocalContext.current
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
+            // The picker takes */*, so the picked file may be anything. Reading its real type,
+            // name and size keeps the icon, badge and viewer routing honest.
+            val mime = runCatching { pickerContext.contentResolver.getType(uri) }.getOrNull()
+            var displayName = uri.lastPathSegment?.substringAfterLast('/', "")
+            var sizeBytes = 0L
+            var lastModified = System.currentTimeMillis()
+            runCatching {
+                val columns = arrayOf(
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    DocumentsContract.Document.COLUMN_SIZE,
+                    DocumentsContract.Document.COLUMN_LAST_MODIFIED
+                )
+                pickerContext.contentResolver.query(uri, columns, null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        cursor.getString(0)?.let { if (it.isNotBlank()) displayName = it }
+                        if (!cursor.isNull(1)) sizeBytes = cursor.getLong(1)
+                        if (!cursor.isNull(2)) lastModified = cursor.getLong(2)
+                    }
+                }
+            }
+            val kind = when {
+                mime?.startsWith("image/") == true -> MediaKind.PHOTO
+                mime?.startsWith("video/") == true -> MediaKind.VIDEO
+                mime?.startsWith("audio/") == true -> MediaKind.AUDIO
+                else -> MediaKind.DOCUMENT
+            }
             onLibraryItemClick(
                 LibraryItem(
                     uri = uri.toString(),
-                    name = uri.lastPathSegment ?: "Document",
-                    kind = MediaKind.DOCUMENT,
-                    mimeType = "application/pdf",
-                    sizeBytes = 0L,
-                    lastModified = System.currentTimeMillis()
+                    name = displayName?.takeIf { it.isNotBlank() } ?: "Document",
+                    kind = kind,
+                    mimeType = mime ?: "application/octet-stream",
+                    sizeBytes = sizeBytes,
+                    lastModified = lastModified
                 )
             )
         }
@@ -153,6 +184,9 @@ fun HomeFeedPane(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Brand lockup: Seal + wordmark, per docs/brand-identity.md §3.
+                    SealMark(modifier = Modifier.size(30.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = "MyDoc",
                         style = AppTheme.typography.display,
@@ -330,7 +364,7 @@ fun HomeFeedPane(
 }
 
 /**
- * Hero Card: Real rendered page thumbnail + Stamp Vermilion progress bar + Fraunces title.
+ * Hero Card: Real rendered page thumbnail + Seal teal progress bar + Fraunces title.
  */
 @Composable
 private fun ContinueReadingHeroCard(

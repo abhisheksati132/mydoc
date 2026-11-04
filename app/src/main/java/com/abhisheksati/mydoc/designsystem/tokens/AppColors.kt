@@ -10,7 +10,7 @@ import com.abhisheksati.mydoc.domain.model.MediaKind
  * Single source of truth for MyDoc color. "Paper under glass" design identity:
  * - Deep ink-navy dark theme (hero identity)
  * - Warm ivory paper light theme
- * - ONE accent color (Stamp Vermilion) used strictly for progress, primary actions, and selection
+ * - ONE accent color (Seal teal) used strictly for progress, primary actions, and selection
  *
  * Chrome surfaces (toolbars, pills, sheets) use refractive glass tokens.
  * Documents, preview tiles, and reading sheets use physical paper tokens.
@@ -26,8 +26,8 @@ data class AppColors(
     val highlight: Color,
     val accent: Color,
     val onAccent: Color,
-    val accentPink: Color = Color(0xFFD94324), // Stamp Vermilion accent variant
-    val accentCyan: Color = Color(0xFF2C4A7F), // Ink navy variant
+    val accentPink: Color = Color(0xFFD94324), // Seal teal accent variant
+    val accentCyan: Color = Color(0xFF2C4A7F), // Ink navy variant (legacy alias)
     val accentAmber: Color = Color(0xFFD97706),
     val accentGreen: Color = Color(0xFF286B49),
 

@@ -130,7 +130,7 @@ fun rememberGlassMotion(gridState: LazyGridState): GlassMotionState {
 }
 
 /**
- * The core "Paper under glass" chrome surface.
+ * The core "Ink & Seal" chrome surface.
  *
  * Optics model (Apple Liquid Glass anatomy):
  * 1. Near-transparent base — the Haze style's backgroundColor is transparent so

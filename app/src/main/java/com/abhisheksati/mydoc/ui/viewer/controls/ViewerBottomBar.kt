@@ -56,10 +56,10 @@ import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import kotlin.math.roundToInt
 
 /**
- * Editorial "Paper under glass" reader footer:
+ * Editorial "Ink & Seal" reader footer:
  * - Hosted on a tactile GlassSurface with specular gradient rim.
  * - Sheet tabs for multi-sheet workbooks.
- * - Monospace live page scrubber with Stamp Vermilion slider.
+ * - Monospace live page scrubber with Seal teal slider.
  * - Triple primary actions: Contents, Pages, Appearance.
  */
 @Composable
