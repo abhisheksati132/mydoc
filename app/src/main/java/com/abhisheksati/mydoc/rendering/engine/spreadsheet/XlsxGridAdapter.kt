@@ -46,7 +46,8 @@ fun XlsxWorkbook.toSpreadsheetModel(): SpreadsheetModel {
                 cells = cells,
                 columnWidths = widths,
                 mergedRegions = sheet.merges.toList(),
-                truncated = sheet.truncated
+                truncated = sheet.truncated,
+                parseFailure = sheet.parseFailure
             )
         }
     )

@@ -9,7 +9,9 @@ data class SheetData(
     /** Ranges where one value visually spans several cells. */
     val mergedRegions: List<CellRange> = emptyList(),
     /** True when the reader stopped early at a safety cap, so the sheet shown is incomplete. */
-    val truncated: Boolean = false
+    val truncated: Boolean = false,
+    /** Why this sheet could not be read at all; null when it was read to the end. */
+    val parseFailure: String? = null
 ) {
     /** Merged cells other than the anchor hold no value; the grid dims them instead of leaving blanks. */
     fun isMergedNonAnchor(row: Int, col: Int): Boolean =
@@ -36,4 +38,12 @@ data class SpreadsheetModel(
 ) {
     val isEmpty: Boolean
         get() = sheets.isEmpty() || sheets.all { it.cells.isEmpty() }
+
+    /** Sheets that failed to parse, in the order the reader met them. */
+    val failedSheets: List<String>
+        get() = sheets.mapNotNull { it.parseFailure?.let { _ -> it.name } }
+
+    /** True when what the grid shows is not everything the workbook contains. */
+    val isPartial: Boolean
+        get() = sheets.any { it.parseFailure != null || it.truncated }
 }

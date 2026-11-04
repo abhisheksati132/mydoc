@@ -58,14 +58,21 @@ object XlsxReader {
             .sortedBy { Regex("sheet(\\d+)").find(it)?.groupValues?.get(1)?.toIntOrNull() ?: Int.MAX_VALUE }
 
         val ordered: List<Triple<String, String, Boolean>> = if (wbSheets.isNotEmpty()) {
-            wbSheets.mapIndexedNotNull { index, sheet ->
+            wbSheets.mapIndexed { index, sheet ->
                 val (name, rId, hidden) = sheet
                 // A workbook whose relationship part is missing or stale still names its sheets in
                 // order; resolving by position keeps the real names instead of dropping the sheet
                 // and reporting an empty workbook.
-                val target = rels[rId] ?: worksheetPaths.getOrNull(index) ?: return@mapIndexedNotNull null
-                val path = if (target.startsWith("/")) target.drop(1) else "xl/" + target.removePrefix("./")
-                if (entries.containsKey(path)) Triple(name, path, hidden) else null
+                val target = rels[rId] ?: worksheetPaths.getOrNull(index)
+                // A sheet the workbook names but whose part cannot be found is kept in the list with
+                // an unresolvable path, so the reader records it as failed. Dropping it here is how a
+                // workbook lost a sheet without anyone being told.
+                val path = when {
+                    target == null -> ""
+                    target.startsWith("/") -> target.drop(1)
+                    else -> "xl/" + target.removePrefix("./")
+                }
+                Triple(name, path, hidden)
             }
         } else {
             entries.keys.filter { it.startsWith("xl/worksheets/sheet") && it.endsWith(".xml") }
@@ -75,7 +82,21 @@ object XlsxReader {
         val sheets = ordered.map { (name, path, hidden) ->
             XlsxSheet(name, path).also { s ->
                 s.hidden = hidden
-                entries[path]?.let { entry -> runCatching { parseWorksheet(entry, s) } }
+                val entry = entries[path]
+                if (entry == null) {
+                    s.parseFailure = "the workbook names this sheet but its part is missing"
+                } else {
+                    try {
+                        parseWorksheet(entry, s)
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Throwable) {
+                        // Recorded, not swallowed: an empty sheet and a sheet that could not be read
+                        // are different claims about the user's file.
+                        s.parseFailure = e.message ?: e.javaClass.simpleName
+                        android.util.Log.w("XlsxReader", "Worksheet " + s.name + " could not be parsed", e)
+                    }
+                }
             }
         }
         return XlsxWorkbook(sheets, styles, shared, editable = entries.containsKey("xl/workbook.xml"))

@@ -127,6 +127,14 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   rather than refused, because the copy exists so a document stays readable after its grant dies.
   Sidecars are excluded from the cache's 50-file / 100 MB budget and are deleted with their copy.
 
+- **A spreadsheet that could not be read was shown as an empty one (H-8).** `XlsxReader` wrapped every
+  worksheet parse in `runCatching` and discarded the result, so a workbook whose second sheet had
+  malformed XML came back as a workbook with a blank second sheet — and a sheet the workbook named
+  but whose part was missing was dropped from the list entirely. Failures are now recorded on the
+  sheet, surfaced as `failedSheets`/`isPartial` on both the OOXML model and the grid model, and
+  stated under the grid: which sheet could not be read, and that what is shown is not the whole
+  workbook.
+
 ### Tests
 
 - `StorageMoveTrashSafetyTest` — 13 JVM tests over an injected `EntryMutator` seam: a
@@ -186,6 +194,15 @@ driven on screen in this batch.
 - `OfflineCopySidecarOnDeviceTest` — 2 instrumented tests against the real `saved_docs` directory:
   the offline fallback returns the document and not its sidecar even when the sidecar is the newer
   file, and 51 copies plus their sidecars survive trimming as 51 documents rather than 102 files.
+
+- `XlsxWorksheetFailureTest` — 3 JVM tests over hand-built workbook archives: a well-formed two-sheet
+  workbook reports nothing failed, a sheet whose elements do not nest is recorded as failed while its
+  neighbour still reads (and the readable sheet is not marked), and a sheet the workbook names whose
+  part is absent stays in the list with a reason instead of vanishing.
+
+Known limitation, measured rather than assumed: a worksheet part that is simply cut off mid-file
+still parses without error, so it is not reported as failed — the parser reaches end-of-document
+quietly. Detecting that needs a terminator check in the worksheet loop, not just an exception.
 
 ## [1.7.2] — 2026-11-04
 

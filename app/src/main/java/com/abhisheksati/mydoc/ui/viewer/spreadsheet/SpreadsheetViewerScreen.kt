@@ -121,6 +121,19 @@ fun SpreadsheetViewerScreen(
             if (state.currentSheet?.truncated == true) {
                 add("This sheet hit our read limit — later rows are not shown")
             }
+            // A worksheet whose XML could not be parsed reads as an empty sheet unless it says
+            // otherwise, which is how a damaged workbook got presented as a blank one.
+            state.currentSheet?.parseFailure?.let { reason ->
+                add("This sheet could not be read: $reason")
+            }
+            val failed = state.model.failedSheets
+            if (failed.isNotEmpty()) {
+                val total = state.model.sheets.size
+                add(
+                    if (failed.size == 1) "1 of $total sheets could not be read: ${failed.first()}"
+                    else "${failed.size} of $total sheets could not be read: ${failed.joinToString(", ")}"
+                )
+            }
         },
         modifier = modifier
     ) {

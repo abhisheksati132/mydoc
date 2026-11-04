@@ -57,6 +57,12 @@ class XlsxSheet(
     var hidden = false
     var truncated = false
 
+    /**
+     * Why this sheet's part could not be read, or null when it was read to the end. Without it a
+     * worksheet that threw halfway is indistinguishable from one that genuinely has no rows.
+     */
+    var parseFailure: String? = null
+
     fun cell(r: Int, c: Int): CellData? = rows[r]?.cells?.get(c)
 
     val maxRow: Int get() = rows.lastEntry()?.let { e -> if (e.value.cells.isEmpty() && e.value.heightPt == null) lastRealRow() else e.key } ?: -1
@@ -98,6 +104,13 @@ class XlsxWorkbook(
     val sharedStrings: List<RichText>,
     val editable: Boolean
 ) {
+    /** Sheets whose part could not be read or named but is absent: the workbook is usable, not complete. */
+    val failedSheets: List<String>
+        get() = sheets.mapNotNull { sheet -> sheet.parseFailure?.let { sheet.name } }
+
+    val isPartial: Boolean
+        get() = sheets.any { it.parseFailure != null || it.truncated }
+
     fun sheetByName(name: String): XlsxSheet? = sheets.firstOrNull { it.name.equals(name, ignoreCase = true) }
 
     fun textOf(c: CellData): RichText? = when (c.type) {
