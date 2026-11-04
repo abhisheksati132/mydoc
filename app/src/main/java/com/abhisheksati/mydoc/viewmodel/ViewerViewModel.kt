@@ -50,6 +50,8 @@ data class ViewerUiState(
     val isLoading: Boolean = true,
     val isPermissionExpired: Boolean = false,
     val errorMessage: String? = null,
+    /** Why loading stopped, when we know. Drives the specific message instead of one generic one. */
+    val failure: com.abhisheksati.mydoc.domain.model.LoadFailure? = null,
     val needsReflowFallback: Boolean = false
 )
 
@@ -97,7 +99,13 @@ class ViewerViewModel(
     private fun loadDocument() {
         viewModelScope.launch {
             _uiState.update {
-                it.copy(isLoading = true, isPermissionExpired = false, errorMessage = null, needsReflowFallback = false)
+                it.copy(
+                    isLoading = true,
+                    isPermissionExpired = false,
+                    errorMessage = null,
+                    failure = null,
+                    needsReflowFallback = false
+                )
             }
 
             // Restore per-file view state from Room
@@ -108,39 +116,52 @@ class ViewerViewModel(
                     val uri = Uri.parse(activeDocumentFile.uri)
                     val ext = activeDocumentFile.extension.lowercase().ifEmpty { "pdf" }
 
-                    val convertedPdfFile: java.io.File? = when (ext) {
-                        "pptx", "ppsx", "potx", "pps", "ppt", "odp" -> com.abhisheksati.mydoc.rendering.engine.presentation.PptxConverter.convertPptxToPdf(
-                            context = context,
-                            uri = uri,
-                            displayName = activeDocumentFile.displayName
-                        )
-                        "docx", "dotx", "doc", "odt" -> com.abhisheksati.mydoc.rendering.engine.word.DocxConverter.convertDocxToPdf(
-                            context = context,
-                            uri = uri,
-                            displayName = activeDocumentFile.displayName
-                        )
-                        "xlsx", "xls", "ods", "csv", "tsv" -> com.abhisheksati.mydoc.rendering.engine.spreadsheet.XlsxConverter.convertXlsxToPdf(
-                            context = context,
-                            uri = uri,
-                            displayName = activeDocumentFile.displayName
-                        )
-                        else -> null
+                    // Which converter, if any, is decided by the format registry rather than a
+                    // local list. Formats with no converter (legacy .doc/.xls, CSV, ODS, binary
+                    // decks) must never be handed to a converter that cannot read them, and a
+                    // single-engine format whose converter failed must not fall through to MuPDF,
+                    // which would report a healthy file as damaged.
+                    val converter = com.abhisheksati.mydoc.domain.model.DocumentFormats.converterFor(ext)
+                    val convertedPdfFile: java.io.File? = when (converter) {
+                        com.abhisheksati.mydoc.domain.model.ConverterKind.PPTX_TO_PDF ->
+                            com.abhisheksati.mydoc.rendering.engine.presentation.PptxConverter.convertPptxToPdf(
+                                context = context,
+                                uri = uri,
+                                displayName = activeDocumentFile.displayName
+                            )
+
+                        com.abhisheksati.mydoc.domain.model.ConverterKind.DOCX_TO_PDF ->
+                            com.abhisheksati.mydoc.rendering.engine.word.DocxConverter.convertDocxToPdf(
+                                context = context,
+                                uri = uri,
+                                displayName = activeDocumentFile.displayName
+                            )
+
+                        com.abhisheksati.mydoc.domain.model.ConverterKind.XLSX_TO_PDF ->
+                            com.abhisheksati.mydoc.rendering.engine.spreadsheet.XlsxConverter.convertXlsxToPdf(
+                                context = context,
+                                uri = uri,
+                                displayName = activeDocumentFile.displayName
+                            )
+
+                        com.abhisheksati.mydoc.domain.model.ConverterKind.NONE -> null
                     }
 
-                    val officeFormats = setOf("docx", "dotx", "doc", "odt", "pptx", "ppsx", "potx", "pps", "ppt", "odp")
-                    if (convertedPdfFile == null && ext in officeFormats) {
-                        // These formats have exactly one engine: their converter. Passing the raw
-                        // package to a PDF renderer only yields a false "damaged" report.
+                    if (convertedPdfFile == null && converter != com.abhisheksati.mydoc.domain.model.ConverterKind.NONE) {
                         android.util.Log.w("ViewerLoad", "no PDF produced for ${activeDocumentFile.displayName}")
-                        val isWord = ext in setOf("docx", "dotx", "doc", "odt")
+                        val family = com.abhisheksati.mydoc.domain.model.DocumentFormats.familyOf(ext)
+                        val isWord = family == com.abhisheksati.mydoc.domain.model.DocumentFamily.WORD
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
                                 needsReflowFallback = isWord,
+                                failure = com.abhisheksati.mydoc.domain.model.LoadFailure.CONVERSION_FAILED,
                                 errorMessage = if (isWord) {
-                                    "This Word document could not be laid out as pages."
+                                    "MyDoc read the file but could not lay out its pages. " +
+                                        "You can read it as reflowed text instead."
                                 } else {
-                                    "This presentation could not be laid out as slides."
+                                    "MyDoc read the file but could not lay out its slides. " +
+                                        "It likely uses features our converter does not implement."
                                 }
                             )
                         }
@@ -173,7 +194,12 @@ class ViewerViewModel(
                                 it.copy(
                                     isLoading = false,
                                     isPermissionExpired = isPerm,
-                                    errorMessage = errorMsg
+                                    errorMessage = errorMsg,
+                                    failure = when {
+                                        isPerm -> com.abhisheksati.mydoc.domain.model.LoadFailure.PERMISSION_EXPIRED
+                                        isZeroByte -> com.abhisheksati.mydoc.domain.model.LoadFailure.EMPTY_DOCUMENT
+                                        else -> com.abhisheksati.mydoc.domain.model.LoadFailure.CORRUPT_DOCUMENT
+                                    }
                                 )
                             }
                             return@withContext

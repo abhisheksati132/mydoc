@@ -47,6 +47,7 @@ import com.abhisheksati.mydoc.designsystem.preview.DesignSystemPreviewScreen
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
+import com.abhisheksati.mydoc.domain.model.DocumentFormats
 import com.abhisheksati.mydoc.domain.model.toMediaItem
 import com.abhisheksati.mydoc.security.AppLockScreen
 import com.abhisheksati.mydoc.security.BiometricLockHelper
@@ -572,13 +573,7 @@ class MainActivity : ComponentActivity() {
      */
     private fun documentSiblingsFor(file: File?): List<DocumentFile> {
         val dir = file?.parentFile ?: return emptyList()
-        val readableExt = setOf(
-            "pdf", "epub", "xps", "oxps", "cbz",
-            "doc", "dot", "docx", "dotx", "rtf", "odt", "fodt", "ott", "wps", "wpd",
-            "ppt", "pps", "pot", "pptx", "potx", "ppsx", "odp", "fodp", "otp",
-            "xls", "xlsx", "xlsm", "xlsb", "csv", "tsv", "ods", "fods", "ots",
-            "txt", "md", "log", "json", "xml", "yaml", "yml", "ini", "conf", "sh", "sql"
-        )
+        val readableExt = DocumentFormats.supportedExtensions
         val files = runCatching {
             dir.listFiles { f -> f.isFile && !f.name.startsWith(".") && f.extension.lowercase() in readableExt }
                 ?.sortedBy { it.name.lowercase() }

@@ -36,17 +36,7 @@ data class DocumentFile(
         else -> extension.uppercase(Locale.ROOT).take(5).ifEmpty { "DOC" }
     }
 
-    val category: DocumentCategory = when (extension) {
-        "pdf" -> DocumentCategory.PDF
-        "epub", "xps", "oxps", "cbz", "fb2" -> DocumentCategory.EPUB
-        "docx", "doc" -> DocumentCategory.WORD
-        "xlsx", "xls", "csv" -> DocumentCategory.EXCEL
-        "pptx", "ppt", "ppsx", "pps", "potx", "pot", "pptm", "potm" -> DocumentCategory.PPT
-        "txt", "log", "md", "json", "xml", "yaml", "yml", "ini", "conf", "sh",
-        "sql", "kt", "java", "py", "html", "css", "js", "ts", "c", "cpp", "h",
-        "gradle", "properties", "bat" -> DocumentCategory.TEXT
-        else -> DocumentCategory.ALL
-    }
+    val category: DocumentCategory = DocumentFormats.categoryOf(extension)
 
     val formattedSize: String = formatBytesPrecise(sizeBytes)
 

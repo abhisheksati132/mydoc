@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.AppTopBar
 import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.domain.model.DocumentFilter
 import com.abhisheksati.mydoc.domain.model.LibraryItem
 import com.abhisheksati.mydoc.ui.files.LibraryThumbnail
 
@@ -78,13 +79,10 @@ fun SpotlightSearchSheet(
     val filteredItems = remember(items, query, selectedFilter) {
         val q = query.trim().lowercase()
         items.filter { item ->
-            val matchesFilter = when (selectedFilter) {
-                "PDF" -> item.extension.equals("pdf", ignoreCase = true)
-                "Word" -> item.extension.lowercase() in setOf("doc", "docx", "dot", "dotx", "odt", "rtf")
-                "Excel" -> item.extension.lowercase() in setOf("xls", "xlsx", "xlsm", "csv", "ods")
-                "PPT" -> item.extension.lowercase() in setOf("ppt", "pptx", "pps", "odp")
-                "Media" -> item.extension.lowercase() in setOf("jpg", "jpeg", "png", "webp", "mp4", "mp3", "mkv", "mov", "wav", "flac")
-                else -> true
+            val matchesFilter = when {
+                selectedFilter == "Media" ->
+                    item.extension.lowercase() in setOf("jpg", "jpeg", "png", "webp", "mp4", "mp3", "mkv", "mov", "wav", "flac")
+                else -> DocumentFilter.fromLabel(selectedFilter)?.matches(item.extension) ?: true
             }
             val matchesQuery = if (q.isEmpty()) true else {
                 item.name.lowercase().contains(q) ||

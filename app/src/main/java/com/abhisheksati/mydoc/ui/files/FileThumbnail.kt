@@ -54,6 +54,7 @@ import com.abhisheksati.mydoc.rendering.engine.spreadsheet.XlsxConverter
 import com.abhisheksati.mydoc.rendering.engine.word.DocxConverter
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
+import com.abhisheksati.mydoc.domain.model.DocumentFormats
 import com.abhisheksati.mydoc.domain.model.LibraryItem
 import com.abhisheksati.mydoc.domain.model.MediaKind
 import com.abhisheksati.mydoc.domain.model.StorageFileType
@@ -87,7 +88,10 @@ private val pdfThumbnailCache = object : LruCache<String, ImageBitmap>(MAX_THUMB
         (value.width * value.height * 4 / 1024).coerceAtLeast(1)
 }
 private val textPreviewExtensions = setOf("txt", "md", "csv", "log", "json")
-private val officePreviewExtensions = setOf("docx", "pptx", "xlsx")
+// Formats whose first page the registry says is reachable through a converter.
+private val officePreviewExtensions: Set<String> = DocumentFormats.thumbnailExtensions
+    .filter { it != "pdf" }
+    .toSet()
 
 // A grid of Word/Excel/Slide tiles would otherwise stampede the parsers on first paint;
 // one page of tiles is enough to keep the list feeling alive.

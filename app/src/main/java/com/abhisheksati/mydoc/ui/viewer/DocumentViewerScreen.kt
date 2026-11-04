@@ -11,8 +11,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.abhisheksati.mydoc.MyDocApp
-import com.abhisheksati.mydoc.domain.model.DocumentCategory
+import com.abhisheksati.mydoc.domain.model.DocumentFamily
 import com.abhisheksati.mydoc.domain.model.DocumentFile
+import com.abhisheksati.mydoc.domain.model.DocumentFormats
+import com.abhisheksati.mydoc.domain.model.LoadFailure
+import com.abhisheksati.mydoc.domain.model.ViewerKind
 import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.ui.viewer.pdf.PdfViewerScreen
 import com.abhisheksati.mydoc.ui.viewer.presentation.PresentationViewerScreen
@@ -23,8 +26,15 @@ import com.abhisheksati.mydoc.viewmodel.SpreadsheetViewModel
 import com.abhisheksati.mydoc.viewmodel.ViewerViewModel
 
 /**
- * Universal document viewer dispatcher routing documents to their optimal rendering engine.
- * Ordered strictly by format specificity with zero unreachable or duplicated branches.
+ * Routes a document to the engine that can actually read it.
+ *
+ * Dispatch comes from [DocumentFormats], not from local extension lists: one table decides the
+ * viewer, whether a converter is required, what the thumbnail can show, and what the reader must
+ * disclose about fidelity. A format with no engine lands on [DocumentProblemScreen] instead of
+ * being handed to a parser that cannot read it.
+ *
+ * Files whose extension is unknown still go to MuPDF, which reports its own error — a mislabelled
+ * PDF should not become "unsupported" merely because nobody declared its extension.
  */
 @Composable
 fun DocumentViewerScreen(
@@ -41,13 +51,40 @@ fun DocumentViewerScreen(
     val context = LocalContext.current
     val app = context.applicationContext as MyDocApp
     val ext = document.extension.lowercase()
+    val descriptor = DocumentFormats.forExtension(ext)
+    val declaredFailure = DocumentFormats.failureFor(ext)
     var isSlideshowActive by rememberSaveable { mutableStateOf(false) }
     var isWordReflowActive by rememberSaveable { mutableStateOf(false) }
 
-    when {
-        // 1. Spreadsheets: Multi-sheet grid viewer supporting cell formulas, borders, and frozen panes.
-        // Handled via SpreadsheetViewerScreen using Apache POI / CSV stream parsing.
-        document.category == DocumentCategory.EXCEL || ext in setOf("xls", "xlsx", "xlsm", "xlsb", "csv", "tsv", "ods", "fods", "ots") -> {
+    val viewer = when {
+        descriptor == null -> ViewerKind.PDF_PAGES
+        declaredFailure != null -> ViewerKind.UNSUPPORTED
+        else -> descriptor.viewer
+    }
+
+    if (viewer == ViewerKind.UNSUPPORTED) {
+        DocumentProblemScreen(
+            failure = declaredFailure ?: LoadFailure.UNSUPPORTED_FORMAT,
+            extension = ext,
+            onBackClick = onBackClick,
+            modifier = modifier.fillMaxSize()
+        )
+        return
+    }
+
+    // Slideshow projection is a mode of the presentation viewer, not a format route.
+    if (isSlideshowActive) {
+        PresentationViewerScreen(
+            document = document,
+            onBackClick = { isSlideshowActive = false },
+            onShareClick = onShareClick,
+            modifier = modifier.fillMaxSize()
+        )
+        return
+    }
+
+    when (viewer) {
+        ViewerKind.SPREADSHEET_GRID -> {
             val spreadsheetViewModel: SpreadsheetViewModel = viewModel(
                 key = document.uri,
                 factory = SpreadsheetViewModel.Factory(context, document)
@@ -61,34 +98,48 @@ fun DocumentViewerScreen(
             )
         }
 
-        // 2. Presentations (Slideshow mode): Full-screen slide projection mode.
-        // Activated explicitly from the top bar overflow menu or when opening standalone presentations.
-        isSlideshowActive -> {
-            PresentationViewerScreen(
-                document = document,
-                onBackClick = { isSlideshowActive = false },
-                onShareClick = onShareClick,
-                modifier = modifier.fillMaxSize()
-            )
-        }
+        ViewerKind.PRESENTATION_SLIDES -> PresentationViewerScreen(
+            document = document,
+            onBackClick = onBackClick,
+            onShareClick = onShareClick,
+            modifier = modifier.fillMaxSize()
+        )
 
-        // 3. Presentations (Document reading mode): Rendered page-by-page through vector pipeline
-        // with pinch-to-zoom, search, and page scrubber, plus top-bar option to start slideshow.
-        document.category == DocumentCategory.PPT || ext in setOf("ppt", "pptx", "pot", "potx", "pps", "ppsx", "odp", "fodp", "otp") -> {
-            if (ext in setOf("ppt", "pps", "pot", "odp", "fodp", "otp")) {
-                // Only the presentation reader parses binary OLE2 decks and OpenDocument; the page
-                // pipeline has no converter for them and would report a healthy file as damaged.
-                PresentationViewerScreen(
+        ViewerKind.WORD_REFLOW -> WordViewerScreen(
+            document = document,
+            onBackClick = onBackClick,
+            onShareClick = onShareClick,
+            modifier = modifier.fillMaxSize()
+        )
+
+        ViewerKind.TEXT_VIEWER -> TextViewerScreen(
+            document = document,
+            onBackClick = onBackClick,
+            onShareClick = onShareClick,
+            onSwipeToNextDocument = onSwipeToNextDocument,
+            onSwipeToPreviousDocument = onSwipeToPreviousDocument,
+            modifier = modifier.fillMaxSize()
+        )
+
+        ViewerKind.CONVERTED_PAGES, ViewerKind.PDF_PAGES -> {
+            val viewerViewModel: ViewerViewModel = viewModel(
+                key = document.uri,
+                factory = ViewerViewModel.Factory(context, app.documentRepository, document)
+            )
+            val viewerState by viewerViewModel.uiState.collectAsStateWithLifecycle()
+            val family = descriptor?.family
+            val isWord = family == DocumentFamily.WORD
+
+            if (isWord && (isWordReflowActive || viewerState.needsReflowFallback)) {
+                WordViewerScreen(
                     document = document,
-                    onBackClick = onBackClick,
+                    onBackClick = {
+                        if (isWordReflowActive) isWordReflowActive = false else onBackClick()
+                    },
                     onShareClick = onShareClick,
                     modifier = modifier.fillMaxSize()
                 )
             } else {
-                val viewerViewModel: ViewerViewModel = viewModel(
-                    key = document.uri,
-                    factory = ViewerViewModel.Factory(context, app.documentRepository, document)
-                )
                 PdfViewerScreen(
                     document = document,
                     viewModel = viewerViewModel,
@@ -97,7 +148,16 @@ fun DocumentViewerScreen(
                     onToolsClick = onToolsClick,
                     onSelectTool = onSelectTool,
                     onDocumentUpdated = onDocumentUpdated,
-                    onSlideshowClick = { isSlideshowActive = true },
+                    onReflowClick = if (isWord) {
+                        { isWordReflowActive = true }
+                    } else {
+                        null
+                    },
+                    onSlideshowClick = if (family == DocumentFamily.PRESENTATION) {
+                        { isSlideshowActive = true }
+                    } else {
+                        null
+                    },
                     onSwipeToNextDocument = onSwipeToNextDocument,
                     onSwipeToPreviousDocument = onSwipeToPreviousDocument,
                     modifier = modifier.fillMaxSize()
@@ -105,84 +165,6 @@ fun DocumentViewerScreen(
             }
         }
 
-        // 4. Word processing documents (.docx, .dotx, .doc, .odt, etc.):
-        // Supports both Paginated Vector Engine (crisp print fidelity) and Reflow Reading Mode (native text & TTS).
-        ext in setOf("docx", "dotx") || document.category == DocumentCategory.WORD || ext in setOf("doc", "dot", "rtf", "odt", "fodt", "ott", "wps", "wpd") -> {
-            val isReflowOnly = ext in setOf("doc", "dot", "rtf", "odt", "fodt", "ott", "wps", "wpd")
-            if (isReflowOnly) {
-                WordViewerScreen(
-                    document = document,
-                    onBackClick = onBackClick,
-                    onShareClick = onShareClick,
-                    modifier = modifier.fillMaxSize()
-                )
-            } else {
-                val viewerViewModel: ViewerViewModel = viewModel(
-                    key = document.uri,
-                    factory = ViewerViewModel.Factory(context, app.documentRepository, document)
-                )
-                val viewerState by viewerViewModel.uiState.collectAsStateWithLifecycle()
-                if (isWordReflowActive || viewerState.needsReflowFallback) {
-                    WordViewerScreen(
-                        document = document,
-                        onBackClick = {
-                            if (isWordReflowActive) isWordReflowActive = false else onBackClick()
-                        },
-                        onShareClick = onShareClick,
-                        modifier = modifier.fillMaxSize()
-                    )
-                } else {
-                    PdfViewerScreen(
-                        document = document,
-                        viewModel = viewerViewModel,
-                        onBackClick = onBackClick,
-                        onShareClick = onShareClick,
-                        onToolsClick = onToolsClick,
-                        onSelectTool = onSelectTool,
-                        onDocumentUpdated = onDocumentUpdated,
-                        onReflowClick = { isWordReflowActive = true },
-                        onSwipeToNextDocument = onSwipeToNextDocument,
-                        onSwipeToPreviousDocument = onSwipeToPreviousDocument,
-                        modifier = modifier.fillMaxSize()
-                    )
-                }
-            }
-        }
-
-        // 6. Plain text, logs, configuration files, and source code:
-        // Handled via TextViewerScreen with virtualized line index, monospace typography, and syntax line numbers.
-        document.category == DocumentCategory.TEXT || ext in setOf(
-            "txt", "log", "json", "xml", "md", "yaml", "yml", "ini", "conf", "sh",
-            "sql", "kt", "java", "py", "html", "css", "js", "ts", "c", "cpp", "h",
-            "gradle", "properties", "bat"
-        ) -> {
-            TextViewerScreen(
-                document = document,
-                onBackClick = onBackClick,
-                onShareClick = onShareClick,
-                onSwipeToNextDocument = onSwipeToNextDocument,
-                onSwipeToPreviousDocument = onSwipeToPreviousDocument,
-                modifier = modifier.fillMaxSize()
-            )
-        }
-
-        // 7. Fixed-layout vector documents (Default: PDF, EPUB, XPS, CBZ, and all others):
-        // Handled via PdfViewerScreen with MuPDF native renderer, centroid pinch-to-zoom, and sharp tiles.
-        else -> {
-            val viewerViewModel: ViewerViewModel = viewModel(
-                key = document.uri,
-                factory = ViewerViewModel.Factory(context, app.documentRepository, document)
-            )
-            PdfViewerScreen(
-                document = document,
-                viewModel = viewerViewModel,
-                onBackClick = onBackClick,
-                onShareClick = onShareClick,
-                onToolsClick = onToolsClick,
-                onSelectTool = onSelectTool,
-                onDocumentUpdated = onDocumentUpdated,
-                modifier = modifier.fillMaxSize()
-            )
-        }
+        ViewerKind.UNSUPPORTED -> Unit
     }
 }
