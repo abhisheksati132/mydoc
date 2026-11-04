@@ -37,7 +37,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.FastForward
@@ -433,12 +433,12 @@ fun VideoPlayerScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
 
                     Text(
                         text = item.displayName,
-                        style = typography.bodyStrong,
+                        style = typography.documentName,
                         color = Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

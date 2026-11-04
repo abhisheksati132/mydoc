@@ -3,6 +3,60 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [Unreleased]
+
+Consistency pass across screens, plus closing the disclosure gap v1.7.1's registry opened.
+
+### Added
+
+- **Fidelity disclosure on screen.** `DocumentFormats` declared a render fidelity and per-format
+  limitations, but nothing read them — `fidelityNote()` had zero callers — so a byte-scraped
+  `.doc` or a text-only `.ppt` was presented as a faithful rendering. One `FidelityNotice` strip
+  now sits under the chrome in every viewer, driven by the registry and downgraded at runtime when
+  an engine falls back (`usedTextFallback`, `recovered`, sheet truncation). Document details lists
+  the complete set of gaps. Seven tests pin the two ways it can fail: staying silent when it
+  should speak, and letting a declared capability cover a runtime fallback.
+- `UserMessages` — the one place an exception becomes a sentence a reader can act on, with the
+  cause sent to the log instead of the screen.
+
+### Fixed
+
+- **Exception text no longer reaches the UI.** More than 30 sites interpolated `e.message` or
+  `localizedMessage` into visible strings: file-open failures in `MainActivity`, the viewer and
+  spreadsheet view models, every file-manager snackbar (`Failed: …`, `Delete failed: …`), OCR,
+  camera, share, biometric and update paths.
+- `calculateHash()` returned `"Error: <exception>"` and `"Unavailable"` *as checksums*, so two
+  unrelated failures compared equal. It returns `null` now and the properties sheet hides the row.
+- Text viewer failures printed a raw red string while every other viewer used
+  `DocumentProblemScreen`; they now share one error surface and one `LoadFailure`.
+- Status bar insets were applied twice in `TrashBinSheet` (a padded `CenterAlignedTopAppBar`) and
+  in the spreadsheet error state (nested `statusBarsPadding`). `DocumentProblemScreen` no longer
+  pads itself; each host applies the inset once.
+- One chrome metric: `ViewerChrome.topBarHeight` / `bottomBarHeight` replace the `64.dp` and
+  `56.dp` literals each viewer re-typed to clear its own bars.
+
+### Changed
+
+- Headers: `TrashBinSheet` moved onto `AppTopBar`. The back affordance is the outlined arrow
+  everywhere (AppTopBar, media players, cropper). Bars naming a document use the brand
+  `documentName` role; bars naming a screen use `titleLarge`.
+- Sheets: five divergent sheet titles (`title`, `titleSmall`, `bodyLargeStrong`, `labelLarge`)
+  now share the role `AppBottomSheet` uses.
+- Loading: the four document viewers, app manager, cleaner, page grid and page organizer use
+  `AppProgressIndicator`; the PDF viewer was previously the only one that did.
+- Empty states: the app manager's bare `Text`, the cleaner's centred thumbs-up billboard and the
+  spotlight's 64.dp glyph circle are `AppEmptyState` paragraphs.
+- Dialogs: `DocumentDetailsDialog`, `PasswordDialog` and `PageJumpDialog` titles are on the same
+  role as `AppDialog`.
+- Dropped the `AppSpacing as Spacing` alias from the four files that used it.
+
+### Not done, deliberately
+
+- 13 raw `AlertDialog`s still live outside `AppDialog`; their titles match, porting them is a
+  separate sweep. The 11 list-row metric variants (leading wells from 36 to 72.dp, icons 18-24.dp)
+  and the off-scale spacing/radius literals are untouched. The fidelity strip floats over the
+  first rows of a dense grid instead of reserving space — tap to hide the chrome, or scroll.
+
 ## [1.7.1] — 2026-11-04
 
 Range: `v1.7.0..v1.7.1`. Merged from `fix/office-document-rendering`.

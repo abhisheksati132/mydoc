@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
+import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -27,7 +28,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -208,10 +208,7 @@ fun PageGridSheet(
                                     modifier = Modifier.fillMaxSize()
                                 )
                             } else {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp
-                                )
+                                AppProgressIndicator(size = 20.dp)
                             }
 
                             if (isBookmarked) {

@@ -26,7 +26,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.RotateRight
 import androidx.compose.material.icons.filled.Edit
@@ -232,7 +232,7 @@ fun PhotoViewerScreen(
                 ) {
                     IconButton(onClick = onBackClick) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = "Back",
                             tint = contentColor
                         )
@@ -245,7 +245,7 @@ fun PhotoViewerScreen(
                     ) {
                         Text(
                             text = currentItem.displayName,
-                            style = typography.bodyMedium,
+                            style = typography.documentName,
                             color = contentColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis

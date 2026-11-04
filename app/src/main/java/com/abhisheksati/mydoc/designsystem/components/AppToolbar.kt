@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,6 +25,12 @@ import dev.chrisbanes.haze.HazeState
  * The single app bar every screen uses, so back affordance, insets, title rhythm and
  * action placement stay identical across the Files, Settings, viewer and media surfaces.
  * Hosted on a tactile GlassSurface with specular gradient rim.
+ *
+ * Role split, deliberately: this bar carries a *screen* title on `titleLarge`; bars that name the
+ * document being read (ViewerTopBar, PresentationTopBar, the media players) use the brand's
+ * `documentName` role instead. The back affordance is the outlined arrow, matching the outlined
+ * icon set the rest of the app is drawn from. Insets come from `contentInsets` and are applied
+ * here once - callers must not pad for the status bar as well.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,7 +85,7 @@ fun AppTopBar(
                 if (onBack != null) {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = "Back",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )

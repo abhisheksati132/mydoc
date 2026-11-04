@@ -1,5 +1,7 @@
 package com.abhisheksati.mydoc.ui.viewer.text
 
+import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
+import androidx.compose.foundation.layout.statusBarsPadding
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -16,7 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,15 +48,18 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
+import com.abhisheksati.mydoc.util.UserMessages
 import com.abhisheksati.mydoc.MainActivity
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.data.local.DocumentStreamResolver
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
+import com.abhisheksati.mydoc.domain.model.LoadFailure
 import com.abhisheksati.mydoc.domain.model.ReadingPrefs
 import com.abhisheksati.mydoc.domain.model.ViewState
 import com.abhisheksati.mydoc.tools.tts.DocumentTtsManager
 import com.abhisheksati.mydoc.ui.tts.DocumentTtsBar
+import com.abhisheksati.mydoc.ui.viewer.DocumentProblemScreen
 import com.abhisheksati.mydoc.ui.viewer.controls.SearchOverlay
 import com.abhisheksati.mydoc.ui.viewer.controls.edgeFlingToDocument
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerCapabilities
@@ -169,6 +173,7 @@ fun TextViewerScreen(
     var lines by remember { mutableStateOf<List<String>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var loadFailure by remember { mutableStateOf<LoadFailure?>(null) }
 
     val defaultPrefs = remember { ReadingPrefs() }
     val readingPrefs by (app?.settingsRepository?.readingPrefs ?: remember { kotlinx.coroutines.flow.MutableStateFlow(defaultPrefs) }).collectAsState()
@@ -187,6 +192,7 @@ fun TextViewerScreen(
     LaunchedEffect(document.uri) {
         isLoading = true
         errorMessage = null
+        loadFailure = null
         withContext(Dispatchers.IO) {
             try {
                 val uri = Uri.parse(document.uri)
@@ -196,7 +202,12 @@ fun TextViewerScreen(
                 lines = loadedLines
                 isLoading = false
             } catch (e: Exception) {
-                errorMessage = e.localizedMessage ?: "Failed to read text file"
+                errorMessage = UserMessages.readFailure("TextViewer", e)
+                loadFailure = if (UserMessages.isPermissionFailure(e)) {
+                    LoadFailure.PERMISSION_EXPIRED
+                } else {
+                    LoadFailure.CORRUPT_DOCUMENT
+                }
                 isLoading = false
             }
         }
@@ -339,17 +350,15 @@ fun TextViewerScreen(
     ) {
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                AppProgressIndicator()
             }
         } else if (errorMessage != null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = errorMessage ?: "Error reading file",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
+            DocumentProblemScreen(
+                failure = loadFailure ?: LoadFailure.CORRUPT_DOCUMENT,
+                extension = document.extension,
+                onBackClick = onBackClick,
+                modifier = Modifier.statusBarsPadding()
+            )
         } else {
             LazyColumn(
                 state = listState,

@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.appmanager
 
+import com.abhisheksati.mydoc.util.UserMessages
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -31,6 +32,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
+import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
+import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
@@ -141,7 +144,7 @@ fun AppManagerSheet(
                     Column {
                         Text(
                             text = "Installed Apps & APKs",
-                            style = typography.titleSmall,
+                            style = typography.heading,
                             color = colors.textPrimary
                         )
                         Text(
@@ -210,17 +213,17 @@ fun AppManagerSheet(
                         .weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = colors.accent)
+                    AppProgressIndicator()
                 }
             } else if (filteredApps.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("No applications found", color = colors.textSecondary, style = typography.body)
-                }
+                AppEmptyState(
+                    message = if (searchQuery.isBlank()) {
+                        "No installed apps or APKs to show."
+                    } else {
+                        "Nothing matches \"$searchQuery\"."
+                    },
+                    modifier = Modifier.fillMaxWidth().weight(1f)
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier
@@ -242,7 +245,7 @@ fun AppManagerSheet(
                                     result.onSuccess { file ->
                                         context.showMessage("Extracted to Downloads/MyDoc/ExtractedAPKs/${file.name}", long = true)
                                     }.onFailure { err ->
-                                        context.showMessage("Failed: ${err.message}")
+                                        context.showMessage(UserMessages.actionFailed("Extract", err, "AppManager"))
                                     }
                                 }
                             },
@@ -254,7 +257,7 @@ fun AppManagerSheet(
                                     result.onSuccess { file ->
                                         shareApk(context, file)
                                     }.onFailure { err ->
-                                        context.showMessage("Extract error: ${err.message}")
+                                        context.showMessage(UserMessages.actionFailed("Extract", err, "AppManager"))
                                     }
                                 }
                             },
@@ -366,11 +369,7 @@ private fun AppListItem(
 
             // Actions
             if (isExtracting) {
-                CircularProgressIndicator(
-                    color = colors.accent,
-                    strokeWidth = 2.dp,
-                    modifier = Modifier.size(24.dp)
-                )
+                AppProgressIndicator()
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
@@ -436,7 +435,7 @@ private fun shareApk(context: Context, apkFile: File) {
         }
         context.startActivity(Intent.createChooser(shareIntent, "Share APK"))
     } catch (e: Exception) {
-        context.showMessage("Share error: ${e.message}")
+        context.showMessage("This app could not be shared.")
     }
 }
 

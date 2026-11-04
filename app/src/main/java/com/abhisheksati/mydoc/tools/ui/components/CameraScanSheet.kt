@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.tools.ui.components
 
+import com.abhisheksati.mydoc.util.UserMessages
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -221,7 +222,7 @@ fun CameraScanSheet(
                             }
                         } catch (e: Exception) {
                             withContext(Dispatchers.Main) {
-                                context.showMessage("Failed to save: ${e.message}")
+                                context.showMessage(UserMessages.actionFailed("Save", e, "Scan"))
                             }
                         }
                     }
@@ -304,7 +305,7 @@ fun CameraScanSheet(
                             )
                             cameraControl = camera.cameraControl
                         } catch (e: Exception) {
-                            ctx.showMessage("Failed to start camera: ${e.message}")
+                            ctx.showMessage("The camera could not be started. Check that MyDoc has camera permission.")
                         }
                     }, ContextCompat.getMainExecutor(ctx))
 
@@ -716,7 +717,7 @@ fun CameraScanSheet(
 
                                             override fun onError(exception: ImageCaptureException) {
                                                 isCapturing = false
-                                                context.showMessage("Capture failed: ${exception.message}")
+                                                context.showMessage("The photo could not be captured.")
                                             }
                                         }
                                     )

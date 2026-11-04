@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ocr
 
+import com.abhisheksati.mydoc.util.UserMessages
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -89,7 +90,7 @@ fun OcrResultSheet(
                     Column {
                         Text(
                             text = "Extracted Text (OCR)",
-                            style = typography.titleSmall,
+                            style = typography.heading,
                             color = colors.textPrimary
                         )
                         Text(
@@ -154,7 +155,7 @@ fun OcrResultSheet(
                             file.writeText(text)
                             context.showMessage("Saved to Documents/${file.name}")
                         } catch (e: Exception) {
-                            context.showMessage("Failed to save: ${e.message}")
+                            context.showMessage(UserMessages.actionFailed("Save", e, "Ocr"))
                         }
                     },
                     modifier = Modifier.weight(1f),

@@ -119,7 +119,7 @@ class UpdateManager(
             apkDownloader.fetchChecksumText(release.checksumUrl)
         }.getOrElse { ex ->
             cleanUpdatesCache()
-            _state.value = UpdateUiState.Error("Checksum verification failed: ${ex.message}")
+            _state.value = UpdateUiState.Error("That download did not match its published checksum. Try downloading it again.")
             return
         }
 
@@ -141,12 +141,12 @@ class UpdateManager(
                     installerHelper.installApk(file)
                 }.onFailure { ex ->
                     cleanUpdatesCache()
-                    _state.value = UpdateUiState.Error(ex.localizedMessage ?: "Installation verification failed")
+                    _state.value = UpdateUiState.Error("The download could not be verified, so it was not installed.")
                 }
             }
         }.onFailure { err ->
             cleanUpdatesCache()
-            _state.value = UpdateUiState.Error(err.localizedMessage ?: "Download failed")
+            _state.value = UpdateUiState.Error("The download failed. Check your connection and try again.")
         }
     }
 
@@ -154,7 +154,7 @@ class UpdateManager(
         runCatching { installerHelper.installApk(apkFile) }
             .onFailure { ex ->
                 cleanUpdatesCache()
-                _state.value = UpdateUiState.Error(ex.localizedMessage ?: "Installation verification failed")
+                _state.value = UpdateUiState.Error("The download could not be verified, so it was not installed.")
             }
     }
 

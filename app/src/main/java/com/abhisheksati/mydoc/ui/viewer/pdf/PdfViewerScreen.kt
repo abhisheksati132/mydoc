@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.pdf
 
+import com.abhisheksati.mydoc.util.UserMessages
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.ActivityInfo
@@ -586,7 +587,7 @@ fun PdfViewerScreen(
                                 context.showMessage("Unable to render page for OCR")
                             }
                         } catch (e: Exception) {
-                            context.showMessage("OCR failed: ${e.message}")
+                            context.showMessage("No text could be extracted from this page.")
                         } finally {
                             isOcrRunning = false
                         }

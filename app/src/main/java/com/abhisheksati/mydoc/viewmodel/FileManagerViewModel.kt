@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.abhisheksati.mydoc.domain.model.ClipboardOperation
+import com.abhisheksati.mydoc.util.UserMessages
 import com.abhisheksati.mydoc.domain.model.ClipboardState
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.FileSortField
@@ -315,7 +316,7 @@ class FileManagerViewModel(
                     it.copy(
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = "Failed: ${err.message}"
+                        userMessage = UserMessages.actionFailed("Paste", err)
                     )
                 }
             }
@@ -329,7 +330,7 @@ class FileManagerViewModel(
                 _uiState.update { it.copy(userMessage = "Folder '$name' created") }
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
             }.onFailure { err ->
-                _uiState.update { it.copy(userMessage = err.message ?: "Failed to create folder") }
+                _uiState.update { it.copy(userMessage = UserMessages.actionFailed("Create folder", err)) }
             }
         }
     }
@@ -341,7 +342,7 @@ class FileManagerViewModel(
                 _uiState.update { it.copy(userMessage = "File '$name' created") }
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
             }.onFailure { err ->
-                _uiState.update { it.copy(userMessage = err.message ?: "Failed to create file") }
+                _uiState.update { it.copy(userMessage = UserMessages.actionFailed("Create file", err)) }
             }
         }
     }
@@ -353,7 +354,7 @@ class FileManagerViewModel(
                 _uiState.update { it.copy(userMessage = "Renamed successfully") }
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
             }.onFailure { err ->
-                _uiState.update { it.copy(userMessage = err.message ?: "Rename failed") }
+                _uiState.update { it.copy(userMessage = UserMessages.actionFailed("Rename", err)) }
             }
         }
     }
@@ -382,7 +383,7 @@ class FileManagerViewModel(
                     it.copy(
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = "Delete failed: ${err.message}"
+                        userMessage = UserMessages.actionFailed("Delete", err)
                     )
                 }
             }
@@ -397,7 +398,7 @@ class FileManagerViewModel(
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
                 refreshVolumes()
             }.onFailure { err ->
-                _uiState.update { it.copy(userMessage = "Delete failed: ${err.message}") }
+                _uiState.update { it.copy(userMessage = UserMessages.actionFailed("Delete", err)) }
             }
         }
     }
@@ -427,7 +428,7 @@ class FileManagerViewModel(
                     it.copy(
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = "Failed to move to Trash: ${err.message}"
+                        userMessage = UserMessages.actionFailed("Move to Trash", err)
                     )
                 }
             }
@@ -447,7 +448,7 @@ class FileManagerViewModel(
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
                 refreshVolumes()
             }.onFailure { err ->
-                _uiState.update { it.copy(userMessage = "Failed to move to Trash: ${err.message}") }
+                _uiState.update { it.copy(userMessage = UserMessages.actionFailed("Move to Trash", err)) }
             }
         }
     }
@@ -467,7 +468,7 @@ class FileManagerViewModel(
                 refreshVolumes()
                 onComplete?.invoke()
             }.onFailure { err ->
-                _uiState.update { it.copy(userMessage = "Failed to move to Recycle Bin: ${err.message}") }
+                _uiState.update { it.copy(userMessage = UserMessages.actionFailed("Move to Recycle Bin", err)) }
             }
         }
     }
@@ -502,7 +503,7 @@ class FileManagerViewModel(
                     it.copy(
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = "Restore failed: ${err.message}"
+                        userMessage = UserMessages.actionFailed("Restore", err)
                     )
                 }
             }
@@ -529,7 +530,7 @@ class FileManagerViewModel(
                     it.copy(
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = "Restore failed: ${err.message}"
+                        userMessage = UserMessages.actionFailed("Restore", err)
                     )
                 }
             }
@@ -544,7 +545,7 @@ class FileManagerViewModel(
                 refreshVolumes()
                 onComplete?.invoke()
             }.onFailure { err ->
-                _uiState.update { it.copy(userMessage = "Delete failed: ${err.message}") }
+                _uiState.update { it.copy(userMessage = UserMessages.actionFailed("Delete", err)) }
             }
         }
     }
@@ -557,7 +558,7 @@ class FileManagerViewModel(
                 refreshVolumes()
                 onComplete?.invoke()
             }.onFailure { err ->
-                _uiState.update { it.copy(userMessage = "Failed to empty Recycle Bin: ${err.message}") }
+                _uiState.update { it.copy(userMessage = UserMessages.actionFailed("Empty Recycle Bin", err)) }
             }
         }
     }
@@ -636,7 +637,7 @@ class FileManagerViewModel(
                     it.copy(
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = "Compression failed: ${err.message}"
+                        userMessage = UserMessages.actionFailed("Compression", err)
                     )
                 }
             }
@@ -670,7 +671,7 @@ class FileManagerViewModel(
                     it.copy(
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = "Compression failed: ${err.message}"
+                        userMessage = UserMessages.actionFailed("Compression", err)
                     )
                 }
             }
@@ -709,7 +710,7 @@ class FileManagerViewModel(
                     it.copy(
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = "Extraction failed: ${err.message}"
+                        userMessage = UserMessages.actionFailed("Extraction", err)
                     )
                 }
             }

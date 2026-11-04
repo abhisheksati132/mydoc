@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.media
 
+import com.abhisheksati.mydoc.util.UserMessages
 import android.media.MediaPlayer
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -20,7 +21,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
@@ -125,7 +126,7 @@ fun AudioPlayerScreen(
                 isPlaying = true
             }
         } catch (e: Exception) {
-            context.showMessage("Cannot play audio: ${e.message}")
+            context.showMessage("MyDoc can't play this audio file.")
         }
 
         onDispose {
@@ -185,7 +186,7 @@ fun AudioPlayerScreen(
                 modifier = Modifier.size(48.dp)
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                     contentDescription = "Back",
                     tint = colors.ink
                 )

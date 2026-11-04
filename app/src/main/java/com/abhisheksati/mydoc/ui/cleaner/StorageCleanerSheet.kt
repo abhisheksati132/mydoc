@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.cleaner
 
+import com.abhisheksati.mydoc.util.UserMessages
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,6 +25,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.abhisheksati.mydoc.MyDocApp
+import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
+import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.components.showMessage
@@ -148,7 +151,7 @@ fun StorageCleanerSheet(
                     Column {
                         Text(
                             text = "Storage Cleaner",
-                            style = typography.titleSmall,
+                            style = typography.heading,
                             color = colors.textPrimary
                         )
                         Text(
@@ -177,10 +180,9 @@ fun StorageCleanerSheet(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        CircularProgressIndicator(
-                            color = colors.accent,
-                            strokeWidth = 3.dp,
-                            modifier = Modifier.size(56.dp)
+                        AppProgressIndicator(
+                            size = 56.dp,
+                            strokeWidth = 3.dp
                         )
                         Spacer(modifier = Modifier.height(20.dp))
                         Text(
@@ -495,32 +497,10 @@ fun StorageCleanerSheet(
                     // Nothing to clean state
                     if (res.tempFiles.isEmpty() && res.apkFiles.isEmpty() && res.duplicateGroups.isEmpty() && res.emptyFolders.isEmpty()) {
                         item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 32.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        imageVector = Icons.Default.ThumbUp,
-                                        contentDescription = null,
-                                        tint = colors.accent,
-                                        modifier = Modifier.size(48.dp)
-                                    )
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    Text(
-                                        text = "Storage is Clean!",
-                                        style = typography.bodyStrong,
-                                        color = colors.textPrimary
-                                    )
-                                    Text(
-                                        text = "No unnecessary junk or duplicate files found.",
-                                        style = typography.label,
-                                        color = colors.textSecondary
-                                    )
-                                }
-                            }
+                            AppEmptyState(
+                                title = "Storage is clean",
+                                message = "No unnecessary junk or duplicate files found."
+                            )
                         }
                     }
 
@@ -680,7 +660,7 @@ fun StorageCleanerSheet(
                                 emptyList()
                             } else {
                             app.storageRepository.moveToTrash(selectedFiles).getOrElse { error ->
-                                app.showMessage("Could not move files: ${error.message}")
+                                app.showMessage(UserMessages.actionFailed("Move to Trash", error, "Cleaner"))
                                 emptyList()
                             }
                         }

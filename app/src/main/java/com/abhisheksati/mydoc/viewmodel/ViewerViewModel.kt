@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.domain.model.ViewState
+import com.abhisheksati.mydoc.util.UserMessages
 import com.abhisheksati.mydoc.domain.repository.DocumentRepository
 import com.abhisheksati.mydoc.rendering.engine.DocumentRenderer
 import com.abhisheksati.mydoc.rendering.engine.MuPdfRenderer
@@ -316,12 +317,12 @@ class ViewerViewModel(
                         prefetchSurroundingPages(initialPage)
                     }
                 } catch (e: Exception) {
-                    val isPerm = e is SecurityException || (e.localizedMessage?.contains("Permission Denial", ignoreCase = true) == true)
+                    val isPerm = UserMessages.isPermissionFailure(e)
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             isPermissionExpired = isPerm,
-                            errorMessage = if (isPerm) "Storage permission has expired for this file." else (e.localizedMessage ?: "Failed to open document")
+                            errorMessage = UserMessages.readFailure("ViewerViewModel", e)
                         )
                     }
                 }

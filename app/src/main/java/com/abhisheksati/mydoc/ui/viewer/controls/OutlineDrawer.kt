@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -36,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 
 private enum class DrawerTab {
@@ -70,12 +70,12 @@ fun OutlineDrawer(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = Spacing.medium)
+                .padding(horizontal = AppSpacing.medium)
         ) {
             // Tabs: Outline vs Bookmarks
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.small)
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
             ) {
                 FilterChip(
                     selected = selectedTab == DrawerTab.OUTLINE,
@@ -104,7 +104,7 @@ fun OutlineDrawer(
                 )
             }
 
-            Spacer(modifier = Modifier.height(Spacing.small))
+            Spacer(modifier = Modifier.height(AppSpacing.small))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             when (selectedTab) {
@@ -115,7 +115,7 @@ fun OutlineDrawer(
                             text = "This document does not contain an outline.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = Spacing.large)
+                            modifier = Modifier.padding(vertical = AppSpacing.large)
                         )
                     } else {
                         LazyColumn(
@@ -132,7 +132,7 @@ fun OutlineDrawer(
                                             onDismiss()
                                         }
                                         .heightIn(min = 48.dp)
-                                        .padding(vertical = Spacing.small),
+                                        .padding(vertical = AppSpacing.small),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Spacer(modifier = Modifier.width((item.level * 16).dp))
@@ -144,7 +144,7 @@ fun OutlineDrawer(
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.weight(1f)
                                     )
-                                    Spacer(modifier = Modifier.width(Spacing.small))
+                                    Spacer(modifier = Modifier.width(AppSpacing.small))
                                     Text(
                                         text = "${item.pageIndex + 1}",
                                         style = MaterialTheme.typography.bodyMedium,
@@ -164,7 +164,7 @@ fun OutlineDrawer(
                             text = "No bookmarks yet. Tap the bookmark icon in the top toolbar to save a page.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = Spacing.large)
+                            modifier = Modifier.padding(vertical = AppSpacing.large)
                         )
                     } else {
                         LazyColumn(
@@ -181,7 +181,7 @@ fun OutlineDrawer(
                                             onDismiss()
                                         }
                                         .heightIn(min = 48.dp)
-                                        .padding(vertical = Spacing.small),
+                                        .padding(vertical = AppSpacing.small),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
@@ -190,7 +190,7 @@ fun OutlineDrawer(
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(18.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(Spacing.small))
+                                    Spacer(modifier = Modifier.width(AppSpacing.small))
                                     Text(
                                         text = "Page ${pageIndex + 1}",
                                         style = MaterialTheme.typography.bodyLarge,

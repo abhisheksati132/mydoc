@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.presentation
 
+import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -32,7 +33,6 @@ import androidx.compose.material.icons.filled.Slideshow
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.DisposableEffect
 import androidx.core.content.FileProvider
 import java.io.File
@@ -66,10 +66,14 @@ import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
+import com.abhisheksati.mydoc.domain.model.RenderFidelity
+import com.abhisheksati.mydoc.ui.viewer.FidelityNotice
+import com.abhisheksati.mydoc.ui.viewer.fidelityDisclosureFor
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxParser
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxPresentation
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxSlide
 import com.abhisheksati.mydoc.rendering.engine.presentation.VisualElementType
+import com.abhisheksati.mydoc.util.UserMessages
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.ui.viewer.controls.PageJumpDialog
 import com.abhisheksati.mydoc.ui.viewer.controls.PrintHelper
@@ -221,7 +225,7 @@ fun PresentationViewerScreen(
                 isLoading = false
             } catch (t: Throwable) {
                 android.util.Log.e("PresentationViewer", "Error loading presentation: ${document.displayName}", t)
-                errorMessage = t.localizedMessage ?: "Failed to read presentation"
+                errorMessage = UserMessages.readFailure("PresentationViewer", t)
                 isLoading = false
             }
         }
@@ -361,10 +365,22 @@ fun PresentationViewerScreen(
         ReadingMode.NORMAL -> colors.textSecondary
     }
 
+    val fidelityDisclosure = remember(document.extension, presentationData?.recovered) {
+        fidelityDisclosureFor(
+            extension = document.extension,
+            observedFidelity = if (presentationData?.recovered == true) {
+                RenderFidelity.RECOVERED_SCRAPE
+            } else {
+                null
+            }
+        )
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            PresentationTopBar(
+            Column {
+                PresentationTopBar(
                 document = document,
                 effectiveSlideCount = effectiveSlideCount,
                 isSlideshowMode = isSlideshowMode,
@@ -431,7 +447,12 @@ fun PresentationViewerScreen(
                 bgColor = bgColor,
                 textColor = textColor,
                 secondaryTextColor = secondaryTextColor
-            )
+                )
+                FidelityNotice(
+                    disclosure = fidelityDisclosure,
+                    modifier = Modifier.padding(bottom = AppSpacing.paddingSmall)
+                )
+            }
         },
         bottomBar = {
             if (effectiveSlideCount > 0 && !isSlideshowMode) {
@@ -485,7 +506,7 @@ fun PresentationViewerScreen(
             contentAlignment = Alignment.Center
         ) {
             if (isLoading) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                AppProgressIndicator()
             } else if (errorMessage != null) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,

@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,7 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 
 @Composable
 fun PasswordDialog(
@@ -36,7 +37,7 @@ fun PasswordDialog(
         title = {
             Text(
                 text = "Password protected",
-                style = MaterialTheme.typography.headlineSmall
+                style = AppTheme.typography.titleSmall
             )
         },
         text = {
@@ -47,7 +48,7 @@ fun PasswordDialog(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(Spacing.medium))
+                Spacer(modifier = Modifier.height(AppSpacing.medium))
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },

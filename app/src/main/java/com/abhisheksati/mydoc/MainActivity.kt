@@ -59,6 +59,7 @@ import com.abhisheksati.mydoc.ui.search.SpotlightSearchSheet
 import com.abhisheksati.mydoc.ui.settings.SettingsScreen
 import com.abhisheksati.mydoc.ui.viewer.DocumentViewerScreen
 import com.abhisheksati.mydoc.update.UpdateManager
+import com.abhisheksati.mydoc.util.UserMessages
 import com.abhisheksati.mydoc.util.shareFile
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import java.io.File
@@ -749,14 +750,14 @@ class MainActivity : ComponentActivity() {
                                     }
                                     startActivity(Intent.createChooser(intent, "Open with"))
                                 } catch (_: Exception) {
-                                    this@MainActivity.showMessage("Could not open file: ${e.localizedMessage ?: "Unknown error"}")
+                                    this@MainActivity.showMessage(UserMessages.readFailure("MainActivity", e))
                                 }
                             } else {
-                                this@MainActivity.showMessage("Could not open file: ${e.localizedMessage ?: "Unknown error"}")
+                                this@MainActivity.showMessage(UserMessages.readFailure("MainActivity", e))
                             }
                         }
                     } catch (e: Exception) {
-                        this@MainActivity.showMessage("Unable to access file: ${e.localizedMessage ?: "Permission denied"}")
+                        this@MainActivity.showMessage(UserMessages.readFailure("MainActivity", e))
                     }
                 }
             }

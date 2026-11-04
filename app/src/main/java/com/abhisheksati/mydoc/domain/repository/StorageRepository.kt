@@ -17,7 +17,7 @@ interface StorageRepository {
     suspend fun copy(sources: List<File>, targetDir: File, onProgress: (current: Int, total: Int) -> Unit = { _, _ -> }): Result<Int>
     suspend fun move(sources: List<File>, targetDir: File, onProgress: (current: Int, total: Int) -> Unit = { _, _ -> }): Result<Int>
     suspend fun getFolderProperties(directory: File): FolderProperties
-    suspend fun calculateHash(file: File, algorithm: String = "SHA-256"): String
+    suspend fun calculateHash(file: File, algorithm: String = "SHA-256"): String?
     suspend fun zip(sources: List<File>, destinationZip: File, onProgress: (current: Int, total: Int) -> Unit = { _, _ -> }): Result<File>
     suspend fun unzip(zipFile: File, destinationDir: File, onProgress: (extractedFiles: Int) -> Unit = {}): Result<File>
     suspend fun queryCategory(category: FileCategory): List<StorageItem>

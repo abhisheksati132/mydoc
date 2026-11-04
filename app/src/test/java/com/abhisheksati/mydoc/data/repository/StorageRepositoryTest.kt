@@ -5,6 +5,7 @@ import com.abhisheksati.mydoc.domain.model.FileSortOrder
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -47,8 +48,12 @@ class StorageRepositoryTest {
 
         // 4. Calculate SHA-256 Checksum
         val hash = repo.calculateHash(renamedFile, "SHA-256")
-        assertTrue(hash.isNotEmpty())
-        assertEquals(64, hash.length) // SHA-256 is 64 hex characters
+        assertTrue(hash != null && hash.isNotEmpty())
+        assertEquals(64, hash?.length) // SHA-256 is 64 hex characters
+
+        // An unreadable file has no checksum; it must not return a string that could be
+        // mistaken for one, or compare equal to another failure.
+        assertNull(repo.calculateHash(File(renamedFile.parent, "never-existed.txt"), "SHA-256"))
 
         // 5. Copy File
         val copyDestDir = repo.createDirectory(root, "CopyTarget").getOrThrow()

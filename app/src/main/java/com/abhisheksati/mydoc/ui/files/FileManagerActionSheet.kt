@@ -123,7 +123,7 @@ fun SingleItemActionBottomSheet(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = item.name,
-                        style = typography.bodyLargeStrong,
+                        style = typography.documentName,
                         color = colors.ink,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis

@@ -392,10 +392,10 @@ class StorageRepositoryImpl(
         )
     }
 
-    override suspend fun calculateHash(file: File, algorithm: String): String = withContext(Dispatchers.IO) {
+    override suspend fun calculateHash(file: File, algorithm: String): String? = withContext(Dispatchers.IO) {
         try {
             if (!file.exists() || !file.canRead() || file.isDirectory) {
-                return@withContext "Unavailable"
+                return@withContext null
             }
             val digest = MessageDigest.getInstance(algorithm)
             val buffer = ByteArray(65536)
@@ -414,7 +414,8 @@ class StorageRepositoryImpl(
             hex.toString()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            "Error: ${e.message}"
+            android.util.Log.w("StorageRepository", "Checksum failed for " + file.name, e)
+            null
         }
     }
 

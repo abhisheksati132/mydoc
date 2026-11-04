@@ -68,7 +68,7 @@ fun PhotoInfoSheet(
             ) {
             Text(
                 text = "Details",
-                style = typography.title,
+                style = typography.heading,
                 color = colors.textPrimary,
                 modifier = Modifier.padding(bottom = AppSpacing.paddingMedium)
             )

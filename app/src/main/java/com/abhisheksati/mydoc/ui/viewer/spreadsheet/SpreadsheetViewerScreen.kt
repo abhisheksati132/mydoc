@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.spreadsheet
 
+import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,7 +22,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -54,6 +54,7 @@ import com.abhisheksati.mydoc.domain.model.ReadingPrefs
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SheetData
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerCapabilities
+import com.abhisheksati.mydoc.ui.viewer.controls.ViewerChrome
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerScaffold
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerThemeTokens
 import com.abhisheksati.mydoc.viewmodel.SpreadsheetViewModel
@@ -111,13 +112,18 @@ fun SpreadsheetViewerScreen(
         sheetItems = outlineItems,
         onSheetSelect = { viewModel.selectSheet(it) },
         readingPrefs = readingPrefs,
+        fidelityNotes = buildList {
+            if (state.currentSheet?.truncated == true) {
+                add("This sheet hit our read limit — later rows are not shown")
+            }
+        },
         modifier = modifier
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(top = 64.dp, bottom = 64.dp)
+                .padding(top = ViewerChrome.topBarHeight, bottom = ViewerChrome.bottomBarHeight)
         ) {
             // In-sheet search input
             if (isSearchOpen) {
@@ -140,7 +146,7 @@ fun SpreadsheetViewerScreen(
 
             if (state.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    AppProgressIndicator()
                 }
             } else if (state.errorMessage != null) {
                 DocumentProblemScreen(
@@ -287,7 +293,7 @@ fun SpreadsheetViewerScreen(
                 ) {
                     Text(
                         text = "Cell $cellRef",
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(8.dp))

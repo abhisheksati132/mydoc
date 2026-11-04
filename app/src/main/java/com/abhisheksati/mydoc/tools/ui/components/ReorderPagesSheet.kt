@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.tools.ui.components
 
+import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.foundation.Image
@@ -34,7 +35,6 @@ import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -273,10 +273,7 @@ fun ReorderPagesSheet(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(36.dp),
-                            strokeWidth = 3.dp
-                        )
+                        AppProgressIndicator(size = 36.dp, strokeWidth = 3.dp)
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "Loading document pages...",
@@ -385,10 +382,7 @@ fun ReorderPagesSheet(
                                                 modifier = Modifier.fillMaxSize()
                                             )
                                         } else {
-                                            CircularProgressIndicator(
-                                                strokeWidth = 2.dp,
-                                                modifier = Modifier.size(20.dp)
-                                            )
+                                            AppProgressIndicator(size = 20.dp)
                                         }
                                     }
 

@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.abhisheksati.mydoc.domain.model.DocumentFile
+import com.abhisheksati.mydoc.util.UserMessages
 import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SheetData
 import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SpreadsheetModel
 import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SpreadsheetParser
@@ -75,7 +76,7 @@ class SpreadsheetViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = e.localizedMessage ?: "Failed to parse spreadsheet",
+                        errorMessage = UserMessages.readFailure("SpreadsheetViewModel", e),
                         failure = com.abhisheksati.mydoc.domain.model.LoadFailure.CORRUPT_DOCUMENT
                     )
                 }

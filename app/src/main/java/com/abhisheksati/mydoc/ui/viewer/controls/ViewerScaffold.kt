@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -17,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -27,8 +31,11 @@ import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.domain.model.ReadingPrefs
+import com.abhisheksati.mydoc.domain.model.RenderFidelity
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import com.abhisheksati.mydoc.ui.home.DocumentDetailsDialog
+import com.abhisheksati.mydoc.ui.viewer.FidelityNotice
+import com.abhisheksati.mydoc.ui.viewer.fidelityDisclosureFor
 
 /**
  * Declares capabilities supported by a specific document format viewer.
@@ -43,6 +50,15 @@ data class ViewerCapabilities(
     val supportsPdfTools: Boolean = false,
     val supportsOcr: Boolean = false
 )
+
+/**
+ * Chrome metrics shared by every viewer. Content areas pad by these instead of re-typing the
+ * bar heights, so a viewer cannot drift away from the chrome it floats over.
+ */
+object ViewerChrome {
+    val topBarHeight: Dp = 64.dp
+    val bottomBarHeight: Dp = 64.dp
+}
 
 /**
  * Standard colors for reading modes, unifying TextViewer, WordViewer, and PdfViewer.
@@ -86,6 +102,7 @@ object ViewerThemeTokens {
  * 5. DocumentDetailsDialog.
  * 6. System bars immersion (transient swipe) with restore on exit.
  * 7. TTS bar and password dialog slots.
+ * 8. The fidelity notice, when what is on screen is less than the format promises.
  */
 @Composable
 fun ViewerScaffold(
@@ -116,6 +133,8 @@ fun ViewerScaffold(
     searchOverlay: @Composable (BoxScope.() -> Unit)? = null,
     ttsBar: @Composable (BoxScope.() -> Unit)? = null,
     passwordDialog: @Composable (() -> Unit)? = null,
+    observedFidelity: RenderFidelity? = null,
+    fidelityNotes: List<String> = emptyList(),
     content: @Composable BoxScope.() -> Unit
 ) {
     val context = LocalContext.current
@@ -180,6 +199,10 @@ fun ViewerScaffold(
 
     val backgroundColor = ViewerThemeTokens.getBackgroundColor(readingPrefs.readingMode, isDark, colors.surface)
 
+    val fidelityDisclosure = remember(document.extension, observedFidelity, fidelityNotes) {
+        fidelityDisclosureFor(document.extension, observedFidelity, fidelityNotes.toList())
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -217,6 +240,18 @@ fun ViewerScaffold(
         // Search overlay slot
         if (searchOverlay != null) {
             searchOverlay()
+        }
+
+        // Sits under the bar and hides with it, so a scraped .doc tells the reader the truth
+        // without permanently covering the page.
+        if (fidelityDisclosure != null && isControlsVisible) {
+            FidelityNotice(
+                disclosure = fidelityDisclosure,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(top = ViewerChrome.topBarHeight)
+            )
         }
 
         // Bottom Bar

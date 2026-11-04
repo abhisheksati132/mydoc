@@ -2,7 +2,6 @@ package com.abhisheksati.mydoc.ui.viewer
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
@@ -30,7 +29,6 @@ fun DocumentProblemScreen(
     AppEmptyState(
         modifier = modifier
             .fillMaxSize()
-            .statusBarsPadding()
             .padding(AppSpacing.paddingLarge),
         title = copy.title,
         message = copy.message,

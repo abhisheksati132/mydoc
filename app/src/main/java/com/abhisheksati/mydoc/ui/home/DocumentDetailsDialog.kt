@@ -37,6 +37,8 @@ import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
 import com.abhisheksati.mydoc.domain.model.DocumentFile
+import com.abhisheksati.mydoc.domain.model.DocumentFormats
+import com.abhisheksati.mydoc.ui.viewer.label
 import com.abhisheksati.mydoc.util.openFile
 import java.text.NumberFormat
 import java.util.Locale
@@ -82,7 +84,7 @@ fun DocumentDetailsDialog(
                 Spacer(modifier = Modifier.width(AppSpacing.paddingSmall))
                 Text(
                     text = "Document details",
-                    style = typography.title,
+                    style = typography.titleSmall,
                     color = colors.textPrimary
                 )
             }
@@ -113,6 +115,30 @@ fun DocumentDetailsDialog(
                     DetailItem(label = "Last opened", value = document.formattedLastOpened)
                 }
                 DetailItem(label = "MIME type", value = document.mimeType.ifEmpty { "Unknown" })
+
+                val descriptor = DocumentFormats.forExtension(document.extension)
+                if (descriptor != null) {
+                    DetailItem(label = "Rendering", value = descriptor.fidelity.label())
+                    if (descriptor.limitations.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                        AppDivider()
+                        Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                        Text(
+                            text = "Not shown in MyDoc",
+                            style = typography.overline,
+                            color = colors.textSecondary
+                        )
+                        Spacer(modifier = Modifier.height(AppSpacing.paddingXSmall))
+                        descriptor.limitations.forEach { limitation ->
+                            Text(
+                                text = limitation,
+                                style = typography.caption,
+                                color = colors.textSecondary,
+                                modifier = Modifier.padding(bottom = 2.dp)
+                            )
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 AppDivider()

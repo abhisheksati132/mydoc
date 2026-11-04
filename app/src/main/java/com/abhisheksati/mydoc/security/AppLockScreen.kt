@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.security
 
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -24,7 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing as Spacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 
 @Composable
@@ -41,7 +41,7 @@ fun AppLockScreen(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(Spacing.large)
+            modifier = Modifier.padding(AppSpacing.large)
         ) {
             Box(
                 modifier = Modifier
@@ -61,7 +61,7 @@ fun AppLockScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(Spacing.large))
+            Spacer(modifier = Modifier.height(AppSpacing.large))
 
             Text(
                 text = "mydoc is locked",
@@ -69,7 +69,7 @@ fun AppLockScreen(
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            Spacer(modifier = Modifier.height(Spacing.small))
+            Spacer(modifier = Modifier.height(AppSpacing.small))
 
             Text(
                 text = "Biometric authentication is required to access your documents.",
@@ -77,7 +77,7 @@ fun AppLockScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(Spacing.extraLarge))
+            Spacer(modifier = Modifier.height(AppSpacing.extraLarge))
 
             Button(
                 onClick = onUnlockClick,
@@ -92,7 +92,7 @@ fun AppLockScreen(
                     contentDescription = null,
                     modifier = Modifier.size(20.dp)
                 )
-                Spacer(modifier = Modifier.size(Spacing.small))
+                Spacer(modifier = Modifier.size(AppSpacing.small))
                 Text(
                     text = "Unlock",
                     style = AppTheme.typography.bodyLargeStrong

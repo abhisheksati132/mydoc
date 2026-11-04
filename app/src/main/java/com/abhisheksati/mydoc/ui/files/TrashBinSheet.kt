@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.files
 
+import com.abhisheksati.mydoc.designsystem.components.AppTopBar
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,7 +23,6 @@ import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.DeleteSweep
@@ -35,7 +35,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -46,11 +45,9 @@ import androidx.compose.material3.Text
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -110,33 +107,13 @@ fun TrashBinSheet(
             modifier = modifier.fillMaxSize(),
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
-                CenterAlignedTopAppBar(
-                    modifier = Modifier.statusBarsPadding(),
-                    title = {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = if (isSelectionMode) "${selectedIds.size} Selected" else "Recycle Bin",
-                                style = typography.titleSmall,
-                                color = colors.textPrimary
-                            )
-                            if (!isSelectionMode) {
-                                Text(
-                                    text = "${trashItems.size} items • 30-day auto-purge",
-                                    style = typography.caption,
-                                    color = colors.textSecondary
-                                )
-                            }
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onClose) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                contentDescription = "Close",
-                                tint = colors.textPrimary
-                            )
-                        }
-                    },
+                AppTopBar(
+                    title = if (isSelectionMode) "${selectedIds.size} Selected" else "Recycle Bin",
+                    subtitle = if (isSelectionMode) null
+                        else "${trashItems.size} items • 30-day auto-purge",
+                    onBack = onClose,
+                    isGlass = false,
+                    containerColor = colors.background,
                     actions = {
                         if (trashItems.isNotEmpty()) {
                             if (!isSelectionMode) {
@@ -165,10 +142,7 @@ fun TrashBinSheet(
                                 }
                             }
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = colors.background
-                    )
+                    }
                 )
             },
             bottomBar = {

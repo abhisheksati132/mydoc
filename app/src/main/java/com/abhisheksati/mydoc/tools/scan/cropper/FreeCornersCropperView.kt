@@ -22,7 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.RotateRight
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
@@ -127,7 +127,7 @@ fun FreeCornersCropperDialog(
                 ) {
                     IconButton(onClick = onDismiss) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = "Cancel",
                             tint = Color.White
                         )
@@ -135,7 +135,7 @@ fun FreeCornersCropperDialog(
 
                     Text(
                         text = "Perspective Deskew",
-                        style = AppTheme.typography.bodyLargeStrong,
+                        style = AppTheme.typography.titleSmall,
                         color = Color.White
                     )
 

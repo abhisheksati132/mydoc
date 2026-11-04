@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.files
 
+import com.abhisheksati.mydoc.util.UserMessages
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.Column
@@ -97,6 +98,6 @@ fun shareFiles(context: Context, files: List<File>) {
 
         context.startActivity(Intent.createChooser(intent, "Share via"))
     } catch (e: Exception) {
-        context.showMessage("Share error: ${e.message}")
+        context.showMessage("This file could not be shared.")
     }
 }

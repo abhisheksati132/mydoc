@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer
 
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -70,7 +71,7 @@ fun DocumentViewerScreen(
             failure = declaredFailure ?: LoadFailure.UNSUPPORTED_FORMAT,
             extension = ext,
             onBackClick = onBackClick,
-            modifier = modifier.fillMaxSize()
+            modifier = modifier.fillMaxSize().statusBarsPadding()
         )
         return
     }

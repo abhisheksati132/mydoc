@@ -24,7 +24,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -46,6 +45,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextOverflow
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppTopBar
 import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
@@ -201,45 +201,14 @@ fun SpotlightSearchSheet(
         }
 
         if (filteredItems.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 32.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        modifier = Modifier
-                            .size(64.dp)
-                            .clip(CircleShape)
-                            .background(scheme.surfaceContainerHigh),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.SearchOff,
-                            contentDescription = null,
-                            tint = scheme.onSurfaceVariant,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = if (query.isEmpty()) "No documents found" else "No matches for \"$query\"",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = scheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = if (query.isEmpty()) {
-                            "Documents in your storage will appear here"
-                        } else {
-                            "Check for typos or try a different term"
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = scheme.onSurfaceVariant
-                    )
+            AppEmptyState(
+                title = if (query.isEmpty()) "No documents found" else "No matches for \"$query\"",
+                message = if (query.isEmpty()) {
+                    "Documents in your storage will appear here"
+                } else {
+                    "Check for typos or try a different term"
                 }
-            }
+            )
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),

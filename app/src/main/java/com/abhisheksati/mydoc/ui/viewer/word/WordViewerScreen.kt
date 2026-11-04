@@ -1,5 +1,7 @@
 package com.abhisheksati.mydoc.ui.viewer.word
 
+import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
+import androidx.compose.foundation.layout.statusBarsPadding
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,15 +43,18 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.util.UserMessages
 import com.abhisheksati.mydoc.MainActivity
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.data.local.DocumentStreamResolver
+import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentReadingType
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.ui.viewer.DocumentProblemScreen
 import com.abhisheksati.mydoc.domain.model.ReadingPrefs
+import com.abhisheksati.mydoc.domain.model.RenderFidelity
 import com.abhisheksati.mydoc.domain.model.ViewState
 import com.abhisheksati.mydoc.rendering.engine.word.DocxBlock
 import com.abhisheksati.mydoc.rendering.engine.word.DocxDocument
@@ -60,6 +64,7 @@ import com.abhisheksati.mydoc.tools.tts.DocumentTtsManager
 import com.abhisheksati.mydoc.ui.tts.DocumentTtsBar
 import com.abhisheksati.mydoc.ui.viewer.controls.SearchOverlay
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerCapabilities
+import com.abhisheksati.mydoc.ui.viewer.controls.ViewerChrome
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerScaffold
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerThemeTokens
 import kotlinx.coroutines.Dispatchers
@@ -116,8 +121,12 @@ fun WordViewerScreen(
                 errorMessage = e.message
                 loadFailure = e.failure
             } catch (e: Exception) {
-                errorMessage = e.localizedMessage ?: "Failed to read Word document"
-                loadFailure = com.abhisheksati.mydoc.domain.model.LoadFailure.CORRUPT_DOCUMENT
+                errorMessage = UserMessages.readFailure("WordViewer", e)
+                loadFailure = if (UserMessages.isPermissionFailure(e)) {
+                    com.abhisheksati.mydoc.domain.model.LoadFailure.PERMISSION_EXPIRED
+                } else {
+                    com.abhisheksati.mydoc.domain.model.LoadFailure.CORRUPT_DOCUMENT
+                }
                 isLoading = false
             }
         }
@@ -225,6 +234,11 @@ fun WordViewerScreen(
         onSearchClick = { isSearchOpen = true },
         onTtsClick = { isTtsVisible = true },
         readingPrefs = readingPrefs,
+        observedFidelity = if (docxData?.usedTextFallback == true) {
+            RenderFidelity.RECOVERED_SCRAPE
+        } else {
+            RenderFidelity.STRUCTURED_REFLOW
+        },
         onPageScrubbed = { page ->
             if (filteredBlocks.isNotEmpty()) {
                 val target = page.coerceIn(0, filteredBlocks.size - 1)
@@ -273,33 +287,24 @@ fun WordViewerScreen(
     ) {
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                AppProgressIndicator()
             }
         } else if (errorMessage != null) {
             DocumentProblemScreen(
                 failure = loadFailure ?: com.abhisheksati.mydoc.domain.model.LoadFailure.CORRUPT_DOCUMENT,
                 extension = document.extension,
-                onBackClick = onBackClick
+                onBackClick = onBackClick,
+                modifier = Modifier.statusBarsPadding()
             )
         } else {
             LazyColumn(
                 state = lazyListState,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = AppSpacing.paddingMedium)
                     .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(top = 64.dp, bottom = 64.dp)
+                    .padding(top = ViewerChrome.topBarHeight, bottom = ViewerChrome.bottomBarHeight)
             ) {
-                if (docxData?.usedTextFallback == true) {
-                    item {
-                        Text(
-                            text = "Limited preview: this format has no layout parser, so the text is shown unformatted.",
-                            color = secondaryTextColor,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
-                    }
-                }
                 items(filteredBlocks) { block ->
                     when (block) {
                         is DocxBlock.Heading -> {

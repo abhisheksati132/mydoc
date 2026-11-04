@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.security
 
+import com.abhisheksati.mydoc.util.UserMessages
 import android.app.Activity
 import android.app.KeyguardManager
 import android.content.Context
@@ -107,7 +108,7 @@ object BiometricLockHelper {
             try {
                 launcher.launch(intent)
             } catch (e: Exception) {
-                onError("Failed to launch security prompt: ${e.message}")
+                onError("The security prompt could not be started.")
             }
         } else {
             onError("Authentication not supported on this device")
