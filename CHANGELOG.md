@@ -37,6 +37,27 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   defect: a judge step distinguishes "Timeout waiting for emulator to boot" (re-run the
   job) from a `FATAL EXCEPTION` in logcat (this build is broken), and a failed smoke
   still blocks publication.
+- **Protect PDF, Unlock PDF and two Compress levels never worked.** MuPDF's writer rejects option
+  tokens it does not know, and three strings this app sent were never valid options:
+  `encryption=aes-256,…` (the key is `encrypt=`), `encryption=none` and `deflate`. Every call threw
+  `Unused pdf arguments found` in the native layer. Protect and Unlock reported that as a failed
+  operation; BALANCED and STRONG compression caught it, set `cleanSucceeded = false` and carried on
+  with a different strategy while still reporting a compaction.
+- **PDF permissions were written but not denied (N-8).** The `/P` mask started from `-64` and OR-ed
+  in what the user allowed, so unchecking *Allow Printing* left bit 12 (full-resolution print)
+  granted and unchecking *Allow Copying* left bit 10 (extraction for accessibility) granted. The
+  mask is now built in `PdfPermissions` from the unrestricted base `-4` by clearing the bits the
+  user denied, with the bit table documented against ISO 32000-1 Table 25.
+- **A permission that was written was not a permission that applied.** Opening a PDF with the owner
+  password grants every permission whatever `/P` says, and the tool copied the user password into
+  the owner slot whenever the user left it blank — so both switches were decorative. An unset owner
+  password now gets a random one, and the saved file is reopened and asked what it allows
+  (`Document.hasPermission`) before the tool claims success; if the answer disagrees with the
+  switches, the operation fails instead of reporting a protected document.
+- Unlock removes encryption by writing the opened document with `encrypt=none` instead of rebuilding
+  it page by page, which also keeps the outline, form fields and annotations the graft loop dropped.
+- The Protect sheet states that permissions are a request other readers honour and do not stop
+  someone printing a picture of a page.
 
 ### Tests
 
@@ -50,6 +71,20 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   restore and empty real directories and assert the resulting bytes and database rows.
 - `DataIntegrityCleanerE2ETest.tier2_feature6` asserted the silent-skip behaviour H-3
   removes (`isSuccess` with zero restored); it now asserts the reported failure.
+- `PdfPermissionsTest` — 8 JVM tests over the mask: all four switch combinations, reserved bits 1-2
+  staying zero in every case, the two denied-bit regressions above, and what the switches do not
+  claim to control (editing, annotating, forms and assembly keep the value the tool always wrote).
+- `PdfProtectPermissionsOnDeviceTest` — 8 instrumented tests that run the real native writer, read
+  `/P` back out of the produced bytes, reopen the file with the right password, the wrong password
+  and no password, and assert the library's own verdict on printing and copying for all four
+  combinations. One test requires that an owner password equal to the user password is *refused*
+  rather than reported as protection, because that configuration silently grants everything.
+- `PdfWriterOptionsOnDeviceTest` — 3 instrumented tests pinning the writer vocabulary: every option
+  string the tools send is accepted by the packaged MuPDF, and the three strings that used to be in
+  the code are still rejected.
+- Measured and now asserted: MuPDF reports the real page count of an encrypted PDF *before* any
+  password is offered, so "zero pages" is a damage signal rather than an encryption one, and
+  `needsPassword()` is what decides whether to ask.
 
 ## [1.7.2] — 2026-11-04
 

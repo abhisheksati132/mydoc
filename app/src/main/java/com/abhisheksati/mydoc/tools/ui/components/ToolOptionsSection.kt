@@ -185,6 +185,12 @@ internal fun ToolOptionsSection(
                         onCheckedChange = { allowed -> onOptionsChange { it.copy(allowCopying = allowed) } }
                     )
                 }
+                Text(
+                    text = "Permissions are a request that other readers honour. They do not stop someone who can open the document from printing a picture of a page or re-rendering it.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = AppSpacing.paddingSmall)
+                )
             }
 
             PdfTool.UNLOCK -> {

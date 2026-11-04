@@ -98,9 +98,12 @@ class PdfOptimizationEngine(private val context: Context) {
         // Strategy C: Pure object and xref compaction via MuPDF
         val cleanOutFile = createTempOutputFile("compressed_clean", "pdf")
         val cleanParams = when (options.compressionLevel) {
+            // "deflate" is not a MuPDF writer option; the save threw and BALANCED and STRONG
+            // silently fell through to another strategy while claiming to compact the file.
+            // "compress" already deflates the streams it writes.
             CompressionLevel.LIGHT -> "compress,clean,garbage=2"
-            CompressionLevel.BALANCED -> "compress,deflate,clean,garbage=3"
-            CompressionLevel.STRONG -> "compress,deflate,clean,garbage=4"
+            CompressionLevel.BALANCED -> "compress,clean,garbage=3"
+            CompressionLevel.STRONG -> "compress,clean,garbage=4"
         }
         val srcDoc = try {
             Document.openDocument(file.absolutePath) as? PDFDocument

@@ -41,29 +41,70 @@ class PdfSecurityEngine(private val context: Context) {
             require(userPwd.none { it == ',' || it.isISOControl() }) {
                 "Password cannot contain commas or control characters."
             }
-            val ownerPwd = options.ownerPassword.ifBlank { userPwd }
+            val ownerPwd = options.ownerPassword.ifBlank { randomOwnerPassword() }
             require(ownerPwd.none { it == ',' || it.isISOControl() }) {
                 "Owner password cannot contain commas or control characters."
             }
-            // ISO 32000-1 user permissions bitmask (parsed as integer by MuPDF pdf-write.c: fz_lookup_option_integer)
-            // Default unrestricted standard mask is -4 (0xFFFFFFFC).
-            // Print: bit 3 (4) | bit 12 (2048)
-            // Copy: bit 5 (16) | bit 10 (512)
-            var permMask = -64
-            if (options.allowPrinting) {
-                permMask = permMask or 4 or 2048
-            }
-            if (options.allowCopying) {
-                permMask = permMask or 16 or 512
-            }
-            val permissions = permMask.toString()
+            // /P is written as a signed 32-bit integer by MuPDF. See PdfPermissions for the bit
+            // table and for why the value is built by clearing denied bits from the unrestricted
+            // base rather than setting allowed bits into a restricted one.
+            val permissions = PdfPermissions.mask(
+                allowPrinting = options.allowPrinting,
+                allowCopying = options.allowCopying
+            ).toString()
 
             val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "protected", "pdf")
-            srcDoc.save(outFile.absolutePath, "encryption=aes-256,user-password=$userPwd,owner-password=$ownerPwd,permissions=$permissions")
+            // The key is "encrypt=". "encryption=" is not a writer option in this MuPDF and the
+            // save throws "Unused pdf arguments found", which is what this call used to send.
+            srcDoc.save(
+                outFile.absolutePath,
+                "encrypt=aes-256,user-password=$userPwd,owner-password=$ownerPwd,permissions=$permissions"
+            )
+            // A user password that doubles as the owner password authenticates as the owner, and
+            // the owner is granted every permission regardless of /P — so the two switches on
+            // screen would be written to the file and then ignored. Check the file we just made
+            // reports what the user asked for before calling it protected.
+            verifyDeclaredPermissions(outFile, userPwd, options.allowPrinting, options.allowCopying)
             onProgress(ToolProgress(100, 100, 95, "Password encryption complete.", false))
             return outFile
         } finally {
             srcDoc.destroy()
+        }
+    }
+
+    /**
+     * The owner password keeps the permissions enforceable; the document owner is the person
+     * holding the user password, so nothing here needs to be remembered by them.
+     */
+    private fun randomOwnerPassword(): String {
+        val bytes = ByteArray(16)
+        java.security.SecureRandom().nextBytes(bytes)
+        return bytes.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun verifyDeclaredPermissions(file: File, userPassword: String, allowPrinting: Boolean, allowCopying: Boolean) {
+        val doc = try {
+            Document.openDocument(file.absolutePath)
+        } catch (_: Throwable) {
+            throw IllegalStateException("The protected document could not be reopened to check it.")
+        }
+        try {
+            if (!doc.needsPassword()) {
+                throw IllegalStateException("The document was written without password protection.")
+            }
+            if (!doc.authenticatePassword(userPassword)) {
+                throw IllegalStateException("The document did not open with the password it was given.")
+            }
+            val printing = runCatching { doc.hasPermission(Document.PERMISSION_PRINT) }.getOrNull()
+            val copying = runCatching { doc.hasPermission(Document.PERMISSION_COPY) }.getOrNull()
+            if (printing != allowPrinting || copying != allowCopying) {
+                throw IllegalStateException(
+                    "The permissions in the protected document did not match the ones selected " +
+                        "(printing ${if (allowPrinting) "on" else "off"}, copying ${if (allowCopying) "on" else "off"})."
+                )
+            }
+        } finally {
+            doc.destroy()
         }
     }
 
@@ -80,19 +121,36 @@ class PdfSecurityEngine(private val context: Context) {
             }
 
             onProgress(ToolProgress(1, 100, 40, "Removing encryption...", false))
-            val totalPages = srcDoc.countPages()
-            val destDoc = PDFDocument()
-            for (p in 0 until totalPages) {
-                currentCoroutineContext().ensureActive()
-                destDoc.graftPage(destDoc.countPages(), srcDoc, p)
-            }
-
             val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "unlocked", "pdf")
-            destDoc.save(outFile.absolutePath, "encryption=none,compress")
-            destDoc.destroy()
+            // "encrypt=none" is the writer option that drops the encryption dictionary. The
+            // "encryption=none" this used to send is not an option at all, so the save threw
+            // "Unused pdf arguments found" and the tool never produced a file. Writing the
+            // opened document also keeps the outline, form fields and annotations that the
+            // page-by-page rebuild used to copy.
+            srcDoc.save(outFile.absolutePath, "compress,encrypt=none")
+            verifyUnlocked(outFile)
+            onProgress(ToolProgress(100, 100, 95, "Encryption removed.", false))
             return outFile
         } finally {
             srcDoc.destroy()
+        }
+    }
+
+    private fun verifyUnlocked(file: File) {
+        val doc = try {
+            Document.openDocument(file.absolutePath)
+        } catch (_: Throwable) {
+            throw IllegalStateException("The unlocked document could not be reopened to check it.")
+        }
+        try {
+            if (doc.needsPassword()) {
+                throw IllegalStateException("The document is still password protected.")
+            }
+            if (doc.countPages() <= 0) {
+                throw IllegalStateException("The unlocked document has no pages.")
+            }
+        } finally {
+            doc.destroy()
         }
     }
 
