@@ -12,6 +12,7 @@ import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.tools.model.ToolExecutionResult
 import com.abhisheksati.mydoc.tools.model.ToolOptions
 import com.abhisheksati.mydoc.tools.model.ToolProgress
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -104,6 +105,14 @@ class ToolsViewModel(application: Application) : AndroidViewModel(application) {
                 } else {
                     _executionState.value = ToolExecutionUiState.Error(result.errorMessage ?: "Tool execution failed.")
                 }
+            } catch (e: CancellationException) {
+                // Pressing Cancel is not a failure. Without this branch the cancelled job's own
+                // catch ran after cancelExecution() had already put the panel back to Idle, so the
+                // reader saw a red error panel for an action they took deliberately.
+                if (_executionState.value is ToolExecutionUiState.Running) {
+                    _executionState.value = ToolExecutionUiState.Idle
+                }
+                throw e
             } catch (e: Exception) {
                 _executionState.value = ToolExecutionUiState.Error(e.localizedMessage ?: "Unexpected error occurred.")
             }

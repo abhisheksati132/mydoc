@@ -100,7 +100,7 @@ fun SettingsStorageSection(
             SettingsDivider()
             SettingActionRow(
                 title = "Recent history & progress",
-                subtitle = "Clears recent documents and reading progress",
+                subtitle = "Clears the recent list, document reading positions and media resume points. The files themselves stay on the device.",
                 icon = Icons.Outlined.DeleteSweep,
                 actionLabel = stringResource(R.string.clear_cache),
                 onAction = onClearRecentClick

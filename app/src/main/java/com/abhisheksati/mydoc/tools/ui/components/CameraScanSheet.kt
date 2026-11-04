@@ -186,6 +186,7 @@ fun CameraScanSheet(
 
         val capturedFiles = remember { mutableStateListOf<File>() }
         var imageCapture: ImageCapture? by remember { mutableStateOf(null) }
+        var cameraProvider: androidx.camera.lifecycle.ProcessCameraProvider? by remember { mutableStateOf(null) }
         var cameraControl: CameraControl? by remember { mutableStateOf(null) }
         var isTorchOn by remember { mutableStateOf(false) }
         var selectedMode by remember { mutableStateOf(ScanAspectMode.DOCUMENT) }
@@ -285,7 +286,7 @@ fun CameraScanSheet(
 
                     val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
                     cameraProviderFuture.addListener({
-                        val cameraProvider = cameraProviderFuture.get()
+                        val provider = cameraProviderFuture.get()
                         val preview = Preview.Builder().build().also {
                             it.setSurfaceProvider(previewView.surfaceProvider)
                         }
@@ -296,8 +297,9 @@ fun CameraScanSheet(
                         imageCapture = capture
 
                         try {
-                            cameraProvider.unbindAll()
-                            val camera = cameraProvider.bindToLifecycle(
+                            provider.unbindAll()
+                            cameraProvider = provider
+                            val camera = provider.bindToLifecycle(
                                 lifecycleOwner,
                                 CameraSelector.DEFAULT_BACK_CAMERA,
                                 preview,
@@ -312,6 +314,20 @@ fun CameraScanSheet(
                     previewView
                 }
             )
+
+            // Closing the sheet has to take the camera with it. The use cases are bound to the
+            // surrounding lifecycle owner, which stays RESUMED while the sheet is gone, so without
+            // this the preview pipeline keeps the camera in use after the reader has left.
+            DisposableEffect(lifecycleOwner) {
+                onDispose {
+                    runCatching { cameraProvider?.unbindAll() }
+                    runCatching { cameraControl?.enableTorch(false) }
+                    isTorchOn = false
+                    imageCapture = null
+                    cameraControl = null
+                    cameraProvider = null
+                }
+            }
 
             // Dynamic Viewfinder with Scrim Mask & Laser Guide
             BoxWithConstraints(

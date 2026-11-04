@@ -96,6 +96,14 @@ fun AudioPlayerScreen(
     var isLooping by remember { mutableStateOf(false) }
 
     val mediaPlayer = remember { MediaPlayer() }
+    val app = context.applicationContext as? MyDocApp
+    // Writes are checkpoints, not every frame; see PlaybackCheckpoints for the rule and what it costs.
+    val checkpoints = remember(item.uri, app) {
+        PlaybackCheckpointWriter { value, duration ->
+            val uri = item.uri.toString()
+            app?.mediaRepository?.savePlaybackPosition(uri, value, duration)
+        }
+    }
 
     BackHandler {
         onBackClick()
@@ -110,13 +118,14 @@ fun AudioPlayerScreen(
             mediaPlayer.isLooping = isLooping
 
             // Auto-resume from database if exists
-            val app = context.applicationContext as? MyDocApp
             if (app != null) {
                 scope.launch {
                     val saved = app.database.mediaPlaybackDao().getPlaybackPosition(item.uri.toString())
-                    if (saved != null && saved.positionMs > 1000L && saved.positionMs < totalDurationMs - 3000L) {
-                        mediaPlayer.seekTo(saved.positionMs.toInt())
-                        currentPositionMs = saved.positionMs
+                    val resume = saved?.let { PlaybackCheckpoints.valueToSave(it.positionMs, totalDurationMs) }
+                    if (resume != null) {
+                        mediaPlayer.seekTo(resume.toInt())
+                        currentPositionMs = resume
+                        checkpoints.seed(resume)
                     }
                     mediaPlayer.start()
                     isPlaying = true
@@ -130,37 +139,46 @@ fun AudioPlayerScreen(
         }
 
         onDispose {
+            // No save is attempted from here: this composition's scope is being cancelled, which is
+            // why the old write from onDispose usually never reached the database. The last
+            // checkpoint, and the flush written when playback stopped or the app was backgrounded,
+            // are what survive.
             try {
-                // Save position on close
-                val app = context.applicationContext as? MyDocApp
-                if (app != null && mediaPlayer.currentPosition > 1000) {
-                    val pos = mediaPlayer.currentPosition.toLong()
-                    val dur = mediaPlayer.duration.toLong()
-                    scope.launch {
-                        app.database.mediaPlaybackDao().savePlaybackPosition(
-                            MediaPlaybackEntity(
-                                uri = item.uri.toString(),
-                                positionMs = pos,
-                                durationMs = dur,
-                                updatedTimestamp = System.currentTimeMillis()
-                            )
-                        )
-                    }
-                }
                 mediaPlayer.stop()
                 mediaPlayer.release()
             } catch (_: Exception) {}
         }
     }
 
-    // Progress polling loop
+    // Progress polling loop, and the checkpoint writes that make "resume where you left off" real.
     LaunchedEffect(isPlaying) {
         while (isPlaying) {
             if (!isSeeking && mediaPlayer.isPlaying) {
-                currentPositionMs = mediaPlayer.currentPosition.toLong()
+                val position = mediaPlayer.currentPosition.toLong()
+                val duration = totalDurationMs
+                currentPositionMs = position
+                checkpoints.checkpoint(position, duration)
             }
             delay(250L)
         }
+        // Paused, stopped or left: the position the listener actually reached.
+        val position = runCatching { mediaPlayer.currentPosition.toLong() }.getOrDefault(0L)
+        checkpoints.checkpoint(position, totalDurationMs, force = true)
+    }
+
+    // Backgrounding is a lifecycle transition, not a disposal: the scope is still alive here, so the
+    // checkpoint written now is the one that survives a phone call.
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, app) {
+        val owner = lifecycleOwner
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP && app != null) {
+                val position = runCatching { mediaPlayer.currentPosition.toLong() }.getOrDefault(0L)
+                scope.launch { checkpoints.checkpoint(position, totalDurationMs, force = true) }
+            }
+        }
+        owner.lifecycle.addObserver(observer)
+        onDispose { owner.lifecycle.removeObserver(observer) }
     }
 
     Column(

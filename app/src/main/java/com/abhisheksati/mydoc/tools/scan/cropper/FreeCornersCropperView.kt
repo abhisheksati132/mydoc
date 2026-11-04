@@ -35,6 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -105,6 +106,17 @@ fun FreeCornersCropperDialog(
         BackHandler(onBack = onDismiss)
 
         var currentBitmap by remember { mutableStateOf(bitmap) }
+        // Bitmaps this screen created. The incoming bitmap belongs to the caller, so only these
+        // are ever recycled — and they are recycled as soon as a rotation replaces them, because a
+        // camera-size ARGB bitmap is tens of megabytes and each tap used to leave one behind.
+        var createdBitmaps by remember { mutableStateOf(listOf<Bitmap>()) }
+        DisposableEffect(bitmap) {
+            onDispose {
+                createdBitmaps.forEach { candidate ->
+                    if (candidate !== bitmap && !candidate.isRecycled) candidate.recycle()
+                }
+            }
+        }
 
         Surface(
             modifier = modifier.fillMaxSize(),
@@ -141,13 +153,13 @@ fun FreeCornersCropperDialog(
 
                     IconButton(
                         onClick = {
-                            // Rotate 90 degrees
-                            val matrix = Matrix().apply { postRotate(90f) }
-                            currentBitmap = Bitmap.createBitmap(
-                                currentBitmap, 0, 0,
-                                currentBitmap.width, currentBitmap.height,
-                                matrix, true
-                            )
+                            val previous = currentBitmap
+                            val rotated = BitmapRotation.rotate(previous, 90)
+                            currentBitmap = rotated
+                            if (rotated !== previous) {
+                                if (previous !== bitmap && !previous.isRecycled) previous.recycle()
+                                createdBitmaps = createdBitmaps.filter { it !== previous } + rotated
+                            }
                         }
                     ) {
                         Icon(

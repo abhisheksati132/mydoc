@@ -189,11 +189,24 @@ fun VideoPlayerScreen(
         exoPlayer.repeatMode = if (isLooping) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
     }
 
+    // The position the database was last told about. Writes are checkpoints while playing plus a
+    // flush when playback stops or the app is backgrounded; the old write from `onDispose` ran on a
+    // scope that was being cancelled, so it usually never landed.
+    var lastSavedMs by remember(item.uri) { mutableLongStateOf(-1L) }
+
+    val checkpoints = remember(item.uri, mediaRepository) {
+        PlaybackCheckpointWriter { value, duration ->
+            val uri = item.uri.toString()
+            mediaRepository.savePlaybackPosition(uri, value, duration)
+        }
+    }
+
     // Restore saved playback position
     LaunchedEffect(item.uri, autoResume) {
         val savedPos = mediaRepository.getPlaybackPosition(item.uri.toString())
         if (autoResume && savedPos > 2000L) {
             exoPlayer.seekTo(savedPos)
+            checkpoints.seed(savedPos)
         }
     }
 
@@ -214,25 +227,34 @@ fun VideoPlayerScreen(
         exoPlayer.addListener(listener)
 
         onDispose {
-            val pos = exoPlayer.currentPosition
-            val dur = exoPlayer.duration
-            if (pos > 1000L && dur > 0L) {
-                val saveTime = if (pos >= dur - 3000L) 0L else pos
-                scope.launch {
-                    mediaRepository.savePlaybackPosition(item.uri.toString(), saveTime, dur)
-                }
-            }
+            // Nothing is saved from here: this scope is being cancelled. The checkpoints written
+            // while playing, and the flush below that runs when playback stops, are what persist.
             exoPlayer.removeListener(listener)
             exoPlayer.release()
         }
     }
 
-    // Periodic position polling for timeline scrubber
+    // Periodic position polling for the timeline scrubber, and the checkpoint it makes possible.
     LaunchedEffect(isPlaying) {
         while (isPlaying) {
-            currentPositionMs = exoPlayer.currentPosition
+            val position = exoPlayer.currentPosition
+            currentPositionMs = position
+            checkpoints.checkpoint(position, exoPlayer.duration)
             delay(250)
         }
+        checkpoints.checkpoint(exoPlayer.currentPosition, exoPlayer.duration, force = true)
+    }
+
+    val videoLifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(videoLifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                // The composition is still alive when the app is backgrounded, so this scope works.
+                scope.launch { checkpoints.checkpoint(exoPlayer.currentPosition, exoPlayer.duration, force = true) }
+            }
+        }
+        videoLifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { videoLifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     // Auto-hide controls after 3.5 seconds of inactivity

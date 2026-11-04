@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.data.local.SettingsRepository
+import com.abhisheksati.mydoc.designsystem.components.AppDialog
 import com.abhisheksati.mydoc.designsystem.components.AppTopBar
 import com.abhisheksati.mydoc.ui.appmanager.AppManagerSheet
 import com.abhisheksati.mydoc.ui.cleaner.StorageCleanerSheet
@@ -66,6 +67,7 @@ fun SettingsScreen(
     val glassEffectMode by settingsRepository.glassEffectMode.collectAsState()
 
     var showStorageCleaner by remember { mutableStateOf(false) }
+    var showClearHistoryConfirmation by remember { mutableStateOf(false) }
     var showAppManager by remember { mutableStateOf(false) }
 
     // READING
@@ -171,11 +173,12 @@ fun SettingsScreen(
                         }
                         context.showMessage(toastText)
                     },
-                    onClearRecentClick = onClearRecent?.let { clearAction ->
+                    // Clearing history is one tap away from erasing every reading position, so it
+                    // asks first and says what goes and what stays.
+                    onClearRecentClick = if (onClearRecent == null) null else {
                         {
                             if (hapticFeedbackEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            clearAction()
-                            context.showMessage(recentHistoryClearedMessage)
+                            showClearHistoryConfirmation = true
                         }
                     },
                     onOpenStorageCleaner = { showStorageCleaner = true },
@@ -216,6 +219,24 @@ fun SettingsScreen(
                     onDesignSystemPreviewClick = onDesignSystemPreviewClick
                 )
             }
+        }
+
+        if (showClearHistoryConfirmation) {
+            AppDialog(
+                isOpen = true,
+                title = "Clear recent history?",
+                message = "This removes the recent list, the page each document was left on, and the " +
+                    "resume points for audio and video. Nothing is deleted from storage — your files " +
+                    "stay exactly where they are. This cannot be undone.",
+                confirmLabel = "Clear",
+                isDestructive = true,
+                onDismissRequest = { showClearHistoryConfirmation = false },
+                onConfirm = {
+                    showClearHistoryConfirmation = false
+                    onClearRecent?.invoke()
+                    context.showMessage(recentHistoryClearedMessage)
+                }
+            )
         }
 
         if (showStorageCleaner) {

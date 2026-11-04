@@ -91,6 +91,34 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   store kept them, with their native MuPDF handles, until the Activity was destroyed. One view model
   now serves the viewer and `RendererSlot` owns at most one engine, closing what it replaces.
 
+- **Audio and video resume positions were written from a scope that was being cancelled (N-3).**
+  Both players called `rememberCoroutineScope().launch { … }` inside `onDispose`. Tested on device:
+  the composition scope is already cancelled by then, so the write never reached Room — the player
+  did stop and release, but the position was lost. Saving is now checkpointed while playing (about
+  every five seconds of movement, not every 250 ms frame), flushed when playback stops, and flushed
+  again on `ON_STOP`, none of which depends on a dying scope. The cost is stated rather than hidden:
+  leaving a player can lose up to one checkpoint interval. Audio and video share the same rule,
+  including resetting a track played to the end back to zero instead of resuming past the last bar.
+- **Cancel was reported as a failure (N-9).** `ToolsViewModel` caught `CancellationException` in the
+  same `catch (e: Exception)` as real errors, so pressing Cancel — which sets the panel to Idle
+  first — was then overwritten with a red error panel naming the cancellation. Cancellation is now
+  handled separately, returns the panel to Idle, and is re-thrown.
+- **Clearing history had no confirmation (N-10).** One tap erased every recent document, every
+  reading position and every media resume point, under a button labelled "Clear" with no way back.
+  It now asks, and the message says what goes (records) and what does not (the files themselves).
+  The row's subtitle was also wrong: it claimed only documents and reading progress were cleared
+  while media resume points were erased too.
+- **The scanner kept the camera after it closed (N-11).** The CameraX use cases were bound to the
+  surrounding lifecycle owner, which stays resumed when a sheet is dismissed, so nothing unbound
+  them: the preview pipeline kept the camera in use after the reader had gone. Disposal now
+  unbinds, turns the torch off, and drops the capture references.
+- **Rotating a scan cropped it and leaked a bitmap per tap (N-12).** `createBitmap(src, 0, 0,
+  src.width, src.height, matrix, true)` returns a bitmap of the size asked for, so a 90 degree turn
+  drew the rotated image into the *original* box and clipped it. Rotation now swaps the axes and
+  draws through a canvas. Each tap used to leave the previous full-size camera bitmap alive with no
+  reference to it; the copies this screen makes are now recycled when a rotation replaces them and
+  when the cropper closes, while the caller's bitmap is never touched.
+
 ### Tests
 
 - `StorageMoveTrashSafetyTest` — 13 JVM tests over an injected `EntryMutator` seam: a
@@ -132,6 +160,16 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 Not device-verified: the Compose interaction itself — that tapping next moves the list, and that the
 truncation notice is legible in both themes. Those are wired to the functions above but were not
 driven on screen in this batch.
+
+- `PlaybackCheckpointsTest` — 10 JVM tests over the checkpoint rule: the first-second and unknown
+  duration refusals, the near-end reset, one write per five seconds across 480 polls, the stop and
+  background flushes, no rewrite of a position that was just resumed, and a seek backwards.
+- `PlaybackPersistenceOnDeviceTest` — 4 instrumented tests against the real Room database. One of
+  them reproduces the old pattern through an actual Compose composition and asserts the write does
+  **not** land, which is the evidence N-3 needed; the others drive the checkpoint writer the way the
+  poll loop does and assert the position survives, resumes on reopen, and resets at the end.
+- `BitmapRotationTest` — 5 JVM tests on the axis swap, including four quarter turns returning to the
+  original box and a half turn not swapping.
 
 ## [1.7.2] — 2026-11-04
 
