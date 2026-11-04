@@ -40,7 +40,7 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ### Tests
 
-- `StorageMoveTrashSafetyTest` — 11 JVM tests over an injected `EntryMutator` seam: a
+- `StorageMoveTrashSafetyTest` — 13 JVM tests over an injected `EntryMutator` seam: a
   folder move keeps the copy the source can no longer hold, an untouched source takes the
   copy back, nothing is deleted before the complete copy exists, nested and empty folder
   moves, a vanished source, bin-emptying that keeps a record for content it could not
