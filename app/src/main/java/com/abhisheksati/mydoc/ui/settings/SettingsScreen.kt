@@ -210,7 +210,8 @@ fun SettingsScreen(
                     updateManager = updateManager,
                     updateState = updateState,
                     checkUpdatesOnLaunch = checkUpdatesOnLaunch,
-                    onCheckUpdatesOnLaunchChange = { settingsRepository.setCheckUpdatesOnLaunch(it) }
+                    onCheckUpdatesOnLaunchChange = { settingsRepository.setCheckUpdatesOnLaunch(it) },
+                    onDesignSystemPreviewClick = onDesignSystemPreviewClick
                 )
             }
         }

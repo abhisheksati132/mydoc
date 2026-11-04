@@ -195,6 +195,7 @@ fun HomeScreen(
                             onScanClick = { documentScanner() },
                             onNavigateToLibrary = { viewModel.selectTab(HomeTab.LIBRARY) },
                             errorMessage = uiState.errorMessage,
+                            isLoading = uiState.isLoading,
                             onDismissError = { viewModel.clearError() },
                             hazeState = hazeState,
                             listState = homeListState,

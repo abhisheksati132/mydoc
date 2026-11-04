@@ -134,7 +134,7 @@ class HomeViewModel(
      .stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = HomeUiState(isLoading = false)
+        initialValue = HomeUiState(isLoading = true)
     )
 
     fun clearError() {

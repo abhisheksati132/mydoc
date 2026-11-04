@@ -35,6 +35,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.abhisheksati.mydoc.designsystem.components.AppSnackbarHost
 import com.abhisheksati.mydoc.designsystem.components.LocalGlassEffectMode
+import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
+import com.abhisheksati.mydoc.designsystem.motion.rememberReducedMotion
 import com.abhisheksati.mydoc.data.local.AppThemeMode
 import com.abhisheksati.mydoc.designsystem.animation.AppMotion
 import com.abhisheksati.mydoc.designsystem.animation.LocalAnimatedVisibilityScope
@@ -168,6 +170,7 @@ class MainActivity : ComponentActivity() {
                 AppThemeMode.SYSTEM -> isSystemInDarkTheme()
             }
             val isBlack = themeMode == AppThemeMode.BLACK || (isDark && amoledBlack)
+            val reducedMotion by rememberReducedMotion()
 
             // The app can force light/dark independently of the system, so the
             // bars must follow the app theme rather than system night mode.
@@ -213,6 +216,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 CompositionLocalProvider(
                     LocalGlassEffectMode provides glassEffectMode,
+                    LocalReducedMotion provides reducedMotion,
                     com.abhisheksati.mydoc.designsystem.tokens.LocalHapticsEnabled provides hapticsEnabled
                 ) {
                     val selectedTool by toolsViewModel.selectedTool.collectAsStateWithLifecycle()

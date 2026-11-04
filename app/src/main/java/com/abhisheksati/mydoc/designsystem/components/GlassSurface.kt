@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
+import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.ContinuousCornerShape
@@ -186,7 +187,12 @@ fun GlassSurface(
     val actualRimBottom = rimBottom ?: colors.glassRimBottom
     val actualInnerShadow = innerShadowColor ?: colors.glassInnerShadow
 
-    val progress = max(motion?.progress ?: 0f, (motion?.interaction ?: 0f) * 0.6f)
+    val reducedMotion = LocalReducedMotion.current
+    val progress = if (reducedMotion) {
+        0f
+    } else {
+        max(motion?.progress ?: 0f, (motion?.interaction ?: 0f) * 0.6f)
+    }
 
     // Directional specular: bright top arc fading to nothing by mid-face,
     // with only a whisper of occlusion along the bottom edge.

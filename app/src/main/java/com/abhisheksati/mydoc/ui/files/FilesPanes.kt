@@ -41,6 +41,7 @@ import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import com.abhisheksati.mydoc.designsystem.components.AppDropdownMenu
+import com.abhisheksati.mydoc.designsystem.components.BrowseSkeleton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -158,6 +159,14 @@ fun BrowseHomePane(
     val listState = rememberLazyListState()
     if (glassMotion != null) {
         TrackGlassMotion(listState, glassMotion)
+    }
+    if (storageUiState.isLoading) {
+        Column(
+            modifier = modifier.then(if (hazeState != null) Modifier.hazeSource(hazeState) else Modifier)
+        ) {
+            BrowseSkeleton()
+        }
+        return
     }
     LazyColumn(
         state = listState,

@@ -52,8 +52,10 @@ import com.abhisheksati.mydoc.designsystem.components.AppLinearProgress
 import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.components.AppSectionHeader
 import com.abhisheksati.mydoc.designsystem.components.AppTopBar
+import com.abhisheksati.mydoc.designsystem.components.BrowseSkeleton
 import com.abhisheksati.mydoc.designsystem.components.GlassEffectMode
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
+import com.abhisheksati.mydoc.designsystem.components.HomeFeedSkeleton
 import com.abhisheksati.mydoc.designsystem.components.LocalGlassEffectMode
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
@@ -363,6 +365,15 @@ fun DesignSystemPreviewScreen(
                                 Text("Open Dialog", style = typography.label)
                             }
                         }
+                        Spacer(modifier = Modifier.height(AppSpacing.large))
+
+                        // SECTION 6: LOADING SKELETONS
+                        AppSectionHeader(title = "6. Loading Skeletons (first paint)")
+                        HomeFeedSkeleton(
+                            modifier = Modifier.padding(horizontal = AppSpacing.medium)
+                        )
+                        Spacer(modifier = Modifier.height(AppSpacing.large))
+                        BrowseSkeleton()
                     }
                 }
 

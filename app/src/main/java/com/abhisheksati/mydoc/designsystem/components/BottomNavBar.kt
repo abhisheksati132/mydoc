@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.runtime.LaunchedEffect
+import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
@@ -70,8 +71,13 @@ fun BottomNavBar(
 
     // Glass thickens on touch: a damped spring kicks the blur up on tab change
     // and relaxes back, so the bar responds to interaction, not just scroll.
-    LaunchedEffect(currentTab, motion) {
+    val reducedMotion = LocalReducedMotion.current
+    LaunchedEffect(currentTab, motion, reducedMotion) {
         val target = motion ?: return@LaunchedEffect
+        if (reducedMotion) {
+            target.interaction = 0f
+            return@LaunchedEffect
+        }
         target.interaction = 1f
         val decay = Animatable(1f)
         decay.animateTo(0f, spring(dampingRatio = 0.55f, stiffness = 300f)) {

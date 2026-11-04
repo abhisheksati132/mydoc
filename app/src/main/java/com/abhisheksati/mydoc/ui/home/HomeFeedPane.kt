@@ -47,6 +47,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
+import com.abhisheksati.mydoc.designsystem.components.HomeFeedSkeleton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -92,6 +93,7 @@ fun HomeFeedPane(
     onNavigateToLibrary: () -> Unit,
     modifier: Modifier = Modifier,
     errorMessage: String? = null,
+    isLoading: Boolean = false,
     onDismissError: (() -> Unit)? = null,
     hazeState: HazeState? = null,
     listState: LazyListState = rememberLazyListState()
@@ -231,7 +233,11 @@ fun HomeFeedPane(
         }
 
         // CONTINUE READING HERO CARD
-        if (heroItem != null) {
+        if (isLoading) {
+            item(key = "feed_skeleton") {
+                HomeFeedSkeleton()
+            }
+        } else if (heroItem != null) {
             item(key = "hero_continue_reading") {
                 ContinueReadingHeroCard(
                     item = heroItem,

@@ -1,5 +1,8 @@
 package com.abhisheksati.mydoc.ui.settings
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,12 +33,14 @@ import com.abhisheksati.mydoc.update.UpdateUiState
 import java.util.Locale
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SettingsAboutSection(
     updateManager: UpdateManager,
     updateState: UpdateUiState,
     checkUpdatesOnLaunch: Boolean,
     onCheckUpdatesOnLaunchChange: (Boolean) -> Unit,
+    onDesignSystemPreviewClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -45,7 +51,12 @@ fun SettingsAboutSection(
     SettingsCard(
         title = "About & updates",
         icon = Icons.Outlined.Info,
-        modifier = modifier
+        modifier = modifier.combinedClickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = {},
+            onLongClick = onDesignSystemPreviewClick
+        )
     ) {
         SettingToggleRow(
             title = "Check for updates on launch",

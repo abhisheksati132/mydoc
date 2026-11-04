@@ -3,6 +3,16 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [1.5.17] — 2026-11-04
+
+Range: `v1.5.16..v1.5.17`.
+
+### Added
+
+- **Skeleton first-paint states.** The Home feed and Library browse now render static tonal placeholder blocks while their data loads, instead of a blank pane. Deliberately shimmer-free: a pulsing skeleton would reintroduce exactly the motion some users asked the system to remove.
+- **Reduced-motion respected across glass.** A new `LocalReducedMotion` reads the system "remove animations" setting (transition/animator scale = 0) and observes live changes via a `ContentObserver`. When on, scroll- and touch-driven glass stays at its base thickness (blur pinned to 12dp, tint at rest) and the nav-bar interaction spring is skipped, so chrome never animates against the user's accessibility preference.
+- **Design-system preview skeletons.** Section 6 of the debug-only Paper-under-Glass preview renders both skeleton layouts for review; opened by long-pressing the About & updates card in Settings.
+
 ## [1.5.16] — 2026-11-04
 
 Range: `v1.5.15..v1.5.16`.
