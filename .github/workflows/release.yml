@@ -165,15 +165,24 @@ jobs:
       # A signed, cert-verified APK is not proof it runs. R8 shrinking, release-only resource
       # stripping and the release signing config can all break the app at first launch, and that
       # is exactly what users meet. Nothing is published until this passes.
+      # First boot of an API 35 image on a shared runner is slow: the system image is not always
+      # pre-installed, so it is downloaded and then cold-booted. The action's own default is 600s,
+      # which is what this step ran with the first time it existed and it timed out. The timeout is
+      # stated explicitly and the AVD is created without a snapshot so nothing is reused or cached
+      # between runs; a boot failure here is infrastructure, and the message says so.
       - name: Smoke test the signed release APK
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        continue-on-error: true
+        id: smoke
         with:
           api-level: 35
           target: google_apis
           arch: x86_64
           profile: pixel_6
+          timeout: 2400
           disable-animations: true
-          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          snapshot: false
+          emulator-options: -no-snapshot-load -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
             set -euo pipefail
             APK=app/build/outputs/apk/release/app-x86_64-release.apk
@@ -197,6 +206,20 @@ jobs:
             fi
             adb exec-out screencap -p > release-smoke-launch.png
             echo "Release build installed, launched and survived 20s on API 35."
+
+      # The step above is allowed to fail so this can tell the two failures apart. A release must
+      # not be published on an untested artifact either way, but the reason decides what to do
+      # next: a boot timeout is retried, a crash is fixed.
+      - name: Judge the smoke test result
+        run: |
+          if [ "${{ steps.smoke.outcome }}" = "success" ]; then
+            echo "Smoke test passed."
+            exit 0
+          fi
+          echo "::error::The release APK smoke test did not pass."
+          echo "Check the emulator log above: 'Timeout waiting for emulator to boot' is runner"
+          echo "infrastructure and can be re-run; a FATAL EXCEPTION is this build and must be fixed."
+          exit 1
 
       - name: Upload Release Smoke Evidence
         if: always()
