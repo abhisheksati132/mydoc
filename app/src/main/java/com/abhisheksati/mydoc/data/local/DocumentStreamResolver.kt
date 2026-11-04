@@ -162,7 +162,9 @@ object DocumentStreamResolver {
 
                 // Only a copy whose name carries this exact URI identity counts; a similar
                 // display name never matches.
-                val byKey = files.firstOrNull { DocumentIdentity.isSavedCopyOf(it, uriString) }
+                val byKey = files.firstOrNull {
+                    !OfflineCopyPolicy.isMetaFile(it.name) && DocumentIdentity.isSavedCopyOf(it, uriString)
+                }
                 if (byKey != null) {
                     byKey.setLastModified(System.currentTimeMillis())
                     return StreamResult(FileInputStream(byKey), null, "saved_docs_key")
@@ -257,7 +259,10 @@ object DocumentStreamResolver {
     const val MAX_SAVED_DOCS_BYTES = 100L * 1024 * 1024 // 100 MB
 
     fun trimSavedDocsCache(savedDocsDir: File) {
-        val files = savedDocsDir.listFiles()?.filter { it.isFile } ?: return
+        // The sidecars are bookkeeping, not cached documents: they must not occupy a slot in the
+        // count or the byte budget, and they go away with the copy they describe.
+        val all = savedDocsDir.listFiles()?.filter { it.isFile } ?: return
+        val files = all.filterNot { OfflineCopyPolicy.isMetaFile(it.name) }
         var totalBytes = files.sumOf { it.length() }
         var count = files.size
         if (count <= MAX_SAVED_DOCS_COUNT && totalBytes <= MAX_SAVED_DOCS_BYTES) return
@@ -267,6 +272,7 @@ object DocumentStreamResolver {
             if (count > MAX_SAVED_DOCS_COUNT || totalBytes > MAX_SAVED_DOCS_BYTES) {
                 val len = f.length()
                 if (f.delete()) {
+                    java.io.File(f.parentFile, OfflineCopyPolicy.metaFileFor(f.name)).delete()
                     totalBytes -= len
                     count--
                 }

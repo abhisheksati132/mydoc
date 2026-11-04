@@ -119,6 +119,14 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   reference to it; the copies this screen makes are now recycled when a rotation replaces them and
   when the cropper closes, while the caller's bitmap is never touched.
 
+- **The offline copy could be served after the document had changed (H-9).** A cached copy was
+  judged current on file size alone, so an edit that kept the length — a word replaced in place, a
+  re-export that happens to match — left MyDoc holding an outdated copy of the user's document with
+  no way to notice. Each copy now carries a sidecar recording the size *and* modification time it was
+  taken from, and is rewritten when either differs. When a provider reports neither, the copy is kept
+  rather than refused, because the copy exists so a document stays readable after its grant dies.
+  Sidecars are excluded from the cache's 50-file / 100 MB budget and are deleted with their copy.
+
 ### Tests
 
 - `StorageMoveTrashSafetyTest` — 13 JVM tests over an injected `EntryMutator` seam: a
@@ -170,6 +178,14 @@ driven on screen in this batch.
   poll loop does and assert the position survives, resumes on reopen, and resets at the end.
 - `BitmapRotationTest` — 5 JVM tests on the axis swap, including four quarter turns returning to the
   original box and a half turn not swapping.
+
+- `OfflineCopyPolicyTest` — 10 JVM tests: the same-size edit is now detected, an unchanged document
+  keeps its copy, a length mismatch, a missing/empty/stampless copy, a document whose metadata is
+  entirely unknown still reading offline, sidecar format round-trip, and malformed stamps treated as
+  absent rather than trusted.
+- `OfflineCopySidecarOnDeviceTest` — 2 instrumented tests against the real `saved_docs` directory:
+  the offline fallback returns the document and not its sidecar even when the sidecar is the newer
+  file, and 51 copies plus their sidecars survive trimming as 51 documents rather than 102 files.
 
 ## [1.7.2] — 2026-11-04
 

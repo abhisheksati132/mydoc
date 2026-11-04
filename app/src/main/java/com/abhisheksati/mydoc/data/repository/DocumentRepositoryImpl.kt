@@ -8,6 +8,8 @@ import android.net.Uri
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import com.abhisheksati.mydoc.data.local.AppDatabase
+import com.abhisheksati.mydoc.data.local.OfflineCopyPolicy
+import com.abhisheksati.mydoc.data.local.OfflineCopyStamp
 import com.abhisheksati.mydoc.data.local.entity.FavoriteDocumentEntity
 import com.abhisheksati.mydoc.data.local.entity.RecentDocumentEntity
 import com.abhisheksati.mydoc.data.local.entity.ViewStateEntity
@@ -220,7 +222,12 @@ class DocumentRepositoryImpl(
                 val savedDocsDir = java.io.File(context.filesDir, "saved_docs").apply { mkdirs() }
                 val cacheName = DocumentIdentity.savedDocsName(uri.toString(), metadata.displayName)
                 val localFile = java.io.File(savedDocsDir, cacheName)
-                if (!localFile.exists() || localFile.length() == 0L || (metadata.sizeBytes > 0L && localFile.length() != metadata.sizeBytes)) {
+                val metaFile = java.io.File(savedDocsDir, OfflineCopyPolicy.metaFileFor(cacheName))
+                val recorded = runCatching {
+                    if (metaFile.exists()) OfflineCopyPolicy.parse(metaFile.readText()) else null
+                }.getOrNull()
+                val source = OfflineCopyStamp(metadata.sizeBytes, metadata.lastModified)
+                if (OfflineCopyPolicy.needsRefresh(recorded, localFile.length(), source)) {
                     // Write to a temp file then rename: opening localFile's own outputStream would
                     // truncate it to 0 before the copy, destroying the backup when the resolved
                     // stream is this same saved_docs file (tier-2 fallback).
@@ -235,8 +242,12 @@ class DocumentRepositoryImpl(
                             tmpFile.copyTo(localFile, overwrite = true)
                             tmpFile.delete()
                         }
+                        // The stamp is only written for a copy that completed, so an interrupted
+                        // refresh is retried next time instead of being believed current.
+                        runCatching { metaFile.writeText(OfflineCopyPolicy.format(source)) }
                     } else {
                         tmpFile.delete()
+                        metaFile.delete()
                     }
                 }
                 localFile.setLastModified(System.currentTimeMillis())
@@ -398,6 +409,7 @@ class DocumentRepositoryImpl(
     private fun extractMetadata(uri: Uri): DocumentMetadata {
         var displayName: String? = null
         var sizeBytes: Long = 0
+        var lastModified: Long = 0
         var mimeType: String? = contentResolver.getType(uri)
 
         if (uri.scheme == "content") {
@@ -412,6 +424,13 @@ class DocumentRepositoryImpl(
                         if (sizeIndex != -1 && !cursor.isNull(sizeIndex)) {
                             sizeBytes = cursor.getLong(sizeIndex)
                         }
+                        // Providers are not obliged to report it, and it is in seconds.
+                        val modifiedIndex = cursor.getColumnIndex(
+                            android.provider.DocumentsContract.Document.COLUMN_LAST_MODIFIED
+                        )
+                        if (modifiedIndex != -1 && !cursor.isNull(modifiedIndex)) {
+                            lastModified = cursor.getLong(modifiedIndex) * 1000L
+                        }
                     }
                 }
                         } catch (e: SecurityException) {
@@ -423,6 +442,7 @@ class DocumentRepositoryImpl(
             val file = File(uri.path ?: "")
             displayName = file.name
             sizeBytes = file.length()
+            lastModified = file.lastModified()
         }
 
         if (displayName.isNullOrBlank()) {
@@ -460,7 +480,8 @@ class DocumentRepositoryImpl(
         return DocumentMetadata(
             displayName = displayName,
             sizeBytes = sizeBytes,
-            mimeType = mimeType
+            mimeType = mimeType,
+            lastModified = lastModified
         )
     }
 
@@ -468,6 +489,8 @@ class DocumentRepositoryImpl(
     private data class DocumentMetadata(
         val displayName: String,
         val sizeBytes: Long,
-        val mimeType: String
+        val mimeType: String,
+        /** When the document itself changed, 0 when no provider reported it. */
+        val lastModified: Long
     )
 }
