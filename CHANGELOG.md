@@ -134,6 +134,16 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   sheet, surfaced as `failedSheets`/`isPartial` on both the OOXML model and the grid model, and
   stated under the grid: which sheet could not be read, and that what is shown is not the whole
   workbook.
+- **Opening a document enumerated its folder on the UI thread (H-10).** The swipe-between-neighbouring-
+  files list was built by a private `documentSiblingsFor()` called straight from a `LaunchedEffect` in
+  `MainActivity`: `listFiles()` plus a `length()` and `lastModified()` per entry, on the main thread,
+  with no way to abandon it. Measured on the emulator, a folder of 5,001 files took 1,143 ms — a
+  visible stall on every document open, and worse on a slow device or a big Downloads folder. The scan
+  moved to `DocumentSiblings.readableDocumentsIn()`, which runs on `Dispatchers.IO`, checks
+  cancellation every 256 entries, and leaves hidden files, subfolders and unsupported types out. A
+  scan whose reader has already moved on is now discarded rather than published, so it cannot
+  overwrite the swipe chain of the document the user actually opened. A failed enumeration yields an
+  empty chain instead of throwing through the effect.
 
 ### Tests
 
@@ -203,6 +213,12 @@ driven on screen in this batch.
 Known limitation, measured rather than assumed: a worksheet part that is simply cut off mid-file
 still parses without error, so it is not reported as failed — the parser reaches end-of-document
 quietly. Detecting that needs a terminator check in the worksheet loop, not just an exception.
+
+- `DocumentSiblingsOnDeviceTest` — 4 instrumented tests on the real filesystem: 5,001 files enumerate
+  in name order with their real sizes inside a 2.5 s bound (measured 1,143 ms on `mydoc_api35`),
+  hidden files / unsupported types / subfolders stay out, an already-gone caller receives nothing
+  (`withTimeoutOrNull(0)` returns null), and a missing folder yields an empty chain instead of
+  throwing.
 
 ## [1.7.2] — 2026-11-04
 

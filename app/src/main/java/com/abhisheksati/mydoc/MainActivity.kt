@@ -47,7 +47,6 @@ import com.abhisheksati.mydoc.designsystem.preview.DesignSystemPreviewScreen
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
-import com.abhisheksati.mydoc.domain.model.DocumentFormats
 import com.abhisheksati.mydoc.domain.model.toMediaItem
 import com.abhisheksati.mydoc.security.AppLockScreen
 import com.abhisheksati.mydoc.security.BiometricLockHelper
@@ -59,6 +58,7 @@ import com.abhisheksati.mydoc.ui.search.SpotlightSearchSheet
 import com.abhisheksati.mydoc.ui.settings.SettingsScreen
 import com.abhisheksati.mydoc.ui.viewer.DocumentViewerScreen
 import com.abhisheksati.mydoc.update.UpdateManager
+import com.abhisheksati.mydoc.util.DocumentSiblings
 import com.abhisheksati.mydoc.util.UserMessages
 import com.abhisheksati.mydoc.util.shareFile
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
@@ -320,7 +320,11 @@ class MainActivity : ComponentActivity() {
                 // Sibling list is recomputed on every document change, so every open path —
                 // library, recents, browse, intent — gets the same swipe-to-next-document behaviour.
                 LaunchedEffect(currentDocument?.uri) {
-                    docSiblings = documentSiblingsFor(currentDocument?.uri?.toPathFile())
+                    // Enumerated off the main thread and cancellable: reading a folder's file
+                    // metadata here used to stall the exact moment a document was opening, and a
+                    // scan abandoned by a newer document must not publish stale siblings after it.
+                    docSiblings = DocumentSiblings
+                        .readableDocumentsIn(currentDocument?.uri?.toPathFile())
                 }
 
                 Surface(
@@ -589,28 +593,6 @@ class MainActivity : ComponentActivity() {
     private fun handleOpenFile(file: File, siblingFiles: List<File>? = null) {
         val uri = Uri.fromFile(file)
         openUriOrFile(uri = uri, fileName = file.name, file = file, siblingFiles = siblingFiles)
-    }
-
-    /**
-     * Readable documents from the same folder, name-sorted. Swiping past the first or last page
-     * of a document walks this list, so one gesture chain covers a whole folder of files.
-     */
-    private fun documentSiblingsFor(file: File?): List<DocumentFile> {
-        val dir = file?.parentFile ?: return emptyList()
-        val readableExt = DocumentFormats.supportedExtensions
-        val files = runCatching {
-            dir.listFiles { f -> f.isFile && !f.name.startsWith(".") && f.extension.lowercase() in readableExt }
-                ?.sortedBy { it.name.lowercase() }
-        }.getOrNull() ?: return emptyList()
-        return files.map { f ->
-            DocumentFile(
-                uri = Uri.fromFile(f).toString(),
-                displayName = f.name,
-                sizeBytes = f.length(),
-                mimeType = "",
-                lastOpenedTimestamp = f.lastModified(),
-            )
-        }
     }
 
     /** Steps to the neighbouring document; false when the current one is already at the end of the folder. */
