@@ -86,14 +86,32 @@ Run professional PDF transformations entirely offline on your phone:
 
 ## 📊 Format Support Matrix
 
-| Category | Extensions | Capabilities |
-| :--- | :--- | :--- |
-| **PDF Documents** | `.pdf` | Full vector render, continuous scroll, search, bookmarks, outline, annotations, signing, print |
-| **Word Processing** | `.docx`, `.doc`, `.rtf` | Streaming XML rendering, heading hierarchy, tables, text extraction fallback for legacy formats |
-| **Spreadsheets** | `.xlsx`, `.xls`, `.csv` | Virtualized viewport grid, cell formula separation, multi-sheet tab navigation |
-| **Presentations** | `.pptx`, `.ppt`, `.pptm` | Native slide deck viewer, slide thumbnails, notes viewer, shape text extraction |
-| **E-Books & Text** | `.epub`, `.txt`, `.log`, `.md` | Dynamic reflow typography, chapter navigation, raw source inspection |
-| **Media & Audio** | `.mp4`, `.mkv`, `.mp3`, `.flac` | Hardware-accelerated ExoPlayer, picture-in-picture, audio background playback |
+The table is generated from the same registry the app routes on
+(`domain/model/DocumentFormats.kt`), so it describes what the readers actually do rather than
+what the container is nominally called. "Fidelity" is what the reader discloses in-app.
+
+| Category | Extensions | Fidelity | Known gaps |
+| :--- | :--- | :--- | :--- |
+| **PDF** | `.pdf`, `.xps`, `.oxps`, `.cbz` | Fixed layout | — |
+| **Word** | `.docx`, `.dotx`, `.odt`, `.ott` | Structured reflow | Images, headers/footers and footnotes are not rendered; pagination is ours, so page numbers can differ from Word |
+| **Word (flat ODF)** | `.fodt` | Structured reflow | Images and styles not rendered |
+| **Word (RTF)** | `.rtf` | Structured reflow | Bold/italic/underline and paragraphs only; tables, images and styles are not decoded |
+| **Word (legacy)** | `.doc`, `.dot` | Text only | BIFF/Word binary layout is not decoded; text is recovered and labelled as such |
+| **Spreadsheets** | `.xlsx`, `.xlsm` | Structured reflow | Formulas show their cached values — there is no calculation engine. Macros are never executed |
+| **Spreadsheets (ODF)** | `.ods`, `.fods`, `.ots` | Structured reflow | Cell styles and number formats not applied |
+| **Spreadsheets (legacy)** | `.xls` | Recovered text | BIFF8 is not decoded; cells are recovered as text and may be out of order |
+| **Delimited** | `.csv`, `.tsv` | Fixed layout | RFC 4180 quoting, BOM/UTF-16 detection, cp1252 fallback, delimiter detection outside quotes |
+| **Presentations** | `.pptx`, `.ppsx`, `.potx`, `.pptm` | Fixed layout | Charts, SmartArt and embedded objects are not drawn; animations are not played; macros never execute |
+| **Presentations (ODF)** | `.odp`, `.otp` | Structured reflow | Draw styles and master pages simplified |
+| **Presentations (legacy)** | `.ppt`, `.pps`, `.pot` | Text only | Shape positions, colors and images in the binary format are not decoded |
+| **E-Books** | `.epub` | Structured reflow | Reflow is MuPDF's, not the book's own CSS |
+| **Text & source** | `.txt`, `.md`, `.log`, `.json`, `.xml`, `.yaml`, `.ini`, `.sh`, `.sql`, `.kt`, `.java`, `.py`, `.html`, `.css`, `.js`, `.c`, `.h`, `.gradle`, `.bat` | Fixed layout | Markdown renders headings, emphasis, lists, quotes and rules |
+| **Media** | `.mp4`, `.mkv`, `.webm`, `.mov`, `.mp3`, `.m4a`, `.aac`, `.flac`, `.wav` | Hardware playback | — |
+| **Images** | `.jpg`, `.png`, `.webp`, `.gif`, `.bmp`, `.heic` | Full render | — |
+
+**Refused rather than scraped:** `.xlsb`, `.wps`, `.wpd`, `.fb2`. These containers have no reader
+here, and MyDoc says so instead of feeding them to an engine that cannot parse them and showing
+the empty result as a loaded document.
 
 ---
 

@@ -3,6 +3,81 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [Unreleased] — `fix/office-document-rendering`
+
+Office document loading, parsing, routing and failure reporting. No UI redesign; the Ink & Seal
+identity is untouched.
+
+### Fixed
+
+- **One format registry.** Format knowledge lived in six lists that disagreed (viewer routing,
+  the conversion switch, category classification, filter chips, spotlight filters, thumbnails).
+  The conversion switch still named formats the router no longer sent there, so `.xls`, `.ods`,
+  `.csv` and `.tsv` were handed to the OOXML-only converter, got `null` back, and fell through to
+  MuPDF as raw bytes reported damaged. `DocumentFormats` now declares family, viewer, converter,
+  thumbnail strategy, render fidelity and limitations per extension, and everything reads it.
+- **No more fabricated content.** An unreadable spreadsheet returned a blank "Sheet 1"; an
+  unreadable Word file returned a paragraph whose text was the sentence "Document is empty." or
+  "File too large or unreadable: …", indistinguishable from the document's own words; a deck that
+  parsed to zero slides was byte-scraped into six-strings-per-slide slides and shown as parsed.
+  Parsers now throw `DocumentLoadException` with a specific `LoadFailure`, and the viewer names
+  the cause.
+- **Emptiness is a property, not a string.** `PptxPresentation` used a slide titled
+  "Empty Presentation" as its empty sentinel, which a genuine slide with that title would defeat.
+  It has `isEmpty`, `emptyReason` and `recovered` now.
+- **Excel grid uses the real engine.** The grid was fed by a values-only reader that invented
+  sheet names, sorted sheets lexicographically (so `Sheet10` preceded `Sheet2`), showed date
+  serials as numbers, dropped formulas without cached values, and ignored hidden sheets, column
+  widths and merged ranges. It now projects `XlsxReader`'s model, verified on device: real sheet
+  names (`By Subject`, `Faculty`, `Summary`) and workbook column widths.
+- **Grouped PowerPoint shapes are placed correctly.** A group pushed an all-zero transform and
+  its own `a:off`/`a:ext` were written to the shape variables, so the transform was skipped and
+  children were laid out in raw child space.
+- **ODP decks are accepted.** The sniff looked for `draw:page` in the first 2048 bytes of
+  `content.xml`; real decks place it after `office:automatic-styles`, so valid files were
+  rejected as "No slides found".
+- **RTF and flat ODF are parsed, not scraped.** Both fell to the byte scanner and displayed
+  control words and `<text:p>` tags as document text. `RtfReader` walks the control stream (group
+  state, hex escapes in the declared code page, unicode escapes with their fallback skip, binary
+  payloads dropped by length, destination groups ignored); `.fodt` and `.fods` are parsed as the
+  XML they are.
+- **CSV to RFC 4180.** Quoted fields kept their padding (a flag tested after the closing quote
+  had cleared it), a stray quote swallowed the rest of the line, delimiter detection counted
+  separators inside quoted fields, only the UTF-8 BOM was stripped so UTF-16 decoded to
+  NUL-interleaved text, and cp1252 files turned accents into replacement characters.
+- **Conversion cache is content-addressed.** Two converters keyed cached PDFs on a 32-bit
+  `contentHashCode()` plus file length, so two same-sized documents could be served each other's
+  cached PDF. Keys are now truncated SHA-256.
+- **Refusal beats fallback routing.** `.xlsb` is refused with an explanation instead of being
+  handed to a PDF renderer that reports it damaged. Found on device, not in review.
+- **Shared XML parser creation.** Five engines repeated a platform-then-JVM try/catch that only
+  worked by accident: under `unitTests.isReturnDefaultValues` the platform parser returns null
+  rather than throwing, so the fallback was never reached.
+
+### Changed
+
+- `.odt` and `.ott` now take the paginated path they already qualified for, because the DOCX
+  parser genuinely reads `content.xml`.
+- Legacy `.doc`, `.dot` and `.xls` still recover text, but say so: the first scraped string is no
+  longer promoted to a heading, and the fallback flag drives an in-app disclosure.
+- `.xlsb`, `.wps`, `.wpd` and `.fb2` are reported as unsupported rather than partially rendered.
+- The README format matrix is expressed in the registry's vocabulary and lists known gaps.
+
+### Tests
+
+`SpreadsheetFormatsTest` (CSV quoting, encoding, delimiter detection, FODS, XLSB refusal) and
+`DocumentFormatsTest` (routing contract: refusals, converter requirements, disclosure
+invariants, category and filter mapping). Five existing tests asserted the defective behaviour —
+the fabricated empty slide, the "Document is empty." prose block, the invented heading, the blank
+xlsx sheet — and were rewritten to assert the honest contract. 211 unit tests pass; lint, debug
+and release builds are green.
+
+### Not done
+
+Deep cancellation inside long parse loops, streaming instead of whole-file reads, one zip-bomb
+budget across the three engines, and cache-directory sweeps. Charts, SmartArt, embedded objects
+and animations remain unrendered, and legacy binary `.ppt`, `.xls` and `.doc` stay text-only.
+
 ## [1.7.0] — 2026-11-04
 
 Range: `v1.6.1..v1.7.0`.
