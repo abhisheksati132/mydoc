@@ -75,7 +75,13 @@ data class PptxPresentation(
      */
     val emptyReason: String? = null,
     /** True when slides came from a byte-level text scrape rather than a real parse. */
-    val recovered: Boolean = false
+    val recovered: Boolean = false,
+    /**
+     * Why the deck may be shorter than the file. A parse that stopped halfway used to return the
+     * slides it had managed with no signal at all, which is an incomplete document presented as a
+     * complete one - the exact failure this release set out to remove.
+     */
+    val incompleteReason: String? = null
 ) {
     val isEmpty: Boolean get() = slides.isEmpty()
 }

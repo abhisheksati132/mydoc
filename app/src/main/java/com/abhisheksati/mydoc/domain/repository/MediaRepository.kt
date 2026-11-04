@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.Flow
 
 interface MediaRepository {
     fun getMedia(filter: MediaFilter = MediaFilter.ALL): Flow<List<MediaItem>>
+
+    /** Drop the short-lived library snapshot so the next collector re-reads MediaStore. */
+    fun invalidateMediaSnapshot()
     suspend fun getMediaItem(uri: Uri): MediaItem?
     suspend fun extractExif(uri: Uri): ExifMetadata
     suspend fun getPlaybackPosition(uri: String): Long

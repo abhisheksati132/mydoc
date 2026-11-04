@@ -27,8 +27,11 @@ object BiometricLockHelper {
         val keyguardManager = activity.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
 
         if (keyguardManager == null || !keyguardManager.isDeviceSecure) {
-            // If device has no screen lock, bypass
-            onSuccess()
+            // Fail closed. There is no device credential to check, so nothing can prove who is
+            // holding the phone; opening anyway would make the lock a prompt rather than a
+            // control. Settings already refuses to enable app lock on an insecure device, so
+            // this is reached only after the user removed their screen lock.
+            onError("App lock needs a device PIN, pattern or password. Set one in system settings, then try again.")
             return
         }
 

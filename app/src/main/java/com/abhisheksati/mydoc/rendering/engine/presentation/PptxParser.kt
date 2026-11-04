@@ -442,7 +442,16 @@ class PptxParser {
                 }
                 eventType = parser.next()
             }
-        } catch (_: Throwable) {}
+        } catch (e: Throwable) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            android.util.Log.w("PptxParser", "Presentation markup stopped parsing early", e)
+            val stoppedAspect = if (pageHeightCm > 0f) pageWidthCm / pageHeightCm else 16f / 9f
+            return PptxPresentation(
+                slides = slides,
+                aspectRatio = stoppedAspect,
+                incompleteReason = "Part of this file could not be parsed, so later slides may be missing."
+            )
+        }
 
         val aspect = if (pageHeightCm > 0f) pageWidthCm / pageHeightCm else 16f / 9f
         return PptxPresentation(slides = slides, aspectRatio = aspect)
@@ -496,6 +505,7 @@ class PptxParser {
 
     private fun parseZipInMemory(bytes: ByteArray): PptxPresentation {
         val entryMap = mutableMapOf<String, ByteArray>()
+        var stoppedEarly: String? = null
         try {
             val zip = ZipInputStream(ByteArrayInputStream(bytes))
             var entry: ZipEntry? = zip.nextEntry
@@ -524,9 +534,17 @@ class PptxParser {
             }
         } catch (e: SecurityException) {
             android.util.Log.w("PptxParser", "Rejected PPTX: ${e.message}")
-        } catch (_: Throwable) {}
+            stoppedEarly = "This file exceeded the limits MyDoc applies, so only part of it was read."
+        } catch (e: Throwable) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            android.util.Log.w("PptxParser", "PPTX package stopped reading early", e)
+            stoppedEarly = "Only part of this package could be read, so some slides may be missing."
+        }
 
-        return parseFromEntryMap(entryMap)
+        val presentation = parseFromEntryMap(entryMap)
+        return if (stoppedEarly != null && presentation.slides.isNotEmpty()) {
+            presentation.copy(incompleteReason = stoppedEarly)
+        } else presentation
     }
 
     private val MAX_ENTRY_BYTES = 25L * 1024L * 1024L

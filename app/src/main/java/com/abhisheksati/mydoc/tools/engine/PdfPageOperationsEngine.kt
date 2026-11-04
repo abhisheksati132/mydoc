@@ -22,8 +22,23 @@ import java.util.zip.ZipOutputStream
  */
 class PdfPageOperationsEngine(private val context: Context) {
 
-    suspend fun mergePdfs(files: List<File>, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File {
-        val destDoc = PDFDocument()
+    /**
+     * MuPDF documents live outside the garbage collector. Every output document is created here
+     * so it is destroyed whether the body returns or throws; previously a graft or save failure
+     * abandoned the destination document, leaking native memory and a file handle until the
+     * process died - and tools fail most often on exactly the damaged files people open.
+     */
+    private inline fun <R> usePdfDocument(block: (PDFDocument) -> R): R {
+        val document = PDFDocument()
+        try {
+            return block(document)
+        } finally {
+            document.destroy()
+        }
+    }
+
+    suspend fun mergePdfs(files: List<File>, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File =
+        usePdfDocument { destDoc ->
         val totalFiles = files.size
 
         files.forEachIndexed { fileIndex, file ->
@@ -47,8 +62,7 @@ class PdfPageOperationsEngine(private val context: Context) {
 
         val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "merged", "pdf")
         destDoc.save(outFile.absolutePath, "compress,garbage=3")
-        destDoc.destroy()
-        return outFile
+        outFile
     }
 
     suspend fun splitPdf(file: File, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File {
@@ -64,16 +78,16 @@ class PdfPageOperationsEngine(private val context: Context) {
                 if (indices.isEmpty()) {
                     throw IllegalArgumentException("No pages matched the range \"$range\".")
                 }
-                val outDoc = PDFDocument()
-                for (p in indices) {
-                    currentCoroutineContext().ensureActive()
-                    outDoc.graftPage(outDoc.countPages(), srcDoc, p)
+                return usePdfDocument { outDoc ->
+                    for (p in indices) {
+                        currentCoroutineContext().ensureActive()
+                        outDoc.graftPage(outDoc.countPages(), srcDoc, p)
+                    }
+                    onProgress(ToolProgress(indices.size, indices.size, 85, "Saving selected pages...", false))
+                    val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "split", "pdf")
+                    outDoc.save(outFile.absolutePath, "compress")
+                    outFile
                 }
-                onProgress(ToolProgress(indices.size, indices.size, 85, "Saving selected pages...", false))
-                val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "split", "pdf")
-                outDoc.save(outFile.absolutePath, "compress")
-                outDoc.destroy()
-                return outFile
             }
 
             val step = options.splitEveryNPages.coerceAtLeast(1)
@@ -87,15 +101,14 @@ class PdfPageOperationsEngine(private val context: Context) {
                     var pageIndex = 0
                     while (pageIndex < totalPages) {
                         currentCoroutineContext().ensureActive()
-                        val subDoc = PDFDocument()
                         val endIndex = (pageIndex + step).coerceAtMost(totalPages)
-                        for (p in pageIndex until endIndex) {
-                            subDoc.graftPage(subDoc.countPages(), srcDoc, p)
-                        }
-
                         val partFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "part_${partNum}", "pdf")
-                        subDoc.save(partFile.absolutePath, "compress")
-                        subDoc.destroy()
+                        usePdfDocument { subDoc ->
+                            for (p in pageIndex until endIndex) {
+                                subDoc.graftPage(subDoc.countPages(), srcDoc, p)
+                            }
+                            subDoc.save(partFile.absolutePath, "compress")
+                        }
 
                         // Add to zip
                         zos.putNextEntry(ZipEntry(String.format(java.util.Locale.ROOT, "part_%03d.pdf", partNum)))
@@ -112,15 +125,15 @@ class PdfPageOperationsEngine(private val context: Context) {
                 return zipFile
             } else {
                 // Single part: every page in one file
-                val outDoc = PDFDocument()
-                for (p in 0 until totalPages) {
-                    currentCoroutineContext().ensureActive()
-                    outDoc.graftPage(outDoc.countPages(), srcDoc, p)
+                return usePdfDocument { outDoc ->
+                    for (p in 0 until totalPages) {
+                        currentCoroutineContext().ensureActive()
+                        outDoc.graftPage(outDoc.countPages(), srcDoc, p)
+                    }
+                    val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "split", "pdf")
+                    outDoc.save(outFile.absolutePath, "compress")
+                    outFile
                 }
-                val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "split", "pdf")
-                outDoc.save(outFile.absolutePath, "compress")
-                outDoc.destroy()
-                return outFile
             }
         } finally {
             srcDoc.destroy()
@@ -137,18 +150,18 @@ class PdfPageOperationsEngine(private val context: Context) {
                 throw IllegalArgumentException("Cannot remove all pages from document.")
             }
 
-            val outDoc = PDFDocument()
-            for (p in 0 until totalPages) {
-                currentCoroutineContext().ensureActive()
-                if (p !in toRemove) {
-                    outDoc.graftPage(outDoc.countPages(), srcDoc, p)
+            return usePdfDocument { outDoc ->
+                for (p in 0 until totalPages) {
+                    currentCoroutineContext().ensureActive()
+                    if (p !in toRemove) {
+                        outDoc.graftPage(outDoc.countPages(), srcDoc, p)
+                    }
                 }
+                onProgress(ToolProgress(1, 1, 85, "Saving pruned PDF...", false))
+                val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "pruned", "pdf")
+                outDoc.save(outFile.absolutePath, "compress,clean,garbage=3")
+                outFile
             }
-            onProgress(ToolProgress(1, 1, 85, "Saving pruned PDF...", false))
-            val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "pruned", "pdf")
-            outDoc.save(outFile.absolutePath, "compress,clean,garbage=3")
-            outDoc.destroy()
-            return outFile
         } finally {
             srcDoc.destroy()
         }
@@ -165,18 +178,18 @@ class PdfPageOperationsEngine(private val context: Context) {
                 (0 until totalPages).toList()
             }
 
-            val outDoc = PDFDocument()
-            order.forEachIndexed { idx, p ->
-                currentCoroutineContext().ensureActive()
-                outDoc.graftPage(outDoc.countPages(), srcDoc, p)
-                val pct = 20 + ((idx.toFloat() / order.size) * 70).toInt()
-                onProgress(ToolProgress(idx + 1, order.size, pct, "Reordering page ${idx + 1}...", false))
-            }
+            return usePdfDocument { outDoc ->
+                order.forEachIndexed { idx, p ->
+                    currentCoroutineContext().ensureActive()
+                    outDoc.graftPage(outDoc.countPages(), srcDoc, p)
+                    val pct = 20 + ((idx.toFloat() / order.size) * 70).toInt()
+                    onProgress(ToolProgress(idx + 1, order.size, pct, "Reordering page ${idx + 1}...", false))
+                }
 
-            val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "reordered", "pdf")
-            outDoc.save(outFile.absolutePath, "compress,garbage=2")
-            outDoc.destroy()
-            return outFile
+                val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "reordered", "pdf")
+                outDoc.save(outFile.absolutePath, "compress,garbage=2")
+                outFile
+            }
         } finally {
             srcDoc.destroy()
         }
@@ -192,18 +205,18 @@ class PdfPageOperationsEngine(private val context: Context) {
                 throw IllegalArgumentException("No valid pages specified for extraction.")
             }
 
-            val outDoc = PDFDocument()
-            indices.forEachIndexed { i, p ->
-                currentCoroutineContext().ensureActive()
-                outDoc.graftPage(outDoc.countPages(), srcDoc, p)
-                val pct = 20 + ((i.toFloat() / indices.size) * 70).toInt()
-                onProgress(ToolProgress(i + 1, indices.size, pct, "Extracting page ${i + 1}...", false))
-            }
+            return usePdfDocument { outDoc ->
+                indices.forEachIndexed { i, p ->
+                    currentCoroutineContext().ensureActive()
+                    outDoc.graftPage(outDoc.countPages(), srcDoc, p)
+                    val pct = 20 + ((i.toFloat() / indices.size) * 70).toInt()
+                    onProgress(ToolProgress(i + 1, indices.size, pct, "Extracting page ${i + 1}...", false))
+                }
 
-            val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "extracted", "pdf")
-            outDoc.save(outFile.absolutePath, "compress")
-            outDoc.destroy()
-            return outFile
+                val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "extracted", "pdf")
+                outDoc.save(outFile.absolutePath, "compress")
+                outFile
+            }
         } finally {
             srcDoc.destroy()
         }

@@ -40,12 +40,12 @@ fun PdfContextualActionsHost(
         onCopy = {
             coroutineScope.launch {
                 val text = activeSelectionText ?: viewModel.getPageText(pageNum)
-                if (text.isNotBlank()) {
+                if (!text.isNullOrBlank()) {
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     clipboard.setPrimaryClip(ClipData.newPlainText("PDF Text", text))
                     context.showMessage(if (activeSelectionText != null) "Text copied to clipboard" else "Page ${pageNum + 1} text copied")
                 } else {
-                    context.showMessage("No text detected on this page")
+                    context.showMessage(text.unreadableTextLayerMessage() ?: "No text detected on this page")
                 }
                 onClose()
             }
@@ -53,14 +53,14 @@ fun PdfContextualActionsHost(
         onShare = {
             coroutineScope.launch {
                 val text = activeSelectionText ?: viewModel.getPageText(pageNum)
-                if (text.isNotBlank()) {
+                if (!text.isNullOrBlank()) {
                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
                         putExtra(Intent.EXTRA_TEXT, text)
                     }
                     context.startActivity(Intent.createChooser(shareIntent, "Share Text"))
                 } else {
-                    context.showMessage("No text to share")
+                    context.showMessage(text.unreadableTextLayerMessage() ?: "No text to share")
                 }
                 onClose()
             }
@@ -68,7 +68,7 @@ fun PdfContextualActionsHost(
         onSearch = {
             coroutineScope.launch {
                 val text = activeSelectionText ?: viewModel.getPageText(pageNum)
-                if (text.isNotBlank()) {
+                if (!text.isNullOrBlank()) {
                     val searchIntent = Intent(Intent.ACTION_WEB_SEARCH).apply {
                         putExtra(SearchManager.QUERY, text.take(150))
                     }
@@ -78,7 +78,7 @@ fun PdfContextualActionsHost(
                         context.showMessage("No browser found")
                     }
                 } else {
-                    context.showMessage("No text to search")
+                    context.showMessage(text.unreadableTextLayerMessage() ?: "No text to search")
                 }
                 onClose()
             }
@@ -86,11 +86,11 @@ fun PdfContextualActionsHost(
         onSpeak = {
             coroutineScope.launch {
                 val text = activeSelectionText ?: viewModel.getPageText(pageNum)
-                if (text.isNotBlank()) {
+                if (!text.isNullOrBlank()) {
                     onStartTts(text)
                     ttsManager.startReading(text)
                 } else {
-                    context.showMessage("No text to read")
+                    context.showMessage(text.unreadableTextLayerMessage() ?: "No text to read")
                 }
                 onClose()
             }
@@ -106,12 +106,12 @@ fun PdfContextualActionsHost(
         onCopyPageText = {
             coroutineScope.launch {
                 val text = viewModel.getPageText(pageNum)
-                if (text.isNotBlank()) {
+                if (!text.isNullOrBlank()) {
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     clipboard.setPrimaryClip(ClipData.newPlainText("Page ${pageNum + 1}", text))
                     context.showMessage("Page ${pageNum + 1} text copied to clipboard")
                 } else {
-                    context.showMessage("No digital text on this page. Try OCR extract.")
+                    context.showMessage(text.unreadableTextLayerMessage() ?: "No digital text on this page. Try OCR extract.")
                 }
                 onClose()
             }
@@ -119,10 +119,10 @@ fun PdfContextualActionsHost(
         onReadPageAloud = {
             coroutineScope.launch {
                 val text = viewModel.getPageText(pageNum)
-                if (text.isNotBlank()) {
+                if (!text.isNullOrBlank()) {
                     onStartTts(text)
                 } else {
-                    context.showMessage("No text on this page to read")
+                    context.showMessage(text.unreadableTextLayerMessage() ?: "No text on this page to read")
                 }
                 onClose()
             }
@@ -130,14 +130,14 @@ fun PdfContextualActionsHost(
         onSharePageText = {
             coroutineScope.launch {
                 val text = viewModel.getPageText(pageNum)
-                if (text.isNotBlank()) {
+                if (!text.isNullOrBlank()) {
                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
                         putExtra(Intent.EXTRA_TEXT, text)
                     }
                     context.startActivity(Intent.createChooser(shareIntent, "Share Page ${pageNum + 1} Text"))
                 } else {
-                    context.showMessage("No text on this page to share")
+                    context.showMessage(text.unreadableTextLayerMessage() ?: "No text on this page to share")
                 }
                 onClose()
             }
@@ -158,3 +158,11 @@ fun PdfContextualActionsHost(
         }
     )
 }
+
+/**
+ * A null page text means the text layer could not be read; an empty one means the page has no
+ * text. Telling a reader "there is nothing here" about a page we failed to parse sends them to
+ * OCR for a document that only needs re-opening, so the two get different sentences.
+ */
+private fun String?.unreadableTextLayerMessage(): String? =
+    if (this == null) "MyDoc could not read this page's text layer." else null

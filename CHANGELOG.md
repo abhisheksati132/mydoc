@@ -35,6 +35,66 @@ Consistency pass across screens, plus closing the disclosure gap v1.7.1's regist
 - One chrome metric: `ViewerChrome.topBarHeight` / `bottomBarHeight` replace the `64.dp` and
   `56.dp` literals each viewer re-typed to clear its own bars.
 
+### Fixed — engineering audit follow-up
+
+An external source audit of v1.7.1 (`9b9fba1`). Each claim was checked against the code first;
+the confirmed ones are below, the refuted ones are recorded in
+[`docs/audit/2026-11-04-external-audit-verification.md`](docs/audit/2026-11-04-external-audit-verification.md)
+so they are not re-reported as open work.
+
+- **Document cache identity is no longer a 32-bit hash.** Four layers keyed cached content on
+  `hashCode()`: the offline `saved_docs` backup (`DocumentRepositoryImpl`), the tier-2 stream
+  fallback (`DocumentStreamResolver`, twice) and thumbnail lookup (`FileThumbnail`). A collision
+  hands one document another document's pages or thumbnail with no error anywhere.
+  `DocumentIdentity` derives a truncated SHA-256 from the URI alone. A display name is never part
+  of the identity, so `openStream()` lost the parameter and the decoy test asserts a name cannot
+  steer a lookup. The conversion caches v1.7.1 already hashed were folded into the same helper.
+- **A move that could not delete the source is no longer reported as a move.** The cross-volume
+  fallback incremented its count unconditionally, so "Pasted 1 item" could mean the file was in
+  two places. The deletion is verified; if the source survives, the copy is withdrawn and the
+  item counts as failed.
+- **Trashing can no longer destroy a file.** The physical move happened first and the database row
+  after, and `purgeExpiredTrash` deleted trash files with no row once they were 24 hours old — a
+  crash between the two made the document unrecoverable. The row is reserved before the move, and
+  orphans are logged and kept rather than deleted.
+- **Partial batches report themselves.** A copy or move stopped at the first failing item and said
+  nothing about what had already been written. Every item is now attempted, and a split surfaces
+  as "Paste completed for 2 of 3 items — 1 could not be completed." with the listing refreshed.
+- **Half-finished output is taken back.** A failed extraction left earlier entries in the
+  destination while the UI reported failure; a failed compression left a truncated `.zip` that
+  opens like a real archive. Extraction rolls back only what it created; compression stages and
+  renames.
+- **Long file operations are cancellable.** No loop checked for cancellation and `onProgress` was
+  a non-suspend lambda, so a cancelled scope ran to completion. Every loop calls `ensureActive()`,
+  and copy/move/zip/unzip check free space before writing anything.
+- **Native PDF documents are destroyed on every path.** `PdfPageOperationsEngine` had no `finally`
+  around any destination document, so a throw during page grafting or saving leaked native memory
+  and a file handle — most likely on the damaged files people open. Merge, split (all three
+  shapes), remove, reorder and extract go through one helper now, and `MuPdfRenderer` page,
+  pixmap and structured-text objects got the same treatment.
+- **"No text on this page" and "we could not read this page" are different answers.**
+  `getPageText()` / `getDocumentText()` returned `""` for both, so copy, share, read-aloud, search
+  and OCR fallback all gave advice for the wrong problem. They return null when the text layer
+  could not be read.
+- **A saved signature that cannot be decrypted is no longer invisible.** `hasSavedSignature` only
+  checked that the file existed, so an undecryptable signature showed "Edit / Redraw" and then
+  failed with "No signature found" — and `getOrCreateKey()` silently minted a new key when the
+  alias was gone, which is what made that state reachable. `SignatureStatus` distinguishes
+  NONE / READY / UNREADABLE, decryption never creates a key, and writes are staged and renamed.
+- **App lock fails closed.** With no device credential the gate called `onSuccess()`, so disabling
+  the screen lock after enabling app lock removed the protection. An incoming VIEW/SEND intent was
+  also resolved — its document read and copied into the offline cache — before anyone
+  authenticated, with the lock screen drawn over content that had already been fetched; external
+  intents are now held until unlock.
+- **A partially parsed presentation says so.** The ODP/flat-XML parse swallowed any throwable and
+  returned the slides it had managed — an incomplete deck presented as complete. The reason now
+  rides along as `incompleteReason` and appears in the fidelity notice.
+- **Home stopped querying the whole media library twice.** `getAllItems()` and `continueItems()`
+  each ran three MediaStore cursors, so one subscription cost six full-library queries. A
+  1.2-second snapshot lets the second subscriber ride the first, deletions invalidate it, and the
+  dead `MediaViewModel` — referenced only from its own file — is gone.
+
+
 ### Changed
 
 - Headers: `TrashBinSheet` moved onto `AppTopBar`. The back affordance is the outlined arrow
@@ -49,6 +109,7 @@ Consistency pass across screens, plus closing the disclosure gap v1.7.1's regist
 - Dialogs: `DocumentDetailsDialog`, `PasswordDialog` and `PageJumpDialog` titles are on the same
   role as `AppDialog`.
 - Dropped the `AppSpacing as Spacing` alias from the four files that used it.
+- Deleting a photo that cannot be moved to the Recycle Bin says it was deleted, instead of promising a recovery that does not exist.
 
 ### Not done, deliberately
 
@@ -56,6 +117,7 @@ Consistency pass across screens, plus closing the disclosure gap v1.7.1's regist
   separate sweep. The 11 list-row metric variants (leading wells from 36 to 72.dp, icons 18-24.dp)
   and the off-scale spacing/radius literals are untouched. The fidelity strip floats over the
   first rows of a dense grid instead of reserving space — tap to hide the chrome, or scroll.
+- CI now installs and launches the signed release APK and fails the publish if it crashes, but does not exercise its screens. The reference-rendering fidelity corpus the audit asks for does not exist yet; `MANAGE_EXTERNAL_STORAGE` policy eligibility and a SAF-only mode are product decisions; the large-class splits (`MainActivity`, `StorageRepositoryImpl`, `PptxParser`, `VideoPlayerScreen`) are deferred.
 
 ## [1.7.1] — 2026-11-04
 

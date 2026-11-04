@@ -365,14 +365,19 @@ fun PresentationViewerScreen(
         ReadingMode.NORMAL -> colors.textSecondary
     }
 
-    val fidelityDisclosure = remember(document.extension, presentationData?.recovered) {
+    val fidelityDisclosure = remember(
+        document.extension,
+        presentationData?.recovered,
+        presentationData?.incompleteReason
+    ) {
         fidelityDisclosureFor(
             extension = document.extension,
             observedFidelity = if (presentationData?.recovered == true) {
                 RenderFidelity.RECOVERED_SCRAPE
             } else {
                 null
-            }
+            },
+            extraNotes = listOfNotNull(presentationData?.incompleteReason)
         )
     }
 

@@ -162,6 +162,51 @@ jobs:
           fi
           echo "SUCCESS: Release APK certificate fingerprint verified ($ACTUAL_SHA256)."
 
+      # A signed, cert-verified APK is not proof it runs. R8 shrinking, release-only resource
+      # stripping and the release signing config can all break the app at first launch, and that
+      # is exactly what users meet. Nothing is published until this passes.
+      - name: Smoke test the signed release APK
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            set -euo pipefail
+            APK=app/build/outputs/apk/release/app-x86_64-release.apk
+            if [ ! -f "$APK" ]; then
+              echo "ERROR: expected $APK to exist for the smoke test."
+              exit 1
+            fi
+            adb install -r "$APK"
+            adb logcat -c
+            adb shell am start -n com.abhisheksati.mydoc/com.abhisheksati.mydoc.MainActivity
+            sleep 20
+            if [ -z "$(adb shell pidof -s com.abhisheksati.mydoc)" ]; then
+              echo "ERROR: the release build did not stay running."
+              adb logcat -d -v brief | tail -n 200
+              exit 1
+            fi
+            if adb logcat -d | grep -qE "FATAL EXCEPTION|Begin tracking.*com.abhisheksati.mydoc"; then
+              echo "ERROR: the release build crashed on launch."
+              adb logcat -d -v brief | grep -A 30 "FATAL EXCEPTION" | head -n 60
+              exit 1
+            fi
+            adb exec-out screencap -p > release-smoke-launch.png
+            echo "Release build installed, launched and survived 20s on API 35."
+
+      - name: Upload Release Smoke Evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-smoke-evidence
+          path: release-smoke-launch.png
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Prepare Release Assets
         run: |
           TAG="${{ steps.vars.outputs.tag }}"

@@ -597,7 +597,7 @@ fun PdfViewerScreen(
             onTtsClick = {
                 coroutineScope.launch {
                     val pageText = viewModel.getPageText(state.currentPage)
-                    if (pageText.isNotBlank()) {
+                    if (!pageText.isNullOrBlank()) {
                         currentTtsText = pageText
                         isTtsVisible = true
                     } else {

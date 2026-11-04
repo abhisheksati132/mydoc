@@ -227,25 +227,30 @@ class AndroidPdfRenderer(
         }
     }
 
-    override fun getPageText(pageIndex: Int): String = lock.withLock {
-        if (pageIndex < 0 || pageIndex >= pageCount) return@withLock ""
+    /** Null means the text layer could not be read; empty means the page has no text. */
+    override fun getPageText(pageIndex: Int): String? = lock.withLock {
+        if (pageIndex < 0 || pageIndex >= pageCount) return@withLock null
         try {
-            val doc = pdfBoxDocument() ?: return@withLock ""
+            val doc = pdfBoxDocument() ?: return@withLock null
             val stripper = PDFTextStripper()
             stripper.startPage = pageIndex + 1
             stripper.endPage = pageIndex + 1
             stripper.getText(doc)?.trim() ?: ""
-        } catch (_: Throwable) {
-            ""
+        } catch (e: Throwable) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            android.util.Log.w("AndroidPdfRenderer", "Page $pageIndex text layer unreadable", e)
+            null
         }
     }
 
-    override fun getDocumentText(): String = lock.withLock {
+    override fun getDocumentText(): String? = lock.withLock {
         try {
-            val doc = pdfBoxDocument() ?: return@withLock ""
+            val doc = pdfBoxDocument() ?: return@withLock null
             PDFTextStripper().getText(doc)?.trim() ?: ""
-        } catch (_: Throwable) {
-            ""
+        } catch (e: Throwable) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            android.util.Log.w("AndroidPdfRenderer", "Document text unreadable", e)
+            null
         }
     }
 

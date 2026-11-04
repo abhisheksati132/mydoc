@@ -39,6 +39,7 @@ import com.abhisheksati.mydoc.tools.model.PageNumberPosition
 import com.abhisheksati.mydoc.tools.model.PageSizeFormat
 import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.tools.model.ToolOptions
+import com.abhisheksati.mydoc.tools.security.SignatureStatus
 import com.abhisheksati.mydoc.tools.security.SignatureStorage
 
 @Composable
@@ -337,7 +338,8 @@ internal fun ToolOptionsSection(
             }
 
             PdfTool.SIGN_PDF -> {
-                val hasSignature = SignatureStorage.hasSavedSignature(LocalContext.current)
+                val signatureStatus = SignatureStorage.status(LocalContext.current)
+                val hasSignature = signatureStatus == SignatureStatus.READY
                 Text(text = "SIGNATURE STAMP", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     text = "Applies a visual signature stamp to pages. For cryptographic integrity verification, use official certificates.",
@@ -367,7 +369,11 @@ internal fun ToolOptionsSection(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (hasSignature) "Edit / Redraw Signature" else "Draw Signature Now",
+                        text = when (signatureStatus) {
+                            SignatureStatus.READY -> "Edit / Redraw Signature"
+                            SignatureStatus.UNREADABLE -> "Saved signature can't be opened - redraw it"
+                            SignatureStatus.NONE -> "Draw Signature Now"
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (hasSignature) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.SemiBold

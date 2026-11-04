@@ -30,10 +30,41 @@ class MediaRepositoryImpl(
     private val contentResolver = context.contentResolver
     private val mediaPlaybackDao = database.mediaPlaybackDao()
 
+    @Volatile
+    private var snapshot: MediaSnapshot? = null
+
+    /**
+     * MediaStore is queried with three separate cursors per ALL request, and Home subscribes to
+     * the same list twice in one pass (recent and everything), so one screen refresh cost six
+     * full-library queries. A short snapshot lets the second subscriber ride the first; it is
+     * deliberately brief so a photo deleted elsewhere reappears as gone within about a second
+     * rather than lingering in the grid.
+     */
     override fun getMedia(filter: MediaFilter): Flow<List<MediaItem>> = flow {
-        val items = queryMediaStore(filter)
+        val now = android.os.SystemClock.elapsedRealtime()
+        val cached = snapshot
+        val items = if (cached != null && cached.filter == filter && now - cached.takenAtMs < SNAPSHOT_TTL_MS) {
+            cached.items
+        } else {
+            queryMediaStore(filter).also { snapshot = MediaSnapshot(filter, it, now) }
+        }
         emit(items)
     }.flowOn(Dispatchers.IO)
+
+    /** Force the next collector to re-read MediaStore, e.g. after a media file is removed. */
+    override fun invalidateMediaSnapshot() {
+        snapshot = null
+    }
+
+    private data class MediaSnapshot(
+        val filter: MediaFilter,
+        val items: List<MediaItem>,
+        val takenAtMs: Long
+    )
+
+    private companion object {
+        const val SNAPSHOT_TTL_MS = 1_200L
+    }
 
     private fun queryMediaStore(filter: MediaFilter): List<MediaItem> {
         val mediaList = mutableListOf<MediaItem>()

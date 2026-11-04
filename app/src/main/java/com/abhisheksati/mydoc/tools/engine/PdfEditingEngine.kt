@@ -128,8 +128,10 @@ class PdfEditingEngine(private val context: Context) {
     }
 
     suspend fun signPdf(file: File, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File {
+        // A stored-but-undecryptable signature is a different problem from never having saved
+        // one, and the reader needs the other instruction.
         val sigBmp = SignatureStorage.loadSignature(context)
-            ?: throw IllegalStateException("No signature found. Please draw or import your signature first.")
+            ?: throw IllegalStateException(SignatureStorage.problemMessage(context) ?: "No signature found.")
 
         PdfBoxHelper.ensureInitialized(context)
         val outFile = createTempOutputFile("signed", "pdf")

@@ -43,7 +43,15 @@ object DocumentStreamResolver {
             return Result.failure(java.io.FileNotFoundException("Unable to access or locate file stream for null Uri"))
         }
         val streamResult = openStreamWithFallback(context, uri)
-            ?: return Result.failure(java.io.FileNotFoundException("Unable to access or locate file stream for: $uri"))
+            ?: return Result.failure(
+                // The bytes were never opened, so nothing here says anything about the file's
+                // health. Calling this "damaged" sends people to a converter for a permission
+                // problem; the audit's own principle is that a failure names its real cause.
+                com.abhisheksati.mydoc.domain.model.DocumentLoadException(
+                    com.abhisheksati.mydoc.domain.model.LoadFailure.PERMISSION_EXPIRED,
+                    "MyDoc could not open this file. It was never read, so it is not known to be damaged."
+                )
+            )
 
         return runCatching {
             streamResult.stream.use { input ->

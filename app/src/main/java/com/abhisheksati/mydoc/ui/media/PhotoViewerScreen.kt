@@ -509,9 +509,12 @@ fun PhotoViewerScreen(
                     coroutineScope.launch {
                         val app = context.applicationContext as? MyDocApp
                         val file = itemToDelete.filePath?.let { File(it).takeIf { f -> f.exists() } }
+                        val trashTarget = file?.let { f -> app?.let { a -> f to a } }
+                        val recoverable = trashTarget != null
                         val success = withContext(Dispatchers.IO) {
-                            if (file != null && app != null) {
-                                app.storageRepository.moveToTrash(listOf(file)).isSuccess
+                            val done = if (trashTarget != null) {
+                                trashTarget.second.storageRepository
+                                    .moveToTrash(listOf(trashTarget.first)).isSuccess
                             } else {
                                 try {
                                     context.contentResolver.delete(itemToDelete.uri, null, null) > 0
@@ -519,9 +522,14 @@ fun PhotoViewerScreen(
                                     false
                                 }
                             }
+                            if (done) app?.mediaRepository?.invalidateMediaSnapshot()
+                            done
                         }
                         if (success) {
-                            context.showMessage("Photo moved to Recycle Bin")
+                            context.showMessage(
+                                if (recoverable) "Photo moved to Recycle Bin"
+                                else "Photo deleted. MyDoc could not move it to the Recycle Bin."
+                            )
                             onDeletePhoto?.invoke(itemToDelete)
                             val idx = photoList.indexOf(itemToDelete)
                             if (idx >= 0) {

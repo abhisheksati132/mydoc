@@ -39,8 +39,13 @@ interface DocumentRenderer {
     ): Bitmap? = null
     fun search(query: String): List<SearchMatch>
     fun getOutline(): List<OutlineItem>
-    fun getPageText(pageIndex: Int): String = ""
-    fun getDocumentText(): String = ""
+    /**
+     * Null when the text layer could not be read at all; an empty string when the page or
+     * document genuinely carries no text. Collapsing the two makes "no text on this page" and
+     * "we could not read this page" indistinguishable to search, OCR fallback and copy.
+     */
+    fun getPageText(pageIndex: Int): String? = null
+    fun getDocumentText(): String? = null
     fun selectTextAt(pageIndex: Int, point: android.graphics.PointF): TextSelectionResult? = null
     fun selectTextBetween(pageIndex: Int, start: android.graphics.PointF, end: android.graphics.PointF): TextSelectionResult? = null
     fun close()

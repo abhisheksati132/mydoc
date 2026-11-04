@@ -127,6 +127,13 @@ class MainActivity : ComponentActivity() {
     private var isDesignSystemPreviewOpen by mutableStateOf(false)
     private var isAppUnlocked by mutableStateOf(true)
 
+    /**
+     * An incoming VIEW/SEND intent, held until the app is unlocked. Handling it immediately read
+     * the document and copied it into the offline cache before anyone had authenticated, so the
+     * lock protected the screen but not the bytes.
+     */
+    private var pendingIntent: Intent? = null
+
     @Volatile
     private var isContentReady = false
 
@@ -154,7 +161,7 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        handleIncomingIntent(intent)
+        handleIncomingIntentWhenUnlocked(intent)
 
         setContent {
             LaunchedEffect(Unit) { isContentReady = true }
@@ -209,6 +216,17 @@ class MainActivity : ComponentActivity() {
                     attemptUnlock()
                 } else {
                     window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                }
+            }
+
+            // Drain whatever the launcher handed us, but only once there is an unlocked session
+            // to put it in.
+            LaunchedEffect(isAppUnlocked) {
+                if (isAppUnlocked) {
+                    pendingIntent?.let { incoming ->
+                        pendingIntent = null
+                        handleIncomingIntent(incoming)
+                    }
                 }
             }
 
@@ -531,7 +549,12 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleIncomingIntent(intent)
+        handleIncomingIntentWhenUnlocked(intent)
+    }
+
+    private fun handleIncomingIntentWhenUnlocked(intent: Intent?) {
+        if (intent == null) return
+        if (isAppUnlocked) handleIncomingIntent(intent) else pendingIntent = intent
     }
 
     private fun handleIncomingIntent(intent: Intent?) {

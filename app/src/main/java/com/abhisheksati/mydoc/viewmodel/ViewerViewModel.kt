@@ -181,13 +181,16 @@ class ViewerViewModel(
 
                         if (resolveResult.isFailure) {
                             val exception = resolveResult.exceptionOrNull()
-                            val isZeroByte = exception?.message?.contains("0 bytes", ignoreCase = true) == true ||
-                                             exception?.message?.contains("empty", ignoreCase = true) == true
-                            val isPerm = exception is SecurityException || (exception?.localizedMessage?.contains("Permission Denial", ignoreCase = true) == true)
+                            val typed = exception as? com.abhisheksati.mydoc.domain.model.DocumentLoadException
+                            val declaredFailure = typed?.failure
+                            val isZeroByte = declaredFailure == com.abhisheksati.mydoc.domain.model.LoadFailure.EMPTY_DOCUMENT ||
+                                             exception?.message?.contains("0 bytes", ignoreCase = true) == true
+                            val isPerm = declaredFailure == com.abhisheksati.mydoc.domain.model.LoadFailure.PERMISSION_EXPIRED ||
+                                         UserMessages.isPermissionFailure(exception)
 
                             val errorMsg = when {
                                 isZeroByte -> "This document is empty (0 bytes) or corrupted and cannot be opened."
-                                isPerm -> "Access permission has expired or file could not be found. Tap below to select it."
+                                isPerm -> "MyDoc cannot open this file right now. It may have been moved, or permission to reach it has lapsed."
                                 else -> "Unable to load document. The file may be damaged or unavailable."
                             }
 
@@ -196,7 +199,7 @@ class ViewerViewModel(
                                     isLoading = false,
                                     isPermissionExpired = isPerm,
                                     errorMessage = errorMsg,
-                                    failure = when {
+                                    failure = declaredFailure ?: when {
                                         isPerm -> com.abhisheksati.mydoc.domain.model.LoadFailure.PERMISSION_EXPIRED
                                         isZeroByte -> com.abhisheksati.mydoc.domain.model.LoadFailure.EMPTY_DOCUMENT
                                         else -> com.abhisheksati.mydoc.domain.model.LoadFailure.CORRUPT_DOCUMENT
@@ -556,12 +559,13 @@ class ViewerViewModel(
         renderer?.selectTextBetween(pageIndex, start, end)
     }
 
-    suspend fun getPageText(pageIndex: Int): String = withContext(ioDispatcher) {
-        renderer?.getPageText(pageIndex).orEmpty()
+    /** Null means the text layer could not be read; empty means the page has no text. */
+    suspend fun getPageText(pageIndex: Int): String? = withContext(ioDispatcher) {
+        renderer?.getPageText(pageIndex)
     }
 
-    suspend fun getDocumentText(): String = withContext(ioDispatcher) {
-        renderer?.getDocumentText().orEmpty()
+    suspend fun getDocumentText(): String? = withContext(ioDispatcher) {
+        renderer?.getDocumentText()
     }
 
     override fun onCleared() {
