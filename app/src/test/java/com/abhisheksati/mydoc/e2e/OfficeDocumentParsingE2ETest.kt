@@ -86,12 +86,12 @@ class OfficeDocumentParsingE2ETest {
 
     @Test
     fun tier2_feature23_docxParserHandlesEmptyOrTruncatedStreamGracefully() = runBlocking {
-        val emptyStream = ByteArrayInputStream(ByteArray(0))
-        val doc = docxParser.parse(emptyStream)
-
-        // Should return a graceful placeholder block rather than throwing unhandled EOFException
-        assertNotNull(doc)
-        assertTrue(doc.blocks.isNotEmpty())
+        // Graceful means a typed, explained failure — not a placeholder block that the reader
+        // cannot tell apart from the document's own words.
+        val failure = runCatching { docxParser.parse(ByteArrayInputStream(ByteArray(0))) }
+            .exceptionOrNull() as? com.abhisheksati.mydoc.domain.model.DocumentLoadException
+        assertNotNull(failure)
+        assertEquals(com.abhisheksati.mydoc.domain.model.LoadFailure.EMPTY_DOCUMENT, failure?.failure)
     }
 
     @Test

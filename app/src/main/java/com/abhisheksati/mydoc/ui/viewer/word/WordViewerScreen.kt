@@ -49,6 +49,7 @@ import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentReadingType
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
+import com.abhisheksati.mydoc.ui.viewer.DocumentProblemScreen
 import com.abhisheksati.mydoc.domain.model.ReadingPrefs
 import com.abhisheksati.mydoc.domain.model.ViewState
 import com.abhisheksati.mydoc.rendering.engine.word.DocxBlock
@@ -84,6 +85,7 @@ fun WordViewerScreen(
     var docxData by remember { mutableStateOf<DocxDocument?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var loadFailure by remember { mutableStateOf<com.abhisheksati.mydoc.domain.model.LoadFailure?>(null) }
 
     val defaultPrefs = remember { ReadingPrefs() }
     val readingPrefs by (app?.settingsRepository?.readingPrefs ?: remember { kotlinx.coroutines.flow.MutableStateFlow(defaultPrefs) }).collectAsState()
@@ -101,6 +103,7 @@ fun WordViewerScreen(
     LaunchedEffect(document.uri) {
         isLoading = true
         errorMessage = null
+        loadFailure = null
         withContext(Dispatchers.IO) {
             try {
                 val uri = Uri.parse(document.uri)
@@ -109,8 +112,12 @@ fun WordViewerScreen(
                 val parsed = inputStream.use { DocxParser().parse(it) }
                 docxData = parsed
                 isLoading = false
+            } catch (e: com.abhisheksati.mydoc.domain.model.DocumentLoadException) {
+                errorMessage = e.message
+                loadFailure = e.failure
             } catch (e: Exception) {
                 errorMessage = e.localizedMessage ?: "Failed to read Word document"
+                loadFailure = com.abhisheksati.mydoc.domain.model.LoadFailure.CORRUPT_DOCUMENT
                 isLoading = false
             }
         }
@@ -269,14 +276,11 @@ fun WordViewerScreen(
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else if (errorMessage != null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = errorMessage ?: "Error reading document",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
+            DocumentProblemScreen(
+                failure = loadFailure ?: com.abhisheksati.mydoc.domain.model.LoadFailure.CORRUPT_DOCUMENT,
+                extension = document.extension,
+                onBackClick = onBackClick
+            )
         } else {
             LazyColumn(
                 state = lazyListState,

@@ -6,6 +6,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
+import com.abhisheksati.mydoc.domain.model.DocumentLoadException
+import com.abhisheksati.mydoc.domain.model.LoadFailure
+import kotlinx.coroutines.ensureActive
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.util.zip.ZipEntry
@@ -57,79 +60,150 @@ class DocxParser {
         val bytes = try {
             readBoundedInputStream(inputStream, 50 * 1024 * 1024)
         } catch (e: Exception) {
-            android.util.Log.e("DocxParser", "Error reading document", e)
-            return@withContext DocxDocument(listOf(DocxBlock.Paragraph(listOf(DocxRun("File too large or unreadable: ${e.message}")))))
+            throw DocumentLoadException(
+                LoadFailure.EXCEEDS_LIMITS,
+                "This document is larger than the 50 MB limit MyDoc reads.",
+                e
+            )
         }
         if (bytes.isEmpty()) {
-            return@withContext DocxDocument(listOf(DocxBlock.Paragraph(listOf(DocxRun("Document is empty.")))))
+            throw DocumentLoadException(LoadFailure.EMPTY_DOCUMENT, "This file is empty (0 bytes).")
         }
+        ensureActive()
 
         val isZip = bytes.size >= 4 && bytes[0] == 0x50.toByte() && bytes[1] == 0x4B.toByte()
+        val isOle2 = bytes.size >= 8 &&
+            bytes[0] == 0xD0.toByte() && bytes[1] == 0xCF.toByte() &&
+            bytes[2] == 0x11.toByte() && bytes[3] == 0xE0.toByte()
         val blocks = mutableListOf<DocxBlock>()
 
         if (isZip) {
             val entryMap = mutableMapOf<String, ByteArray>()
             try {
-                val zis = ZipInputStream(ByteArrayInputStream(bytes))
-                var entry: ZipEntry? = zis.nextEntry
-                var entryCount = 0
-                var totalExtractedBytes = 0L
-                while (entry != null) {
-                    entryCount++
-                    if (entryCount > 10_000) throw SecurityException("Entry count exceeds limit")
-                    if (!entry.isDirectory) {
-                        val norm = entry.name.replace('\\', '/').trimStart('/').lowercase()
-                        if (norm == "word/document.xml" || norm == "content.xml") {
-                            val data = readBounded(zis, 25 * 1024 * 1024)
-                            totalExtractedBytes += data.size
-                            if (totalExtractedBytes > 100L * 1024 * 1024) {
-                                throw SecurityException("Aggregate decompressed content exceeds 100 MB limit")
+                ZipInputStream(ByteArrayInputStream(bytes)).use { zis ->
+                    var entry: ZipEntry? = zis.nextEntry
+                    var entryCount = 0
+                    var totalExtractedBytes = 0L
+                    while (entry != null) {
+                        entryCount++
+                        if (entryCount > 10_000) throw SecurityException("Entry count exceeds limit")
+                        if (!entry.isDirectory) {
+                            val norm = entry.name.replace('\\', '/').trimStart('/').lowercase()
+                            if (norm == "word/document.xml" || norm == "content.xml") {
+                                val data = readBounded(zis, 25 * 1024 * 1024)
+                                totalExtractedBytes += data.size
+                                if (totalExtractedBytes > 100L * 1024 * 1024) {
+                                    throw SecurityException("Aggregate decompressed content exceeds 100 MB limit")
+                                }
+                                entryMap[norm] = data
                             }
-                            entryMap[norm] = data
                         }
+                        zis.closeEntry()
+                        entry = zis.nextEntry
                     }
-                    zis.closeEntry()
-                    entry = zis.nextEntry
                 }
             } catch (e: SecurityException) {
-                android.util.Log.w("DocxParser", "Rejected unsafe document: ${e.message}")
-                return@withContext DocxDocument(listOf(DocxBlock.Paragraph(listOf(DocxRun("File exceeds safety limits: ${e.message}")))))
-            } catch (_: Throwable) {}
-
-            // 1. DOCX: word/document.xml
-            val docXml = entryMap["word/document.xml"]
-            if (docXml != null) {
-                try {
-                    val parser = createPullParser(docXml)
-                    blocks.addAll(parseDocumentXml(parser))
-                } catch (_: Throwable) {}
+                throw DocumentLoadException(
+                    LoadFailure.EXCEEDS_LIMITS,
+                    "This document exceeds the safety limits MyDoc applies: ${e.message}",
+                    e
+                )
+            } catch (e: Throwable) {
+                throw DocumentLoadException(
+                    LoadFailure.CORRUPT_DOCUMENT,
+                    "The document package could not be read. It is truncated or damaged.",
+                    e
+                )
             }
 
-            // 2. ODT: content.xml
+            entryMap["word/document.xml"]?.let { blocks.addAll(parseDocumentXml(createPullParser(it))) }
+            if (blocks.isEmpty()) entryMap["content.xml"]?.let { blocks.addAll(parseOdtXml(it)) }
+
             if (blocks.isEmpty()) {
-                val contentXml = entryMap["content.xml"]
-                if (contentXml != null) {
-                    blocks.addAll(parseOdtXml(contentXml))
-                }
+                throw DocumentLoadException(
+                    LoadFailure.EMPTY_DOCUMENT,
+                    "This document contains no readable content."
+                )
+            }
+            return@withContext DocxDocument(blocks)
+        }
+
+        // Flat ODF (.fodt) is the ODF document XML with no zip around it. It previously fell to
+        // the byte scanner, which printed <text:p> tags as paragraphs.
+        if (!isOle2 && looksLikeXml(bytes)) {
+            blocks.addAll(parseOdtXml(bytes))
+            if (blocks.isEmpty()) {
+                throw DocumentLoadException(LoadFailure.CORRUPT_DOCUMENT, "This flat ODF document has no readable body.")
+            }
+            return@withContext DocxDocument(blocks)
+        }
+
+        // RTF has a real reader now; it used to be byte-scraped and the control words were
+        // rendered as document text.
+        if (!isOle2 && RtfReader.looksLikeRtf(bytes)) {
+            blocks.addAll(RtfReader.read(bytes))
+            if (blocks.isEmpty()) {
+                throw DocumentLoadException(LoadFailure.EMPTY_DOCUMENT, "This RTF document has no readable text.")
+            }
+            return@withContext DocxDocument(blocks)
+        }
+
+        // Some tools export plain text under a .doc name. Reading it is right; pretending it
+        // was parsed as a formatted document is not, so it is recovered and flagged.
+        if (!isOle2 && looksLikePlainText(bytes)) {
+            blocks.addAll(
+                String(bytes, Charsets.UTF_8).lines()
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .map { DocxBlock.Paragraph(listOf(DocxRun(it))) }
+            )
+            if (blocks.isNotEmpty()) {
+                return@withContext DocxDocument(blocks, usedTextFallback = true)
             }
         }
 
-        // 3. Fallback for binary .doc (OLE2) or corrupted document streams
-        var usedTextFallback = false
-        if (blocks.isEmpty()) {
-            blocks.addAll(parseRawTextFallback(bytes))
-            usedTextFallback = blocks.isNotEmpty()
+        if (!isOle2) {
+            throw DocumentLoadException(
+                LoadFailure.UNSUPPORTED_FORMAT,
+                "MyDoc has no reader for this document container."
+            )
         }
 
+        // Legacy binary .doc: text recovery only. The flag is what makes the reader say so
+        // instead of presenting a scrape as a formatted document.
+        blocks.addAll(parseRawTextFallback(bytes))
         if (blocks.isEmpty()) {
-            blocks.add(DocxBlock.Paragraph(listOf(DocxRun("Document is empty."))))
+            throw DocumentLoadException(
+                LoadFailure.CORRUPT_DOCUMENT,
+                "No readable text could be recovered from this legacy document."
+            )
         }
+        DocxDocument(blocks, usedTextFallback = true)
+    }
 
-        DocxDocument(blocks, usedTextFallback)
+    /** Mostly printable bytes with recognizable line structure, i.e. text mislabelled as .doc. */
+    private fun looksLikePlainText(bytes: ByteArray): Boolean {
+        val sample = bytes.copyOfRange(0, minOf(bytes.size, 4096))
+        if (sample.isEmpty()) return false
+        var printable = 0
+        for (b in sample) {
+            val v = b.toInt() and 0xFF
+            if (v in 9..13 || v == 32 || v in 33..126 || v >= 160) printable++
+        }
+        return printable.toDouble() / sample.size > 0.92
+    }
+
+    private fun looksLikeXml(bytes: ByteArray): Boolean {
+        var i = 0
+        while (i < bytes.size && i < 64 && (bytes[i] == 0x20.toByte() || bytes[i] == 0x09.toByte() ||
+                bytes[i] == 0x0A.toByte() || bytes[i] == 0x0D.toByte())) i++
+        return i < bytes.size && bytes[i] == 0x3C.toByte()
     }
 
     private fun parseOdtXml(xmlBytes: ByteArray): List<DocxBlock> {
         val blocks = mutableListOf<DocxBlock>()
+        // A failed ODT parse used to return whatever partial blocks it had collected, and the
+        // caller reported that as a successfully opened document.
         try {
             val parser = createPullParser(xmlBytes)
             var eventType = parser.eventType
@@ -251,7 +325,13 @@ class DocxParser {
                 }
                 eventType = parser.next()
             }
-        } catch (_: Throwable) {}
+        } catch (e: Throwable) {
+            throw DocumentLoadException(
+                LoadFailure.CORRUPT_DOCUMENT,
+                "The OpenDocument content could not be parsed.",
+                e
+            )
+        }
         return blocks
     }
 
@@ -313,12 +393,10 @@ class DocxParser {
             noiseSet.none { l.contains(it) } && !l.startsWith("<?xml")
         }
 
-        for ((idx, str) in validStrings.withIndex()) {
-            if (idx == 0 && str.length < 60) {
-                blocks.add(DocxBlock.Heading(str, 1))
-            } else {
-                blocks.add(DocxBlock.Paragraph(listOf(DocxRun(str))))
-            }
+        // Every token is a paragraph. Promoting the first short string to a heading invented
+        // document structure that the binary format never promised.
+        for (str in validStrings) {
+            blocks.add(DocxBlock.Paragraph(listOf(DocxRun(str))))
         }
 
         return blocks

@@ -1,7 +1,10 @@
 package com.abhisheksati.mydoc.rendering.engine.word
 
+import com.abhisheksati.mydoc.domain.model.DocumentLoadException
+import com.abhisheksati.mydoc.domain.model.LoadFailure
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -14,11 +17,13 @@ class DocxParserTest {
     private val parser = DocxParser()
 
     @Test
-    fun parse_emptyStream_returnsEmptyDocumentBlock() = runTest {
-        val doc = parser.parse(ByteArrayInputStream(ByteArray(0)))
-        assertEquals(1, doc.blocks.size)
-        val block = doc.blocks[0] as DocxBlock.Paragraph
-        assertEquals("Document is empty.", block.fullText)
+    fun parse_emptyStream_reportsEmptyRatherThanProse() = runTest {
+        // An empty file used to come back as a one-paragraph document whose text was the
+        // sentence "Document is empty." — indistinguishable from real content.
+        val failure = runCatching { parser.parse(ByteArrayInputStream(ByteArray(0))) }
+            .exceptionOrNull() as? DocumentLoadException
+        assertNotNull(failure)
+        assertEquals(LoadFailure.EMPTY_DOCUMENT, failure?.failure)
     }
 
     @Test
@@ -26,8 +31,10 @@ class DocxParserTest {
         val sampleText = "Hello world!\nThis is a plain document fallback test.\nFinal line."
         val doc = parser.parse(ByteArrayInputStream(sampleText.toByteArray(Charsets.UTF_8)))
         assertTrue(doc.blocks.isNotEmpty())
-        val heading = doc.blocks.firstOrNull { it is DocxBlock.Heading } as? DocxBlock.Heading
-        assertEquals("Hello world!", heading?.text)
+        // Promoting the first short string to a heading invented structure the container never
+        // promised; recovered text is now paragraphs plus an honest fallback flag.
+        assertTrue(doc.blocks.none { it is DocxBlock.Heading })
+        assertTrue(doc.usedTextFallback)
         val paragraphs = doc.blocks.filterIsInstance<DocxBlock.Paragraph>()
         assertTrue(paragraphs.any { it.fullText.contains("This is a plain document fallback test.") })
     }
