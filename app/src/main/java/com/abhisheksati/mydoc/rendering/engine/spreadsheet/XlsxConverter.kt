@@ -21,9 +21,9 @@ object XlsxConverter {
         displayName: String
     ): File? = withContext(Dispatchers.IO) {
         try {
-            val safeName = displayName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+            val safeName = com.abhisheksati.mydoc.rendering.engine.ConversionKey.ofIdentity(uri.toString(), displayName)
             val stamp = DocumentStreamResolver.sourceStamp(context, uri)
-            val targetPdf = File(context.cacheDir, "xlsx_converted_${safeName.hashCode()}_${stamp.first}_${stamp.second}.pdf")
+            val targetPdf = File(context.cacheDir, "xlsx_converted_${safeName}_${stamp.first}_${stamp.second}.pdf")
 
             if (targetPdf.isFile && targetPdf.length() > 1024) {
                 return@withContext targetPdf

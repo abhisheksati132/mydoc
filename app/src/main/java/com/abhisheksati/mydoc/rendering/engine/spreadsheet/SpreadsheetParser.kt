@@ -559,61 +559,6 @@ class SpreadsheetParser {
         return best
     }
 
-    private fun parseXlsx(bytes: ByteArray): SpreadsheetModel {
-        val entries = mutableMapOf<String, ByteArray>()
-        var totalBytesRead = 0L
-        val maxDecompressedBytes = 100L * 1024 * 1024
-
-        try {
-            ZipInputStream(ByteArrayInputStream(bytes)).use { zis ->
-                var ze = zis.nextEntry
-                while (ze != null) {
-                    if (!ze.isDirectory) {
-                        val baos = java.io.ByteArrayOutputStream()
-                        val buf = ByteArray(8192)
-                        var read: Int
-                        while (zis.read(buf).also { read = it } != -1) {
-                            totalBytesRead += read
-                            if (totalBytesRead > maxDecompressedBytes) break
-                            baos.write(buf, 0, read)
-                        }
-                        entries[ze.name] = baos.toByteArray()
-                    }
-                    zis.closeEntry()
-                    ze = zis.nextEntry
-                }
-            }
-        } catch (_: Exception) {}
-
-        // Step 1: Extract shared strings
-        val sharedStringsBytes = entries["xl/sharedStrings.xml"]
-        val sharedStrings = if (sharedStringsBytes != null) {
-            extractSharedStrings(sharedStringsBytes)
-        } else {
-            emptyList()
-        }
-
-        // Step 2: Extract sheets
-        val sheets = mutableListOf<SheetData>()
-        val sheetEntries = entries.keys
-            .filter { it.startsWith("xl/worksheets/sheet") && it.endsWith(".xml") }
-            .sorted()
-
-        var sheetCounter = 1
-        for (sheetName in sheetEntries) {
-            val sheetBytes = entries[sheetName] ?: continue
-            val sheetData = parseWorksheetXml(ByteArrayInputStream(sheetBytes), "Sheet $sheetCounter", sharedStrings)
-            sheets.add(sheetData)
-            sheetCounter++
-        }
-
-        if (sheets.isEmpty()) {
-            sheets.add(SheetData(name = "Sheet 1"))
-        }
-
-        return SpreadsheetModel(sheets)
-    }
-
     private fun createXmlParser(): XmlPullParser {
         return com.abhisheksati.mydoc.rendering.engine.EngineXml.newPullParser()
     }

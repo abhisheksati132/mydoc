@@ -56,9 +56,12 @@ fun DocumentViewerScreen(
     var isSlideshowActive by rememberSaveable { mutableStateOf(false) }
     var isWordReflowActive by rememberSaveable { mutableStateOf(false) }
 
+    // Order matters. An explicitly refused format (xlsb, wps) has no descriptor, so checking
+    // for a missing descriptor first would send it to MuPDF and report a healthy refusal as
+    // "file is damaged".
     val viewer = when {
-        descriptor == null -> ViewerKind.PDF_PAGES
         declaredFailure != null -> ViewerKind.UNSUPPORTED
+        descriptor == null -> ViewerKind.PDF_PAGES
         else -> descriptor.viewer
     }
 

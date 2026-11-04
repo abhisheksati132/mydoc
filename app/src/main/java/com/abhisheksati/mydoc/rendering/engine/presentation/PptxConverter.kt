@@ -2,6 +2,7 @@ package com.abhisheksati.mydoc.rendering.engine.presentation
 
 import android.content.Context
 import android.net.Uri
+import com.abhisheksati.mydoc.rendering.engine.ConversionKey
 import com.abhisheksati.mydoc.rendering.engine.OutlineCache
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import java.io.File
@@ -29,21 +30,28 @@ object PptxConverter {
         } ?: return null
 
         val cacheDir = File(context.cacheDir, "converted_presentations").apply { mkdirs() }
-        val targetPdf = File(cacheDir, "pptx_${bytes.contentHashCode()}_${bytes.size}.pdf")
+        val targetPdf = File(cacheDir, "pptx_${ConversionKey.of(bytes)}_${bytes.size}.pdf")
 
         if (targetPdf.isFile && targetPdf.length() > 0L) {
             return targetPdf
         }
 
         // Apply orphan placeholder recovery to resolve cut-off titles and missing master styles
-        val processedBytes = runCatching {
+        // The temp copy is deleted in finally: if PptxPlaceholderFix throws after the write,
+        // the previous code left the file in the cache directory forever.
+        val processedBytes = run {
             val tempPptx = File(cacheDir, "temp_${System.currentTimeMillis()}.pptx")
-            tempPptx.writeBytes(bytes)
-            PptxPlaceholderFix.apply(tempPptx)
-            val fixed = tempPptx.readBytes()
-            tempPptx.delete()
-            fixed
-        }.getOrDefault(bytes)
+            try {
+                tempPptx.writeBytes(bytes)
+                PptxPlaceholderFix.apply(tempPptx)
+                tempPptx.readBytes()
+            } catch (t: Throwable) {
+                android.util.Log.w("PptxConvert", "placeholder recovery skipped: ${t.message}")
+                bytes
+            } finally {
+                tempPptx.delete()
+            }
+        }
 
         val renderResult = PptxRenderer.renderWithOutlines(processedBytes) ?: run {
             android.util.Log.w("PptxConvert", "no slides laid out for $displayName")

@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import com.abhisheksati.mydoc.data.local.DocumentStreamResolver
+import com.abhisheksati.mydoc.rendering.engine.ConversionKey
 import com.abhisheksati.mydoc.rendering.engine.OutlineCache
 import java.io.File
 import java.io.FileOutputStream
@@ -33,7 +34,7 @@ object DocxConverter {
         }
 
         val cacheDir = File(context.cacheDir, "converted_docs").apply { mkdirs() }
-        val targetPdf = File(cacheDir, "docx_${bytes.contentHashCode()}_${bytes.size}.pdf")
+        val targetPdf = File(cacheDir, "docx_${ConversionKey.of(bytes)}_${bytes.size}.pdf")
         if (targetPdf.isFile && targetPdf.length() > 0L) return targetPdf
 
         val blocks = try {
