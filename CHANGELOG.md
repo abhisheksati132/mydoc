@@ -3,6 +3,14 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [1.5.19] — 2026-11-04
+
+Range: `v1.5.18..v1.5.19`.
+
+### Changed
+
+- **iOS system color palette.** Replaced the Tailwind/editorial hexes with Apple's actual system colors across the design tokens (`AppColors`, `AppTheme` light/dark/AMOLED schemes, `DocumentFormatColors`, media-kind tokens) and the file-type badge tints: systemBlue accent (`#007AFF` / `#0A84FF`), systemRed/Orange/Green/Indigo/Purple/Pink/Teal/Mint/Brown/Gray for formats, and neutral iOS chrome (grouped `#F2F2F7` canvas, `#1C1C1E`/`#2C2C2E` dark surfaces, label/secondaryLabel text). The result is the restrained "color comes from content, chrome is neutral" Apple liquid-glass look rather than a saturated editorial palette. Verified on the emulator in light and dark.
+
 ## [1.5.18] — 2026-11-04
 
 Range: `v1.5.17..v1.5.18`.

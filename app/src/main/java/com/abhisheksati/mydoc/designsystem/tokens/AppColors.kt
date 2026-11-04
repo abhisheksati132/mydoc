@@ -116,22 +116,22 @@ data class AppColors(
             highlight = scheme.primaryContainer,
             accent = scheme.primary,
             onAccent = scheme.onPrimary,
-            accentPink = if (isDark) Color(0xFFF43F5E) else Color(0xFFEC4899),
-            accentCyan = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7),
-            accentAmber = if (isDark) Color(0xFFFBBF24) else Color(0xFFF59E0B),
-            accentGreen = if (isDark) Color(0xFF34D399) else Color(0xFF10B981),
-            documentKind = if (isDark) Color(0xFFF87171) else Color(0xFFEF4444),
+            accentPink = if (isDark) Color(0xFFFF375F) else Color(0xFFFF2D55), // systemPink
+            accentCyan = if (isDark) Color(0xFF64D2FF) else Color(0xFF32ADE6), // systemCyan
+            accentAmber = if (isDark) Color(0xFFFF9F0A) else Color(0xFFFF9500), // systemOrange
+            accentGreen = if (isDark) Color(0xFF30D158) else Color(0xFF34C759), // systemGreen
+            documentKind = if (isDark) Color(0xFFFF453A) else Color(0xFFFF3B30), // systemRed
             onDocumentKind = Color(0xFFFFFFFF),
-            documentContainer = if (isDark) Color(0xFF3B1519) else Color(0xFFFEE2E2),
-            photoKind = if (isDark) Color(0xFF818CF8) else Color(0xFF6366F1),
+            documentContainer = if (isDark) Color(0xFF3A1D1B) else Color(0xFFFFE5E3),
+            photoKind = if (isDark) Color(0xFF5E5CE6) else Color(0xFF5856D6), // systemIndigo
             onPhotoKind = Color(0xFFFFFFFF),
-            photoContainer = if (isDark) Color(0xFF1E1B4B) else Color(0xFFEEF2FF),
-            videoKind = if (isDark) Color(0xFFFB923C) else Color(0xFFF97316),
+            photoContainer = if (isDark) Color(0xFF1E1B4B) else Color(0xFFE3E2FA),
+            videoKind = if (isDark) Color(0xFFFF9F0A) else Color(0xFFFF9500), // systemOrange
             onVideoKind = Color(0xFFFFFFFF),
-            videoContainer = if (isDark) Color(0xFF431407) else Color(0xFFFFEDD5),
-            audioKind = if (isDark) Color(0xFF2DD4BF) else Color(0xFF14B8A6),
-            onAudioKind = Color(0xFFFFFFFF),
-            audioContainer = if (isDark) Color(0xFF042F2E) else Color(0xFFCCFBF1),
+            videoContainer = if (isDark) Color(0xFF3A2A10) else Color(0xFFFFEAD1),
+            audioKind = if (isDark) Color(0xFF40C8E0) else Color(0xFF30B0C7), // systemTeal
+            onAudioKind = if (isDark) Color(0xFF00303A) else Color(0xFFFFFFFF),
+            audioContainer = if (isDark) Color(0xFF10353D) else Color(0xFFD9F1F7),
             // Low-alpha tint over a transparent Haze base: content supplies the
             // color (vibrancy); the tint only densifies the glass slightly.
             glassTint = scheme.surfaceContainerHighest.copy(alpha = if (isDark) 0.42f else 0.55f),
@@ -162,37 +162,37 @@ data class AppColors(
     }
 }
 
-/** Apple Liquid Glass Light Theme: crisp slate-white canvas with luminous surfaces. */
+/** Apple Liquid Glass Light Theme: neutral iOS chrome, systemBlue accent, color from content. */
 val LightAppColors = AppColors(
-    background = Color(0xFFF8FAFC),
-    surface = Color(0xFFFFFFFF),
-    surfaceMuted = Color(0xFFF1F5F9),
-    line = Color(0xFFE2E8F0),
-    ink = Color(0xFF0F172A),
-    inkMuted = Color(0xFF64748B),
-    highlight = Color(0xFFEFF6FF),
-    accent = Color(0xFF0066FF),
+    background = Color(0xFFF2F2F7),        // systemGroupedBackground
+    surface = Color(0xFFFFFFFF),           // systemBackground
+    surfaceMuted = Color(0xFFE5E5EA),      // systemGray6
+    line = Color(0xFFC6C6C8),              // separator
+    ink = Color(0xFF000000),               // label
+    inkMuted = Color(0xFF6C7076),          // secondaryLabel
+    highlight = Color(0xFFD6EBFF),         // systemBlue tint
+    accent = Color(0xFF007AFF),            // systemBlue
     onAccent = Color(0xFFFFFFFF),
-    accentPink = Color(0xFFEC4899),
-    accentCyan = Color(0xFF0284C7),
-    accentAmber = Color(0xFFF59E0B),
-    accentGreen = Color(0xFF10B981),
+    accentPink = Color(0xFFFF2D55),        // systemPink
+    accentCyan = Color(0xFF32ADE6),        // systemCyan
+    accentAmber = Color(0xFFFF9500),       // systemOrange
+    accentGreen = Color(0xFF34C759),       // systemGreen
 
-    documentKind = Color(0xFFEF4444),
+    documentKind = Color(0xFFFF3B30),      // systemRed (PDF)
     onDocumentKind = Color(0xFFFFFFFF),
-    documentContainer = Color(0xFFFEE2E2),
+    documentContainer = Color(0xFFFFE5E3),
 
-    photoKind = Color(0xFF6366F1),
+    photoKind = Color(0xFF5856D6),         // systemIndigo (photo)
     onPhotoKind = Color(0xFFFFFFFF),
-    photoContainer = Color(0xFFEEF2FF),
+    photoContainer = Color(0xFFE3E2FA),
 
-    videoKind = Color(0xFFF97316),
+    videoKind = Color(0xFFFF9500),         // systemOrange (video)
     onVideoKind = Color(0xFFFFFFFF),
-    videoContainer = Color(0xFFFFEDD5),
+    videoContainer = Color(0xFFFFEAD1),
 
-    audioKind = Color(0xFF14B8A6),
+    audioKind = Color(0xFF30B0C7),         // systemTeal (audio)
     onAudioKind = Color(0xFFFFFFFF),
-    audioContainer = Color(0xFFCCFBF1),
+    audioContainer = Color(0xFFD9F1F7),
 
     glassTint = Color(0x8CFFFFFF),
     glassRimTop = Color(0x59FFFFFF),
@@ -201,39 +201,39 @@ val LightAppColors = AppColors(
     paperGrainColor = Color(0x00000000)
 )
 
-/** Apple Liquid Glass Dark Theme: obsidian glass canvas with luminous accents. */
+/** Apple Liquid Glass Dark Theme: graphite chrome, brighter system accents. */
 val DarkAppColors = AppColors(
-    background = Color(0xFF090D16),
-    surface = Color(0xFF131A29),
-    surfaceMuted = Color(0xFF1E283D),
-    line = Color(0xFF2B374F),
-    ink = Color(0xFFF8FAFC),
-    inkMuted = Color(0xFF94A3B8),
-    highlight = Color(0xFF1E293B),
-    accent = Color(0xFF2979FF),
+    background = Color(0xFF000000),        // systemBackground (dark)
+    surface = Color(0xFF1C1C1E),           // secondarySystemBackground
+    surfaceMuted = Color(0xFF2C2C2E),      // tertiarySystemBackground / elevated
+    line = Color(0xFF38383A),              // separator (dark)
+    ink = Color(0xFFFFFFFF),               // label
+    inkMuted = Color(0xFF98989D),          // secondaryLabel
+    highlight = Color(0xFF0A3A6B),         // systemBlue tint (dark)
+    accent = Color(0xFF0A84FF),            // systemBlue (dark)
     onAccent = Color(0xFFFFFFFF),
-    accentPink = Color(0xFFF43F5E),
-    accentCyan = Color(0xFF38BDF8),
-    accentAmber = Color(0xFFFBBF24),
-    accentGreen = Color(0xFF34D399),
+    accentPink = Color(0xFFFF375F),        // systemPink (dark)
+    accentCyan = Color(0xFF64D2FF),        // systemCyan (dark)
+    accentAmber = Color(0xFFFF9F0A),       // systemOrange (dark)
+    accentGreen = Color(0xFF30D158),       // systemGreen (dark)
 
-    documentKind = Color(0xFFF87171),
+    documentKind = Color(0xFFFF453A),      // systemRed (dark)
     onDocumentKind = Color(0xFFFFFFFF),
-    documentContainer = Color(0xFF3B1519),
+    documentContainer = Color(0xFF3A1D1B),
 
-    photoKind = Color(0xFF818CF8),
+    photoKind = Color(0xFF5E5CE6),         // systemIndigo (dark)
     onPhotoKind = Color(0xFFFFFFFF),
     photoContainer = Color(0xFF1E1B4B),
 
-    videoKind = Color(0xFFFB923C),
+    videoKind = Color(0xFFFF9F0A),         // systemOrange (dark)
     onVideoKind = Color(0xFFFFFFFF),
-    videoContainer = Color(0xFF431407),
+    videoContainer = Color(0xFF3A2A10),
 
-    audioKind = Color(0xFF2DD4BF),
-    onAudioKind = Color(0xFFFFFFFF),
-    audioContainer = Color(0xFF042F2E),
+    audioKind = Color(0xFF40C8E0),         // systemTeal (dark)
+    onAudioKind = Color(0xFF00303A),
+    audioContainer = Color(0xFF10353D),
 
-    glassTint = Color(0x6B1E283D),
+    glassTint = Color(0x6B2C2C2E),
     glassRimTop = Color(0x38FFFFFF),
     glassRimBottom = Color(0x20FFFFFF),
     glassInnerShadow = Color(0x0F000000),
@@ -243,21 +243,21 @@ val DarkAppColors = AppColors(
 /** Pure AMOLED zero-nit obsidian variant. */
 val BlackAppColors = DarkAppColors.copy(
     background = Color(0xFF000000),
-    surface = Color(0xFF0D1117),
-    surfaceMuted = Color(0xFF161B22),
-    line = Color(0xFF30363D),
-    ink = Color(0xFFF0F6FC),
-    inkMuted = Color(0xFF8B949E),
-    highlight = Color(0xFF1F242C),
-    glassTint = Color(0x6B161B22),
+    surface = Color(0xFF0B0B0D),
+    surfaceMuted = Color(0xFF1C1C1E),
+    line = Color(0xFF2A2A2C),
+    ink = Color(0xFFFFFFFF),
+    inkMuted = Color(0xFF98989D),
+    highlight = Color(0xFF0A3A6B),
+    glassTint = Color(0x6B1C1C1E),
     glassRimTop = Color(0x40FFFFFF),
     glassRimBottom = Color(0x26FFFFFF),
     glassInnerShadow = Color(0x0F000000),
-    surfaceContainer = Color(0xFF0D1117),
-    surfaceContainerHigh = Color(0xFF161B22),
+    surfaceContainer = Color(0xFF0B0B0D),
+    surfaceContainerHigh = Color(0xFF1C1C1E),
     surfaceContainerLow = Color(0xFF000000),
-    primaryContainer = Color(0xFF161B22),
-    secondaryContainer = Color(0xFF161B22)
+    primaryContainer = Color(0xFF1C1C1E),
+    secondaryContainer = Color(0xFF1C1C1E)
 )
 
 val LocalAppColors = staticCompositionLocalOf { LightAppColors }
@@ -265,17 +265,17 @@ val LocalAppColors = staticCompositionLocalOf { LightAppColors }
 fun kindColor(kind: MediaKind, isDark: Boolean = false): Color {
     return if (isDark) {
         when (kind) {
-            MediaKind.DOCUMENT -> Color(0xFFF87171)
-            MediaKind.PHOTO -> Color(0xFF818CF8)
-            MediaKind.VIDEO -> Color(0xFFFB923C)
-            MediaKind.AUDIO -> Color(0xFF2DD4BF)
+            MediaKind.DOCUMENT -> Color(0xFFFF453A)  // systemRed
+            MediaKind.PHOTO -> Color(0xFF5E5CE6)     // systemIndigo
+            MediaKind.VIDEO -> Color(0xFFFF9F0A)     // systemOrange
+            MediaKind.AUDIO -> Color(0xFF40C8E0)     // systemTeal
         }
     } else {
         when (kind) {
-            MediaKind.DOCUMENT -> Color(0xFFEF4444)
-            MediaKind.PHOTO -> Color(0xFF6366F1)
-            MediaKind.VIDEO -> Color(0xFFF97316)
-            MediaKind.AUDIO -> Color(0xFF14B8A6)
+            MediaKind.DOCUMENT -> Color(0xFFFF3B30)  // systemRed
+            MediaKind.PHOTO -> Color(0xFF5856D6)     // systemIndigo
+            MediaKind.VIDEO -> Color(0xFFFF9500)     // systemOrange
+            MediaKind.AUDIO -> Color(0xFF30B0C7)     // systemTeal
         }
     }
 }
@@ -283,17 +283,17 @@ fun kindColor(kind: MediaKind, isDark: Boolean = false): Color {
 fun kindContainer(kind: MediaKind, isDark: Boolean = false): Color {
     return if (isDark) {
         when (kind) {
-            MediaKind.DOCUMENT -> Color(0xFF3B1519)
+            MediaKind.DOCUMENT -> Color(0xFF3A1D1B)
             MediaKind.PHOTO -> Color(0xFF1E1B4B)
-            MediaKind.VIDEO -> Color(0xFF431407)
-            MediaKind.AUDIO -> Color(0xFF042F2E)
+            MediaKind.VIDEO -> Color(0xFF3A2A10)
+            MediaKind.AUDIO -> Color(0xFF10353D)
         }
     } else {
         when (kind) {
-            MediaKind.DOCUMENT -> Color(0xFFFEE2E2)
-            MediaKind.PHOTO -> Color(0xFFEEF2FF)
-            MediaKind.VIDEO -> Color(0xFFFFEDD5)
-            MediaKind.AUDIO -> Color(0xFFCCFBF1)
+            MediaKind.DOCUMENT -> Color(0xFFFFE5E3)
+            MediaKind.PHOTO -> Color(0xFFE3E2FA)
+            MediaKind.VIDEO -> Color(0xFFFFEAD1)
+            MediaKind.AUDIO -> Color(0xFFD9F1F7)
         }
     }
 }
@@ -305,17 +305,17 @@ fun onKindColor(kind: MediaKind, isDark: Boolean = false): Color {
 fun onKindContainer(kind: MediaKind, isDark: Boolean = false): Color {
     return if (isDark) {
         when (kind) {
-            MediaKind.DOCUMENT -> Color(0xFFFCA5A5)
-            MediaKind.PHOTO -> Color(0xFFC7D2FE)
-            MediaKind.VIDEO -> Color(0xFFFDBA74)
-            MediaKind.AUDIO -> Color(0xFF99F6E4)
+            MediaKind.DOCUMENT -> Color(0xFFFF9A93)
+            MediaKind.PHOTO -> Color(0xFFB9B7F5)
+            MediaKind.VIDEO -> Color(0xFFFFC173)
+            MediaKind.AUDIO -> Color(0xFF8FE0F0)
         }
     } else {
         when (kind) {
-            MediaKind.DOCUMENT -> Color(0xFF991B1B)
-            MediaKind.PHOTO -> Color(0xFF3730A3)
-            MediaKind.VIDEO -> Color(0xFF9A3412)
-            MediaKind.AUDIO -> Color(0xFF115E59)
+            MediaKind.DOCUMENT -> Color(0xFFB3261E)
+            MediaKind.PHOTO -> Color(0xFF3634A0)
+            MediaKind.VIDEO -> Color(0xFF8A5200)
+            MediaKind.AUDIO -> Color(0xFF00667A)
         }
     }
 }
@@ -325,13 +325,13 @@ fun onKindContainer(kind: MediaKind, isDark: Boolean = false): Color {
  * Refined, vibrant format badges designed for modern Liquid Glass contrast.
  */
 object DocumentFormatColors {
-    val pdfTint = Color(0xFFEF4444)     // Crimson
-    val wordTint = Color(0xFF2563EB)    // Royal Blue
-    val excelTint = Color(0xFF10B981)   // Emerald Green
-    val pptTint = Color(0xFFF97316)     // Vibrant Orange
-    val textTint = Color(0xFF64748B)    // Slate
-    val mediaTint = Color(0xFF8B5CF6)   // Radiant Violet
-    val zipTint = Color(0xFF475569)     // Charcoal
+    val pdfTint = Color(0xFFFF3B30)     // systemRed
+    val wordTint = Color(0xFF007AFF)    // systemBlue
+    val excelTint = Color(0xFF34C759)   // systemGreen
+    val pptTint = Color(0xFFFF9500)     // systemOrange
+    val textTint = Color(0xFF8E8E93)    // systemGray
+    val mediaTint = Color(0xFFAF52DE)   // systemPurple
+    val zipTint = Color(0xFFA2845E)     // systemBrown
 
     fun getTint(extension: String): Color {
         return when (extension.lowercase()) {
