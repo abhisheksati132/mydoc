@@ -86,31 +86,31 @@ private val pdfThumbnailCache = object : LruCache<String, ImageBitmap>(MAX_THUMB
 private val textPreviewExtensions = setOf("txt", "md", "csv", "log", "json")
 
 private object TypeTint {
-    val pdf = Color(0xFFFF3B30)      // systemRed
-    val word = Color(0xFF007AFF)     // systemBlue
-    val excel = Color(0xFF34C759)    // systemGreen
-    val slides = Color(0xFFFF9500)   // systemOrange
-    val image = Color(0xFFAF52DE)    // systemPurple
-    val video = Color(0xFFFF2D55)    // systemPink
-    val audio = Color(0xFF30B0C7)    // systemTeal
-    val archive = Color(0xFFA2845E)  // systemBrown
-    val apk = Color(0xFF00C7BE)      // systemMint
-    val code = Color(0xFF8E8E93)     // systemGray
-    val generic = Color(0xFFAEAEB2)  // systemGray2
+    val pdf = Color(0xFF8C3B34)      // brick
+    val word = Color(0xFF33506E)     // ink blue
+    val excel = Color(0xFF3A5A44)    // forest
+    val slides = Color(0xFF8A5A2E)   // clay
+    val image = Color(0xFF5B4E6B)    // muted violet
+    val video = Color(0xFF7A4256)    // muted plum
+    val audio = Color(0xFF2F5A5A)    // deep petrol
+    val archive = Color(0xFF6B5A3A)  // kraft
+    val apk = Color(0xFF3A5A4A)      // olive
+    val code = Color(0xFF4E565F)     // charcoal
+    val generic = Color(0xFF5D5A52)  // warm gray
 
-    // Dark themes use the brighter system-color variants so format plates
+    // Dark themes lift the same hues to warm tonal variants so format plates
     // stay legible against dark containers instead of muddying into them.
-    val pdfDark = Color(0xFFFF453A)
-    val wordDark = Color(0xFF0A84FF)
-    val excelDark = Color(0xFF30D158)
-    val slidesDark = Color(0xFFFF9F0A)
-    val imageDark = Color(0xFFBF5AF2)
-    val videoDark = Color(0xFFFF375F)
-    val audioDark = Color(0xFF40C8E0)
-    val archiveDark = Color(0xFFAC8E68)
-    val apkDark = Color(0xFF63E6E2)
-    val codeDark = Color(0xFF98989D)
-    val genericDark = Color(0xFF98989D)
+    val pdfDark = Color(0xFFC56A5E)
+    val wordDark = Color(0xFF7C9CC0)
+    val excelDark = Color(0xFF7FA98B)
+    val slidesDark = Color(0xFFC0905A)
+    val imageDark = Color(0xFF9C8CB0)
+    val videoDark = Color(0xFFBE7E94)
+    val audioDark = Color(0xFF6FA6A6)
+    val archiveDark = Color(0xFFA99463)
+    val apkDark = Color(0xFF77A48C)
+    val codeDark = Color(0xFF8A9096)
+    val genericDark = Color(0xFF98938A)
 }
 
 private fun tintFor(type: StorageFileType, isDark: Boolean = false): Color = if (isDark) when (type) {

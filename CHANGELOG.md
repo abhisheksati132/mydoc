@@ -3,6 +3,25 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [1.6.0] — 2026-11-04
+
+Range: `v1.5.19..v1.6.0`.
+
+### Added
+
+- **Brand identity — "Ink & Seal".** A documented, ownable design system (`docs/brand-identity.md`): positioning (the private, local-first, every-format suite that never phones home), a quiet-luxury personality, voice rules, and hard anti-slop guardrails (no gradients/aurora/glow, one accent, one typeface pair, color never the only signal).
+
+### Changed
+
+- **New color system.** Replaced the generic Apple system palette with a warm, restrained "Ink & Seal" scheme across `AppColors` and the Material 3 schemes in `AppTheme`: warm bone canvas (`#F5F3EE`) / warm graphite dark, near-black label text, one **Seal-teal** accent (`#0E5C57` / `#4FB0A6`) and a single **brass** micro-accent (`#A67C3D`) reserved for the seal and premium touches. Format/media colors are desaturated to warm letterpress tones so the UI reads calm, not a crayon box.
+- **New brand mark + launcher/splash icon.** Replaced the generic blue gradient stacked-paper icon with an ownable vector seal — a Seal-teal rounded square holding a cream folded-corner document with two text rules — wired into the adaptive launcher icon, the cold-start splash, and the window background. Verified in light, dark and on the splash.
+- **Wordmark.** Home header is now a clean Fraunces "MyDoc" (the trailing accent-period cliché removed).
+- **Brand is the default theme.** Material You wallpaper theming now defaults **off** (it overrides the brand accent); it remains an opt-in toggle in Settings → Appearance.
+
+### Assets
+
+- `assets/brand/mydoc-seal.png` (raster mark), `assets/brand/launch-banner.html` + `launch-banner.png` (1200×630 launch banner in the identity).
+
 ## [1.5.19] — 2026-11-04
 
 Range: `v1.5.18..v1.5.19`.

@@ -158,11 +158,6 @@ fun HomeFeedPane(
                         style = AppTheme.typography.display,
                         color = colors.ink
                     )
-                    Text(
-                        text = ".",
-                        style = AppTheme.typography.display,
-                        color = colors.accent
-                    )
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {

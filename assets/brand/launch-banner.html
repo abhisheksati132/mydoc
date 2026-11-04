@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1200, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F5F3EE; --card:#FCFBF8; --line:#DEDACF;
+    --ink:#1A1712; --muted:#6B6558; --seal:#0E5C57; --brass:#A67C3D;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1200px;height:630px;background:var(--paper);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  .banner{position:relative;width:1200px;height:630px;background:var(--paper);overflow:hidden;
+    display:flex;align-items:center;padding:0 88px}
+  /* faint warm grain via layered radial, no gradient slop */
+  .banner::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(120% 90% at 88% 18%, rgba(14,92,87,0.05), transparent 60%)}
+  .left{max-width:640px;z-index:1}
+  .lockup{display:flex;align-items:center;gap:18px;margin-bottom:34px}
+  .seal{width:56px;height:56px;border-radius:15px;background:var(--seal);position:relative;flex:none;
+    box-shadow:0 1px 0 rgba(0,0,0,0.04)}
+  .seal svg{position:absolute;inset:0}
+  .wordmark{font-family:'Fraunces',serif;font-weight:600;font-size:44px;letter-spacing:-0.02em;color:var(--ink)}
+  h1{font-family:'Fraunces',serif;font-weight:500;font-size:66px;line-height:1.04;letter-spacing:-0.02em;color:var(--ink)}
+  h1 .em{color:var(--seal)}
+  .sub{margin-top:22px;font-size:22px;line-height:1.5;color:var(--muted);max-width:560px}
+  .cta{margin-top:38px;display:inline-flex;align-items:center;gap:10px;font-size:18px;font-weight:600;
+    color:var(--seal);border:1.5px solid var(--seal);border-radius:12px;padding:14px 22px}
+  .right{position:absolute;right:88px;top:50%;transform:translateY(-50%);z-index:1}
+  .stack{position:relative;width:300px;height:360px}
+  .sheet{position:absolute;width:230px;height:300px;background:var(--card);border:1px solid var(--line);
+    border-radius:18px;box-shadow:0 18px 40px rgba(26,23,18,0.10)}
+  .sheet.s1{left:0;top:40px;transform:rotate(-8deg)}
+  .sheet.s2{left:36px;top:18px;transform:rotate(-2deg)}
+  .sheet.s3{left:74px;top:0;transform:rotate(5deg)}
+  .sheet .fold{position:absolute;top:0;right:0;width:44px;height:44px;background:var(--paper);
+    border-left:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:0 18px 0 12px}
+  .sheet .rule{position:absolute;left:22px;height:8px;border-radius:4px;background:var(--seal);opacity:.16}
+  .sheet .rule.a{top:70px;width:150px} .sheet .rule.b{top:92px;width:186px} .sheet .rule.c{top:114px;width:120px}
+  .sheet.s3 .rule.a{opacity:.9;width:120px;background:var(--seal)} .sheet.s3 .rule.b{opacity:.5}
+  .tag{position:absolute;left:74px;top:250px;font-family:'JetBrains Mono',monospace;font-size:12px;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--brass)}
+  .foot{position:absolute;left:88px;bottom:34px;font-family:'JetBrains Mono',monospace;font-size:13px;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+</style>
+</head>
+<body>
+  <div class="banner">
+    <div class="left">
+      <div class="lockup">
+        <div class="seal">
+          <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+            <path d="M18 12 h12 l10 10 v20 a4 4 0 0 1 -4 4 H18 a4 4 0 0 1 -4 -4 V16 a4 4 0 0 1 4 -4 z" fill="#F5F3EE"/>
+            <path d="M30 12 l10 10 H30 z" fill="#E3DFD5"/>
+            <rect x="18" y="28" width="16" height="3.4" rx="1.7" fill="#0E5C57"/>
+            <rect x="18" y="36" width="11" height="3.4" rx="1.7" fill="#0E5C57"/>
+          </svg>
+        </div>
+        <div class="wordmark">MyDoc</div>
+      </div>
+      <h1>Every document.<br>On your device. <span class="em">Yours.</span></h1>
+      <p class="sub">The private, local-first suite for PDF, Office, ebooks, images and video —
+        read, edit, scan and organise. No cloud. No telemetry. No subscription.</p>
+      <div class="cta">Own your work →</div>
+    </div>
+    <div class="right">
+      <div class="stack">
+        <div class="sheet s1"><span class="fold"></span></div>
+        <div class="sheet s2"><span class="fold"></span><span class="rule a"></span><span class="rule b"></span><span class="rule c"></span></div>
+        <div class="sheet s3"><span class="fold"></span><span class="rule a"></span><span class="rule b"></span><span class="rule c"></span></div>
+        <div class="tag">PDF · DOCX · XLSX · EPUB</div>
+      </div>
+    </div>
+    <div class="foot">Local-first · Zero telemetry · Every format</div>
+  </div>
+</body>
+</html>

@@ -85,7 +85,9 @@ class SettingsRepository(private val context: Context) {
     private val _doubleTapZoom = MutableStateFlow(prefs.getBoolean(KEY_DOUBLE_TAP_ZOOM, true))
     val doubleTapZoom: StateFlow<Boolean> = _doubleTapZoom.asStateFlow()
 
-    private val _dynamicColor = MutableStateFlow(prefs.getBoolean(KEY_DYNAMIC_COLOR, true))
+    // Brand default: the fixed "Ink & Seal" palette is the identity. Material You wallpaper
+    // theming is opt-in (it overrides the brand accent), so it defaults off.
+    private val _dynamicColor = MutableStateFlow(prefs.getBoolean(KEY_DYNAMIC_COLOR, false))
     val dynamicColor: StateFlow<Boolean> = _dynamicColor.asStateFlow()
 
     private val _filesGridView = MutableStateFlow(prefs.getBoolean(KEY_FILES_GRID_VIEW, false))
