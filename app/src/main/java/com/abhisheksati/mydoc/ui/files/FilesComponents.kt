@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +52,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -280,11 +282,26 @@ fun FileRow(
             .padding(horizontal = 10.dp)
             .clip(AppRadius.cardShape)
             .background(if (isSelected) scheme.primaryContainer else scheme.background)
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = {
-                    haptics.snap()
-                    onLongClick()
+            .then(
+                if (isSelectionMode) {
+                    // R7: `toggleable` is what publishes a checked state to the accessibility layer.
+                    // Measured on mydoc_api35: a plain `semantics { selected = … }` never reached the
+                    // node, and a bare `role = Role.Checkbox` made every row checkable while the
+                    // selected one still read unchecked — worse than saying nothing. Selection mode
+                    // only, so a row being browsed normally is not announced as a checkbox.
+                    Modifier.toggleable(
+                        value = isSelected,
+                        role = Role.Checkbox,
+                        onValueChange = { onClick() }
+                    )
+                } else {
+                    Modifier.combinedClickable(
+                        onClick = onClick,
+                        onLongClick = {
+                            haptics.snap()
+                            onLongClick()
+                        }
+                    )
                 }
             )
             .padding(horizontal = 10.dp, vertical = 9.dp),
@@ -360,11 +377,26 @@ fun FileGridCell(
         modifier = modifier
             .fillMaxWidth()
             .clip(AppRadius.cardShape)
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = {
-                    haptics.snap()
-                    onLongClick()
+            .then(
+                if (isSelectionMode) {
+                    // R7: `toggleable` is what publishes a checked state to the accessibility layer.
+                    // Measured on mydoc_api35: a plain `semantics { selected = … }` never reached the
+                    // node, and a bare `role = Role.Checkbox` made every row checkable while the
+                    // selected one still read unchecked — worse than saying nothing. Selection mode
+                    // only, so a row being browsed normally is not announced as a checkbox.
+                    Modifier.toggleable(
+                        value = isSelected,
+                        role = Role.Checkbox,
+                        onValueChange = { onClick() }
+                    )
+                } else {
+                    Modifier.combinedClickable(
+                        onClick = onClick,
+                        onLongClick = {
+                            haptics.snap()
+                            onLongClick()
+                        }
+                    )
                 }
             )
             .padding(8.dp)
