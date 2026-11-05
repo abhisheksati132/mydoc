@@ -3,7 +3,7 @@ package com.abhisheksati.mydoc.ui.viewer.text
 import com.abhisheksati.mydoc.domain.model.LoadFailure
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -21,6 +21,12 @@ import java.nio.charset.CodingErrorAction
  * copied again for read-aloud. The reader now has a stated budget and says when it stopped short.
  */
 class TextViewerModelTest {
+
+    private companion object {
+        // Early enough that a fast machine cannot have finished the document, late enough that
+        // the loader is definitely inside its read loop when the cancellation lands.
+        const val CANCEL_AT_CHUNK = 3
+    }
 
     private fun bytes(text: String) = ByteArrayInputStream(text.toByteArray(Charsets.UTF_8))
 
@@ -135,22 +141,55 @@ class TextViewerModelTest {
 
     @Test
     fun aLongReadStopsWhenTheCoroutineIsCancelled() {
+        // The cancel has to be issued from inside the read, not from a delay the read is hoped to
+        // outlast: the previous version slept 60ms, cancelled, and asserted the loader had noticed -
+        // which passed on my machine and failed on CI's faster one, where the whole document was
+        // already loaded by then. Here the stream cancels the loader's own job on its third chunk, so
+        // the loader is provably mid-document when the cancellation lands and its next cancellation
+        // checkpoint has to throw. Nothing depends on how fast the machine is.
         val huge = (1..300_000).joinToString("\n") { "line $it with some text in it" }
+        var reads = 0
+        var cancelledAtChunk = -1
+        val scanJob = Job()
+
+        val stream = object : InputStream() {
+            private val source = ByteArrayInputStream(huge.toByteArray(Charsets.UTF_8))
+            override fun read(b: ByteArray, off: Int, len: Int): Int {
+                reads++
+                if (reads == CANCEL_AT_CHUNK && cancelledAtChunk < 0) {
+                    cancelledAtChunk = reads
+                    scanJob.cancel()
+                }
+                return source.read(b, off, len)
+            }
+
+            override fun read(): Int = source.read()
+            override fun available(): Int = source.available()
+            override fun close() {
+                source.close()
+            }
+        }
+
+        var cancellationReachedCaller = false
+        var completedAnyway = false
         runBlocking {
-            var cancellationReachedCaller = false
-            val job = launch(Dispatchers.IO) {
+            launch(scanJob + Dispatchers.IO) {
                 try {
-                    TextViewerModel.load({ bytes(huge) }, TextBudget(50_000_000, 10_000_000, 200))
-                    fail("the read ran to completion despite cancellation")
+                    TextViewerModel.load({ stream }, TextBudget(50_000_000, 10_000_000, 200))
+                    completedAnyway = true
                 } catch (expected: CancellationException) {
                     cancellationReachedCaller = true
                 }
-            }
-            delay(60)
-            job.cancel()
-            job.join()
-            assertTrue("the cancel was swallowed inside the loader", cancellationReachedCaller)
+            }.join()
         }
+
+        assertTrue(
+            "the loader consumed the whole document before the cancel could be issued " +
+                "(the stream was read $reads times)",
+            cancelledAtChunk == CANCEL_AT_CHUNK
+        )
+        assertFalse("the read ran to completion despite the cancellation", completedAnyway)
+        assertTrue("the cancel was swallowed inside the loader", cancellationReachedCaller)
     }
 
     @Test
