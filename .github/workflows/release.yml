@@ -28,7 +28,6 @@ jobs:
       # verification without an entry, and CI's build job reuses a cache that predates the pins, so neither
       # notices a missing one; a cold home here is what proves every artifact the release is built from is
       # pinned and key-verified without a keyserver. Costs a few minutes of downloads, which is the point.
-      GRADLE_USER_HOME: ${{ runner.temp }}/gradle-cold
 
     steps:
       - name: Checkout repository
