@@ -631,40 +631,61 @@ class StorageRepositoryImpl(
             val total = entriesToCompress.size
             var current = 0
 
+            // Copy and move refuse up front when the volume cannot hold the payload; this path asked
+            // for no room at all, so a full disk was discovered halfway through writing.
+            var payloadBytes = 0L
+            for (task in entriesToCompress) {
+                if (task.file.isFile) payloadBytes += task.file.length()
+            }
+            if (!hasRoomFor(parentDir, payloadBytes)) {
+                throw java.io.IOException("Not enough free space on ${parentDir.name} for this archive")
+            }
+
             // Build the archive under a private name. A compression that dies halfway used to
-            // leave a real .zip on disk that opens as a truncated archive.
+            // leave a real .zip on disk that opens as a truncated archive — and it also left the
+            // private name itself behind, because nothing took it back.
             val staging = File(parentDir, ".${destFile.name}.tmp")
-            ZipOutputStream(BufferedOutputStream(FileOutputStream(staging), 32 * 1024)).use { zos ->
-                val buffer = ByteArray(32 * 1024)
-                for (task in entriesToCompress) {
-                    if (task.file.isDirectory) {
-                        val dirEntry = ZipEntry(if (task.entryName.endsWith("/")) task.entryName else "${task.entryName}/")
-                        dirEntry.time = task.file.lastModified()
-                        zos.putNextEntry(dirEntry)
-                        zos.closeEntry()
-                    } else {
-                        val fileEntry = ZipEntry(task.entryName)
-                        fileEntry.time = task.file.lastModified()
-                        fileEntry.size = task.file.length()
-                        zos.putNextEntry(fileEntry)
-                        FileInputStream(task.file).use { fis ->
-                            var len: Int
-                            while (fis.read(buffer).also { len = it } > 0) {
-                                zos.write(buffer, 0, len)
+            val destPreExisted = destFile.exists()
+            val stagingWasPreExisting = staging.exists()
+            try {
+                ZipOutputStream(BufferedOutputStream(FileOutputStream(staging), 32 * 1024)).use { zos ->
+                    val buffer = ByteArray(32 * 1024)
+                    for (task in entriesToCompress) {
+                        if (task.file.isDirectory) {
+                            val dirEntry = ZipEntry(if (task.entryName.endsWith("/")) task.entryName else "${task.entryName}/")
+                            dirEntry.time = task.file.lastModified()
+                            zos.putNextEntry(dirEntry)
+                            zos.closeEntry()
+                        } else {
+                            val fileEntry = ZipEntry(task.entryName)
+                            fileEntry.time = task.file.lastModified()
+                            fileEntry.size = task.file.length()
+                            zos.putNextEntry(fileEntry)
+                            FileInputStream(task.file).use { fis ->
+                                var len: Int
+                                while (fis.read(buffer).also { len = it } > 0) {
+                                    zos.write(buffer, 0, len)
+                                }
                             }
+                            zos.closeEntry()
                         }
-                        zos.closeEntry()
+                        current++
+                        currentCoroutineContext().ensureActive()
+                        onProgress(current, total)
                     }
-                    current++
-                    currentCoroutineContext().ensureActive()
-                    onProgress(current, total)
                 }
+                if (!staging.renameTo(destFile)) {
+                    staging.copyTo(destFile, overwrite = true)
+                    discardPartial(staging)
+                }
+                destFile
+            } catch (t: Throwable) {
+                // Cancellation lands here too. A half-written archive is not the user's output, and
+                // neither is the private staging name — before this, both stayed on disk.
+                if (!stagingWasPreExisting) discardPartial(staging)
+                if (!destPreExisted) discardPartial(destFile)
+                throw t
             }
-            if (!staging.renameTo(destFile)) {
-                staging.copyTo(destFile, overwrite = true)
-                staging.delete()
-            }
-            destFile
         }.onFailure { error ->
             if (error is CancellationException) throw error
         }

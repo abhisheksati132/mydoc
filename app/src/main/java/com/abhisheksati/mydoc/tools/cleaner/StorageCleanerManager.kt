@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.tools.cleaner
 
+import com.abhisheksati.mydoc.util.SecureLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
@@ -224,17 +225,26 @@ class StorageCleanerManager {
      * Removes directories that are still empty at the moment of the call. Files are never
      * touched here: the cleaner moves them to Trash so they can be restored.
      */
-    suspend fun deleteEmptyDirectories(directories: List<File>): Int = withContext(Dispatchers.IO) {
+    suspend fun deleteEmptyDirectories(directories: List<File>, withinRoot: File? = null): Int = withContext(Dispatchers.IO) {
+        // The scan refuses anything that resolves outside its root; the delete is a separate call
+        // with a list the UI has held for as long as the sheet has been open, so it re-checks here.
+        val canonicalRoot = withinRoot?.let { runCatching { it.canonicalFile.canonicalPath }.getOrNull() }
         var removed = 0
         // Deepest first so a parent that only contains other empty parents also goes.
         for (dir in directories.sortedByDescending { it.absolutePath.length }) {
             if (isProtectedDirectory(dir)) continue
+            val canonical = runCatching { dir.canonicalFile.canonicalPath }.getOrNull() ?: continue
+            if (canonicalRoot != null) {
+                if (canonical == canonicalRoot) continue
+                if (!canonical.startsWith(canonicalRoot + File.separator)) continue
+            }
             try {
                 if (dir.isDirectory && dir.listFiles()?.isEmpty() == true && dir.delete()) {
                     removed++
                 }
-            } catch (_: Exception) {
-                // Ignore single directory failures.
+            } catch (e: Exception) {
+                // One unreadable folder must not stop the batch; it is reported, not swallowed.
+                SecureLog.warn("StorageCleaner", "could not remove an empty folder", e) { dir.name }
             }
         }
         removed

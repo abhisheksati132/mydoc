@@ -681,7 +681,7 @@ fun StorageCleanerSheet(
                                 emptyList()
                             }
                         }
-                        val deletedDirs = cleanerManager.deleteEmptyDirectories(selectedEmptyDirs)
+                        val deletedDirs = cleanerManager.deleteEmptyDirectories(selectedEmptyDirs, rootDir)
                         cleanedCount = moved.size
                         cleanedBytes = moved.sumOf { it.sizeBytes }
 

@@ -265,8 +265,20 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   to logcat, while a debug build still logs it for whoever is fixing the bug. The guarantee is
   behavioural — that field is mutable so a test can drive both paths, and R8 does not delete the branch.
 
+- **A cancelled or failed zip left its staging file on disk (R3).** `StorageRepositoryImpl.zip()`
+  builds the archive under a private `.<name>.zip.tmp` name and renames it into place, but nothing
+  ever removed that name: a compression that was cancelled, or that failed because a source vanished
+  between the folder walk and the read, left the half-written `.tmp` behind — and when the rename fell
+  back to a copy and the copy failed, a truncated `.zip` beside it. Both are now taken back on every
+  exit from the write, including cancellation, and only if this run created them. The same path also
+  skipped the free-space pre-flight that copy and move perform, so a full disk was discovered
+  mid-write instead of refused up front.
+- **The cleaner's delete re-checks containment (R2).** `scanDirectory` refuses anything that resolves
+  outside its root, but `deleteEmptyDirectories` deleted whatever list it was handed — a folder that
+  was renamed or replaced by a link after the scan, or one that was never in the scan, or the root
+  itself. It now takes the scanned root, skips any entry whose canonical path is not strictly inside
+  it, and reports a folder it could not remove instead of swallowing the exception.
 ### Documentation and release integrity (Batch 6)
-
 - **Third-party notices now describe the APK that exists.** ZXing, `docx-preview`, `JSZip` and a
   design-attribution credit to an unrelated PDF app are removed: no artifact, WebView, JavaScript
   payload or asset of theirs is in the build. Added: AndroidX Camera/Compose/Core/Lifecycle/SplashScreen,
@@ -299,6 +311,16 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   "compare the fingerprint with the published value" instruction has been waiting for (H-11).
 
 ### Tests
+
+- `StorageCleanerDeleteTest` (7 JVM) — an empty folder inside the scanned root goes, a folder outside
+  it stays, the root itself is never a victim, a `../` id that resolves outside is refused, a folder
+  that gained content after the scan is refused, a protected name is refused, nested empties go
+  deepest first. `StorageOperationSafetyTest` gained 3 more (10 in the class): a cancelled zip
+  propagates cancellation and leaves no staging file, a zip whose source vanished mid-write fails and
+  takes its output back, and a successful zip still produces a readable archive with no `.`-prefixed
+  leftovers. Both new behaviours were proved non-vacuous by re-running the classes with the fix
+  removed — 3 cleaner tests and 2 zip tests fail against the previous code, and pass again once it is
+  restored.
 
 - `ExternalStoragePathContainmentTest` (5 JVM) and `ExternalStorageContainmentOnDeviceTest` (3 on
   `mydoc_api35`) — an ordinary relative id resolves to the file inside external storage, a `..` climb

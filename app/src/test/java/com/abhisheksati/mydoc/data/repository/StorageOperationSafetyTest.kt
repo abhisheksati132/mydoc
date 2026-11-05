@@ -1,6 +1,9 @@
 package com.abhisheksati.mydoc.data.repository
 
 import com.abhisheksati.mydoc.domain.model.PartialStorageOperationException
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -12,6 +15,7 @@ import java.io.File
 import java.nio.channels.FileChannel
 import java.nio.file.StandardOpenOption
 import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 
 /**
@@ -115,5 +119,89 @@ class StorageOperationSafetyTest {
             File(out, "first.txt").exists()
         )
         assertFalse(File(out, "second.txt").exists())
+    }
+
+    /**
+     * R3: the archive was built in a private `.`-prefixed `.tmp` name that nothing ever removed. A
+     * compression that failed or was cancelled left that file — and, when the rename fell back to a
+     * copy, a half-written `.zip` beside it. Both look like output to the next listing.
+     */
+    @Test
+    fun `a cancelled archive leaves nothing behind`() {
+        lateinit var work: File
+        var outcome: Result<*>? = null
+        runBlocking {
+            work = tempFolder.newFolder("zipcancel")
+            val sources = listOf(
+                File(work, "a.txt").apply { writeText("aaaaaaaaaa") },
+                File(work, "b.txt").apply { writeText("bbbbbbbbbb") },
+                File(work, "c.txt").apply { writeText("cccccccccc") }
+            )
+            val dest = File(work, "bundle.zip")
+
+            // Cancelled as a child, not as the runBlocking scope: cancelling the test's own job
+            // makes runBlocking rethrow before any assertion below can run.
+            launch {
+                outcome = runCatching {
+                    repo().zip(sources, dest) { current, _ -> if (current == 2) cancel() }
+                }
+            }.join()
+        }
+
+        val captured = outcome ?: error("the zip call produced no outcome at all")
+        assertTrue(
+            "a cancelled zip must propagate cancellation, not return a result: $captured",
+            captured.exceptionOrNull() is CancellationException
+        )
+        assertNothingButTheSourcesLeft(work)
+    }
+
+    @Test
+    fun `a zip that fails midway takes its own output back`() = runBlocking {
+        val work = tempFolder.newFolder("zipfail")
+        val first = File(work, "a.txt").apply { writeText("aaaaaaaaaa") }
+        val vanishing = File(work, "b.txt").apply { writeText("bbbbbbbbbb") }
+        val third = File(work, "c.txt").apply { writeText("cccccccccc") }
+        val dest = File(work, "bundle.zip")
+
+        // The file disappears after the folder was enumerated but before it is read: the honest
+        // outcome is a failure with no archive, not a truncated zip that opens on two entries.
+        val result = repo().zip(listOf(first, vanishing, third), dest) { current, _ ->
+            if (current == 1) vanishing.delete()
+        }
+
+        assertTrue("the vanished entry must be reported as a failure: $result", result.isFailure)
+        assertNothingButTheSourcesLeft(work)
+        assertTrue("the sources are never the archive's collateral", first.exists() && third.exists())
+    }
+
+    @Test
+    fun `a zip that succeeds keeps its archive and drops the staging name`() = runBlocking {
+        val work = tempFolder.newFolder("zipok")
+        val sources = listOf(
+            File(work, "a.txt").apply { writeText("hello") },
+            File(work, "b.txt").apply { writeText("there") }
+        )
+        val dest = File(work, "bundle.zip")
+
+        val result = repo().zip(sources, dest) { _, _ -> }
+
+        val archive = result.getOrThrow()
+        val names = ZipFile(archive).use { zip -> zip.entries().asSequence().map { it.name }.toSet() }
+        assertEquals(setOf("a.txt", "b.txt"), names)
+        assertNothingButTheSourcesLeft(work)
+    }
+
+    private fun assertNothingButTheSourcesLeft(work: File) {
+        val strays = work.listFiles()?.filter { it.name.startsWith(".") || it.name.endsWith(".tmp") }
+            ?.map { it.name }
+            ?: emptyList()
+        assertEquals("the staging name survived the run: $strays", emptyList<String>(), strays)
+        val archive = File(work, "bundle.zip")
+        if (archive.exists()) {
+            // An archive that exists must be a whole one: a truncated zip is the failure this
+            // guard exists to prevent, so reading it here is the assertion.
+            ZipFile(archive).use { assertTrue("the archive holds no entries", it.size() > 0) }
+        }
     }
 }
