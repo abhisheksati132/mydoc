@@ -248,7 +248,7 @@ internal fun ToolOptionsSection(
                     ) {
                         Icon(Icons.Outlined.GridView, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Open Visual Page Organizer", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
+                        Text("Open Visual Page Organizer", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Normal)
                     }
                     if (options.reorderedPageIndices.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(6.dp))
@@ -382,7 +382,7 @@ internal fun ToolOptionsSection(
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (hasSignature) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.Normal
                     )
                 }
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))

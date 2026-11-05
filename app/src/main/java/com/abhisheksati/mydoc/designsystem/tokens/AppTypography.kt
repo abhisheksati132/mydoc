@@ -69,21 +69,21 @@ data class AppTypography(
     // --- Fraunces Serif Display Tier ---
     val display: TextStyle = TextStyle(
         fontFamily = FrauncesFontFamily,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.Normal,
         fontSize = 32.sp,
         lineHeight = 38.sp,
         letterSpacing = (-0.5).sp
     ),
     val title: TextStyle = TextStyle(
         fontFamily = FrauncesFontFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Normal,
         fontSize = 24.sp,
         lineHeight = 30.sp,
         letterSpacing = (-0.3).sp
     ),
     val heading: TextStyle = TextStyle(
         fontFamily = FrauncesFontFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Normal,
         fontSize = 20.sp,
         lineHeight = 26.sp,
         letterSpacing = (-0.2).sp
@@ -99,14 +99,14 @@ data class AppTypography(
     /** Document item title. */
     val documentName: TextStyle = TextStyle(
         fontFamily = FrauncesFontFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Normal,
         fontSize = 17.sp,
         lineHeight = 22.sp,
         letterSpacing = (-0.1).sp
     ),
     val wordmark: TextStyle = TextStyle(
         fontFamily = FrauncesFontFamily,
-        fontWeight = FontWeight.ExtraBold,
+        fontWeight = FontWeight.Normal,
         fontSize = 22.sp,
         lineHeight = 26.sp,
         letterSpacing = (-0.4).sp
@@ -114,7 +114,7 @@ data class AppTypography(
     /** Root-tab header title. */
     val screenTitle: TextStyle = TextStyle(
         fontFamily = FrauncesFontFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Normal,
         fontSize = 22.sp,
         lineHeight = 28.sp,
         letterSpacing = (-0.3).sp
@@ -130,7 +130,7 @@ data class AppTypography(
     ),
     val bodyLargeStrong: TextStyle = TextStyle(
         fontFamily = InterFontFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.sp
@@ -151,7 +151,7 @@ data class AppTypography(
     ),
     val bodyStrong: TextStyle = TextStyle(
         fontFamily = InterFontFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.sp
@@ -166,7 +166,7 @@ data class AppTypography(
     /** Small, wide-tracked section label. Use for "RECENT DOCUMENTS", group headers. */
     val overline: TextStyle = TextStyle(
         fontFamily = InterFontFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Normal,
         fontSize = 11.sp,
         lineHeight = 14.sp,
         letterSpacing = 0.8.sp
@@ -180,7 +180,7 @@ data class AppTypography(
     ),
     val captionStrong: TextStyle = TextStyle(
         fontFamily = InterFontFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.1.sp
@@ -205,7 +205,7 @@ data class AppTypography(
     ),
     val metadataStrong: TextStyle = TextStyle(
         fontFamily = JetBrainsMonoFontFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Normal,
         fontSize = 11.sp,
         lineHeight = 15.sp,
         letterSpacing = (-0.1).sp,
@@ -238,13 +238,13 @@ fun appTypographyFromMaterial(base: Typography): AppTypography = AppTypography(
     wordmark = base.titleLarge,
     screenTitle = base.headlineSmall,
     bodyLarge = base.bodyLarge,
-    bodyLargeStrong = base.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+    bodyLargeStrong = base.bodyLarge.copy(fontWeight = FontWeight.Normal),
     body = base.bodyMedium,
     bodyMedium = base.bodyMedium.copy(fontWeight = FontWeight.Medium),
-    bodyStrong = base.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+    bodyStrong = base.bodyMedium.copy(fontWeight = FontWeight.Normal),
     label = base.labelLarge,
     caption = base.bodySmall,
-    captionStrong = base.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+    captionStrong = base.bodySmall.copy(fontWeight = FontWeight.Normal),
     micro = base.labelSmall,
     headline = base.titleLarge
 )

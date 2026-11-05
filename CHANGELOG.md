@@ -5,6 +5,21 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+### Changed
+
+- **The app's own text is no longer bold.** Every chrome role in `AppTypography` - the Fraunces
+  display/title/heading/document-name/screen-title/wordmark tier and the Inter `*Strong` and overline
+  roles - now renders at the regular weight, and the three remaining hardcoded weights in the tools
+  panel and the spreadsheet column header went with them. Hierarchy is carried by size, colour and
+  spacing instead. `Medium` (500) is kept where a role already used it, which is not a bold. What a
+  *document* says is untouched: bold runs in Word, PowerPoint and Markdown still render bold, because
+  that weight belongs to the file and not to MyDoc.
+- **Video playback is fullscreen.** The status and navigation bars are hidden while the controls are
+  hidden or the screen is locked, come back with the controls, and are restored when the player is
+  left; a swipe still brings them transiently. The rotation button no longer announces
+  "Landscape"/"Portrait"/"Auto Rotate" as a popup, and both control bars now pad for the display
+  cutout, which in landscape sits on the side rather than the top.
+
 ### Added
 
 - **A binary `.doc` is read through its piece table.** Word 97 stores a document's characters in

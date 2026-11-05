@@ -226,7 +226,7 @@ fun SpreadsheetViewerScreen(
                                             Text(
                                                 text = SheetData.columnIndexToLetter(c),
                                                 style = MaterialTheme.typography.bodySmall,
-                                                fontWeight = FontWeight.SemiBold,
+                                                fontWeight = FontWeight.Normal,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }

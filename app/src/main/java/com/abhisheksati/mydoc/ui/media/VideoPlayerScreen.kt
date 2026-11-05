@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -79,10 +80,14 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem as ExoMediaItem
 import androidx.media3.common.PlaybackParameters
@@ -163,12 +168,31 @@ fun VideoPlayerScreen(
     var gestureOverlayIcon by remember { mutableStateOf<ImageVector?>(null) }
 
     // Keep screen on while player is active
+    val playerContentView = LocalView.current
     DisposableEffect(activity) {
         val window = activity?.window
         window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         onDispose {
             window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            // The bars were hidden for playback; the rest of the app needs them back.
+            if (window != null) {
+                WindowCompat.getInsetsController(window, playerContentView).show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+    }
+
+    // The video owns the whole screen, so the system bars are part of what it covers: they stay
+    // hidden while the controls are hidden or the screen is locked, and come back with the controls
+    // rather than sitting permanently over the top bar. A swipe still brings them transiently.
+    LaunchedEffect(areControlsVisible, isScreenLocked) {
+        val window = activity?.window ?: return@LaunchedEffect
+        val controller = WindowCompat.getInsetsController(window, playerContentView)
+        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        if (areControlsVisible && !isScreenLocked) {
+            controller.show(WindowInsetsCompat.Type.systemBars())
+        } else {
+            controller.hide(WindowInsetsCompat.Type.systemBars())
         }
     }
 
@@ -450,6 +474,10 @@ fun VideoPlayerScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .statusBarsPadding()
+                            // In landscape the cutout and the navigation bar move to the sides, so
+                            // the bars have to be padded there too or the outermost buttons land
+                            // under the notch.
+                            .displayCutoutPadding()
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -479,12 +507,6 @@ fun VideoPlayerScreen(
                     // Screen Rotation Lock Toggle
                     IconButton(onClick = {
                         orientationMode = (orientationMode + 1) % 3
-                        val modeName = when (orientationMode) {
-                            1 -> "Landscape"
-                            2 -> "Portrait"
-                            else -> "Auto Rotate"
-                        }
-                        context.showMessage(modeName)
                     }) {
                         Icon(Icons.Default.ScreenRotation, contentDescription = "Rotation", tint = Color.White)
                     }
@@ -581,6 +603,7 @@ fun VideoPlayerScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .navigationBarsPadding()
+                            .displayCutoutPadding()
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
                     // Timeline Slider & Time Labels
