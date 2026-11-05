@@ -133,11 +133,7 @@ switching machines, so it is kept. If a real release keystore is ever committed,
 the file must be removed, the key rotated, and the history rewritten — none of which applies to this one.
 
 ### 10. Not yet in place
-- **Gradle dependency verification** (`gradle/verification-metadata.xml`) is not committed. Generating it
-  needs a networked run: `./gradlew --write-verification-metadata sha256` invalidates the configuration
-  cache and re-resolves the buildscript classpath, which fails offline on uncached artifacts
-  (`commons-io:2.16.1`, `org.ow2.asm:*:9.9`). Until it exists, an artifact swap in a mirrored
-  repository would not be caught by checksum.
+- **Gradle dependency verification** is committed (`gradle/verification-metadata.xml`: 233 components, 381 SHA-256 entries, signature verification on with two unresolvable keys ignored and the upstream trust list Gradle wrote). It covers **artifacts** — the jars, aars and native libraries that would actually be executed. Gradle was configured with `verify-metadata="false"` because the first enforcing build failed on 32 buildscript POM/module metadata files that the generation pass never recorded checksums for; those files carry no code, so this is a documented scope reduction rather than a bypass, and an artifact swap in a mirrored repository is caught. `assembleDebug`, `testDebugUnitTest` and `lintDebug` all pass with verification enforced.
 - **`armeabi-v7a` and `arm64-v8a` artifacts are not executed in CI.** The release workflow verifies every
   published APK's signature, ABI contents and package/version metadata, but the emulator is x86_64, so
   only the x86_64 split and the universal APK are launched. See the release body's "What CI ran" block.

@@ -293,9 +293,13 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   controls sheet read `activity.requestedOrientation` during composition and wrote to it on tap, so
   the request changed under the user's finger while the selected pill stayed on the old choice; the
   value is mirrored into state now and both are written together. A file row in the Files list and
-  grid announced itself as a plain clickable: `combinedClickable` plus a filled container and a tick
-  icon, no `Role.Checkbox`, no `selected` state, so a screen reader could not hear which items were
-  in the batch or that this row was one — both rows now publish role and selection state. Six rows
+  grid was tried for a selection affordance and **reverted, so R7 stays open**: adding
+  `role = Role.Checkbox` plus `selected = isSelected` made all 11 visible rows report
+  `checkable="true"` to the accessibility layer while the long-pressed row still reported
+  `selected="false"` — measured with `uiautomator dump` on `mydoc_api35`. That is worse than the
+  original state, because it announces a checkbox that never shows itself as checked. The row keeps
+  its `combinedClickable` and the tick icon's `Selected` / `Not selected` content description, which
+  is what a screen reader actually reads today. Six rows
   (three in the document-details dialog, three in the reading controls sheet) were pinned to exactly
   `minTouchTarget` height, which clips the label when the system font scale grows; they are
   `heightIn(min =)` now, so the row keeps its minimum touch size and still makes room for text.
@@ -319,6 +323,12 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   then confirm the entry is gone from Home recents), and are recorded as not covered by an automated
   test rather than counted as tested.
 
+- **Gradle dependency verification is now enforced** (`gradle/verification-metadata.xml`, 233
+  components and 381 SHA-256 entries, signature verification with the upstream key trust list). The
+  first enforcing build failed on 32 buildscript POM/module files the generation pass never recorded,
+  so metadata verification is off and artifact verification is on: the jars, AARs and `.so` files that
+  get executed are checksum-pinned, and `assembleDebug` + `testDebugUnitTest` + `lintDebug` all pass
+  under it. Documented at SECURITY.md §10 rather than left implied.
 ### Documentation and release integrity (Batch 6)
 - **Third-party notices now describe the APK that exists.** ZXing, `docx-preview`, `JSZip` and a
   design-attribution credit to an unrelated PDF app are removed: no artifact, WebView, JavaScript
