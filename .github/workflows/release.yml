@@ -123,44 +123,70 @@ jobs:
       - name: Install apksigner
         run: sudo apt-get update -y && sudo apt-get install -y apksigner
 
-      - name: Verify Universal APK Signing Certificate
+      # H-13: every artifact that is about to be published is verified, not only the universal one.
+      # A split whose signature nobody checked is a split nobody can attribute to this signing key,
+      # and a split whose ABI list was never read is a split that may not contain the ABI its file
+      # name promises. Each result is written to release-assets/verification.txt so the published
+      # release carries the evidence rather than a promise.
+      - name: Verify every published APK
         env:
           EXPECTED_CERT_SHA256: ${{ secrets.MYDOC_RELEASE_CERT_SHA256 }}
+          RELEASE_TAG: ${{ steps.vars.outputs.tag }}
         run: |
           set -euo pipefail
-          UNIVERSAL_APK="app/build/outputs/apk/release/app-universal-release.apk"
-          if [ ! -f "$UNIVERSAL_APK" ]; then
-            echo "ERROR: Universal release APK not found at $UNIVERSAL_APK"
-            exit 1
-          fi
-
           if [ -z "$EXPECTED_CERT_SHA256" ]; then
             echo "ERROR: Secret MYDOC_RELEASE_CERT_SHA256 is missing or empty!"
             exit 1
           fi
-
-          echo "### Release APK Signing Certificate Verification" >> $GITHUB_STEP_SUMMARY
-          CERT_OUTPUT=$(apksigner verify --print-certs "$UNIVERSAL_APK")
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "$CERT_OUTPUT" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-
-          # Extract Signer #1 SHA-256 digest
-          ACTUAL_SHA256=$(echo "$CERT_OUTPUT" | grep -i "Signer #1 certificate SHA-256 digest:" | head -1 | awk '{print $NF}' | tr -d ' :' | tr '[:upper:]' '[:lower:]')
           NORMALIZED_EXPECTED=$(echo "$EXPECTED_CERT_SHA256" | tr -d ' :' | tr '[:upper:]' '[:lower:]')
-
-          if [ -z "$ACTUAL_SHA256" ]; then
-            echo "ERROR: Could not parse certificate SHA-256 digest from apksigner output!"
+          AAPT2=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 2>/dev/null | tail -1 || true)
+          shopt -s nullglob
+          APKS=(app/build/outputs/apk/release/*.apk)
+          if [ ${#APKS[@]} -eq 0 ]; then
+            echo "ERROR: no release APKs found to verify."
             exit 1
           fi
-
-          if [ "$ACTUAL_SHA256" != "$NORMALIZED_EXPECTED" ]; then
-            echo "CRITICAL SECURITY FAILURE: Release APK certificate fingerprint mismatch!"
-            echo "Expected: $NORMALIZED_EXPECTED"
-            echo "Actual:   $ACTUAL_SHA256"
-            exit 1
-          fi
-          echo "SUCCESS: Release APK certificate fingerprint verified ($ACTUAL_SHA256)."
+          mkdir -p release-assets
+          : > release-assets/verification.txt
+          echo "### APK verification (${#APKS[@]} artifacts)" >> "$GITHUB_STEP_SUMMARY"
+          for apk in "${APKS[@]}"; do
+            name=$(basename "$apk")
+            CERT_OUTPUT=$(apksigner verify --print-certs "$apk")
+            ACTUAL=$(echo "$CERT_OUTPUT" | grep -i "Signer #1 certificate SHA-256 digest:" | head -1 | awk '{print $NF}' | tr -d ' :' | tr '[:upper:]' '[:lower:]')
+            if [ -z "$ACTUAL" ] || [ "$ACTUAL" != "$NORMALIZED_EXPECTED" ]; then
+              echo "CRITICAL SECURITY FAILURE: $name is signed by '${ACTUAL:-nothing}', expected $NORMALIZED_EXPECTED."
+              exit 1
+            fi
+            ABIS=$(unzip -Z1 "$apk" 'lib/*' 2>/dev/null | sed -n 's|^lib/\([^/]*\)/.*|\1|p' | sort -u | tr '\n' ',' | sed 's/,$//' || true)
+            case "$name" in
+              *arm64-v8a*) case "$ABIS" in *arm64-v8a*) ;; *) echo "ERROR: $name carries no arm64-v8a native libs ($ABIS)."; exit 1 ;; esac ;;
+              *armeabi-v7a*) case "$ABIS" in *armeabi-v7a*) ;; *) echo "ERROR: $name carries no armeabi-v7a native libs ($ABIS)."; exit 1 ;; esac ;;
+              *x86_64*) case "$ABIS" in *x86_64*) ;; *) echo "ERROR: $name carries no x86_64 native libs ($ABIS)."; exit 1 ;; esac ;;
+              *) echo "ERROR: $name carries no native libs at all." ; exit 1 ;;
+            esac
+            LINE="$name signed_by=$ACTUAL abis=$ABIS"
+            if [ -n "$AAPT2" ]; then
+              BADGE=$("$AAPT2" dump badging "$apk")
+              PACKAGE=$(echo "$BADGE" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")
+              VC=$(echo "$BADGE" | sed -n "s/^package:.*versionCode='\([^']*\)'.*/\1/p" | head -1)
+              VN=$(echo "$BADGE" | sed -n "s/^package:.*versionName='\([^']*\)'.*/\1/p" | head -1)
+              if [ "$PACKAGE" != "com.abhisheksati.mydoc" ]; then
+                echo "ERROR: $name declares package '$PACKAGE'."
+                exit 1
+              fi
+              if [ -n "${RELEASE_TAG#v}" ] && [ "$VN" != "${RELEASE_TAG#v}" ]; then
+                echo "ERROR: $name declares versionName '$VN' but the tag is '$RELEASE_TAG'."
+                exit 1
+              fi
+              LINE="$LINE package=$PACKAGE versionName=$VN versionCode=$VC"
+            else
+              LINE="$LINE package=unchecked(_no_aapt2)"
+              echo "::warning::aapt2 was not on the runner; package and version metadata for $name were not verified."
+            fi
+            echo "$LINE" >> release-assets/verification.txt
+            echo "- \`$name\`: signature OK, ABIs \`$ABIS\`" >> "$GITHUB_STEP_SUMMARY"
+          done
+          cat release-assets/verification.txt
 
       # A signed, cert-verified APK is not proof it runs. R8 shrinking, release-only resource
       # stripping and the release signing config can all break the app at first launch, and that
@@ -185,27 +211,38 @@ jobs:
           emulator-options: -no-snapshot-load -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
             set -euo pipefail
-            APK=app/build/outputs/apk/release/app-x86_64-release.apk
-            if [ ! -f "$APK" ]; then
-              echo "ERROR: expected $APK to exist for the smoke test."
-              exit 1
-            fi
-            adb install -r "$APK"
-            adb logcat -c
-            adb shell am start -n com.abhisheksati.mydoc/com.abhisheksati.mydoc.MainActivity
-            sleep 20
-            if [ -z "$(adb shell pidof -s com.abhisheksati.mydoc)" ]; then
-              echo "ERROR: the release build did not stay running."
-              adb logcat -d -v brief | tail -n 200
-              exit 1
-            fi
-            if adb logcat -d | grep -qE "FATAL EXCEPTION|Begin tracking.*com.abhisheksati.mydoc"; then
-              echo "ERROR: the release build crashed on launch."
-              adb logcat -d -v brief | grep -A 30 "FATAL EXCEPTION" | head -n 60
-              exit 1
-            fi
-            adb exec-out screencap -p > release-smoke-launch.png
-            echo "Release build installed, launched and survived 20s on API 35."
+            : > release-assets/smoke.txt
+            for APK in app/build/outputs/apk/release/app-x86_64-release.apk \
+                       app/build/outputs/apk/release/app-universal-release.apk; do
+              if [ ! -f "$APK" ]; then
+                echo "ERROR: expected $APK to exist for the smoke test."
+                exit 1
+              fi
+              NAME=$(basename "$APK")
+              adb install -r -g "$APK"
+              adb logcat -c
+              adb shell am start -n com.abhisheksati.mydoc/com.abhisheksati.mydoc.MainActivity
+              sleep 20
+              if [ -z "$(adb shell pidof -s com.abhisheksati.mydoc)" ]; then
+                echo "ERROR: the release build of $NAME did not stay running."
+                adb logcat -d -v brief | tail -n 200
+                exit 1
+              fi
+              if adb logcat -d | grep -qE "FATAL EXCEPTION|Begin tracking.*com.abhisheksati.mydoc"; then
+                echo "ERROR: the release build of $NAME crashed on launch."
+                adb logcat -d -v brief | grep -A 30 "FATAL EXCEPTION" | head -n 60
+                exit 1
+              fi
+              adb exec-out screencap -p > "release-smoke-$(echo "$NAME" | tr '.' '_').png"
+              echo "$NAME: installed, launched and survived 20s on API 35 x86_64." | tee -a release-assets/smoke.txt
+              adb uninstall com.abhisheksati.mydoc > /dev/null
+            done
+            # Stated rather than implied: an x86_64 emulator cannot execute arm code, so the arm
+            # splits are signature- and metadata-verified above but never run here.
+            {
+              echo "arm64-v8a and armeabi-v7a splits: signature, ABI contents and package metadata"
+              echo "verified; not executed, because this runner has no arm64 or armv7 system image."
+            } | tee -a release-assets/smoke.txt
 
       # The step above is allowed to fail so this can tell the two failures apart. A release must
       # not be published on an untested artifact either way, but the reason decides what to do
@@ -226,7 +263,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-smoke-evidence
-          path: release-smoke-launch.png
+          path: release-smoke-*.png
           if-no-files-found: ignore
           retention-days: 14
 
@@ -243,6 +280,32 @@ jobs:
             sha256sum "$f" > "${f}.sha256"
           done
           ls -lh
+          cd ..
+
+          # H-11: the README tells people to compare the certificate fingerprint against a value
+          # published with the release, so the release publishes it. The value is the one apksigner
+          # read off these artifacts in the verification step, not a hand-copied constant.
+          {
+            echo "## Integrity"
+            echo
+            echo "Signing certificate SHA-256 of every artifact below, as verified by CI:"
+            echo
+            echo '```'
+            cut -d' ' -f2 release-assets/verification.txt | sed 's/signed_by=/  /' | sort -u
+            echo '```'
+            echo
+            echo "Check your download with \`sha256sum -c mydoc-*.apk.sha256\`, and the signer with"
+            echo "\`apksigner verify --print-certs mydoc-*.apk\`."
+            echo
+            echo "## What CI ran"
+            echo
+            if [ -s release-assets/smoke.txt ]; then
+              sed 's/^/- /' release-assets/smoke.txt
+            else
+              echo "- No smoke-test evidence: the emulator step did not complete, so nothing here is executed-verified."
+            fi
+          } > release-assets/release-body.md
+          cat release-assets/release-body.md
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
@@ -253,9 +316,11 @@ jobs:
           prerelease: false
           make_latest: true
           generate_release_notes: true
+          body_path: release-assets/release-body.md
           files: |
             release-assets/mydoc-*.apk
             release-assets/mydoc-*.apk.sha256
+            release-assets/verification.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

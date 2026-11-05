@@ -14,8 +14,11 @@ import com.abhisheksati.mydoc.BuildConfig
 object SecureLog {
 
     /**
-     * Seam for tests. [BuildConfig.DEBUG] is a compile-time constant, so a release build folds this
-     * to false and R8 drops the whole detail branch; a unit test flips it to exercise both paths.
+     * Defaults to [BuildConfig.DEBUG], so a release build logs the summary only. It is a mutable field
+     * rather than a constant so a test can drive both paths — which also means R8 does not delete the
+     * detail branch from the release binary. The guarantee is behavioural, not structural: with this
+     * false, [messageFor] never invokes the detail lambda, so no document name is ever put in a
+     * message handed to logcat.
      */
     @Volatile
     internal var verbose: Boolean = BuildConfig.DEBUG

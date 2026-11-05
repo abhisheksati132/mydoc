@@ -6,10 +6,13 @@ Security fixes and updates are provided for the following releases:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 1.5.x   | :white_check_mark: |
-| < 1.5.0 | :x:                |
+| 1.7.x   | :white_check_mark: |
+| < 1.7.0 | :x:                |
 
-Current version: **1.5.13**
+Current version: **1.7.2** (`versionCode` 174), produced by the tag-triggered release workflow. The
+1.6.x and 1.5.x lines are not maintained: fixes land on the current build only, so the security
+behaviour described below is the behaviour of the latest release, not of an older APK you may still
+have installed.
 
 Users are encouraged to always use the latest release from the [GitHub Releases](https://github.com/abhisheksati132/mydoc/releases) page.
 
@@ -54,10 +57,10 @@ All document reading, parsing, conversion, and compression operations are perfor
 - **PDF Rendering:** MuPDF 1.28.5 Fitz native vector engine with viewport tiling and thread-safe locking.
 - **Office Documents:** Word, Excel and PowerPoint files are parsed on-device by the app's own Kotlin OOXML parsers. No Apache POI, no third-party Office library and no cloud service is involved. Office-to-PDF conversion is no longer offered.
 - **PDF Manipulation & Tools:** Apache PDFBox 2.0.27.0 (merge, split, compress, watermark, reorder, sign).
-- **Text Recognition:** Google ML Kit on-device text recognition. The model runs locally; on devices that do not ship it, Google Play Services may download the model once. The scanned document itself is never sent.
+- **Text Recognition:** Google ML Kit on-device text recognition (`com.google.mlkit:text-recognition:16.0.1`, the bundled-model artifact). The models ship inside the APK — `assets/mlkit-google-ocr-models/**` plus `lib/<abi>/libmlkit_google_ocr_pipeline.so`, both read out of a built artifact — so nothing is downloaded on first use. The document itself is never sent.
 - **Multimedia Engine:** Google AndroidX Media3 ExoPlayer (hardware-accelerated, zero JNI crash risk).
 
-Document and media content never leaves the device through MyDoc. Outbound traffic is limited to three paths: the optional GitHub update check and download described in section 5; the optional one-time Google Play Services download of the ML Kit text-recognition model on devices that do not ship it; and the metrics transport bundled by ML Kit's Google DataTransport/Firebase components (see section 4).
+Document and media content does not leave the device through MyDoc: no code path uploads one. The only outbound connection MyDoc itself makes is the optional GitHub update check and download described in section 5. Separately, ML Kit's Google DataTransport/Firebase components are packaged in the APK and registered in its merged manifest (section 4). MyDoc never invokes them, and no traffic from them was observed while testing — that is a report about what was measured, not proof that they cannot transmit.
 
 ### 2. No WebView in Document Pipeline
 MyDoc does not use WebViews in its document rendering pipeline. Document parsing and layout are handled completely via native Kotlin and C++ vector renderers to prevent cross-site scripting (XSS), JavaScript injection, and WebView sandbox escape vulnerabilities.
@@ -71,8 +74,8 @@ Each OOXML parser applies strict bounds while decompressing (`.docx`, `.pptx`, `
 
 These decompression safety bounds are enforced directly within each parser engine (`DocxParser`, `PptxParser`, and `SpreadsheetParser`), verifying uncompressed size before inflating entries to prevent memory exhaustion and zip-bomb attacks.
 
-### 4. Zero Telemetry & Tracking
-MyDoc contains zero advertising SDKs, zero user tracking libraries and zero crash reporting telemetry, and the app itself collects no analytics. The ML Kit text-recognition dependency does transitively bundle Google DataTransport/Firebase components in the merged manifest, which can emit Google metrics about model usage. If strict zero telemetry is required, that transport can be disabled or the ML Kit model bundled so Play Services is not contacted at runtime.
+### 4. No app-side telemetry
+MyDoc contains no advertising SDK, no crash-reporting SDK and no analytics library, and its own code collects no usage data, identifiers or documents. Calling the whole APK "zero telemetry" would overstate that: ML Kit's `text-recognition` dependency transitively pulls in `com.google.android.datatransport`, `com.google.firebase` and `com.google.android.gms` artifacts, and the packaged APK's merged manifest registers their transport plumbing — `TransportBackendDiscovery` with a `cct.CctBackendFactory` backend, `JobInfoSchedulerService` and `AlarmManagerSchedulerBroadcastReceiver`. That is Google's own usage/metrics machinery: MyDoc does not configure it, name an endpoint for it, or call into it, and auditing this build observed no request from it and no document content leaving the device. Because it is third-party code inside the distributed artifact, the stronger claim — that nothing can ever leave the device — is not one this project makes from source inspection alone. OCR is the only feature that depends on ML Kit, so a build without that transport is a build without on-device OCR.
 
 ### 5. Transparent, Hardened Updates
 The application checks exclusively for updates against public GitHub Releases. This check:
@@ -83,9 +86,58 @@ The application checks exclusively for updates against public GitHub Releases. T
 
 ### 6. Least-Privilege Sandboxing & Encryption
 - **FileProvider**: Internal storage and root device paths are never exposed. File sharing is restricted to designated cache subdirectories (`cache/updates/`, `cache/shared/`, `cache/tools_output/`) and the offline document cache (`files/saved_docs/`). Shared and opened files are always handed to other apps as `content://` URIs, never `file://`.
-- **App Lock**: Biometric and screen lock protection is requested via `KeyguardManager.isDeviceSecure`, but the guard fails open: when the device has no screen lock, `BiometricLockHelper` calls `onSuccess` without any authentication. The lock is also not re-applied when the app leaves the foreground — there is no re-lock on `onStop`, so an unlocked session stays unlocked until the process is recreated. Treat it as a convenience barrier, not a strong boundary against a local attacker.
+- **App Lock**: Settings refuses to enable the lock on a device with no screen credential, and the guard fails closed: when `KeyguardManager.isDeviceSecure` is false, `BiometricLockHelper` reports an error rather than calling `onSuccess`, so the documents stay behind `AppLockScreen`. The session re-locks whenever the app leaves the foreground — `MainActivity.onStop()` and `onRestart()` clear the unlocked state and re-arm `FLAG_SECURE` while the lock is enabled, and `onCreate()` starts locked — and a share or open intent received while locked is held until authentication succeeds. It remains a barrier against a person holding an unlocked phone, not against a rooted device or someone who knows the user's device credential.
 - **Android Keystore Encryption**: Signatures and sensitive data are encrypted on-device with AES-256-GCM using non-exportable Android Keystore keys, and the encrypted signature file is excluded from cloud and device backups. The code does not request StrongBox and does not verify at runtime that the key is hardware-backed, so on devices without a usable hardware keystore the key may be software-backed.
 - **Permissions**: `MANAGE_EXTERNAL_STORAGE` is user-granted all-files access, used to browse and open documents anywhere in shared storage; `WRITE_EXTERNAL_STORAGE` is declared with `maxSdkVersion="29"` for saving on pre-scoped-storage releases; `REQUEST_INSTALL_PACKAGES` exists solely so the in-app updater can hand a signature-verified APK to the system installer.
 
 ### 7. Android Backup & Device Transfer
-MyDoc opts into the platform backup system. If backup or device transfer is enabled by the user's Android settings, the OS may copy the app database (recent-document index), offline document copies under `saved_docs/`, and the user-pinned folder list in `pinned_folders_prefs.xml` to the user's own Google backup and onto a new device. This is OS behaviour, not an upload by MyDoc. Excluded from backup: `mydoc_settings.xml` (settings and app-lock state), `mydoc_updater.xml` (updater state), all cache directories, and the hardware-encrypted signature file. Users who do not want document copies in platform backup should disable backup for MyDoc in Android Settings.
+MyDoc opts into the platform backup system and excludes the things that matter from it. The exclusions are in `app/src/main/res/xml/backup_rules.xml` (Android 11 and below) and, for Android 12+, `data_extraction_rules.xml`, where the same list is applied to **both** `cloud-backup` and `device-transfer`: the Room database `mydoc.db` with its `-wal` and `-shm` side files (recent documents, favourites, offline-copy records, trash entries, playback positions), the offline document copies under `saved_docs/`, the trash under `.trash/`, the pinned-folder list `pinned_folders_prefs.xml`, `mydoc_settings.xml` (settings and app-lock state), `mydoc_updater.xml` (updater state), all cache directories, and the Keystore-encrypted `user_signature.enc` — whose key could not migrate to another device anyway.
+
+So the document index and any cached document copies are not part of OS backup or device transfer. Anything not named above is still eligible for whatever the platform decides to copy; a user who wants nothing copied should turn off backup for MyDoc in Android settings.
+
+### 8. Storage permission: assessed, kept
+`MANAGE_EXTERNAL_STORAGE` is the widest storage permission Android offers, and it is a real cost: while
+granted, MyDoc can read every file in shared storage, not only documents, and Play requires the
+all-files access justification for it.
+
+It is kept because it is load-bearing for what the app promises. MyDoc's core behaviour is opening,
+searching, converting, renaming, trashing and restoring files **wherever the user keeps them**, plus
+in-app file management (move, delete, restore from a trash folder). SAF-only access cannot provide
+that: a `content://` tree grant covers only the trees the user picked, cannot be remembered across
+reinstall in the way the recent-documents index expects, and does not allow the rename/move/trash
+operations the app performs. Storage Access Framework remains the fallback path — documents opened
+through a picker are read through their URI, and `DocumentStreamResolver` resolves those URIs without
+needing all-files access at all — so a user who refuses the permission still gets a working reader, just
+not the file-manager half of the app.
+
+What narrowing looks like, if it is ever done: keep all-files access for the file-management screens
+only, make every open path go through SAF or the platform recents, and drop the permission for devices
+where the user never uses those screens. That is a storage-model redesign, not a hardening fix, and it
+is recorded here as an accepted, documented risk rather than silently tolerated.
+
+### 9. Checked-in debug keystore: assessed, kept
+`app/keystore/debug.keystore` (alias `mydoc`, store and key password `android`) is committed on purpose,
+for debug builds only. `signingConfigs` binds it to the `shared` config, which only the `debug` build
+type selects; the `release` build type uses the `release` config, whose `storeFile` is set **only** when
+`MYDOC_KEYSTORE_PATH` points at a real file, and a release assembly without the four keystore
+environment values fails the build rather than falling back. A debug and a release artifact therefore
+cannot share a signer by accident, and the pinned `RELEASE_CERT_SHA256` check in the updater is the
+second tripwire.
+
+A public, well-known debug key is not a secret, so it needs no rotation and its presence in git history
+leaks nothing that an attacker does not already have (the Android default debug keystore is public by
+definition). What history does carry is every version of this file — which is why the keystore stays
+debug-only by configuration, not by obscurity. Removing it would make debug installs diverge per
+machine (each developer's own `~/.android/debug.keystore`) and break `adb install -r` for anyone
+switching machines, so it is kept. If a real release keystore is ever committed, that is an incident:
+the file must be removed, the key rotated, and the history rewritten — none of which applies to this one.
+
+### 10. Not yet in place
+- **Gradle dependency verification** (`gradle/verification-metadata.xml`) is not committed. Generating it
+  needs a networked run: `./gradlew --write-verification-metadata sha256` invalidates the configuration
+  cache and re-resolves the buildscript classpath, which fails offline on uncached artifacts
+  (`commons-io:2.16.1`, `org.ow2.asm:*:9.9`). Until it exists, an artifact swap in a mirrored
+  repository would not be caught by checksum.
+- **`armeabi-v7a` and `arm64-v8a` artifacts are not executed in CI.** The release workflow verifies every
+  published APK's signature, ABI contents and package/version metadata, but the emulator is x86_64, so
+  only the x86_64 split and the universal APK are launched. See the release body's "What CI ran" block.

@@ -260,9 +260,43 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 - **Document names and paths were written to logcat in release builds (Batch 6).** Eighteen logging
   sites interpolated `displayName`, `file.name` or a worksheet name into a `Log.w`/`Log.e` message,
   so a bug report or a connected debugger could recover which documents the user had opened and
-  failed to open. They now go through `SecureLog`, whose detail argument is a lambda: in a release
-  build `BuildConfig.DEBUG` folds the branch away and the private text is never even produced, while
-  a debug build still logs it for whoever is fixing the bug.
+  failed to open. They now go through `SecureLog`, whose detail argument is a lambda: with
+  `BuildConfig.DEBUG` false the detail is never invoked, so no name is ever put into a message handed
+  to logcat, while a debug build still logs it for whoever is fixing the bug. The guarantee is
+  behavioural — that field is mutable so a test can drive both paths, and R8 does not delete the branch.
+
+### Documentation and release integrity (Batch 6)
+
+- **Third-party notices now describe the APK that exists.** ZXing, `docx-preview`, `JSZip` and a
+  design-attribution credit to an unrelated PDF app are removed: no artifact, WebView, JavaScript
+  payload or asset of theirs is in the build. Added: AndroidX Camera/Compose/Core/Lifecycle/SplashScreen,
+  Room, Haze, Kotlin and coroutines, each with the licence its own POM declares, and the transitively
+  packaged Google DataTransport/Firebase/GMS components. The three bundled fonts get their upstream SIL
+  OFL 1.1 texts, copied from the projects that publish them, now shipped at
+  `app/src/main/assets/licences/` so the licence travels with the font inside the APK.
+- **"Zero telemetry" replaced with what is measured.** The app-side claim (no analytics, crash or
+  advertising SDK; no collection by MyDoc's own code) is separated from the fact that ML Kit's metrics
+  transport is packaged *and registered* in the merged manifest — `TransportBackendDiscovery` with a
+  `cct.CctBackendFactory`, `JobInfoSchedulerService`, `AlarmManagerSchedulerBroadcastReceiver` — which
+  nothing observed transmitting. The old "the model is downloaded by Play Services on first use" claim
+  is corrected: `text-recognition:16.0.1` is the bundled-model artifact, so `assets/mlkit-google-ocr-models/**`
+  and `lib<abi>/libmlkit_google_ocr_pipeline.so` are already in the APK.
+- **SECURITY.md matched to the source.** Supported versions went from 1.5.x/1.5.13 to 1.7.x/1.7.2; the
+  app-lock section no longer describes a fail-open gate with no re-lock, because the code now fails
+  closed, clears the unlocked state in `onStop()`/`onRestart()`, re-arms `FLAG_SECURE` and defers
+  pending intents; the backup section no longer says the OS may copy the document index and cached
+  documents, because both `backup_rules.xml` and `data_extraction_rules.xml` exclude `mydoc.db*`,
+  `saved_docs/`, `.trash/` and `pinned_folders_prefs.xml` from cloud backup *and* device transfer. Added:
+  the storage-permission assessment, the checked-in debug keystore assessment, and an explicit list of
+  what is not yet in place.
+- **CI verifies every published APK, not only the universal one** (H-13). Each artifact in
+  `app/build/outputs/apk/release/` is now signature-checked against the pinned certificate, its packaged
+  ABIs are read out of the archive and matched against the file name, and its package name, versionName
+  and versionCode are checked with `aapt2`. The smoke test launches both the x86_64 split and the
+  universal APK, and the release body states in plain words that the arm splits were verified but never
+  executed. What CI measured — fingerprints, ABI lists, run evidence — is published as
+  `verification.txt` and quoted in the release notes, which is what the README's
+  "compare the fingerprint with the published value" instruction has been waiting for (H-11).
 
 ### Tests
 

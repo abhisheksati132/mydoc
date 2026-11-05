@@ -25,7 +25,7 @@
 
 ## 🌟 What is MyDoc?
 
-**MyDoc** is an all-in-one Android document reader and utility engineered from the ground up for speed, offline privacy, and tactile elegance. Powered by the **Artifex MuPDF Fitz** rendering engine, streaming Office parsers, and modern Jetpack Compose with a translucent "Liquid Glass" surface system, MyDoc delivers fast file reading and advanced PDF operations — completely on-device, with no telemetry, no accounts, and no cloud reliance. It is the local-first alternative to Office / Drive / WPS: your documents stay yours.
+**MyDoc** is an all-in-one Android document reader and utility engineered from the ground up for speed, offline privacy, and tactile elegance. Powered by the **Artifex MuPDF Fitz** rendering engine, streaming Office parsers, and modern Jetpack Compose with a translucent "Liquid Glass" surface system, MyDoc delivers fast file reading and advanced PDF operations — completely on-device, with no app-side telemetry, no accounts, and no cloud storage. It is the local-first alternative to Office / Drive / WPS: your documents stay yours.
 
 ---
 
@@ -120,11 +120,9 @@ the empty result as a loaded document.
 MyDoc is architected around the **Zero-Trust Local-First** principle:
 
 1. **Zero Cloud Uploads**: All document parsing, rendering, text recognition (OCR), and PDF modifications take place strictly inside the on-device sandbox.
-2. **Zero Telemetry**: No Google Analytics, Firebase Analytics, Crashlytics, Mixpanel, or advertising SDKs.
-3. **Transparent Network Access**: The only network calls made by MyDoc are:
-   - Querying the public GitHub Releases API for software updates (can be disabled in Settings).
-   - Downloading the ML Kit text recognition model on first OCR run (handled directly by Google Play Services).
-4. **Android Cloud Backup Hardening**: Backup manifests explicitly exclude cached documents, trash archives, and user credentials.
+2. **No app-side telemetry**: No Google Analytics, Firebase Analytics, Crashlytics, Mixpanel, or advertising SDKs, and MyDoc's own code collects no usage data. What is *inside* the APK is a different statement: ML Kit's OCR dependency transitively packages Google's DataTransport/Firebase metrics components and registers them in the merged manifest. MyDoc never calls them and no traffic from them was observed — see [SECURITY.md](SECURITY.md) §4, which keeps the two claims apart.
+3. **Transparent Network Access**: The only network call made by MyDoc is querying the public GitHub Releases API for software updates and downloading the APK it points at (can be disabled in Settings). OCR needs no network at all: `com.google.mlkit:text-recognition` is the bundled-model artifact, so the models are already inside the APK (`assets/mlkit-google-ocr-models/**`) and nothing is fetched on first use.
+4. **Android Cloud Backup Hardening**: The backup manifests exclude the document index database, cached offline documents, trash, pinned-folder paths, settings and app-lock state, updater state, caches and the Keystore-encrypted signature file — from both cloud backup and device transfer.
 
 ---
 
@@ -154,7 +152,14 @@ Inspect the APK certificate with `apksigner` (from the Android SDK build-tools):
 apksigner verify --print-certs mydoc-v*.apk
 ```
 
-Compare the `Signer #1 certificate SHA-256 digest` with the fingerprint published in the [GitHub Release notes](https://github.com/abhisheksati132/mydoc/releases).
+Compare the `Signer #1 certificate SHA-256 digest` with the fingerprint CI measured for that release.
+The release workflow verifies every published APK's signature against the pinned
+`MYDOC_RELEASE_CERT_SHA256` secret and publishes what it read as a `verification.txt` asset plus a
+"Signing certificate SHA-256" block in the release body; releases cut from this workflow onward carry
+both. Releases published before that step existed do not publish a fingerprint, so for those the digest
+above has nothing in this repository to be compared against — and a value copied into a README would
+not be evidence of anything either. If you have an older APK and need certainty about its signer,
+compare it against a newer release from this project and check that the two digests match.
 
 ---
 
