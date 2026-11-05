@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.domain.model.ViewState
+import com.abhisheksati.mydoc.util.SecureLog
 import com.abhisheksati.mydoc.util.UserMessages
 import com.abhisheksati.mydoc.domain.repository.DocumentRepository
 import com.abhisheksati.mydoc.rendering.engine.DocumentRenderer
@@ -185,7 +186,7 @@ class ViewerViewModel(
                     }
 
                     if (convertedPdfFile == null && converter != com.abhisheksati.mydoc.domain.model.ConverterKind.NONE) {
-                        android.util.Log.w("ViewerLoad", "no PDF produced for ${activeDocumentFile.displayName}")
+                        SecureLog.warn("ViewerLoad", "no PDF produced for document") { activeDocumentFile.displayName }
                         val family = com.abhisheksati.mydoc.domain.model.DocumentFormats.familyOf(ext)
                         val isWord = family == com.abhisheksati.mydoc.domain.model.DocumentFamily.WORD
                         _uiState.update {

@@ -10,6 +10,7 @@ import com.abhisheksati.mydoc.rendering.engine.asConversionFailure
 import com.abhisheksati.mydoc.util.DocumentIdentity
 import com.abhisheksati.mydoc.rendering.engine.OutlineCache
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
+import com.abhisheksati.mydoc.util.SecureLog
 import kotlinx.coroutines.CancellationException
 import java.io.File
 import java.io.FileOutputStream
@@ -61,7 +62,7 @@ object PptxConverter {
         }
 
         val renderResult = PptxRenderer.renderWithOutlines(processedBytes) ?: run {
-            android.util.Log.w("PptxConvert", "no slides laid out for $displayName")
+            SecureLog.warn("PptxConvert", "no slides laid out for presentation") { displayName }
             return layoutFailure()
         }
 
@@ -82,7 +83,7 @@ object PptxConverter {
             OutlineCache.saveOutlines(targetPdf, renderResult.outlines)
             OfficeConversion.Success(targetPdf)
         } catch (t: Throwable) {
-            android.util.Log.w("PptxConvert", "could not write PDF for $displayName", t)
+            SecureLog.warn("PptxConvert", "could not write PDF for presentation", t) { displayName }
             staging.delete()
             targetPdf.delete()
             layoutFailure()

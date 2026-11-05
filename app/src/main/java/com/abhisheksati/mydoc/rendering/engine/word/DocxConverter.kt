@@ -2,7 +2,6 @@ package com.abhisheksati.mydoc.rendering.engine.word
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
 import com.abhisheksati.mydoc.domain.model.LoadFailure
 import com.abhisheksati.mydoc.rendering.engine.OfficeConversion
 import com.abhisheksati.mydoc.rendering.engine.OfficeSource
@@ -10,6 +9,7 @@ import com.abhisheksati.mydoc.rendering.engine.OfficeSourceReader
 import com.abhisheksati.mydoc.rendering.engine.OutlineCache
 import com.abhisheksati.mydoc.rendering.engine.asConversionFailure
 import com.abhisheksati.mydoc.util.DocumentIdentity
+import com.abhisheksati.mydoc.util.SecureLog
 import kotlinx.coroutines.CancellationException
 import java.io.File
 import java.io.FileOutputStream
@@ -38,7 +38,7 @@ object DocxConverter {
         } catch (e: CancellationException) {
             throw e
         } catch (t: Throwable) {
-            Log.w(Tag, "could not parse $displayName", t)
+            SecureLog.warn(Tag, "could not parse word document", t) { displayName }
             return layoutFailure()
         }
 
@@ -47,10 +47,10 @@ object DocxConverter {
         } catch (e: CancellationException) {
             throw e
         } catch (t: Throwable) {
-            Log.w(Tag, "could not lay out $displayName", t)
+            SecureLog.warn(Tag, "could not lay out word document", t) { displayName }
             null
         } ?: run {
-            Log.w(Tag, "no pages produced for $displayName")
+            SecureLog.warn(Tag, "word document produced no pages") { displayName }
             return layoutFailure()
         }
 
@@ -69,7 +69,7 @@ object DocxConverter {
             OutlineCache.saveOutlines(targetPdf, rendered.outlines)
             OfficeConversion.Success(targetPdf)
         } catch (t: Throwable) {
-            Log.w(Tag, "could not write PDF for $displayName", t)
+            SecureLog.warn(Tag, "could not write PDF for word document", t) { displayName }
             staging.delete()
             targetPdf.delete()
             layoutFailure()

@@ -14,6 +14,7 @@ import com.abhisheksati.mydoc.domain.model.PartialStorageOperationException
 import com.abhisheksati.mydoc.domain.model.StorageItem
 import com.abhisheksati.mydoc.domain.model.StorageVolume
 import com.abhisheksati.mydoc.domain.repository.StorageRepository
+import com.abhisheksati.mydoc.util.SecureLog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -587,7 +588,7 @@ class StorageRepositoryImpl(
             hex.toString()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            android.util.Log.w("StorageRepository", "Checksum failed for " + file.name, e)
+            SecureLog.warn("StorageRepository", "checksum failed for a cached document", e) { file.name }
             null
         }
     }

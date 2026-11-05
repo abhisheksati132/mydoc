@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.rendering.engine.spreadsheet
 
+import com.abhisheksati.mydoc.util.SecureLog
 import org.xmlpull.v1.XmlPullParser
 import java.io.InputStream
 import java.util.zip.ZipInputStream
@@ -94,7 +95,7 @@ object XlsxReader {
                         // Recorded, not swallowed: an empty sheet and a sheet that could not be read
                         // are different claims about the user's file.
                         s.parseFailure = e.message ?: e.javaClass.simpleName
-                        android.util.Log.w("XlsxReader", "Worksheet " + s.name + " could not be parsed", e)
+                        SecureLog.warn("XlsxReader", "a worksheet could not be parsed", e) { s.name }
                     }
                 }
             }

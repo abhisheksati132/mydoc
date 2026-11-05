@@ -2,9 +2,9 @@ package com.abhisheksati.mydoc.rendering.engine
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
 import com.abhisheksati.mydoc.data.local.DocumentStreamResolver
 import com.abhisheksati.mydoc.domain.model.LoadFailure
+import com.abhisheksati.mydoc.util.SecureLog
 import kotlinx.coroutines.CancellationException
 import java.io.File
 import java.io.InputStream
@@ -36,7 +36,9 @@ object OfficeSourceReader {
     fun read(context: Context, uri: Uri, displayName: String): OfficeSource {
         val declaredSize = DocumentStreamResolver.sourceStamp(context, uri).first
         if (declaredSize > MAX_SOURCE_BYTES) {
-            Log.w(Tag, "$displayName declares $declaredSize bytes, over the $MAX_SOURCE_BYTES budget")
+            SecureLog.warn(Tag, "document is over the conversion size budget") {
+                "$displayName declares $declaredSize bytes, over the $MAX_SOURCE_BYTES budget"
+            }
             return OfficeSource.Failed(OfficeSourceFailure.TOO_LARGE)
         }
         val stream = try {
@@ -44,7 +46,7 @@ object OfficeSourceReader {
         } catch (e: CancellationException) {
             throw e
         } catch (t: Throwable) {
-            Log.w(Tag, "could not open $displayName", t)
+            SecureLog.warn(Tag, "could not open document", t) { displayName }
             null
         } ?: return OfficeSource.Failed(OfficeSourceFailure.UNREADABLE)
 
@@ -54,10 +56,10 @@ object OfficeSourceReader {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: OutOfMemoryError) {
-                Log.e(Tag, "out of memory reading $displayName", e)
+                SecureLog.error(Tag, "ran out of memory reading a document", e) { displayName }
                 OfficeSource.Failed(OfficeSourceFailure.OUT_OF_MEMORY)
             } catch (t: Throwable) {
-                Log.w(Tag, "could not read $displayName", t)
+                SecureLog.warn(Tag, "could not read document", t) { displayName }
                 OfficeSource.Failed(OfficeSourceFailure.UNREADABLE)
             }
         }
@@ -74,10 +76,10 @@ object OfficeSourceReader {
         } catch (e: CancellationException) {
             throw e
         } catch (e: OutOfMemoryError) {
-            Log.e(Tag, "out of memory reading ${file.name}", e)
+            SecureLog.error(Tag, "ran out of memory reading a document", e) { file.name }
             OfficeSource.Failed(OfficeSourceFailure.OUT_OF_MEMORY)
         } catch (t: Throwable) {
-            Log.w(Tag, "could not read ${file.name}", t)
+            SecureLog.warn(Tag, "could not read document", t) { file.name }
             OfficeSource.Failed(OfficeSourceFailure.UNREADABLE)
         }
     }

@@ -3,6 +3,7 @@ package com.abhisheksati.mydoc.rendering.engine.spreadsheet
 import android.content.Context
 import android.net.Uri
 import com.abhisheksati.mydoc.data.local.DocumentStreamResolver
+import com.abhisheksati.mydoc.util.SecureLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -53,7 +54,7 @@ object XlsxConverter {
             tempResolvedFile?.delete()
 
             val renderResult = XlsxPdfRenderer.renderWithOutlines(workbook) ?: run {
-                android.util.Log.w("XlsxConvert", "no printable range found in $displayName")
+                SecureLog.warn("XlsxConvert", "no printable range found in spreadsheet") { displayName }
                 return@withContext null
             }
 
@@ -73,7 +74,7 @@ object XlsxConverter {
 
             if (targetPdf.isFile && targetPdf.length() > 0) targetPdf else null
         } catch (t: Throwable) {
-            android.util.Log.w("XlsxConvert", "conversion failed for $displayName", t)
+            SecureLog.warn("XlsxConvert", "conversion failed for spreadsheet", t) { displayName }
             null
         }
     }

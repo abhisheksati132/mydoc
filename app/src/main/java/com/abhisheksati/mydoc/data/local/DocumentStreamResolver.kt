@@ -240,19 +240,42 @@ object DocumentStreamResolver {
                     uriString.substringAfter("primary:")
                 }
                 val relPath = Uri.decode(encodedPath)
-                val testPaths = listOf(
-                    File("/storage/emulated/0", relPath),
-                    File(Environment.getExternalStorageDirectory(), relPath)
+                val roots = listOfNotNull(
+                    Environment.getExternalStorageDirectory()?.takeIf { it.isDirectory },
+                    File("/storage/emulated/0").takeIf { it.isDirectory }
                 )
-                for (f in testPaths) {
-                    if (f.exists() && f.canRead() && f.length() > 0L) {
-                        return StreamResult(FileInputStream(f), Uri.fromFile(f), "external_storage_path")
+                for (root in roots) {
+                    // The relative part arrives from an untrusted content URI, so it is resolved and
+                    // checked for containment instead of being appended: a document id of
+                    // "primary:../../..<path>" used to reach any readable file on the device.
+                    val resolved = externalStorageChild(root, relPath) ?: continue
+                    if (resolved.exists() && resolved.canRead() && resolved.length() > 0L) {
+                        return StreamResult(FileInputStream(resolved), Uri.fromFile(resolved), "external_storage_path")
                     }
                 }
             }
         } catch (e: Throwable) {}
 
         return null
+    }
+
+    /**
+     * [relativePath] resolved inside [root], or null when it is absolute, empty, or escapes the root
+     * through `..` or a symlink. Canonicalising before the comparison is what makes `a/../b` safe.
+     */
+    internal fun externalStorageChild(root: File, relativePath: String): File? {
+        if (relativePath.isBlank() || relativePath.startsWith("/") || relativePath.startsWith("\\")) {
+            return null
+        }
+        val canonicalRoot = runCatching { root.canonicalFile }.getOrNull() ?: return null
+        val candidate = runCatching { File(canonicalRoot, relativePath).canonicalFile }.getOrNull()
+            ?: return null
+        if (candidate == canonicalRoot) return null
+        // Canonical paths carry no trailing separator except for a filesystem root, so the boundary
+        // character has to be added before the comparison — otherwise `/a` would contain `/ab/x`.
+        val rootPath = canonicalRoot.path
+        val prefix = if (rootPath.endsWith(File.separator)) rootPath else rootPath + File.separator
+        return candidate.takeIf { it.path.startsWith(prefix) }
     }
 
     const val MAX_SAVED_DOCS_COUNT = 50

@@ -248,8 +248,29 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   `selectedFiles.sumOf { it.length() }` ran on every recomposition of the sheet: one filesystem stat
   per selected file, on the UI thread, in reaction to a checkbox. It is produced off-thread now and
   only when the selection changes.
+- **A storage-provider document id could name a file outside external storage (Batch 6).** The
+  resolver's last tier took the `primary%3A<relative path>` part of an external-storage document URI
+  and passed it straight to `File(root, relativePath)`, so an id such as
+  `primary%3A%2E%2E%2F%2E%2E%2Fdata%2Fdata%2F%3Cpackage%3E%2Fx` resolved to the app's own private
+  directory — which is readable, unlike most of what a traversal can reach. The tier now resolves the
+  id against a canonical external-storage root through `DocumentStreamResolver.externalStorageChild()`,
+  which refuses absolute paths, UNC paths, an empty id, the storage root itself, and anything whose
+  canonical form does not stay inside the root. Tested on the JVM and on the emulator, where the
+  refusal is checked against a target that really exists and really resolves outside the root.
+- **Document names and paths were written to logcat in release builds (Batch 6).** Eighteen logging
+  sites interpolated `displayName`, `file.name` or a worksheet name into a `Log.w`/`Log.e` message,
+  so a bug report or a connected debugger could recover which documents the user had opened and
+  failed to open. They now go through `SecureLog`, whose detail argument is a lambda: in a release
+  build `BuildConfig.DEBUG` folds the branch away and the private text is never even produced, while
+  a debug build still logs it for whoever is fixing the bug.
 
 ### Tests
+
+- `ExternalStoragePathContainmentTest` (5 JVM) and `ExternalStorageContainmentOnDeviceTest` (3 on
+  `mydoc_api35`) — an ordinary relative id resolves to the file inside external storage, a `..` climb
+  is refused even when its target exists, an absolute or empty id is refused, naming the root is not
+  a document. `SecureLogTest` (4 JVM) — a release message carries the summary only, the detail lambda
+  is never invoked, a debug message still names the file.
 
 - `StorageMoveTrashSafetyTest` — 13 JVM tests over an injected `EntryMutator` seam: a
   folder move keeps the copy the source can no longer hold, an untouched source takes the

@@ -35,6 +35,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.material3.Button
 import androidx.compose.runtime.DisposableEffect
 import androidx.core.content.FileProvider
+import com.abhisheksati.mydoc.util.SecureLog
 import java.io.File
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -227,7 +228,7 @@ fun PresentationViewerScreen(
 
                 isLoading = false
             } catch (t: Throwable) {
-                android.util.Log.e("PresentationViewer", "Error loading presentation: ${document.displayName}", t)
+                SecureLog.error("PresentationViewer", "could not load presentation", t) { document.displayName }
                 errorMessage = UserMessages.readFailure("PresentationViewer", t)
                 isLoading = false
             }
