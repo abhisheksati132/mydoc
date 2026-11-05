@@ -5,7 +5,33 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+## [1.7.3] — 2026-11-05
+
 ### Fixed
+
+- **CI could not build at all on Linux: the dependency pins were Windows-only.** The
+  `gradle/verification-metadata.xml` added in this cycle was generated on a Windows machine, so the
+  one artifact in the graph that carries an operating-system classifier -
+  `com.android.tools.build:aapt2:9.5.0-16666295` - was pinned only as
+  `aapt2-9.5.0-16666295-windows.jar`. On the GitHub runners Gradle resolves the `-linux` variant,
+  found no checksum for it, and failed the first task that touches the Android tooling classpath
+  (`Dependency verification failed for configuration ':app:detachedConfiguration1'`), which took down
+  both CI jobs before any test ran. The Linux artifact is now pinned with its own SHA-256, measured
+  from Google's repository (2,451,278 bytes, `fa1014cb1431622d292ef55ba870e75882ea19987bec541698b912f446a2d08f`).
+  Nothing was relaxed: metadata verification and signature checking stay on, and `aapt2` is the only
+  OS-classified component in the resolved graph (checked against the whole pin file).
+- **Two device tests failed on faster hardware because they measured the clock, not the behaviour.**
+  `PdfSearchCancellationOnDeviceTest.renderingIsNotHeldBehindTheWholeDocumentSearch` demanded that a
+  1,200-page scan take more than 1,000 ms before it would judge locking strategy; CI measured
+  502/694/853/873 ms across runs, so the guard fired and the job went red even though the lock
+  discipline was correct. `DocumentSiblingsOnDeviceTest.theScanLeavesTheMainThreadFree` had the same
+  shape (`scan took 239/255/390 ms, too fast to judge` against a 400 ms floor). Both now prove the
+  property by ordering instead of duration: the search test asks for a page *from inside the
+  cancellation predicate*, which runs outside the rendering lock, so it completes only if the lock is
+  taken page by page; the sibling test posts work to the main looper once the scan is under way and
+  requires that work to run while `readableDocumentsIn` is still suspended. Each was checked against
+  the defect it is supposed to catch - holding the render lock for the whole scan and running the
+  scan inline on the main thread respectively - and both failed there.
 
 - **Moving a folder could destroy the only complete copy (H-1).** The cross-volume
   fallback in `StorageRepositoryImpl.move()` copied with `copyRecursively()`, then deleted
