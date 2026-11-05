@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -45,6 +46,10 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -118,7 +123,7 @@ fun ReadingControlsBottomSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(AppSpacing.minTouchTarget),
+                    .heightIn(min = AppSpacing.minTouchTarget),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -189,7 +194,7 @@ fun ReadingControlsBottomSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(AppSpacing.minTouchTarget),
+                    .heightIn(min = AppSpacing.minTouchTarget),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -301,33 +306,39 @@ fun ReadingControlsBottomSheet(
                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
             ) {
                 val activity = context as? Activity
-                val currentOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                // The activity holds the real request, so it is mirrored into state here. Reading
+                // `requestedOrientation` straight during composition gave the highlight no reason to
+                // recompose: the orientation changed under the user's finger and the selected button
+                // stayed on the old choice.
+                var currentOrientation by remember(activity) {
+                    mutableIntStateOf(
+                        activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                    )
+                }
+                val requestOrientation: (Int) -> Unit = { mode ->
+                    activity?.requestedOrientation = mode
+                    currentOrientation = mode
+                }
 
                 ThemeOptionButton(
                     label = "Auto",
                     icon = Icons.Outlined.ScreenRotation,
                     isSelected = currentOrientation == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED,
-                    onClick = {
-                        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-                    },
+                    onClick = { requestOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) },
                     modifier = Modifier.weight(1f)
                 )
                 ThemeOptionButton(
                     label = "Portrait",
                     icon = Icons.Outlined.StayCurrentPortrait,
                     isSelected = currentOrientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT,
-                    onClick = {
-                        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                    },
+                    onClick = { requestOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT) },
                     modifier = Modifier.weight(1f)
                 )
                 ThemeOptionButton(
                     label = "Landscape",
                     icon = Icons.Outlined.StayCurrentLandscape,
                     isSelected = currentOrientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE,
-                    onClick = {
-                        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                    },
+                    onClick = { requestOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -338,7 +349,7 @@ fun ReadingControlsBottomSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(AppSpacing.minTouchTarget)
+                    .heightIn(min = AppSpacing.minTouchTarget)
                     .clickable {
                         onKeepScreenOnChange(!isKeepScreenOn)
                     },

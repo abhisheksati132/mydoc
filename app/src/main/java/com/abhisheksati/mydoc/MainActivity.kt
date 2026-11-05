@@ -169,7 +169,6 @@ class MainActivity : ComponentActivity() {
 
             val themeMode by app.settingsRepository.themeMode.collectAsStateWithLifecycle()
             val amoledBlack by app.settingsRepository.amoledBlack.collectAsStateWithLifecycle()
-            val dynamicColor by app.settingsRepository.dynamicColor.collectAsStateWithLifecycle()
             val glassEffectMode by app.settingsRepository.glassEffectMode.collectAsStateWithLifecycle()
             val hapticsEnabled by app.settingsRepository.isHapticFeedbackEnabled.collectAsStateWithLifecycle()
             val autoResumeVideo by app.settingsRepository.autoResumeVideo.collectAsStateWithLifecycle()
@@ -233,7 +232,6 @@ class MainActivity : ComponentActivity() {
 
             AppDesignSystemTheme(
                 darkTheme = isDark,
-                dynamicColor = dynamicColor,
                 amoledBlack = isBlack
             ) {
                 CompositionLocalProvider(

@@ -128,7 +128,6 @@ fun PhotoViewerScreen(
     var isMoreMenuOpen by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var ocrExtractedText by remember { mutableStateOf<String?>(null) }
-    var isOcrRunning by remember { mutableStateOf(false) }
     val ocrEngine = remember { com.abhisheksati.mydoc.ocr.OcrEngine(context) }
     DisposableEffect(ocrEngine) {
         onDispose {

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,7 +51,7 @@ fun OcrResultSheet(
     val colors = AppTheme.colors
     val typography = AppTheme.typography
 
-    val wordCount = text.split(Regex("\\s+")).count { it.isNotBlank() }
+    val wordCount = remember(text) { ocrWordCount(text) }
     val charCount = text.length
 
     ModalBottomSheet(
@@ -198,3 +199,12 @@ fun OcrResultSheet(
         }
     }
 }
+
+/**
+ * The sheet used to split the whole OCR result on every recomposition — a regex compile plus one
+ * substring per word, per scroll, per button press, for a text that never changes while it is open.
+ * Splitting is now done once per text, and the counting itself is exposed so it can be tested.
+ */
+internal fun ocrWordCount(text: String): Int = text.split(OCR_WHITESPACE).count { it.isNotBlank() }
+
+private val OCR_WHITESPACE = Regex("\\s+")

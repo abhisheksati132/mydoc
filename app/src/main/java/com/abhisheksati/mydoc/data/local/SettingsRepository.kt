@@ -85,11 +85,6 @@ class SettingsRepository(private val context: Context) {
     private val _doubleTapZoom = MutableStateFlow(prefs.getBoolean(KEY_DOUBLE_TAP_ZOOM, true))
     val doubleTapZoom: StateFlow<Boolean> = _doubleTapZoom.asStateFlow()
 
-    // Brand default: the fixed "Ink & Seal" palette is the identity. Material You wallpaper
-    // theming is opt-in (it overrides the brand accent), so it defaults off.
-    private val _dynamicColor = MutableStateFlow(prefs.getBoolean(KEY_DYNAMIC_COLOR, false))
-    val dynamicColor: StateFlow<Boolean> = _dynamicColor.asStateFlow()
-
     private val _filesGridView = MutableStateFlow(prefs.getBoolean(KEY_FILES_GRID_VIEW, false))
     val filesGridView: StateFlow<Boolean> = _filesGridView.asStateFlow()
 
@@ -115,11 +110,6 @@ class SettingsRepository(private val context: Context) {
     fun setCheckUpdatesOnLaunch(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_CHECK_UPDATES_ON_LAUNCH, enabled).apply()
         _checkUpdatesOnLaunch.value = enabled
-    }
-
-    fun setDynamicColor(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_DYNAMIC_COLOR, enabled).apply()
-        _dynamicColor.value = enabled
     }
 
     fun setFilesGridView(enabled: Boolean) {
@@ -346,7 +336,6 @@ class SettingsRepository(private val context: Context) {
         private const val KEY_VOLUME_KEY_TURNING = "volume_key_turning"
         private const val KEY_VIDEO_AUTO_LOOP = "video_auto_loop"
         private const val KEY_DOUBLE_TAP_ZOOM = "double_tap_zoom"
-        private const val KEY_DYNAMIC_COLOR = "dynamic_color_enabled"
         private const val KEY_FILES_GRID_VIEW = "files_grid_view"
         private const val KEY_AMOLED_BLACK = "amoled_black_enabled"
         private const val KEY_CHECK_UPDATES_ON_LAUNCH = "check_updates_on_launch"

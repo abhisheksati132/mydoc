@@ -54,6 +54,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
@@ -279,6 +283,7 @@ fun FileRow(
             .fillMaxWidth()
             .padding(horizontal = 10.dp)
             .clip(AppRadius.cardShape)
+            .selectionSemantics(isSelected)
             .background(if (isSelected) scheme.primaryContainer else scheme.background)
             .combinedClickable(
                 onClick = onClick,
@@ -360,6 +365,7 @@ fun FileGridCell(
         modifier = modifier
             .fillMaxWidth()
             .clip(AppRadius.cardShape)
+            .selectionSemantics(isSelected)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = {
@@ -655,3 +661,15 @@ fun BreadcrumbRow(
         }
     }
 }
+
+/**
+ * R7: a file row is a checkable item, but it only looked like one. Selection was drawn as a filled
+ * container plus a tick icon, so a screen-reader user heard "Open" / the file name and nothing about
+ * whether the row was selected, and could not tell which control to activate. The click action stays
+ * where it is (the row needs long-press too); this publishes the state and the role alongside it.
+ */
+private fun Modifier.selectionSemantics(isSelected: Boolean): Modifier = semantics {
+    role = Role.Checkbox
+    selected = isSelected
+}
+

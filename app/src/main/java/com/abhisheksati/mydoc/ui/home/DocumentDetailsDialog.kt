@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -178,7 +179,7 @@ fun DocumentDetailsDialog(
         confirmButton = {
             Box(
                 modifier = Modifier
-                    .height(AppSpacing.minTouchTarget)
+                    .heightIn(min = AppSpacing.minTouchTarget)
                     .clip(AppRadius.roundShape)
                     .background(colors.accent)
                     .clickable {
@@ -198,7 +199,7 @@ fun DocumentDetailsDialog(
         dismissButton = {
             Box(
                 modifier = Modifier
-                    .height(AppSpacing.minTouchTarget)
+                    .heightIn(min = AppSpacing.minTouchTarget)
                     .clip(AppRadius.roundShape)
                     .border(
                         width = AppSpacing.dividerThickness,
@@ -269,7 +270,7 @@ private fun DialogActionButton(
 
     Box(
         modifier = modifier
-            .height(AppSpacing.minTouchTarget)
+            .heightIn(min = AppSpacing.minTouchTarget)
             .clip(AppRadius.roundShape)
             .border(
                 width = AppSpacing.dividerThickness,

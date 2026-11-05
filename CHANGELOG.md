@@ -278,6 +278,31 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   was renamed or replaced by a link after the scan, or one that was never in the scan, or the root
   itself. It now takes the scanned root, skips any entry whose canonical path is not strictly inside
   it, and reports a folder it could not remove instead of swallowing the exception.
+- **Two viewer leftovers (N-20, N-22).** `SettingsRepository.setDynamicColor()` wrote a preference no
+  screen could reach, and `AppDesignSystemTheme` defaulted its `dynamicColor` parameter to the opposite
+  of what the app ships — so every preview (`ViewerTopBar`, `ViewerBottomBar`, `ReadingControlsBottomSheet`,
+  the design-system preview) rendered a Material You palette the user never sees. The dead writer, its
+  unread flow and the `dynamic_color_enabled` key are gone, and the default is now the shipped value:
+  the brand palette, off for wallpaper colours. `OcrResultSheet` split the entire OCR result to count
+  words during composition — a regex compile plus one substring per word, on every scroll and every
+  button press, for text that cannot change while the sheet is open; the count is now produced once per
+  text and the counting itself is a named function under test. `PhotoViewerScreen`'s `isOcrRunning` was
+  written nowhere and read nowhere; deleted.
+
+- **Selection, orientation and text rows in the viewer and file lists (N-15, R7, R8).** The reading
+  controls sheet read `activity.requestedOrientation` during composition and wrote to it on tap, so
+  the request changed under the user's finger while the selected pill stayed on the old choice; the
+  value is mirrored into state now and both are written together. A file row in the Files list and
+  grid announced itself as a plain clickable: `combinedClickable` plus a filled container and a tick
+  icon, no `Role.Checkbox`, no `selected` state, so a screen reader could not hear which items were
+  in the batch or that this row was one — both rows now publish role and selection state. Six rows
+  (three in the document-details dialog, three in the reading controls sheet) were pinned to exactly
+  `minTouchTarget` height, which clips the label when the system font scale grows; they are
+  `heightIn(min =)` now, so the row keeps its minimum touch size and still makes room for text.
+  Compile, lint and the suite cover the code; the highlight moving, TalkBack announcing "checked" and
+  the row at 1.3× font scale are visual properties that need a screen pass and are recorded as not
+  yet visually verified rather than claimed as fixed.
+
 ### Documentation and release integrity (Batch 6)
 - **Third-party notices now describe the APK that exists.** ZXing, `docx-preview`, `JSZip` and a
   design-attribution credit to an unrelated PDF app are removed: no artifact, WebView, JavaScript
@@ -321,6 +346,14 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   leftovers. Both new behaviours were proved non-vacuous by re-running the classes with the fix
   removed — 3 cleaner tests and 2 zip tests fail against the previous code, and pass again once it is
   restored.
+
+- `OcrWordCountTest` (5 JVM) — running text, runs of whitespace, an empty result, an unbroken token
+  with no spaces (counts 1, not 0), and a 2 MB result counted inside a stated time bound.
+  `SettingsRepositorySurfaceTest` (2 JVM) — reflection over the class: no `setDynamicColor` and no
+  unread `_dynamicColor` field can come back, while the toggles that are genuinely on screen
+  (`setShowHiddenFiles`, `setGlassEffectMode`, `setCheckUpdatesOnLaunch`) must stay. The other half of
+  N-20 — a Composable's default parameter — is not reachable from a JVM test; the previews rendering
+  the brand palette is a visual property and needs a screen pass to confirm, not a unit test.
 
 - `ExternalStoragePathContainmentTest` (5 JVM) and `ExternalStorageContainmentOnDeviceTest` (3 on
   `mydoc_api35`) — an ordinary relative id resolves to the file inside external storage, a `..` climb
