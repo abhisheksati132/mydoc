@@ -91,7 +91,9 @@ fun HomeScreen(
     onSpotlightSearch: () -> Unit,
     onShareDocument: (DocumentFile) -> Unit,
     modifier: Modifier = Modifier,
-    updateManager: UpdateManager? = null
+    updateManager: UpdateManager? = null,
+    quickScanRequested: Boolean = false,
+    onQuickScanShown: () -> Unit = {}
 ) {
 
     val uiState by viewModel.uiState.collectAsState()
@@ -113,10 +115,12 @@ fun HomeScreen(
         }
     )
 
-    // Trigger instant scanning when launched from Quick Settings tile
-    LaunchedEffect(Unit) {
-        MainActivity.quickScanEvents.collect {
+    // The Quick Scan tile. MainActivity holds the request as state, so it reaches the scanner from
+    // whatever screen was showing; this only has to act on it while Home is on screen.
+    LaunchedEffect(quickScanRequested) {
+        if (quickScanRequested) {
             documentScanner()
+            onQuickScanShown()
         }
     }
 

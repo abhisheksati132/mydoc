@@ -25,6 +25,24 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
     }
 }
 
+/**
+ * The favourites and playback lists are ordered by their timestamp columns, which were unindexed,
+ * and both lists were unbounded. The index names below are the ones Room generates, so a mismatch
+ * would fail schema validation on open rather than quietly do nothing.
+ */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_favorite_documents_addedTimestamp` " +
+                "ON `favorite_documents` (`addedTimestamp`)"
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_media_playback_updatedTimestamp` " +
+                "ON `media_playback` (`updatedTimestamp`)"
+        )
+    }
+}
+
 val MIGRATION_3_5 = object : Migration(3, 5) {
     override fun migrate(db: SupportSQLiteDatabase) {
         // Direct jump from 3 to 5 (shelves were only added in 4 and removed in 5)
@@ -39,7 +57,7 @@ val MIGRATION_3_5 = object : Migration(3, 5) {
         MediaPlaybackEntity::class,
         TrashEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -61,7 +79,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "mydoc.db"
                 )
-                    .addMigrations(MIGRATION_4_5, MIGRATION_3_5)
+                    .addMigrations(MIGRATION_4_5, MIGRATION_3_5, MIGRATION_5_6)
                     .fallbackToDestructiveMigrationFrom(true, 1, 2)
                     .build()
                 INSTANCE = instance

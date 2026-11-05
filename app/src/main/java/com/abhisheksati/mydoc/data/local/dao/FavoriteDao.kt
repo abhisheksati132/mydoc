@@ -10,8 +10,14 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface FavoriteDao {
 
-    @Query("SELECT * FROM favorite_documents ORDER BY addedTimestamp DESC")
-    fun getAllFavorites(): Flow<List<FavoriteDocumentEntity>>
+    companion object {
+        /** A list nobody can scroll to the end of is not a list; the index behind it is what keeps the query cheap. */
+        const val MAX_LISTED = 500
+    }
+
+
+    @Query("SELECT * FROM favorite_documents ORDER BY addedTimestamp DESC LIMIT :limit")
+    fun getAllFavorites(limit: Int = MAX_LISTED): Flow<List<FavoriteDocumentEntity>>
 
     @Query("SELECT EXISTS(SELECT 1 FROM favorite_documents WHERE uri = :uri)")
     suspend fun isFavorite(uri: String): Boolean

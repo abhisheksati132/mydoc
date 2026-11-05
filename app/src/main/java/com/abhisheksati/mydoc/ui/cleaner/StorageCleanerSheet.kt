@@ -1,5 +1,10 @@
 package com.abhisheksati.mydoc.ui.cleaner
 
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.getValue
+
+import kotlinx.coroutines.withContext
 import com.abhisheksati.mydoc.util.UserMessages
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -96,7 +101,11 @@ fun StorageCleanerSheet(
         if (cleanDuplicates) res.duplicateGroups.forEach { addAll(it.duplicates) }
     }.distinctBy { it.absolutePath }
     val selectedEmptyDirs = if (cleanEmptyFolders) res.emptyFolders else emptyList()
-    val selectedBytesToFree = selectedFiles.sumOf { it.length() }
+    // One stat per selected file: it used to run on every recomposition of the sheet, on the
+    // main thread, while the reader was watching the checkbox respond.
+    val selectedBytesToFree by produceState(0L, selectedFiles) {
+        value = withContext(Dispatchers.IO) { selectedFiles.sumOf { it.length() } }
+    }
     val hasSelection = selectedFiles.isNotEmpty() || selectedEmptyDirs.isNotEmpty()
 
     ModalBottomSheet(

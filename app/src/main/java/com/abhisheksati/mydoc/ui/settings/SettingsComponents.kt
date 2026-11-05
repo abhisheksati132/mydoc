@@ -2,6 +2,7 @@ package com.abhisheksati.mydoc.ui.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
@@ -122,7 +124,14 @@ fun SettingToggleRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) }
+            // The row is the control. A clickable Row around a live Switch made two focus nodes
+            // and two switch states for one setting, so a screen reader announced the pair twice
+            // and TalkBack users could toggle the same preference from either node.
+            .toggleable(
+                value = checked,
+                role = Role.Switch,
+                onValueChange = onCheckedChange
+            )
             .defaultMinSize(minHeight = 56.dp)
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -154,7 +163,7 @@ fun SettingToggleRow(
         }
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange
+            onCheckedChange = null
         )
     }
 }

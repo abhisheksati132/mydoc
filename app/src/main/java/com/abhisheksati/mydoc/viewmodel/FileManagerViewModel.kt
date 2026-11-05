@@ -756,7 +756,9 @@ class FileManagerViewModel(
     }
 
     fun toggleHiddenFiles() {
-        _uiState.update { it.copy(showHiddenFiles = !it.showHiddenFiles) }
+        val next = !_uiState.value.showHiddenFiles
+        _uiState.update { it.copy(showHiddenFiles = next) }
+        settingsRepository?.setShowHiddenFiles(next)
         loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
     }
 

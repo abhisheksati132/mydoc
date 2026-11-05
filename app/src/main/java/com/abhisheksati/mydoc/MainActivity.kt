@@ -25,6 +25,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -242,12 +243,21 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val selectedTool by toolsViewModel.selectedTool.collectAsStateWithLifecycle()
 
+                // The tile used to post into a replay-zero shared flow whose only subscriber was
+                // HomeScreen, so tapping it from the viewer, settings or search dropped the request
+                // on the floor. The request is state now, and a pending one resolves to Home.
+                var quickScanRequested by remember { mutableStateOf(false) }
+                LaunchedEffect(Unit) {
+                    MainActivity.quickScanEvents.collect { quickScanRequested = true }
+                }
+
                 val photo = currentPhoto
                 val video = currentVideo
                 val audio = currentAudio
                 val doc = currentDocument
                 val activeScreen: ActiveScreen = when {
                     !isAppUnlocked && isBiometricLockEnabled -> ActiveScreen.Lock
+                    quickScanRequested -> ActiveScreen.Home
                     isDesignSystemPreviewOpen && BuildConfig.DEBUG -> ActiveScreen.DesignSystemPreview
                     isSettingsOpen -> ActiveScreen.Settings
                     isSpotlightSearchOpen -> ActiveScreen.Search
@@ -480,6 +490,8 @@ class MainActivity : ComponentActivity() {
                                         }
                                         ActiveScreen.Home -> {
                                             HomeScreen(
+                                                quickScanRequested = quickScanRequested,
+                                                onQuickScanShown = { quickScanRequested = false },
                                                 viewModel = homeViewModel,
                                                 toolsViewModel = toolsViewModel,
                                                 fileManagerViewModel = fileManagerViewModel,

@@ -267,26 +267,6 @@ val DarkAppColors = AppColors(
     paperGrainColor = Color(0x00000000)
 )
 
-/** Pure AMOLED zero-nit obsidian variant. */
-val BlackAppColors = DarkAppColors.copy(
-    background = Color(0xFF000000),
-    surface = Color(0xFF12100D),
-    surfaceMuted = Color(0xFF1C1A16),
-    line = Color(0xFF2A2721),
-    ink = Color(0xFFF2EFE8),
-    inkMuted = Color(0xFFA8A090),
-    highlight = Color(0xFF123A36),
-    glassTint = Color(0x6B1C1A16),
-    glassRimTop = Color(0x40FFFFFF),
-    glassRimBottom = Color(0x26FFFFFF),
-    glassInnerShadow = Color(0x0F000000),
-    surfaceContainer = Color(0xFF12100D),
-    surfaceContainerHigh = Color(0xFF1C1A16),
-    surfaceContainerLow = Color(0xFF000000),
-    primaryContainer = Color(0xFF1C1A16),
-    secondaryContainer = Color(0xFF1C1A16)
-)
-
 val LocalAppColors = staticCompositionLocalOf { LightAppColors }
 
 fun kindColor(kind: MediaKind, isDark: Boolean = false): Color {

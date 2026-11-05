@@ -210,6 +210,45 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   budget or the device, unreadable → `CONVERSION_FAILED`, and only a genuine layout failure keeps the
   reflow wording. Cancellation is rethrown, not reported.
 
+- **A transient message could overwrite another one (N-16).** `AppMessages` held a single "latest"
+  value while the snackbar host was suspended inside `showSnackbar`, so a second message — e.g. the
+  "what was left behind" half of a partial-move result — replaced the first and it was never seen.
+  The channel is a queue now, delivered in order, with the identifier counter made atomic.
+- **Settings rows were two controls, not one (N-17).** The shared row wrapped a live `Switch` in a
+  `clickable` Row: two focus nodes, two switch states, and TalkBack announcing each preference twice
+  with two different ways to change it. The row is now the single `toggleable` with `Role.Switch` and
+  the Switch is display-only.
+- **The Quick Scan tile did nothing unless Home was on screen (N-18).** The tile posted into a
+  replay-zero shared flow whose only subscriber was `HomeScreen`, so tapping it from the viewer,
+  settings or search dropped the request. The request is state in `MainActivity` now, and a pending
+  request resolves the derived screen to Home, which opens the scanner and clears it.
+- **The hidden-files toggle did not persist (N-19).** `SettingsRepository.setShowHiddenFiles()`
+  existed, wrote to preferences and had no callers: the browser flipped its in-memory state and the
+  next open was back to hidden-files-off. The toggle now goes through the repository.
+- **`formatMiddleTruncated` could ask for a negative number of characters (N-21).** With a long
+  extension or a limit below the extension's length, `availableForBase` went negative and
+  `name.take(maxChars - ext.length - 1)`/`substring(0, n)` threw while a title bar was being
+  composed. Extensions longer than eight characters are now treated as name text, the head of the
+  name is kept when nothing else fits, and every limit from 1 up is bounded. Titles containing the
+  field separator no longer have to be rewritten to survive a cache round trip either.
+- **Favourites and playback lists were unindexed and unbounded (N-29).** Both entities keyed only on
+  their `uri` primary key while every list query ordered by a timestamp column, and neither query had
+  a `LIMIT`. Room is at version 6 with `MIGRATION_5_6` creating the two indexes the planner needs —
+  verified on device, including that existing rows survive the migration — and both flows are capped
+  at 500 rows.
+- **An outline sidecar could outlive the document it described (N-30).** The cache was keyed by file
+  name only and validated nothing, so a document re-converted under the same name read the previous
+  outline; saving an empty outline returned early, leaving the old sidecar in place for a table of
+  contents that had been deleted. The sidecar now carries the PDF's size and modification time, an
+  unstampable (older-format) sidecar is distrusted and dropped, and clearing the outlines clears the
+  file. Nested levels were already preserved and still are.
+- **`BlackAppColors` was dead code (N-31).** The obsidian palette it defines is never selected;
+  `AppTheme` builds the AMOLED variant itself. Removed rather than left to imply a second path.
+- **The storage cleaner counted bytes on the main thread during composition (R6).**
+  `selectedFiles.sumOf { it.length() }` ran on every recomposition of the sheet: one filesystem stat
+  per selected file, on the UI thread, in reaction to a checkbox. It is produced off-thread now and
+  only when the selection changes.
+
 ### Tests
 
 - `StorageMoveTrashSafetyTest` — 13 JVM tests over an injected `EntryMutator` seam: a
@@ -286,6 +325,18 @@ quietly. Detecting that needs a terminator check in the worksheet loop, not just
   and a scan dispatched from Main keeps the main looper ticking (the test posts a 20 ms ticker and
   fails if the looper did not get at least one tick per 40 ms of a scan measured to take >400 ms —
   a scan that held the main thread could not satisfy it).
+- `AppMessagesTest` — 4 JVM tests: two messages arriving while one is on screen are both delivered
+  in order, ids are distinct and increasing, and an empty queue yields nothing.
+- `FilenameFormatterTest` — 9 JVM tests: a name that fits, a long extension against a 16-character
+  limit, every limit from 1 to the name length, a leading dot not treated as an extension, zero and
+  negative limits, and non-ASCII names measured in characters.
+- `OutlineCacheTest` — 6 JVM tests on real files: nested levels survive, a pipe in a title survives
+  unmangled, a re-converted document under the same name does not reuse the old outline, an empty
+  outline clears the sidecar, a sidecar without a stamp is distrusted, no cache means no result.
+- `MigrationTest` — 3 instrumented tests now, including `migrate5to6AddsIndexesAndKeepsEveryRecord`
+  (both indexes created and the user's rows intact) and a bounded-favourites check against the real
+  Room database.
+
 - `OfficeSourceReaderTest` — 8 JVM tests on the bounded reader: a claim that matches the stream, a
   claim that is too long (only the bytes that exist are returned), a claim that is too short (it
   grows and still reads in full), a stream past the budget refused rather than buffered, an absurd
