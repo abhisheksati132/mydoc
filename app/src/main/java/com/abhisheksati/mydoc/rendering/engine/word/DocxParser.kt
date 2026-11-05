@@ -18,16 +18,53 @@ data class DocxRun(
     val text: String,
     val isBold: Boolean = false,
     val isItalic: Boolean = false,
-    val isUnderline: Boolean = false
+    val isUnderline: Boolean = false,
+    /** Where a `w:hyperlink` pointed. Null for ordinary text. */
+    val linkTarget: String? = null
 )
+
+/**
+ * A table cell. It holds blocks rather than a string because a cell can contain several paragraphs
+ * and can contain another table: with a string cell, an inner `w:tbl` used to clear the outer
+ * table's rows and both tables lost content.
+ */
+data class DocxCell(val blocks: List<DocxBlock>) {
+    /** Everything the cell says, for renderers that only draw text. */
+    val text: String
+        get() = blocks.mapNotNull { DocxBlock.plainTextOf(it) }.joinToString("\n").trim()
+}
 
 sealed class DocxBlock {
     data class Heading(val text: String, val level: Int = 1) : DocxBlock()
     data class Paragraph(val runs: List<DocxRun>) : DocxBlock() {
         val fullText: String get() = runs.joinToString("") { it.text }
     }
-    data class Bullet(val runs: List<DocxRun>) : DocxBlock()
-    data class Table(val rows: List<List<String>>) : DocxBlock()
+
+    /**
+     * A list item at any depth. [marker] is what Word would print before the text - "bullet" becomes
+     * "\u2022", a decimal level becomes "1." - and [ordered] says whether the marker came from a
+     * numbering definition or from a bullet character. The old model could only express bullets, so
+     * every numbered list in a .docx was rendered as one.
+     */
+    data class ListItem(
+        val runs: List<DocxRun>,
+        val marker: String = "\u2022",
+        val level: Int = 0,
+        val ordered: Boolean = false
+    ) : DocxBlock() {
+        val fullText: String get() = runs.joinToString("") { it.text }
+    }
+
+    data class Table(val rows: List<List<DocxCell>>) : DocxBlock()
+
+    companion object {
+        fun plainTextOf(block: DocxBlock): String? = when (block) {
+            is Heading -> block.text
+            is Paragraph -> block.fullText.takeIf { it.isNotEmpty() }
+            is ListItem -> block.fullText.takeIf { it.isNotEmpty() }
+            is Table -> block.rows.joinToString("\n") { row -> row.joinToString(" | ") { it.text } }
+        }
+    }
 }
 
 data class DocxDocument(
@@ -89,7 +126,11 @@ class DocxParser {
                         if (entryCount > 10_000) throw SecurityException("Entry count exceeds limit")
                         if (!entry.isDirectory) {
                             val norm = entry.name.replace('\\', '/').trimStart('/').lowercase()
-                            if (norm == "word/document.xml" || norm == "content.xml") {
+                            // document.xml alone cannot describe a Word file: hyperlink targets live
+                            // in word/_rels/document.xml.rels, list definitions in word/numbering.xml,
+                            // heading levels in word/styles.xml, and footnote text in word/footnotes.xml.
+                            val wanted = norm in READER_PARTS
+                            if (wanted) {
                                 val data = readBounded(zis, 25 * 1024 * 1024)
                                 totalExtractedBytes += data.size
                                 if (totalExtractedBytes > 100L * 1024 * 1024) {
@@ -116,7 +157,17 @@ class DocxParser {
                 )
             }
 
-            entryMap["word/document.xml"]?.let { blocks.addAll(parseDocumentXml(createPullParser(it))) }
+            entryMap["word/document.xml"]?.let { doc ->
+                val ctx = DocxContext(
+                    links = readHyperlinkTargets(entryMap["word/_rels/document.xml.rels"]),
+                    numbering = readNumberingDefinitions(entryMap["word/numbering.xml"]),
+                    styles = readParagraphStyles(entryMap["word/styles.xml"]),
+                    footnotes = readNotes(entryMap["word/footnotes.xml"], "w:footnote"),
+                    endnotes = readNotes(entryMap["word/endnotes.xml"], "w:endnote")
+                )
+                blocks.addAll(parseDocumentXml(createPullParser(doc), ctx))
+                blocks.addAll(noteBlocks(ctx))
+            }
             if (blocks.isEmpty()) entryMap["content.xml"]?.let { blocks.addAll(parseOdtXml(it)) }
 
             if (blocks.isEmpty()) {
@@ -293,7 +344,7 @@ class DocxParser {
                                 if (text.isNotEmpty() && !inTable) {
                                     val runs = listOf(DocxRun(text = text, isBold = isBold, isItalic = isItalic, isUnderline = isUnderline))
                                     if (inList) {
-                                        blocks.add(DocxBlock.Bullet(runs))
+                                        blocks.add(DocxBlock.ListItem(runs, "•", 0, false))
                                     } else {
                                         blocks.add(DocxBlock.Paragraph(runs))
                                     }
@@ -316,7 +367,9 @@ class DocxParser {
                             }
                             name.equals("table", ignoreCase = true) -> {
                                 if (currentTableRows.isNotEmpty()) {
-                                    blocks.add(DocxBlock.Table(currentTableRows.map { it.toList() }))
+                                    blocks.add(DocxBlock.Table(currentTableRows.map { row ->
+                            row.map { text -> DocxCell(listOf(DocxBlock.Paragraph(listOf(DocxRun(text))))) }
+                        }))
                                 }
                                 inTable = false
                             }
@@ -402,135 +455,576 @@ class DocxParser {
         return blocks
     }
 
-    private fun parseDocumentXml(parser: XmlPullParser): List<DocxBlock> {
+    /**
+     * What a paragraph's own XML cannot tell you. Hyperlink targets live in
+     * `word/_rels/document.xml.rels`, list definitions in `word/numbering.xml`, a heading level is
+     * only reliable through `word/styles.xml`, because `w:pStyle` carries a style *id* whose spelling
+     * a localized template is free to change, and footnote text is kept out of the body altogether in
+     * `word/footnotes.xml`.
+     */
+    internal class DocxContext(
+        val links: Map<String, String> = emptyMap(),
+        val numbering: Map<Int, AbstractNumbering> = emptyMap(),
+        val styles: Map<String, ParagraphStyle> = emptyMap(),
+        val footnotes: Map<Int, List<DocxRun>> = emptyMap(),
+        val endnotes: Map<Int, List<DocxRun>> = emptyMap(),
+        val cited: NoteCitations = NoteCitations()
+    )
+
+    /**
+     * Which notes the body points at, in the order they are first cited. Word shows that position as
+     * the superscript number, so the same number is used for the reference and for the note text.
+     */
+    internal class NoteCitations {
+        private val footnoteIds = mutableListOf<Int>()
+        private val endnoteIds = mutableListOf<Int>()
+
+        fun footnoteNumber(id: Int): Int {
+            if (id !in footnoteIds) footnoteIds.add(id)
+            return footnoteIds.indexOf(id) + 1
+        }
+
+        fun endnoteNumber(id: Int): Int {
+            if (id !in endnoteIds) endnoteIds.add(id)
+            return endnoteIds.indexOf(id) + 1
+        }
+
+        val citedFootnotes: List<Int> get() = footnoteIds
+        val citedEndnotes: List<Int> get() = endnoteIds
+    }
+
+    internal data class NumberLevel(val format: String, val text: String, val start: Int)
+    internal data class AbstractNumbering(val levels: Map<Int, NumberLevel>)
+    internal data class ParagraphStyle(
+        val name: String,
+        val outlineLevel: Int?,
+        val basedOn: String?,
+        val numId: Int? = null,
+        val ilvl: Int = 0
+    )
+
+    private companion object {
+        /** Word nests tables inside cells; past this depth the content is scraped, not parsed. */
+        const val MAX_TABLE_DEPTH = 8
+
+        /**
+         * The parts the readers below interpret. Everything else in the package stays compressed:
+         * images, styles beyond the paragraph definitions, and the binary junk a Word file carries.
+         */
+        val READER_PARTS = setOf(
+            "word/document.xml",
+            "word/_rels/document.xml.rels",
+            "word/numbering.xml",
+            "word/styles.xml",
+            "word/footnotes.xml",
+            "word/endnotes.xml",
+            "content.xml"
+        )
+    }
+
+    private fun attrInt(parser: XmlPullParser, name: String, absent: Int): Int =
+        parser.getAttributeValue(null, name)?.toIntOrNull() ?: absent
+
+    /** `<w:b w:val="0"/>` and `w:val="false"` switch a property *off*; the old reader set it on. */
+    private fun attrOn(parser: XmlPullParser, absent: Boolean = true): Boolean {
+        val value = parser.getAttributeValue(null, "w:val")?.lowercase() ?: return absent
+        return value != "false" && value != "0" && value != "none" && value != "off"
+    }
+
+    private fun readHyperlinkTargets(xml: ByteArray?): Map<String, String> {
+        if (xml == null) return emptyMap()
+        val targets = HashMap<String, String>()
+        val parser = EngineXml.newPullParser(ByteArrayInputStream(xml))
+        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+            if (parser.eventType == XmlPullParser.START_TAG && parser.name == "Relationship") {
+                val id = parser.getAttributeValue(null, "Id")
+                val target = parser.getAttributeValue(null, "Target")
+                val mode = parser.getAttributeValue(null, "TargetMode")
+                if (id != null && !target.isNullOrBlank() && (mode == null || mode == "External")) {
+                    targets[id] = target
+                }
+            }
+            parser.next()
+        }
+        return targets
+    }
+
+    /**
+     * Footnote and endnote text, keyed by the id the body cites it with. Word writes two notes that
+     * are page furniture rather than content - a `w:type="separator"` and a continuation separator -
+     * and those carry only the reference mark itself, so they are skipped instead of read.
+     */
+    private fun readNotes(xml: ByteArray?, noteTag: String): Map<Int, List<DocxRun>> {
+        if (xml == null) return emptyMap()
+        val notes = HashMap<Int, List<DocxRun>>()
+        val parser = EngineXml.newPullParser(ByteArrayInputStream(xml))
+        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+            if (parser.eventType == XmlPullParser.START_TAG && parser.name == noteTag) {
+                val id = attrInt(parser, "w:id", -1)
+                if (parser.getAttributeValue(null, "w:type") == null && id >= 0) {
+                    readNoteText(parser, noteTag).takeIf { it.isNotEmpty() }?.let { notes[id] = it }
+                } else {
+                    skipElement(parser)
+                }
+            }
+            parser.next()
+        }
+        return notes
+    }
+
+    /** Called on the note's START_TAG; returns on its END_TAG with the runs the note is made of. */
+    private fun readNoteText(parser: XmlPullParser, noteTag: String): List<DocxRun> {
+        val runs = mutableListOf<DocxRun>()
+        var collecting = false
+        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+            when (parser.eventType) {
+                XmlPullParser.START_TAG -> if (parser.name == "w:t") collecting = true
+                XmlPullParser.END_TAG -> when (parser.name) {
+                    "w:t" -> collecting = false
+                    noteTag -> return runs
+                }
+
+                XmlPullParser.TEXT -> if (collecting) {
+                    val text = parser.text
+                    if (!text.isNullOrEmpty()) runs.add(DocxRun(text))
+                }
+            }
+            parser.next()
+        }
+        return runs
+    }
+
+    /**
+     * Reflow cannot put a note at the bottom of the page Word chose, because the pages are ours. The
+     * text is still the reader's, so it is collected at the end of the document under the number the
+     * body shows.
+     */
+    private fun noteBlocks(ctx: DocxContext): List<DocxBlock> {
+        fun series(ids: List<Int>, notes: Map<Int, List<DocxRun>>): List<DocxBlock> =
+            ids.mapIndexedNotNull { index, id ->
+                notes[id]?.takeIf { it.isNotEmpty() }
+                    ?.let { DocxBlock.ListItem(runs = it, marker = "[${index + 1}]") }
+            }
+        return series(ctx.cited.citedFootnotes, ctx.footnotes) +
+            series(ctx.cited.citedEndnotes, ctx.endnotes)
+    }
+
+    private fun readNumberingDefinitions(xml: ByteArray?): Map<Int, AbstractNumbering> {
+        if (xml == null) return emptyMap()
+        val levels = HashMap<Int, MutableMap<Int, NumberLevel>>()
+        val numToAbstract = HashMap<Int, Int>()
+        val parser = EngineXml.newPullParser(ByteArrayInputStream(xml))
+        var abstractId = -1
+        var levelIndex = -1
+        var format = "decimal"
+        var levelText = ""
+        var startAt = 1
+        var numId = -1
+        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+            when (parser.eventType) {
+                XmlPullParser.START_TAG -> when (parser.name) {
+                    "w:abstractNum" -> {
+                        abstractId = attrInt(parser, "w:abstractNumId", -1)
+                        if (abstractId >= 0) levels.getOrPut(abstractId) { HashMap() }
+                    }
+
+                    "w:lvl" -> {
+                        levelIndex = attrInt(parser, "w:ilvl", -1)
+                        format = "decimal"; levelText = ""; startAt = 1
+                    }
+
+                    "w:numFmt" -> format = parser.getAttributeValue(null, "w:val") ?: "decimal"
+                    "w:lvlText" -> levelText = parser.getAttributeValue(null, "w:val") ?: ""
+                    "w:start" -> startAt = attrInt(parser, "w:val", 1)
+                    "w:num" -> numId = attrInt(parser, "w:numId", -1)
+                    "w:abstractNumId" -> if (numId >= 0) numToAbstract[numId] = attrInt(parser, "w:val", -1)
+                }
+
+                XmlPullParser.END_TAG -> when (parser.name) {
+                    "w:lvl" -> if (abstractId >= 0 && levelIndex >= 0) {
+                        levels[abstractId]?.put(levelIndex, NumberLevel(format, levelText, startAt))
+                    }
+
+                    "w:abstractNum" -> abstractId = -1
+                    "w:num" -> numId = -1
+                }
+            }
+            parser.next()
+        }
+        return numToAbstract.mapNotNull { (id, abs) ->
+            levels[abs]?.let { id to AbstractNumbering(it) }
+        }.toMap()
+    }
+
+    private fun readParagraphStyles(xml: ByteArray?): Map<String, ParagraphStyle> {
+        if (xml == null) return emptyMap()
+        val styles = HashMap<String, ParagraphStyle>()
+        val numIds = HashMap<String, Int>()
+        val parser = EngineXml.newPullParser(ByteArrayInputStream(xml))
+        var styleId: String? = null
+        var name = ""
+        var basedOn: String? = null
+        var outline: Int? = null
+        var numId: Int? = null
+        var ilvl = 0
+        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+            when (parser.eventType) {
+                XmlPullParser.START_TAG -> when (parser.name) {
+                    "w:style" -> {
+                        styleId = parser.getAttributeValue(null, "w:styleId")
+                        name = ""; basedOn = null; outline = null; numId = null; ilvl = 0
+                    }
+
+                    "w:name" -> name = parser.getAttributeValue(null, "w:val") ?: ""
+                    "w:basedOn" -> basedOn = parser.getAttributeValue(null, "w:val")
+                    "w:outlineLvl" -> outline = attrInt(parser, "w:val", -1).takeIf { it >= 0 }?.plus(1)
+                    "w:ilvl" -> ilvl = attrInt(parser, "w:val", 0)
+                    "w:numId" -> numId = attrInt(parser, "w:val", -1).takeIf { it >= 0 }
+                }
+
+                XmlPullParser.END_TAG -> if (parser.name == "w:style" && styleId != null) {
+                    styles[styleId] = ParagraphStyle(name, outline, basedOn, numId, ilvl)
+                    if (numId != null) numIds[styleId] = numId
+                    styleId = null
+                }
+            }
+            parser.next()
+        }
+        return styles
+    }
+
+    private fun DocxContext.styleOutlineAndName(styleId: String?): Pair<Int?, String> {
+        var current = styleId
+        var hops = 0
+        var outline: Int? = null
+        var name = ""
+        while (current != null && hops++ < 12) {
+            val style = styles[current] ?: break
+            if (outline == null) outline = style.outlineLevel
+            if (name.isEmpty()) name = style.name
+            if (outline != null && name.isNotEmpty()) break
+            current = style.basedOn
+        }
+        return outline to name
+    }
+
+    private fun DocxContext.styleNumId(styleId: String?): Pair<Int?, Int> {
+        var current = styleId
+        var hops = 0
+        while (current != null && hops++ < 12) {
+            val style = styles[current] ?: break
+            if (style.numId != null) return style.numId to style.ilvl
+            current = style.basedOn
+        }
+        return null to 0
+    }
+
+    /**
+     * Recursive-descent reader. The previous version was a flat loop over one shared state, so an
+     * inner `w:tbl` cleared the outer table's rows and a hyperlink, a numbered level or a nested
+     * paragraph inside a cell could not be represented at all.
+     */
+    private fun parseDocumentXml(parser: XmlPullParser, ctx: DocxContext = DocxContext()): List<DocxBlock> {
         val blocks = mutableListOf<DocxBlock>()
-        var eventType = parser.eventType
+        val counters = HashMap<Int, IntArray>()
+        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+            if (parser.eventType == XmlPullParser.START_TAG) {
+                when (parser.name) {
+                    "w:p" -> readParagraph(parser, ctx, counters)?.let { blocks.add(it) }
+                    "w:tbl" -> readTable(parser, ctx, counters, 0)?.let { blocks.add(it) }
+                }
+            }
+            parser.next()
+        }
+        return blocks
+    }
 
-        var inParagraph = false
-        var inRun = false
-        var inTable = false
-        var inTableRow = false
-        var inTableCell = false
+    /**
+     * Consumes the current element and everything under it, leaving the parser on its END_TAG.
+     * Anything the readers below do not interpret is dropped this way, so a skipped child can never
+     * be mistaken for the close of the element being read - the reason the previous version's
+     * hand-rolled depth counters walked a cell open to the end of the document.
+     */
+    private fun skipElement(parser: XmlPullParser) {
+        if (parser.eventType != XmlPullParser.START_TAG) return
+        val name = parser.name
+        var depth = 0
+        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+            if (parser.eventType == XmlPullParser.START_TAG && parser.name == name) depth++
+            else if (parser.eventType == XmlPullParser.END_TAG && parser.name == name) {
+                depth--
+                if (depth == 0) return
+            }
+            parser.next()
+        }
+    }
 
-        var isBold = false
-        var isItalic = false
-        var isUnderline = false
-        var headingLevel = 0
-        var isBullet = false
+    /** Called on `w:p`'s START_TAG; returns on its END_TAG. */
+    private fun readParagraph(parser: XmlPullParser, ctx: DocxContext, counters: MutableMap<Int, IntArray>): DocxBlock? {
+        var styleId: String? = null
+        var directOutline: Int? = null
+        var numId: Int? = null
+        var ilvl: Int? = null
+        val runs = mutableListOf<DocxRun>()
+        val links = mutableListOf<String?>()
+        var bold = false
+        var italic = false
+        var underline = false
+        var collectingText = false
 
-        val currentRuns = mutableListOf<DocxRun>()
-        val currentTableRows = mutableListOf<MutableList<String>>()
-        val currentTableCellText = StringBuilder()
+        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+            when (parser.eventType) {
+                XmlPullParser.START_TAG -> when (parser.name) {
+                    "w:pStyle" -> styleId = parser.getAttributeValue(null, "w:val")
+                    "w:outlineLvl" -> directOutline =
+                        attrInt(parser, "w:val", -1).takeIf { it >= 0 }?.plus(1)
+                    "w:ilvl" -> ilvl = attrInt(parser, "w:val", 0)
+                    "w:numId" -> attrInt(parser, "w:val", -1).let { if (it >= 0) numId = it }
+                    "w:hyperlink" -> links.add(
+                        parser.getAttributeValue(null, "r:id")?.let { ctx.links[it] }
+                            ?: parser.getAttributeValue(null, "w:anchor")?.let { "#$it" }
+                    )
 
-        while (eventType != XmlPullParser.END_DOCUMENT) {
-            val name = parser.name ?: ""
+                    "w:r" -> {
+                        bold = false; italic = false; underline = false
+                    }
 
-            when (eventType) {
-                XmlPullParser.START_TAG -> {
-                    when (name) {
-                        "w:p" -> {
-                            inParagraph = true
-                            currentRuns.clear()
-                            headingLevel = 0
-                            isBullet = false
-                        }
-                        "w:pStyle" -> {
-                            val styleVal = parser.getAttributeValue(null, "w:val") ?: ""
-                            headingLevel = when {
-                                styleVal.contains("Heading1", ignoreCase = true) || styleVal.contains("Title", ignoreCase = true) -> 1
-                                styleVal.contains("Heading2", ignoreCase = true) -> 2
-                                styleVal.contains("Heading3", ignoreCase = true) -> 3
-                                else -> 0
-                            }
-                            // Word puts the numbering on the paragraph style most of the time, so a
-                            // list is usually recognisable only by its style name.
-                            if (styleVal.contains("ListBullet", ignoreCase = true) ||
-                                styleVal.contains("ListParagraph", ignoreCase = true)
-                            ) {
-                                isBullet = true
-                            }
-                        }
-                        "w:numPr" -> {
-                            isBullet = true
-                        }
-                        "w:r" -> {
-                            inRun = true
-                            isBold = false
-                            isItalic = false
-                            isUnderline = false
-                        }
-                        "w:b" -> isBold = true
-                        "w:i" -> isItalic = true
-                        "w:u" -> isUnderline = true
-                        "w:t" -> {
-                            val text = parser.nextText()
-                            if (text.isNotEmpty()) {
-                                if (inTableCell) {
-                                    currentTableCellText.append(text)
-                                } else {
-                                    currentRuns.add(
-                                        DocxRun(
-                                            text = text,
-                                            isBold = isBold,
-                                            isItalic = isItalic,
-                                            isUnderline = isUnderline
-                                        )
-                                    )
-                                }
-                            }
-                        }
-                        "w:tbl" -> {
-                            inTable = true
-                            currentTableRows.clear()
-                        }
-                        "w:tr" -> {
-                            inTableRow = true
-                            currentTableRows.add(mutableListOf())
-                        }
-                        "w:tc" -> {
-                            inTableCell = true
-                            currentTableCellText.clear()
-                        }
+                    "w:b", "w:bCs" -> bold = bold || attrOn(parser)
+                    "w:i", "w:iCs" -> italic = italic || attrOn(parser)
+                    "w:u" -> underline = (parser.getAttributeValue(null, "w:val") ?: "none") != "none"
+                    "w:br", "w:cr" -> runs.add(DocxRun("\n", bold, italic, underline, links.lastOrNull()))
+                    "w:tab" -> runs.add(DocxRun("\t", bold, italic, underline, links.lastOrNull()))
+                    "w:footnoteReference" -> citeNote(parser, ctx, runs, footnote = true)
+                    "w:endnoteReference" -> citeNote(parser, ctx, runs, footnote = false)
+                    "w:t" -> collectingText = true
+                }
+
+                XmlPullParser.TEXT -> if (collectingText) {
+                    val text = parser.text
+                    if (!text.isNullOrEmpty()) {
+                        runs.add(DocxRun(text, bold, italic, underline, links.lastOrNull()))
                     }
                 }
 
-                XmlPullParser.END_TAG -> {
-                    when (name) {
-                        "w:p" -> {
-                            if (!inTableCell) {
-                                val fullText = currentRuns.joinToString("") { it.text }.trim()
-                                if (fullText.isNotEmpty()) {
-                                    if (headingLevel > 0) {
-                                        blocks.add(DocxBlock.Heading(fullText, headingLevel))
-                                    } else if (isBullet) {
-                                        blocks.add(DocxBlock.Bullet(currentRuns.toList()))
-                                    } else {
-                                        blocks.add(DocxBlock.Paragraph(currentRuns.toList()))
-                                    }
-                                }
-                            }
-                            inParagraph = false
-                        }
-                        "w:r" -> inRun = false
-                        "w:tc" -> {
-                            val cellText = currentTableCellText.toString().trim()
-                            currentTableRows.lastOrNull()?.add(cellText)
-                            inTableCell = false
-                        }
-                        "w:tr" -> inTableRow = false
-                        "w:tbl" -> {
-                            if (currentTableRows.isNotEmpty()) {
-                                blocks.add(DocxBlock.Table(currentTableRows.map { it.toList() }))
-                            }
-                            inTable = false
-                        }
+                XmlPullParser.END_TAG -> when (parser.name) {
+                    "w:t" -> collectingText = false
+                    "w:hyperlink" -> if (links.isNotEmpty()) links.removeAt(links.size - 1)
+                    "w:p" -> {
+                        return paragraphBlock(runs, styleId, directOutline, numId, ilvl, ctx, counters)
                     }
                 }
             }
-            eventType = parser.next()
+            parser.next()
         }
+        return paragraphBlock(runs, styleId, directOutline, numId, ilvl, ctx, counters)
+    }
 
-        return blocks
+    /**
+     * The body keeps the number Word would print as a superscript; the note's own text is read from
+     * its part and appended by [noteBlocks].
+     */
+    private fun citeNote(parser: XmlPullParser, ctx: DocxContext, runs: MutableList<DocxRun>, footnote: Boolean) {
+        val id = attrInt(parser, "w:id", -1)
+        val text = if (footnote) ctx.footnotes[id] else ctx.endnotes[id]
+        // A reference with no note behind it would be a number the reader could never look up.
+        if (text.isNullOrEmpty()) return
+        val number = if (footnote) ctx.cited.footnoteNumber(id) else ctx.cited.endnoteNumber(id)
+        runs.add(DocxRun("[$number]"))
+    }
+
+    private fun paragraphBlock(
+        runs: List<DocxRun>,
+        styleId: String?,
+        directOutline: Int?,
+        numId: Int?,
+        ilvl: Int?,
+        ctx: DocxContext,
+        counters: MutableMap<Int, IntArray>
+    ): DocxBlock? {
+        if (runs.none { it.text.isNotEmpty() }) return null
+        val (styleOutline, styleName) = ctx.styleOutlineAndName(styleId)
+        // A package without styles.xml still names the style it used, so the id stays a last resort;
+        // outlineLvl, direct or inherited, is the reliable route.
+        val level = directOutline ?: styleOutline ?: headingLevelFromName(styleName)
+            ?: headingLevelFromName(styleId ?: "") ?: 0
+        if (level > 0) return DocxBlock.Heading(runs.joinToString("") { it.text }, level)
+
+        val inherited = ctx.styleNumId(styleId)
+        val effectiveNumId = numId ?: inherited.first
+        val styleHint = styleName + " " + (styleId ?: "")
+        val isList = effectiveNumId != null || numId != null || ilvl != null ||
+            styleHint.contains("List", ignoreCase = true)
+        if (!isList) return DocxBlock.Paragraph(runs)
+        return listBlock(runs, ctx, counters, effectiveNumId, ilvl ?: inherited.second, styleHint)
+    }
+
+    /** Called on `w:tbl`'s START_TAG; returns on its END_TAG. Cells recurse, so nesting is kept. */
+    private fun readTable(
+        parser: XmlPullParser,
+        ctx: DocxContext,
+        counters: MutableMap<Int, IntArray>,
+        depth: Int
+    ): DocxBlock? {
+        val rows = mutableListOf<List<DocxCell>>()
+        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+            when (parser.eventType) {
+                XmlPullParser.START_TAG -> when (parser.name) {
+                    "w:tr" -> readRow(parser, ctx, counters, depth)?.let { rows.add(it) }
+                    // Only rows and cells are read here. Matching this element's own name would make
+                    // the reader recurse into the table it was called on and wrap it in a phantom row,
+                    // which is what happened first: a nested table belongs in a cell, handled by
+                    // readCell, never directly in the table body.
+                    "w:tblPr", "w:tblGrid" -> skipElement(parser)
+                }
+
+                XmlPullParser.END_TAG -> if (parser.name == "w:tbl") {
+                    return rows.filter { row -> row.any { cell -> cell.text.isNotEmpty() } }
+                        .takeIf { it.isNotEmpty() }
+                        ?.let { DocxBlock.Table(it) }
+                }
+            }
+            parser.next()
+        }
+        return null
+    }
+
+    /** Called on `w:tr`'s START_TAG; returns on its END_TAG. */
+    private fun readRow(
+        parser: XmlPullParser,
+        ctx: DocxContext,
+        counters: MutableMap<Int, IntArray>,
+        depth: Int
+    ): List<DocxCell>? {
+        val cells = mutableListOf<DocxCell>()
+        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+            when (parser.eventType) {
+                XmlPullParser.START_TAG -> when (parser.name) {
+                    "w:tc" -> cells.add(readCell(parser, ctx, counters, depth))
+                    "w:trPr" -> skipElement(parser)
+                }
+
+                XmlPullParser.END_TAG -> if (parser.name == "w:tr") return cells.ifEmpty { null }
+            }
+            parser.next()
+        }
+        return cells.ifEmpty { null }
+    }
+
+    /** Called on `w:tc`'s START_TAG; returns on its END_TAG with everything the cell contains. */
+    private fun readCell(
+        parser: XmlPullParser,
+        ctx: DocxContext,
+        counters: MutableMap<Int, IntArray>,
+        depth: Int
+    ): DocxCell {
+        val blocks = mutableListOf<DocxBlock>()
+        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+            when (parser.eventType) {
+                XmlPullParser.START_TAG -> when (parser.name) {
+                    "w:p" -> if (depth < MAX_TABLE_DEPTH) {
+                        readParagraph(parser, ctx, counters)?.let { blocks.add(it) }
+                    } else {
+                        skipElement(parser)
+                    }
+
+                    "w:tbl" -> if (depth + 1 < MAX_TABLE_DEPTH) {
+                        readTable(parser, ctx, counters, depth + 1)?.let { blocks.add(it) }
+                    } else {
+                        skipElement(parser)
+                    }
+
+                    "w:tcPr" -> skipElement(parser)
+                }
+
+                XmlPullParser.END_TAG -> if (parser.name == "w:tc") {
+                    return DocxCell(blocks.toList())
+                }
+            }
+            parser.next()
+        }
+        return DocxCell(blocks.toList())
+    }
+
+    private fun headingLevelFromName(name: String): Int? {
+        val match = Regex("^(?:heading|Heading)\\s*([1-9])").find(name.trim())
+        if (match != null) return match.groupValues[1].toInt()
+        val trimmed = name.trim().lowercase()
+        return if (trimmed == "title") 1 else null
+    }
+
+    private fun listBlock(
+        runs: List<DocxRun>,
+        ctx: DocxContext,
+        counters: MutableMap<Int, IntArray>,
+        numId: Int?,
+        ilvl: Int,
+        styleHint: String
+    ): DocxBlock {
+        val numbering = numId?.let { ctx.numbering[it] }
+        val level = numbering?.levels?.get(ilvl)
+        if (numbering != null && level != null) {
+            val counter = counters.getOrPut(numId) { IntArray(9) { 0 } }
+            val slot = ilvl.coerceIn(0, 8)
+            counter[slot] = if (counter[slot] == 0) level.start else counter[slot] + 1
+            for (deeper in (slot + 1)..8) counter[deeper] = 0
+            val ordered = level.format != "bullet" && level.format != "none"
+            return DocxBlock.ListItem(
+                runs = runs,
+                marker = markerFor(level, numbering, counter),
+                level = ilvl.coerceIn(0, 8),
+                ordered = ordered
+            )
+        }
+        val bulletAsDigit = styleHint.lowercase().contains("listnumber")
+        return DocxBlock.ListItem(
+            runs = runs,
+            marker = if (bulletAsDigit) "1." else "•",
+            level = ilvl,
+            ordered = bulletAsDigit
+        )
+    }
+
+    private fun markerFor(level: NumberLevel, numbering: AbstractNumbering, counter: IntArray): String {
+        val template = level.text.ifEmpty {
+            return if (level.format == "bullet" || level.format == "none") "•" else "%1."
+        }
+        var text = template
+        for (index in 0..8) {
+            val value = counter[index]
+            if (value == 0) continue
+            val fmt = numbering.levels[index]?.format ?: level.format
+            text = text.replace("%${index + 1}", formatNumber(value, fmt))
+        }
+        // A bullet level's glyph usually comes from Symbol or Wingdings and sits in the private-use
+        // area - F0B7 is Symbol's bullet. That is a font instruction, not a character: drawn with the
+        // document's own typeface it is an empty box, so an undrawable marker falls back to a real one.
+        val trimmed = text.trim()
+        return if (trimmed.isEmpty() || trimmed.any { it.code in 0xE000..0xF8FF }) "•" else trimmed
+    }
+
+    private fun formatNumber(value: Int, format: String): String = when (format) {
+        "bullet", "none" -> "•"
+        "lowerLetter" -> ('a' + ((value - 1) % 26)).toString()
+        "upperLetter" -> ('A' + ((value - 1) % 26)).toString()
+        "lowerRoman" -> roman(value).lowercase()
+        "upperRoman" -> roman(value)
+        else -> value.toString()
+    }
+
+    private fun roman(number: Int): String {
+        if (number <= 0) return number.toString()
+        val pairs = arrayOf(
+            1000 to "M", 900 to "CM", 500 to "D", 400 to "CD", 100 to "C", 90 to "XC",
+            50 to "L", 40 to "XL", 10 to "X", 9 to "IX", 5 to "V", 4 to "IV", 1 to "I"
+        )
+        var rest = number
+        val out = StringBuilder()
+        for ((value, symbol) in pairs) {
+            while (rest >= value) {
+                out.append(symbol); rest -= value
+            }
+        }
+        return out.toString()
     }
 
     private fun readBounded(input: java.io.InputStream, maxBytes: Int): ByteArray {

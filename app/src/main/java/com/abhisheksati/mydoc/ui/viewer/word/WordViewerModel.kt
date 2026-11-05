@@ -15,12 +15,11 @@ import java.io.InputStream
 object WordViewerModel {
 
     /** Plain text of a block, in the same order the viewer renders it. */
-    fun plainText(block: DocxBlock): String = when (block) {
-        is DocxBlock.Heading -> block.text
-        is DocxBlock.Paragraph -> block.runs.joinToString("") { it.text }
-        is DocxBlock.Bullet -> block.runs.joinToString("") { it.text }
-        is DocxBlock.Table -> block.rows.joinToString("\n") { it.joinToString(" | ") }
-    }
+    /**
+     * Delegates to the model's own projection so the text that search is measured against can never
+     * disagree with what the viewer and the PDF converter render.
+     */
+    fun plainText(block: DocxBlock): String = DocxBlock.plainTextOf(block) ?: ""
 
     /** One occurrence of the query, addressed by block and by character range inside that block. */
     data class Match(val blockIndex: Int, val start: Int, val end: Int)

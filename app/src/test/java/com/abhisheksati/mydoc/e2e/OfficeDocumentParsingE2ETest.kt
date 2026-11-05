@@ -268,8 +268,10 @@ class OfficeDocumentParsingE2ETest {
             val hasMatch = when (block) {
                 is DocxBlock.Heading -> block.text.contains(query, ignoreCase = true)
                 is DocxBlock.Paragraph -> block.fullText.contains(query, ignoreCase = true)
-                is DocxBlock.Bullet -> block.runs.any { it.text.contains(query, ignoreCase = true) }
-                is DocxBlock.Table -> block.rows.any { row -> row.any { it.contains(query, ignoreCase = true) } }
+                is DocxBlock.ListItem -> block.runs.any { it.text.contains(query, ignoreCase = true) }
+                is DocxBlock.Table -> block.rows.any { row ->
+                    row.any { it.text.contains(query, ignoreCase = true) }
+                }
             }
             if (hasMatch) index else null
         }

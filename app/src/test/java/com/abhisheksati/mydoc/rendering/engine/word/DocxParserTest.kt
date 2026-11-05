@@ -104,7 +104,7 @@ class DocxParserTest {
         val table = doc.blocks.firstOrNull { it is DocxBlock.Table } as? DocxBlock.Table
         assertTrue(table != null)
         assertEquals(1, table?.rows?.size)
-        assertEquals(listOf("Cell 1", "Cell 2"), table?.rows?.get(0))
+        assertEquals(listOf("Cell 1", "Cell 2"), table?.rows?.get(0)?.map { it.text })
     }
 
     @Test
@@ -136,7 +136,7 @@ class DocxParserTest {
         assertTrue(heading != null)
         assertEquals("OpenDocument Heading", heading?.text)
 
-        val bullet = doc.blocks.firstOrNull { it is DocxBlock.Bullet } as? DocxBlock.Bullet
+        val bullet = doc.blocks.firstOrNull { it is DocxBlock.ListItem } as? DocxBlock.ListItem
         assertTrue(bullet != null)
         assertEquals("Bullet item 1", bullet?.runs?.firstOrNull()?.text)
     }

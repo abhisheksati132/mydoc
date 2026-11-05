@@ -100,7 +100,8 @@ data class FormatDescriptor(
     val isSupported: Boolean get() = viewer != ViewerKind.UNSUPPORTED
 }
 
-private const val OFFICE_LAYOUT_LIMIT = "Embedded images, headers, footers and footnotes are not rendered"
+private const val OFFICE_LAYOUT_LIMIT =
+    "Embedded images and page headers/footers are not rendered; footnote text is collected at the end of the document"
 
 private val TEXT_EXTENSIONS = setOf(
     "txt", "md", "log", "json", "xml", "yaml", "yml", "ini", "conf", "sh", "sql",

@@ -5,6 +5,39 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+### Added
+
+- **`.docx` footnotes and endnotes are read.** `word/footnotes.xml` and `word/endnotes.xml` are now
+  among the parts the reader opens, a `w:footnoteReference` puts the number Word shows into the text,
+  and the note's own sentences are collected at the end of the document. They used to be dropped
+  silently: a document's citations survived as a number with nothing behind it.
+
+### Fixed
+
+- **The Word reader stops losing structure it was never able to represent.** `parseDocumentXml` was a
+  flat loop over one shared state, so an inner `w:tbl` called `currentTableRows.clear()` and destroyed
+  the table around it, every numbered list rendered as bullets, and a `w:hyperlink` kept its text but
+  threw away its target. It is now a recursive-descent reader over a model that can hold the
+  differences: table cells contain blocks (and therefore tables), list items carry the marker Word
+  computed from `word/numbering.xml` at their level, and runs carry the link they came from.
+- **Headings are found through the style chain, not through English style ids.** `w:pStyle` names a
+  style *id*, and a localised template spells it however it likes (`berschrift1`, `a5`); the level is
+  in `word/styles.xml` as `w:outlineLvl`, inherited through `w:basedOn`. Heading 4-9 no longer fall
+  through to body text, and `<w:b w:val="0"/>` now switches bold *off* instead of on.
+- **A Symbol-font bullet is drawn as a bullet.** Word writes bullet levels as a private-use glyph
+  (`U+F0B7` for Symbol), which is a font instruction rather than a character: with the document's own
+  typeface the reader saw an empty box. Undrawable markers fall back to `•`, and a bullet the author
+  really typed - `-`, `o`, `▪` - is left alone.
+- **The converted page no longer invents spaces.** The PDF wrapper joined every run with a space of
+  its own, so `…endnote` + `[1]` + `.` became `…endnote [1] .` on the page. It now inserts a space only
+  where the document wrote one, and a linked run is drawn underlined and tinted like a link.
+
+### Notes
+
+- The Word viewer's fidelity notice covers the first blocks of a reflowed document while the viewer
+  chrome is up, because that surface never hides its chrome. Longer disclosure text makes it cover
+  more. Pre-existing, unchanged by this batch, and filed as its own fix.
+
 ## [1.7.3] — 2026-11-05
 
 ### Fixed

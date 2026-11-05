@@ -3,6 +3,7 @@ package com.abhisheksati.mydoc.ui.viewer.word
 import com.abhisheksati.mydoc.domain.model.DocumentLoadException
 import com.abhisheksati.mydoc.domain.model.LoadFailure
 import com.abhisheksati.mydoc.rendering.engine.word.DocxBlock
+import com.abhisheksati.mydoc.rendering.engine.word.DocxCell
 import com.abhisheksati.mydoc.rendering.engine.word.DocxDocument
 import com.abhisheksati.mydoc.rendering.engine.word.DocxRun
 import kotlinx.coroutines.CancellationException
@@ -118,8 +119,13 @@ class WordViewerModelTest {
         val blocks = listOf(
             paragraph("alpha beta"),
             paragraph("beta gamma beta"),
-            DocxBlock.Bullet(listOf(DocxRun("delta"), DocxRun(" beta"))),
-            DocxBlock.Table(listOf(listOf("x"), listOf("beta here")))
+            DocxBlock.ListItem(listOf(DocxRun("delta"), DocxRun(" beta"))),
+            DocxBlock.Table(
+                listOf(
+                    listOf(DocxCell(listOf(DocxBlock.Paragraph(listOf(DocxRun("x")))))),
+                    listOf(DocxCell(listOf(DocxBlock.Paragraph(listOf(DocxRun("beta here"))))))
+                )
+            )
         )
         val matches = WordViewerModel.matches(blocks, "beta")
         assertEquals(5, matches.size)

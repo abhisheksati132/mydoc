@@ -334,10 +334,19 @@ fun WordViewerScreen(
                             Spacer(modifier = Modifier.height(6.dp))
                         }
 
-                        is DocxBlock.Bullet -> {
-                            Row(modifier = Modifier.padding(start = 12.dp, top = 2.dp, bottom = 2.dp)) {
+                        is DocxBlock.ListItem -> {
+                            Row(
+                                modifier = Modifier.padding(
+                                    // A nested level indents; the marker comes from the document's own
+                                    // numbering definition, so an ordered list reads "1." here and
+                                    // "1." in the converted PDF instead of becoming a bullet.
+                                    start = (12 + 14 * block.level).dp,
+                                    top = 2.dp,
+                                    bottom = 2.dp
+                                )
+                            ) {
                                 Text(
-                                    text = "• ",
+                                    text = block.marker + " ",
                                     color = secondaryTextColor,
                                     fontSize = DocumentReadingType.body * readingPrefs.fontScale,
                                     fontWeight = FontWeight.Bold
@@ -406,7 +415,8 @@ private fun DocxRunsView(
     ranges: List<IntRange>,
     active: Boolean,
     lineHeight: androidx.compose.ui.unit.TextUnit?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    linkColor: Color = MaterialTheme.colorScheme.primary
 ) {
     val offsets = WordViewerModel.runOffsets(runs)
     val annotatedString = buildAnnotatedString {
@@ -416,8 +426,13 @@ private fun DocxRunsView(
             val spanStyle = SpanStyle(
                 fontWeight = if (bold) FontWeight.Bold else if (run.isBold) FontWeight.Bold else FontWeight.Normal,
                 fontStyle = if (run.isItalic) FontStyle.Italic else FontStyle.Normal,
-                textDecoration = if (run.isUnderline) TextDecoration.Underline else TextDecoration.None,
-                color = textColor,
+                // A linked run is underlined and tinted even when the document did not underline it.
+                textDecoration = if (run.isUnderline || run.linkTarget != null) {
+                    TextDecoration.Underline
+                } else {
+                    TextDecoration.None
+                },
+                color = if (run.linkTarget != null) linkColor else textColor,
                 fontSize = fontSize,
                 background = when {
                     !hit -> Color.Transparent
@@ -460,9 +475,9 @@ private fun DocxTableView(
                     .fillMaxWidth()
                     .background(if (isHeader) borderColor.copy(alpha = 0.15f) else Color.Transparent)
             ) {
-                row.forEach { cellText ->
+                row.forEach { cell ->
                     Text(
-                        text = cellText,
+                        text = cell.text,
                         color = textColor,
                         fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
                         fontSize = DocumentReadingType.tableCell,

@@ -34,6 +34,9 @@ internal object DocxPdfRenderer {
     private const val CellPad = 4f
     private const val MaxPages = 4000
 
+    /** Links are drawn in a fixed blue because the converted page is always white paper. */
+    private val LinkColor = 0xFF1A5FB4.toInt()
+
     private fun headingSize(level: Int): Float = when (level) {
         1 -> 19f
         2 -> 15.5f
@@ -65,7 +68,7 @@ internal object DocxPdfRenderer {
                 when (block) {
                     is DocxBlock.Heading -> heading(block)
                     is DocxBlock.Paragraph -> text(block.runs, BodySize, 0f)
-                    is DocxBlock.Bullet -> bullet(block.runs)
+                    is DocxBlock.ListItem -> list(block)
                     is DocxBlock.Table -> table(block.rows)
                 }
             }
@@ -96,15 +99,20 @@ internal object DocxPdfRenderer {
             outlines.add(OutlineItem(title = block.text, pageIndex = pageNumber - 1, level = block.level - 1))
         }
 
-        private fun bullet(runs: List<DocxRun>) {
+        /**
+         * The marker comes from the document's own numbering definition, so an ordered list is drawn
+         * "1." rather than as a bullet, and a nested level is indented by that level.
+         */
+        private fun list(block: DocxBlock.ListItem) {
             val step = BodySize * Leading
-            val marker = paint(BodySize, false, false, false)
-            val lines = wrap(runs, BodySize, section.contentWidth - ListIndent, forceBold = false)
+            val markerPaint = paint(BodySize, false, false, false)
+            val indent = ListIndent * (1 + block.level)
+            val lines = wrap(block.runs, BodySize, section.contentWidth - indent, forceBold = false)
             for ((index, line) in lines.withIndex()) {
                 ensureRoom(step)
                 val baseline = y + line.maxOf { -it.paint.fontMetrics.ascent }
-                if (index == 0) canvas?.drawText("•", section.left + 2f, baseline, marker)
-                drawLine(line, section.left + ListIndent, baseline)
+                if (index == 0) canvas?.drawText(block.marker, section.left + 2f, baseline, markerPaint)
+                drawLine(line, section.left + indent, baseline)
                 y += step
             }
             y += ParagraphGap * 0.5f
@@ -120,7 +128,7 @@ internal object DocxPdfRenderer {
             y += ParagraphGap
         }
 
-        private fun table(rows: List<List<String>>) {
+        private fun table(rows: List<List<DocxCell>>) {
             val columns = rows.maxOf { it.size }.coerceIn(1, 24)
             val cell = paint(TableSize, false, false, false)
             val step = TableSize * Leading
@@ -135,7 +143,7 @@ internal object DocxPdfRenderer {
             val wanted = (0 until columns).map { c ->
                 var longest = 0f
                 for (row in rows) {
-                    val text = row.getOrNull(c) ?: continue
+                    val text = row.getOrNull(c)?.text ?: continue
                     for (word in text.split(' ')) longest = max(longest, cell.measureText(word))
                 }
                 (longest + 2 * CellPad).coerceIn(34f, section.contentWidth * 0.6f)
@@ -146,7 +154,7 @@ internal object DocxPdfRenderer {
             y += ParagraphGap * 0.4f
             for ((rowIndex, row) in rows.withIndex()) {
                 val lines = (0 until columns).map { c ->
-                    wrap(listOf(DocxRun(row.getOrNull(c) ?: "")), TableSize, widths[c] - 2f * CellPad, forceBold = rowIndex == 0)
+                    wrap(listOf(DocxRun(row.getOrNull(c)?.text ?: "")), TableSize, widths[c] - 2f * CellPad, forceBold = rowIndex == 0)
                 }
                 val rowHeight = max(step * lines.maxOf { it.size } + 2 * CellPad, step + 2 * CellPad)
                 ensureRoom(rowHeight)
@@ -204,18 +212,25 @@ internal object DocxPdfRenderer {
             val lines = mutableListOf<MutableList<Piece>>()
             var current = mutableListOf<Piece>()
             var width = 0f
+            var spaceBefore = false
 
             for (run in runs) {
                 val bold = forceBold || run.isBold
-                val piecePaint = paint(size, bold, run.isItalic, run.isUnderline)
-                for (token in run.text.split(' ')) {
+                val isLink = run.linkTarget != null
+                val piecePaint = paint(size, bold, run.isItalic, run.isUnderline || isLink, isLink)
+                // A space is only inserted where the document wrote one. Runs are adjacent fragments
+                // of a sentence - "endnote", "[1]", "." - and joining them with a space of our own
+                // puts a gap in front of the punctuation.
+                val tokens = run.text.split(' ')
+                for ((index, token) in tokens.withIndex()) {
+                    if (index > 0) spaceBefore = true
                     if (token.isEmpty()) continue
-                    if (current.isNotEmpty() && width + piecePaint.measureText(" $token") > limit) {
+                    if (current.isNotEmpty() && spaceBefore && width + piecePaint.measureText(" $token") > limit) {
                         lines.add(current)
                         current = mutableListOf()
                         width = 0f
                     }
-                    val word = if (current.isEmpty()) token else " $token"
+                    val word = if (current.isEmpty() || !spaceBefore) token else " $token"
                     var measured = piecePaint.measureText(word)
                     var text = word
                     if (measured > limit && current.isEmpty()) {
@@ -224,6 +239,7 @@ internal object DocxPdfRenderer {
                     }
                     current.add(Piece(text, piecePaint, measured))
                     width += measured
+                    spaceBefore = false
                 }
             }
             if (current.isNotEmpty()) lines.add(current)
@@ -237,14 +253,23 @@ internal object DocxPdfRenderer {
             return token.substring(0, end)
         }
 
-        private fun paint(size: Float, bold: Boolean, italic: Boolean, underline: Boolean): TextPaint {
+        private fun paint(
+            size: Float,
+            bold: Boolean,
+            italic: Boolean,
+            underline: Boolean,
+            link: Boolean = false
+        ): TextPaint {
             val key = (size.toLong() and 0xFFFFL) or
                 ((if (bold) 1L else 0L) shl 16) or
                 ((if (italic) 1L else 0L) shl 17) or
-                ((if (underline) 1L else 0L) shl 18)
+                ((if (underline) 1L else 0L) shl 18) or
+                ((if (link) 1L else 0L) shl 19)
             return paints.getOrPut(key) {
                 TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-                    color = Color.BLACK
+                    // The page is always white paper here, so the link colour is fixed rather than
+                    // themed; the reflow viewer is the surface that follows the app's palette.
+                    color = if (link) LinkColor else Color.BLACK
                     textSize = size
                     isUnderlineText = underline
                     typeface = Typeface.create(

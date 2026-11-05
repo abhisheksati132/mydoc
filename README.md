@@ -93,7 +93,7 @@ what the container is nominally called. "Fidelity" is what the reader discloses 
 | Category | Extensions | Fidelity | Known gaps |
 | :--- | :--- | :--- | :--- |
 | **PDF** | `.pdf`, `.xps`, `.oxps`, `.cbz` | Fixed layout | — |
-| **Word** | `.docx`, `.dotx`, `.odt`, `.ott` | Structured reflow | Images, headers/footers and footnotes are not rendered; pagination is ours, so page numbers can differ from Word |
+| **Word** | `.docx`, `.dotx`, `.odt`, `.ott` | Structured reflow | Images and page headers/footers are not rendered; `.docx`/`.dotx` footnote text is collected at the end of the document; pagination is ours, so page numbers can differ from Word |
 | **Word (flat ODF)** | `.fodt` | Structured reflow | Images and styles not rendered |
 | **Word (RTF)** | `.rtf` | Structured reflow | Bold/italic/underline and paragraphs only; tables, images and styles are not decoded |
 | **Word (legacy)** | `.doc`, `.dot` | Text only | BIFF/Word binary layout is not decoded; text is recovered and labelled as such |
