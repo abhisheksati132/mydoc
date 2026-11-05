@@ -21,7 +21,7 @@ class RendererSlotTest {
         override fun authenticatePassword(password: String) = false
         override fun getPageSize(pageIndex: Int) = 595f to 842f
         override fun renderPage(pageIndex: Int, scale: Float, mode: ReadingMode) = null
-        override fun search(query: String): List<SearchMatch> = emptyList()
+        override fun search(query: String, isCancelled: () -> Boolean): List<SearchMatch> = emptyList()
         override fun getOutline(): List<OutlineItem> = emptyList()
         override fun close() { closes++ }
     }
@@ -91,7 +91,7 @@ class RendererSlotTest {
             override fun authenticatePassword(password: String) = false
             override fun getPageSize(pageIndex: Int) = 595f to 842f
             override fun renderPage(pageIndex: Int, scale: Float, mode: ReadingMode) = null
-            override fun search(query: String): List<SearchMatch> = emptyList()
+            override fun search(query: String, isCancelled: () -> Boolean): List<SearchMatch> = emptyList()
             override fun getOutline(): List<OutlineItem> = emptyList()
             override fun close() {
                 attempts++

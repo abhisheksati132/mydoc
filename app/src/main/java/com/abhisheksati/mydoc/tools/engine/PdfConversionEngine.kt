@@ -8,6 +8,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
+import androidx.exifinterface.media.ExifInterface
+import com.abhisheksati.mydoc.tools.scan.cropper.BitmapRotation
 import android.graphics.pdf.PdfDocument as AndroidPdfDocument
 import com.abhisheksati.mydoc.ocr.OcrEngine
 import com.abhisheksati.mydoc.tools.model.PageMargin
@@ -28,6 +30,7 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.math.max
 
 /**
  * Specialized engine handling document format conversions to and from PDF,
@@ -35,58 +38,129 @@ import java.util.zip.ZipOutputStream
  */
 class PdfConversionEngine(private val context: Context) {
 
+    private companion object {
+        /** Pixels per page point when decoding into a fixed page size. */
+        const val PAGE_SUPERSAMPLE = 2f
+        const val MAX_SAMPLE_SIZE = 32
+
+        /** Floor for the auto-reduced long-image scale, below which the output is unreadable. */
+        const val MIN_STITCH_SCALE = 0.5f
+
+        /** Ceiling for the stitched long image in pixels (~96 MB as ARGB_8888). */
+        const val MAX_STITCHED_PIXELS = 24_000_000L
+    }
+
     private fun createTempOutputFile(prefix: String, ext: String): File =
         PdfToolUtils.createTempOutputFile(context.cacheDir, prefix, ext)
 
     suspend fun imagesToPdf(files: List<File>, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File {
         val outDoc = AndroidPdfDocument()
-        val total = files.size
-        var added = 0
+        try {
+            val total = files.size
+            var added = 0
 
-        files.forEachIndexed { index, imgFile ->
-            currentCoroutineContext().ensureActive()
-            val bitmap = BitmapFactory.decodeFile(imgFile.absolutePath)
-                ?: return@forEachIndexed
+            files.forEachIndexed { index, imgFile ->
+                currentCoroutineContext().ensureActive()
+                // FIT_IMAGE sizes the page from the image, so it keeps full resolution; a fixed page
+                // only needs enough pixels to fill it, so the rest is sampled away while decoding.
+                val budgetPx = when (options.pageSizeFormat) {
+                    PageSizeFormat.FIT_IMAGE -> Int.MAX_VALUE
+                    PageSizeFormat.A4 -> (max(
+                        PageSizeFormat.A4.widthPt, PageSizeFormat.A4.heightPt) * PAGE_SUPERSAMPLE).toInt()
+                    PageSizeFormat.LETTER -> (max(
+                        PageSizeFormat.LETTER.widthPt, PageSizeFormat.LETTER.heightPt) * PAGE_SUPERSAMPLE).toInt()
+                }
+                val bitmap = decodeSampled(imgFile, budgetPx) ?: return@forEachIndexed
 
-            val (pageWidth, pageHeight) = when (options.pageSizeFormat) {
-                PageSizeFormat.A4 -> Pair(PageSizeFormat.A4.widthPt.toInt(), PageSizeFormat.A4.heightPt.toInt())
-                PageSizeFormat.LETTER -> Pair(PageSizeFormat.LETTER.widthPt.toInt(), PageSizeFormat.LETTER.heightPt.toInt())
-                PageSizeFormat.FIT_IMAGE -> Pair(bitmap.width, bitmap.height)
+                val (pageWidth, pageHeight) = when (options.pageSizeFormat) {
+                    PageSizeFormat.A4 -> Pair(PageSizeFormat.A4.widthPt.toInt(), PageSizeFormat.A4.heightPt.toInt())
+                    PageSizeFormat.LETTER -> Pair(PageSizeFormat.LETTER.widthPt.toInt(), PageSizeFormat.LETTER.heightPt.toInt())
+                    PageSizeFormat.FIT_IMAGE -> Pair(bitmap.width, bitmap.height)
+                }
+
+                val margin = options.pageMargin.marginPt
+                val availableW = (pageWidth - 2 * margin).coerceAtLeast(10f)
+                val availableH = (pageHeight - 2 * margin).coerceAtLeast(10f)
+
+                val pageInfo = AndroidPdfDocument.PageInfo.Builder(pageWidth, pageHeight, index + 1).create()
+                val page = outDoc.startPage(pageInfo)
+                try {
+                    val canvas = page.canvas
+                    val scale = minOf(availableW / bitmap.width.toFloat(), availableH / bitmap.height.toFloat())
+                    val drawW = bitmap.width * scale
+                    val drawH = bitmap.height * scale
+                    val left = margin + (availableW - drawW) / 2f
+                    val top = margin + (availableH - drawH) / 2f
+
+                    canvas.drawBitmap(bitmap, null, RectF(left, top, left + drawW, top + drawH), null)
+                    added++
+                } finally {
+                    outDoc.finishPage(page)
+                    bitmap.recycle()
+                }
+
+                val pct = 10 + (((index + 1).toFloat() / total) * 80).toInt()
+                onProgress(ToolProgress(index + 1, total, pct, "Adding image ${index + 1} of $total...", false))
             }
 
-            val margin = options.pageMargin.marginPt
-            val availableW = (pageWidth - 2 * margin).coerceAtLeast(10f)
-            val availableH = (pageHeight - 2 * margin).coerceAtLeast(10f)
+            if (added == 0) {
+                throw IllegalArgumentException("None of the selected files could be decoded as an image.")
+            }
 
-            val pageInfo = AndroidPdfDocument.PageInfo.Builder(pageWidth, pageHeight, index + 1).create()
-            val page = outDoc.startPage(pageInfo)
-            val canvas = page.canvas
-
-            val scale = minOf(availableW / bitmap.width.toFloat(), availableH / bitmap.height.toFloat())
-            val drawW = bitmap.width * scale
-            val drawH = bitmap.height * scale
-            val left = margin + (availableW - drawW) / 2f
-            val top = margin + (availableH - drawH) / 2f
-
-            canvas.drawBitmap(bitmap, null, RectF(left, top, left + drawW, top + drawH), null)
-            bitmap.recycle()
-            outDoc.finishPage(page)
-            added++
-
-            val pct = 10 + (((index + 1).toFloat() / total) * 80).toInt()
-            onProgress(ToolProgress(index + 1, total, pct, "Adding image ${index + 1} of $total...", false))
-        }
-
-        if (added == 0) {
+            val outFile = createTempOutputFile("converted", "pdf")
+            FileOutputStream(outFile).use { outDoc.writeTo(it) }
+            return outFile
+        } finally {
+            // A document abandoned half way through used to leak its native pages.
             outDoc.close()
-            throw IllegalArgumentException("None of the selected files could be decoded as an image.")
+        }
+    }
+
+    /**
+     * Decodes at no larger than the resolution the output can show, and rotates to match the
+     * camera's orientation tag: `BitmapFactory` ignores EXIF, so a portrait photo used to land on
+     * the page sideways at four times the pixels it needed.
+     */
+    private fun decodeSampled(file: File, maxDimensionPx: Int): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.absolutePath, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+
+        var sample = 1
+        while (max(bounds.outWidth, bounds.outHeight) / (sample.toLong() * 2) >= maxDimensionPx &&
+            sample <= MAX_SAMPLE_SIZE
+        ) {
+            sample *= 2
         }
 
-        val outFile = createTempOutputFile("converted", "pdf")
-        FileOutputStream(outFile).use { outDoc.writeTo(it) }
-        outDoc.close()
-        return outFile
+        var bitmap = BitmapFactory.decodeFile(
+            file.absolutePath,
+            BitmapFactory.Options().apply { inSampleSize = sample }
+        ) ?: return null
+
+        val degrees = exifRotation(file)
+        if (degrees != 0) {
+            val rotated = BitmapRotation.rotate(bitmap, degrees)
+            if (rotated !== bitmap) {
+                bitmap.recycle()
+                bitmap = rotated
+            }
+        }
+        return bitmap
     }
+
+    private fun exifRotation(file: File): Int = runCatching {
+        file.inputStream().use { input ->
+            when (ExifInterface(input).getAttributeInt(
+                ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL
+            )) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> 90
+                ExifInterface.ORIENTATION_ROTATE_180 -> 180
+                ExifInterface.ORIENTATION_ROTATE_270 -> 270
+                else -> 0
+            }
+        }
+    }.getOrDefault(0)
 
     suspend fun textOrCsvToPdf(file: File, onProgress: (ToolProgress) -> Unit): File {
         val lines = file.readLines()
@@ -206,40 +280,86 @@ class PdfConversionEngine(private val context: Context) {
             val scale = if (options.exportDpi >= 300) 3.0f else 1.5f
 
             if (options.exportAsLongImage) {
-                val renderedBitmaps = mutableListOf<Bitmap>()
-                var totalHeight = 0
-                var maxWidth = 0
+                // Measure first. Page bounds come from the document without rendering anything, so
+                // the stitched bitmap can be sized - and the scale reduced to fit it inside the
+                // memory budget - before a single pixel is produced. The previous version kept every
+                // page bitmap alive and then allocated one enormous bitmap on top of them.
+                var maxWidthPt = 1f
+                var totalHeightPt = 1f
                 for (p in 0 until totalPages) {
                     currentCoroutineContext().ensureActive()
                     val page = srcDoc.loadPage(p)
-                    val pixmap = page.toPixmap(Matrix(scale, scale), ColorSpace.DeviceRGB, false)
-                    val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
-                    renderedBitmaps.add(bmp)
-                    maxWidth = maxOf(maxWidth, bmp.width)
-                    totalHeight += bmp.height
-                    pixmap.destroy()
-                    page.destroy()
-                    val pct = 10 + (((p + 1).toFloat() / totalPages) * 60).toInt()
-                    onProgress(ToolProgress(p + 1, totalPages, pct, "Rendering page ${p + 1} of $totalPages for stitch...", false))
+                    try {
+                        val bounds = page.bounds
+                        maxWidthPt = max(maxWidthPt, bounds.x1 - bounds.x0)
+                        totalHeightPt += (bounds.y1 - bounds.y0)
+                    } finally {
+                        page.destroy()
+                    }
                 }
 
-                val stitchedBitmap = Bitmap.createBitmap(maxWidth, totalHeight, Bitmap.Config.ARGB_8888)
-                val canvas = Canvas(stitchedBitmap)
-                canvas.drawColor(Color.WHITE)
-                var currentY = 0f
-                for (bmp in renderedBitmaps) {
-                    val left = (maxWidth - bmp.width) / 2f
-                    canvas.drawBitmap(bmp, left, currentY, null)
-                    currentY += bmp.height
-                    bmp.recycle()
+                var stitchScale = scale
+                while (stitchScale > MIN_STITCH_SCALE &&
+                    (maxWidthPt * stitchScale).toLong() * (totalHeightPt * stitchScale).toLong() > MAX_STITCHED_PIXELS
+                ) {
+                    stitchScale *= 0.75f
+                }
+                if (stitchScale < scale) {
+                    onProgress(
+                        ToolProgress(
+                            0, totalPages, 5,
+                            "Long image is very tall - reduced to ${((stitchScale / scale) * 100).toInt()}% " +
+                                "of the chosen resolution to fit in memory...",
+                            false
+                        )
+                    )
                 }
 
-                val outFile = createTempOutputFile("stitched_long_image", ext)
-                FileOutputStream(outFile).use { fos ->
-                    stitchedBitmap.compress(compressFormat, quality, fos)
+                val outWidth = (maxWidthPt * stitchScale).toInt().coerceAtLeast(1)
+                val outHeight = (totalHeightPt * stitchScale).toInt().coerceAtLeast(1)
+                val stitchedBitmap = Bitmap.createBitmap(outWidth, outHeight, Bitmap.Config.ARGB_8888)
+                try {
+                    val canvas = Canvas(stitchedBitmap)
+                    canvas.drawColor(Color.WHITE)
+                    var currentY = 0f
+                    for (p in 0 until totalPages) {
+                        currentCoroutineContext().ensureActive()
+                        val page = srcDoc.loadPage(p)
+                        val pixmap = page.toPixmap(
+                            Matrix(stitchScale, stitchScale), ColorSpace.DeviceRGB, true
+                        )
+                        try {
+                            val left = (outWidth - pixmap.width) / 2f
+                            val pageBitmap = Bitmap.createBitmap(
+                                pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888
+                            )
+                            try {
+                                canvas.drawBitmap(pageBitmap, left, currentY, null)
+                                currentY += pageBitmap.height
+                            } finally {
+                                pageBitmap.recycle()
+                            }
+                        } finally {
+                            pixmap.destroy()
+                            page.destroy()
+                        }
+
+                        val pct = 10 + (((p + 1).toFloat() / totalPages) * 60).toInt()
+                        onProgress(
+                            ToolProgress(p + 1, totalPages, pct, "Rendering page ${p + 1} of $totalPages...", false)
+                        )
+                    }
+
+                    val outFile = createTempOutputFile("stitched_long_image", ext)
+                    FileOutputStream(outFile).use { fos ->
+                        stitchedBitmap.compress(compressFormat, quality, fos)
+                    }
+                    return outFile
+                } finally {
+                    if (!stitchedBitmap.isRecycled) {
+                        stitchedBitmap.recycle()
+                    }
                 }
-                stitchedBitmap.recycle()
-                return outFile
             }
 
             val zipFile = createTempOutputFile("rendered_images", "zip")
@@ -247,7 +367,7 @@ class PdfConversionEngine(private val context: Context) {
                 for (p in 0 until totalPages) {
                     currentCoroutineContext().ensureActive()
                     val page = srcDoc.loadPage(p)
-                    val pixmap = page.toPixmap(Matrix(scale, scale), ColorSpace.DeviceRGB, false)
+                    val pixmap = page.toPixmap(Matrix(scale, scale), ColorSpace.DeviceRGB, true)
                     val bitmap = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
 
                     zos.putNextEntry(ZipEntry(String.format(java.util.Locale.ROOT, "page_%03d.$ext", p + 1)))
@@ -311,7 +431,7 @@ class PdfConversionEngine(private val context: Context) {
                     for (p in 0 until totalPages) {
                         currentCoroutineContext().ensureActive()
                         val page = srcDoc.loadPage(p)
-                        val pixmap = page.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, false)
+                        val pixmap = page.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, true)
                         val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
                         pixmap.destroy()
                         page.destroy()
@@ -371,7 +491,7 @@ class PdfConversionEngine(private val context: Context) {
                     for (p in 0 until totalPages) {
                         currentCoroutineContext().ensureActive()
                         val page = srcDoc.loadPage(p)
-                        val pixmap = page.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, false)
+                        val pixmap = page.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, true)
                         val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
                         pixmap.destroy()
                         page.destroy()
@@ -506,7 +626,7 @@ class PdfConversionEngine(private val context: Context) {
 
                         // If document had no embedded individual images (e.g. raster scan), export full page
                         if (extractedImagesCount == 0) {
-                            val pixmap = page.toPixmap(Matrix(2.0f, 2.0f), ColorSpace.DeviceRGB, false)
+                            val pixmap = page.toPixmap(Matrix(2.0f, 2.0f), ColorSpace.DeviceRGB, true)
                             val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
 
                             zos.putNextEntry(ZipEntry(String.format(java.util.Locale.ROOT, "images/page_%03d.png", p + 1)))

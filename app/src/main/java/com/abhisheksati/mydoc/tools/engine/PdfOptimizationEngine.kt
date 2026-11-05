@@ -16,6 +16,7 @@ import com.artifex.mupdf.fitz.PDFDocument
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import java.io.File
@@ -28,6 +29,12 @@ import java.io.FileOutputStream
  */
 class PdfOptimizationEngine(private val context: Context) {
 
+    private companion object {
+        /** An embedded image larger than this (~24 MP, ~96 MB decoded) is left alone rather than
+         *  decoded, because the decode itself is what exhausts memory on an image-heavy scan. */
+        const val MAX_DECODABLE_PIXELS = 24_000_000L
+    }
+
     private fun createTempOutputFile(prefix: String, ext: String): File =
         PdfToolUtils.createTempOutputFile(context.cacheDir, prefix, ext)
 
@@ -37,6 +44,7 @@ class PdfOptimizationEngine(private val context: Context) {
 
         // Strategy A: Recompress embedded image streams with PDFBox
         var totalImagesRecompressed = 0
+        var totalImagesSkipped = 0
         val boxOutFile = createTempOutputFile("compressed_box", "pdf")
         var pdfBoxSucceeded = false
 
@@ -56,12 +64,33 @@ class PdfOptimizationEngine(private val context: Context) {
                         val page = doc.getPage(p)
                         val resources = page.resources ?: continue
                         for (name in resources.xObjectNames) {
-                            if (resources.isImageXObject(name)) {
-                                val xobj = resources.getXObject(name) as? PDImageXObject ?: continue
-                                val origBmp = runCatching { xobj.image }.getOrNull() ?: continue
-                                val w = origBmp.width
-                                val h = origBmp.height
+                            if (!resources.isImageXObject(name)) continue
+                            val xobj = resources.getXObject(name) as? PDImageXObject ?: continue
+                            val w = xobj.width
+                            val h = xobj.height
 
+                            // The stream dictionary already gives the dimensions, so an image too large
+                            // to hold is skipped before it is decoded rather than after it dies.
+                            if (w.toLong() * h.toLong() > MAX_DECODABLE_PIXELS) {
+                                android.util.Log.w(
+                                    "PdfOptimize",
+                                    "skipping a ${w}x$h image: too large to decode within the budget"
+                                )
+                                totalImagesSkipped++
+                                continue
+                            }
+
+                            val origBmp = try {
+                                xobj.image
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (t: Throwable) {
+                                android.util.Log.w("PdfOptimize", "could not decode a ${w}x$h image", t)
+                                totalImagesSkipped++
+                                continue
+                            }
+
+                            try {
                                 val scale = minOf(1.0f, maxDim.toFloat() / maxOf(w, h).toFloat())
                                 val targetW = (w * scale).toInt().coerceAtLeast(1)
                                 val targetH = (h * scale).toInt().coerceAtLeast(1)
@@ -72,17 +101,37 @@ class PdfOptimizationEngine(private val context: Context) {
                                     origBmp
                                 }
 
-                                val newImg = JPEGFactory.createFromImage(doc, scaledBmp, qualityFloat)
-                                resources.put(name, newImg)
-                                totalImagesRecompressed++
-
-                                if (scaledBmp !== origBmp) {
-                                    scaledBmp.recycle()
+                                try {
+                                    resources.put(
+                                        name,
+                                        JPEGFactory.createFromImage(doc, scaledBmp, qualityFloat)
+                                    )
+                                    totalImagesRecompressed++
+                                } finally {
+                                    if (scaledBmp !== origBmp) {
+                                        scaledBmp.recycle()
+                                    }
                                 }
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (t: Throwable) {
+                                android.util.Log.w("PdfOptimize", "could not recompress a ${w}x$h image", t)
+                                totalImagesSkipped++
+                            } finally {
+                                // PDImageXObject.getImage() decodes afresh on every call, so this bitmap
+                                // belongs to this loop; the encoded JPEG no longer refers to it.
+                                origBmp.recycle()
                             }
                         }
                         val pct = 10 + ((p.toFloat() / totalPages) * 35).toInt()
                         onProgress(ToolProgress(p + 1, totalPages, pct, "Optimizing image streams...", false))
+                    }
+
+                    if (totalImagesSkipped > 0) {
+                        android.util.Log.w(
+                            "PdfOptimize",
+                            "left $totalImagesSkipped embedded image(s) untouched: too large or undecodable"
+                        )
                     }
 
                     if (totalImagesRecompressed > 0) {
@@ -91,7 +140,10 @@ class PdfOptimizationEngine(private val context: Context) {
                     }
                 }
             }
-        } catch (_: Exception) {
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.w("PdfOptimize", "image recompression strategy failed", e)
             pdfBoxSucceeded = false
         }
 

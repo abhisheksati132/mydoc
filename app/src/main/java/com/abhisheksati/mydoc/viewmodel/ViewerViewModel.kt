@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
 @Immutable
@@ -618,7 +619,10 @@ class ViewerViewModel(
         // keystroke keeps the workers busy with queries the user has already abandoned.
         searchJob = viewModelScope.launch(ioDispatcher) {
             delay(250)
-            val matches = renderer?.search(query) ?: emptyList()
+            val matches = renderer?.search(query) { isActive } ?: emptyList()
+            // Cancelling the job cannot interrupt the scan once it is running, so the result is
+            // dropped here: publishing it would show matches for a query the reader replaced.
+            if (!isActive) return@launch
             _uiState.update {
                 it.copy(
                     searchMatches = matches,

@@ -1,4 +1,5 @@
 package com.abhisheksati.mydoc.rendering.engine
+import kotlinx.coroutines.CancellationException
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -258,30 +259,40 @@ class AndroidPdfRenderer(
         }
     }
 
-    override fun search(query: String): List<SearchMatch> = lock.withLock {
-        if (query.isBlank()) return@withLock emptyList()
+    override fun search(query: String, isCancelled: () -> Boolean): List<SearchMatch> {
+        if (query.isBlank()) return emptyList()
         val total = pageCount
         val results = mutableListOf<SearchMatch>()
-        try {
-            val doc = pdfBoxDocument() ?: return@withLock emptyList()
-            val stripper = PDFTextStripper()
-            for (p in 0 until total) {
-                stripper.startPage = p + 1
-                stripper.endPage = p + 1
-                val text = stripper.getText(doc) ?: ""
-                if (text.contains(query, ignoreCase = true)) {
-                    val size = getPageSize(p)
-                    results.add(
-                        SearchMatch(
-                            pageIndex = p,
-                            bounds = android.graphics.RectF(0f, 0f, size.first, size.second),
-                            textSnippet = query
-                        )
-                    )
+        for (p in 0 until total) {
+            if (isCancelled()) return emptyList()
+            // One page per lock acquisition: PDFBox and the renderer share this lock, and a whole
+            // document scan used to keep page rendering waiting for the entire search.
+            val hit = lock.withLock {
+                try {
+                    val doc = pdfBoxDocument() ?: return emptyList()
+                    val stripper = PDFTextStripper()
+                    stripper.startPage = p + 1
+                    stripper.endPage = p + 1
+                    (stripper.getText(doc) ?: "").contains(query, ignoreCase = true)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (t: Throwable) {
+                    android.util.Log.w("AndroidPdfRenderer", "Search skipped page $p", t)
+                    false
                 }
             }
-        } catch (_: Throwable) {}
-        results
+            if (hit) {
+                val size = getPageSize(p)
+                results.add(
+                    SearchMatch(
+                        pageIndex = p,
+                        bounds = android.graphics.RectF(0f, 0f, size.first, size.second),
+                        textSnippet = query
+                    )
+                )
+            }
+        }
+        return results
     }
 
     override fun getOutline(): List<OutlineItem> = lock.withLock {

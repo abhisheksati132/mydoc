@@ -47,7 +47,12 @@ interface DocumentRenderer {
         outHeight: Int,
         mode: ReadingMode = ReadingMode.NORMAL
     ): Bitmap? = null
-    fun search(query: String): List<SearchMatch>
+    /**
+     * A full-document search. [isCancelled] is consulted between pages: the scan is long enough to
+     * be worth abandoning when the reader types another character, and the caller must not publish
+     * results for a query nobody asked for any more.
+     */
+    fun search(query: String, isCancelled: () -> Boolean = { false }): List<SearchMatch>
     fun getOutline(): List<OutlineItem>
     /**
      * Null when the text layer could not be read at all; an empty string when the page or

@@ -1,6 +1,8 @@
 package com.abhisheksati.mydoc.rendering.engine
 
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.RectF
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.rendering.cache.TileBitmapCache
@@ -237,13 +239,31 @@ class MuPdfRenderer(
             val raw = withPage(doc, pageIndex) { page ->
                 val bounds = page.bounds
                 val srcW = (bounds.x1 - bounds.x0).coerceAtLeast(1f)
+                val srcH = (bounds.y1 - bounds.y0).coerceAtLeast(1f)
                 val s = pageWidthPx / srcW
-                val pageHeightPx = (bounds.y1 - bounds.y0) * s
-                val matrix = Matrix(s).translate(-region.left * pageWidthPx, -region.top * pageHeightPx)
+
+                // The region in page coordinates. MuPDF applies a Matrix translation in pre-scale
+                // space, so the offsets here are page units: shifting by pixel values left every
+                // tile showing the whole page instead of the slice that was asked for.
+                val regionLeft = bounds.x0 + region.left * srcW
+                val regionTop = bounds.y0 + region.top * srcH
+
                 try {
-                    com.artifex.mupdf.fitz.android.AndroidDrawDevice.drawPage(page, matrix)
+                    val tile = Bitmap.createBitmap(outWidth, outHeight, Bitmap.Config.ARGB_8888)
+                    Canvas(tile).drawColor(Color.WHITE)
+                    try {
+                        val device = com.artifex.mupdf.fitz.android.AndroidDrawDevice(tile)
+                        page.run(device, Matrix(s).translate(-regionLeft, -regionTop), null)
+                    } catch (t: Throwable) {
+                        android.util.Log.w("MuPdfRenderer", "clipped tile render failed", t)
+                        if (!tile.isRecycled) tile.recycle()
+                        throw t
+                    }
+                    tile
                 } catch (_: Throwable) {
-                    withPixmap(page, matrix) { pixmap ->
+                    // Pixmap fallback. toPixmap allocates for the transformed page bounds, so this
+                    // path is only taken when the draw device itself cannot be used.
+                    withPixmap(page, Matrix(s).translate(-regionLeft, -regionTop)) { pixmap ->
                         val width = pixmap.width
                         val height = pixmap.height
                         val pixels = pixmap.pixels
@@ -298,40 +318,52 @@ class MuPdfRenderer(
         }
     }
 
-    override fun search(query: String): List<SearchMatch> {
+    override fun search(query: String, isCancelled: () -> Boolean): List<SearchMatch> {
         if (query.isBlank()) return emptyList()
 
-        return lock.withLock {
-            val doc = document ?: return@withLock emptyList()
-            val results = mutableListOf<SearchMatch>()
-            val total = try { doc.countPages() } catch (_: Throwable) { 0 }
+        val total = lock.withLock {
+            val doc = document ?: return emptyList()
+            try {
+                doc.countPages()
+            } catch (t: Throwable) {
+                android.util.Log.w("MuPdfRenderer", "could not count pages for search", t)
+                0
+            }
+        }
 
-            for (p in 0 until total) {
+        val results = mutableListOf<SearchMatch>()
+        for (p in 0 until total) {
+            // The native document is not safe to touch from two threads, but the scan does not need
+            // the lock while it is turning quads into RectFs or deciding whether to keep going.
+            // Holding the rendering lock for the whole document used to freeze page painting for as
+            // long as the search ran, which for a large PDF was seconds per keystroke.
+            if (isCancelled()) return emptyList()
+            val quads = lock.withLock {
+                val doc = document ?: return emptyList()
                 try {
-                    withPage(doc, p) { page ->
-                        val quadsList = page.search(query)
-                        if (quadsList != null) {
-                            for (quads in quadsList) {
-                                for (q in quads) {
-                                    val r = q.toRect()
-                                    results.add(
-                                        SearchMatch(
-                                            pageIndex = p,
-                                            bounds = RectF(r.x0, r.y0, r.x1, r.y1),
-                                            textSnippet = query
-                                        )
-                                    )
-                                }
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    android.util.Log.w("MuPdfRenderer", "Search skipped page $p", e)
+                    withPage(doc, p) { page -> page.search(query) }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (t: Throwable) {
+                    android.util.Log.w("MuPdfRenderer", "Search skipped page $p", t)
+                    null
                 }
             }
-            results
+            if (quads == null) continue
+            for (quadsInLine in quads) {
+                for (quad in quadsInLine) {
+                    val r = quad.toRect()
+                    results.add(
+                        SearchMatch(
+                            pageIndex = p,
+                            bounds = RectF(r.x0, r.y0, r.x1, r.y1),
+                            textSnippet = query
+                        )
+                    )
+                }
+            }
         }
+        return results
     }
 
     override fun getOutline(): List<OutlineItem> {

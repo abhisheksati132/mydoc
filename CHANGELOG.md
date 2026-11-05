@@ -144,6 +144,35 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   scan whose reader has already moved on is now discarded rather than published, so it cannot
   overwrite the swipe chain of the document the user actually opened. A failed enumeration yields an
   empty chain instead of throwing through the effect.
+- **Every PDF image export path was dead: MuPDF will not give back pixels without an alpha
+  channel.** Five call sites rendered `page.toPixmap(matrix, DeviceRGB, false)` and then read
+  `pixmap.pixels`, which the native layer rejects with `invalid colorspace for getPixels (must be
+  RGB/BGR with alpha)`. "Export as images", long-image export and the OCR fallbacks therefore threw
+  on the first page, on every device. All five now request `DeviceRGB` with alpha, and a device test
+  asserts the rejection itself so the flag cannot be flipped back silently.
+- **Long-image export held every page in memory at once (N-5).** `pdfToImagesZip` rendered all pages
+  into a list of bitmaps, then allocated one enormous bitmap on top of them and drew the list in. A
+  20-page A4 document at 300 dpi is 1,785 × 50,520 ≈ 90 million pixels (~360 MB) before compression.
+  The geometry is now measured first from the page bounds without rendering, the scale is reduced
+  until the stitched image fits a 24-megapixel budget (with the reduction announced in the progress
+  text), and pages are rendered one at a time straight onto the stitched canvas, each released in
+  `finally`. A cancellation or an I/O failure releases the stitched bitmap too.
+- **Image-to-PDF decoded at full camera resolution and ignored orientation (N-6).**
+  `BitmapFactory.decodeFile` was called with no options, so a 12 MP photo was buffered in full to
+  draw onto an A4 page, and EXIF orientation was never applied — a portrait photo landed sideways.
+  Decoding now samples down to the resolution the chosen page can actually show (FIT_IMAGE keeps
+  full resolution because the page is the image), the EXIF rotation is applied through the shared
+  `BitmapRotation` so the axes swap correctly, and the `PdfDocument` is closed in a `finally`: the
+  old code closed it only on the two paths it thought of, leaking the native document when drawing
+  or writing threw.
+- **PDF compression leaked every image it touched (N-7).** `PdfOptimizationEngine` decoded each
+  `PDImageXObject` with `xobj.image`, recycled only the scaled copy it had made itself, and never
+  released the original — which PDFBox decodes afresh per call. It also wrapped the decode in
+  `runCatching { … }.getOrNull() ?: continue`, so an undecodable image vanished without a trace, and
+  the whole strategy sat inside `catch (_: Exception)`. Ownership is now explicit: the decoded bitmap
+  is recycled in a `finally`, the strategy failure is logged, `CancellationException` is rethrown,
+  and an image larger than the decode budget is skipped *before* decoding (its dimensions come from
+  the stream dictionary, not the bitmap) with the number left untouched logged.
 - **Office conversions buffered the whole document before checking its size (H-7).** `DocxConverter`
   called `readBytes()` first and compared against its documented 200 MB limit afterwards, so the
   limit could only ever be reached by dying; `PptxConverter` had no limit at all and additionally
@@ -152,6 +181,27 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   sizes one buffer from it, caps growth at the budget instead of doubling past it (a provider that
   understates the length cannot make the reader allocate past the budget), and keeps the deck's
   placeholder-recovered copy inside the same budget.
+- **Zoom tiles showed the whole page instead of the region asked for (H-5).** `renderRegion` built
+  the matrix with `Matrix(s).translate(-region.left * pageWidthPx, …)`: MuPDF applies a Matrix
+  translation in *pre-scale* (page) units, so the offsets were out by the scale factor, and
+  `AndroidDrawDevice.drawPage` allocated the full page anyway before `createScaledBitmap` shrank it.
+  Measured on the emulator with a fixture whose quadrants are different greys: every tile — top-left
+  and bottom-right alike — averaged 114, which is the whole page's average (115). The region is now
+  mapped in page units and drawn straight into a tile-sized bitmap through `AndroidDrawDevice`, so no
+  full-page bitmap is allocated per tile and no post-hoc crop is involved. The same measurement now
+  gives 160 for the top-left tile and 200 for the bottom-right, i.e. the region that was asked for.
+- **A document search stopped page rendering until it had finished (H-6).** `MuPdfRenderer.search`
+  took the rendering lock for the entire scan, so scrolling a large PDF waited on every keystroke,
+  and `ViewerViewModel` published the result even when the job had been cancelled while the scan ran
+  (cancellation cannot interrupt a blocking call, and there was no suspension point before the
+  publish). The scan now takes the lock one page at a time — native calls stay serialized, which is
+  what the renderer requires — and consults an `isCancelled` predicate between pages; the viewer
+  drops a result whose job is no longer active. `AndroidPdfRenderer` had the same whole-scan lock
+  and a `catch (_: Throwable) {}` that swallowed every page failure silently; both changed the same
+  way, with the failure logged. Proven in both directions: with the old single-lock scan the new
+  device test fails ("render only completed after the whole 1,106 ms scan"), with per-page locking it
+  passes.
+ Both converters
 - **A document that was too large was announced as an unsupported one (H-7).** Both converters
   returned `null` for every failure and the viewer turned that into "could not lay out its pages …
   features our converter does not implement" — a memory limit dressed up as a missing feature, and a
@@ -242,10 +292,26 @@ quietly. Detecting that needs a terminator check in the worksheet loop, not just
   10 GB claim against a 1 KB budget that must not drive the allocation, empty distinguished from
   unreadable, and the failure mapping (neither a size limit nor an out-of-memory may be announced as
   unimplemented features).
+- `PdfTileRenderingOnDeviceTest` — 3 instrumented tests on a fixture whose four quadrants are four
+  different greys: a tile is the size it was asked for, and the top-left and bottom-right tiles
+  average the grey of the quadrant they name. Both quadrant tests failed before the fix, when every
+  tile averaged the whole page (measured 114 against a page average of 115).
+- `PdfSearchCancellationOnDeviceTest` — 2 instrumented tests over a 1,200 page, text-dense fixture: a
+  cancelled search yields nothing while the same query yields matches when not cancelled, and a
+  `renderPage` issued while a scan is running completes before the scan does. The second test was
+  checked against the old whole-document locking and fails there, so it measures the lock discipline
+  rather than just passing.
+
 - `OfficeConversionBudgetOnDeviceTest` — 3 instrumented tests on real files: a sparse 250 MB `.docx`
   refused in under a second without its bytes ever being buffered, a real DOCX still converting to a
   cached PDF that the second open reuses rather than re-rendering, and an empty document refused
   rather than announced as a valid one.
+- `ImageConversionMemoryOnDeviceTest` — 5 instrumented tests: a JPEG tagged `ORIENTATION_ROTATE_90`
+  ends up taller-than-wide on the page, a 20-page A4 export at 300 dpi stays inside the 24-megapixel
+  budget with the scale visibly reduced, "Export as images" yields one decodable PNG per page (it
+  produced none before the alpha fix), the alpha-less pixmap read is asserted to *throw* so the fix
+  cannot be reverted, and a batch mixing a real PNG with a text file still places the image that
+  decoded while reporting the rest as undecodable.
 
 Known gaps, measured rather than assumed: a 0-byte `.docx` is reported by the reader as unreadable
 rather than empty, because the stream resolver returns no stream for it — the message is still
