@@ -289,23 +289,7 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   text and the counting itself is a named function under test. `PhotoViewerScreen`'s `isOcrRunning` was
   written nowhere and read nowhere; deleted.
 
-- **Selection, orientation and text rows in the viewer and file lists (N-15, R7, R8).** The reading
-  controls sheet read `activity.requestedOrientation` during composition and wrote to it on tap, so
-  the request changed under the user's finger while the selected pill stayed on the old choice; the
-  value is mirrored into state now and both are written together. A file row in the Files list and
-  grid was tried for a selection affordance and **reverted, so R7 stays open**: adding
-  `role = Role.Checkbox` plus `selected = isSelected` made all 11 visible rows report
-  `checkable="true"` to the accessibility layer while the long-pressed row still reported
-  `selected="false"` — measured with `uiautomator dump` on `mydoc_api35`. That is worse than the
-  original state, because it announces a checkbox that never shows itself as checked. The row keeps
-  its `combinedClickable` and the tick icon's `Selected` / `Not selected` content description, which
-  is what a screen reader actually reads today. Six rows
-  (three in the document-details dialog, three in the reading controls sheet) were pinned to exactly
-  `minTouchTarget` height, which clips the label when the system font scale grows; they are
-  `heightIn(min =)` now, so the row keeps its minimum touch size and still makes room for text.
-  Compile, lint and the suite cover the code; the highlight moving, TalkBack announcing "checked" and
-  the row at 1.3× font scale are visual properties that need a screen pass and are recorded as not
-  yet visually verified rather than claimed as fixed.
+- **A file row could not be heard as selected (R7).** Selection was only ever drawn — a filled container and a tick icon — so a screen reader could not tell which items were in the batch. The first attempt, `role = Role.Checkbox` plus `selected = isSelected` on every row, was measured and discarded: all 11 visible rows reported `checkable="true"` while the selected row still reported `selected="false"`, i.e. a checkbox that never shows itself as checked. What ships is `toggleable(value = isSelected, role = Role.Checkbox)` applied **only while selection mode is on**, with the original `combinedClickable` otherwise. Re-measured with `uiautomator dump` on `mydoc_api35`: in selection mode 11 rows are checkable and exactly the long-pressed one is `checked="true"`; after closing selection 0 rows are checkable and the list is unchanged.
 
 - **Two dead viewer controls that were still dead (N-1, N-4).** The Definition-of-Done pass found
   the audit's "already shipped fixed" note to be wrong against this tree. `ViewerScaffold` passed
