@@ -95,7 +95,8 @@ internal object PptxRenderer {
                     n.startsWith("ppt/slideLayouts/") ||
                     n.startsWith("ppt/slideMasters/") ||
                     n.startsWith("ppt/theme/") ||
-                    n.startsWith("ppt/media/")
+                    n.startsWith("ppt/media/") ||
+                    n.startsWith("ppt/charts/")
                 if (keep && !n.startsWith("ppt/notesSlides/")) {
                     if (totalExtractedBytes < maxTotalBytes) {
                         val baos = java.io.ByteArrayOutputStream(minOf(maxEntryBytes, 64 * 1024))
@@ -374,6 +375,16 @@ internal object PptxRenderer {
             }
 
             val box = frame.find("p:xfrm")?.let { boxOf(it) }?.let { transform.apply(it) } ?: return
+
+            // A chart is a part of its own, reached through the slide's relationships, and it carries
+            // its values in the part - so it can be drawn without opening the workbook behind it.
+            frame.find("c:chart")?.let { reference ->
+                val path = reference.attr("r:id")?.let { rels(ctx.slidePath)[it] }
+                val root = path?.let { part(it) }
+                if (root != null) ChartModel.parse(root)?.let { ChartPainter.paint(canvas, box.left, box.top, box.right, box.bottom, it) }
+                return
+            }
+
             val table = frame.find("a:tbl") ?: return
             val grid = table.find("a:tblGrid")?.childrenNamed("a:gridCol").orEmpty()
                 .map { (it.attr("w")?.toFloatOrNull() ?: 0f) / EmuPerPoint }

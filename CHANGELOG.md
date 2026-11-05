@@ -36,6 +36,21 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   and the note's own sentences are collected at the end of the document. They used to be dropped
   silently: a document's citations survived as a number with nothing behind it.
 
+- **Charts on a slide are drawn instead of skipped.** A chart in a `.pptx` is a part of its own that
+  carries its own values (`c:numCache` / `c:strCache`), so a viewer needs neither the workbook behind
+  it nor a calculation engine. `ChartModel` reads vertical bar groups - clustered, stacked and
+  percentage-stacked - line groups and pie groups, including the 3-D pie, whose tilt is dropped but
+  whose slices are the same data, and `ChartPainter` draws them into the rectangle the author gave
+  the frame: gridlines with their values, bars, polylines with markers, slices with their share, and a
+  colour key. What cannot be laid out truthfully stays blank rather than being improvised: a
+  horizontal bar chart, a stacked line, a combo plot area with more than one group, and every other
+  kind return nothing, because half a chart is the wrong chart. The colours are the painter's own
+  sequence rather than the deck's theme, and the `pptx`/`pptm`/`ppsx`/`potx` capability notes now say
+  exactly that. Verified on `mydoc_api35` against a deck PowerPoint itself wrote (bar, pie and line on
+  three slides) with instrumented tests that count the series colours in the rasterised page and a
+  control deck whose chart part is missing; the reader is also tested against the three chart parts
+  taken out of that deck.
+
 ### Fixed
 
 - **The Word reader stops losing structure it was never able to represent.** `parseDocumentXml` was a
@@ -55,6 +70,13 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 - **The converted page no longer invents spaces.** The PDF wrapper joined every run with a space of
   its own, so `…endnote` + `[1]` + `.` became `…endnote [1] .` on the page. It now inserts a space only
   where the document wrote one, and a linked run is drawn underlined and tinted like a link.
+- **A chart part no longer has to be beside its slide to be found.** `ppt/charts/` was not among the
+  entries the presentation package reader kept, so even a correct chart reference resolved to nothing
+  and the frame stayed empty. The reader's own cache lookups were one level too shallow as well:
+  Office writes `c:val` → `c:numRef` → `c:numCache`, and a direct child never reached the values.
+- **The format table said `.fb2` was refused after it had started opening.** The capability registry,
+  the library and the viewer were changed for `.fb2`; the README's "Refused rather than scraped"
+  sentence was not, so the documentation claimed a limitation the app no longer had.
 
 ### Notes
 
