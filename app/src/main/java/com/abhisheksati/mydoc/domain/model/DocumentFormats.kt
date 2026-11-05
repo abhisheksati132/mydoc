@@ -127,6 +127,22 @@ private val descriptors: List<FormatDescriptor> = buildList {
         )
     )
 
+    // FictionBook is a MuPDF format like EPUB: the engine refows it, we do not parse it.
+    add(
+        FormatDescriptor(
+            extension = "fb2",
+            family = DocumentFamily.EBOOK,
+            viewer = ViewerKind.PDF_PAGES,
+            converter = ConverterKind.NONE,
+            thumbnail = ThumbnailKind.ICON_ONLY,
+            fidelity = RenderFidelity.STRUCTURED_REFLOW,
+            limitations = listOf(
+                "Reflowable text is laid out by MuPDF, not by the book's own stylesheet",
+                "Only the first story is followed: a .fb2 with several binary-linked bodies shows one"
+            )
+        )
+    )
+
     // ---- Word processing ----
     add(
         FormatDescriptor(
@@ -288,7 +304,6 @@ private val byExtension: Map<String, FormatDescriptor> =
 /** Containers we deliberately refuse rather than scrape into nonsense. */
 private val explicitlyUnsupported: Map<String, LoadFailure> = mapOf(
     "xlsb" to LoadFailure.UNSUPPORTED_FORMAT,
-    "fb2" to LoadFailure.UNSUPPORTED_FORMAT,
     "wps" to LoadFailure.UNSUPPORTED_FORMAT,
     "wpd" to LoadFailure.UNSUPPORTED_FORMAT
 )
@@ -366,6 +381,7 @@ object DocumentFormats {
         "tsv" -> listOf("text/tab-separated-values")
         "pdf" -> listOf("application/pdf")
         "epub" -> listOf("application/epub+zip")
+        "fb2" -> listOf("application/x-fictionbook+xml", "application/xml")
         else -> emptyList()
     }
 }

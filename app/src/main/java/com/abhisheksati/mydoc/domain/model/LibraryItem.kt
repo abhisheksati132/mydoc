@@ -42,6 +42,7 @@ data class LibraryItem(
         MediaKind.DOCUMENT -> when (extension) {
             "pdf" -> "PDF"
             "epub" -> "EPUB"
+            "fb2" -> "FB2"
             "docx", "doc" -> "WORD"
             "xlsx", "xls" -> "EXCEL"
             "pptx", "ppt" -> "PPT"

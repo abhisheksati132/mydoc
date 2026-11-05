@@ -45,7 +45,7 @@ data class StorageItem(
         get() {
             if (isDirectory) return StorageFileType.DIRECTORY
             return when (extension) {
-                "pdf", "epub", "xps", "oxps", "cbz" -> StorageFileType.PDF
+                "pdf", "epub", "fb2", "xps", "oxps", "cbz" -> StorageFileType.PDF
                 "doc", "docx" -> StorageFileType.WORD
                 "xls", "xlsx", "csv", "tsv" -> StorageFileType.EXCEL
                 "ppt", "pptx", "pps", "ppsx" -> StorageFileType.PPT

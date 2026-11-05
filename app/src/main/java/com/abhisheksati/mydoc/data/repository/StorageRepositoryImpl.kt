@@ -848,7 +848,8 @@ class StorageRepositoryImpl(
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.odt' OR " +
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.ods' OR " +
                             "${MediaStore.Files.FileColumns.DATA} LIKE '%.odp' OR " +
-                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.epub'"
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.epub' OR " +
+                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.fb2'"
                     Triple(sel, null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC")
                 }
                 FileCategory.IMAGES -> {

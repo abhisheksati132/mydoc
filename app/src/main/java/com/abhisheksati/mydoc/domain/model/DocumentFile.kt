@@ -26,6 +26,7 @@ data class DocumentFile(
     val typeBadge: String = when (extension) {
         "pdf" -> "PDF"
         "epub" -> "EPUB"
+        "fb2" -> "FB2"
         "xps", "oxps" -> "XPS"
         "cbz" -> "CBZ"
         "docx", "doc" -> "WORD"

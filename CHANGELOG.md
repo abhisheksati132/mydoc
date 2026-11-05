@@ -7,6 +7,13 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ### Added
 
+- **`.fb2` opens instead of being refused.** FictionBook2 was in the list of containers MyDoc
+  deliberately refuses, which was wrong: the MuPDF we already ship contains an FB2 refiner
+  (`fb2_document_handler`, the `application/x-fictionbook` registration and the FictionBook stylesheet
+  are all in the bundled native library). `.fb2` is now routed the same way `.epub` is — MuPDF lays
+  the book out, we do not — and it appears in the library, the folder browse, the category chips, the
+  recents badges and the `ACTION_VIEW` filter. Verified on `mydoc_api35` with a two-chapter FB2: the
+  prose, the centred chapter titles, the quotation block, the poem and the outline all come through.
 - **`.docx` footnotes and endnotes are read.** `word/footnotes.xml` and `word/endnotes.xml` are now
   among the parts the reader opens, a `w:footnoteReference` puts the number Word shows into the text,
   and the note's own sentences are collected at the end of the document. They used to be dropped

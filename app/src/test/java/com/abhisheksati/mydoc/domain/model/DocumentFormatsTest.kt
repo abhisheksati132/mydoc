@@ -22,9 +22,22 @@ class DocumentFormatsTest {
 
     @Test
     fun refusedContainersAreReportedNotScraped() {
-        for (ext in listOf("xlsb", "wps", "wpd", "fb2")) {
+        for (ext in listOf("xlsb", "wps", "wpd")) {
             assertEquals(ext, LoadFailure.UNSUPPORTED_FORMAT, DocumentFormats.failureFor(ext))
         }
+    }
+
+    @Test
+    fun fb2IsOpenedByTheEbookEngineRatherThanRefused() {
+        // MuPDF ships an FB2 refiner (fb2_document_handler and the FictionBook stylesheet are in the
+        // bundled native library), so refusing the extension was a routing gap, not a capability gap.
+        assertEquals(ViewerKind.PDF_PAGES, DocumentFormats.viewerFor("fb2"))
+        assertEquals(DocumentFamily.EBOOK, DocumentFormats.familyOf("fb2"))
+        assertEquals(ConverterKind.NONE, DocumentFormats.converterFor("fb2"))
+        assertNull(DocumentFormats.failureFor("fb2"))
+        assertTrue(DocumentFormats.forExtension("fb2")!!.limitations.isNotEmpty())
+        assertTrue(DocumentFormats.openableExtensions.contains("fb2"))
+        assertEquals(DocumentCategory.EPUB, DocumentFormats.categoryOf("fb2"))
     }
 
     @Test

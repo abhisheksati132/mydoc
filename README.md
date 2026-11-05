@@ -104,7 +104,7 @@ what the container is nominally called. "Fidelity" is what the reader discloses 
 | **Presentations** | `.pptx`, `.ppsx`, `.potx`, `.pptm` | Fixed layout | Charts, SmartArt and embedded objects are not drawn; animations are not played; macros never execute |
 | **Presentations (ODF)** | `.odp`, `.otp` | Structured reflow | Draw styles and master pages simplified |
 | **Presentations (legacy)** | `.ppt`, `.pps`, `.pot` | Text only | Shape positions, colors and images in the binary format are not decoded |
-| **E-Books** | `.epub` | Structured reflow | Reflow is MuPDF's, not the book's own CSS |
+| **E-Books** | `.epub`, `.fb2` | Structured reflow | Reflow is MuPDF's, not the book's own CSS; a `.fb2` with several bodies shows the first |
 | **Text & source** | `.txt`, `.md`, `.log`, `.json`, `.xml`, `.yaml`, `.ini`, `.sh`, `.sql`, `.kt`, `.java`, `.py`, `.html`, `.css`, `.js`, `.c`, `.h`, `.gradle`, `.bat` | Fixed layout | Markdown renders headings, emphasis, lists, quotes and rules |
 | **Media** | `.mp4`, `.mkv`, `.webm`, `.mov`, `.mp3`, `.m4a`, `.aac`, `.flac`, `.wav` | Hardware playback | — |
 | **Images** | `.jpg`, `.png`, `.webp`, `.gif`, `.bmp`, `.heic` | Full render | — |

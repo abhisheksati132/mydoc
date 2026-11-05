@@ -239,7 +239,8 @@ class StorageViewModel(
                         "${MediaStore.Files.FileColumns.DATA} LIKE '%.txt' OR " +
                         "${MediaStore.Files.FileColumns.DATA} LIKE '%.csv' OR " +
                         "${MediaStore.Files.FileColumns.DATA} LIKE '%.md' OR " +
-                        "${MediaStore.Files.FileColumns.DATA} LIKE '%.epub'"
+                        "${MediaStore.Files.FileColumns.DATA} LIKE '%.epub' OR " +
+                        "${MediaStore.Files.FileColumns.DATA} LIKE '%.fb2'"
                 Pair(sel, null)
             }
             FileCategory.IMAGES -> {
