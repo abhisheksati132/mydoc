@@ -48,6 +48,18 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   back empty for an APK that does contain `lib/arm64-v8a/libmupdf_java.so`). The rewritten step was
   run against the four real APK layouts this project produces - three splits and the universal, which
   also carries x86 - and against six name/ABI combinations including each way it can fail.
+- **"Timeout waiting for emulator to boot" was not flaky infrastructure - it was `-accel off`.** Measured
+  from the runners' own logs: the release job launched
+  `emulator -port 5554 -avd test ... -accel off` and printed `ProbeKVM: This user doesn't have
+  permissions to use KVM (/dev/kvm)` - the device node is `crw-rw---- root kvm` and the CI user is not in
+  that group - so an API 35 x86_64 image was booting in software emulation and never came online (the
+  collected diagnostics show `adb: device offline` for the whole window). The build workflow's
+  instrumented job had the udev rule that grants KVM all along, which is why it boots in about 40 seconds
+  while the release job timed out on every attempt, including the v1.7.2 run that started this. The
+  emulator action's own `enable-kvm` input does not do it - with that input set the launch line still came
+  out `-accel off` - so release.yml now carries the same `Enable KVM` step, and the judge step's advice
+  tells you to read the launch line for `-accel off` before retrying, because a retry cannot fix a missing
+  permission.
 - **Three tests failed on faster hardware because they measured the clock, not the behaviour.**
   `PdfSearchCancellationOnDeviceTest.renderingIsNotHeldBehindTheWholeDocumentSearch` demanded that a
   1,200-page scan take more than 1,000 ms before it would judge locking strategy; CI measured

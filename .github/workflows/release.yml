@@ -229,6 +229,19 @@ jobs:
       # system image if it is missing, so the first run on a fresh runner spends part of the boot
       # budget pulling ~1 GB. Install it as its own step so the 40 minutes below buys booting only.
       # Failure here is not fatal — the emulator step would have done the same download anyway.
+      # This is the step whose absence made every release smoke test time out. The runner's /dev/kvm
+      # is `crw-rw---- root kvm` and the CI user is not in that group, so without this the emulator
+      # starts with "-accel off" (measured: the launch line in the job log), an API 35 x86_64 image
+      # cannot boot usefully in software emulation, and the step dies with "Timeout waiting for
+      # emulator to boot" - which looks like flaky infrastructure but is deterministic. The build
+      # workflow has had this step all along, which is why its instrumented job boots in ~40s while
+      # the release job never did. The action's own `enable-kvm` input does not do this.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
       - name: Pre-install the API 35 x86_64 system image
         continue-on-error: true
         run: |
@@ -248,14 +261,13 @@ jobs:
       # pre-installed, so it is downloaded and then cold-booted. The action's own default is 600s,
       # which is what this step ran with the first time it existed and it timed out. The timeout is
       # stated explicitly and the AVD is created without a snapshot so nothing is reused or cached
-      # between runs; a boot failure here is infrastructure, and the message says so.
+      # between runs; if it still times out, the launch line above shows whether KVM was granted.
       - name: Smoke test the signed release APK
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         continue-on-error: true
         id: smoke
         with:
           api-level: 35
-          enable-kvm: true
           target: google_apis
           arch: x86_64
           profile: pixel_6
@@ -308,8 +320,10 @@ jobs:
             exit 0
           fi
           echo "::error::The release APK smoke test did not pass."
-          echo "Check the emulator log above: 'Timeout waiting for emulator to boot' is runner"
-          echo "infrastructure and can be re-run; a FATAL EXCEPTION is this build and must be fixed."
+          echo "Read the emulator launch line above before retrying: '-accel off' means KVM was not"
+          echo "granted (the Enable KVM step is missing or stopped working) and a retry cannot help."
+          echo "Otherwise 'Timeout waiting for emulator to boot' is runner capacity, and a FATAL"
+          echo "EXCEPTION is this build and must be fixed."
           exit 1
 
       # "Timeout waiting for emulator to boot" is nearly always one of three things on a shared
