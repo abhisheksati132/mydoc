@@ -195,7 +195,7 @@ fun ViewerBottomBar(
                         icon = Icons.AutoMirrored.Outlined.FormatListBulleted,
                         label = "Contents",
                         contentDescription = "Document contents and outline",
-                        enabled = true,
+                        enabled = hasOutline,
                         onClick = onOutlineClick,
                         modifier = Modifier.weight(1f)
                     )

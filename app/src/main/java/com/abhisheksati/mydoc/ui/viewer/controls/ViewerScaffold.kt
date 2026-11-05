@@ -13,6 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,6 +30,8 @@ import com.abhisheksati.mydoc.designsystem.tokens.LocalIsDark
 import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
+import com.abhisheksati.mydoc.designsystem.components.showMessage
+import com.abhisheksati.mydoc.util.openFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.domain.model.ReadingPrefs
 import com.abhisheksati.mydoc.domain.model.RenderFidelity
@@ -36,6 +39,8 @@ import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import com.abhisheksati.mydoc.ui.home.DocumentDetailsDialog
 import com.abhisheksati.mydoc.ui.viewer.FidelityNotice
 import com.abhisheksati.mydoc.ui.viewer.fidelityDisclosureFor
+import androidx.core.net.toUri
+import kotlinx.coroutines.launch
 
 /**
  * Declares capabilities supported by a specific document format viewer.
@@ -139,6 +144,7 @@ fun ViewerScaffold(
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp
+    val viewerScope = rememberCoroutineScope()
     val colors = LocalAppColors.current
     val isDark = LocalIsDark.current
 
@@ -328,9 +334,23 @@ fun ViewerScaffold(
             DocumentDetailsDialog(
                 document = document,
                 onDismiss = { isDocumentDetailsOpen = false },
-                onOpen = { isDocumentDetailsOpen = false },
+                // N-1: both handlers used to be `isDocumentDetailsOpen = false` — two buttons that
+                // looked like "Open with…" and "Remove from recents" and did nothing but close the
+                // dialog. They do the thing now, and say so when the thing was not possible.
+                onOpen = { doc ->
+                    isDocumentDetailsOpen = false
+                    if (!openFile(context, doc.uri.toUri(), doc.mimeType)) {
+                        context.showMessage("No other app on this device can open ${doc.displayName}.")
+                    }
+                },
                 onShare = { onShareClick() },
-                onRemove = { isDocumentDetailsOpen = false }
+                onRemove = { doc ->
+                    isDocumentDetailsOpen = false
+                    viewerScope.launch {
+                        app?.documentRepository?.removeFromRecents(doc.uri)
+                        context.showMessage("${doc.displayName} is no longer in recent documents.")
+                    }
+                }
             )
         }
 

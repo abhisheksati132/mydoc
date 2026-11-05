@@ -303,6 +303,22 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   the row at 1.3× font scale are visual properties that need a screen pass and are recorded as not
   yet visually verified rather than claimed as fixed.
 
+- **Two dead viewer controls that were still dead (N-1, N-4).** The Definition-of-Done pass found
+  the audit's "already shipped fixed" note to be wrong against this tree. `ViewerScaffold` passed
+  `onOpen = { isDocumentDetailsOpen = false }` and `onRemove = { isDocumentDetailsOpen = false }` to
+  the Document Details dialog, so both buttons only dismissed it — "Open with…" and "Remove from
+  recents" promised an action and delivered nothing; they now route through `openFile` (FileProvider
+  `content://`, never `file://`) and `documentRepository.removeFromRecents(uri)`, and report the
+  outcome, including the case where no other app can handle the file. `ViewerBottomBar` accepted
+  `hasOutline` — the PDF viewer computes `capabilities.supportsOutline && sheetItems.isNotEmpty()` —
+  and still rendered Contents with `enabled = true`, so an outline-less PDF offered an empty sheet;
+  it is gated on the flag now, and `ViewerContentsButtonOnDeviceTest` (3, on `mydoc_api35`) pins that
+  the other two controls stay usable either way. Reverting the gate makes the no-outline case fail on
+  device, so the test is known to catch the defect rather than merely pass beside it. N-1's two
+  handlers are wiring at a call site with no seam: they need a screen pass (tap Details → Remove,
+  then confirm the entry is gone from Home recents), and are recorded as not covered by an automated
+  test rather than counted as tested.
+
 ### Documentation and release integrity (Batch 6)
 - **Third-party notices now describe the APK that exists.** ZXing, `docx-preview`, `JSZip` and a
   design-attribution credit to an unrelated PDF app are removed: no artifact, WebView, JavaScript
