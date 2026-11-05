@@ -276,7 +276,12 @@ jobs:
           snapshot: false
           emulator-options: -no-snapshot-load -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
-            set -euo pipefail
+            # This script is executed by the action with /usr/bin/sh, not bash (measured: the job log
+            # contains "sh: 1: set: Illegal option -o pipefail", which aborted the whole smoke test
+            # before it installed an APK, while the step itself still looked green because it is
+            # allowed to fail). So: POSIX shell only, `set -eu` and no pipefail, and every check is an
+            # explicit test rather than relying on pipeline status.
+            set -eu
             : > release-assets/smoke.txt
             for APK in app/build/outputs/apk/release/app-x86_64-release.apk \
                        app/build/outputs/apk/release/app-universal-release.apk; do
