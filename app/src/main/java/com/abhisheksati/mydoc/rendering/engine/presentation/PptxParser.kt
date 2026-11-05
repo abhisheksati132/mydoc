@@ -2265,6 +2265,10 @@ class PptxParser {
             val picturesStream = ole2.getStream("Pictures")
 
             if (pptDocStream != null && pptDocStream.isNotEmpty()) {
+                val fromTree = slidesFromRecordTree(pptDocStream, picturesStream)
+                if (fromTree.isNotEmpty()) {
+                    return PptxPresentation(slides = fromTree, aspectRatio = 4f / 3f)
+                }
                 val pres = parsePptDocStream(pptDocStream, picturesStream)
                 if (pres.slides.isNotEmpty()) return pres
             }
@@ -2277,6 +2281,81 @@ class PptxParser {
             emptyPresentation()
         }
     }
+
+    /**
+     * Builds the deck from the record tree rather than from a scan of the stream, so the master's
+     * placeholder text stays out of the slides and each slide keeps its own words.
+     */
+    private fun slidesFromRecordTree(docBytes: ByteArray, picturesBytes: ByteArray?): List<PptxSlide> {
+        val slides = Ppt97Records.slides(docBytes)
+        if (slides.isEmpty()) return emptyList()
+
+        val pictures = mutableListOf<ByteArray>()
+        if (picturesBytes != null && picturesBytes.size > 32) extractPicturesFromStream(picturesBytes, pictures)
+
+        return slides.mapIndexed { index, slide ->
+            val lines = slide.blocks
+                .flatMap { block -> block.split('\r', '\n').map { it.trim() } }
+                .filter { it.isNotEmpty() && !isFontNoiseText(it) }
+            if (lines.isEmpty()) return@mapIndexed null
+            val title = lines.first()
+            val body = lines.drop(1)
+            val visuals = mutableListOf<VisualElement>()
+            visuals.add(
+                VisualElement(
+                    type = VisualElementType.TEXT_BOX,
+                    bounds = SlideBounds(0.06f, 0.08f, 0.88f, 0.18f),
+                    paragraphs = listOf(
+                        SlideParagraph(runs = listOf(SlideTextRun(text = title, fontSizeSp = 24f, isBold = true)))
+                    )
+                )
+            )
+            val hasPic = index < pictures.size
+            if (body.isNotEmpty()) {
+                visuals.add(
+                    VisualElement(
+                        type = VisualElementType.TEXT_BOX,
+                        bounds = SlideBounds(0.06f, 0.28f, if (hasPic) 0.46f else 0.88f, 0.64f),
+                        paragraphs = body.map { line ->
+                            SlideParagraph(
+                                runs = listOf(SlideTextRun(text = line, fontSizeSp = 15f)),
+                                isBullet = true
+                            )
+                        }
+                    )
+                )
+            }
+            if (hasPic) {
+                visuals.add(
+                    VisualElement(
+                        type = VisualElementType.IMAGE,
+                        bounds = SlideBounds(0.54f, 0.28f, 0.40f, 0.60f),
+                        imageBytes = pictures[index]
+                    )
+                )
+            }
+            PptxSlide(
+                slideNumber = index + 1,
+                title = title,
+                content = body,
+                visualElements = visuals,
+                aspectRatio = 4f / 3f
+            )
+        }.filterNotNull()
+    }
+
+    private fun isFontNoiseText(text: String): Boolean {
+        val lower = text.trim().lowercase()
+        return lower in legacyFontNames || lower.startsWith("_ppt")
+    }
+
+    /** Typeface names and internal stream names the binary stream writes where shapes were. */
+    private val legacyFontNames = setOf(
+        "verdana", "wingdings", "times", "times new roman", "calibri", "arial",
+        "courier", "courier new", "tahoma", "symbol", "segoe ui", "cambria",
+        "georgia", "helvetica", "garamond", "comic sans ms", "trebuchet ms",
+        "ms sans serif"
+    )
 
     /**
      * Parses the assembled PowerPoint Document stream directly.

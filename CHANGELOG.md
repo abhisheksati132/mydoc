@@ -62,6 +62,17 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   `AddSmartArt` fails), so no Office-authored diagram exists to check against here, and the shapes
   side of a real graphic remains unverified.
 
+- **A binary `.ppt` is read as the record tree it is.** PowerPoint 97-2003 writes one stream of
+  records whose headers say which records are containers, and the slides are `RT_Slide` containers
+  holding their own text. MyDoc scanned the stream for bytes that look like a header instead, which
+  cannot tell a slide from the master it was made from: the master's "Click to edit Master title
+  style" and its bullet levels arrived as slide text, a three-slide deck came out as two, and the
+  record numbers the scanner compared were not the ones PowerPoint writes. `Ppt97Records` walks the
+  tree now, and takes each block from the bytes atom in Windows-1252 or the wide atom in UTF-16,
+  depending on which of the two PowerPoint wrote for that text. Verified against two decks PowerPoint
+  itself saved as ".ppt": the three-slide one, and one whose title needs `é`, `ï` and an em dash and
+  whose body needs Japanese - the case that makes PowerPoint switch encodings.
+
 ### Fixed
 
 - **The Word reader stops losing structure it was never able to represent.** `parseDocumentXml` was a
