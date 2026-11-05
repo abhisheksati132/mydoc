@@ -12,6 +12,7 @@ import org.xmlpull.v1.XmlPullParserFactory
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
+import com.abhisheksati.mydoc.rendering.engine.Ole2File
 import java.io.InputStream
 import java.util.ArrayDeque
 import java.util.zip.ZipEntry

@@ -99,7 +99,7 @@ what the container is nominally called. "Fidelity" is what the reader discloses 
 | **Word (legacy)** | `.doc`, `.dot` | Text only | BIFF/Word binary layout is not decoded; text is recovered and labelled as such |
 | **Spreadsheets** | `.xlsx`, `.xlsm` | Structured reflow | Formulas show their cached values — there is no calculation engine. Macros are never executed |
 | **Spreadsheets (ODF)** | `.ods`, `.fods`, `.ots` | Structured reflow | Cell styles and number formats not applied |
-| **Spreadsheets (legacy)** | `.xls` | Recovered text | BIFF8 is not decoded; cells are recovered as text and may be out of order |
+| **Spreadsheets (legacy)** | `.xls` | Structured reflow | BIFF8 records are decoded into a real grid; number formats, styles and charts from the 97-2003 binary are not applied, and formula cells show Excel's cached result |
 | **Delimited** | `.csv`, `.tsv` | Fixed layout | RFC 4180 quoting, BOM/UTF-16 detection, cp1252 fallback, delimiter detection outside quotes |
 | **Presentations** | `.pptx`, `.ppsx`, `.potx`, `.pptm` | Fixed layout | Charts, SmartArt and embedded objects are not drawn; animations are not played; macros never execute |
 | **Presentations (ODF)** | `.odp`, `.otp` | Structured reflow | Draw styles and master pages simplified |

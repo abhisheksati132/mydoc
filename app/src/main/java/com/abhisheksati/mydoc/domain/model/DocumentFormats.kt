@@ -230,8 +230,11 @@ private val descriptors: List<FormatDescriptor> = buildList {
             viewer = ViewerKind.SPREADSHEET_GRID,
             converter = ConverterKind.NONE,
             thumbnail = ThumbnailKind.ICON_ONLY,
-            fidelity = RenderFidelity.RECOVERED_SCRAPE,
-            limitations = listOf("Legacy BIFF8 is not decoded: cells are recovered as text and may be out of order")
+            fidelity = RenderFidelity.STRUCTURED_REFLOW,
+            limitations = listOf(
+                "Number formats, styles and charts from the 97-2003 binary are not applied, so dates show as their serial number",
+                "Formula cells show the value Excel last cached — nothing is recalculated"
+            )
         )
     )
     add(

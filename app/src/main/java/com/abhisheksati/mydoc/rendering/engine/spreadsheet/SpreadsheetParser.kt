@@ -1,6 +1,7 @@
 package com.abhisheksati.mydoc.rendering.engine.spreadsheet
 
 import android.util.Xml
+import com.abhisheksati.mydoc.rendering.engine.Ole2File
 import com.abhisheksati.mydoc.domain.model.DocumentLoadException
 import com.abhisheksati.mydoc.domain.model.LoadFailure
 import kotlinx.coroutines.Dispatchers
@@ -89,8 +90,18 @@ class SpreadsheetParser {
 
             ext == "csv" || ext == "tsv" || ext == "txt" -> parseCsv(bytes)
 
-            // Legacy BIFF8 and mislabelled files keep the existing content sniffing, but a
-            // completely unreadable result is now an error rather than an empty grid.
+            // A real .xls is a CFBF container with a BIFF8 Workbook stream inside it, and that
+            // stream says where every cell is. Only when it cannot be read does the file fall to
+            // the byte scan below, which then reports itself as a failure rather than a grid.
+            ext == "xls" -> readBiff8(bytes) ?: sniffAny(bytes, isZip).ifEmpty {
+                throw DocumentLoadException(
+                    LoadFailure.CORRUPT_DOCUMENT,
+                    "This legacy Excel workbook has no readable cells."
+                )
+            }
+
+            // Mislabelled files keep the existing content sniffing, but a completely unreadable
+            // result is now an error rather than an empty grid.
             else -> sniffAny(bytes, isZip).ifEmpty {
                 throw DocumentLoadException(
                     LoadFailure.CORRUPT_DOCUMENT,
@@ -131,6 +142,17 @@ class SpreadsheetParser {
 
     private fun SpreadsheetModel.ifEmpty(block: () -> Nothing): SpreadsheetModel =
         if (sheets.isNotEmpty() && sheets.any { it.cells.isNotEmpty() }) this else block()
+
+    /** The Workbook stream of a CFBF container, decoded as BIFF8; null when it is not that. */
+    private fun readBiff8(bytes: ByteArray): SpreadsheetModel? {
+        if (!isOle2(bytes)) return null
+        val ole = runCatching { Ole2File(bytes) }.getOrNull() ?: return null
+        val workbook = runCatching { ole.getStream("Workbook") ?: ole.getStream("Book") }.getOrNull()
+        if (workbook == null || workbook.size < 8) return null
+        return runCatching { Biff8Reader.read(workbook) }.getOrNull()?.takeIf {
+            it.sheets.any { sheet -> sheet.cells.isNotEmpty() }
+        }
+    }
 
     private fun sniffAny(bytes: ByteArray, isZip: Boolean): SpreadsheetModel {
         if (isZip) {
@@ -435,7 +457,19 @@ class SpreadsheetParser {
             row++
         }
 
-        return SpreadsheetModel(listOf(SheetData(name = "Extracted Data", maxRow = row - 1, maxCol = 0, cells = cells)))
+        return SpreadsheetModel(
+            listOf(
+                SheetData(
+                    name = "Extracted Data",
+                    maxRow = row - 1,
+                    maxCol = 0,
+                    cells = cells,
+                    // The scan is not a grid, and the viewer has to say so instead of the registry
+                    // claiming structured reflow over a list of recovered words.
+                    parseFailure = "The workbook's cell records could not be read; the text was recovered in order instead."
+                )
+            )
+        )
     }
 
     /**

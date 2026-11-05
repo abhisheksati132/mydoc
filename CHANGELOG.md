@@ -7,6 +7,15 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ### Added
 
+- **`.xls` is decoded as BIFF8 instead of being scavenged.** A legacy workbook is a CFBF container
+  with a `Workbook` stream of records inside it, and MyDoc had never opened it: the engine scanned
+  the whole file for UTF-16 word pairs and dropped whatever it found into column 0 of a sheet named
+  "Extracted Data", which lost every number and every cell address. `Biff8Reader` walks the records
+  now - shared string table (with CONTINUE, compressed and 16-bit text, rich and phonetic runs),
+  the sheet directory, LABELSST / LABEL / NUMBER / RK / MULRK / FORMULA+STRING / BOOLERR, merged
+  regions - and the grid shows cells at their real row and column. The test fixture is a workbook
+  Excel itself saved as "Excel 97-2003", not records assembled by hand.
+
 - **`.fb2` opens instead of being refused.** FictionBook2 was in the list of containers MyDoc
   deliberately refuses, which was wrong: the MuPDF we already ship contains an FB2 refiner
   (`fb2_document_handler`, the `application/x-fictionbook` registration and the FictionBook stylesheet

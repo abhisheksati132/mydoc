@@ -31,7 +31,11 @@ class FidelityDisclosureTest {
 
     @Test
     fun `recovered and text-only formats say so in their own words`() {
-        assertTrue(fidelityDisclosureFor("xls")!!.headline.contains("Recovered", ignoreCase = true))
+        // .xls is decoded as BIFF8 now, so it promises a grid and names what it still drops.
+        val xls = fidelityDisclosureFor("xls")!!
+        assertTrue(xls.headline.contains("Recovered", ignoreCase = true).not())
+        assertTrue(xls.notes.any { it.contains("97-2003") })
+        assertTrue(xls.notes.any { it.contains("cached", ignoreCase = true) })
         assertTrue(fidelityDisclosureFor("ppt")!!.headline.contains("Text only", ignoreCase = true))
     }
 
