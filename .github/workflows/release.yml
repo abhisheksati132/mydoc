@@ -17,12 +17,24 @@ jobs:
   release:
     name: Build & Publish Release
     runs-on: ubuntu-latest
+    # Every Gradle call in this job runs against an empty Gradle home on purpose. The dependency
+    # pin file was generated on a developer machine whose cache and PGP keyring let artifacts pass
+    # verification without a checksum entry, and CI's build job reuses a cache that predates the
+    # pins, so neither of them notices a missing entry: the cold run here is what proves that every
+    # artifact a release is built from is actually pinned. It costs a few minutes of downloads and
+    # it is the point of the job.
     # The emulator step is allowed 40 minutes of booting on its own. Without a job cap the whole run
     # would sit on GitHub's 6-hour default when a runner is unhealthy, which is the failure being
     # diagnosed here ("Timeout waiting for emulator to boot").
     timeout-minutes: 150
     env:
       GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8"
+      # Every Gradle call in this job runs against an empty Gradle home on purpose. The dependency pin
+      # file was generated on a developer machine whose warm cache and PGP keyring let artifacts pass
+      # verification without an entry, and CI's build job reuses a cache that predates the pins, so neither
+      # notices a missing one; a cold home here is what proves every artifact the release is built from is
+      # pinned and key-verified without a keyserver. Costs a few minutes of downloads, which is the point.
+      GRADLE_USER_HOME: ${{ runner.temp }}/gradle-cold
 
     steps:
       - name: Checkout repository

@@ -20,6 +20,22 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   from Google's repository (2,451,278 bytes, `fa1014cb1431622d292ef55ba870e75882ea19987bec541698b912f446a2d08f`).
   Nothing was relaxed: metadata verification and signature checking stay on, and `aapt2` is the only
   OS-classified component in the resolved graph (checked against the whole pin file).
+- **The dependency pin file only looked complete.** `gradle/verification-metadata.xml` had been generated
+  on a machine with a warm Gradle cache and a populated PGP keyring, and CI's build job reuses a cache that
+  predates the pins, so neither environment ever demanded an entry for what a *cold* build needs: with an
+  empty Gradle home and no keyring, 48 artifacts failed verification. The release runner hit the first
+  uncached one (`org.json:json:20260814`), and pinning that jar by hand only exposed fifteen more - all of
+  them components the file *trusts a PGP key for* but which no runner can resolve a key for, because the
+  keyserver is unreachable from CI and a checksum does not discharge an expected signature. The fix is the
+  one Gradle provides for exactly this: `./gradlew --export-keys` now ships `gradle/verification-keyring.keys`
+  and `.gpg` (63 keys) in the repository, so signatures are verified offline against pinned keys, and the
+  fifteen jars the cold run still had no checksum for were measured from `repo1.maven.org` and cross-checked
+  against Maven Central's own published SHA-1 before recording. The pin file went from 234 to 341 components
+  and 393 to 500 artifact entries, and the release job now points every Gradle call at an empty
+  `GRADLE_USER_HOME`, so a missing pin fails the release build instead of hiding behind a cache.
+  Nothing was weakened to get green: `verify-signatures` stays on, `ignoredDependencies` is still empty, and
+  no checksum was removed.
+
 - **The release workflow's own per-ABI verification step failed the v1.7.3 tag run.** The step
   added to prove that arm64-v8a and armeabi-v7a are no longer published unchecked classified each
   artifact by matching its *filename* against an ABI name, with a catch-all that assumed anything
