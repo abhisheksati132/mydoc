@@ -17,6 +17,10 @@ jobs:
   release:
     name: Build & Publish Release
     runs-on: ubuntu-latest
+    # The emulator step is allowed 40 minutes of booting on its own. Without a job cap the whole run
+    # would sit on GitHub's 6-hour default when a runner is unhealthy, which is the failure being
+    # diagnosed here ("Timeout waiting for emulator to boot").
+    timeout-minutes: 150
     env:
       GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8"
 
@@ -188,6 +192,22 @@ jobs:
           done
           cat release-assets/verification.txt
 
+      # A boot timeout and a download timeout look identical from the outside: the action installs the
+      # system image if it is missing, so the first run on a fresh runner spends part of the boot
+      # budget pulling ~1 GB. Install it as its own step so the 40 minutes below buys booting only.
+      # Failure here is not fatal — the emulator step would have done the same download anyway.
+      - name: Pre-install the API 35 x86_64 system image
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          SDKMANAGER=$(ls "$ANDROID_HOME"/cmdline-tools/latest/bin/sdkmanager "$ANDROID_HOME"/cmdline-tools/bin/sdkmanager 2>/dev/null | head -1)
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager not found; the emulator step will install the image itself."
+            exit 0
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "system-images;android-35;google_apis;x86_64"
+
       # A signed, cert-verified APK is not proof it runs. R8 shrinking, release-only resource
       # stripping and the release signing config can all break the app at first launch, and that
       # is exactly what users meet. Nothing is published until this passes.
@@ -202,6 +222,7 @@ jobs:
         id: smoke
         with:
           api-level: 35
+          enable-kvm: true
           target: google_apis
           arch: x86_64
           profile: pixel_6
@@ -258,12 +279,43 @@ jobs:
           echo "infrastructure and can be re-run; a FATAL EXCEPTION is this build and must be fixed."
           exit 1
 
+      # "Timeout waiting for emulator to boot" is nearly always one of three things on a shared
+      # runner: no KVM device, a saturated host, or a disk that filled mid-boot. None of that is in
+      # the step log today, so a retry tells you nothing about whether the next retry will work.
+      # Collected only when the smoke test failed, and nothing here is allowed to mask that failure.
+      - name: Collect emulator diagnostics
+        if: failure()
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          {
+            echo "## KVM"
+            ls -l /dev/kvm 2>&1 || true
+            egrep -c '(vmx|svm)' /proc/cpuinfo 2>&1 || true
+            echo "## CPU / memory / disk"
+            nproc; free -m; df -h "$RUNNER_TEMP" "$GITHUB_WORKSPACE"
+            echo "## qemu processes"
+            ps aux | grep -i "[q]emu\|[e]mulator" || echo "no emulator process survived"
+            echo "## adb state"
+            adb devices -l 2>&1 || true
+            adb shell getprop sys.boot_completed 2>&1 || true
+            adb shell getprop ro.build.fingerprint 2>&1 || true
+            echo "## last kernel messages"
+            sudo dmesg -T 2>/dev/null | tail -n 120 || echo "dmesg unavailable"
+            echo "## emulator logs"
+            find "$HOME/.android/avd" -maxdepth 2 -name '*.log' -o -maxdepth 2 -name 'config.ini' \
+              -print 2>/dev/null | head -20 || true
+          } > emulator-diagnostics.txt 2>&1
+          tail -n 60 emulator-diagnostics.txt
+
       - name: Upload Release Smoke Evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-smoke-evidence
-          path: release-smoke-*.png
+          path: |
+            release-smoke-*.png
+            emulator-diagnostics.txt
           if-no-files-found: ignore
           retention-days: 14
 
