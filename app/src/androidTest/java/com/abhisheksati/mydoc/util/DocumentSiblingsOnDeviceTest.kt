@@ -14,7 +14,9 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
 /**
@@ -121,48 +123,52 @@ class DocumentSiblingsOnDeviceTest {
     }
 
     /**
-     * The finding was that this scan ran on the main thread. Running it from a Main-dispatched
-     * coroutine on a background thread lets the main looper keep ticking only if the scan suspends
-     * off it — an inline scan would starve the ticker for the whole second it takes.
+     * The finding was that this scan ran on the main thread. The proof that it no longer does is
+     * order, not duration: work posted to the main looper has to run *while* the scan is still
+     * going. An inline scan holds the looper until the list is built, so the posted callback can only
+     * ever land after the scan returned - which is what the last assertion refuses to accept. A
+     * previous version of this test asserted the scan took longer than a fixed number of milliseconds
+     * and a fast runner made that unsatisfiable, so the claim is now measured in a way that does not
+     * depend on how quickly a device can stat 5,000 files.
      */
     @Test
     fun theScanLeavesTheMainThreadFree() {
         val dir = folder("mainthread")
         repeat(5_000) { index -> File(dir, "doc%04d.pdf".format(index)).writeText("x") }
-        File(dir, "zz-visible.pdf").writeText("x")
         val anchor = File(dir, "doc0000.pdf")
 
+        val scanRunning = AtomicBoolean(false)
+        val scanStarted = CountDownLatch(1)
+        val scanFinished = CountDownLatch(1)
+        val ranWhileScanning = AtomicBoolean(false)
+        var enumerated = -1
         val handler = Handler(Looper.getMainLooper())
-        val ticks = AtomicInteger(0)
-        var ticking = true
-        val ticker = object : Runnable {
-            override fun run() {
-                if (ticking) {
-                    ticks.incrementAndGet()
-                    handler.postDelayed(this, 20L)
-                }
-            }
-        }
-        handler.post(ticker)
 
-        val scanMs = AtomicInteger(0)
         val worker = thread(name = "sibling-scan-from-main") {
             runBlocking(Dispatchers.Main) {
-                val started = System.nanoTime()
-                DocumentSiblings.readableDocumentsIn(anchor)
-                scanMs.set(((System.nanoTime() - started) / 1_000_000).toInt())
+                scanRunning.set(true)
+                scanStarted.countDown()
+                enumerated = DocumentSiblings.readableDocumentsIn(anchor).size
+                scanRunning.set(false)
+                scanFinished.countDown()
             }
         }
-        worker.join(60_000)
-        ticking = false
-        handler.removeCallbacks(ticker)
 
-        assertTrue("the scan never finished within 60s", !worker.isAlive)
-        assertTrue("scan took ${scanMs.get()}ms, too fast to judge", scanMs.get() > 400)
+        assertTrue("the scan never started", scanStarted.await(30, TimeUnit.SECONDS))
+        // Queued only after the scan is under way: if the scan suspends off the main thread this runs
+        // in that gap, and if it blocks the main thread the looper cannot reach it before
+        // scanRunning has already gone back to false.
+        handler.post { if (scanRunning.get()) ranWhileScanning.set(true) }
+
+        assertTrue("the scan never finished within 60s", scanFinished.await(60, TimeUnit.SECONDS))
+        worker.join(5_000)
+        handler.removeCallbacksAndMessages(null)
+
+        assertEquals("the scan must enumerate the whole folder for this to mean anything", 5_000, enumerated)
         assertTrue(
-            "the main looper only ticked ${ticks.get()} times during a ${scanMs.get()}ms scan — " +
-                "the scan is holding the main thread",
-            ticks.get() > scanMs.get() / 40
+            "the main looper was starved for the whole scan: the posted callback only ran after " +
+                "readableDocumentsIn returned",
+            ranWhileScanning.get()
         )
         dir.walkBottomUp().forEach { it.delete() }
     }

@@ -1,11 +1,13 @@
 package com.abhisheksati.mydoc.rendering.engine
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -14,6 +16,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
 /**
  * H-6: a full-document search used to hold the rendering lock for the whole scan, so scrolling a
@@ -23,7 +26,17 @@ import java.util.concurrent.TimeUnit
 @RunWith(AndroidJUnit4::class)
 class PdfSearchCancellationOnDeviceTest {
 
-    private companion object { const val PAGES = 1200 }
+    private companion object {
+        const val PAGES = 1200
+
+        // The scan consults its predicate on every page, so asking for a page on the third pass
+        // leaves 1,197 pages of work still running - that gap is the window the render needs.
+        const val RENDER_AT_PAGE = 3
+
+        // The correct answer is "straight away": the render only waits for the gap between two
+        // pages. Nothing but a lock held across the whole scan can make this expire.
+        const val REQUEST_WINDOW_SECONDS = 20L
+    }
 
     private lateinit var context: Context
     private lateinit var file: File
@@ -36,10 +49,8 @@ class PdfSearchCancellationOnDeviceTest {
         val paint = Paint().apply { color = Color.BLACK; textSize = 9f }
         repeat(PAGES) { index ->
             val page = doc.startPage(PdfDocument.PageInfo.Builder(400, 300, index + 1).create())
-            // Only the last page holds the needle, so every search has to walk all 400 pages.
+            // Only the last page holds the needle, so every search has to walk all 1,200 pages.
             page.canvas.drawText(if (index == PAGES - 1) "needle" else "page $index of $PAGES", 40f, 60f, paint)
-            // Enough text per page that walking the document is real work: the point of the test is
-            // whether one scan can hold every render waiting, which needs a scan that lasts.
             repeat(24) { line ->
                 page.canvas.drawText(
                     "The quick brown fox jumps over the lazy dog and keeps running across line $line",
@@ -74,45 +85,46 @@ class PdfSearchCancellationOnDeviceTest {
     @Test
     fun renderingIsNotHeldBehindTheWholeDocumentSearch() {
         val renderer = renderer()
+        val renderRequested = CountDownLatch(1)
+        val renderFinished = CountDownLatch(1)
+        var predicateCalls = 0
+        var rendered: Bitmap? = null
+        var renderedDuringSearch = false
 
-        // Baseline first: the window the render has to slip into is derived from the real cost of
-        // the scan on this device, not from a guessed constant.
-        val scanStarted = System.nanoTime()
-        renderer.search("needle") { false }
-        val scanAloneMs = (System.nanoTime() - scanStarted) / 1_000_000
-        assertTrue(
-            "a 1,200 page scan took only ${scanAloneMs}ms — too quick to tell locking strategies apart",
-            scanAloneMs > 1_000
-        )
+        val renderThread = thread(name = "page-render-during-search") {
+            if (renderRequested.await(REQUEST_WINDOW_SECONDS, TimeUnit.SECONDS)) {
+                rendered = renderer.renderPage(0, 1.5f, com.abhisheksati.mydoc.domain.model.ReadingMode.NORMAL)
+                renderFinished.countDown()
+            }
+        }
 
-        val start = CountDownLatch(1)
-        var searchFinishedAt = 0L
-        var renderFinishedAt = 0L
-
-        val searcher = Thread {
-            start.await(5, TimeUnit.SECONDS)
-            renderer.search("needle") { false }
-            searchFinishedAt = System.nanoTime()
-        }.apply { name = "doc-search"; start() }
-
-        // Get the scan properly under way, then ask for a page. With one lock for the whole scan the
-        // render can only complete after the search has; per-page locking lets it slip in between.
-        Thread.sleep((scanAloneMs / 5).coerceIn(60, 200))
-        start.countDown()
-        Thread.sleep((scanAloneMs / 5).coerceIn(60, 200))
-        val bitmap = renderer.renderPage(0, 1.5f, com.abhisheksati.mydoc.domain.model.ReadingMode.NORMAL)
-        renderFinishedAt = System.nanoTime()
-
-        searcher.join(TimeUnit.SECONDS.toMillis(120))
+        // search() asks the cancellation predicate between every page, and that call sits outside the
+        // rendering lock. Asking for a page from inside the callback therefore only succeeds if the
+        // lock is taken one page at a time: with the old whole-document lock the callback ran while
+        // the search held the lock, the render blocked behind the remaining 1,197 pages, and this
+        // wait expired. Nothing here depends on how fast the device is.
+        val matches = renderer.search("needle") {
+            predicateCalls++
+            if (predicateCalls == RENDER_AT_PAGE) {
+                renderRequested.countDown()
+                renderedDuringSearch = renderFinished.await(REQUEST_WINDOW_SECONDS, TimeUnit.SECONDS)
+            }
+            false
+        }
+        renderThread.join(TimeUnit.SECONDS.toMillis(REQUEST_WINDOW_SECONDS * 3))
         renderer.close()
 
-        assertTrue("the search never finished", !searcher.isAlive)
-        assertTrue("renderPage produced nothing", bitmap != null)
-        assertTrue(
-            "render only completed after the whole ${scanAloneMs}ms scan: the search still holds " +
-                "the rendering lock for the document",
-            renderFinishedAt < searchFinishedAt
+        assertTrue("renderPage produced nothing", rendered != null)
+        rendered?.recycle()
+        assertEquals(
+            "the predicate should be consulted once per page; the scan walked only $predicateCalls",
+            PAGES, predicateCalls
         )
-        bitmap?.recycle()
+        assertTrue("the search found nothing, although the last page holds the needle", matches.isNotEmpty())
+        assertTrue(
+            "renderPage could not complete while the scan still had ${PAGES - RENDER_AT_PAGE} pages to " +
+                "walk: the search holds the rendering lock for the whole document",
+            renderedDuringSearch
+        )
     }
 }
