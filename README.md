@@ -101,7 +101,7 @@ what the container is nominally called. "Fidelity" is what the reader discloses 
 | **Spreadsheets (ODF)** | `.ods`, `.fods`, `.ots` | Structured reflow | Cell styles and number formats not applied |
 | **Spreadsheets (legacy)** | `.xls` | Structured reflow | BIFF8 records are decoded into a real grid; number formats, styles and charts from the 97-2003 binary are not applied, and formula cells show Excel's cached result |
 | **Delimited** | `.csv`, `.tsv` | Fixed layout | RFC 4180 quoting, BOM/UTF-16 detection, cp1252 fallback, delimiter detection outside quotes |
-| **Presentations** | `.pptx`, `.ppsx`, `.potx`, `.pptm` | Fixed layout | Bar, line and pie charts are drawn from the values the chart part itself stores, in our own colours; combo charts and other kinds, SmartArt and embedded objects are not drawn; animations are not played; macros never execute |
+| **Presentations** | `.pptx`, `.ppsx`, `.potx`, `.pptm` | Fixed layout | Bar, line and pie charts are drawn from the values the chart part itself stores, in our own colours; combo charts and other kinds stay blank; SmartArt is shown as the text its diagram part holds, not as the shapes around it; embedded objects are not drawn; animations are not played; macros never execute |
 | **Presentations (ODF)** | `.odp`, `.otp` | Structured reflow | Draw styles and master pages simplified |
 | **Presentations (legacy)** | `.ppt`, `.pps`, `.pot` | Text only | Shape positions, colors and images in the binary format are not decoded |
 | **E-Books** | `.epub`, `.fb2` | Structured reflow | Reflow is MuPDF's, not the book's own CSS; a `.fb2` with several bodies shows the first |

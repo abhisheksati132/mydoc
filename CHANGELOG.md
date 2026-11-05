@@ -51,6 +51,17 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   control deck whose chart part is missing; the reader is also tested against the three chart parts
   taken out of that deck.
 
+- **SmartArt gives up its text.** A diagram on a slide keeps its words in `ppt/diagrams/dataN.xml`,
+  one `dgm:pt` per node, each with its text in a `dgm:txVar` - and MyDoc drew nothing at all, because
+  the shapes come from a layout gallery the package does not carry. The nodes are read now and their
+  text is set out in bands inside the frame the author gave the graphic, in the order the model lists
+  them: the `def` variant rather than the shorter one written for a narrow layout, `proc` nodes
+  included, the document node and the transition nodes left out, and a node with nothing in it taking
+  up no line. **The fixture is written to ECMA-376 Part 1 rather than taken from a deck**: this
+  machine's Office has no SmartArt gallery installed (`SmartArtLayouts.Count` is 0, and
+  `AddSmartArt` fails), so no Office-authored diagram exists to check against here, and the shapes
+  side of a real graphic remains unverified.
+
 ### Fixed
 
 - **The Word reader stops losing structure it was never able to represent.** `parseDocumentXml` was a
@@ -83,6 +94,10 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 - The Word viewer's fidelity notice covers the first blocks of a reflowed document while the viewer
   chrome is up, because that surface never hides its chrome. Longer disclosure text makes it cover
   more. Pre-existing, unchanged by this batch, and filed as its own fix.
+- The same overlay hides the first lines of a converted slide now that SmartArt text is drawn: on
+  `mydoc_api35` the notice sits over the top band of the diagram, and only the lower nodes are
+  visible while it is up. The instrumented tests check the rasterised page rather than the screen for
+  that reason, and the fix is the same one (#175).
 
 ## [1.7.3] — 2026-11-05
 

@@ -108,6 +108,10 @@ private const val CHART_LIMIT =
     "Bar, line and pie charts are drawn from the values stored in the chart itself, in our own colours; " +
         "combo charts and other kinds stay blank"
 
+/** SmartArt keeps its words in a diagram part; the shapes come from a gallery the package lacks. */
+private const val DIAGRAM_LIMIT =
+    "SmartArt is shown as the text its diagram part holds, not as the shapes around it"
+
 private val TEXT_EXTENSIONS = setOf(
     "txt", "md", "log", "json", "xml", "yaml", "yml", "ini", "conf", "sh", "sql",
     "kt", "java", "py", "html", "css", "js", "ts", "c", "cpp", "h", "gradle",
@@ -270,12 +274,12 @@ private val descriptors: List<FormatDescriptor> = buildList {
             converter = ConverterKind.PPTX_TO_PDF,
             thumbnail = ThumbnailKind.VIA_CONVERTER,
             fidelity = RenderFidelity.FIXED_LAYOUT,
-            limitations = listOf(CHART_LIMIT, "SmartArt and embedded objects are not drawn", "Animations and transitions are not played")
+            limitations = listOf(CHART_LIMIT, DIAGRAM_LIMIT, "Embedded objects are not drawn", "Animations and transitions are not played")
         )
     )
-    add(FormatDescriptor("pptm", DocumentFamily.PRESENTATION, ViewerKind.CONVERTED_PAGES, ConverterKind.PPTX_TO_PDF, ThumbnailKind.VIA_CONVERTER, RenderFidelity.FIXED_LAYOUT, listOf("Macros are never executed", CHART_LIMIT, "SmartArt and embedded objects are not drawn")))
-    add(FormatDescriptor("ppsx", DocumentFamily.PRESENTATION, ViewerKind.CONVERTED_PAGES, ConverterKind.PPTX_TO_PDF, ThumbnailKind.VIA_CONVERTER, RenderFidelity.FIXED_LAYOUT, listOf(CHART_LIMIT, "SmartArt and embedded objects are not drawn")))
-    add(FormatDescriptor("potx", DocumentFamily.PRESENTATION, ViewerKind.CONVERTED_PAGES, ConverterKind.PPTX_TO_PDF, ThumbnailKind.VIA_CONVERTER, RenderFidelity.FIXED_LAYOUT, listOf(CHART_LIMIT, "SmartArt and embedded objects are not drawn")))
+    add(FormatDescriptor("pptm", DocumentFamily.PRESENTATION, ViewerKind.CONVERTED_PAGES, ConverterKind.PPTX_TO_PDF, ThumbnailKind.VIA_CONVERTER, RenderFidelity.FIXED_LAYOUT, listOf("Macros are never executed", CHART_LIMIT, DIAGRAM_LIMIT, "Embedded objects are not drawn")))
+    add(FormatDescriptor("ppsx", DocumentFamily.PRESENTATION, ViewerKind.CONVERTED_PAGES, ConverterKind.PPTX_TO_PDF, ThumbnailKind.VIA_CONVERTER, RenderFidelity.FIXED_LAYOUT, listOf(CHART_LIMIT, DIAGRAM_LIMIT, "Embedded objects are not drawn")))
+    add(FormatDescriptor("potx", DocumentFamily.PRESENTATION, ViewerKind.CONVERTED_PAGES, ConverterKind.PPTX_TO_PDF, ThumbnailKind.VIA_CONVERTER, RenderFidelity.FIXED_LAYOUT, listOf(CHART_LIMIT, DIAGRAM_LIMIT, "Embedded objects are not drawn")))
     add(
         FormatDescriptor(
             extension = "odp",

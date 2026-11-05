@@ -36,6 +36,9 @@ internal object PptxRenderer {
 
     private const val MaxSlides = 500
 
+    /** Diagram nodes that hold the shape tree or a connection, not anything the reader came to read. */
+    private val diagramStructureTypes = setOf("doc", "parTrans", "sibTrans")
+
     data class PptxRenderResult(
         val doc: PdfDocument,
         val outlines: List<com.abhisheksati.mydoc.rendering.engine.OutlineItem>
@@ -96,7 +99,8 @@ internal object PptxRenderer {
                     n.startsWith("ppt/slideMasters/") ||
                     n.startsWith("ppt/theme/") ||
                     n.startsWith("ppt/media/") ||
-                    n.startsWith("ppt/charts/")
+                    n.startsWith("ppt/charts/") ||
+                    n.startsWith("ppt/diagrams/")
                 if (keep && !n.startsWith("ppt/notesSlides/")) {
                     if (totalExtractedBytes < maxTotalBytes) {
                         val baos = java.io.ByteArrayOutputStream(minOf(maxEntryBytes, 64 * 1024))
@@ -385,6 +389,15 @@ internal object PptxRenderer {
                 return
             }
 
+            // SmartArt keeps its words in a diagram data part. The shapes come from a gallery the
+            // package does not carry, so the words are what can honestly reach the page.
+            frame.find("dgm:relIds")?.let { references ->
+                val path = references.attr("r:dm")?.let { rels(ctx.slidePath)[it] }
+                val root = path?.let { part(it) }
+                if (root != null) drawDiagramText(canvas, root, box, ctx)
+                return
+            }
+
             val table = frame.find("a:tbl") ?: return
             val grid = table.find("a:tblGrid")?.childrenNamed("a:gridCol").orEmpty()
                 .map { (it.attr("w")?.toFloatOrNull() ?: 0f) / EmuPerPoint }
@@ -408,6 +421,34 @@ internal object PptxRenderer {
                 }
                 y += rowH
                 if (y > box.bottom + rowH) break
+            }
+        }
+
+        /**
+         * The words a SmartArt graphic holds. Its nodes are the `dgm:pt` entries of the diagram data
+         * part and each one that carries text carries it in a text variant, of which `def` is the
+         * text the author typed rather than an alternative written for a narrower layout. The
+         * document node and the transition nodes have no text of their own.
+         *
+         * The shapes come from a layout gallery the package does not carry, so the text is set out
+         * in bands inside the frame the author gave the graphic: what reaches the page is what the
+         * graphic says, not a picture of boxes that were never drawn.
+         */
+        private fun drawDiagramText(canvas: Canvas, dataModel: OoxmlNode, box: Rect, ctx: SlideContext) {
+            val nodes = dataModel.find("dgm:ptLst")?.childrenNamed("dgm:pt").orEmpty()
+            val bodies = nodes.mapNotNull { node ->
+                if (node.attr("type") in diagramStructureTypes) return@mapNotNull null
+                val variants = node.find("dgm:textVariants")?.childrenNamed("dgm:txVar").orEmpty()
+                val body = (variants.firstOrNull { it.attr("var") == "def" } ?: variants.firstOrNull())
+                    ?.child("a:txBody") ?: return@mapNotNull null
+                if (body.textContent().trim().isEmpty()) return@mapNotNull null
+                body
+            }
+            if (bodies.isEmpty()) return
+            val band = box.height() / bodies.size
+            bodies.forEachIndexed { index, body ->
+                val top = box.top + band * index
+                drawTextBody(canvas, body, Rect(box.left, top, box.right, top + band), ctx, null, null)
             }
         }
 
