@@ -275,45 +275,10 @@ jobs:
           disable-animations: true
           snapshot: false
           emulator-options: -no-snapshot-load -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: |
-            # This script is executed by the action with /usr/bin/sh, not bash (measured: the job log
-            # contains "sh: 1: set: Illegal option -o pipefail", which aborted the whole smoke test
-            # before it installed an APK, while the step itself still looked green because it is
-            # allowed to fail). So: POSIX shell only, `set -eu` and no pipefail, and every check is an
-            # explicit test rather than relying on pipeline status.
-            set -eu
-            : > release-assets/smoke.txt
-            for APK in app/build/outputs/apk/release/app-x86_64-release.apk \
-                       app/build/outputs/apk/release/app-universal-release.apk; do
-              if [ ! -f "$APK" ]; then
-                echo "ERROR: expected $APK to exist for the smoke test."
-                exit 1
-              fi
-              NAME=$(basename "$APK")
-              adb install -r -g "$APK"
-              adb logcat -c
-              adb shell am start -n com.abhisheksati.mydoc/com.abhisheksati.mydoc.MainActivity
-              sleep 20
-              if [ -z "$(adb shell pidof -s com.abhisheksati.mydoc)" ]; then
-                echo "ERROR: the release build of $NAME did not stay running."
-                adb logcat -d -v brief | tail -n 200
-                exit 1
-              fi
-              if adb logcat -d | grep -qE "FATAL EXCEPTION|Begin tracking.*com.abhisheksati.mydoc"; then
-                echo "ERROR: the release build of $NAME crashed on launch."
-                adb logcat -d -v brief | grep -A 30 "FATAL EXCEPTION" | head -n 60
-                exit 1
-              fi
-              adb exec-out screencap -p > "release-smoke-$(echo "$NAME" | tr '.' '_').png"
-              echo "$NAME: installed, launched and survived 20s on API 35 x86_64." | tee -a release-assets/smoke.txt
-              adb uninstall com.abhisheksati.mydoc > /dev/null
-            done
-            # Stated rather than implied: an x86_64 emulator cannot execute arm code, so the arm
-            # splits are signature- and metadata-verified above but never run here.
-            {
-              echo "arm64-v8a and armeabi-v7a splits: signature, ABI contents and package metadata"
-              echo "verified; not executed, because this runner has no arm64 or armv7 system image."
-            } | tee -a release-assets/smoke.txt
+          # One line, because the action executes each line of this input in its own `sh -c` - a loop
+          # written inline cannot survive that (measured: "sh: 1: Syntax error: end of file unexpected"
+          # on the `for APK in ...` line). The test itself lives in scripts/release-smoke.sh.
+          script: bash scripts/release-smoke.sh
 
       # The step above is allowed to fail so this can tell the two failures apart. A release must
       # not be published on an untested artifact either way, but the reason decides what to do
