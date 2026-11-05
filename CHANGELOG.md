@@ -20,6 +20,18 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   from Google's repository (2,451,278 bytes, `fa1014cb1431622d292ef55ba870e75882ea19987bec541698b912f446a2d08f`).
   Nothing was relaxed: metadata verification and signature checking stay on, and `aapt2` is the only
   OS-classified component in the resolved graph (checked against the whole pin file).
+- **The release workflow's own per-ABI verification step failed the v1.7.3 tag run.** The step
+  added to prove that arm64-v8a and armeabi-v7a are no longer published unchecked classified each
+  artifact by matching its *filename* against an ABI name, with a catch-all that assumed anything
+  unrecognised must have no native libraries. `app-universal-release.apk` is not named after an ABI,
+  so the one artifact most users download - and the one that does carry all three - was rejected with
+  "carries no native libs at all" before the release was published. The classifier now checks a split
+  against the ABI in its name and the universal APK against all three, fails an empty library list on
+  its own message, refuses an unknown artifact name, and no longer relies on `unzip`'s internal
+  `lib/*` pattern (which matches nothing on some Info-ZIP builds: measured here, the entry list came
+  back empty for an APK that does contain `lib/arm64-v8a/libmupdf_java.so`). The rewritten step was
+  run against the four real APK layouts this project produces - three splits and the universal, which
+  also carries x86 - and against six name/ABI combinations including each way it can fail.
 - **Three tests failed on faster hardware because they measured the clock, not the behaviour.**
   `PdfSearchCancellationOnDeviceTest.renderingIsNotHeldBehindTheWholeDocumentSearch` demanded that a
   1,200-page scan take more than 1,000 ms before it would judge locking strategy; CI measured

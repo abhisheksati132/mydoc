@@ -144,6 +144,10 @@ jobs:
           fi
           NORMALIZED_EXPECTED=$(echo "$EXPECTED_CERT_SHA256" | tr -d ' :' | tr '[:upper:]' '[:lower:]')
           AAPT2=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 2>/dev/null | tail -1 || true)
+          if ! command -v unzip >/dev/null 2>&1; then
+            echo "ERROR: unzip is missing, so the native library layout of the release APKs cannot be checked."
+            exit 1
+          fi
           shopt -s nullglob
           APKS=(app/build/outputs/apk/release/*.apk)
           if [ ${#APKS[@]} -eq 0 ]; then
@@ -161,19 +165,40 @@ jobs:
               echo "CRITICAL SECURITY FAILURE: $name is signed by '${ACTUAL:-nothing}', expected $NORMALIZED_EXPECTED."
               exit 1
             fi
-            ABIS=$(unzip -Z1 "$apk" 'lib/*' 2>/dev/null | sed -n 's|^lib/\([^/]*\)/.*|\1|p' | sort -u | tr '\n' ',' | sed 's/,$//' || true)
+            ABIS=$(unzip -Z1 "$apk" 2>/dev/null | sed -n 's|^lib/\([^/]*\)/.*|\1|p' | sort -u | tr '\n' ',' | sed 's/,$//' || true)
+            if [ -z "$ABIS" ]; then
+              echo "ERROR: $name carries no native libraries at all (no lib/<abi>/ entries)."
+              exit 1
+            fi
+            # A split has to carry the ABI its filename promises. The universal APK is not named after any
+            # single ABI, and it is the artifact most people download, so it is checked against all three
+            # rather than falling into a catch-all - the first version of this step did exactly that and
+            # failed the release on an APK that was carrying every ABI.
             case "$name" in
-              *arm64-v8a*) case "$ABIS" in *arm64-v8a*) ;; *) echo "ERROR: $name carries no arm64-v8a native libs ($ABIS)."; exit 1 ;; esac ;;
-              *armeabi-v7a*) case "$ABIS" in *armeabi-v7a*) ;; *) echo "ERROR: $name carries no armeabi-v7a native libs ($ABIS)."; exit 1 ;; esac ;;
-              *x86_64*) case "$ABIS" in *x86_64*) ;; *) echo "ERROR: $name carries no x86_64 native libs ($ABIS)."; exit 1 ;; esac ;;
-              *) echo "ERROR: $name carries no native libs at all." ; exit 1 ;;
+              *arm64-v8a*) EXPECTED_ABIS="arm64-v8a" ;;
+              *armeabi-v7a*) EXPECTED_ABIS="armeabi-v7a" ;;
+              *x86_64*) EXPECTED_ABIS="x86_64" ;;
+              *universal*) EXPECTED_ABIS="arm64-v8a armeabi-v7a x86_64" ;;
+              *)
+                echo "ERROR: $name is not one of the four release artifacts this workflow publishes."
+                exit 1
+                ;;
             esac
+            for want in $EXPECTED_ABIS; do
+              case ",$ABIS," in
+                *",$want,"*) ;;
+                *)
+                  echo "ERROR: $name must carry $want native libraries but carries only ($ABIS)."
+                  exit 1
+                  ;;
+              esac
+            done
             LINE="$name signed_by=$ACTUAL abis=$ABIS"
             if [ -n "$AAPT2" ]; then
               BADGE=$("$AAPT2" dump badging "$apk")
               PACKAGE=$(echo "$BADGE" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")
-              VC=$(echo "$BADGE" | sed -n "s/^package:.*versionCode='\([^']*\)'.*/\1/p" | head -1)
               VN=$(echo "$BADGE" | sed -n "s/^package:.*versionName='\([^']*\)'.*/\1/p" | head -1)
+              VC=$(echo "$BADGE" | sed -n "s/^package:.*versionCode='\([^']*\)'.*/\1/p" | head -1)
               if [ "$PACKAGE" != "com.abhisheksati.mydoc" ]; then
                 echo "ERROR: $name declares package '$PACKAGE'."
                 exit 1
@@ -184,7 +209,6 @@ jobs:
               fi
               LINE="$LINE package=$PACKAGE versionName=$VN versionCode=$VC"
             else
-              LINE="$LINE package=unchecked(_no_aapt2)"
               echo "::warning::aapt2 was not on the runner; package and version metadata for $name were not verified."
             fi
             echo "$LINE" >> release-assets/verification.txt
