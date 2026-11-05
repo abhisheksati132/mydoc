@@ -184,10 +184,13 @@ private val descriptors: List<FormatDescriptor> = buildList {
             converter = ConverterKind.NONE,
             thumbnail = ThumbnailKind.ICON_ONLY,
             fidelity = RenderFidelity.TEXT_ONLY,
-            limitations = listOf("Text only: formatting, tables and images in binary .doc are not decoded")
+            limitations = listOf(
+                "Text only: the characters and paragraph breaks come from the Word 97 piece table, but formatting, table structure and images are not decoded",
+                "Headers, footers and footnotes of a binary .doc are not read"
+            )
         )
     )
-    add(FormatDescriptor("dot", DocumentFamily.WORD, ViewerKind.WORD_REFLOW, ConverterKind.NONE, ThumbnailKind.ICON_ONLY, RenderFidelity.TEXT_ONLY, listOf("Text only: formatting, tables and images in binary .dot are not decoded")))
+    add(FormatDescriptor("dot", DocumentFamily.WORD, ViewerKind.WORD_REFLOW, ConverterKind.NONE, ThumbnailKind.ICON_ONLY, RenderFidelity.TEXT_ONLY, listOf("Text only: the characters and paragraph breaks come from the Word 97 piece table, but formatting, table structure and images are not decoded")))
     add(
         FormatDescriptor(
             extension = "rtf",

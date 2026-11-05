@@ -96,7 +96,7 @@ what the container is nominally called. "Fidelity" is what the reader discloses 
 | **Word** | `.docx`, `.dotx`, `.odt`, `.ott` | Structured reflow | Images and page headers/footers are not rendered; `.docx`/`.dotx` footnote text is collected at the end of the document; pagination is ours, so page numbers can differ from Word |
 | **Word (flat ODF)** | `.fodt` | Structured reflow | Images and styles not rendered |
 | **Word (RTF)** | `.rtf` | Structured reflow | Bold/italic/underline and paragraphs only; tables, images and styles are not decoded |
-| **Word (legacy)** | `.doc`, `.dot` | Text only | BIFF/Word binary layout is not decoded; text is recovered and labelled as such |
+| **Word (legacy)** | `.doc`, `.dot` | Text only | The Word 97 piece table gives back the characters in document order with the right encoding; formatting, table structure, images and page furniture are not decoded |
 | **Spreadsheets** | `.xlsx`, `.xlsm` | Structured reflow | Formulas show their cached values — there is no calculation engine. Macros are never executed |
 | **Spreadsheets (ODF)** | `.ods`, `.fods`, `.ots` | Structured reflow | Cell styles and number formats not applied |
 | **Spreadsheets (legacy)** | `.xls` | Structured reflow | BIFF8 records are decoded into a real grid; number formats, styles and charts from the 97-2003 binary are not applied, and formula cells show Excel's cached result |

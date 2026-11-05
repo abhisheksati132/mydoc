@@ -220,8 +220,18 @@ class DocxParser {
             )
         }
 
-        // Legacy binary .doc: text recovery only. The flag is what makes the reader say so
-        // instead of presenting a scrape as a formatted document.
+        // A real Word 97-2003 file says where its text is: the FIB points at a piece table that
+        // lists the runs and how each is encoded. That is read first, and the byte scan below is
+        // only reached when the container is not a Word document at all.
+        Word97Text.read(bytes)?.let { text ->
+            text.lines().map { it.trim() }.filter { it.isNotEmpty() }.forEach { line ->
+                blocks.add(DocxBlock.Paragraph(listOf(DocxRun(line))))
+            }
+            if (blocks.isNotEmpty()) return@withContext DocxDocument(blocks)
+        }
+
+        // Last resort for a damaged binary document: text recovery only, and the flag is what makes
+        // the reader say so instead of presenting a scrape as a formatted document.
         blocks.addAll(parseRawTextFallback(bytes))
         if (blocks.isEmpty()) {
             throw DocumentLoadException(

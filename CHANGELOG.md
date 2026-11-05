@@ -7,6 +7,14 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ### Added
 
+- **A binary `.doc` is read through its piece table.** Word 97 stores a document's characters in
+  pieces described by a table in `0Table`/`1Table`, pointed at by the FIB in `WordDocument`; each
+  piece says where it lives and whether it is Windows-1252 or UTF-16. `Word97Text` follows that now,
+  so a legacy document arrives in document order with accented and non-Latin text intact, its
+  paragraph and cell marks turned into structure and its field marks gone. The byte-pair scan stays
+  as the last resort for a container that is not a Word document at all, and still flags itself as a
+  scrape. Tested against a document Word itself saved as ".doc".
+
 - **`.xls` is decoded as BIFF8 instead of being scavenged.** A legacy workbook is a CFBF container
   with a `Workbook` stream of records inside it, and MyDoc had never opened it: the engine scanned
   the whole file for UTF-16 word pairs and dropped whatever it found into column 0 of a sheet named
