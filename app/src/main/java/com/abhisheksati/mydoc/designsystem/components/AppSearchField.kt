@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.designsystem.components
 
+import com.abhisheksati.mydoc.R
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +16,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
@@ -70,7 +72,7 @@ fun AppSearchField(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
-                        contentDescription = "Clear search",
+                        contentDescription = stringResource(R.string.cd_clear_search),
                         tint = colors.textSecondary,
                         modifier = Modifier.size(18.dp)
                     )

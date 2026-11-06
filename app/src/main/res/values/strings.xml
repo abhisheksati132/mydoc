@@ -520,4 +520,9 @@
     <string name="settings_update_failed">Update check failed</string>
     <string name="settings_retry">Retry</string>
     <string name="photo_move_failed">Failed to move photo to Recycle Bin</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_library">Library</string>
+    <string name="nav_tools">Tools</string>
+    <string name="cd_clear_search">Clear search</string>
+    <string name="cd_back">Back</string>
 </resources>

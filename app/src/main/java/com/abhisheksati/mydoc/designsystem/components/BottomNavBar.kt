@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.designsystem.components
 
+import com.abhisheksati.mydoc.R
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -33,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -112,7 +114,7 @@ fun BottomNavBar(
                 // Home Tab
                 NavPillItem(
                     selected = currentTab == HomeTab.HOME,
-                    label = "Home",
+                    label = stringResource(R.string.nav_home),
                     selectedIcon = Icons.Filled.AutoStories,
                     unselectedIcon = Icons.Outlined.AutoStories,
                     onClick = {
@@ -126,7 +128,7 @@ fun BottomNavBar(
                 // Library Tab
                 NavPillItem(
                     selected = currentTab == HomeTab.LIBRARY,
-                    label = "Library",
+                    label = stringResource(R.string.nav_library),
                     selectedIcon = Icons.Filled.FolderCopy,
                     unselectedIcon = Icons.Outlined.FolderCopy,
                     onClick = {
@@ -140,7 +142,7 @@ fun BottomNavBar(
                 // Tools Tab
                 NavPillItem(
                     selected = currentTab == HomeTab.TOOLS,
-                    label = "Tools",
+                    label = stringResource(R.string.nav_tools),
                     selectedIcon = Icons.Filled.Widgets,
                     unselectedIcon = Icons.Outlined.Widgets,
                     onClick = {
