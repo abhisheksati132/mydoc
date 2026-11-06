@@ -52,6 +52,7 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppDropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -69,6 +70,7 @@ import androidx.compose.runtime.setValue
 import android.provider.DocumentsContract
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -125,6 +127,8 @@ fun HomeFeedPane(
     val haptics = rememberAppHaptics()
     val pickerContext = LocalContext.current
 
+    // Read in composition: the picker callback is not composable, so it needs the value hoisted.
+    val documentFallbackName = stringResource(R.string.home_document_fallback)
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -158,7 +162,7 @@ fun HomeFeedPane(
             onLibraryItemClick(
                 LibraryItem(
                     uri = uri.toString(),
-                    name = displayName?.takeIf { it.isNotBlank() } ?: "Document",
+                    name = displayName?.takeIf { it.isNotBlank() } ?: documentFallbackName,
                     kind = kind,
                     mimeType = mime ?: "application/octet-stream",
                     sizeBytes = sizeBytes,
@@ -211,7 +215,7 @@ fun HomeFeedPane(
                         SealMark(modifier = Modifier.size(30.dp))
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "MyDoc",
+                            text = stringResource(R.string.app_name),
                             style = AppTheme.typography.display,
                             color = colors.ink
                         )
@@ -226,7 +230,7 @@ fun HomeFeedPane(
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Search,
-                                contentDescription = "Search documents",
+                                contentDescription = stringResource(R.string.cd_search_documents),
                                 tint = colors.ink
                             )
                         }
@@ -238,7 +242,7 @@ fun HomeFeedPane(
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Settings,
-                                contentDescription = "Settings",
+                                contentDescription = stringResource(R.string.cd_settings),
                                 tint = colors.ink
                             )
                         }
@@ -274,7 +278,7 @@ fun HomeFeedPane(
                                 IconButton(onClick = onDismissError) {
                                     Icon(
                                         imageVector = Icons.Outlined.Close,
-                                        contentDescription = "Dismiss",
+                                        contentDescription = stringResource(R.string.cd_dismiss),
                                         tint = MaterialTheme.colorScheme.onErrorContainer
                                     )
                                 }
@@ -325,7 +329,7 @@ fun HomeFeedPane(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = "Recent Documents",
+                                text = stringResource(R.string.home_recent_documents),
                                 style = AppTheme.typography.heading,
                                 color = colors.ink
                             )
@@ -345,7 +349,7 @@ fun HomeFeedPane(
 
                         TextButton(onClick = onNavigateToLibrary) {
                             Text(
-                                text = "View all",
+                                text = stringResource(R.string.home_view_all),
                                 style = AppTheme.typography.captionStrong,
                                 color = colors.accent
                             )
@@ -459,7 +463,7 @@ private fun ContinueReadingHeroCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = "CONTINUE READING",
+                    text = stringResource(R.string.home_continue_reading),
                     style = AppTheme.typography.overline,
                     color = colors.accent
                 )
@@ -533,7 +537,7 @@ private fun ContinueReadingHeroCard(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "Resume",
+                            text = stringResource(R.string.home_resume),
                             style = AppTheme.typography.captionStrong,
                             color = colors.accent
                         )
@@ -604,7 +608,7 @@ private fun RecentPaperCard(
                 if (isSelectionMode) {
                     Icon(
                         imageVector = if (isSelected) Icons.Rounded.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
-                        contentDescription = if (isSelected) "Selected" else "Not selected",
+                        contentDescription = stringResource(if (isSelected) R.string.cd_selected else R.string.cd_not_selected),
                         tint = if (isSelected) colors.accent else colors.inkSecondary,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
@@ -624,7 +628,7 @@ private fun RecentPaperCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.MoreVert,
-                                contentDescription = "Options",
+                                contentDescription = stringResource(R.string.cd_options),
                                 tint = colors.inkSecondary,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -635,21 +639,21 @@ private fun RecentPaperCard(
                             onDismissRequest = { menuExpanded = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Details", style = AppTheme.typography.body) },
+                                text = { Text(stringResource(R.string.menu_details), style = AppTheme.typography.body) },
                                 onClick = {
                                     menuExpanded = false
                                     onDetails()
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Share", style = AppTheme.typography.body) },
+                                text = { Text(stringResource(R.string.menu_share), style = AppTheme.typography.body) },
                                 onClick = {
                                     menuExpanded = false
                                     onShare()
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Remove from recents", style = AppTheme.typography.body) },
+                                text = { Text(stringResource(R.string.menu_remove_recent), style = AppTheme.typography.body) },
                                 onClick = {
                                     menuExpanded = false
                                     onRemove()
@@ -734,12 +738,12 @@ private fun FirstRunPaperCard(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Your documents, under glass.",
+                    text = stringResource(R.string.home_empty_title),
                     style = AppTheme.typography.title,
                     color = colors.ink
                 )
                 Text(
-                    text = "Open any PDF, Office doc, or book to start reading with crisp typography and zero clutter.",
+                    text = stringResource(R.string.home_empty_message),
                     style = AppTheme.typography.body,
                     color = colors.inkSecondary
                 )
@@ -748,22 +752,22 @@ private fun FirstRunPaperCard(
             // 3 Quick Action Tiles
             ActionTile(
                 icon = Icons.Outlined.Description,
-                title = "Open document",
-                subtitle = "Select any file from device storage",
+                title = stringResource(R.string.home_action_open_title),
+                subtitle = stringResource(R.string.home_action_open_subtitle),
                 onClick = onOpenFile
             )
 
             ActionTile(
                 icon = Icons.Outlined.CameraAlt,
-                title = "Scan with camera",
-                subtitle = "Turn physical papers into crisp PDFs",
+                title = stringResource(R.string.home_action_scan_title),
+                subtitle = stringResource(R.string.home_action_scan_subtitle),
                 onClick = onScan
             )
 
             ActionTile(
                 icon = Icons.Outlined.FolderOpen,
-                title = "Browse library",
-                subtitle = "Explore device folders and storage",
+                title = stringResource(R.string.home_action_browse_title),
+                subtitle = stringResource(R.string.home_action_browse_subtitle),
                 onClick = onBrowse
             )
         }
@@ -869,7 +873,7 @@ private fun HomeRecentsSelectionBar(
             IconButton(onClick = onClose) {
                 Icon(
                     imageVector = Icons.Outlined.Close,
-                    contentDescription = "Close selection",
+                    contentDescription = stringResource(R.string.cd_close_selection),
                     tint = colors.ink
                 )
             }
@@ -884,7 +888,7 @@ private fun HomeRecentsSelectionBar(
                 IconButton(onClick = onSelectAll) {
                     Icon(
                         imageVector = Icons.Outlined.SelectAll,
-                        contentDescription = "Select all",
+                        contentDescription = stringResource(R.string.cd_select_all),
                         tint = colors.ink
                     )
                 }
@@ -892,14 +896,14 @@ private fun HomeRecentsSelectionBar(
             IconButton(onClick = onShare) {
                 Icon(
                     imageVector = Icons.Outlined.Share,
-                    contentDescription = "Share selected",
+                    contentDescription = stringResource(R.string.cd_share_selected),
                     tint = colors.ink
                 )
             }
             IconButton(onClick = onRemove) {
                 Icon(
                     imageVector = Icons.Outlined.Delete,
-                    contentDescription = "Remove selected from recents",
+                    contentDescription = stringResource(R.string.cd_remove_selected),
                     tint = colors.error
                 )
             }
