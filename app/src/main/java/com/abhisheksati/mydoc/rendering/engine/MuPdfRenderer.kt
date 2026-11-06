@@ -153,13 +153,32 @@ class MuPdfRenderer(
         }
     }
 
+    /**
+     * A page is rendered into one bitmap, and a PDF may declare a MediaBox large enough that the
+     * requested scale would ask for a multi-gigabyte allocation. The scale is capped so the page
+     * still appears, smaller, instead of failing the allocation and leaving a spinner behind.
+     */
+    /** 24 Mpx is about 96 MB at ARGB_8888, the largest single page worth allocating. */
+    private val MaxPagePixels = 24_000_000.0
+
+    private fun budgetedScale(pageIndex: Int, scale: Float): Float {
+        val (width, height) = getPageSize(pageIndex)
+        val points = width.toDouble() * height.toDouble()
+        if (points <= 0.0) return scale
+        val ceiling = kotlin.math.sqrt(MaxPagePixels / points).toFloat()
+        return if (scale > ceiling) ceiling.coerceAtLeast(0.02f) else scale
+    }
+
+
     override fun getCachedPage(pageIndex: Int, scale: Float, mode: ReadingMode): Bitmap? {
-        val cached = tileCache.get(pageIndex, scale, mode)
+        val cached = tileCache.get(pageIndex, budgetedScale(pageIndex, scale), mode)
         return if (cached != null && !cached.isRecycled) cached else null
     }
 
     override fun renderPage(pageIndex: Int, scale: Float, mode: ReadingMode): Bitmap? {
-        val cached = tileCache.get(pageIndex, scale, mode)
+        // Bounded before the lock is taken: getPageSize locks too.
+        val effectiveScale = budgetedScale(pageIndex, scale)
+        val cached = tileCache.get(pageIndex, effectiveScale, mode)
         if (cached != null && !cached.isRecycled) {
             return cached
         }
@@ -171,7 +190,7 @@ class MuPdfRenderer(
             var baseBitmap: Bitmap? = null
             try {
                 baseBitmap = withPage(doc, pageIndex) { page ->
-                    val matrix = Matrix(scale)
+                    val matrix = Matrix(effectiveScale)
                     try {
                         com.artifex.mupdf.fitz.android.AndroidDrawDevice.drawPage(page, matrix)
                     } catch (_: Throwable) {
@@ -214,7 +233,7 @@ class MuPdfRenderer(
                     ReadingMode.NORMAL -> baseBitmap
                 }
 
-                tileCache.put(pageIndex, scale, mode, finalBitmap)
+                tileCache.put(pageIndex, effectiveScale, mode, finalBitmap)
                 finalBitmap
             } catch (_: Throwable) {
                 baseBitmap?.recycle()

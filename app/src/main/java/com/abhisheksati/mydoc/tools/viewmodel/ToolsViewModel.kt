@@ -17,6 +17,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -140,7 +141,9 @@ class ToolsViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        viewModelScope.launch {
+        // The copy is whole files, not bytes in memory; on the main dispatcher the UI froze for
+        // the duration of the export.
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 context.contentResolver.openOutputStream(destinationUri)?.use { out ->
                     FileInputStream(outputFile).use { input ->

@@ -117,8 +117,15 @@ class AndroidPdfRenderer(
                     val origWidth = page.width
                     val origHeight = page.height
 
-                    val scaledWidth = (origWidth * scale).toInt().coerceAtLeast(1)
-                    val scaledHeight = (origHeight * scale).toInt().coerceAtLeast(1)
+                    // Same budget as the native engine: a page whose box is huge is rendered
+                    // smaller rather than asking for a multi-gigabyte bitmap.
+                    val area = origWidth.toDouble() * origHeight.toDouble()
+                    val budgetScale =
+                        if (area > 0.0) kotlin.math.sqrt(24_000_000.0 / area).toFloat() else scale
+                    val effectiveScale =
+                        if (scale > budgetScale) budgetScale.coerceAtLeast(0.02f) else scale
+                    val scaledWidth = (origWidth * effectiveScale).toInt().coerceAtLeast(1)
+                    val scaledHeight = (origHeight * effectiveScale).toInt().coerceAtLeast(1)
 
                     baseBitmap = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888)
                     val canvas = Canvas(baseBitmap)

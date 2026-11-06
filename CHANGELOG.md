@@ -30,6 +30,11 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   looking complete.
 - **Sign PDF's "Last Page" is the last page.** It was a fixed sentinel of 999, which signed page 1000
   of a longer document; the bottom presets were also flipped because PDF y grows upwards.
+- **A page with an oversized box is rendered smaller instead of failing.** Both PDF engines cap a
+  single page bitmap at 24 Mpx, so a pathological MediaBox no longer asks for a multi-gigabyte
+  allocation and then leaves a spinner behind.
+- **Saving a tool's output no longer copies on the main thread**, so the app stays responsive while
+  a large result is written to the destination the reader picked.
 
 ## [1.7.5] — 2026-11-06
 
