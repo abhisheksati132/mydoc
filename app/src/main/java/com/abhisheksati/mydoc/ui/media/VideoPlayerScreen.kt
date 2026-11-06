@@ -20,6 +20,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,6 +62,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -686,8 +689,12 @@ fun VideoPlayerScreen(
     // Playback Speed Selector Modal Bottom Sheet
     if (isSpeedSheetOpen) {
         val speeds = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
+        // Landscape gives a sheet about a fifth of the height it gets in portrait. Opening it
+        // half-expanded and letting the list scroll is what keeps every speed reachable, and the
+        // insets have to be paid on the sides as well as the bottom once the bars rotate.
         ModalBottomSheet(
             onDismissRequest = { isSpeedSheetOpen = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             containerColor = DarkAppColors.surface,
             contentColor = Color.White
         ) {
@@ -695,7 +702,10 @@ fun VideoPlayerScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)
+                    .verticalScroll(rememberScrollState())
+                    .navigationBarsPadding()
+                    .displayCutoutPadding()
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
                 Text(
                     text = "Playback Speed",

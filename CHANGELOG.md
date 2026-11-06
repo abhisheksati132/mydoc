@@ -19,6 +19,12 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   left; a swipe still brings them transiently. The rotation button no longer announces
   "Landscape"/"Portrait"/"Auto Rotate" as a popup, and both control bars now pad for the display
   cutout, which in landscape sits on the side rather than the top.
+- **The playback speed menu fits landscape.** It opened as a half-expanded sheet, which in landscape
+  is about a fifth of the height it gets in portrait, so the lower speeds sat below the fold with no
+  obvious way to reach them, and the side navigation bar overlapped the list. The sheet now opens at
+  its full content height, scrolls if the content is taller than the space left to it, and pads for
+  the navigation bar and the cutout. Verified on `mydoc_api35` in landscape: all six speeds from
+  0.5x to 2.0x are on screen and clear of the system bars.
 
 ### Added
 
