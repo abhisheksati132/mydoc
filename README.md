@@ -12,12 +12,12 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Compose](https://img.shields.io/badge/Jetpack%20Compose-M3-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
 [![Privacy](https://img.shields.io/badge/Privacy-100%25%20On--Device-success?style=for-the-badge&logo=shield)](SECURITY.md)
-[![CI](https://img.shields.io/github/actions/workflow/status/abhisheksati132/mydoc/ci.yml?style=for-the-badge&label=CI&color=0E5C57)](https://github.com/abhisheksati132/mydoc/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/abhisheksati132/mydoc/build.yml?style=for-the-badge&label=CI&color=0E5C57)](https://github.com/abhisheksati132/mydoc/actions)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg?style=for-the-badge)](LICENSE)
 
 <br/>
 
-[📥 **Download Latest APK (v1.7.4)**](https://github.com/abhisheksati132/mydoc/releases/latest) • [✨ **Features**](#-features) • [🎨 **Brand & Design**](#-brand--design) • [🛡️ **Security & Integrity**](#-security--cryptographic-verification) • [📊 **Supported Formats**](#-format-support-matrix) • [🛠️ **Build & Test**](#-building-from-source)
+[📥 **Download Latest APK (v1.7.5)**](https://github.com/abhisheksati132/mydoc/releases/latest) • [✨ **Features**](#-features) • [🎨 **Brand & Design**](#-brand--design) • [🛡️ **Security & Integrity**](#-security--cryptographic-verification) • [📊 **Supported Formats**](#-format-support-matrix) • [🛠️ **Build & Test**](#-building-from-source)
 
 </div>
 

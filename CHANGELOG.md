@@ -5,6 +5,59 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+## [1.7.5] — 2026-11-06
+
+### Fixed
+
+- **PDF search returned nothing.** `ViewerViewModel` passed `isActive` where the renderer's
+  parameter asks "should I stop?", so the first page check cancelled every ordinary search.
+- **Select All could act on files a format chip had hidden.** The chip filtered only inside the
+  composable; selection, the item count and the operations read the unfiltered list. The filter now
+  lives in the ViewModel, so the rows drawn, the count and Select All are the same projection.
+- **Two same-named files shared together arrived as one.** Both sharing paths staged every
+  attachment at `cache/shared/<basename>` with overwrite on; each attachment now gets its own
+  directory, and an earlier grant cannot read a replacement through the same URI.
+- **Open in Office App could send the previous presentation.** The handoff reused any non-empty
+  file with the same name and never refreshed it; it now stages per handoff and always writes the
+  bytes being viewed.
+- **"Move to Recycle Bin" could permanently delete a photo.** A provider-backed photo with no
+  filesystem path fell through to `ContentResolver.delete()`. MyDoc now refuses the operation and
+  says nothing was deleted.
+- **Compressing a folder could overwrite a hidden file.** Staging used a predictable
+  `.name.tmp` opened in truncation mode; it is a unique file per run now.
+- **`.xls` integer cells decoded wrongly.** The RK flags were swapped: bit 0 is fX100 (divide by
+  100) and bit 1 is fInt (signed 30-bit integer). Both RK and MULRK use the corrected decoder, and
+  the test now encodes the spec's flags instead of repeating the old mistake.
+- **`.ods`/`.fods` repetition changed values and coordinates.** A repeated cell is that value in
+  every column it spans, and a repeated row is that row N times; the reader stored one value,
+  clamped column runs to 100 and dropped row runs. Both are reproduced now, bounded to the grid
+  the reader can show.
+- **A Word token wider than the line lost its tail.** A long URL, identifier or CJK run was trimmed
+  to a prefix with the remainder discarded while the conversion still reported success. It wraps
+  across lines now.
+- **Untrusted headers could request disproportionate allocations.** The OLE2 FAT array is sized
+  from a header field and is now capped by the file's own size; the cached PPTX route applies the
+  same entry-count and aggregate budgets as the in-memory route.
+- **A 180-degree image rotation produced a blank image.** The matrix was never translated for that
+  turn, so the whole image was drawn at negative coordinates.
+- **Smaller honesty fixes.** The delete dialog no longer promises permanent deletion for a move to
+  the Bin, the page-jump field waits for submission instead of jumping on the first digit, Crop can
+  run with a blank range as its copy says, and the PDF password fields are masked.
+
+### Known remaining (1.7.4 audit, not fixed in this release)
+
+- Word: table columns beyond 24 are dropped, rows are not split across pages, and (`.docx`) page
+  furniture is still not rendered.
+- `.xls` rich/phonetic shared strings are still parsed with the old field widths; the ODS limit
+  above is bounded rather than complete; `.xlsx` `date1904` workbooks still display as 1900-system.
+- Export/to-PDF: mixed searchable/scanned pages are still OCR'd all-or-nothing, the long-image
+  pixel budget is not enforced, and skipped inputs are not reported.
+- Reader sessions: two loads can still race (no generation guard), and cancellation is not checked
+  inside the long parse loops.
+- URI fallback in `DocumentStreamResolver` still reinterprets opaque `document:`/`primary:` ids.
+- Accessibility (headings, roles, sub-48dp targets) and localisation (437 hardcoded strings) are
+  unchanged; `context.md` and `improvement.md` are marked historical instead of rewritten.
+
 ## [1.7.4] — 2026-11-06
 
 ### Changed

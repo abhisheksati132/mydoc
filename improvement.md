@@ -1,3 +1,7 @@
+> **Historical document.** This file describes an earlier state of the project and is kept for
+> context. It is not the current architecture, roadmap or version; `README.md`, `SECURITY.md`,
+> `docs/ARCHITECTURE.md` and `CHANGELOG.md` are authoritative. Current version: 1.7.5.
+
 # Document Engine Architecture & Improvement Plan
 
 > **Project Target:** `mydoc` (`com.abhisheksati.mydoc`)  
