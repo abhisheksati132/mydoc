@@ -58,8 +58,9 @@ class ImageConversionMemoryOnDeviceTest {
         val pdf = runBlocking {
             PdfConversionEngine(context).imagesToPdf(
                 listOf(jpg),
-                ToolOptions(pageSizeFormat = PageSizeFormat.FIT_IMAGE)
-            ) {}
+                ToolOptions(pageSizeFormat = PageSizeFormat.FIT_IMAGE),
+                onProgress = {}
+            )
         }
 
         val doc = Document.openDocument(pdf.absolutePath)
@@ -147,7 +148,7 @@ class ImageConversionMemoryOnDeviceTest {
         val bogus = File(dir, "not_an_image.pdf").apply { writeText("plain text, not a picture") }
 
         val error = runCatching {
-            runBlocking { PdfConversionEngine(context).imagesToPdf(listOf(bogus), ToolOptions()) {} }
+            runBlocking { PdfConversionEngine(context).imagesToPdf(listOf(bogus), ToolOptions(), onProgress = {}) }
         }.exceptionOrNull()
 
         assertTrue("expected IllegalArgumentException, got $error", error is IllegalArgumentException)
@@ -163,7 +164,7 @@ class ImageConversionMemoryOnDeviceTest {
         val bad = File(dir, "bad.png").apply { writeText("not a png") }
 
         val pdf = runBlocking {
-            PdfConversionEngine(context).imagesToPdf(listOf(good, bad), ToolOptions()) {}
+            PdfConversionEngine(context).imagesToPdf(listOf(good, bad), ToolOptions(), onProgress = {})
         }
         assertTrue("no PDF produced", pdf.length() > 0L)
 
