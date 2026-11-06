@@ -102,13 +102,13 @@ class PdfToolsEngine(private val context: Context) {
 
             val primaryFile = inputFiles.firstOrNull()
             fun requirePrimaryFile(): File = primaryFile
-                ?: throw IllegalArgumentException("Primary input file is required for ${tool.title}")
+                ?: throw IllegalArgumentException("Primary input file is required for ${context.getString(tool.titleRes)}")
 
             val initialSizeBytes = inputFiles.sumOf { it.length() }
             val initialPages = primaryFile?.let { countDocumentPages(it) } ?: 0
             var skippedImages: List<String> = emptyList()
 
-            onProgress(ToolProgress(10, 100, 15, "Executing ${tool.title}...", false))
+            onProgress(ToolProgress(10, 100, 15, "Executing ${context.getString(tool.titleRes)}...", false))
 
             val resultFile: File = when (tool) {
                 // 1. Organize

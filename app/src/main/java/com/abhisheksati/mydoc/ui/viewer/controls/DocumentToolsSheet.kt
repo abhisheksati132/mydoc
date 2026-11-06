@@ -117,12 +117,14 @@ fun DocumentToolsSheet(
         )
     }
 
-    val filteredTools = remember(applicableTools, searchQuery, selectedGroup) {
+    val labels = localizedToolLabels(applicableTools)
+    val filteredTools = remember(applicableTools, searchQuery, selectedGroup, labels) {
         applicableTools.filter { tool ->
+            val (title, description) = labels.getValue(tool)
             val matchesGroup = selectedGroup == null || tool.group == selectedGroup
             val matchesSearch = searchQuery.isBlank() ||
-                tool.title.contains(searchQuery, ignoreCase = true) ||
-                tool.description.contains(searchQuery, ignoreCase = true) ||
+                title.contains(searchQuery, ignoreCase = true) ||
+                description.contains(searchQuery, ignoreCase = true) ||
                 tool.group.title.contains(searchQuery, ignoreCase = true)
             matchesGroup && matchesSearch
         }
@@ -270,14 +272,14 @@ private fun ToolRow(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = tool.title,
+                    text = stringResource(tool.titleRes),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = tool.description,
+                    text = stringResource(tool.descriptionRes),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -286,4 +288,14 @@ private fun ToolRow(
             }
         }
     }
+}
+
+/** Titles and descriptions resolved for search and display; stringResource is composable-only. */
+@Composable
+private fun localizedToolLabels(tools: List<PdfTool>): Map<PdfTool, Pair<String, String>> {
+    val labels = LinkedHashMap<PdfTool, Pair<String, String>>()
+    for (tool in tools) {
+        labels[tool] = stringResource(tool.titleRes) to stringResource(tool.descriptionRes)
+    }
+    return labels
 }

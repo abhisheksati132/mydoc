@@ -138,15 +138,17 @@ fun ToolsScreen(
     }
 
     val allTools = PdfTool.entries
-    val filteredTools = remember(searchQuery) {
+    val searchable = localizedToolLabels(allTools)
+    val filteredTools = remember(searchQuery, searchable) {
         val q = searchQuery.trim().lowercase()
         if (q.isEmpty()) {
             allTools
         } else {
-            allTools.filter {
-                it.title.lowercase().contains(q) ||
-                    it.description.lowercase().contains(q) ||
-                    it.group.title.lowercase().contains(q)
+            allTools.filter { tool ->
+                val (title, description) = searchable.getValue(tool)
+                title.lowercase().contains(q) ||
+                    description.lowercase().contains(q) ||
+                    tool.group.title.lowercase().contains(q)
             }
         }
     }
@@ -388,14 +390,14 @@ private fun ToolRow(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = tool.title,
+                    text = stringResource(tool.titleRes),
                     style = AppTheme.typography.titleSmall,
                     color = colors.inkPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = tool.description,
+                    text = stringResource(tool.descriptionRes),
                     style = AppTheme.typography.caption,
                     color = colors.inkMuted,
                     maxLines = 1,
@@ -459,4 +461,14 @@ private fun ToolsEmptyState(onClear: () -> Unit) {
             )
         }
     }
+}
+
+/** Titles and descriptions resolved for search; stringResource is composable-only. */
+@Composable
+private fun localizedToolLabels(tools: List<PdfTool>): Map<PdfTool, Pair<String, String>> {
+    val labels = LinkedHashMap<PdfTool, Pair<String, String>>()
+    for (tool in tools) {
+        labels[tool] = stringResource(tool.titleRes) to stringResource(tool.descriptionRes)
+    }
+    return labels
 }

@@ -170,7 +170,7 @@ fun ToolRunnerSheet(
                     IconPlate(icon = tool.icon)
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = tool.title,
+                        text = stringResource(tool.titleRes),
                         style = typography.titleLarge,
                         color = scheme.onSurface
                     )
@@ -186,7 +186,7 @@ fun ToolRunnerSheet(
             }
 
             Text(
-                text = tool.description,
+                text = stringResource(tool.descriptionRes),
                 style = typography.bodyMedium,
                 color = scheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
@@ -255,7 +255,7 @@ fun ToolRunnerSheet(
                             .height(52.dp),
                         shape = AppRadius.cardShape
                     ) {
-                        Text(text = stringResource(R.string.run_tool, tool.title), style = typography.titleSmall)
+                        Text(text = stringResource(R.string.run_tool, stringResource(tool.titleRes)), style = typography.titleSmall)
                     }
                 }
 

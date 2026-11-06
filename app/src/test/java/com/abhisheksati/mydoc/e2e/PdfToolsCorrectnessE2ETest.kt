@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.e2e
 
+import com.abhisheksati.mydoc.R
 import android.content.Context
 import android.content.ContextWrapper
 import com.abhisheksati.mydoc.domain.model.DocumentCategory
@@ -144,7 +145,7 @@ class PdfToolsCorrectnessE2ETest {
         val watermarkTool = PdfTool.ADD_WATERMARK
         assertNotNull(watermarkTool)
         // Description should honestly describe watermark capability
-        assertTrue(watermarkTool.title.contains("Watermark", ignoreCase = true))
+        assertEquals(R.string.tool_add_watermark_title, watermarkTool.titleRes)
     }
 
     // =========================================================================
@@ -227,7 +228,7 @@ class PdfToolsCorrectnessE2ETest {
     fun tier1_feature18_signatureToolGroupAndDefinition() {
         val signTool = PdfTool.SIGN_PDF
         assertEquals(ToolGroup.EDIT_SIGN, signTool.group)
-        assertTrue(signTool.title.contains("Sign", ignoreCase = true))
+        assertEquals(R.string.tool_sign_pdf_title, signTool.titleRes)
     }
 
     // =========================================================================
