@@ -5,6 +5,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.getValue
 
 import kotlinx.coroutines.withContext
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.util.UserMessages
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -20,6 +21,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -58,10 +61,11 @@ fun StorageCleanerSheet(
     val coroutineScope = rememberCoroutineScope()
     val cleanerManager = remember { StorageCleanerManager() }
     val app = LocalContext.current.applicationContext as MyDocApp
+    val resources = LocalResources.current
     // The sheet only ever scans one root; naming it stops the reader assuming it covers a card
     // they have mounted.
     val rootLabel = if (rootDir.absolutePath == android.os.Environment.getExternalStorageDirectory().absolutePath) {
-        "internal storage"
+        stringResource(R.string.cleaner_root_internal)
     } else {
         rootDir.name.ifBlank { rootDir.absolutePath }
     }
@@ -168,19 +172,19 @@ fun StorageCleanerSheet(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "Storage Cleaner",
+                            text = stringResource(R.string.cleaner_title),
                             style = typography.heading,
                             color = colors.textPrimary
                         )
                         Text(
-                            text = "Reclaim wasted space in $rootLabel",
+                            text = stringResource(R.string.cleaner_subtitle, rootLabel),
                             style = typography.caption,
                             color = colors.textSecondary
                         )
                     }
                 }
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = "Close", tint = colors.textSecondary)
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close), tint = colors.textSecondary)
                 }
             }
 
@@ -204,7 +208,7 @@ fun StorageCleanerSheet(
                         )
                         Spacer(modifier = Modifier.height(20.dp))
                         Text(
-                            text = "Scanning Storage...",
+                            text = stringResource(R.string.cleaner_scanning),
                             style = typography.bodyStrong,
                             color = colors.textPrimary
                         )
@@ -255,14 +259,14 @@ fun StorageCleanerSheet(
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Moved to Trash",
+                            text = stringResource(R.string.cleaner_moved_to_trash),
                             style = typography.heading,
                             color = colors.textPrimary
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "$cleanedCount items (${formatSize(cleanedBytes ?: 0L)}) moved to Trash. " +
-                                "Empty Trash to actually free the space.",
+                                stringResource(R.string.cleaner_empty_trash_hint),
                             style = typography.body,
                             color = colors.textSecondary,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -295,7 +299,7 @@ fun StorageCleanerSheet(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = "Reclaimable Storage",
+                                    text = stringResource(R.string.cleaner_reclaimable),
                                     style = typography.overline,
                                     color = colors.textSecondary
                                 )
@@ -314,7 +318,7 @@ fun StorageCleanerSheet(
                                 if (res.truncated) {
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = "Scan stopped at the safety limit — some files were not checked.",
+                                        text = stringResource(R.string.cleaner_scan_limited),
                                         style = typography.caption,
                                         color = colors.warning
                                     )
@@ -327,7 +331,7 @@ fun StorageCleanerSheet(
                     if (res.tempFiles.isNotEmpty()) {
                         item {
                             CleanerCategoryCard(
-                                title = "Cache & Temporary Files",
+                                title = stringResource(R.string.cleaner_cache_temp),
                                 subtitle = "${res.tempFiles.size} junk files (${formatSize(res.tempFiles.sumOf { it.length() })})",
                                 icon = Icons.Outlined.DeleteSweep,
                                 checked = cleanTempFiles,
@@ -341,7 +345,7 @@ fun StorageCleanerSheet(
                     if (res.apkFiles.isNotEmpty()) {
                         item {
                             CleanerCategoryCard(
-                                title = "Obsolete APK Packages",
+                                title = stringResource(R.string.cleaner_obsolete_apks),
                                 subtitle = "${res.apkFiles.size} installer files (${formatSize(res.apkFiles.sumOf { it.length() })})",
                                 icon = Icons.Outlined.Android,
                                 checked = cleanApks,
@@ -362,7 +366,7 @@ fun StorageCleanerSheet(
                                     .animateContentSize()
                             ) {
                                 CleanerCategoryCard(
-                                    title = "Duplicate Files",
+                                    title = stringResource(R.string.cleaner_duplicates),
                                     subtitle = "${res.duplicateGroups.size} identical file clusters (${formatSize(res.duplicateGroups.sumOf { it.wastedBytes })})",
                                     icon = Icons.Outlined.CopyAll,
                                     checked = cleanDuplicates,
@@ -376,7 +380,7 @@ fun StorageCleanerSheet(
                                 if (expandDuplicates) {
                                     Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)) {
                                         Text(
-                                            text = "Keeping 1 original copy, removing duplicates:",
+                                            text = stringResource(R.string.cleaner_keeping_original),
                                             style = typography.micro,
                                             color = colors.textSecondary
                                         )
@@ -427,7 +431,7 @@ fun StorageCleanerSheet(
                     if (res.emptyFolders.isNotEmpty()) {
                         item {
                             CleanerCategoryCard(
-                                title = "Empty Directories",
+                                title = stringResource(R.string.cleaner_empty_dirs),
                                 subtitle = "${res.emptyFolders.size} zero-item folders taking clutter",
                                 icon = Icons.Outlined.FolderOff,
                                 checked = cleanEmptyFolders,
@@ -463,7 +467,7 @@ fun StorageCleanerSheet(
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = "Large Files (>50 MB)",
+                                            text = stringResource(R.string.cleaner_large_files),
                                             style = typography.bodyStrong,
                                             color = colors.textPrimary
                                         )
@@ -517,8 +521,8 @@ fun StorageCleanerSheet(
                     if (res.tempFiles.isEmpty() && res.apkFiles.isEmpty() && res.duplicateGroups.isEmpty() && res.emptyFolders.isEmpty()) {
                         item {
                             AppEmptyState(
-                                title = "Storage is clean",
-                                message = "No unnecessary junk or duplicate files found."
+                                title = stringResource(R.string.cleaner_clean_title),
+                                message = stringResource(R.string.cleaner_clean_message)
                             )
                         }
                     }
@@ -559,16 +563,16 @@ fun StorageCleanerSheet(
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
-                                Text("Cleaning...", style = typography.bodyStrong)
+                                Text(stringResource(R.string.cleaner_cleaning), style = typography.bodyStrong)
                             } else {
                                 Icon(Icons.Outlined.DeleteSweep, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = when {
-                                        !hasSelection -> "Select a category to clean"
+                                        !hasSelection -> stringResource(R.string.cleaner_select_category)
                                         selectedFiles.isEmpty() ->
-                                            "Remove ${selectedEmptyDirs.size} empty folders"
-                                        else -> "Move to Trash (${formatSize(selectedBytesToFree)})"
+                                            stringResource(R.string.cleaner_remove_folders, selectedEmptyDirs.size)
+                                        else -> stringResource(R.string.cleaner_move_to_trash_size, formatSize(selectedBytesToFree))
                                     },
                                     style = typography.bodyStrong
                                 )
@@ -583,7 +587,7 @@ fun StorageCleanerSheet(
     if (showConfirm) {
         AlertDialog(
             onDismissRequest = { showConfirm = false },
-            title = { Text("Move to Trash?") },
+            title = { Text(stringResource(R.string.cleaner_confirm_title)) },
             text = {
                 Column(
                     modifier = Modifier
@@ -684,7 +688,13 @@ fun StorageCleanerSheet(
                                 emptyList()
                             } else {
                             app.storageRepository.moveToTrash(selectedFiles).getOrElse { error ->
-                                app.showMessage(UserMessages.actionFailed("Move to Trash", error, "Cleaner"))
+                                app.showMessage(
+                                    UserMessages.actionFailed(
+                                        resources.getString(R.string.dialog_move_to_bin),
+                                        error,
+                                        "Cleaner"
+                                    )
+                                )
                                 emptyList()
                             }
                         }
@@ -696,9 +706,13 @@ fun StorageCleanerSheet(
                         val failedDirs = selectedEmptyDirs.size - deletedDirs
                         if (failedFiles > 0 || failedDirs > 0) {
                             val msg = buildString {
-                                append("Cleaned ${moved.size} files and $deletedDirs folders.")
-                                if (failedFiles > 0) append(" Failed to delete $failedFiles files.")
-                                if (failedDirs > 0) append(" Failed to delete $failedDirs folders.")
+                                append(resources.getString(R.string.cleaner_result_partial, moved.size, deletedDirs))
+                                if (failedFiles > 0) {
+                                    append(resources.getString(R.string.cleaner_failed_files, failedFiles))
+                                }
+                                if (failedDirs > 0) {
+                                    append(resources.getString(R.string.cleaner_failed_folders, failedDirs))
+                                }
                             }
                             app.showMessage(msg)
                         } else {
@@ -706,16 +720,20 @@ fun StorageCleanerSheet(
                             // freed until it is emptied, so the message says "reclaimable" rather
                             // than claiming the space back now.
                             app.showMessage(
-                                "Moved ${moved.size} files and deleted $deletedDirs folders " +
-                                    "(${formatSize(cleanedBytes ?: 0L)} reclaimable once the Bin is emptied)."
+                                resources.getString(
+                                    R.string.cleaner_result_complete,
+                                    moved.size,
+                                    deletedDirs,
+                                    formatSize(cleanedBytes ?: 0L)
+                                )
                             )
                         }
                         isCleaning = false
                     }
-                }) { Text("Move to Trash") }
+                }) { Text(stringResource(R.string.dialog_move_to_bin)) }
             },
             dismissButton = {
-                TextButton(onClick = { showConfirm = false }) { Text("Cancel") }
+                TextButton(onClick = { showConfirm = false }) { Text(stringResource(R.string.action_cancel)) }
             }
         )
     }
@@ -780,7 +798,7 @@ private fun CleanerCategoryCard(
             IconButton(onClick = onToggleExpand) {
                 Icon(
                     imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = "Expand",
+                    contentDescription = stringResource(R.string.cd_expand),
                     tint = colors.textSecondary
                 )
             }
