@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.storage
 
+import com.abhisheksati.mydoc.R
 import android.app.Application
 import android.content.Context
 import android.content.pm.ApplicationInfo
@@ -66,7 +67,7 @@ class StorageViewModel(
             val volumes = storageRepository.getStorageVolumes()
 
             if (volumes.isEmpty()) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "No storage volumes found") }
+                _uiState.update { it.copy(isLoading = false, errorMessage = context.getString(R.string.storage_no_volumes)) }
                 return@launch
             }
 

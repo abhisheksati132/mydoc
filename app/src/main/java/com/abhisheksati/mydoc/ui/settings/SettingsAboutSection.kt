@@ -176,9 +176,9 @@ fun SettingsAboutSection(
 
             is UpdateUiState.ReadyToInstall -> {
                 UpdateLine(
-                    title = "Download complete",
-                    detail = "v${state.release.versionName} is ready to install",
-                    actionLabel = "Install now",
+                    title = stringResource(R.string.settings_download_complete),
+                    detail = stringResource(R.string.settings_ready_install_detail, state.release.versionName),
+                    actionLabel = stringResource(R.string.settings_install_now),
                     onAction = {
                         if (!updateManager.installerHelper.canInstallUnknownApps()) {
                             val intent = updateManager.installerHelper.createManageUnknownAppSourcesIntent()
@@ -192,9 +192,9 @@ fun SettingsAboutSection(
 
             is UpdateUiState.Error -> {
                 UpdateLine(
-                    title = "Update check failed",
+                    title = stringResource(R.string.settings_update_failed),
                     detail = state.message,
-                    actionLabel = "Retry",
+                    actionLabel = stringResource(R.string.settings_retry),
                     onAction = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } }
                 )
             }

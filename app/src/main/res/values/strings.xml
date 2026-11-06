@@ -513,4 +513,11 @@
     <string name="cell_label">Cell %1$s</string>
     <string name="tools_cat_all">All</string>
     <string name="tools_cat_scan">Scan</string>
+    <string name="storage_no_volumes">No storage volumes found</string>
+    <string name="settings_download_complete">Download complete</string>
+    <string name="settings_ready_install_detail">v%1$s is ready to install</string>
+    <string name="settings_install_now">Install now</string>
+    <string name="settings_update_failed">Update check failed</string>
+    <string name="settings_retry">Retry</string>
+    <string name="photo_move_failed">Failed to move photo to Recycle Bin</string>
 </resources>

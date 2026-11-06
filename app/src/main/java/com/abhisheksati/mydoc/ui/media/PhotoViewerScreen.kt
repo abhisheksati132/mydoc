@@ -483,11 +483,11 @@ fun PhotoViewerScreen(
                                 onBackClick()
                             }
                         } else {
-                            context.showMessage("Failed to move photo to Recycle Bin")
+                            context.showMessage(resources.getString(R.string.photo_move_failed))
                         }
                     }
                 },
-                dismissLabel = "Cancel",
+                dismissLabel = stringResource(R.string.action_cancel),
                 onDismiss = { showDeleteConfirmDialog = false }
             )
         }
