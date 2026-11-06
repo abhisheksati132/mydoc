@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.tiles
 
+import com.abhisheksati.mydoc.R
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
@@ -13,9 +14,9 @@ class ScanTileService : TileService() {
         super.onStartListening()
         qsTile?.let { tile ->
             tile.state = Tile.STATE_INACTIVE
-            tile.label = "Scan Doc"
+            tile.label = getString(R.string.tile_scan_label)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                tile.subtitle = "Capture & OCR"
+                tile.subtitle = getString(R.string.tile_scan_subtitle)
             }
             tile.updateTile()
         }

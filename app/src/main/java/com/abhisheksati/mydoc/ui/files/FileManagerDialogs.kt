@@ -334,7 +334,7 @@ fun FilePropertiesDialog(
                     .verticalScroll(rememberScrollState())
             ) {
                 // Name
-                PropertyItem(title = "Name", value = file.name)
+                PropertyItem(title = stringResource(R.string.photo_name), value = file.name)
 
                 // Path
                 Row(
@@ -360,7 +360,7 @@ fun FilePropertiesDialog(
                 // Size
                 val formattedSize = formatBytes(properties.totalSizeBytes)
                 val exactSize = "${properties.totalSizeBytes} bytes"
-                PropertyItem(title = "Size", value = "$formattedSize ($exactSize)")
+                PropertyItem(title = stringResource(R.string.photo_size), value = "$formattedSize ($exactSize)")
 
                 // Folder Contents
                 if (file.isDirectory) {

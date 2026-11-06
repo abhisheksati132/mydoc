@@ -254,7 +254,7 @@ fun TrashBinSheet(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = colors.error)
                 ) {
-                    Text("Empty")
+                    Text(stringResource(R.string.trash_meta_empty))
                 }
             },
             dismissButton = {

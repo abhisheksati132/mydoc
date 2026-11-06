@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
+import com.abhisheksati.mydoc.R
 import android.graphics.Bitmap
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -31,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -195,7 +197,7 @@ fun FastScrollbar(
                     if (thumb != null) {
                         Image(
                             bitmap = thumb.asImageBitmap(),
-                            contentDescription = "Page ${lastHapticPage + 1}",
+                            contentDescription = stringResource(R.string.page_label, lastHapticPage + 1),
                             modifier = Modifier
                                 .size(width = 68.dp, height = 90.dp)
                                 .clip(MaterialTheme.shapes.extraSmall)

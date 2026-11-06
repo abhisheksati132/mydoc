@@ -94,7 +94,7 @@ fun PageJumpDialog(
         },
         confirmButton = {
             Button(onClick = { submit() }) {
-                Text("Go")
+                Text(stringResource(R.string.action_go))
             }
         },
         dismissButton = {

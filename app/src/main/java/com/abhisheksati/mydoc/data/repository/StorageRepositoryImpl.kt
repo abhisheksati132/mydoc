@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.data.repository
 
+import com.abhisheksati.mydoc.R
 import android.content.Context
 import android.media.MediaScannerConnection
 import android.os.Environment
@@ -89,7 +90,7 @@ class StorageRepositoryImpl(
                 val free = stat.availableBytes
                 volumes.add(
                     StorageVolume(
-                        title = "Internal Storage",
+                        titleRes = R.string.storage_internal_title,
                         path = primaryDir.absolutePath,
                         totalBytes = total,
                         freeBytes = free,
@@ -117,7 +118,7 @@ class StorageRepositoryImpl(
                         if (volumes.none { it.path == root.absolutePath }) {
                             volumes.add(
                                 StorageVolume(
-                                    title = "SD Card",
+                                    titleRes = R.string.storage_sd_card,
                                     path = root.absolutePath,
                                     totalBytes = total,
                                     freeBytes = free,

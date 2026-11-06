@@ -1,12 +1,13 @@
 package com.abhisheksati.mydoc.domain.model
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 import java.io.File
 import java.util.Locale
 
 @Immutable
 data class StorageVolume(
-    val title: String,
+    @StringRes val titleRes: Int,
     val path: String,
     val totalBytes: Long,
     val freeBytes: Long,

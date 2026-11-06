@@ -52,7 +52,7 @@ fun SettingsReadingSection(
                 onClick = { onReadingModeChange(ReadingMode.NORMAL) }
             )
             ChoiceChip(
-                label = "Dark",
+                label = stringResource(R.string.theme_dark),
                 icon = Icons.Outlined.DarkMode,
                 selected = currentReadingMode == ReadingMode.INVERTED_DARK,
                 onClick = { onReadingModeChange(ReadingMode.INVERTED_DARK) }

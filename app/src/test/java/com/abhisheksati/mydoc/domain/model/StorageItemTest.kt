@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.domain.model
 
+import com.abhisheksati.mydoc.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -58,7 +59,7 @@ class StorageItemTest {
     @Test
     fun testStorageVolumeCalculations() {
         val volume = StorageVolume(
-            title = "Internal",
+            titleRes = R.string.files_title_internal,
             path = "/storage/emulated/0",
             totalBytes = 100_000_000_000L,
             freeBytes = 40_000_000_000L,

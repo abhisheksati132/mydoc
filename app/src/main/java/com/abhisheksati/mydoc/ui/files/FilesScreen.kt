@@ -168,7 +168,7 @@ fun FilesScreen(
         activeCategory != null -> activeCategory.displayName
         atStorageRoot -> uiState.storageVolumes.firstOrNull {
             it.path == uiState.currentDirectory.absolutePath
-        }?.title ?: stringResource(R.string.files_title_internal)
+        }?.let { stringResource(it.titleRes) } ?: stringResource(R.string.files_title_internal)
         else -> uiState.currentDirectory.name
     }
     val subtitle = when {
@@ -242,7 +242,7 @@ fun FilesScreen(
         else -> uiState.breadcrumbTrail.mapIndexed { index, crumb ->
             val volume = uiState.storageVolumes.firstOrNull { it.path == crumb.absolutePath }
             val label = when {
-                volume != null -> volume.title
+                volume != null -> stringResource(volume.titleRes)
                 crumb.absolutePath == "/storage/emulated/0" -> stringResource(R.string.files_title_internal)
                 index == 0 -> stringResource(R.string.files_crumb_storage)
                 else -> crumb.name

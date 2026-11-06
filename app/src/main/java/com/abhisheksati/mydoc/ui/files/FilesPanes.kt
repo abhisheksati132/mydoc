@@ -243,7 +243,7 @@ fun BrowseHomePane(
                 key = { "vol_${it.path}" }
             ) { volume ->
                 LocationRow(
-                    title = volume.title,
+                    title = stringResource(volume.titleRes),
                     meta = "${volume.formattedFree} free of ${volume.formattedTotal}",
                     icon = Icons.Outlined.SdCard,
                     onClick = { onBrowseVolume(volume) },

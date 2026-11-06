@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.viewmodel
 
+import com.abhisheksati.mydoc.R
 import androidx.lifecycle.ViewModel
 import com.abhisheksati.mydoc.domain.model.DocumentTypeFilter
 import com.abhisheksati.mydoc.domain.model.FileCategory
@@ -55,7 +56,7 @@ class FileManagerViewModelTest {
         fakeRepo = FakeStorageRepository(
             volumes = listOf(
                 StorageVolume(
-                    title = "Internal",
+                    titleRes = R.string.files_title_internal,
                     path = tempDir.absolutePath,
                     totalBytes = 100_000_000L,
                     freeBytes = 50_000_000L,
@@ -103,7 +104,7 @@ class FileManagerViewModelTest {
 
         assertEquals(tempDir.absolutePath, state.currentDirectory.absolutePath)
         assertEquals(1, state.storageVolumes.size)
-        assertEquals("Internal", state.storageVolumes[0].title)
+        assertEquals(R.string.files_title_internal, state.storageVolumes[0].titleRes)
         assertFalse(state.isLoading)
         assertEquals(4, state.items.size)
         assertEquals(4, state.filteredItems.size)
