@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.tools.ui.components
 
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.util.UserMessages
 import android.Manifest
 import android.content.pm.PackageManager
@@ -67,6 +68,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -249,7 +252,11 @@ fun CameraScanSheet(
                     .background(Color.Black),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = "Requesting Camera Permission...", style = MaterialTheme.typography.bodyMedium, color = Color.White)
+                Text(
+                    text = stringResource(R.string.scan_requesting_permission),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White
+                )
             }
             return@Dialog
         }
@@ -420,7 +427,7 @@ fun CameraScanSheet(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Close,
-                            contentDescription = "Close scanner",
+                            contentDescription = stringResource(R.string.cd_close_scanner),
                             tint = Color.White,
                             modifier = Modifier.size(22.dp)
                         )
@@ -432,12 +439,12 @@ fun CameraScanSheet(
                             .padding(start = 4.dp)
                     ) {
                         Text(
-                            text = "SCANNER",
+                            text = stringResource(R.string.scan_header),
                             style = MaterialTheme.typography.labelSmall,
                             color = CaptureChromeColors.onChromeMuted
                         )
                         Text(
-                            text = "Scan document",
+                            text = stringResource(R.string.scan_document),
                             style = MaterialTheme.typography.titleMedium,
                             color = Color.White
                         )
@@ -452,7 +459,7 @@ fun CameraScanSheet(
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = "${capturedFiles.size} ${if (capturedFiles.size == 1) "PAGE" else "PAGES"}",
+                                text = pluralStringResource(R.plurals.scan_pages, capturedFiles.size, capturedFiles.size),
                                 style = MaterialTheme.typography.labelSmall.withTabularFigures(),
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
@@ -468,7 +475,7 @@ fun CameraScanSheet(
                     ) {
                         Icon(
                             imageVector = if (isTorchOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
-                            contentDescription = "Toggle torch",
+                            contentDescription = stringResource(R.string.cd_toggle_torch),
                             tint = if (isTorchOn) CaptureChromeColors.torchOn else Color.White,
                             modifier = Modifier.size(22.dp)
                         )
@@ -511,7 +518,7 @@ fun CameraScanSheet(
                 }
 
                 Text(
-                    text = "Align the page inside the frame",
+                    text = stringResource(R.string.scan_align),
                     style = MaterialTheme.typography.labelMedium,
                     color = CaptureChromeColors.onChromeMuted,
                     textAlign = TextAlign.Center,
@@ -583,7 +590,7 @@ fun CameraScanSheet(
                                         .size(160, 215)
                                         .crossfade(true)
                                         .build(),
-                                    contentDescription = "Page ${idx + 1}",
+                                    contentDescription = stringResource(R.string.page_label, idx + 1),
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop
                                 )
@@ -613,7 +620,7 @@ fun CameraScanSheet(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Outlined.Close,
-                                        contentDescription = "Remove page",
+                                        contentDescription = stringResource(R.string.cd_remove_page),
                                         tint = Color.White,
                                         modifier = Modifier.size(12.dp)
                                     )
@@ -679,7 +686,7 @@ fun CameraScanSheet(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.PhotoLibrary,
-                            contentDescription = "Import from gallery",
+                            contentDescription = stringResource(R.string.cd_import_gallery),
                             tint = Color.White,
                             modifier = Modifier.size(22.dp)
                         )
@@ -810,7 +817,7 @@ fun CameraScanSheet(
                                 } else {
                                     Icon(
                                         imageVector = Icons.Outlined.Check,
-                                        contentDescription = "Done scanning",
+                                        contentDescription = stringResource(R.string.cd_done_scanning),
                                         tint = MaterialTheme.colorScheme.onPrimary,
                                         modifier = Modifier.size(22.dp)
                                     )

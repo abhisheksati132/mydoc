@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.tools.ui.components
 
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import android.graphics.Bitmap
 import android.net.Uri
@@ -58,6 +59,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -185,14 +187,14 @@ fun ReorderPagesSheet(
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
-                        contentDescription = "Back",
+                        contentDescription = stringResource(R.string.cd_back),
                         tint = scheme.onSurface
                     )
                 }
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Page Organizer",
+                        text = stringResource(R.string.page_organizer),
                         style = typography.titleLarge,
                         color = scheme.onSurface,
                         maxLines = 1,
@@ -218,7 +220,7 @@ fun ReorderPagesSheet(
                     ) {
                         Icon(
                             imageVector = if (selectedIds.size == pages.size && pages.isNotEmpty()) Icons.Outlined.CheckCircle else Icons.Outlined.SelectAll,
-                            contentDescription = "Toggle Select All",
+                            contentDescription = stringResource(R.string.cd_toggle_select_all),
                             tint = if (selectedIds.size == pages.size && pages.isNotEmpty()) scheme.primary else scheme.onSurfaceVariant
                         )
                     }
@@ -233,7 +235,7 @@ fun ReorderPagesSheet(
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Delete,
-                                contentDescription = "Delete Selected",
+                                contentDescription = stringResource(R.string.cd_delete_selected),
                                 tint = scheme.error
                             )
                         }
@@ -259,7 +261,7 @@ fun ReorderPagesSheet(
                         AppProgressIndicator(size = 36.dp, strokeWidth = 3.dp)
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Loading document pages...",
+                            text = stringResource(R.string.reorder_loading),
                             style = typography.bodyMedium,
                             color = scheme.onSurfaceVariant
                         )
@@ -284,7 +286,7 @@ fun ReorderPagesSheet(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "No pages remaining. Add or restore pages.",
+                            text = stringResource(R.string.reorder_empty),
                             style = typography.bodyMedium,
                             color = scheme.onSurfaceVariant
                         )
@@ -346,7 +348,7 @@ fun ReorderPagesSheet(
 
                                         Icon(
                                             imageVector = if (isSelected) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
-                                            contentDescription = "Select",
+                                            contentDescription = stringResource(R.string.cd_select),
                                             tint = if (isSelected) scheme.primary else scheme.onSurfaceVariant,
                                             modifier = Modifier.size(16.dp)
                                         )
@@ -366,7 +368,7 @@ fun ReorderPagesSheet(
                                         if (bmp != null) {
                                             Image(
                                                 bitmap = bmp.asImageBitmap(),
-                                                contentDescription = "Page ${index + 1}",
+                                                contentDescription = stringResource(R.string.page_label, index + 1),
                                                 modifier = Modifier.fillMaxSize()
                                             )
                                         } else {
@@ -396,7 +398,7 @@ fun ReorderPagesSheet(
                                         ) {
                                             Icon(
                                                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
-                                                contentDescription = "Move left",
+                                                contentDescription = stringResource(R.string.cd_move_left),
                                                 tint = if (index > 0) scheme.onSurfaceVariant else scheme.onSurfaceVariant.copy(alpha = 0.38f),
                                                 modifier = Modifier.size(20.dp)
                                             )
@@ -412,7 +414,7 @@ fun ReorderPagesSheet(
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Outlined.Delete,
-                                                contentDescription = "Remove page",
+                                                contentDescription = stringResource(R.string.cd_remove_page),
                                                 tint = scheme.error,
                                                 modifier = Modifier.size(18.dp)
                                             )
@@ -432,7 +434,7 @@ fun ReorderPagesSheet(
                                         ) {
                                             Icon(
                                                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-                                                contentDescription = "Move right",
+                                                contentDescription = stringResource(R.string.cd_move_right),
                                                 tint = if (index < pages.size - 1) scheme.onSurfaceVariant else scheme.onSurfaceVariant.copy(alpha = 0.38f),
                                                 modifier = Modifier.size(20.dp)
                                             )
@@ -455,7 +457,7 @@ fun ReorderPagesSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${pages.size} pages organized",
+                    text = stringResource(R.string.reorder_pages_organized, pages.size),
                     style = typography.bodySmall,
                     color = scheme.onSurfaceVariant
                 )
@@ -472,7 +474,7 @@ fun ReorderPagesSheet(
                 ) {
                     Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Apply & Save")
+                    Text(stringResource(R.string.action_apply_save))
                 }
             }
         }
