@@ -170,7 +170,11 @@ fun StorageOverviewCard(
             Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "${formattedFree.ifEmpty { "—" }} free · $usedPercentage% used",
+                    text = stringResource(
+                        R.string.files_storage_line,
+                        formattedFree.ifEmpty { "—" },
+                        usedPercentage
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = scheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)

@@ -22,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -214,7 +215,7 @@ fun StorageCleanerSheet(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "$scannedCount files analyzed",
+                            text = stringResource(R.string.cleaner_files_analyzed, scannedCount),
                             style = typography.label,
                             color = colors.textSecondary
                         )
@@ -265,8 +266,12 @@ fun StorageCleanerSheet(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "$cleanedCount items (${formatSize(cleanedBytes ?: 0L)}) moved to Trash. " +
-                                stringResource(R.string.cleaner_empty_trash_hint),
+                            text = stringResource(
+                                R.string.cleaner_moved_summary,
+                                cleanedCount,
+                                formatSize(cleanedBytes ?: 0L),
+                                stringResource(R.string.cleaner_empty_trash_hint)
+                            ),
                             style = typography.body,
                             color = colors.textSecondary,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -311,7 +316,7 @@ fun StorageCleanerSheet(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "${res.totalScannedFiles} files scanned across ${res.totalScannedDirectories} folders",
+                                    text = stringResource(R.string.cleaner_scan_summary, res.totalScannedFiles, res.totalScannedDirectories),
                                     style = typography.metadata,
                                     color = colors.textSecondary
                                 )
@@ -332,7 +337,7 @@ fun StorageCleanerSheet(
                         item {
                             CleanerCategoryCard(
                                 title = stringResource(R.string.cleaner_cache_temp),
-                                subtitle = "${res.tempFiles.size} junk files (${formatSize(res.tempFiles.sumOf { it.length() })})",
+                                subtitle = stringResource(R.string.cleaner_temp_subtitle, res.tempFiles.size, formatSize(res.tempFiles.sumOf { it.length() })),
                                 icon = Icons.Outlined.DeleteSweep,
                                 checked = cleanTempFiles,
                                 onCheckedChange = { cleanTempFiles = it },
@@ -346,7 +351,7 @@ fun StorageCleanerSheet(
                         item {
                             CleanerCategoryCard(
                                 title = stringResource(R.string.cleaner_obsolete_apks),
-                                subtitle = "${res.apkFiles.size} installer files (${formatSize(res.apkFiles.sumOf { it.length() })})",
+                                subtitle = stringResource(R.string.cleaner_apk_subtitle, res.apkFiles.size, formatSize(res.apkFiles.sumOf { it.length() })),
                                 icon = Icons.Outlined.Android,
                                 checked = cleanApks,
                                 onCheckedChange = { cleanApks = it },
@@ -367,7 +372,7 @@ fun StorageCleanerSheet(
                             ) {
                                 CleanerCategoryCard(
                                     title = stringResource(R.string.cleaner_duplicates),
-                                    subtitle = "${res.duplicateGroups.size} identical file clusters (${formatSize(res.duplicateGroups.sumOf { it.wastedBytes })})",
+                                    subtitle = stringResource(R.string.cleaner_dup_subtitle, res.duplicateGroups.size, formatSize(res.duplicateGroups.sumOf { it.wastedBytes })),
                                     icon = Icons.Outlined.CopyAll,
                                     checked = cleanDuplicates,
                                     onCheckedChange = { cleanDuplicates = it },
@@ -402,7 +407,7 @@ fun StorageCleanerSheet(
                                                         overflow = TextOverflow.Ellipsis
                                                     )
                                                     Text(
-                                                        text = "${group.duplicates.size} duplicate(s)",
+                                                        text = pluralStringResource(R.plurals.cleaner_duplicate_count, group.duplicates.size, group.duplicates.size),
                                                         style = typography.micro,
                                                         color = colors.textSecondary
                                                     )
@@ -416,7 +421,7 @@ fun StorageCleanerSheet(
                                         }
                                         if (res.duplicateGroups.size > 10) {
                                             Text(
-                                                text = "+ ${res.duplicateGroups.size - 10} more duplicate groups",
+                                                text = stringResource(R.string.cleaner_dup_more, res.duplicateGroups.size - 10),
                                                 style = typography.micro,
                                                 color = colors.textSecondary
                                             )
@@ -432,7 +437,7 @@ fun StorageCleanerSheet(
                         item {
                             CleanerCategoryCard(
                                 title = stringResource(R.string.cleaner_empty_dirs),
-                                subtitle = "${res.emptyFolders.size} zero-item folders taking clutter",
+                                subtitle = stringResource(R.string.cleaner_empty_subtitle, res.emptyFolders.size),
                                 icon = Icons.Outlined.FolderOff,
                                 checked = cleanEmptyFolders,
                                 onCheckedChange = { cleanEmptyFolders = it },
@@ -472,7 +477,7 @@ fun StorageCleanerSheet(
                                             color = colors.textPrimary
                                         )
                                         Text(
-                                            text = "${res.largeFiles.size} large files (${formatSize(res.largeFiles.sumOf { it.length() })})",
+                                            text = stringResource(R.string.cleaner_large_subtitle, res.largeFiles.size, formatSize(res.largeFiles.sumOf { it.length() })),
                                             style = typography.caption,
                                             color = colors.textSecondary
                                         )

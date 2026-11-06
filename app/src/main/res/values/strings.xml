@@ -701,4 +701,18 @@
     <string name="cd_more">More</string>
     <string name="files_selected_count">%1$d selected</string>
     <string name="action_cut">Cut</string>
+    <string name="cleaner_files_analyzed">%1$d files analyzed</string>
+    <string name="cleaner_moved_summary">%1$d items (%2$s) moved to Trash. %3$s</string>
+    <string name="cleaner_scan_summary">%1$d files scanned across %2$d folders</string>
+    <string name="cleaner_temp_subtitle">%1$d junk files (%2$s)</string>
+    <string name="cleaner_apk_subtitle">%1$d installer files (%2$s)</string>
+    <string name="cleaner_dup_subtitle">%1$d identical file clusters (%2$s)</string>
+    <string name="cleaner_dup_more">+ %1$d more duplicate groups</string>
+    <string name="cleaner_empty_subtitle">%1$d zero-item folders taking clutter</string>
+    <string name="cleaner_large_subtitle">%1$d large files (%2$s)</string>
+    <plurals name="cleaner_duplicate_count">
+        <item quantity="one">%1$d duplicate</item>
+        <item quantity="other">%1$d duplicates</item>
+    </plurals>
+    <string name="files_storage_line">%1$s free · %2$d%% used</string>
 </resources>
