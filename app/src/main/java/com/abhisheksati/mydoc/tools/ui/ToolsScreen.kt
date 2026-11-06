@@ -1,5 +1,8 @@
 package com.abhisheksati.mydoc.tools.ui
 
+import com.abhisheksati.mydoc.R
+import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -78,7 +81,7 @@ import dev.chrisbanes.haze.hazeSource
 private data class ToolNavCategory(
     val group: ToolGroup?,
     val icon: ImageVector,
-    val label: String
+    @StringRes val labelRes: Int
 )
 
 /**
@@ -86,22 +89,22 @@ private data class ToolNavCategory(
  * Organize, Edit & Sign, Compress, Convert, Secure, Scan.
  */
 private val toolCategories = listOf(
-    ToolNavCategory(null, Icons.Outlined.AllInclusive, "All"),
-    ToolNavCategory(ToolGroup.ORGANIZE, Icons.AutoMirrored.Outlined.CallSplit, "Organize"),
-    ToolNavCategory(ToolGroup.EDIT_SIGN, Icons.Outlined.Draw, "Edit & Sign"),
-    ToolNavCategory(ToolGroup.COMPRESS, Icons.Outlined.Compress, "Compress"),
-    ToolNavCategory(ToolGroup.CONVERT, Icons.Outlined.Transform, "Convert"),
-    ToolNavCategory(ToolGroup.SECURE, Icons.Outlined.Shield, "Secure"),
-    ToolNavCategory(ToolGroup.SCAN, Icons.Outlined.CameraAlt, "Scan")
+    ToolNavCategory(null, Icons.Outlined.AllInclusive, R.string.tools_cat_all),
+    ToolNavCategory(ToolGroup.ORGANIZE, Icons.AutoMirrored.Outlined.CallSplit, R.string.tools_filter_organize),
+    ToolNavCategory(ToolGroup.EDIT_SIGN, Icons.Outlined.Draw, R.string.tools_filter_edit_sign),
+    ToolNavCategory(ToolGroup.COMPRESS, Icons.Outlined.Compress, R.string.tools_filter_compress),
+    ToolNavCategory(ToolGroup.CONVERT, Icons.Outlined.Transform, R.string.tools_filter_convert),
+    ToolNavCategory(ToolGroup.SECURE, Icons.Outlined.Shield, R.string.tools_filter_secure),
+    ToolNavCategory(ToolGroup.SCAN, Icons.Outlined.CameraAlt, R.string.tools_cat_scan)
 )
 
-private fun friendlyHeader(group: ToolGroup): String = when (group) {
-    ToolGroup.ORGANIZE -> "Organize"
-    ToolGroup.EDIT_SIGN -> "Edit & Sign"
-    ToolGroup.COMPRESS -> "Compress"
-    ToolGroup.CONVERT -> "Convert"
-    ToolGroup.SECURE -> "Secure"
-    ToolGroup.SCAN -> "Scan"
+private fun friendlyHeader(group: ToolGroup): Int = when (group) {
+    ToolGroup.ORGANIZE -> R.string.tools_filter_organize
+    ToolGroup.EDIT_SIGN -> R.string.tools_filter_edit_sign
+    ToolGroup.COMPRESS -> R.string.tools_filter_compress
+    ToolGroup.CONVERT -> R.string.tools_filter_convert
+    ToolGroup.SECURE -> R.string.tools_filter_secure
+    ToolGroup.SCAN -> R.string.tools_cat_scan
 }
 
 /**
@@ -238,7 +241,7 @@ fun ToolsScreen(
                     onClick = { selectedGroup = if (selected) null else category.group },
                     label = {
                         Text(
-                            text = category.label,
+                            text = stringResource(category.labelRes),
                             style = if (selected) AppTheme.typography.captionStrong else AppTheme.typography.caption
                         )
                     },
@@ -289,7 +292,7 @@ fun ToolsScreen(
 
                     item(key = "header_${group.name}") {
                         Text(
-                            text = friendlyHeader(group),
+                            text = stringResource(friendlyHeader(group)),
                             style = AppTheme.typography.heading,
                             color = colors.inkPrimary,
                             modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 8.dp)

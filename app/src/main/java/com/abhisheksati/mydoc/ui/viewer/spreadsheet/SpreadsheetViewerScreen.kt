@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.spreadsheet
 
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -38,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -119,12 +121,12 @@ fun SpreadsheetViewerScreen(
         readingPrefs = readingPrefs,
         fidelityNotes = buildList {
             if (state.currentSheet?.truncated == true) {
-                add("This sheet hit our read limit — later rows are not shown")
+                add(stringResource(R.string.sheet_read_limit))
             }
             // A worksheet whose XML could not be parsed reads as an empty sheet unless it says
             // otherwise, which is how a damaged workbook got presented as a blank one.
             state.currentSheet?.parseFailure?.let { reason ->
-                add("This sheet could not be read: $reason")
+                add(stringResource(R.string.sheet_read_failed, reason))
             }
             val failed = state.model.failedSheets
             if (failed.isNotEmpty()) {
@@ -162,7 +164,7 @@ fun SpreadsheetViewerScreen(
                 OutlinedTextField(
                     value = state.searchQuery,
                     onValueChange = viewModel::onSearchQueryChanged,
-                    placeholder = { Text("Search sheet cells…") },
+                    placeholder = { Text(stringResource(R.string.sheet_search_placeholder)) },
                     singleLine = true,
                     shape = MaterialTheme.shapes.extraLarge,
                     modifier = Modifier
@@ -324,7 +326,7 @@ fun SpreadsheetViewerScreen(
                         .navigationBarsPadding()
                 ) {
                     Text(
-                        text = "Cell $cellRef",
+                        text = stringResource(R.string.cell_label, cellRef),
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.primary
                     )
