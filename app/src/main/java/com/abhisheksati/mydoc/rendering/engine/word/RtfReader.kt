@@ -113,9 +113,12 @@ object RtfReader {
                                     pendingUnicodeSkip = unicodeFallbackCount
                                 }
                                 word == "ansicpg" -> runCatching { codePage = Charset.forName("windows-$digitArg") }
-                                word == "b" -> setStyle { bold = digitArg != 0 }
-                                word == "i" -> setStyle { italic = digitArg != 0 }
-                                word == "ul" -> setStyle { underline = digitArg != 0 }
+                                // A toggle control with no parameter means ON; only `0` (and
+                                // the same for i/ul) turns it off. Reading the missing parameter as
+                                // zero dropped every bold, italic and underline in the document.
+                                word == "b" -> setStyle { bold = argument.isEmpty() || digitArg != 0 }
+                                word == "i" -> setStyle { italic = argument.isEmpty() || digitArg != 0 }
+                                word == "ul" -> setStyle { underline = argument.isEmpty() || digitArg != 0 }
                                 word == "ulnone" -> setStyle { underline = false }
                                 word == "plain" -> setStyle {
                                     bold = false; italic = false; underline = false

@@ -65,6 +65,9 @@ class FileManagerViewModel(
 
     private val backStack = ArrayDeque<File>()
 
+    /** Bumped by every directory/category request; an older, slower reply must not land. */
+    private var listRequestGeneration = 0
+
     private val initialDir: File = baseDir ?: try {
         Environment.getExternalStorageDirectory() ?: File("/")
     } catch (_: Exception) {
@@ -129,6 +132,7 @@ class FileManagerViewModel(
             backStack.push(originCategory?.let(::categoryDirectory) ?: _uiState.value.currentDirectory)
         }
 
+        val generation = ++listRequestGeneration
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
@@ -152,6 +156,7 @@ class FileManagerViewModel(
                 sortOrder = _uiState.value.sortOrder
             )
 
+            if (generation != listRequestGeneration) return@launch
             val filtered = visibleItems(items, _uiState.value)
 
             _uiState.update {
@@ -606,6 +611,7 @@ class FileManagerViewModel(
             return
         }
 
+        val generation = ++listRequestGeneration
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
@@ -617,6 +623,7 @@ class FileManagerViewModel(
                 )
             }
             val items = storageRepository.queryCategory(category)
+            if (generation != listRequestGeneration) return@launch
             val filtered = visibleItems(items, _uiState.value)
             _uiState.update {
                 it.copy(
