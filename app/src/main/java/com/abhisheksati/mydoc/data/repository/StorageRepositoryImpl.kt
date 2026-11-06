@@ -72,6 +72,22 @@ class StorageRepositoryImpl(
      */
     private val mutationLock = Mutex()
 
+    private val batchRenamer = com.abhisheksati.mydoc.data.local.ExplorerRename(
+        journalDirectory = File(context.filesDir, "rename_journals")
+    )
+
+    override suspend fun renameBatch(plan: com.abhisheksati.mydoc.domain.model.ExplorerRenamePlan) =
+        mutationLock.withLock {
+            batchRenamer.apply(plan).also { result ->
+                if (result.success) {
+                    MediaScannerConnection.scanFile(context,
+                        plan.entries.flatMap { listOf(it.source.absolutePath, it.target.absolutePath) }.distinct().toTypedArray(), null, null)
+                }
+            }
+        }
+
+    override suspend fun pendingRenameRecovery() = batchRenamer.pendingRecovery()
+
     private companion object {
         /** A write that fills the last of a volume leaves a file that cannot be told from a good one. */
         const val RESERVED_FREE_BYTES = 16L * 1024 * 1024

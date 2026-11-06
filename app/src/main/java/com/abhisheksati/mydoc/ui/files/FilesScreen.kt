@@ -93,7 +93,7 @@ import com.abhisheksati.mydoc.designsystem.components.showMessage
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FilesScreen(
+fun FilesPaneScreen(
     viewModel: FileManagerViewModel,
     homeViewModel: HomeViewModel,
     storageViewModel: StorageViewModel,
@@ -106,7 +106,8 @@ fun FilesScreen(
     isActive: Boolean = true,
     onOpenInTools: ((File) -> Unit)? = null,
     hazeState: dev.chrisbanes.haze.HazeState? = null,
-    glassMotion: com.abhisheksati.mydoc.designsystem.components.GlassMotionState? = null
+    glassMotion: com.abhisheksati.mydoc.designsystem.components.GlassMotionState? = null,
+    workspaceInsets: Boolean = false
 ) {
 
     val uiState by viewModel.uiState.collectAsState()
@@ -118,6 +119,9 @@ fun FilesScreen(
     var showNewFolderDialog by remember { mutableStateOf(false) }
     var showNewFileDialog by remember { mutableStateOf(false) }
     var renameTarget by remember { mutableStateOf<File?>(null) }
+    var showAdvancedSearch by remember { mutableStateOf(false) }
+    var batchRenameFiles by remember { mutableStateOf<List<File>?>(null) }
+    var showRenameRecovery by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showCompressDialog by remember { mutableStateOf(false) }
     // Resources, not LocalContext: reading a string through the context is not
@@ -294,7 +298,7 @@ fun FilesScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(MaterialTheme.colorScheme.surfaceContainer)
-                            .statusBarsPadding()
+                            .then(if (workspaceInsets) Modifier else Modifier.statusBarsPadding())
                     ) {
                         FilesSelectionBar(
                             selectedCount = uiState.selectedFiles.size,
@@ -304,8 +308,11 @@ fun FilesScreen(
                             onShare = { shareFiles(context, uiState.selectedFiles.toList()) },
                             onCopy = { viewModel.copySelected() },
                             onCut = { viewModel.cutSelected() },
-                            onRename = if (uiState.selectedFiles.size == 1) {
-                                { renameTarget = uiState.selectedFiles.first() }
+                            onRename = if (uiState.selectedFiles.isNotEmpty()) {
+                                {
+                                    if (uiState.selectedFiles.size == 1) renameTarget = uiState.selectedFiles.first()
+                                    else batchRenameFiles = uiState.selectedFiles.toList()
+                                }
                             } else null,
                             onCompress = { showCompressDialog = true },
                             onDelete = { showDeleteConfirm = true }
@@ -328,6 +335,8 @@ fun FilesScreen(
                                 }
                             },
                             onSettingsClick = onSettingsClick,
+                            workspaceInsets = workspaceInsets,
+                            onAdvancedSearch = { showAdvancedSearch = true },
                             onToggleView = { viewModel.toggleViewMode() },
                             onToggleHidden = { viewModel.toggleHiddenFiles() },
                             onNewFolder = { showNewFolderDialog = true },
@@ -352,6 +361,18 @@ fun FilesScreen(
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 8.dp)
                             )
+                        }
+
+                        if (uiState.advancedSearch != null) {
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(stringResource(R.string.explorer_search_scope, uiState.currentDirectory.name), modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
+                                androidx.compose.material3.TextButton(onClick = { viewModel.clearAdvancedSearch() }) { Text(stringResource(R.string.explorer_clear_search)) }
+                            }
+                            if (uiState.searchIncomplete) Text(stringResource(R.string.explorer_search_incomplete), color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp))
+                        }
+                        if (uiState.isLoading) androidx.compose.material3.LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        if (uiState.renameRecovery.isNotEmpty()) androidx.compose.material3.TextButton(onClick = { showRenameRecovery = true }) {
+                            Text(stringResource(R.string.explorer_recovery_title), color = MaterialTheme.colorScheme.error)
                         }
 
                         if (breadcrumbs.size > 1) {
@@ -488,6 +509,26 @@ fun FilesScreen(
         onOpenInTools = onOpenInTools
     )
 
+    if (showAdvancedSearch) ExplorerSearchDialog(
+        directory = uiState.currentDirectory,
+        initial = uiState.advancedSearch,
+        onDismiss = { showAdvancedSearch = false },
+        onSearch = { showAdvancedSearch = false; viewModel.searchAdvanced(it) }
+    )
+    batchRenameFiles?.let { files -> ExplorerRenameDialog(files,
+        onDismiss = { batchRenameFiles = null },
+        onApply = { plan -> batchRenameFiles = null; viewModel.applyBatchRename(plan) }) }
+    if (showRenameRecovery) androidx.compose.material3.AlertDialog(
+        onDismissRequest = { showRenameRecovery = false },
+        title = { Text(stringResource(R.string.explorer_recovery_title)) },
+        text = {
+            androidx.compose.foundation.text.selection.SelectionContainer {
+                Text(stringResource(R.string.explorer_recovery_help) + "\n\n" + uiState.renameRecovery.joinToString("\n\n"))
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { showRenameRecovery = false }) { Text(stringResource(R.string.action_cancel)) } }
+    )
+
     if (showInsights) {
         StorageInsightsSheet(
             storageUiState = storageUiState,
@@ -515,7 +556,9 @@ private fun FilesHeader(
     onNewFolder: () -> Unit,
     onNewFile: () -> Unit,
     onOpenTrash: () -> Unit,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    workspaceInsets: Boolean = false,
+    onAdvancedSearch: () -> Unit = {}
 ) {
     val scheme = MaterialTheme.colorScheme
     var menuOpen by remember { mutableStateOf(false) }
@@ -525,6 +568,7 @@ private fun FilesHeader(
         subtitle = subtitle,
         onBack = if (isInsideFolder) onBack else null,
         isGlass = false,
+        contentInsets = if (workspaceInsets) WindowInsets(0, 0, 0, 0) else androidx.compose.material3.TopAppBarDefaults.windowInsets,
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         actions = {
             IconButton(onClick = onSearch) {
@@ -543,6 +587,7 @@ private fun FilesHeader(
                     Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.cd_more_options), tint = scheme.onSurface)
                 }
                 AppDropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(text = { Text(stringResource(R.string.explorer_advanced_search)) }, onClick = { menuOpen = false; onAdvancedSearch() })
                     DropdownMenuItem(
                         text = { Text(stringResource(if (uiState.isGridView) R.string.menu_list_view else R.string.menu_grid_view)) },
                         leadingIcon = {

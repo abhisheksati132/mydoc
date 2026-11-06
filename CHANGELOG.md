@@ -3,6 +3,14 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [1.8.0] — 2026-11-06
+
+### Added
+
+- Up to six independent folder tabs and side-by-side browsing on wide screens, with a shared copy/move clipboard.
+- Advanced folder search combining name, extension, size, modification date, and optional subfolders.
+- Batch rename preview with extension preservation, numbering, conflict checks, rollback, and interrupted-operation recovery details.
+
 ## [1.7.6] — 2026-11-06
 
 ### Fixed

@@ -96,6 +96,19 @@ class FileManagerViewModelTest {
         tempDir.deleteRecursively()
     }
 
+    @Test fun leavingSearchClearsItsScopeBeforeCategoryRefresh() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        viewModel.searchAdvanced(com.abhisheksati.mydoc.domain.model.ExplorerSearchOptions(name = "report"))
+        viewModel.exitToHub()
+        assertEquals(null, viewModel.uiState.value.advancedSearch)
+        assertFalse(viewModel.uiState.value.searchIncomplete)
+        viewModel.selectCategory(FileCategory.IMAGES)
+        advanceUntilIdle()
+        assertEquals(null, viewModel.uiState.value.advancedSearch)
+        assertEquals(FileCategory.IMAGES, viewModel.uiState.value.activeCategory)
+    }
+
     @Test
     fun initialState_loadsVolumesAndDirectory() = runTest(testDispatcher) {
         createViewModel()
@@ -239,10 +252,61 @@ class FileManagerViewModelTest {
         assertFalse(viewModel.uiState.value.isSelectionMode)
     }
 
+    @Test
+    fun explorerTabsKeepNavigationSeparateAndShareClipboard() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        val workspace = ExplorerWorkspaceViewModel(viewModel, fakeRepo, null, androidx.lifecycle.SavedStateHandle())
+        val owner = androidx.lifecycle.ViewModelStore().apply { put("workspace", workspace) }
+        try {
+            val newId = workspace.add()!!
+            advanceUntilIdle()
+            val other = workspace.tabs.value.first { it.id == newId }.browser
+            val child = File(tempDir, "child").apply { mkdir() }
+            other.startBrowsingStorage(child)
+            advanceUntilIdle()
+            assertEquals(tempDir, viewModel.uiState.value.currentDirectory)
+            assertEquals(child, other.uiState.value.currentDirectory)
+            viewModel.toggleSelection(File(tempDir, "report.pdf"))
+            viewModel.copySelected()
+            advanceUntilIdle()
+            assertEquals(listOf(File(tempDir, "report.pdf")), other.uiState.value.clipboardState?.items)
+            other.pasteClipboard()
+            advanceUntilIdle()
+            assertEquals(child, fakeRepo.lastPasteTarget)
+            assertEquals(null, viewModel.uiState.value.clipboardState)
+            workspace.toggleSplit()
+            assertTrue(workspace.secondary.value != null)
+            workspace.close(newId)
+            assertEquals(1, workspace.tabs.value.size)
+        } finally { owner.clear() }
+    }
+
+    @Test
+    fun explorerWorkspaceRestoresLocationsAndLimitsTabs() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        val saved = androidx.lifecycle.SavedStateHandle(mapOf("ids" to intArrayOf(0, 3), "active" to 3, "next" to 4, "path3" to tempDir.absolutePath))
+        val workspace = ExplorerWorkspaceViewModel(viewModel, fakeRepo, null, saved)
+        val owner = androidx.lifecycle.ViewModelStore().apply { put("workspace", workspace) }
+        try {
+            advanceUntilIdle()
+            assertEquals(3, workspace.active.value)
+            assertEquals(tempDir, workspace.tabs.value.last().browser.uiState.value.currentDirectory)
+            repeat(8) { workspace.add() }
+            advanceUntilIdle()
+            assertEquals(6, workspace.tabs.value.size)
+            assertEquals(null, workspace.add())
+        } finally { owner.clear() }
+    }
+
     private class FakeStorageRepository(
         val volumes: List<StorageVolume>,
         val filesInDir: List<StorageItem>
     ) : StorageRepository {
+        override suspend fun renameBatch(plan: com.abhisheksati.mydoc.domain.model.ExplorerRenamePlan) = com.abhisheksati.mydoc.domain.model.ExplorerRenameResult(false)
+        override suspend fun pendingRenameRecovery(): List<String> = emptyList()
+        var lastPasteTarget: File? = null
         override suspend fun getStorageVolumes(): List<StorageVolume> = volumes
 
         override suspend fun listDirectory(
@@ -262,8 +326,10 @@ class FileManagerViewModelTest {
 
         override suspend fun delete(files: List<File>): Result<Int> = Result.success(files.size)
 
-        override suspend fun copy(sources: List<File>, targetDir: File, onProgress: (Int, Int) -> Unit): Result<Int> =
-            Result.success(sources.size)
+        override suspend fun copy(sources: List<File>, targetDir: File, onProgress: (Int, Int) -> Unit): Result<Int> {
+            lastPasteTarget = targetDir
+            return Result.success(sources.size)
+        }
 
         override suspend fun move(sources: List<File>, targetDir: File, onProgress: (Int, Int) -> Unit): Result<Int> =
             Result.success(sources.size)

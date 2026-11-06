@@ -8,6 +8,8 @@ import com.abhisheksati.mydoc.domain.model.StorageVolume
 import java.io.File
 
 interface StorageRepository {
+    suspend fun renameBatch(plan: com.abhisheksati.mydoc.domain.model.ExplorerRenamePlan): com.abhisheksati.mydoc.domain.model.ExplorerRenameResult
+    suspend fun pendingRenameRecovery(): List<String>
     suspend fun getStorageVolumes(): List<StorageVolume>
     suspend fun listDirectory(directory: File, showHidden: Boolean, sortOrder: FileSortOrder): List<StorageItem>
     suspend fun createDirectory(parent: File, name: String): Result<File>

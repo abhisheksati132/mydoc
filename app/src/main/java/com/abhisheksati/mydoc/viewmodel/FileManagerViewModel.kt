@@ -29,6 +29,13 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.util.ArrayDeque
 import java.util.Locale
+import com.abhisheksati.mydoc.data.local.ExplorerClipboard
+import com.abhisheksati.mydoc.data.local.ExplorerSearch
+import com.abhisheksati.mydoc.domain.model.ExplorerSearchOptions
+import com.abhisheksati.mydoc.domain.model.ExplorerRenamePlan
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.drop
 
 @Immutable
 data class FileManagerUiState(
@@ -55,20 +62,25 @@ data class FileManagerUiState(
     val calculatedChecksum: String? = null,
     val trashItems: List<com.abhisheksati.mydoc.domain.model.TrashItem> = emptyList(),
     val isTrashOpen: Boolean = false,
-    val lastTrashedItems: List<com.abhisheksati.mydoc.domain.model.TrashItem> = emptyList()
+    val lastTrashedItems: List<com.abhisheksati.mydoc.domain.model.TrashItem> = emptyList(),
+    val advancedSearch: ExplorerSearchOptions? = null,
+    val searchIncomplete: Boolean = false,
+    val renameRecovery: List<String> = emptyList()
 )
 
 
 class FileManagerViewModel(
     private val storageRepository: StorageRepository,
     baseDir: File? = null,
-    private val settingsRepository: SettingsRepository? = null
+    private val settingsRepository: SettingsRepository? = null,
+    val explorerClipboard: ExplorerClipboard = ExplorerClipboard()
 ) : ViewModel() {
 
     private val backStack = ArrayDeque<File>()
 
     /** Bumped by every directory/category request; an older, slower reply must not land. */
     private var listRequestGeneration = 0
+    private var advancedSearchJob: Job? = null
 
     private val initialDir: File = baseDir ?: try {
         Environment.getExternalStorageDirectory() ?: File("/")
@@ -89,6 +101,9 @@ class FileManagerViewModel(
     val uiState: StateFlow<FileManagerUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch { refreshRenameRecovery() }
+        viewModelScope.launch { explorerClipboard.state.collect { clip -> _uiState.update { it.copy(clipboardState = clip) } } }
+        viewModelScope.launch { explorerClipboard.revision.drop(1).collect { reloadCurrentSource() } }
         refreshVolumes()
         loadDirectory(initialDir, addToHistory = false)
         viewModelScope.launch {
@@ -113,10 +128,15 @@ class FileManagerViewModel(
     }
 
     fun exitToHub() {
+        advancedSearchJob?.cancel()
+        ++listRequestGeneration
         backStack.clear()
         _uiState.update {
             it.copy(
                 isBrowsingStorage = false,
+                advancedSearch = null,
+                searchIncomplete = false,
+                isLoading = false,
                 activeCategory = null,
                 searchQuery = "",
                 isSelectionMode = false,
@@ -127,6 +147,7 @@ class FileManagerViewModel(
     }
 
     fun loadDirectory(directory: File, addToHistory: Boolean = true) {
+        advancedSearchJob?.cancel()
         val originCategory = _uiState.value.activeCategory
         if (addToHistory && directory.absolutePath != _uiState.value.currentDirectory.absolutePath) {
             // Coming out of a category view, the level above is that category's own folder, not
@@ -139,6 +160,8 @@ class FileManagerViewModel(
             _uiState.update {
                 it.copy(
                     currentDirectory = directory,
+                    advancedSearch = null,
+                    searchIncomplete = false,
                     breadcrumbTrail = buildBreadcrumb(directory),
                     // A category view is kept on screen by `activeCategory` alone. Clearing it here
                     // without claiming the directory surface unmounted the pane mid-navigation, so
@@ -270,6 +293,7 @@ class FileManagerViewModel(
     fun copySelected() {
         val selected = _uiState.value.selectedFiles.toList()
         if (selected.isEmpty()) return
+        if (!explorerClipboard.set(ClipboardState(ClipboardOperation.COPY, selected))) return
         _uiState.update {
             it.copy(
                 clipboardState = ClipboardState(ClipboardOperation.COPY, selected),
@@ -287,6 +311,7 @@ class FileManagerViewModel(
     fun cutSelected() {
         val selected = _uiState.value.selectedFiles.toList()
         if (selected.isEmpty()) return
+        if (!explorerClipboard.set(ClipboardState(ClipboardOperation.CUT, selected))) return
         _uiState.update {
             it.copy(
                 clipboardState = ClipboardState(ClipboardOperation.CUT, selected),
@@ -298,53 +323,117 @@ class FileManagerViewModel(
     }
 
     fun cancelClipboard() {
+        if (!explorerClipboard.set(null)) return
         _uiState.update { it.copy(clipboardState = null) }
     }
 
     fun pasteClipboard() {
-        val clip = _uiState.value.clipboardState ?: return
         val targetDir = _uiState.value.currentDirectory
         viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    activeOperation = if (clip.operation == ClipboardOperation.COPY) "Copying items..." else "Moving items...",
-                    isLoading = true
-                )
-            }
-
-            val result = if (clip.operation == ClipboardOperation.COPY) {
-                storageRepository.copy(clip.items, targetDir)
-            } else {
-                storageRepository.move(clip.items, targetDir)
-            }
-
-            result.onSuccess { count ->
+            val clip = explorerClipboard.beginPaste() ?: return@launch
+            var pasted = false
+            try {
                 _uiState.update {
                     it.copy(
-                        clipboardState = null,
-                        activeOperation = null,
-                        isLoading = false,
-                        userMessage = if (count == 1) UiText.Res(R.string.fm_pasted_one) else UiText.Res(R.string.fm_pasted_many, listOf(count))
+                        activeOperation = if (clip.operation == ClipboardOperation.COPY) "Copying items..." else "Moving items...",
+                        isLoading = true
                     )
                 }
-                loadDirectory(targetDir, addToHistory = false)
-                refreshVolumes()
-            }.onFailure { err ->
-                _uiState.update {
-                    it.copy(
-                        activeOperation = null,
-                        isLoading = false,
-                        userMessage = UserMessages.actionFailed(R.string.action_paste, err)
-                    )
+
+                val result = if (clip.operation == ClipboardOperation.COPY) {
+                    storageRepository.copy(clip.items, targetDir)
+                } else {
+                    storageRepository.move(clip.items, targetDir)
                 }
-                // A partial batch really did write the items that succeeded; leaving the listing
-                // stale would tell the reader nothing arrived.
-                if (err is PartialStorageOperationException) {
+
+                result.onSuccess { count ->
+                    pasted = true
+                    _uiState.update {
+                        it.copy(
+                            clipboardState = null,
+                            activeOperation = null,
+                            isLoading = false,
+                            userMessage = if (count == 1) UiText.Res(R.string.fm_pasted_one) else UiText.Res(R.string.fm_pasted_many, listOf(count))
+                        )
+                    }
                     loadDirectory(targetDir, addToHistory = false)
+                    refreshVolumes()
+                }.onFailure { err ->
+                    _uiState.update {
+                        it.copy(
+                            activeOperation = null,
+                            isLoading = false,
+                            userMessage = UserMessages.actionFailed(R.string.action_paste, err)
+                        )
+                    }
+                    // A partial batch really did write the items that succeeded; leaving the listing
+                    // stale would tell the reader nothing arrived.
+                    if (err is PartialStorageOperationException) {
+                        loadDirectory(targetDir, addToHistory = false)
+                    }
+                    refreshVolumes()
                 }
-                refreshVolumes()
+            } finally { explorerClipboard.endPaste(pasted) }
+        }
+    }
+
+    fun searchAdvanced(options: ExplorerSearchOptions) {
+        if (!options.isValid) return
+        advancedSearchJob?.cancel()
+        val generation = ++listRequestGeneration
+        val root = _uiState.value.currentDirectory
+        val hidden = _uiState.value.showHiddenFiles
+        _uiState.update { it.copy(advancedSearch = options, searchQuery = "", items = emptyList(), filteredItems = emptyList(), selectedFiles = emptySet(), isSelectionMode = false, isLoading = true, searchIncomplete = false) }
+        advancedSearchJob = viewModelScope.launch {
+            try {
+                val result = ExplorerSearch().search(root, options, hidden)
+                if (generation != listRequestGeneration) return@launch
+                _uiState.update { state ->
+                    val sorted = sortSearchResults(result.items, state.sortOrder)
+                    state.copy(items = sorted, filteredItems = visibleItems(sorted, state), isLoading = false, searchIncomplete = result.incomplete)
+                }
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                if (generation == listRequestGeneration) _uiState.update { it.copy(isLoading = false, userMessage = UiText.Res(R.string.explorer_search_failed)) }
             }
         }
+    }
+
+    fun clearAdvancedSearch() = loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+
+    fun applyBatchRename(plan: ExplorerRenamePlan) {
+        if (!plan.canApply || _uiState.value.activeOperation != null) return
+        _uiState.update { it.copy(activeOperation = "rename", isLoading = true) }
+        viewModelScope.launch {
+            val result = storageRepository.renameBatch(plan)
+            _uiState.update { it.copy(activeOperation = null, isLoading = false, selectedFiles = emptySet(), isSelectionMode = false,
+                userMessage = when {
+                    result.success -> UiText.Res(R.string.explorer_rename_done)
+                    result.unresolvedPaths.isEmpty() -> UiText.Res(R.string.explorer_rename_rolled_back)
+                    else -> UiText.Res(R.string.explorer_rename_recovery, listOf(result.unresolvedPaths.joinToString("\n")))
+                }) }
+            loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+            refreshRenameRecovery()
+        }
+    }
+
+    private suspend fun refreshRenameRecovery() {
+        try {
+            val recovery = storageRepository.pendingRenameRecovery()
+            _uiState.update { it.copy(renameRecovery = recovery) }
+        }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { _uiState.update { it.copy(userMessage = UiText.Res(R.string.explorer_recovery_unreadable)) } }
+    }
+
+    private fun sortSearchResults(items: List<StorageItem>, order: FileSortOrder): List<StorageItem> {
+        val field = when (order.field) {
+            FileSortField.NAME -> compareBy<StorageItem> { it.name.lowercase(Locale.ROOT) }
+            FileSortField.DATE -> compareBy { it.lastModified }
+            FileSortField.SIZE -> compareBy { it.sizeBytes }
+            FileSortField.TYPE -> compareBy { it.extension }
+        }
+        return items.sortedWith(compareBy<StorageItem> { !it.isDirectory }.then(if (order.isAscending) field else field.reversed()))
     }
 
     fun createNewFolder(name: String) {
@@ -605,6 +694,8 @@ class FileManagerViewModel(
     }
 
     fun selectCategory(category: FileCategory?) {
+        advancedSearchJob?.cancel()
+        _uiState.update { it.copy(advancedSearch = null, searchIncomplete = false) }
         if (category == null) {
             _uiState.update { it.copy(activeCategory = null, canGoBack = _uiState.value.isBrowsingStorage) }
             if (_uiState.value.isBrowsingStorage) {
@@ -770,6 +861,7 @@ class FileManagerViewModel(
      * folder they had not opened.
      */
     private fun reloadCurrentSource() {
+        _uiState.value.advancedSearch?.let { searchAdvanced(it); return }
         val category = _uiState.value.activeCategory
         if (category != null) {
             selectCategory(category)
@@ -911,12 +1003,13 @@ class FileManagerViewModel(
 
     class Factory(
         private val storageRepository: StorageRepository,
-        private val settingsRepository: SettingsRepository? = null
+        private val settingsRepository: SettingsRepository? = null,
+        private val clipboard: ExplorerClipboard = ExplorerClipboard()
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(FileManagerViewModel::class.java)) {
-                return FileManagerViewModel(storageRepository, settingsRepository = settingsRepository) as T
+                return FileManagerViewModel(storageRepository, settingsRepository = settingsRepository, explorerClipboard = clipboard) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }
