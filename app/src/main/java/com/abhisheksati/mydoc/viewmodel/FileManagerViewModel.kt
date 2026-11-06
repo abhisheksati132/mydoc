@@ -1,5 +1,7 @@
 package com.abhisheksati.mydoc.viewmodel
 
+import com.abhisheksati.mydoc.util.UiText
+import com.abhisheksati.mydoc.R
 import android.os.Environment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -47,7 +49,7 @@ data class FileManagerUiState(
     val isBrowsingStorage: Boolean = false,
     val isLoading: Boolean = false,
     val activeOperation: String? = null,
-    val userMessage: String? = null,
+    val userMessage: UiText? = null,
     val canGoBack: Boolean = false,
     val selectedProperties: FolderProperties? = null,
     val calculatedChecksum: String? = null,
@@ -274,9 +276,9 @@ class FileManagerViewModel(
                 selectedFiles = emptySet(),
                 isSelectionMode = false,
                 userMessage = if (selected.size == 1) {
-                    "Copied 1 item to clipboard"
+                    UiText.Res(R.string.fm_copied_one)
                 } else {
-                    "Copied ${selected.size} items to clipboard"
+                    UiText.Res(R.string.fm_copied_many, listOf(selected.size))
                 }
             )
         }
@@ -290,7 +292,7 @@ class FileManagerViewModel(
                 clipboardState = ClipboardState(ClipboardOperation.CUT, selected),
                 selectedFiles = emptySet(),
                 isSelectionMode = false,
-                userMessage = "Moving ${selected.size} items"
+                userMessage = UiText.Res(R.string.fm_moving_many, listOf(selected.size))
             )
         }
     }
@@ -322,7 +324,7 @@ class FileManagerViewModel(
                         clipboardState = null,
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = if (count == 1) "Pasted 1 item" else "Pasted $count items"
+                        userMessage = if (count == 1) UiText.Res(R.string.fm_pasted_one) else UiText.Res(R.string.fm_pasted_many, listOf(count))
                     )
                 }
                 loadDirectory(targetDir, addToHistory = false)
@@ -332,7 +334,7 @@ class FileManagerViewModel(
                     it.copy(
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = UserMessages.actionFailed("Paste", err)
+                        userMessage = UserMessages.actionFailed(R.string.action_paste, err)
                     )
                 }
                 // A partial batch really did write the items that succeeded; leaving the listing
@@ -349,10 +351,10 @@ class FileManagerViewModel(
         viewModelScope.launch {
             val result = storageRepository.createDirectory(_uiState.value.currentDirectory, name)
             result.onSuccess {
-                _uiState.update { it.copy(userMessage = "Folder '$name' created") }
+                _uiState.update { it.copy(userMessage = UiText.Res(R.string.fm_folder_created, listOf(name))) }
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
             }.onFailure { err ->
-                _uiState.update { it.copy(userMessage = UserMessages.actionFailed("Create folder", err)) }
+                _uiState.update { it.copy(userMessage = UserMessages.actionFailed(R.string.fm_verb_create_folder, err)) }
             }
         }
     }
@@ -361,10 +363,10 @@ class FileManagerViewModel(
         viewModelScope.launch {
             val result = storageRepository.createFile(_uiState.value.currentDirectory, name)
             result.onSuccess {
-                _uiState.update { it.copy(userMessage = "File '$name' created") }
+                _uiState.update { it.copy(userMessage = UiText.Res(R.string.fm_file_created, listOf(name))) }
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
             }.onFailure { err ->
-                _uiState.update { it.copy(userMessage = UserMessages.actionFailed("Create file", err)) }
+                _uiState.update { it.copy(userMessage = UserMessages.actionFailed(R.string.fm_verb_create_file, err)) }
             }
         }
     }
@@ -373,10 +375,10 @@ class FileManagerViewModel(
         viewModelScope.launch {
             val result = storageRepository.rename(file, newName)
             result.onSuccess {
-                _uiState.update { it.copy(userMessage = "Renamed successfully") }
+                _uiState.update { it.copy(userMessage = UiText.Res(R.string.fm_renamed)) }
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
             }.onFailure { err ->
-                _uiState.update { it.copy(userMessage = UserMessages.actionFailed("Rename", err)) }
+                _uiState.update { it.copy(userMessage = UserMessages.actionFailed(R.string.action_rename, err)) }
             }
         }
     }
@@ -395,7 +397,7 @@ class FileManagerViewModel(
                         isSelectionMode = false,
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = "Deleted $count items"
+                        userMessage = UiText.Res(R.string.fm_deleted_many, listOf(count))
                     )
                 }
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
@@ -405,7 +407,7 @@ class FileManagerViewModel(
                     it.copy(
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = UserMessages.actionFailed("Delete", err)
+                        userMessage = UserMessages.actionFailed(R.string.action_delete, err)
                     )
                 }
             }
@@ -416,11 +418,11 @@ class FileManagerViewModel(
         viewModelScope.launch {
             val result = storageRepository.delete(listOf(file))
             result.onSuccess {
-                _uiState.update { it.copy(userMessage = "Deleted '${file.name}'") }
+                _uiState.update { it.copy(userMessage = UiText.Res(R.string.fm_deleted_one, listOf(file.name))) }
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
                 refreshVolumes()
             }.onFailure { err ->
-                _uiState.update { it.copy(userMessage = UserMessages.actionFailed("Delete", err)) }
+                _uiState.update { it.copy(userMessage = UserMessages.actionFailed(R.string.action_delete, err)) }
             }
         }
     }
@@ -440,7 +442,7 @@ class FileManagerViewModel(
                         activeOperation = null,
                         isLoading = false,
                         lastTrashedItems = trashed,
-                        userMessage = "Moved ${trashed.size} items to Recycle Bin"
+                        userMessage = UiText.Res(R.string.fm_moved_many, listOf(trashed.size))
                     )
                 }
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
@@ -450,7 +452,7 @@ class FileManagerViewModel(
                     it.copy(
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = UserMessages.actionFailed("Move to Trash", err)
+                        userMessage = UserMessages.actionFailed(R.string.fm_verb_move_trash, err)
                     )
                 }
             }
@@ -464,13 +466,13 @@ class FileManagerViewModel(
                 _uiState.update {
                     it.copy(
                         lastTrashedItems = trashed,
-                        userMessage = "Moved '${file.name}' to Recycle Bin"
+                        userMessage = UiText.Res(R.string.fm_moved_one, listOf(file.name))
                     )
                 }
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
                 refreshVolumes()
             }.onFailure { err ->
-                _uiState.update { it.copy(userMessage = UserMessages.actionFailed("Move to Trash", err)) }
+                _uiState.update { it.copy(userMessage = UserMessages.actionFailed(R.string.fm_verb_move_trash, err)) }
             }
         }
     }
@@ -483,14 +485,14 @@ class FileManagerViewModel(
                 _uiState.update {
                     it.copy(
                         lastTrashedItems = trashed,
-                        userMessage = "Moved ${trashed.size} items to Recycle Bin"
+                        userMessage = UiText.Res(R.string.fm_moved_many, listOf(trashed.size))
                     )
                 }
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
                 refreshVolumes()
                 onComplete?.invoke()
             }.onFailure { err ->
-                _uiState.update { it.copy(userMessage = UserMessages.actionFailed("Move to Recycle Bin", err)) }
+                _uiState.update { it.copy(userMessage = UserMessages.actionFailed(R.string.photo_move_to_bin_title, err)) }
             }
         }
     }
@@ -515,7 +517,7 @@ class FileManagerViewModel(
                         activeOperation = null,
                         isLoading = false,
                         lastTrashedItems = emptyList(),
-                        userMessage = "Restored $count items"
+                        userMessage = UiText.Res(R.string.fm_restored_many, listOf(count))
                     )
                 }
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
@@ -525,7 +527,7 @@ class FileManagerViewModel(
                     it.copy(
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = UserMessages.actionFailed("Restore", err)
+                        userMessage = UserMessages.actionFailed(R.string.trash_restore, err)
                     )
                 }
             }
@@ -541,7 +543,7 @@ class FileManagerViewModel(
                     it.copy(
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = "Restored $count items"
+                        userMessage = UiText.Res(R.string.fm_restored_many, listOf(count))
                     )
                 }
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
@@ -552,7 +554,7 @@ class FileManagerViewModel(
                     it.copy(
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = UserMessages.actionFailed("Restore", err)
+                        userMessage = UserMessages.actionFailed(R.string.trash_restore, err)
                     )
                 }
             }
@@ -563,11 +565,11 @@ class FileManagerViewModel(
         viewModelScope.launch {
             val result = storageRepository.deletePermanently(items)
             result.onSuccess { count ->
-                _uiState.update { it.copy(userMessage = "Permanently deleted $count items") }
+                _uiState.update { it.copy(userMessage = UiText.Res(R.string.fm_deleted_permanently, listOf(count))) }
                 refreshVolumes()
                 onComplete?.invoke()
             }.onFailure { err ->
-                _uiState.update { it.copy(userMessage = UserMessages.actionFailed("Delete", err)) }
+                _uiState.update { it.copy(userMessage = UserMessages.actionFailed(R.string.action_delete, err)) }
             }
         }
     }
@@ -576,11 +578,11 @@ class FileManagerViewModel(
         viewModelScope.launch {
             val result = storageRepository.emptyTrash()
             result.onSuccess {
-                _uiState.update { it.copy(userMessage = "Recycle Bin emptied") }
+                _uiState.update { it.copy(userMessage = UiText.Res(R.string.fm_bin_emptied)) }
                 refreshVolumes()
                 onComplete?.invoke()
             }.onFailure { err ->
-                _uiState.update { it.copy(userMessage = UserMessages.actionFailed("Empty Recycle Bin", err)) }
+                _uiState.update { it.copy(userMessage = UserMessages.actionFailed(R.string.trash_empty_bin, err)) }
             }
         }
     }
@@ -660,7 +662,7 @@ class FileManagerViewModel(
                         isSelectionMode = false,
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = "Created archive '${zipFile.name}'"
+                        userMessage = UiText.Res(R.string.fm_archive_created, listOf(zipFile.name))
                     )
                 }
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
@@ -670,7 +672,7 @@ class FileManagerViewModel(
                     it.copy(
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = UserMessages.actionFailed("Compression", err)
+                        userMessage = UserMessages.actionFailed(R.string.fm_verb_compression, err)
                     )
                 }
             }
@@ -694,7 +696,7 @@ class FileManagerViewModel(
                     it.copy(
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = "Created archive '${zipFile.name}'"
+                        userMessage = UiText.Res(R.string.fm_archive_created, listOf(zipFile.name))
                     )
                 }
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
@@ -704,7 +706,7 @@ class FileManagerViewModel(
                     it.copy(
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = UserMessages.actionFailed("Compression", err)
+                        userMessage = UserMessages.actionFailed(R.string.fm_verb_compression, err)
                     )
                 }
             }
@@ -733,7 +735,7 @@ class FileManagerViewModel(
                     it.copy(
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = "Extracted into '${dir.name}'"
+                        userMessage = UiText.Res(R.string.fm_extracted, listOf(dir.name))
                     )
                 }
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
@@ -743,7 +745,7 @@ class FileManagerViewModel(
                     it.copy(
                         activeOperation = null,
                         isLoading = false,
-                        userMessage = UserMessages.actionFailed("Extraction", err)
+                        userMessage = UserMessages.actionFailed(R.string.fm_verb_extraction, err)
                     )
                 }
             }

@@ -694,11 +694,8 @@ fun StorageCleanerSheet(
                             } else {
                             app.storageRepository.moveToTrash(selectedFiles).getOrElse { error ->
                                 app.showMessage(
-                                    UserMessages.actionFailed(
-                                        resources.getString(R.string.dialog_move_to_bin),
-                                        error,
-                                        "Cleaner"
-                                    )
+                                    UserMessages.actionFailed(R.string.dialog_move_to_bin, error, "Cleaner")
+                                        .resolve(app)
                                 )
                                 emptyList()
                             }

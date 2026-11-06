@@ -226,7 +226,7 @@ fun CameraScanSheet(
                             }
                         } catch (e: Exception) {
                             withContext(Dispatchers.Main) {
-                                context.showMessage(UserMessages.actionFailed("Save", e, "Scan"))
+                                context.showMessage(UserMessages.actionFailed(R.string.action_save, e, "Scan").resolve(context))
                             }
                         }
                     }

@@ -129,7 +129,7 @@ fun WordViewerScreen(
                     ?: UserMessages.readFailure(
                         "WordViewer",
                         outcome.error ?: IllegalStateException(WordDocumentLoader.COULD_NOT_OPEN)
-                    )
+                    ).resolve(context)
             }
         }
     }

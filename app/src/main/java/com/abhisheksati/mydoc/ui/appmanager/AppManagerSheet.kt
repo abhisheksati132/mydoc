@@ -255,7 +255,7 @@ fun AppManagerSheet(
                                     result.onSuccess { file ->
                                         context.showMessage(resources.getString(R.string.app_manager_extracted, file.name), long = true)
                                     }.onFailure { err ->
-                                        context.showMessage(UserMessages.actionFailed(resources.getString(R.string.cd_extract_apk), err, "AppManager"))
+                                        context.showMessage(UserMessages.actionFailed(R.string.cd_extract_apk, err, "AppManager").resolve(context))
                                     }
                                 }
                             },
@@ -267,7 +267,7 @@ fun AppManagerSheet(
                                     result.onSuccess { file ->
                                         shareApk(context, file)
                                     }.onFailure { err ->
-                                        context.showMessage(UserMessages.actionFailed(resources.getString(R.string.cd_extract_apk), err, "AppManager"))
+                                        context.showMessage(UserMessages.actionFailed(R.string.cd_extract_apk, err, "AppManager").resolve(context))
                                     }
                                 }
                             },

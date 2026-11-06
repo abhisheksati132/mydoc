@@ -213,7 +213,7 @@ fun TextViewerScreen(
                     ?: UserMessages.readFailure(
                         "TextViewer",
                         outcome.error ?: IllegalStateException(TextViewerModel.COULD_NOT_OPEN)
-                    )
+                    ).resolve(context)
                 loadFailure = outcome.failure
             }
         }

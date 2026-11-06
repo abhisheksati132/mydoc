@@ -83,9 +83,11 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   descriptions, empty states, dialogs and progress text read from `strings.xml` (5 entries at the
   start of this work, 742 now), including the 24 PDF tool names and descriptions, storage
   category and volume names, and plural-aware counts. Still English by design or for a later
-  pass: the `UserMessages` / `DocumentFormats` error-and-limitation layer, the relative-date
-  formatter in the domain models, the "Slide N" titles the PPTX parser writes into a converted
-  document, and the debug-only design-system preview screen.
+  pass: the `DocumentFormats` limitation notes, the relative-date formatter in the domain models,
+  the "Slide N" titles the PPTX parser writes into a converted document, and the debug-only
+  design-system preview screen. Failure and status messages travel from the ViewModel as `UiText`
+  (a resource id plus arguments) and are resolved where a configuration exists, so error copy is
+  localisable without giving a ViewModel a Context.
 
 ## [1.7.5] — 2026-11-06
 

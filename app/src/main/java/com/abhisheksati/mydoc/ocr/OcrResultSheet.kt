@@ -161,7 +161,7 @@ fun OcrResultSheet(
                             file.writeText(text)
                             context.showMessage("Saved to Documents/${file.name}")
                         } catch (e: Exception) {
-                            context.showMessage(UserMessages.actionFailed("Save", e, "Ocr"))
+                            context.showMessage(UserMessages.actionFailed(R.string.action_save, e, "Ocr").resolve(context))
                         }
                     },
                     modifier = Modifier.weight(1f),

@@ -93,7 +93,7 @@ class SpreadsheetViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = UserMessages.readFailure("SpreadsheetViewModel", e),
+                        errorMessage = UserMessages.readFailure("SpreadsheetViewModel", e).resolve(context),
                         failure = com.abhisheksati.mydoc.domain.model.LoadFailure.CORRUPT_DOCUMENT
                     )
                 }

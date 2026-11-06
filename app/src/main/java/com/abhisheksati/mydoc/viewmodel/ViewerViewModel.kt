@@ -422,7 +422,7 @@ class ViewerViewModel(
                         it.copy(
                             isLoading = false,
                             isPermissionExpired = isPerm,
-                            errorMessage = UserMessages.readFailure("ViewerViewModel", e)
+                            errorMessage = UserMessages.readFailure("ViewerViewModel", e).resolve(context)
                         )
                     }
                 }

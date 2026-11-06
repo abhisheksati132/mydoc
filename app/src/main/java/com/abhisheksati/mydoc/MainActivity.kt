@@ -768,14 +768,14 @@ class MainActivity : ComponentActivity() {
                                     }
                                     startActivity(Intent.createChooser(intent, "Open with"))
                                 } catch (_: Exception) {
-                                    this@MainActivity.showMessage(UserMessages.readFailure("MainActivity", e))
+                                    this@MainActivity.showMessage(UserMessages.readFailure("MainActivity", e).resolve(this@MainActivity))
                                 }
                             } else {
-                                this@MainActivity.showMessage(UserMessages.readFailure("MainActivity", e))
+                                this@MainActivity.showMessage(UserMessages.readFailure("MainActivity", e).resolve(this@MainActivity))
                             }
                         }
                     } catch (e: Exception) {
-                        this@MainActivity.showMessage(UserMessages.readFailure("MainActivity", e))
+                        this@MainActivity.showMessage(UserMessages.readFailure("MainActivity", e).resolve(this@MainActivity))
                     }
                 }
             }

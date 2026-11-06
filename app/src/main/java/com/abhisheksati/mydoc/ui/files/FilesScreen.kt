@@ -185,7 +185,7 @@ fun FilesScreen(
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let {
-            context.showMessage(it)
+            context.showMessage(it.resolve(context))
             viewModel.consumeMessage()
         }
     }

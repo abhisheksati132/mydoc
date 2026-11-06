@@ -231,7 +231,7 @@ fun PresentationViewerScreen(
                     presentationData = parsed
                 } catch (e: Throwable) {
                     SecureLog.warn("PresentationViewer", "native presentation parse failed") { document.displayName }
-                    errorMessage = UserMessages.readFailure("PresentationViewer", e)
+                    errorMessage = UserMessages.readFailure("PresentationViewer", e).resolve(context)
                 }
 
                 // A binary .ppt whose record layer produced nothing still holds readable strings.
@@ -253,7 +253,7 @@ fun PresentationViewerScreen(
                 SecureLog.error("PresentationViewer", "could not load presentation", t) { document.displayName }
                 cachedFileOnDisk?.delete()
                 cachedFileOnDisk = null
-                errorMessage = UserMessages.readFailure("PresentationViewer", t)
+                errorMessage = UserMessages.readFailure("PresentationViewer", t).resolve(context)
                 isLoading = false
             }
         }

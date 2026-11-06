@@ -1,6 +1,8 @@
 package com.abhisheksati.mydoc.util
 
 import android.util.Log
+import androidx.annotation.StringRes
+import com.abhisheksati.mydoc.R
 import java.io.FileNotFoundException
 
 /**
@@ -9,21 +11,22 @@ import java.io.FileNotFoundException
  * Exception strings are written for developers: they name internal classes, quote file paths the
  * reader never entered, and change with the device locale. Showing one puts jargon and sometimes
  * someone else's path on screen, so the raw cause goes to the log and a fixed, honest sentence
- * goes to the UI. Use [logCause] when a caller already knows which message it wants.
+ * goes to the UI. The sentence is returned as [UiText] because a ViewModel has no configuration to
+ * resolve a resource against; the UI resolves it at the boundary.
  */
 object UserMessages {
-    const val READ_FAILED = "This file could not be read. It may have been moved, deleted, or MyDoc lost permission to open it."
-    const val PERMISSION_EXPIRED = "Storage permission has expired for this file. Pick it again to restore access."
-    const val FILE_MISSING = "This file is no longer where MyDoc last saw it."
-    const val WRITE_FAILED = "MyDoc could not complete that action. Nothing was changed."
+    val READ_FAILED: UiText = UiText.Res(R.string.user_read_failed)
+    val PERMISSION_EXPIRED: UiText = UiText.Res(R.string.user_permission_expired)
+    val FILE_MISSING: UiText = UiText.Res(R.string.user_file_missing)
+    val WRITE_FAILED: UiText = UiText.Res(R.string.user_write_failed)
 
     /** Message for a failed read, with the real cause logged rather than displayed. */
-    fun readFailure(tag: String, cause: Throwable?): String {
+    fun readFailure(tag: String, cause: Throwable?): UiText {
         Log.w(tag, "Read failed", cause)
         val text = cause?.message.orEmpty()
         return when {
             // DocumentLoadException messages are authored copy naming a real cause, not stack noise.
-            cause is com.abhisheksati.mydoc.domain.model.DocumentLoadException -> text
+            cause is com.abhisheksati.mydoc.domain.model.DocumentLoadException -> UiText.Raw(text)
             cause is SecurityException || text.contains("Permission Denial", ignoreCase = true) ->
                 PERMISSION_EXPIRED
             cause is FileNotFoundException || text.contains("ENOENT", ignoreCase = true) -> FILE_MISSING
@@ -41,33 +44,41 @@ object UserMessages {
      * this adds only the reasons a reader can act on, translated out of errno strings, and logs
      * anything else instead of putting it on screen.
      */
-    fun actionFailed(action: String, cause: Throwable?, tag: String = "Files"): String {
-        Log.w(tag, "$action failed", cause)
+    fun actionFailed(@StringRes actionRes: Int, cause: Throwable?, tag: String = "Files"): UiText {
+        Log.w(tag, "action failed (res $actionRes)", cause)
+        val action = UiText.Res(actionRes)
         if (cause is com.abhisheksati.mydoc.domain.model.PartialStorageOperationException) {
             // Some items did land. Saying only "failed" would send people back to retry work
             // that is already done, and hide that half a batch is now sitting in the folder.
             val total = cause.completed + cause.failed
-            val base = "$action completed for ${cause.completed} of $total items — ${cause.failed} could not be completed."
-            if (cause.retainedSources.isEmpty()) return base
+            val header = UiText.Res(
+                R.string.user_partial_header,
+                listOf(action, cause.completed, total, cause.failed)
+            )
+            if (cause.retainedSources.isEmpty()) return header
             // The copies were kept because part of the original was already removed. Saying only
             // "could not be completed" would send people to delete the duplicate by hand.
-            val plural = cause.retainedSources.size > 1
-            return base + " " + cause.retainedSources.size.toString() +
-                (if (plural) " items are also still in their original location, so their copies were kept too."
-                 else " item is also still in its original location, so its copy was kept too.")
+            val retained = UiText.Res(
+                if (cause.retainedSources.size > 1) R.string.user_partial_retained_many
+                else R.string.user_partial_retained_one,
+                listOf(cause.retainedSources.size)
+            )
+            return UiText.Joined(listOf(header, retained))
         }
         val text = cause?.message.orEmpty()
-        val reason = when {
+        val reasonRes = when {
             cause is SecurityException || text.contains("EACCES") ||
-                text.contains("Permission denied", ignoreCase = true) ->
-                "you don't have permission to change it here"
-            text.contains("ENOENT") -> "the file is no longer there"
-            text.contains("ENOSPC") -> "there is no space left on this storage"
-            text.contains("EROFS") || text.contains("read-only", ignoreCase = true) ->
-                "this storage is read-only"
-            text.contains("EXDEV") -> "it spans volumes MyDoc cannot move between"
+                text.contains("Permission denied", ignoreCase = true) -> R.string.user_reason_no_permission
+            text.contains("ENOENT") -> R.string.user_reason_missing
+            text.contains("ENOSPC") -> R.string.user_reason_no_space
+            text.contains("EROFS") || text.contains("read-only", ignoreCase = true) -> R.string.user_reason_read_only
+            text.contains("EXDEV") -> R.string.user_reason_cross_volume
             else -> null
         }
-        return if (reason == null) "$action failed." else "$action failed — $reason."
+        return if (reasonRes == null) {
+            UiText.Res(R.string.user_action_failed, listOf(action))
+        } else {
+            UiText.Res(R.string.user_action_failed_reason, listOf(action, UiText.Res(reasonRes)))
+        }
     }
 }
