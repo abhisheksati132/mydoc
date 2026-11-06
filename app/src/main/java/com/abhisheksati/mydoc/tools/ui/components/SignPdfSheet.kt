@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.tools.ui.components
 
+import com.abhisheksati.mydoc.R
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.Paint
@@ -50,6 +51,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -153,7 +155,7 @@ fun SignPdfSheet(
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Draw,
-                                contentDescription = "Draw",
+                                contentDescription = stringResource(R.string.sign_draw),
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -171,7 +173,7 @@ fun SignPdfSheet(
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.TextFields,
-                                contentDescription = "Type",
+                                contentDescription = stringResource(R.string.sign_type),
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -181,12 +183,12 @@ fun SignPdfSheet(
                 Spacer(modifier = Modifier.width(4.dp))
 
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Outlined.Close, contentDescription = "Close", tint = scheme.onSurfaceVariant)
+                    Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.action_close), tint = scheme.onSurfaceVariant)
                 }
             }
 
             Text(
-                text = "Signatures are encrypted with hardware-backed AES-256 in Android Keystore.",
+                text = stringResource(R.string.sign_encrypted_note),
                 style = typography.bodySmall,
                 color = scheme.onSurfaceVariant
             )
@@ -224,7 +226,7 @@ fun SignPdfSheet(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.Undo,
-                            contentDescription = "Undo stroke",
+                            contentDescription = stringResource(R.string.sign_undo_stroke),
                             tint = scheme.onSurfaceVariant
                         )
                     }
@@ -296,7 +298,7 @@ fun SignPdfSheet(
                         )
                         if (typedName.isEmpty()) {
                             Text(
-                                text = "Type your name here...",
+                                text = stringResource(R.string.sign_type_hint),
                                 style = signatureStyle.copy(color = Color.Black.copy(alpha = 0.38f))
                             )
                         }
@@ -322,7 +324,7 @@ fun SignPdfSheet(
                         .height(52.dp),
                     shape = AppRadius.cardShape
                 ) {
-                    Text("Clear")
+                    Text(stringResource(R.string.sign_clear))
                 }
 
                 Button(
@@ -353,7 +355,7 @@ fun SignPdfSheet(
                 ) {
                     Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Save signature")
+                    Text(stringResource(R.string.sign_save))
                 }
             }
         }

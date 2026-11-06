@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.tools.ui
 
+import com.abhisheksati.mydoc.R
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -48,6 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -177,7 +179,7 @@ fun ToolRunnerSheet(
                 IconButton(onClick = { viewModel.closeTool() }) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
-                        contentDescription = "Close",
+                        contentDescription = stringResource(R.string.action_close),
                         tint = scheme.onSurfaceVariant
                     )
                 }
@@ -253,7 +255,7 @@ fun ToolRunnerSheet(
                             .height(52.dp),
                         shape = AppRadius.cardShape
                     ) {
-                        Text(text = "Run ${tool.title}", style = typography.titleSmall)
+                        Text(text = stringResource(R.string.run_tool, tool.title), style = typography.titleSmall)
                     }
                 }
 
@@ -355,7 +357,7 @@ fun ToolRunnerSheet(
                                 .height(52.dp),
                             shape = AppRadius.cardShape
                         ) {
-                            Text(text = "Try again", style = typography.titleSmall)
+                            Text(text = stringResource(R.string.action_try_again), style = typography.titleSmall)
                         }
                     }
                 }
@@ -523,7 +525,7 @@ private fun InputFilesSection(
                     IconButton(onClick = { onRemoveUri(uri) }) {
                         Icon(
                             imageVector = Icons.Outlined.Close,
-                            contentDescription = "Remove file",
+                            contentDescription = stringResource(R.string.cd_remove_file),
                             tint = scheme.onSurfaceVariant
                         )
                     }
@@ -537,7 +539,7 @@ private fun InputFilesSection(
                     modifier = Modifier.fillMaxWidth(),
                     shape = AppRadius.cardShape
                 ) {
-                    Text(text = "Add more files", style = typography.titleSmall)
+                    Text(text = stringResource(R.string.action_add_more_files), style = typography.titleSmall)
                 }
             }
         }
@@ -594,7 +596,7 @@ private fun RunningProgressSection(
             modifier = Modifier.fillMaxWidth(),
             shape = AppRadius.cardShape
         ) {
-            Text(text = "Cancel", style = typography.titleSmall)
+            Text(text = stringResource(R.string.action_cancel), style = typography.titleSmall)
         }
     }
 }
@@ -615,7 +617,7 @@ private fun SuccessVerificationSection(
             IconPlate(icon = Icons.Outlined.Check)
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = "Operation completed",
+                text = stringResource(R.string.tool_result_completed),
                 style = typography.titleLarge,
                 color = scheme.onSurface
             )
@@ -631,7 +633,7 @@ private fun SuccessVerificationSection(
                 .padding(16.dp)
         ) {
             Text(
-                text = "Verification",
+                text = stringResource(R.string.tool_result_verification),
                 style = typography.labelLarge,
                 color = scheme.onSurfaceVariant
             )
@@ -642,7 +644,7 @@ private fun SuccessVerificationSection(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "File size", style = typography.bodyMedium, color = scheme.onSurfaceVariant)
+                Text(text = stringResource(R.string.tool_result_file_size), style = typography.bodyMedium, color = scheme.onSurfaceVariant)
                 val diffBytes = result.outputSizeBytes - result.inputSizeBytes
                 val pct = if (result.inputSizeBytes > 0) {
                     kotlin.math.round((diffBytes.toDouble() / result.inputSizeBytes) * 100.0).toInt()
@@ -665,7 +667,7 @@ private fun SuccessVerificationSection(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "Pages", style = typography.bodyMedium, color = scheme.onSurfaceVariant)
+                    Text(text = stringResource(R.string.tool_result_pages), style = typography.bodyMedium, color = scheme.onSurfaceVariant)
                     Text(
                         text = "${result.inputPages} → ${result.outputPages}",
                         style = typography.bodyMedium,
@@ -697,7 +699,7 @@ private fun SuccessVerificationSection(
         ) {
             Icon(Icons.Outlined.Save, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "Save to device", style = typography.titleSmall)
+            Text(text = stringResource(R.string.action_save_to_device), style = typography.titleSmall)
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -716,7 +718,7 @@ private fun SuccessVerificationSection(
             ) {
                 Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Open", style = typography.titleSmall)
+                Text(text = stringResource(R.string.action_open), style = typography.titleSmall)
             }
 
             OutlinedButton(
@@ -729,7 +731,7 @@ private fun SuccessVerificationSection(
             ) {
                 Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Share", style = typography.titleSmall)
+                Text(text = stringResource(R.string.action_share), style = typography.titleSmall)
             }
         }
 
@@ -738,7 +740,7 @@ private fun SuccessVerificationSection(
             onClick = onDone,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(text = "Done", style = typography.titleSmall)
+            Text(text = stringResource(R.string.action_done), style = typography.titleSmall)
         }
     }
 }

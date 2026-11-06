@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ocr
 
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.util.UserMessages
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -25,9 +26,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
@@ -53,6 +56,8 @@ fun OcrResultSheet(
 
     val wordCount = remember(text) { ocrWordCount(text) }
     val charCount = text.length
+    val resources = LocalResources.current
+    val clipLabel = stringResource(R.string.ocr_clip_label)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -90,12 +95,12 @@ fun OcrResultSheet(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "Extracted Text (OCR)",
+                            text = stringResource(R.string.ocr_title),
                             style = typography.heading,
                             color = colors.textPrimary
                         )
                         Text(
-                            text = "$wordCount words • $charCount characters",
+                            text = stringResource(R.string.ocr_counts, wordCount, charCount),
                             style = typography.caption,
                             color = colors.textSecondary
                         )
@@ -103,7 +108,7 @@ fun OcrResultSheet(
                 }
 
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Outlined.Close, contentDescription = "Close", tint = colors.textSecondary)
+                    Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.action_close), tint = colors.textSecondary)
                 }
             }
 
@@ -117,8 +122,8 @@ fun OcrResultSheet(
                 Button(
                     onClick = {
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        clipboard.setPrimaryClip(ClipData.newPlainText("Extracted Text", text))
-                        context.showMessage("Copied to clipboard")
+                        clipboard.setPrimaryClip(ClipData.newPlainText(clipLabel, text))
+                        context.showMessage(resources.getString(R.string.ocr_copied))
                     },
                     modifier = Modifier.weight(1f),
                     shape = AppRadius.pillShape,
@@ -126,7 +131,7 @@ fun OcrResultSheet(
                 ) {
                     Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Copy", style = AppTheme.typography.captionStrong)
+                    Text(stringResource(R.string.action_copy), style = AppTheme.typography.captionStrong)
                 }
 
                 OutlinedButton(
@@ -143,7 +148,7 @@ fun OcrResultSheet(
                 ) {
                     Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Share", style = AppTheme.typography.caption)
+                    Text(stringResource(R.string.action_share), style = AppTheme.typography.caption)
                 }
 
                 OutlinedButton(
@@ -165,7 +170,7 @@ fun OcrResultSheet(
                 ) {
                     Icon(Icons.Outlined.SaveAlt, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Save .txt", style = AppTheme.typography.caption)
+                    Text(stringResource(R.string.action_save_txt), style = AppTheme.typography.caption)
                 }
             }
 
