@@ -5,6 +5,8 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+## [1.7.4] — 2026-11-06
+
 ### Changed
 
 - **The app's own text is no longer bold.** Every chrome role in `AppTypography` - the Fraunces
