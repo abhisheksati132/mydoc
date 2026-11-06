@@ -108,7 +108,7 @@ fun DocumentTtsBar(
                         },
                         modifier = Modifier.size(24.dp)
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = colors.textSecondary, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close), tint = colors.textSecondary, modifier = Modifier.size(18.dp))
                     }
                 }
 
@@ -173,7 +173,7 @@ fun DocumentTtsBar(
                     ) {
                         Icon(Icons.Default.Stop, contentDescription = null, tint = colors.error, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Stop", color = colors.error, style = AppTheme.typography.caption)
+                        Text(stringResource(R.string.action_stop), color = colors.error, style = AppTheme.typography.caption)
                     }
 
                     // Speed toggle pill

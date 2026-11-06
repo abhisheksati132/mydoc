@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.security
 
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
@@ -55,7 +57,7 @@ fun AppLockScreen(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Lock,
-                    contentDescription = "Locked",
+                    contentDescription = stringResource(R.string.cd_locked),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(36.dp)
                 )
@@ -64,7 +66,7 @@ fun AppLockScreen(
             Spacer(modifier = Modifier.height(AppSpacing.large))
 
             Text(
-                text = "mydoc is locked",
+                text = stringResource(R.string.lock_title),
                 style = AppTheme.typography.title,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -72,7 +74,7 @@ fun AppLockScreen(
             Spacer(modifier = Modifier.height(AppSpacing.small))
 
             Text(
-                text = "Biometric authentication is required to access your documents.",
+                text = stringResource(R.string.lock_message),
                 style = AppTheme.typography.body,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -94,7 +96,7 @@ fun AppLockScreen(
                 )
                 Spacer(modifier = Modifier.size(AppSpacing.small))
                 Text(
-                    text = "Unlock",
+                    text = stringResource(R.string.lock_unlock),
                     style = AppTheme.typography.bodyLargeStrong
                 )
             }

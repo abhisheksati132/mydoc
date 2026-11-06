@@ -152,7 +152,7 @@ fun AppManagerSheet(
                             color = colors.textPrimary
                         )
                         Text(
-                            text = "${filteredApps.size} applications found",
+                            text = stringResource(R.string.app_count_found, filteredApps.size),
                             style = typography.caption,
                             color = colors.textSecondary
                         )
@@ -160,7 +160,7 @@ fun AppManagerSheet(
                 }
 
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = "Close", tint = colors.textSecondary)
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close), tint = colors.textSecondary)
                 }
             }
 
@@ -181,7 +181,7 @@ fun AppManagerSheet(
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
                         IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Clear, contentDescription = "Clear", tint = colors.textSecondary)
+                            Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.action_clear), tint = colors.textSecondary)
                         }
                     }
                 },
@@ -344,7 +344,7 @@ private fun AppListItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${app.versionName} • ${formatFileSize(app.apkSize)}",
+                    text = stringResource(R.string.app_version_line, app.versionName, formatFileSize(app.apkSize)),
                     style = typography.micro,
                     color = colors.textSecondary,
                     maxLines = 1,

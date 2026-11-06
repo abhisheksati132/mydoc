@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.presentation
 
+import com.abhisheksati.mydoc.R
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
@@ -169,7 +171,7 @@ fun VisualSlideCard(
                                                     .data(bytes)
                                                     .crossfade(true)
                                                     .build(),
-                                                contentDescription = "Slide Image",
+                                                contentDescription = stringResource(R.string.cd_slide_image),
                                                 contentScale = ContentScale.Fit,
                                                 modifier = Modifier.fillMaxSize()
                                             )
@@ -422,7 +424,7 @@ fun OutlineSlideCard(
 
                     if (allPoints.isEmpty()) {
                         Text(
-                            text = "No additional bullet points on this slide.",
+                            text = stringResource(R.string.slide_no_bullets),
                             style = MaterialTheme.typography.bodyMedium,
                             color = textColor.copy(alpha = 0.5f),
                             fontStyle = FontStyle.Italic,

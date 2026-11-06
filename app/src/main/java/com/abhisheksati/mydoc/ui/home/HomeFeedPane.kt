@@ -483,7 +483,7 @@ private fun ContinueReadingHeroCard(
                 ) {
                     if (item.pageCount > 0) {
                         Text(
-                            text = "p. ${item.lastPage + 1}/${item.pageCount}",
+                            text = stringResource(R.string.home_page_of, item.lastPage + 1, item.pageCount),
                             style = AppTheme.typography.metadata,
                             color = colors.inkSecondary
                         )
@@ -878,7 +878,7 @@ private fun HomeRecentsSelectionBar(
                 )
             }
             Text(
-                text = "$selectedCount selected",
+                text = stringResource(R.string.files_selected_count, selectedCount),
                 style = typography.bodyStrong,
                 color = colors.ink,
                 maxLines = 1,

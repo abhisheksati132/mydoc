@@ -39,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
@@ -136,7 +137,7 @@ fun PresentationTopBar(
                                     color = secondaryTextColor.copy(alpha = 0.5f)
                                 )
                                 Text(
-                                    text = "$effectiveSlideCount slides",
+                                    text = pluralStringResource(R.plurals.slides_count, effectiveSlideCount, effectiveSlideCount),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = secondaryTextColor
                                 )
@@ -148,7 +149,7 @@ fun PresentationTopBar(
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.cd_back),
                             tint = textColor
                         )
                     }
@@ -288,7 +289,7 @@ fun PresentationTopBar(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Print") },
+                                text = { Text(stringResource(R.string.appearance_print)) },
                                 leadingIcon = {
                                     Icon(Icons.Outlined.Print, contentDescription = null)
                                 },

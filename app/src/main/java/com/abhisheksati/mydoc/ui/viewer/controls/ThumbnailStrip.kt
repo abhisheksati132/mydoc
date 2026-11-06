@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
+import com.abhisheksati.mydoc.R
 import android.graphics.Bitmap
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
@@ -31,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -114,7 +116,7 @@ fun ThumbnailStrip(
                             if (bmp != null) {
                                 Image(
                                     bitmap = bmp.asImageBitmap(),
-                                    contentDescription = "Thumbnail for page ${pageIndex + 1}",
+                                    contentDescription = stringResource(R.string.cd_thumbnail_page, pageIndex + 1),
                                     contentScale = ContentScale.Fit,
                                     modifier = Modifier.padding(2.dp)
                                 )

@@ -50,6 +50,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -112,11 +113,11 @@ fun PageGridSheet(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Pages",
+                        text = stringResource(R.string.pagegrid_title),
                         style = MaterialTheme.typography.titleLarge
                     )
                     Text(
-                        text = "$pageCount pages",
+                        text = pluralStringResource(R.plurals.pagegrid_count, pageCount, pageCount),
                         style = MaterialTheme.typography.bodySmall,
                         color = scheme.onSurfaceVariant
                     )

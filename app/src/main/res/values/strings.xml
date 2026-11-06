@@ -715,4 +715,25 @@
         <item quantity="other">%1$d duplicates</item>
     </plurals>
     <string name="files_storage_line">%1$s free · %2$d%% used</string>
+    <string name="action_stop">Stop</string>
+    <string name="home_page_of">p. %1$d/%2$d</string>
+    <string name="app_count_found">%1$d applications found</string>
+    <string name="action_clear">Clear</string>
+    <string name="app_version_line">%1$s • %2$s</string>
+    <string name="cd_locked">Locked</string>
+    <string name="lock_title">mydoc is locked</string>
+    <string name="lock_message">Biometric authentication is required to access your documents.</string>
+    <string name="lock_unlock">Unlock</string>
+    <string name="cd_slide_image">Slide Image</string>
+    <string name="slide_no_bullets">No additional bullet points on this slide.</string>
+    <string name="cd_thumbnail_page">Thumbnail for page %1$d</string>
+    <string name="pagegrid_title">Pages</string>
+    <plurals name="pagegrid_count">
+        <item quantity="one">%1$d page</item>
+        <item quantity="other">%1$d pages</item>
+    </plurals>
+    <plurals name="slides_count">
+        <item quantity="one">%1$d slide</item>
+        <item quantity="other">%1$d slides</item>
+    </plurals>
 </resources>
