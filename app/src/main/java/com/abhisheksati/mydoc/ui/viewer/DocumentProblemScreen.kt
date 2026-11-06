@@ -1,9 +1,12 @@
 package com.abhisheksati.mydoc.ui.viewer
 
+import android.content.Context
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.domain.model.DocumentFormats
@@ -25,7 +28,7 @@ fun DocumentProblemScreen(
     onRetry: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    val copy = problemCopy(failure, extension)
+    val copy = problemCopy(LocalContext.current, failure, extension)
     AppEmptyState(
         modifier = modifier
             .fillMaxSize()
@@ -39,8 +42,10 @@ fun DocumentProblemScreen(
 
 private class ProblemCopy(val title: String, val message: String, val actionLabel: String)
 
-private fun problemCopy(failure: LoadFailure, extension: String?): ProblemCopy {
-    val named = extension?.takeIf { it.isNotBlank() }?.uppercase()?.let { "$it file" } ?: "This document"
+private fun problemCopy(context: Context, failure: LoadFailure, extension: String?): ProblemCopy {
+    val named = extension?.takeIf { it.isNotBlank() }?.uppercase()
+        ?.let { context.getString(R.string.problem_named_file, it) }
+        ?: context.getString(R.string.problem_this_document)
     val limitations = DocumentFormats.forExtension(extension)?.limitations.orEmpty()
 
     fun copy(title: String, head: String, action: String) = ProblemCopy(
@@ -54,46 +59,44 @@ private fun problemCopy(failure: LoadFailure, extension: String?): ProblemCopy {
 
     return when (failure) {
         LoadFailure.UNSUPPORTED_FORMAT -> copy(
-            "Format not supported",
-            "$named uses a container MyDoc has no reader for, so nothing is shown rather than a " +
-                "partial guess. Convert it to a supported format to open it here.",
-            "Choose another file"
+            context.getString(R.string.problem_unsupported_title),
+            context.getString(R.string.problem_unsupported_message, named),
+            context.getString(R.string.problem_choose_another)
         )
         LoadFailure.CORRUPT_DOCUMENT -> copy(
-            "Document is damaged",
-            "$named could not be read. Its structure is broken or its contents are incomplete.",
-            "Try again"
+            context.getString(R.string.problem_corrupt_title),
+            context.getString(R.string.problem_corrupt_message, named),
+            context.getString(R.string.problem_retry)
         )
         LoadFailure.EMPTY_DOCUMENT -> copy(
-            "Document is empty",
-            "$named opened successfully but contains no readable content.",
-            "Choose another file"
+            context.getString(R.string.problem_empty_title),
+            context.getString(R.string.problem_empty_message, named),
+            context.getString(R.string.problem_choose_another)
         )
         LoadFailure.PERMISSION_EXPIRED -> copy(
-            "Document inaccessible",
-            "MyDoc lost permission to read $named. Pick it again to restore access.",
-            "Select file"
+            context.getString(R.string.problem_inaccessible_title),
+            context.getString(R.string.problem_inaccessible_message, named),
+            context.getString(R.string.problem_select_file)
         )
         LoadFailure.PASSWORD_PROTECTED -> copy(
-            "Document is protected",
-            "$named is encrypted or password-protected. Remove the protection, then open it again.",
-            "Choose another file"
+            context.getString(R.string.problem_protected_title),
+            context.getString(R.string.problem_protected_message, named),
+            context.getString(R.string.problem_choose_another)
         )
         LoadFailure.EXCEEDS_LIMITS -> copy(
-            "Document is too large",
-            "$named is larger than the limits MyDoc applies to protect memory and battery.",
-            "Choose another file"
+            context.getString(R.string.problem_too_large_title),
+            context.getString(R.string.problem_too_large_message, named),
+            context.getString(R.string.problem_choose_another)
         )
         LoadFailure.CONVERSION_FAILED -> copy(
-            "Could not prepare pages",
-            "MyDoc read $named but could not lay out its pages. It likely uses features our " +
-                "converter does not implement.",
-            "Try again"
+            context.getString(R.string.problem_conversion_title),
+            context.getString(R.string.problem_conversion_message, named),
+            context.getString(R.string.problem_retry)
         )
         LoadFailure.FEATURE_UNAVAILABLE -> copy(
-            "Feature not available",
-            "This part of $named cannot be shown in MyDoc.",
-            "Choose another file"
+            context.getString(R.string.problem_feature_title),
+            context.getString(R.string.problem_feature_message, named),
+            context.getString(R.string.problem_choose_another)
         )
     }
 }

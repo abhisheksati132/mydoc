@@ -31,6 +31,7 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Slideshow
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.DropdownMenuItem
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppDropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -128,7 +130,7 @@ fun ViewerTopBar(
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                    contentDescription = "Navigate back",
+                                    contentDescription = stringResource(R.string.viewer_back),
                                     tint = colors.inkPrimary,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -166,7 +168,7 @@ fun ViewerTopBar(
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.Search,
-                                    contentDescription = "Search text in document",
+                                    contentDescription = stringResource(R.string.viewer_search),
                                     tint = colors.inkSecondary,
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -178,7 +180,7 @@ fun ViewerTopBar(
                             ) {
                                 Icon(
                                     imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                                    contentDescription = if (isBookmarked) "Remove page bookmark" else "Add page bookmark",
+                                    contentDescription = if (isBookmarked) stringResource(R.string.viewer_bookmark_remove) else stringResource(R.string.viewer_bookmark_add),
                                     tint = if (isBookmarked) colors.accent else colors.inkSecondary,
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -191,7 +193,7 @@ fun ViewerTopBar(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Outlined.MoreVert,
-                                        contentDescription = "More options",
+                                        contentDescription = stringResource(R.string.viewer_more_options),
                                         tint = colors.inkSecondary,
                                         modifier = Modifier.size(18.dp)
                                     )
@@ -235,7 +237,7 @@ fun ViewerTopBar(
                             IconButton(onClick = onBackClick) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                    contentDescription = "Navigate back",
+                                    contentDescription = stringResource(R.string.viewer_back),
                                     tint = colors.inkPrimary
                                 )
                             }
@@ -254,7 +256,7 @@ fun ViewerTopBar(
                                 )
                                 if (pageCount > 0) {
                                     Text(
-                                        text = "Page ${currentPage + 1} of $pageCount",
+                                        text = stringResource(R.string.viewer_page_of, currentPage + 1, pageCount),
                                         style = AppTheme.typography.metadata,
                                         color = colors.inkMuted
                                     )
@@ -264,7 +266,7 @@ fun ViewerTopBar(
                             IconButton(onClick = onSearchClick) {
                                 Icon(
                                     imageVector = Icons.Outlined.Search,
-                                    contentDescription = "Search text in document",
+                                    contentDescription = stringResource(R.string.viewer_search),
                                     tint = colors.inkSecondary
                                 )
                             }
@@ -272,7 +274,7 @@ fun ViewerTopBar(
                             IconButton(onClick = onToggleBookmark) {
                                 Icon(
                                     imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                                    contentDescription = if (isBookmarked) "Remove page bookmark" else "Add page bookmark",
+                                    contentDescription = if (isBookmarked) stringResource(R.string.viewer_bookmark_remove) else stringResource(R.string.viewer_bookmark_add),
                                     tint = if (isBookmarked) colors.accent else colors.inkSecondary
                                 )
                             }
@@ -281,7 +283,7 @@ fun ViewerTopBar(
                                 IconButton(onClick = { isMoreMenuOpen = true }) {
                                     Icon(
                                         imageVector = Icons.Outlined.MoreVert,
-                                        contentDescription = "More options",
+                                        contentDescription = stringResource(R.string.viewer_more_options),
                                         tint = colors.inkSecondary
                                     )
                                 }
@@ -323,7 +325,7 @@ private fun OverflowDropdown(
         onDismissRequest = onDismiss
     ) {
         OverflowAction(
-            label = "Share document",
+            label = stringResource(R.string.viewer_action_share),
             icon = Icons.Outlined.Share,
             onClick = {
                 onDismiss()
@@ -333,7 +335,7 @@ private fun OverflowDropdown(
 
         if (onTtsClick != null) {
             OverflowAction(
-                label = "Read aloud",
+                label = stringResource(R.string.viewer_action_tts),
                 icon = Icons.AutoMirrored.Outlined.VolumeUp,
                 onClick = {
                     onDismiss()
@@ -344,7 +346,7 @@ private fun OverflowDropdown(
 
         if (onOcrClick != null) {
             OverflowAction(
-                label = "Extract text",
+                label = stringResource(R.string.viewer_action_ocr),
                 icon = Icons.Outlined.TextFields,
                 onClick = {
                     onDismiss()
@@ -355,7 +357,7 @@ private fun OverflowDropdown(
 
         if (onToolsClick != null) {
             OverflowAction(
-                label = "PDF tools",
+                label = stringResource(R.string.viewer_action_tools),
                 icon = Icons.Outlined.Build,
                 onClick = {
                     onDismiss()
@@ -366,7 +368,7 @@ private fun OverflowDropdown(
 
         if (onSlideshowClick != null) {
             OverflowAction(
-                label = "Start slideshow",
+                label = stringResource(R.string.viewer_action_slideshow),
                 icon = Icons.Outlined.Slideshow,
                 onClick = {
                     onDismiss()
@@ -377,7 +379,7 @@ private fun OverflowDropdown(
 
         if (onReflowClick != null) {
             OverflowAction(
-                label = "Reflow reading mode",
+                label = stringResource(R.string.viewer_action_reflow),
                 icon = Icons.Outlined.TextFields,
                 onClick = {
                     onDismiss()
@@ -388,7 +390,7 @@ private fun OverflowDropdown(
 
         if (onDocumentDetailsClick != null) {
             OverflowAction(
-                label = "Document details",
+                label = stringResource(R.string.viewer_action_details),
                 icon = Icons.Outlined.Info,
                 onClick = {
                     onDismiss()

@@ -40,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
@@ -47,6 +48,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppSlider
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
@@ -150,7 +152,7 @@ fun ViewerBottomBar(
                             ) {
                                 val target = (scrubPage.roundToInt() + 1).coerceIn(1, pageCount)
                                 Text(
-                                    text = "Page $target of $pageCount",
+                                    text = stringResource(R.string.viewer_page_scrub, target, pageCount),
                                     style = AppTheme.typography.metadataStrong,
                                     color = colors.accent
                                 )
@@ -195,8 +197,8 @@ fun ViewerBottomBar(
                 ) {
                     BottomBarActionButton(
                         icon = Icons.AutoMirrored.Outlined.FormatListBulleted,
-                        label = "Contents",
-                        contentDescription = "Document contents and outline",
+                        label = stringResource(R.string.viewer_contents),
+                        contentDescription = stringResource(R.string.viewer_contents_description),
                         enabled = hasOutline,
                         onClick = onOutlineClick,
                         modifier = Modifier.weight(1f)
@@ -204,8 +206,8 @@ fun ViewerBottomBar(
 
                     BottomBarActionButton(
                         icon = Icons.Outlined.PhotoLibrary,
-                        label = "Pages",
-                        contentDescription = "Thumbnail page grid",
+                        label = stringResource(R.string.viewer_pages),
+                        contentDescription = stringResource(R.string.viewer_pages_description),
                         enabled = onPagesClick != null,
                         onClick = { onPagesClick?.invoke() },
                         modifier = Modifier.weight(1f)
@@ -213,8 +215,8 @@ fun ViewerBottomBar(
 
                     BottomBarActionButton(
                         icon = Icons.Outlined.TextFormat,
-                        label = "Appearance",
-                        contentDescription = "Reading appearance settings",
+                        label = stringResource(R.string.viewer_appearance),
+                        contentDescription = stringResource(R.string.viewer_appearance_description),
                         onClick = onAppearanceClick,
                         modifier = Modifier.weight(1f)
                     )

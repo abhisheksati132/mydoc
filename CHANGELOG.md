@@ -79,6 +79,10 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 - **Screen titles and Settings groups are TalkBack headings.** The bar title and every settings card
   title carry heading semantics, so a screen reader can jump between them.
 
+- **Reader chrome and the load-error screen read from string resources.** Titles, action labels,
+  content descriptions and the problem copy are externalised (`strings.xml` grew from 5 to 48
+  entries); the rest of the UI still carries literals and is the next slice.
+
 ## [1.7.5] — 2026-11-06
 
 ### Fixed
