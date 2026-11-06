@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
@@ -80,7 +82,7 @@ fun OutlineDrawer(
                 FilterChip(
                     selected = selectedTab == DrawerTab.OUTLINE,
                     onClick = { selectedTab = DrawerTab.OUTLINE },
-                    label = { Text("Outline") },
+                    label = { Text(stringResource(R.string.outline_title)) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.FormatListBulleted,
@@ -93,7 +95,7 @@ fun OutlineDrawer(
                 FilterChip(
                     selected = selectedTab == DrawerTab.BOOKMARKS,
                     onClick = { selectedTab = DrawerTab.BOOKMARKS },
-                    label = { Text("Bookmarks (${bookmarks.size})") },
+                    label = { Text(stringResource(R.string.outline_bookmarks, bookmarks.size)) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Outlined.Bookmark,
@@ -112,7 +114,7 @@ fun OutlineDrawer(
                     val flattened = flattenOutline(outline)
                     if (flattened.isEmpty()) {
                         Text(
-                            text = "This document does not contain an outline.",
+                            text = stringResource(R.string.outline_empty),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = AppSpacing.large)
@@ -161,7 +163,7 @@ fun OutlineDrawer(
                     val sortedBookmarks = remember(bookmarks) { bookmarks.toList().sorted() }
                     if (sortedBookmarks.isEmpty()) {
                         Text(
-                            text = "No bookmarks yet. Tap the bookmark icon in the top toolbar to save a page.",
+                            text = stringResource(R.string.bookmarks_empty),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = AppSpacing.large)
@@ -192,7 +194,7 @@ fun OutlineDrawer(
                                     )
                                     Spacer(modifier = Modifier.width(AppSpacing.small))
                                     Text(
-                                        text = "Page ${pageIndex + 1}",
+                                        text = stringResource(R.string.page_label, pageIndex + 1),
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onBackground,
                                         modifier = Modifier.weight(1f)
@@ -203,7 +205,7 @@ fun OutlineDrawer(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Outlined.DeleteOutline,
-                                            contentDescription = "Remove Bookmark",
+                                            contentDescription = stringResource(R.string.cd_remove_bookmark),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(18.dp)
                                         )

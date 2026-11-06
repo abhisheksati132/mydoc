@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
@@ -51,7 +53,7 @@ fun PageJumpDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Go to page",
+                text = stringResource(R.string.pagejump_title),
                 style = AppTheme.typography.titleSmall
             )
         },
@@ -59,7 +61,7 @@ fun PageJumpDialog(
             OverlaySystemBars()
             Column {
                 Text(
-                    text = "Enter a page number between 1 and $pageCount.",
+                    text = stringResource(R.string.pagejump_range, pageCount),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -78,11 +80,11 @@ fun PageJumpDialog(
                         imeAction = ImeAction.Go
                     ),
                     keyboardActions = KeyboardActions(onGo = { submit() }),
-                    label = { Text("Page Number") },
+                    label = { Text(stringResource(R.string.pagejump_label)) },
                     supportingText = {
                         if (isError) {
                             Text(
-                                text = "Please enter a valid page (1 - $pageCount)",
+                                text = stringResource(R.string.pagejump_invalid, pageCount),
                                 color = MaterialTheme.colorScheme.error
                             )
                         }
@@ -97,7 +99,7 @@ fun PageJumpDialog(
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )

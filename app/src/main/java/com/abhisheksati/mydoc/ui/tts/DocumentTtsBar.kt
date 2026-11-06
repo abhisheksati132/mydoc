@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.tts
 
+import com.abhisheksati.mydoc.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -17,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
@@ -88,11 +90,11 @@ fun DocumentTtsBar(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = when (state) {
-                                TtsPlaybackState.PLAYING -> "Reading Aloud..."
-                                TtsPlaybackState.PAUSED -> "Paused"
-                                TtsPlaybackState.INITIALIZING -> "Initializing voice..."
-                                TtsPlaybackState.ERROR -> "Voice error"
-                                else -> "Read Aloud Ready"
+                                TtsPlaybackState.PLAYING -> stringResource(R.string.tts_reading)
+                                TtsPlaybackState.PAUSED -> stringResource(R.string.tts_paused)
+                                TtsPlaybackState.INITIALIZING -> stringResource(R.string.tts_initializing)
+                                TtsPlaybackState.ERROR -> stringResource(R.string.tts_error)
+                                else -> stringResource(R.string.tts_ready)
                             },
                             style = typography.caption,
                             color = colors.textPrimary
@@ -151,7 +153,13 @@ fun DocumentTtsBar(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (state == TtsPlaybackState.PLAYING) "Pause" else if (state == TtsPlaybackState.PAUSED) "Resume" else "Start",
+                            text = stringResource(
+                                when (state) {
+                                    TtsPlaybackState.PLAYING -> R.string.tts_pause
+                                    TtsPlaybackState.PAUSED -> R.string.tts_resume
+                                    else -> R.string.tts_start
+                                }
+                            ),
                             color = Color.White,
                             style = AppTheme.typography.bodyStrong
                         )

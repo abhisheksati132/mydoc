@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
@@ -49,6 +50,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -123,7 +125,7 @@ fun PageGridSheet(
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
-                        contentDescription = "Close page overview"
+                        contentDescription = stringResource(R.string.cd_close_overview)
                     )
                 }
             }
@@ -150,7 +152,7 @@ fun PageGridSheet(
                         }
                     }
                 ),
-                placeholder = { Text("Jump to page (1 - $pageCount)") },
+                placeholder = { Text(stringResource(R.string.pagejump_hint, pageCount)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Search,
@@ -216,7 +218,7 @@ fun PageGridSheet(
                             if (bmp != null && !bmp.isRecycled) {
                                 Image(
                                     bitmap = bmp.asImageBitmap(),
-                                    contentDescription = "Page ${pageIndex + 1}",
+                                    contentDescription = stringResource(R.string.page_label, pageIndex + 1),
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()
                                 )
@@ -235,7 +237,7 @@ fun PageGridSheet(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Filled.Bookmark,
-                                        contentDescription = "Bookmarked",
+                                        contentDescription = stringResource(R.string.cd_bookmarked),
                                         tint = Color.White,
                                         modifier = Modifier.size(12.dp)
                                     )

@@ -126,7 +126,8 @@ fun NewFileDialog(
     onDismiss: () -> Unit,
     onConfirm: (name: String) -> Unit
 ) {
-    var name by remember { mutableStateOf("New Document.txt") }
+    val defaultFileName = stringResource(R.string.dialog_new_file_default)
+    var name by remember { mutableStateOf(defaultFileName) }
     val focusRequester = remember { FocusRequester() }
     val colors = LocalAppColors.current
     val isOled = LocalIsOled.current
@@ -483,7 +484,7 @@ fun CompressDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    placeholder = { Text("Archive.zip") },
+                    placeholder = { Text(stringResource(R.string.dialog_archive_name_hint)) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = colors.textPrimary,
@@ -505,7 +506,7 @@ fun CompressDialog(
                     }
                 }
             ) {
-                Text("Compress", color = colors.accent, style = AppTheme.typography.bodyStrong)
+                Text(stringResource(R.string.action_compress), color = colors.accent, style = AppTheme.typography.bodyStrong)
             }
         },
         dismissButton = {
@@ -533,18 +534,18 @@ fun ExtractConfirmDialog(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
             AppRadius.modalShape
         ),
-        title = { Text("Extract Archive", color = colors.textPrimary) },
+        title = { Text(stringResource(R.string.dialog_extract_archive), color = colors.textPrimary) },
         text = {
             OverlaySystemBars()
             Text(
-                "Extract '$archiveName' into a dedicated folder in the current directory?",
+                stringResource(R.string.dialog_extract_message, archiveName),
                 color = colors.textPrimary,
                 style = LocalAppTypography.current.body
             )
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Extract", color = colors.accent, style = AppTheme.typography.bodyStrong)
+                Text(stringResource(R.string.action_extract), color = colors.accent, style = AppTheme.typography.bodyStrong)
             }
         },
         dismissButton = {
