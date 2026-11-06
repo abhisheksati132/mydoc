@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.media
 
+import com.abhisheksati.mydoc.R
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -56,10 +57,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -98,6 +101,8 @@ fun PhotoViewerScreen(
     if (items.isEmpty()) return
 
     val context = LocalContext.current
+
+    val resources = LocalResources.current
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val haptic = rememberGatedHaptics()
@@ -233,7 +238,7 @@ fun PhotoViewerScreen(
                         IconButton(onClick = { isMoreMenuOpen = true }) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
-                                contentDescription = "More options",
+                                contentDescription = stringResource(R.string.cd_more_options),
                                 tint = contentColor
                             )
                         }
@@ -243,7 +248,7 @@ fun PhotoViewerScreen(
                             onDismissRequest = { isMoreMenuOpen = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Rotate 90°", color = colors.textPrimary) },
+                                text = { Text(stringResource(R.string.photo_rotate_90), color = colors.textPrimary) },
                                 leadingIcon = {
                                     Icon(Icons.AutoMirrored.Filled.RotateRight, contentDescription = null, tint = colors.textPrimary)
                                 },
@@ -253,19 +258,19 @@ fun PhotoViewerScreen(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Open with...", color = colors.textPrimary) },
+                                text = { Text(stringResource(R.string.photo_open_with), color = colors.textPrimary) },
                                 leadingIcon = {
                                     Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = colors.textPrimary)
                                 },
                                 onClick = {
                                     isMoreMenuOpen = false
                                     if (!openFile(context, currentItem.uri, currentItem.mimeType)) {
-                                        context.showMessage("No app found to open this image")
+                                        context.showMessage(resources.getString(R.string.photo_no_app_open))
                                     }
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Set as wallpaper", color = colors.textPrimary) },
+                                text = { Text(stringResource(R.string.photo_set_wallpaper), color = colors.textPrimary) },
                                 leadingIcon = {
                                     Icon(Icons.Outlined.Image, contentDescription = null, tint = colors.textPrimary)
                                 },
@@ -273,7 +278,7 @@ fun PhotoViewerScreen(
                                     isMoreMenuOpen = false
                                     val safeUri = currentItem.uri.toShareableUri(context)
                                     if (safeUri == null) {
-                                        context.showMessage("Unable to set wallpaper")
+                                        context.showMessage(resources.getString(R.string.photo_wallpaper_failed))
                                     } else {
                                         val setAsIntent = Intent(Intent.ACTION_ATTACH_DATA).apply {
                                             setDataAndType(safeUri, currentItem.mimeType)
@@ -281,15 +286,15 @@ fun PhotoViewerScreen(
                                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                         }
                                         try {
-                                            context.startActivity(Intent.createChooser(setAsIntent, "Set as"))
+                                            context.startActivity(Intent.createChooser(setAsIntent, resources.getString(R.string.photo_set_as)))
                                         } catch (_: Exception) {
-                                            context.showMessage("Unable to set wallpaper")
+                                            context.showMessage(resources.getString(R.string.photo_wallpaper_failed))
                                         }
                                     }
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Move to Recycle Bin", color = colors.error) },
+                                text = { Text(stringResource(R.string.photo_move_to_bin_title), color = colors.error) },
                                 leadingIcon = {
                                     Icon(
                                         imageVector = Icons.Outlined.Delete,
@@ -375,11 +380,11 @@ fun PhotoViewerScreen(
                         // Share
                         PhotoViewerPillButton(
                             icon = Icons.Default.Share,
-                            label = "Share",
+                            label = stringResource(R.string.photo_action_share),
                             tint = contentColor,
                             onClick = {
-                                if (!shareFile(context, currentItem.uri, currentItem.mimeType, "Share image")) {
-                                    context.showMessage("No app available to share this image")
+                                if (!shareFile(context, currentItem.uri, currentItem.mimeType, resources.getString(R.string.photo_share_label))) {
+                                    context.showMessage(resources.getString(R.string.photo_no_share_app))
                                 }
                             },
                             modifier = Modifier.weight(1f)
@@ -388,7 +393,7 @@ fun PhotoViewerScreen(
                         // Rotate 90°
                         PhotoViewerPillButton(
                             icon = Icons.AutoMirrored.Filled.RotateRight,
-                            label = "Rotate",
+                            label = stringResource(R.string.photo_action_rotate),
                             tint = contentColor,
                             onClick = {
                                 rotationAngle = (rotationAngle + 90f) % 360f
@@ -409,7 +414,7 @@ fun PhotoViewerScreen(
                         // Delete
                         PhotoViewerPillButton(
                             icon = Icons.Outlined.Delete,
-                            label = "Delete",
+                            label = stringResource(R.string.photo_action_delete),
                             tint = colors.error,
                             onClick = { showDeleteConfirmDialog = true },
                             modifier = Modifier.weight(1f)
@@ -441,9 +446,9 @@ fun PhotoViewerScreen(
         if (showDeleteConfirmDialog) {
             AppDialog(
                 isOpen = showDeleteConfirmDialog,
-                title = "Move to Recycle Bin?",
-                message = "Are you sure you want to move \"${currentItem.displayName}\" to the Recycle Bin?",
-                confirmLabel = "Move to Bin",
+                title = stringResource(R.string.photo_confirm_title),
+                message = stringResource(R.string.photo_confirm_message, currentItem.displayName),
+                confirmLabel = stringResource(R.string.photo_confirm_action),
                 isDestructive = true,
                 onConfirm = {
                     showDeleteConfirmDialog = false
@@ -457,7 +462,7 @@ fun PhotoViewerScreen(
                         // it for good and only explained afterwards that it had not been trashed.
                         if (trashTarget == null) {
                             context.showMessage(
-                                "This photo can't be moved to the Recycle Bin, so it was not deleted."
+                                resources.getString(R.string.photo_cannot_trash)
                             )
                             return@launch
                         }
@@ -468,7 +473,7 @@ fun PhotoViewerScreen(
                             done
                         }
                         if (success) {
-                            context.showMessage("Photo moved to Recycle Bin")
+                            context.showMessage(resources.getString(R.string.photo_moved))
                             onDeletePhoto?.invoke(itemToDelete)
                             val idx = photoList.indexOf(itemToDelete)
                             if (idx >= 0) {

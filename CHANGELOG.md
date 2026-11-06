@@ -80,7 +80,8 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   title carry heading semantics, so a screen reader can jump between them.
 
 - **A growing share of the UI reads from string resources.** The viewer chrome, bottom bar,
-  load-error screen, file dialogs, file browser, storage cleaner and home feed now use
+  load-error screen, file dialogs, file browser, storage cleaner, home feed, settings and the
+  photo viewer now use
   `strings.xml` (up from 5 entries); the rest of the UI still carries literals and is the next
   slice.
 

@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.media
 
+import com.abhisheksati.mydoc.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +18,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
@@ -67,7 +69,7 @@ fun PhotoInfoSheet(
                     .verticalScroll(rememberScrollState())
             ) {
             Text(
-                text = "Details",
+                text = stringResource(R.string.menu_details),
                 style = typography.heading,
                 color = colors.textPrimary,
                 modifier = Modifier.padding(bottom = AppSpacing.paddingMedium)
@@ -77,17 +79,17 @@ fun PhotoInfoSheet(
             Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
 
             // File Information
-            AppSectionHeader(title = "FILE INFORMATION")
+            AppSectionHeader(title = stringResource(R.string.photo_file_information))
             InfoRow(label = "Name", value = item.displayName)
             InfoRow(label = "Size", value = item.formattedSize)
             val dims = if (exif != null && exif.width > 0 && exif.height > 0) {
                 "${exif.width} × ${exif.height} px"
             } else if (item.width > 0 && item.height > 0) {
                 "${item.width} × ${item.height} px"
-            } else "Unknown"
-            InfoRow(label = "Dimensions", value = dims)
-            InfoRow(label = "Date", value = item.formattedDate.ifEmpty { "Unknown" })
-            InfoRow(label = "Format", value = item.mimeType)
+            } else stringResource(R.string.photo_unknown)
+            InfoRow(label = stringResource(R.string.photo_dimensions), value = dims)
+            InfoRow(label = stringResource(R.string.photo_date), value = item.formattedDate.ifEmpty { stringResource(R.string.photo_unknown) })
+            InfoRow(label = stringResource(R.string.photo_format), value = item.mimeType)
 
             // EXIF Camera Information
             if (exif != null) {
@@ -98,31 +100,31 @@ fun PhotoInfoSheet(
                     Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
                     AppDivider()
                     Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
-                    AppSectionHeader(title = "CAMERA & CAPTURE")
+                    AppSectionHeader(title = stringResource(R.string.photo_camera_capture))
 
                     if (hasCamera) {
                         val cameraName = listOfNotNull(exif.cameraMake, exif.cameraModel).distinct().joinToString(" ")
-                        InfoRow(label = "Camera", value = cameraName)
+                        InfoRow(label = stringResource(R.string.photo_camera), value = cameraName)
                     }
 
                     if (!exif.focalLength.isNullOrBlank()) {
-                        InfoRow(label = "Focal length", value = exif.focalLength)
+                        InfoRow(label = stringResource(R.string.photo_focal_length), value = exif.focalLength)
                     }
                     if (!exif.aperture.isNullOrBlank()) {
-                        InfoRow(label = "Aperture", value = exif.aperture)
+                        InfoRow(label = stringResource(R.string.photo_aperture), value = exif.aperture)
                     }
                     if (!exif.exposureTime.isNullOrBlank()) {
-                        InfoRow(label = "Exposure", value = exif.exposureTime)
+                        InfoRow(label = stringResource(R.string.photo_exposure), value = exif.exposureTime)
                     }
                     if (!exif.iso.isNullOrBlank()) {
                         InfoRow(label = "ISO", value = exif.iso)
                     }
                     if (!exif.dateTimeOriginal.isNullOrBlank()) {
-                        InfoRow(label = "Captured", value = exif.dateTimeOriginal)
+                        InfoRow(label = stringResource(R.string.photo_captured), value = exif.dateTimeOriginal)
                     }
 
                     if (exif.locationText != null) {
-                        InfoRow(label = "Coordinates", value = exif.locationText ?: "")
+                        InfoRow(label = stringResource(R.string.photo_coordinates), value = exif.locationText ?: "")
                     }
                 }
             }
