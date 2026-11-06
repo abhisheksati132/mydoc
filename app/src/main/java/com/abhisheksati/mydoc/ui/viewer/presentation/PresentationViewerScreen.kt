@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.presentation
 
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import android.content.Context
 import android.content.Intent
@@ -54,11 +55,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -129,7 +132,7 @@ fun openPresentationInOfficeApp(context: Context, document: DocumentFile) {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
-        context.startActivity(Intent.createChooser(intent, "Open presentation in"))
+        context.startActivity(Intent.createChooser(intent, context.getString(R.string.pres_open_in)))
     } catch (_: Exception) {
         try {
             val playStoreIntent = Intent(
@@ -140,7 +143,7 @@ fun openPresentationInOfficeApp(context: Context, document: DocumentFile) {
             }
             context.startActivity(playStoreIntent)
         } catch (_: Exception) {
-            context.showMessage("Install Google Slides or Microsoft PowerPoint to view full graphics", long = true)
+            context.showMessage(context.getString(R.string.pres_need_office), long = true)
         }
     }
 }
@@ -156,6 +159,7 @@ fun PresentationViewerScreen(
     onSwipeToPreviousDocument: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     val app = context.applicationContext as? MyDocApp
 
@@ -210,8 +214,10 @@ fun PresentationViewerScreen(
                             written += read
                             if (written > OfficeSourceReader.MAX_SOURCE_BYTES) {
                                 throw IllegalStateException(
-                                    "This presentation is larger than MyDoc can open " +
-                                        "(${OfficeSourceReader.MAX_SOURCE_BYTES / (1024 * 1024)} MB budget)."
+                                    resources.getString(
+                                        R.string.pres_too_large,
+                                        (OfficeSourceReader.MAX_SOURCE_BYTES / (1024 * 1024)).toInt()
+                                    )
                                 )
                             }
                             output.write(chunk, 0, read)
@@ -548,7 +554,7 @@ fun PresentationViewerScreen(
                     modifier = Modifier.padding(AppSpacing.paddingLarge)
                 ) {
                     Text(
-                        text = errorMessage ?: "Error reading presentation",
+                        text = errorMessage ?: stringResource(R.string.pres_error_reading),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center
@@ -557,7 +563,7 @@ fun PresentationViewerScreen(
                     Button(onClick = { openPresentationInOfficeApp(context, document) }) {
                         Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Open with PowerPoint / Google Slides")
+                        Text(stringResource(R.string.pres_open_with_office))
                     }
                 }
             } else if (effectiveSlideCount == 0) {
@@ -704,7 +710,7 @@ fun PresentationViewerScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Close,
-                            contentDescription = "Exit Slideshow",
+                            contentDescription = stringResource(R.string.pres_exit_slideshow),
                             tint = Color.White
                         )
                     }

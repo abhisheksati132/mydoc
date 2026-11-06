@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.pdf
 
+import com.abhisheksati.mydoc.R
 import android.app.SearchManager
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -9,6 +10,7 @@ import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.ocr.OcrEngine
 import com.abhisheksati.mydoc.tools.tts.DocumentTtsManager
@@ -31,6 +33,8 @@ fun PdfContextualActionsHost(
     if (pageNum == null) return
 
     val context = LocalContext.current
+
+    val resources = LocalResources.current
     val coroutineScope = rememberCoroutineScope()
 
     PdfFloatingContextualBar(
@@ -42,10 +46,13 @@ fun PdfContextualActionsHost(
                 val text = activeSelectionText ?: viewModel.getPageText(pageNum)
                 if (!text.isNullOrBlank()) {
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("PDF Text", text))
-                    context.showMessage(if (activeSelectionText != null) "Text copied to clipboard" else "Page ${pageNum + 1} text copied")
+                    clipboard.setPrimaryClip(ClipData.newPlainText(resources.getString(R.string.ctx_clip_label), text))
+                    context.showMessage(
+                        if (activeSelectionText != null) resources.getString(R.string.ctx_copied)
+                        else resources.getString(R.string.ctx_page_copied, pageNum + 1)
+                    )
                 } else {
-                    context.showMessage(text.unreadableTextLayerMessage() ?: "No text detected on this page")
+                    context.showMessage(text.unreadableTextLayerMessage() ?: resources.getString(R.string.ctx_no_text))
                 }
                 onClose()
             }
@@ -58,9 +65,9 @@ fun PdfContextualActionsHost(
                         type = "text/plain"
                         putExtra(Intent.EXTRA_TEXT, text)
                     }
-                    context.startActivity(Intent.createChooser(shareIntent, "Share Text"))
+                    context.startActivity(Intent.createChooser(shareIntent, resources.getString(R.string.ctx_share_text)))
                 } else {
-                    context.showMessage(text.unreadableTextLayerMessage() ?: "No text to share")
+                    context.showMessage(text.unreadableTextLayerMessage() ?: resources.getString(R.string.ctx_no_text_share))
                 }
                 onClose()
             }
@@ -75,10 +82,10 @@ fun PdfContextualActionsHost(
                     try {
                         context.startActivity(searchIntent)
                     } catch (_: Exception) {
-                        context.showMessage("No browser found")
+                        context.showMessage(resources.getString(R.string.ctx_no_browser))
                     }
                 } else {
-                    context.showMessage(text.unreadableTextLayerMessage() ?: "No text to search")
+                    context.showMessage(text.unreadableTextLayerMessage() ?: resources.getString(R.string.ctx_no_text_search))
                 }
                 onClose()
             }
@@ -90,7 +97,7 @@ fun PdfContextualActionsHost(
                     onStartTts(text)
                     ttsManager.startReading(text)
                 } else {
-                    context.showMessage(text.unreadableTextLayerMessage() ?: "No text to read")
+                    context.showMessage(text.unreadableTextLayerMessage() ?: resources.getString(R.string.ctx_no_text_read))
                 }
                 onClose()
             }
@@ -108,10 +115,10 @@ fun PdfContextualActionsHost(
                 val text = viewModel.getPageText(pageNum)
                 if (!text.isNullOrBlank()) {
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("Page ${pageNum + 1}", text))
-                    context.showMessage("Page ${pageNum + 1} text copied to clipboard")
+                    clipboard.setPrimaryClip(ClipData.newPlainText(resources.getString(R.string.ctx_page_label, pageNum + 1), text))
+                    context.showMessage(resources.getString(R.string.ctx_page_copied_long, pageNum + 1))
                 } else {
-                    context.showMessage(text.unreadableTextLayerMessage() ?: "No digital text on this page. Try OCR extract.")
+                    context.showMessage(text.unreadableTextLayerMessage() ?: resources.getString(R.string.ctx_no_digital_text))
                 }
                 onClose()
             }
@@ -122,7 +129,7 @@ fun PdfContextualActionsHost(
                 if (!text.isNullOrBlank()) {
                     onStartTts(text)
                 } else {
-                    context.showMessage(text.unreadableTextLayerMessage() ?: "No text on this page to read")
+                    context.showMessage(text.unreadableTextLayerMessage() ?: resources.getString(R.string.ctx_no_text_on_page_read))
                 }
                 onClose()
             }
@@ -135,9 +142,9 @@ fun PdfContextualActionsHost(
                         type = "text/plain"
                         putExtra(Intent.EXTRA_TEXT, text)
                     }
-                    context.startActivity(Intent.createChooser(shareIntent, "Share Page ${pageNum + 1} Text"))
+                    context.startActivity(Intent.createChooser(shareIntent, resources.getString(R.string.ctx_share_page_text, pageNum + 1)))
                 } else {
-                    context.showMessage(text.unreadableTextLayerMessage() ?: "No text on this page to share")
+                    context.showMessage(text.unreadableTextLayerMessage() ?: resources.getString(R.string.ctx_no_text_on_page_share))
                 }
                 onClose()
             }
@@ -151,7 +158,7 @@ fun PdfContextualActionsHost(
                     if (ocr.isNotBlank()) {
                         onOcrResult(ocr)
                     } else {
-                        context.showMessage("No text found with OCR")
+                        context.showMessage(resources.getString(R.string.ctx_no_ocr_text))
                     }
                 }
             }

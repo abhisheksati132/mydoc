@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.pdf
 
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.util.UserMessages
 import android.app.Activity
 import android.content.Intent
@@ -42,10 +43,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import com.abhisheksati.mydoc.ui.viewer.controls.edgeFlingToDocument
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.MainActivity
@@ -85,6 +88,7 @@ fun PdfViewerScreen(
     onSwipeToPreviousDocument: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val app = context.applicationContext as? MyDocApp
     val colors = LocalAppColors.current
     val coroutineScope = rememberCoroutineScope()
@@ -363,9 +367,9 @@ fun PdfViewerScreen(
                 contentAlignment = Alignment.Center
             ) {
                 AppEmptyState(
-                    title = if (state.isPermissionExpired) "Document inaccessible" else "Document could not be displayed",
-                    message = state.errorMessage ?: "The file could not be read from storage. Please select it to restore access.",
-                    actionLabel = "Select file",
+                    title = stringResource(if (state.isPermissionExpired) R.string.pdf_inaccessible_title else R.string.pdf_cannot_display),
+                    message = state.errorMessage ?: stringResource(R.string.pdf_read_failed),
+                    actionLabel = stringResource(R.string.pdf_select_file),
                     onAction = {
                         reopenLauncher.launch(arrayOf("application/pdf", "*/*"))
                     }
@@ -547,9 +551,9 @@ fun PdfViewerScreen(
         } else {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 AppEmptyState(
-                    title = "No pages found",
-                    message = "This document does not contain readable pages.",
-                    actionLabel = "Go back",
+                    title = stringResource(R.string.pdf_no_pages),
+                    message = stringResource(R.string.pdf_no_readable_pages),
+                    actionLabel = stringResource(R.string.pdf_go_back),
                     onAction = onBackClick
                 )
             }
@@ -566,28 +570,31 @@ fun PdfViewerScreen(
             onToggleBookmark = {
                 val added = app?.settingsRepository?.toggleBookmark(document.uri, state.currentPage) ?: false
                 bookmarks = app?.settingsRepository?.getBookmarks(document.uri) ?: emptySet()
-                context.showMessage(if (added) "Bookmarked page ${state.currentPage + 1}" else "Bookmark removed")
+                context.showMessage(
+                            if (added) resources.getString(R.string.pdf_bookmarked_page, state.currentPage + 1)
+                            else resources.getString(R.string.pdf_bookmark_removed)
+                        )
             },
             onToolsClick = { isToolsSheetOpen = true },
             onOcrClick = {
                 if (!isOcrRunning) {
                     isOcrRunning = true
-                    context.showMessage("Extracting text from page ${state.currentPage + 1}...")
+                    context.showMessage(resources.getString(R.string.pdf_extracting_text, state.currentPage + 1))
                     coroutineScope.launch {
                         try {
                             val pageBmp = withContext(Dispatchers.Default) { viewModel.renderPageBitmap(state.currentPage, 2.0f) }
                             if (pageBmp != null) {
                                 val text = ocrEngine.recognizeText(pageBmp)
                                 if (text.isBlank()) {
-                                    context.showMessage("No text detected on this page")
+                                    context.showMessage(resources.getString(R.string.pdf_no_text))
                                 } else {
                                     ocrExtractedText = text
                                 }
                             } else {
-                                context.showMessage("Unable to render page for OCR")
+                                context.showMessage(resources.getString(R.string.pdf_ocr_render_failed))
                             }
                         } catch (e: Exception) {
-                            context.showMessage("No text could be extracted from this page.")
+                            context.showMessage(resources.getString(R.string.pdf_no_text_extracted))
                         } finally {
                             isOcrRunning = false
                         }
@@ -608,7 +615,7 @@ fun PdfViewerScreen(
                                 currentTtsText = ocr
                                 isTtsVisible = true
                             } else {
-                                context.showMessage("No text detected on this page to read")
+                                context.showMessage(resources.getString(R.string.pdf_no_text_to_read))
                             }
                         }
                     }

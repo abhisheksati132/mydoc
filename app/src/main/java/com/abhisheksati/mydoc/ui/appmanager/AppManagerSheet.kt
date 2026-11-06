@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.appmanager
 
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.util.UserMessages
 import android.content.Context
 import android.content.Intent
@@ -22,10 +23,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,6 +55,7 @@ fun AppManagerSheet(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val colors = AppTheme.colors
     val typography = AppTheme.typography
     val coroutineScope = rememberCoroutineScope()
@@ -143,7 +147,7 @@ fun AppManagerSheet(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "Installed Apps & APKs",
+                            text = stringResource(R.string.app_manager_title),
                             style = typography.heading,
                             color = colors.textPrimary
                         )
@@ -166,7 +170,13 @@ fun AppManagerSheet(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Search installed applications...", color = colors.textSecondary, style = AppTheme.typography.label) },
+                placeholder = {
+                        Text(
+                            stringResource(R.string.app_manager_search),
+                            color = colors.textSecondary,
+                            style = AppTheme.typography.label
+                        )
+                    },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = colors.textSecondary) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
@@ -195,7 +205,7 @@ fun AppManagerSheet(
                 FilterChip(
                     selected = showSystemApps,
                     onClick = { showSystemApps = !showSystemApps },
-                    label = { Text("Include System Apps", style = AppTheme.typography.caption) },
+                    label = { Text(stringResource(R.string.app_manager_include_system), style = AppTheme.typography.caption) },
                     leadingIcon = {
                         if (showSystemApps) {
                             Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -218,9 +228,9 @@ fun AppManagerSheet(
             } else if (filteredApps.isEmpty()) {
                 AppEmptyState(
                     message = if (searchQuery.isBlank()) {
-                        "No installed apps or APKs to show."
+                        stringResource(R.string.app_manager_empty)
                     } else {
-                        "Nothing matches \"$searchQuery\"."
+                        stringResource(R.string.app_manager_no_match, searchQuery)
                     },
                     modifier = Modifier.fillMaxWidth().weight(1f)
                 )
@@ -243,9 +253,9 @@ fun AppManagerSheet(
                                     val result = appHelper.extractApk(app)
                                     extractingPackage = null
                                     result.onSuccess { file ->
-                                        context.showMessage("Extracted to Downloads/MyDoc/ExtractedAPKs/${file.name}", long = true)
+                                        context.showMessage(resources.getString(R.string.app_manager_extracted, file.name), long = true)
                                     }.onFailure { err ->
-                                        context.showMessage(UserMessages.actionFailed("Extract", err, "AppManager"))
+                                        context.showMessage(UserMessages.actionFailed(resources.getString(R.string.cd_extract_apk), err, "AppManager"))
                                     }
                                 }
                             },
@@ -257,7 +267,7 @@ fun AppManagerSheet(
                                     result.onSuccess { file ->
                                         shareApk(context, file)
                                     }.onFailure { err ->
-                                        context.showMessage(UserMessages.actionFailed("Extract", err, "AppManager"))
+                                        context.showMessage(UserMessages.actionFailed(resources.getString(R.string.cd_extract_apk), err, "AppManager"))
                                     }
                                 }
                             },
@@ -347,7 +357,7 @@ private fun AppListItem(
                         color = MaterialTheme.colorScheme.tertiaryContainer
                     ) {
                         Text(
-                            text = "Split APK (${app.splitApkFiles.size + 1})",
+                            text = stringResource(R.string.app_split_apk, app.splitApkFiles.size + 1),
                             style = typography.micro,
                             color = MaterialTheme.colorScheme.onTertiaryContainer,
                             maxLines = 1,
@@ -378,7 +388,7 @@ private fun AppListItem(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.FileDownload,
-                            contentDescription = "Extract APK",
+                            contentDescription = stringResource(R.string.cd_extract_apk),
                             tint = colors.accent,
                             modifier = Modifier.size(20.dp)
                         )
@@ -390,7 +400,7 @@ private fun AppListItem(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Share,
-                            contentDescription = "Share APK",
+                            contentDescription = stringResource(R.string.cd_share_apk),
                             tint = colors.textSecondary,
                             modifier = Modifier.size(18.dp)
                         )
@@ -402,7 +412,7 @@ private fun AppListItem(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
-                            contentDescription = "Launch",
+                            contentDescription = stringResource(R.string.cd_launch),
                             tint = colors.textSecondary,
                             modifier = Modifier.size(18.dp)
                         )
@@ -433,9 +443,9 @@ private fun shareApk(context: Context, apkFile: File) {
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(shareIntent, "Share APK"))
+        context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.app_share_chooser)))
     } catch (e: Exception) {
-        context.showMessage("This app could not be shared.")
+        context.showMessage(context.getString(R.string.app_share_failed))
     }
 }
 

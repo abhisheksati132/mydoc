@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.home
 
+import com.abhisheksati.mydoc.R
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -46,7 +47,9 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.abhisheksati.mydoc.MainActivity
@@ -101,6 +104,7 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
+    val resources = LocalResources.current
     val currentTab by viewModel.currentTab.collectAsStateWithLifecycle()
     val selectedRecentUris by viewModel.selectedRecentUris.collectAsStateWithLifecycle()
 
@@ -213,8 +217,8 @@ fun HomeScreen(
                             onClearRecentSelection = { viewModel.clearRecentSelection() },
                             onShareSelectedRecents = { items ->
                                 val uris = items.map { Uri.parse(it.uri) }
-                                if (!shareUris(context, uris, "Share documents")) {
-                                    context.showMessage("These documents could not be shared.")
+                                if (!shareUris(context, uris, resources.getString(R.string.home_share_label))) {
+                                    context.showMessage(resources.getString(R.string.home_share_failed))
                                 }
                             },
                             onRemoveSelectedRecents = { items ->
@@ -313,12 +317,12 @@ fun HomeScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Update available: v${release.versionName}",
+                                        text = stringResource(R.string.home_update_available, release.versionName),
                                         style = AppTheme.typography.body,
                                         color = colors.ink
                                     )
                                     Text(
-                                        text = "Tap to update mydoc",
+                                        text = stringResource(R.string.home_tap_to_update),
                                         style = AppTheme.typography.caption,
                                         color = colors.inkMuted
                                     )
@@ -333,7 +337,7 @@ fun HomeScreen(
                                     ),
                                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                                 ) {
-                                    Text("Update", style = AppTheme.typography.captionStrong)
+                                    Text(stringResource(R.string.home_update), style = AppTheme.typography.captionStrong)
                                 }
                             }
                         }
@@ -358,7 +362,7 @@ fun HomeScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "Downloading update...",
+                                        text = stringResource(R.string.home_downloading_update),
                                         style = AppTheme.typography.label,
                                         color = colors.ink
                                     )
@@ -404,12 +408,12 @@ fun HomeScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Update downloaded!",
+                                        text = stringResource(R.string.home_update_downloaded),
                                         style = AppTheme.typography.body,
                                         color = colors.ink
                                     )
                                     Text(
-                                        text = "Ready to install v${updateState.release.versionName}",
+                                        text = stringResource(R.string.home_ready_install, updateState.release.versionName),
                                         style = AppTheme.typography.caption,
                                         color = colors.inkMuted
                                     )
@@ -431,7 +435,7 @@ fun HomeScreen(
                                     ),
                                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                                 ) {
-                                    Text("Install", style = AppTheme.typography.captionStrong)
+                                    Text(stringResource(R.string.home_install), style = AppTheme.typography.captionStrong)
                                 }
                             }
                         }
@@ -480,14 +484,14 @@ fun HomeScreen(
     if (docToDelete != null) {
         AppDialog(
             isOpen = true,
-            title = "Delete document",
-            message = "Remove \"${docToDelete.displayName}\" from your documents list?",
-            confirmLabel = "Delete",
-            dismissLabel = "Cancel",
+            title = stringResource(R.string.home_delete_title),
+            message = stringResource(R.string.home_delete_message, docToDelete.displayName),
+            confirmLabel = stringResource(R.string.action_delete),
+            dismissLabel = stringResource(R.string.action_cancel),
             onConfirm = {
                 viewModel.removeFromRecents(docToDelete)
                 documentToDelete = null
-                context.showMessage("Document removed")
+                context.showMessage(resources.getString(R.string.home_document_removed))
             },
             onDismiss = { documentToDelete = null }
         )
@@ -557,7 +561,7 @@ fun HomeScreen(
             onDismiss = { showSignaturePad = false },
             onSignatureSaved = {
                 showSignaturePad = false
-                context.showMessage("Signature encrypted and saved.")
+                context.showMessage(resources.getString(R.string.home_signature_saved))
             }
         )
     }

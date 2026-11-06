@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.files
 
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppTopBar
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -55,6 +56,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
@@ -108,7 +110,7 @@ fun TrashBinSheet(
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
                 AppTopBar(
-                    title = if (isSelectionMode) "${selectedIds.size} Selected" else "Recycle Bin",
+                    title = if (isSelectionMode) stringResource(R.string.trash_selected_count, selectedIds.size) else stringResource(R.string.menu_recycle_bin),
                     subtitle = if (isSelectionMode) null
                         else "${trashItems.size} items • 30-day auto-purge",
                     onBack = onClose,
@@ -120,7 +122,7 @@ fun TrashBinSheet(
                                 IconButton(onClick = { showEmptyConfirmDialog = true }) {
                                     Icon(
                                         imageVector = Icons.Outlined.DeleteSweep,
-                                        contentDescription = "Empty Recycle Bin",
+                                        contentDescription = stringResource(R.string.trash_empty_bin),
                                         tint = colors.error
                                     )
                                 }
@@ -136,7 +138,7 @@ fun TrashBinSheet(
                                 ) {
                                     Icon(
                                         imageVector = if (selectedIds.size == trashItems.size) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
-                                        contentDescription = "Select All",
+                                        contentDescription = stringResource(R.string.cd_select_all),
                                         tint = colors.accent
                                     )
                                 }
@@ -168,7 +170,7 @@ fun TrashBinSheet(
                         ) {
                             Icon(imageVector = Icons.Outlined.DeleteForever, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Delete")
+                            Text(stringResource(R.string.trash_delete))
                         }
 
                         Button(
@@ -180,7 +182,7 @@ fun TrashBinSheet(
                         ) {
                             Icon(imageVector = Icons.Outlined.Restore, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Restore")
+                            Text(stringResource(R.string.trash_restore))
                         }
                     }
                 }
@@ -196,8 +198,8 @@ fun TrashBinSheet(
                 contentAlignment = Alignment.Center
             ) {
                 AppEmptyState(
-                    title = "Recycle Bin is Empty",
-                    message = "Items you delete from the File Manager are kept safely in the Recycle Bin for 30 days before being permanently removed."
+                    title = stringResource(R.string.trash_empty_title),
+                    message = stringResource(R.string.trash_empty_message)
                 )
             }
         } else {
@@ -239,10 +241,10 @@ fun TrashBinSheet(
                 BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
                 AppRadius.modalShape
             ),
-            title = { Text("Empty Recycle Bin?", color = colors.textPrimary) },
+            title = { Text(stringResource(R.string.trash_confirm_empty_title), color = colors.textPrimary) },
             text = {
                 OverlaySystemBars()
-                Text("This will permanently delete all ${trashItems.size} items. This action cannot be undone.", color = colors.textSecondary)
+                Text(stringResource(R.string.trash_confirm_empty_message, trashItems.size), color = colors.textSecondary)
             },
             confirmButton = {
                 Button(
@@ -257,7 +259,7 @@ fun TrashBinSheet(
             },
             dismissButton = {
                 TextButton(onClick = { showEmptyConfirmDialog = false }) {
-                    Text("Cancel", color = colors.textSecondary)
+                    Text(stringResource(R.string.action_cancel), color = colors.textSecondary)
                 }
             }
         )
@@ -272,10 +274,10 @@ fun TrashBinSheet(
                 BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
                 AppRadius.modalShape
             ),
-            title = { Text("Delete Permanently?", color = colors.textPrimary) },
+            title = { Text(stringResource(R.string.trash_confirm_delete_title), color = colors.textPrimary) },
             text = {
                 OverlaySystemBars()
-                Text("Permanently delete ${selectedItems.size} items? This cannot be undone.", color = colors.textSecondary)
+                Text(stringResource(R.string.trash_confirm_delete_message, selectedItems.size), color = colors.textSecondary)
             },
             confirmButton = {
                 Button(
@@ -286,12 +288,12 @@ fun TrashBinSheet(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = colors.error)
                 ) {
-                    Text("Delete Forever")
+                    Text(stringResource(R.string.trash_delete_forever))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirmDialog = false }) {
-                    Text("Cancel", color = colors.textSecondary)
+                    Text(stringResource(R.string.action_cancel), color = colors.textSecondary)
                 }
             }
         )
@@ -373,7 +375,7 @@ private fun TrashItemCard(
             IconButton(onClick = onRestoreSingle) {
                 Icon(
                     imageVector = Icons.Outlined.Restore,
-                    contentDescription = "Restore",
+                    contentDescription = stringResource(R.string.cd_restore),
                     tint = colors.accent
                 )
             }

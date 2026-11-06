@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.files
 
+import com.abhisheksati.mydoc.R
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -54,6 +55,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
@@ -127,7 +129,7 @@ fun StorageOverviewCard(
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Internal storage",
+                    text = stringResource(R.string.files_title_internal),
                     style = MaterialTheme.typography.titleSmall,
                     color = scheme.onSurface,
                     modifier = Modifier.weight(1f)
@@ -176,13 +178,13 @@ fun StorageOverviewCard(
                 if (reclaimableBytes > 0 && onClean != null) {
                     TextButton(onClick = onClean, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)) {
                         Text(
-                            text = "Free ${StorageVolume.formatBytes(reclaimableBytes)}",
+                            text = stringResource(R.string.files_free, StorageVolume.formatBytes(reclaimableBytes)),
                             style = MaterialTheme.typography.labelLarge
                         )
                     }
                 } else {
                     TextButton(onClick = onInsights, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)) {
-                        Text("Insights", style = MaterialTheme.typography.labelLarge)
+                        Text(stringResource(R.string.files_insights), style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
@@ -230,7 +232,7 @@ fun CategoryTile(
             )
             Text(
                 text = when {
-                    stat == null -> "Scanning…"
+                    stat == null -> stringResource(R.string.files_scanning_short)
                     stat.fileCount == 0 -> "Empty"
                     else -> "${stat.fileCount} · ${stat.formattedSize}"
                 },
@@ -343,7 +345,7 @@ fun FileRow(
         if (isSelectionMode) {
             Icon(
                 imageVector = if (isSelected) Icons.Rounded.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
-                contentDescription = if (isSelected) "Selected" else "Not selected",
+                contentDescription = stringResource(if (isSelected) R.string.cd_selected else R.string.cd_not_selected),
                 tint = if (isSelected) scheme.primary else scheme.outline,
                 modifier = Modifier.size(22.dp)
             )
@@ -434,7 +436,7 @@ fun FileGridCell(
             if (isSelectionMode) {
                 Icon(
                     imageVector = if (isSelected) Icons.Rounded.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
-                    contentDescription = if (isSelected) "Selected" else "Not selected",
+                    contentDescription = stringResource(if (isSelected) R.string.cd_selected else R.string.cd_not_selected),
                     tint = if (isSelected) scheme.primary else scheme.onSurfaceVariant,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -584,7 +586,7 @@ fun FilesSelectionBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onClose) {
-            Icon(Icons.Outlined.Close, contentDescription = "Close selection", tint = scheme.onSurface)
+            Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.cd_close_selection), tint = scheme.onSurface)
         }
         Text(
             text = "$selectedCount selected",
@@ -594,7 +596,7 @@ fun FilesSelectionBar(
         )
         if (selectedCount < totalCount) {
             IconButton(onClick = onSelectAll) {
-                Icon(Icons.Outlined.SelectAll, contentDescription = "Select all", tint = scheme.onSurface)
+                Icon(Icons.Outlined.SelectAll, contentDescription = stringResource(R.string.cd_select_all), tint = scheme.onSurface)
             }
         }
         IconButton(onClick = onShare) {
@@ -602,7 +604,7 @@ fun FilesSelectionBar(
         }
         Box {
             IconButton(onClick = { isMenuOpen = true }) {
-                Icon(Icons.Outlined.MoreVert, contentDescription = "More actions", tint = scheme.onSurface)
+                Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.cd_more_actions), tint = scheme.onSurface)
             }
             AppDropdownMenu(expanded = isMenuOpen, onDismissRequest = { isMenuOpen = false }) {
                 DropdownMenuItem(
@@ -623,7 +625,7 @@ fun FilesSelectionBar(
                 )
                 if (onRename != null) {
                     DropdownMenuItem(
-                        text = { Text("Rename") },
+                        text = { Text(stringResource(R.string.action_rename)) },
                         leadingIcon = { Icon(Icons.Outlined.DriveFileRenameOutline, contentDescription = null) },
                         onClick = {
                             isMenuOpen = false
@@ -632,7 +634,7 @@ fun FilesSelectionBar(
                     )
                 }
                 DropdownMenuItem(
-                    text = { Text("Compress to ZIP") },
+                    text = { Text(stringResource(R.string.dialog_compress_zip)) },
                     leadingIcon = { Icon(Icons.Outlined.FolderZip, contentDescription = null) },
                     onClick = {
                         isMenuOpen = false
@@ -640,7 +642,7 @@ fun FilesSelectionBar(
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Move to Recycle Bin", color = scheme.error) },
+                    text = { Text(stringResource(R.string.photo_move_to_bin_title), color = scheme.error) },
                     leadingIcon = { Icon(Icons.Outlined.Delete, contentDescription = null, tint = scheme.error) },
                     onClick = {
                         isMenuOpen = false
