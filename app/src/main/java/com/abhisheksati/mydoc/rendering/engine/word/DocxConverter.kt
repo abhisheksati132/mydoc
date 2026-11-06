@@ -31,7 +31,12 @@ object DocxConverter {
 
         val cacheDir = File(context.cacheDir, "converted_docs").apply { mkdirs() }
         val targetPdf = File(cacheDir, "docx_${DocumentIdentity.ofBytes(bytes)}_${bytes.size}.pdf")
-        if (targetPdf.isFile && targetPdf.length() > 0L) return OfficeConversion.Success(targetPdf)
+        if (targetPdf.isFile && targetPdf.length() > 0L) {
+            val noteFile = File(cacheDir, "${targetPdf.name}.note")
+            val cachedNote = runCatching { if (noteFile.isFile) noteFile.readText() else null }
+                .getOrNull()?.takeIf { it.isNotBlank() }
+            return OfficeConversion.Success(targetPdf, conversionNote = cachedNote)
+        }
 
         val blocks = try {
             DocxParser().parse(bytes.inputStream()).blocks
@@ -67,7 +72,18 @@ object DocxConverter {
                 staging.delete()
             }
             OutlineCache.saveOutlines(targetPdf, rendered.outlines)
-            OfficeConversion.Success(targetPdf)
+            val tableNote = if (rendered.droppedTableColumns > 0) {
+                "A table has more than 24 columns; ${rendered.droppedTableColumns} of them are not shown."
+            } else {
+                null
+            }
+            val noteFile = File(cacheDir, "${targetPdf.name}.note")
+            if (tableNote != null) {
+                runCatching { noteFile.writeText(tableNote) }
+            } else {
+                runCatching { noteFile.delete() }
+            }
+            OfficeConversion.Success(targetPdf, conversionNote = tableNote)
         } catch (t: Throwable) {
             SecureLog.warn(Tag, "could not write PDF for word document", t) { displayName }
             staging.delete()

@@ -14,7 +14,10 @@ sealed class OfficeConversion {
 
     val pdfFile: File? get() = (this as? Success)?.pdf
 
-    class Success(val pdf: File) : OfficeConversion()
+    /** Something the reader should know about a conversion that still produced a file. */
+    val note: String? get() = (this as? Success)?.conversionNote
+
+    class Success(val pdf: File, val conversionNote: String? = null) : OfficeConversion()
 
     class Failure(val failure: LoadFailure, val message: String) : OfficeConversion()
 }

@@ -3,6 +3,7 @@ package com.abhisheksati.mydoc.ui.storage
 import android.app.Application
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.lifecycle.ViewModel
@@ -152,19 +153,23 @@ class StorageViewModel(
         val totalCapacity = volume.totalBytes
 
         // 1. MediaStore queries by category
-        val downloads = queryMediaCategoryStats(FileCategory.DOWNLOADS)
-        val images = queryMediaCategoryStats(FileCategory.IMAGES)
-        val videos = queryMediaCategoryStats(FileCategory.VIDEOS)
-        val audio = queryMediaCategoryStats(FileCategory.AUDIO)
-        val documents = queryMediaCategoryStats(FileCategory.DOCUMENTS)
-        val apks = queryMediaCategoryStats(FileCategory.APKS)
-        val archives = queryMediaCategoryStats(FileCategory.ARCHIVES)
-        val largeFiles = queryMediaCategoryStats(FileCategory.LARGE_FILES)
+        // Categories are scoped to the selected volume: pairing an SD card's capacity with
+        // device-wide MediaStore totals made the breakdown describe two different disks.
+        val downloads = queryMediaCategoryStats(FileCategory.DOWNLOADS, volume)
+        val images = queryMediaCategoryStats(FileCategory.IMAGES, volume)
+        val videos = queryMediaCategoryStats(FileCategory.VIDEOS, volume)
+        val audio = queryMediaCategoryStats(FileCategory.AUDIO, volume)
+        val documents = queryMediaCategoryStats(FileCategory.DOCUMENTS, volume)
+        val apks = queryMediaCategoryStats(FileCategory.APKS, volume)
+        val archives = queryMediaCategoryStats(FileCategory.ARCHIVES, volume)
+        val largeFiles = queryMediaCategoryStats(FileCategory.LARGE_FILES, volume)
 
         // 2. Installed User Apps
         var appCount = 0
         var appBytes = 0L
-        try {
+        // Installed apps live in internal storage; on an SD card this category is empty rather
+        // than a copy of the phone's app footprint.
+        if (volume.isPrimary) try {
             val pm = context.packageManager
             val installedApps = pm.getInstalledApplications(0)
             for (app in installedApps) {
@@ -223,7 +228,11 @@ class StorageViewModel(
         )
     }
 
-    private fun queryMediaCategoryStats(category: FileCategory): CategoryCountAndSize {
+    private fun volumeNameFor(volume: StorageVolume): String =
+        if (volume.isPrimary) "external_primary"
+        else volume.path.trimEnd('/').substringAfterLast('/')
+
+    private fun queryMediaCategoryStats(category: FileCategory, volume: StorageVolume): CategoryCountAndSize {
         var totalBytes = 0L
         var count = 0
 
@@ -286,8 +295,8 @@ class StorageViewModel(
                 Pair(sel, null)
             }
             FileCategory.DOWNLOADS -> {
-                val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                if (downloadDir != null && downloadDir.exists() && downloadDir.isDirectory) {
+                val downloadDir = File(volume.file, Environment.DIRECTORY_DOWNLOADS)
+                if (downloadDir.isDirectory) {
                     val files = downloadDir.listFiles()?.filter { it.isFile } ?: emptyList()
                     return CategoryCountAndSize(bytes = files.sumOf { it.length() }, count = files.size)
                 }
@@ -298,7 +307,19 @@ class StorageViewModel(
         try {
             val uri = MediaStore.Files.getContentUri("external")
             val projection = arrayOf(MediaStore.Files.FileColumns.SIZE)
-            context.contentResolver.query(uri, projection, selection, null, null)?.use { cursor ->
+            // VOLUME_NAME is API 29+; on older releases the query stays unscoped rather than
+            // silently filtering everything out.
+            val scoped = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                "($selection) AND ${MediaStore.MediaColumns.VOLUME_NAME} = ?"
+            } else {
+                selection
+            }
+            val scopeArgs = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                arrayOf(volumeNameFor(volume))
+            } else {
+                null
+            }
+            context.contentResolver.query(uri, projection, scoped, scopeArgs, null)?.use { cursor ->
                 val sizeIndex = cursor.getColumnIndex(MediaStore.Files.FileColumns.SIZE)
                 while (cursor.moveToNext()) {
                     if (sizeIndex != -1) {

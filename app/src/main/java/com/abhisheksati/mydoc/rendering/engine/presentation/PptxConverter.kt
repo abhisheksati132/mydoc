@@ -38,7 +38,12 @@ object PptxConverter {
         val targetPdf = File(cacheDir, "pptx_${DocumentIdentity.ofBytes(bytes)}_${bytes.size}.pdf")
 
         if (targetPdf.isFile && targetPdf.length() > 0L) {
-            return OfficeConversion.Success(targetPdf)
+            // The disclosure travels with the cached PDF: a deck converted once as partial must
+            // still say so the next time it is opened.
+            val noteFile = File(cacheDir, "${targetPdf.name}.note")
+            val cachedNote = runCatching { if (noteFile.isFile) noteFile.readText() else null }
+                .getOrNull()?.takeIf { it.isNotBlank() }
+            return OfficeConversion.Success(targetPdf, conversionNote = cachedNote)
         }
 
         // Apply orphan placeholder recovery to resolve cut-off titles and missing master styles
@@ -81,7 +86,19 @@ object PptxConverter {
             }
             slideOutlinesMap[targetPdf.absolutePath] = renderResult.outlines
             OutlineCache.saveOutlines(targetPdf, renderResult.outlines)
-            OfficeConversion.Success(targetPdf)
+            val truncationNote = if (renderResult.droppedSlides > 0) {
+                "Only the first ${renderResult.outlines.size} slides were converted. " +
+                    "${renderResult.droppedSlides} more are not shown."
+            } else {
+                null
+            }
+            val noteFile = File(cacheDir, "${targetPdf.name}.note")
+            if (truncationNote != null) {
+                runCatching { noteFile.writeText(truncationNote) }
+            } else {
+                runCatching { noteFile.delete() }
+            }
+            OfficeConversion.Success(targetPdf, conversionNote = truncationNote)
         } catch (t: Throwable) {
             SecureLog.warn("PptxConvert", "could not write PDF for presentation", t) { displayName }
             staging.delete()

@@ -69,6 +69,13 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   new file was written beside an existing one, and checking the original name left it out of the
   rollback list.
 
+- **A partial conversion says what it left out.** A deck past the 500-slide layout cap and a Word
+  table past 24 columns now produce a note in the reader's fidelity strip instead of arriving as a
+  complete-looking document; the note is cached beside the PDF so it survives a reopen.
+- **The storage breakdown describes the volume it belongs to.** Category totals are scoped to the
+  selected volume's `VOLUME_NAME`, the app footprint is only counted on internal storage, and the
+  cleaner names the root it will scan.
+
 ## [1.7.5] — 2026-11-06
 
 ### Fixed

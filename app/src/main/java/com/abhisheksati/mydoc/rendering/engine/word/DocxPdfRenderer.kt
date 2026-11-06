@@ -49,13 +49,16 @@ internal object DocxPdfRenderer {
         if (blocks.isEmpty()) return null
         val writer = PageWriter(readSection(docxBytes))
         val outlines = writer.write(blocks)
-        return writer.finish()?.let { DocxRenderResult(it, outlines) }
+        return writer.finish()?.let { DocxRenderResult(it, outlines, writer.droppedTableColumns) }
     }
 
     private class PageWriter(private val section: Section) {
 
         private val doc = PdfDocument()
         private val outlines = mutableListOf<OutlineItem>()
+
+        /** Columns beyond the readable grid, counted so the viewer can say the table was cut. */
+        var droppedTableColumns = 0
         private val paints = HashMap<Long, TextPaint>()
         private var canvas: Canvas? = null
         private var currentPage: PdfDocument.Page? = null
@@ -129,7 +132,9 @@ internal object DocxPdfRenderer {
         }
 
         private fun table(rows: List<List<DocxCell>>) {
-            val columns = rows.maxOf { it.size }.coerceIn(1, 24)
+            val widest = rows.maxOf { it.size }
+            if (widest > 24) droppedTableColumns += widest - 24
+            val columns = widest.coerceIn(1, 24)
             val cell = paint(TableSize, false, false, false)
             val step = TableSize * Leading
             val grid = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -157,23 +162,61 @@ internal object DocxPdfRenderer {
                     wrap(listOf(DocxRun(row.getOrNull(c)?.text ?: "")), TableSize, widths[c] - 2f * CellPad, forceBold = rowIndex == 0)
                 }
                 val rowHeight = max(step * lines.maxOf { it.size } + 2 * CellPad, step + 2 * CellPad)
-                ensureRoom(rowHeight)
-                val surface = canvas ?: return
-                val top = y
-                if (rowIndex == 0) {
-                    surface.drawRect(section.left, top, section.left + section.contentWidth, top + rowHeight, headerFill)
-                }
-                var x = section.left
-                for (c in 0 until columns) {
-                    var lineY = top + CellPad
-                    for (line in lines[c]) {
-                        drawLine(line, x + CellPad, lineY + line.maxOf { -it.paint.fontMetrics.ascent })
-                        lineY += step
+                val pageHeight = section.height - section.bottom - section.top
+                if (rowHeight <= pageHeight) {
+                    ensureRoom(rowHeight)
+                    val surface = canvas ?: return
+                    val top = y
+                    if (rowIndex == 0) {
+                        surface.drawRect(section.left, top, section.left + section.contentWidth, top + rowHeight, headerFill)
                     }
-                    surface.drawRect(x, top, x + widths[c], top + rowHeight, grid)
-                    x += widths[c]
+                    var x = section.left
+                    for (c in 0 until columns) {
+                        var lineY = top + CellPad
+                        for (line in lines[c]) {
+                            drawLine(line, x + CellPad, lineY + line.maxOf { -it.paint.fontMetrics.ascent })
+                            lineY += step
+                        }
+                        surface.drawRect(x, top, x + widths[c], top + rowHeight, grid)
+                        x += widths[c]
+                    }
+                    y = top + rowHeight
+                } else {
+                    // Taller than a page: draw the cell text in slices, continuing the same row on
+                    // the next page instead of letting it run off the bottom edge unread.
+                    val tallest = lines.maxOf { it.size }
+                    var lineOffset = 0
+                    // A wide table starting near the foot of a page would otherwise be sliced into
+                    // slivers; begin it on a page with room for at least half a page of it.
+                    if (canvas == null || (section.height - section.bottom - y) < pageHeight * 0.5f) startPage()
+                    while (lineOffset < tallest) {
+                        if (canvas == null) startPage()
+                        val available = (section.height - section.bottom - y).coerceAtLeast(step + 2 * CellPad)
+                        val fitting = ((available - 2 * CellPad) / step).toInt().coerceAtLeast(1)
+                        val count = minOf(fitting, tallest - lineOffset)
+                        val sliceHeight = step * count + 2 * CellPad
+                        val surface = canvas ?: return
+                        val top = y
+                        if (rowIndex == 0 && lineOffset == 0) {
+                            surface.drawRect(section.left, top, section.left + section.contentWidth, top + sliceHeight, headerFill)
+                        }
+                        var x = section.left
+                        for (c in 0 until columns) {
+                            var lineY = top + CellPad
+                            val end = minOf(lineOffset + count, lines[c].size)
+                            for (i in lineOffset until end) {
+                                val line = lines[c][i]
+                                drawLine(line, x + CellPad, lineY + line.maxOf { -it.paint.fontMetrics.ascent })
+                                lineY += step
+                            }
+                            surface.drawRect(x, top, x + widths[c], top + sliceHeight, grid)
+                            x += widths[c]
+                        }
+                        y = top + sliceHeight
+                        lineOffset += count
+                        if (lineOffset < tallest) startPage()
+                    }
                 }
-                y = top + rowHeight
             }
             y += ParagraphGap
         }
@@ -399,5 +442,7 @@ internal object DocxPdfRenderer {
 
 data class DocxRenderResult(
     val doc: PdfDocument,
-    val outlines: List<OutlineItem>
+    val outlines: List<OutlineItem>,
+    /** Table columns past the readable limit, so a cut table is not presented as complete. */
+    val droppedTableColumns: Int = 0
 )

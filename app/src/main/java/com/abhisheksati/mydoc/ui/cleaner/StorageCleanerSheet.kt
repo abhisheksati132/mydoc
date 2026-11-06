@@ -58,6 +58,13 @@ fun StorageCleanerSheet(
     val coroutineScope = rememberCoroutineScope()
     val cleanerManager = remember { StorageCleanerManager() }
     val app = LocalContext.current.applicationContext as MyDocApp
+    // The sheet only ever scans one root; naming it stops the reader assuming it covers a card
+    // they have mounted.
+    val rootLabel = if (rootDir.absolutePath == android.os.Environment.getExternalStorageDirectory().absolutePath) {
+        "internal storage"
+    } else {
+        rootDir.name.ifBlank { rootDir.absolutePath }
+    }
 
     var isScanning by remember { mutableStateOf(true) }
     var scannedCount by remember { mutableIntStateOf(0) }
@@ -166,7 +173,7 @@ fun StorageCleanerSheet(
                             color = colors.textPrimary
                         )
                         Text(
-                            text = "Reclaim wasted space & remove junk",
+                            text = "Reclaim wasted space in $rootLabel",
                             style = typography.caption,
                             color = colors.textSecondary
                         )

@@ -69,8 +69,8 @@ fun BoxScope.PdfViewerControlsOverlay(
 
     // Silence for a real PDF; for an Office file laid out by our converter this says what did not
     // survive the conversion.
-    val fidelityDisclosure = remember(document.extension) {
-        fidelityDisclosureFor(document.extension)
+    val fidelityDisclosure = remember(document.extension, state.conversionNotes) {
+        fidelityDisclosureFor(document.extension, extraNotes = state.conversionNotes)
     }
     if (fidelityDisclosure != null && state.areControlsVisible && !state.isSearchOpen) {
         FidelityNotice(

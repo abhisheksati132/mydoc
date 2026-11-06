@@ -41,7 +41,9 @@ internal object PptxRenderer {
 
     data class PptxRenderResult(
         val doc: PdfDocument,
-        val outlines: List<com.abhisheksati.mydoc.rendering.engine.OutlineItem>
+        val outlines: List<com.abhisheksati.mydoc.rendering.engine.OutlineItem>,
+        /** Slides past [MaxSlides] that were not laid out, so the reader is not told a partial deck is whole. */
+        val droppedSlides: Int = 0
     )
 
     /**
@@ -74,7 +76,7 @@ internal object PptxRenderer {
             doc.finishPage(page)
             pageNumber++
         }
-        return PptxRenderResult(doc, outlines)
+        return PptxRenderResult(doc, outlines, (slides.size - MaxSlides).coerceAtLeast(0))
     }
 
     // ── Package ─────────────────────────────────────────────────────────────────

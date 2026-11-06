@@ -55,7 +55,9 @@ data class ViewerUiState(
     val errorMessage: String? = null,
     /** Why loading stopped, when we know. Drives the specific message instead of one generic one. */
     val failure: com.abhisheksati.mydoc.domain.model.LoadFailure? = null,
-    val needsReflowFallback: Boolean = false
+    val needsReflowFallback: Boolean = false,
+    /** Conversion gaps worth telling the reader about (e.g. slides past the layout limit). */
+    val conversionNotes: List<String> = emptyList()
 )
 
 class ViewerViewModel(
@@ -131,7 +133,8 @@ class ViewerViewModel(
                     needsReflowFallback = false,
                     // Password prompts belong to the document that raised them.
                     isPasswordRequired = false,
-                    isPasswordIncorrect = false
+                    isPasswordIncorrect = false,
+                    conversionNotes = emptyList()
                 )
             }
 
@@ -193,6 +196,10 @@ class ViewerViewModel(
                             )
                         }
                         return@withContext
+                    }
+
+                    conversion?.note?.let { note ->
+                        _uiState.update { it.copy(conversionNotes = listOf(note)) }
                     }
 
                     if (convertedPdfFile == null && converter != com.abhisheksati.mydoc.domain.model.ConverterKind.NONE) {
