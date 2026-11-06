@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.pdf
 
+import com.abhisheksati.mydoc.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -20,6 +21,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.domain.model.ReadingMode
@@ -59,7 +61,7 @@ fun PdfFloatingContextualBar(
             ) {
                 FloatingPillItem(
                     icon = Icons.Outlined.ContentCopy,
-                    label = if (activeSelectionText != null) "Copy" else "Copy page",
+                    label = stringResource(if (activeSelectionText != null) R.string.ctx_copy else R.string.ctx_copy_page),
                     onClick = onCopy
                 )
                 FloatingPillItem(
@@ -69,7 +71,7 @@ fun PdfFloatingContextualBar(
                 )
                 FloatingPillItem(
                     icon = Icons.Outlined.TextFields,
-                    label = "Search",
+                    label = stringResource(R.string.ctx_search),
                     onClick = onSearch
                 )
                 FloatingPillItem(
@@ -80,7 +82,7 @@ fun PdfFloatingContextualBar(
                 IconButton(onClick = onClose) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
-                        contentDescription = "Close actions",
+                        contentDescription = stringResource(R.string.cd_close_actions),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer
 
+import com.abhisheksati.mydoc.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
@@ -76,12 +78,13 @@ fun fidelityDisclosureFor(
     fidelityDisclosure(DocumentFormats.forExtension(extension), observedFidelity, extraNotes)
 
 /** Short name of a fidelity level, for the metadata rows in Document details. */
+@Composable
 fun RenderFidelity.label(): String = when (this) {
-    RenderFidelity.FIXED_LAYOUT -> "Full layout"
-    RenderFidelity.STRUCTURED_REFLOW -> "Re-laid out"
-    RenderFidelity.TEXT_ONLY -> "Text only"
-    RenderFidelity.RECOVERED_SCRAPE -> "Recovered text"
-    RenderFidelity.NONE -> "Not rendered"
+    RenderFidelity.FIXED_LAYOUT -> stringResource(R.string.fidelity_full_layout)
+    RenderFidelity.STRUCTURED_REFLOW -> stringResource(R.string.fidelity_relaid)
+    RenderFidelity.TEXT_ONLY -> stringResource(R.string.fidelity_text_only)
+    RenderFidelity.RECOVERED_SCRAPE -> stringResource(R.string.fidelity_recovered)
+    RenderFidelity.NONE -> stringResource(R.string.fidelity_not_rendered)
 }
 
 /**

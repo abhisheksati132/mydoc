@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.presentation
 
+import com.abhisheksati.mydoc.R
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
@@ -46,7 +48,7 @@ fun PresentationEmptyRecoveryCard(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Can't render this deck",
+                text = stringResource(R.string.deck_fail_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center
@@ -55,7 +57,7 @@ fun PresentationEmptyRecoveryCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "This presentation uses proprietary slides or formatting that could not be parsed. Open it in another presentation app for full fidelity.",
+                text = stringResource(R.string.deck_fail_message),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -70,7 +72,7 @@ fun PresentationEmptyRecoveryCard(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.size(8.dp))
-                Text("Open in another app")
+                Text(stringResource(R.string.deck_open_other))
             }
         }
     }

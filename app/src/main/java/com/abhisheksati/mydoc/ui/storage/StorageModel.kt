@@ -1,5 +1,7 @@
 package com.abhisheksati.mydoc.ui.storage
 
+import com.abhisheksati.mydoc.R
+import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Apps
@@ -16,20 +18,22 @@ import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.StorageVolume
 
 enum class StorageCategoryType(
-    val title: String,
+    // A resource id, not a string: this enum is a model, so the label has to be resolved where a
+    // configuration is available.
+    @StringRes val titleRes: Int,
     val icon: ImageVector,
     val fileCategory: FileCategory?
 ) {
-    DOWNLOADS("Downloads", Icons.Outlined.Download, FileCategory.DOWNLOADS),
-    IMAGES("Images", Icons.Outlined.Image, FileCategory.IMAGES),
-    VIDEOS("Videos", Icons.Outlined.Videocam, FileCategory.VIDEOS),
-    AUDIO("Audio", Icons.Outlined.AudioFile, FileCategory.AUDIO),
-    DOCUMENTS("Documents", Icons.Outlined.Description, FileCategory.DOCUMENTS),
-    APKS("APKs", Icons.Outlined.Android, FileCategory.APKS),
-    ARCHIVES("Archives", Icons.Outlined.FolderZip, FileCategory.ARCHIVES),
-    APPS("Apps & Data", Icons.Outlined.Apps, null),
-    LARGE_FILES("Large Files (>50MB)", Icons.Outlined.DataUsage, FileCategory.LARGE_FILES),
-    SYSTEM_OTHER("System & Other", Icons.Outlined.SettingsSuggest, null)
+    DOWNLOADS(R.string.cat_downloads, Icons.Outlined.Download, FileCategory.DOWNLOADS),
+    IMAGES(R.string.cat_images, Icons.Outlined.Image, FileCategory.IMAGES),
+    VIDEOS(R.string.cat_videos, Icons.Outlined.Videocam, FileCategory.VIDEOS),
+    AUDIO(R.string.cat_audio, Icons.Outlined.AudioFile, FileCategory.AUDIO),
+    DOCUMENTS(R.string.cat_documents, Icons.Outlined.Description, FileCategory.DOCUMENTS),
+    APKS(R.string.cat_apks, Icons.Outlined.Android, FileCategory.APKS),
+    ARCHIVES(R.string.cat_archives, Icons.Outlined.FolderZip, FileCategory.ARCHIVES),
+    APPS(R.string.cat_apps, Icons.Outlined.Apps, null),
+    LARGE_FILES(R.string.cat_large_files, Icons.Outlined.DataUsage, FileCategory.LARGE_FILES),
+    SYSTEM_OTHER(R.string.cat_system_other, Icons.Outlined.SettingsSuggest, null)
 }
 
 data class StorageCategoryStat(

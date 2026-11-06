@@ -224,7 +224,7 @@ fun CategoryTile(
             }
             Spacer(Modifier.height(10.dp))
             Text(
-                text = type.title,
+                text = stringResource(type.titleRes),
                 style = MaterialTheme.typography.bodyMedium,
                 color = scheme.onSurface,
                 maxLines = 1,

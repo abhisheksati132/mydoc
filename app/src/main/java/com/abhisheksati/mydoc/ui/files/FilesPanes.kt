@@ -363,7 +363,7 @@ private fun StorageBreakdown(
                     )
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        text = stat.type.title,
+                        text = stringResource(stat.type.titleRes),
                         style = MaterialTheme.typography.bodyMedium,
                         color = scheme.onSurface,
                         modifier = Modifier.weight(1f)
