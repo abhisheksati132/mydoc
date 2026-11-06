@@ -40,6 +40,7 @@ import androidx.compose.material.icons.outlined.SdCard
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppDropdownMenu
 import com.abhisheksati.mydoc.designsystem.components.BrowseSkeleton
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -60,6 +61,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -131,7 +133,7 @@ fun RecentFileRow(
         IconButton(onClick = onMoreClick, modifier = Modifier.size(48.dp)) {
             Icon(
                 imageVector = Icons.Outlined.MoreVert,
-                contentDescription = "Details",
+                contentDescription = stringResource(R.string.cd_details),
                 tint = scheme.onSurfaceVariant
             )
         }
@@ -221,7 +223,7 @@ fun BrowseHomePane(
         }
 
         item(key = "browse_categories_header") {
-            FilesSectionHeader(title = "Categories")
+            FilesSectionHeader(title = stringResource(R.string.section_categories))
         }
         item(key = "browse_categories") {
             CategoryShortcutGrid(
@@ -234,7 +236,7 @@ fun BrowseHomePane(
         val secondaryVolumes = volumes.filterNot { it.isPrimary }
         if (secondaryVolumes.isNotEmpty()) {
             item(key = "browse_secondary_volumes_header") {
-                FilesSectionHeader(title = "External Storage")
+                FilesSectionHeader(title = stringResource(R.string.section_external_storage))
             }
             items(
                 items = secondaryVolumes,
@@ -252,7 +254,7 @@ fun BrowseHomePane(
 
         if (pinnedFolders.isNotEmpty()) {
             item(key = "browse_pinned_header") {
-                FilesSectionHeader(title = "Pinned")
+                FilesSectionHeader(title = stringResource(R.string.section_pinned))
             }
             items(pinnedFolders, key = { "pin_${it.absolutePath}" }) { folder ->
                 LocationRow(
@@ -266,7 +268,7 @@ fun BrowseHomePane(
         }
 
         item(key = "browse_trash_header") {
-            FilesSectionHeader(title = "Utilities")
+            FilesSectionHeader(title = stringResource(R.string.section_utilities))
         }
         item(key = "browse_apps") {
             LocationRow(
@@ -274,7 +276,7 @@ fun BrowseHomePane(
                 meta = if (storageUiState.userAppCount > 0) {
                     "${storageUiState.userAppCount} installed · ${StorageVolume.formatBytes(storageUiState.userAppBytes)}"
                 } else {
-                    "Installed apps and data"
+                    stringResource(R.string.apps_subtitle)
                 },
                 icon = Icons.Outlined.Storage,
                 onClick = onApps,
@@ -283,15 +285,15 @@ fun BrowseHomePane(
         }
         item(key = "browse_trash") {
             LocationRow(
-                title = "Recycle Bin",
-                meta = if (trashCount > 0) "$trashCount items kept for 30 days" else "Empty",
+                title = stringResource(R.string.menu_recycle_bin),
+                meta = if (trashCount > 0) stringResource(R.string.trash_meta_count, trashCount) else stringResource(R.string.trash_meta_empty),
                 icon = Icons.Outlined.DeleteSweep,
                 onClick = onOpenTrash,
                 modifier = Modifier.padding(horizontal = 10.dp)
             )
             if (trashCount == 0) {
                 Text(
-                    text = "Deleted files stay here for 30 days before they are removed.",
+                    text = stringResource(R.string.trash_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = scheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
@@ -345,7 +347,7 @@ private fun StorageBreakdown(
     ) {
         if (entries.isEmpty()) {
             Text(
-                text = "Scanning storage…",
+                text = stringResource(R.string.scanning_storage),
                 style = MaterialTheme.typography.bodyMedium,
                 color = scheme.onSurfaceVariant
             )
@@ -438,7 +440,7 @@ fun DirectoryPane(
             ) {
                 Icon(
                     imageVector = if (uiState.isGridView) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
-                    contentDescription = if (uiState.isGridView) "List view" else "Grid view",
+                    contentDescription = stringResource(if (uiState.isGridView) R.string.menu_list_view else R.string.menu_grid_view),
                     tint = scheme.onSurfaceVariant
                 )
             }
@@ -515,13 +517,19 @@ fun DirectoryPane(
         if (displayedItems.isEmpty()) {
             FilesEmptyState(
                 icon = Icons.Outlined.FolderOpen,
-                title = if (uiState.searchQuery.isNotEmpty()) "No matches" else if (isDocumentsCategory && selectedDocFilter != DocumentTypeFilter.ALL) "No ${selectedDocFilter.label} documents" else "This folder is empty",
-                message = if (uiState.searchQuery.isNotEmpty()) {
-                    "Try a different search term."
+                title = if (uiState.searchQuery.isNotEmpty()) {
+                    stringResource(R.string.empty_no_matches)
                 } else if (isDocumentsCategory && selectedDocFilter != DocumentTypeFilter.ALL) {
-                    "No ${selectedDocFilter.label} files found in your documents."
+                    stringResource(R.string.empty_no_documents, selectedDocFilter.label)
                 } else {
-                    "Create a folder or add files using the button below."
+                    stringResource(R.string.empty_folder)
+                },
+                message = if (uiState.searchQuery.isNotEmpty()) {
+                    stringResource(R.string.empty_try_search)
+                } else if (isDocumentsCategory && selectedDocFilter != DocumentTypeFilter.ALL) {
+                    stringResource(R.string.empty_no_files_in_documents, selectedDocFilter.label)
+                } else {
+                    stringResource(R.string.empty_create_hint)
                 }
             )
         } else if (uiState.isGridView) {
@@ -575,11 +583,12 @@ fun DirectoryPane(
     }
 }
 
+@Composable
 private fun sortLabel(field: FileSortField): String = when (field) {
-    FileSortField.NAME -> "Name"
-    FileSortField.DATE -> "Date modified"
-    FileSortField.SIZE -> "Size"
-    FileSortField.TYPE -> "Type"
+    FileSortField.NAME -> stringResource(R.string.sort_name)
+    FileSortField.DATE -> stringResource(R.string.sort_date_modified)
+    FileSortField.SIZE -> stringResource(R.string.sort_size)
+    FileSortField.TYPE -> stringResource(R.string.sort_type)
 }
 
 
@@ -607,7 +616,7 @@ fun StorageInsightsSheet(
                 .padding(start = 24.dp, end = 24.dp, bottom = 28.dp)
         ) {
             Text(
-                text = "Storage insights",
+                text = stringResource(R.string.storage_insights),
                 style = MaterialTheme.typography.titleLarge,
                 color = scheme.onSurface
             )
@@ -616,7 +625,7 @@ fun StorageInsightsSheet(
                 text = if (storageUiState.formattedTotal.isNotEmpty()) {
                     "${storageUiState.formattedUsed} used of ${storageUiState.formattedTotal} · ${storageUiState.formattedFree} free"
                 } else {
-                    "Calculating storage…"
+                    stringResource(R.string.storage_calculating)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = scheme.onSurfaceVariant
@@ -642,7 +651,7 @@ fun StorageInsightsSheet(
                     onClick = onClean,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Free up ${StorageVolume.formatBytes(reclaimable)}")
+                    Text(stringResource(R.string.storage_free_up, StorageVolume.formatBytes(reclaimable)))
                 }
             }
         }
