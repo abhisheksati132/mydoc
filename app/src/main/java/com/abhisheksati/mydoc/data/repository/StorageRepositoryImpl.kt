@@ -755,7 +755,6 @@ class StorageRepositoryImpl(
                             createdDuringRun += parent
                         }
 
-                        val wasNew = !outFile.exists()
                         val targetFile = if (outFile.exists()) {
                             when (collisionStrategy) {
                                 ZipCollisionStrategy.SKIP -> {
@@ -769,6 +768,10 @@ class StorageRepositoryImpl(
                         } else {
                             outFile
                         }
+                        // Ownership is a property of the file actually written: under RENAME the
+                        // original outFile exists but the renamed target does not, so checking
+                        // outFile alone left that new file out of the rollback list.
+                        val targetWasNew = !targetFile.exists()
 
                         val tempFile = File(parent, ".tmp_${stagingToken}_${targetFile.name}")
                         try {
@@ -793,7 +796,7 @@ class StorageRepositoryImpl(
                             // Only a file this run created is rolled back: under REPLACE the
                             // target already existed, so deleting it would take the user's own
                             // file as well as ours.
-                            if (wasNew) createdDuringRun += targetFile
+                            if (targetWasNew) createdDuringRun += targetFile
                         } catch (e: Exception) {
                             tempFile.delete()
                             throw e

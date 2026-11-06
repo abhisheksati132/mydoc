@@ -72,11 +72,12 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 
 private sealed class MdNode {
-    data class Heading(val level: Int, val raw: String, val originalIndex: Int) : MdNode()
-    data class Paragraph(val raw: String, val originalIndex: Int) : MdNode()
-    data class ListItem(val raw: String, val ordered: Boolean, val marker: String, val originalIndex: Int) : MdNode()
-    data class BlockQuote(val raw: String, val originalIndex: Int) : MdNode()
-    data class Rule(val originalIndex: Int) : MdNode()
+    abstract val originalIndex: Int
+    data class Heading(val level: Int, val raw: String, override val originalIndex: Int) : MdNode()
+    data class Paragraph(val raw: String, override val originalIndex: Int) : MdNode()
+    data class ListItem(val raw: String, val ordered: Boolean, val marker: String, override val originalIndex: Int) : MdNode()
+    data class BlockQuote(val raw: String, override val originalIndex: Int) : MdNode()
+    data class Rule(override val originalIndex: Int) : MdNode()
 }
 
 private val mdHeadingRegex = Regex("^(#{1,6})\\s+(.*)$")
@@ -288,6 +289,15 @@ fun TextViewerScreen(
         if (!isMarkdown) emptyList()
         else lines.mapIndexedNotNull { index, raw -> parseMarkdownLine(raw, index) }
     }
+    // Markdown drops blank lines, so a line number is not a list position. Search and the page
+    // scrubber work in line space; the LazyColumn works in node space.
+    val itemIndexForLine = remember(markdownNodes, isMarkdown) {
+        if (!isMarkdown) emptyMap()
+        else markdownNodes.mapIndexed { position, node -> node.originalIndex to position }.toMap()
+    }
+    fun itemIndexFor(lineIndex: Int): Int =
+        if (isMarkdown) itemIndexForLine[lineIndex] ?: 0 else lineIndex
+    val itemCount = if (isMarkdown) markdownNodes.size else lines.size
 
     // The read-aloud string is a second full copy of the document, so it is built only while the
     // reader has the speak bar open.
@@ -304,7 +314,7 @@ fun TextViewerScreen(
     fun moveToMatch(index: Int) {
         val target = matchingLineIndices.getOrNull(index) ?: return
         currentMatchIndex = index
-        coroutineScope.launch { listState.scrollToItem(target) }
+        coroutineScope.launch { listState.scrollToItem(itemIndexFor(target)) }
     }
 
     ViewerScaffold(
@@ -317,8 +327,8 @@ fun TextViewerScreen(
             supportsTts = true,
             supportsZoom = false
         ),
-        currentPage = if (lines.isNotEmpty()) visibleLineIndex else 0,
-        pageCount = lines.size.coerceAtLeast(1),
+        currentPage = if (itemCount > 0) visibleLineIndex.coerceIn(0, itemCount - 1) else 0,
+        pageCount = itemCount.coerceAtLeast(1),
         isControlsVisible = !isSearchOpen,
         onBackClick = onBackClick,
         onShareClick = onShareClick,
@@ -328,7 +338,7 @@ fun TextViewerScreen(
         fidelityNotes = if (truncated) listOf(TextBudget.noteFor(TextBudget.DEFAULT)) else emptyList(),
         onPageScrubbed = { page ->
             if (lines.isNotEmpty()) {
-                val target = page.coerceIn(0, lines.size - 1)
+                val target = page.coerceIn(0, (itemCount - 1).coerceAtLeast(0))
                 coroutineScope.launch {
                     listState.scrollToItem(target)
                 }

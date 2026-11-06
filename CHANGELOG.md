@@ -63,6 +63,11 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   page grid, and a bookmark tapped without a per-viewer handler now lights the icon.
 - **The page organizer renders a thumbnail whenever its tile is on screen.** It pre-rendered every
   page and kept only the last 35, so earlier tiles stayed blank for the rest of the session.
+- **Markdown search lands on the match it counted.** Markdown drops blank lines, so the search and
+  scrubber worked in line numbers while the list scrolled in item numbers; the two are mapped now.
+- **A renamed archive entry is rolled back with the rest.** Under the rename collision strategy the
+  new file was written beside an existing one, and checking the original name left it out of the
+  rollback list.
 
 ## [1.7.5] — 2026-11-06
 

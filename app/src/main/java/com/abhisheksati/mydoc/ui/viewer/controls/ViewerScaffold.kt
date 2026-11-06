@@ -278,7 +278,9 @@ fun ViewerScaffold(
             pageCount = pageCount,
             visible = isControlsVisible,
             isCondensed = isCondensed,
-            hasOutline = capabilities.supportsOutline && sheetItems.isNotEmpty(),
+            // Contents is only live when this viewer both has an outline and a handler for it;
+            // several viewers passed an empty lambda, so the enabled button did nothing.
+            hasOutline = capabilities.supportsOutline && sheetItems.isNotEmpty() && onOutlineClick != null,
             onOutlineClick = { onOutlineClick?.invoke() },
             onPagesClick = onPagesClick,
             onAppearanceClick = { isAppearanceSheetOpen = true },
