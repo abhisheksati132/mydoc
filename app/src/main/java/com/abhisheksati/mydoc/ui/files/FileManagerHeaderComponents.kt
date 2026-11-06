@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.files
 
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.util.UserMessages
 import android.content.Context
 import android.content.Intent
@@ -20,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import java.io.File
@@ -47,12 +49,12 @@ fun StoragePermissionBanner(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "Storage access required",
+                    text = stringResource(R.string.perm_required_title),
                     style = MaterialTheme.typography.titleSmall
                 )
             }
             Text(
-                text = "Grant All Files Access to browse and manage files across internal storage and SD cards.",
+                text = stringResource(R.string.perm_required_message),
                 style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 6.dp)
@@ -61,7 +63,7 @@ fun StoragePermissionBanner(
                 onClick = onRequestPermission,
                 modifier = Modifier.padding(top = 12.dp)
             ) {
-                Text("Grant access")
+                Text(stringResource(R.string.action_grant_access))
             }
         }
     }
@@ -100,8 +102,8 @@ fun shareFiles(context: Context, files: List<File>) {
             }
         }
 
-        context.startActivity(Intent.createChooser(intent, "Share via"))
+        context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_via)))
     } catch (e: Exception) {
-        context.showMessage("This file could not be shared.")
+        context.showMessage(context.getString(R.string.file_share_failed))
     }
 }

@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
+import com.abhisheksati.mydoc.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -31,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
@@ -84,7 +86,7 @@ fun SearchOverlay(
                         onValueChange = onQueryChanged,
                         placeholder = {
                             Text(
-                                "Find in document…",
+                                stringResource(R.string.find_in_document),
                                 style = AppTheme.typography.body,
                                 color = colors.inkMuted
                             )
@@ -130,7 +132,7 @@ fun SearchOverlay(
                     IconButton(onClick = onPreviousMatch, enabled = matchCount > 0) {
                         Icon(
                             imageVector = Icons.Outlined.KeyboardArrowUp,
-                            contentDescription = "Previous match",
+                            contentDescription = stringResource(R.string.cd_prev_match),
                             tint = if (matchCount > 0) colors.inkPrimary else colors.inkMuted.copy(alpha = 0.38f)
                         )
                     }
@@ -138,7 +140,7 @@ fun SearchOverlay(
                     IconButton(onClick = onNextMatch, enabled = matchCount > 0) {
                         Icon(
                             imageVector = Icons.Outlined.KeyboardArrowDown,
-                            contentDescription = "Next match",
+                            contentDescription = stringResource(R.string.cd_next_match),
                             tint = if (matchCount > 0) colors.inkPrimary else colors.inkMuted.copy(alpha = 0.38f)
                         )
                     }
@@ -146,7 +148,7 @@ fun SearchOverlay(
                     IconButton(onClick = onCloseSearch) {
                         Icon(
                             imageVector = Icons.Outlined.Close,
-                            contentDescription = "Close search",
+                            contentDescription = stringResource(R.string.cd_close_search),
                             tint = colors.inkPrimary
                         )
                     }

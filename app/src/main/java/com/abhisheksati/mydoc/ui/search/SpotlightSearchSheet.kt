@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.search
 
+import com.abhisheksati.mydoc.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -38,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -129,7 +131,7 @@ fun SpotlightSearchSheet(
                         Box(modifier = Modifier.weight(1f)) {
                             if (query.isEmpty()) {
                                 Text(
-                                    text = "Search documents, notes, media…",
+                                    text = stringResource(R.string.search_placeholder),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = scheme.onSurfaceVariant
                                 )
@@ -189,7 +191,7 @@ fun SpotlightSearchSheet(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = if (query.isEmpty()) "All documents" else "Results",
+                text = stringResource(if (query.isEmpty()) R.string.search_all_documents else R.string.search_results),
                 style = MaterialTheme.typography.titleSmall,
                 color = scheme.onSurface
             )
@@ -202,11 +204,14 @@ fun SpotlightSearchSheet(
 
         if (filteredItems.isEmpty()) {
             AppEmptyState(
-                title = if (query.isEmpty()) "No documents found" else "No matches for \"$query\"",
+                title = stringResource(
+                        if (query.isEmpty()) R.string.search_no_docs
+                        else R.string.search_no_matches, query
+                    ),
                 message = if (query.isEmpty()) {
-                    "Documents in your storage will appear here"
+                    stringResource(R.string.search_docs_hint)
                 } else {
-                    "Check for typos or try a different term"
+                    stringResource(R.string.search_typo_hint)
                 }
             )
         } else {

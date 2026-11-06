@@ -466,4 +466,20 @@
     <string name="dialog_extract_archive">Extract Archive</string>
     <string name="dialog_extract_message">Extract %1$s into a dedicated folder in the current directory?</string>
     <string name="action_extract">Extract</string>
+    <string name="search_placeholder">Search documents, notes, media…</string>
+    <string name="search_all_documents">All documents</string>
+    <string name="search_results">Results</string>
+    <string name="search_no_docs">No documents found</string>
+    <string name="search_no_matches">No matches for \"%1$s\"</string>
+    <string name="search_docs_hint">Documents in your storage will appear here</string>
+    <string name="search_typo_hint">Check for typos or try a different term</string>
+    <string name="perm_required_title">Storage access required</string>
+    <string name="perm_required_message">Grant All Files Access to browse and manage files across internal storage and SD cards.</string>
+    <string name="action_grant_access">Grant access</string>
+    <string name="share_via">Share via</string>
+    <string name="file_share_failed">This file could not be shared.</string>
+    <string name="find_in_document">Find in document…</string>
+    <string name="cd_prev_match">Previous match</string>
+    <string name="cd_next_match">Next match</string>
+    <string name="cd_close_search">Close search</string>
 </resources>
