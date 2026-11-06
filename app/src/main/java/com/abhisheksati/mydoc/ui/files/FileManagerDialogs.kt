@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
@@ -78,14 +80,14 @@ fun NewFolderDialog(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
             AppRadius.modalShape
         ),
-        title = { Text("New Folder", color = colors.textPrimary) },
+        title = { Text(stringResource(R.string.dialog_new_folder), color = colors.textPrimary) },
         text = {
             OverlaySystemBars()
             Column {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    placeholder = { Text("Folder name") },
+                    placeholder = { Text(stringResource(R.string.dialog_folder_name)) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = colors.textPrimary,
@@ -108,12 +110,12 @@ fun NewFolderDialog(
                 },
                 enabled = name.trim().isNotEmpty()
             ) {
-                Text("Create", color = if (name.trim().isNotEmpty()) colors.accent else colors.textSecondary)
+                Text(stringResource(R.string.action_create), color = if (name.trim().isNotEmpty()) colors.accent else colors.textSecondary)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = colors.textSecondary)
+                Text(stringResource(R.string.action_cancel), color = colors.textSecondary)
             }
         }
     )
@@ -137,14 +139,14 @@ fun NewFileDialog(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
             AppRadius.modalShape
         ),
-        title = { Text("New File", color = colors.textPrimary) },
+        title = { Text(stringResource(R.string.dialog_new_file), color = colors.textPrimary) },
         text = {
             OverlaySystemBars()
             Column {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    placeholder = { Text("File name (e.g. notes.txt)") },
+                    placeholder = { Text(stringResource(R.string.dialog_file_name_hint)) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = colors.textPrimary,
@@ -167,12 +169,12 @@ fun NewFileDialog(
                 },
                 enabled = name.trim().isNotEmpty()
             ) {
-                Text("Create", color = if (name.trim().isNotEmpty()) colors.accent else colors.textSecondary)
+                Text(stringResource(R.string.action_create), color = if (name.trim().isNotEmpty()) colors.accent else colors.textSecondary)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = colors.textSecondary)
+                Text(stringResource(R.string.action_cancel), color = colors.textSecondary)
             }
         }
     )
@@ -197,7 +199,7 @@ fun RenameDialog(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
             AppRadius.modalShape
         ),
-        title = { Text("Rename", color = colors.textPrimary) },
+        title = { Text(stringResource(R.string.action_rename), color = colors.textPrimary) },
         text = {
             OverlaySystemBars()
             Column {
@@ -226,12 +228,12 @@ fun RenameDialog(
                 },
                 enabled = name.trim().isNotEmpty() && name.trim() != file.name
             ) {
-                Text("Rename", color = if (name.trim().isNotEmpty()) colors.accent else colors.textSecondary)
+                Text(stringResource(R.string.action_rename), color = if (name.trim().isNotEmpty()) colors.accent else colors.textSecondary)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = colors.textSecondary)
+                Text(stringResource(R.string.action_cancel), color = colors.textSecondary)
             }
         }
     )
@@ -254,26 +256,26 @@ fun DeleteConfirmationDialog(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
             AppRadius.modalShape
         ),
-        title = { Text("Move to Bin", color = colors.textPrimary) },
+        title = { Text(stringResource(R.string.dialog_move_to_bin), color = colors.textPrimary) },
         text = {
             OverlaySystemBars()
             // The operation moves the selection to the Recycle Bin; calling it a permanent delete
             // told the reader the opposite of what would happen.
             val message = if (count == 1 && fileNamePreview != null) {
-                "Move \"$fileNamePreview\" to the Recycle Bin?"
+                stringResource(R.string.dialog_move_file_to_bin, fileNamePreview)
             } else {
-                "Move these $count items to the Recycle Bin?"
+                stringResource(R.string.dialog_move_items_to_bin, count)
             }
             Text(message, color = colors.textSecondary)
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Move to Bin", color = colors.error, style = AppTheme.typography.bodyStrong)
+                Text(stringResource(R.string.dialog_move_to_bin), color = colors.error, style = AppTheme.typography.bodyStrong)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = colors.textSecondary)
+                Text(stringResource(R.string.action_cancel), color = colors.textSecondary)
             }
         }
     )
@@ -317,7 +319,7 @@ fun FilePropertiesDialog(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (file.isDirectory) "Folder Details" else "File Details",
+                    text = if (file.isDirectory) stringResource(R.string.details_folder) else stringResource(R.string.details_file),
                     color = colors.textPrimary,
                     style = typography.titleSmall
                 )
@@ -339,7 +341,7 @@ fun FilePropertiesDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        PropertyItem(title = "Location", value = file.parent ?: "")
+                        PropertyItem(title = stringResource(R.string.details_location), value = file.parent ?: "")
                     }
                     IconButton(
                         onClick = { copyToClipboard("Path", file.absolutePath) },
@@ -347,7 +349,7 @@ fun FilePropertiesDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.ContentCopy,
-                            contentDescription = "Copy Path",
+                            contentDescription = stringResource(R.string.details_copy_path),
                             tint = colors.textSecondary,
                             modifier = Modifier.size(16.dp)
                         )
@@ -362,7 +364,7 @@ fun FilePropertiesDialog(
                 // Folder Contents
                 if (file.isDirectory) {
                     PropertyItem(
-                        title = "Contains",
+                        title = stringResource(R.string.details_contains),
                         value = "${properties.totalFilesCount} files, ${properties.totalFoldersCount} sub-folders"
                     )
                 }
@@ -374,12 +376,15 @@ fun FilePropertiesDialog(
                     DateFormat.MEDIUM,
                     LocalConfiguration.current.locales[0]
                 )
-                PropertyItem(title = "Last Modified", value = df.format(Date(file.lastModified())))
+                PropertyItem(title = stringResource(R.string.details_last_modified), value = df.format(Date(file.lastModified())))
 
                 // Permissions
-                val perm = (if (properties.isReadable) "Readable" else "Unreadable") +
-                        ", " + (if (properties.isWritable) "Writable" else "Read-only")
-                PropertyItem(title = "Permissions", value = perm)
+                val readable = stringResource(if (properties.isReadable) R.string.details_readable else R.string.details_unreadable)
+                val writable = stringResource(if (properties.isWritable) R.string.details_writable else R.string.details_read_only)
+                PropertyItem(
+                    title = stringResource(R.string.details_permissions),
+                    value = stringResource(R.string.details_permissions_value, readable, writable)
+                )
 
                 // Checksum
                 if (!checksum.isNullOrEmpty()) {
@@ -389,7 +394,7 @@ fun FilePropertiesDialog(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "SHA-256 Checksum",
+                                text = stringResource(R.string.details_checksum),
                                 style = typography.micro,
                                 color = colors.textSecondary
                             )
@@ -408,7 +413,7 @@ fun FilePropertiesDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.ContentCopy,
-                                contentDescription = "Copy Checksum",
+                                contentDescription = stringResource(R.string.details_copy_checksum),
                                 tint = colors.textSecondary,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -419,7 +424,7 @@ fun FilePropertiesDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close", color = colors.accent)
+                Text(stringResource(R.string.action_close), color = colors.accent)
             }
         }
     )
@@ -465,12 +470,12 @@ fun CompressDialog(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
             AppRadius.modalShape
         ),
-        title = { Text("Compress to ZIP", color = colors.textPrimary) },
+        title = { Text(stringResource(R.string.dialog_compress_zip), color = colors.textPrimary) },
         text = {
             OverlaySystemBars()
             Column {
                 Text(
-                    text = "Enter archive name:",
+                    text = stringResource(R.string.dialog_archive_name),
                     style = LocalAppTypography.current.caption,
                     color = colors.textSecondary,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -505,7 +510,7 @@ fun CompressDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = colors.textSecondary)
+                Text(stringResource(R.string.action_cancel), color = colors.textSecondary)
             }
         }
     )
@@ -544,7 +549,7 @@ fun ExtractConfirmDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = colors.textSecondary)
+                Text(stringResource(R.string.action_cancel), color = colors.textSecondary)
             }
         }
     )
