@@ -876,4 +876,22 @@
     <string name="transfers_details">Details</string>
     <string name="transfers_active">Transfer in progress</string>
     <string name="transfers_details_hint">Open Details to view progress or stop.</string>
+    <string name="compare_title">Compare folders</string>
+    <string name="compare_help">Compare two open folder tabs, including hidden files and subfolders. Read-only: no files are copied, changed or deleted. Matching folders are omitted from the counts.</string>
+    <string name="compare_need_tabs">Open two different folders in separate tabs, then return here.</string>
+    <string name="compare_left">Left folder</string>
+    <string name="compare_right">Right folder</string>
+    <string name="compare_choose">Choose a folder tab</string>
+    <string name="compare_start">Compare contents</string>
+    <string name="compare_running">Reading folder contents…</string>
+    <string name="compare_failed">Could not compare these folders. Check that both are accessible and different.</string>
+    <string name="compare_count">%1$s: %2$d</string>
+    <string name="compare_matching">Matching files</string>
+    <string name="compare_changed">Different contents or type</string>
+    <string name="compare_left_only">Only in left folder</string>
+    <string name="compare_right_only">Only in right folder</string>
+    <string name="compare_unknown">Unknown</string>
+    <string name="compare_incomplete">Partial comparison. Some entries were skipped, unreadable or changing, or the scan reached 5,000 entries per folder or 512 MiB of content reads. Unknown items are unverified.</string>
+    <string name="compare_differences_only">Hide matching files</string>
+    <string name="compare_no_rows">No items to show with this filter. Check the counts and any partial-comparison notice above.</string>
 </resources>

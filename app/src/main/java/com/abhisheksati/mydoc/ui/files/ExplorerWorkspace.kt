@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CompareArrows
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.SwapHoriz
@@ -66,6 +67,7 @@ fun FilesScreen(
     val focused by workspace.focused.collectAsState()
     val savedStates = rememberSaveableStateHolder()
     var showTransfers by remember { mutableStateOf(false) }
+    var comparisonFolders by remember { mutableStateOf<List<File>?>(null) }
     val transferHistory by viewModel.explorerClipboard.transfers.state.collectAsState()
     BoxWithConstraints(modifier.fillMaxSize()) {
         val wide = maxWidth >= 900.dp
@@ -89,6 +91,11 @@ fun FilesScreen(
                             }
                         }
                     }
+                    IconButton(onClick = {
+                        comparisonFolders = tabs.mapNotNull { tab ->
+                            tab.browser.uiState.value.takeIf { it.isBrowsingStorage && it.activeCategory == null }?.currentDirectory
+                        }
+                    }) { Icon(Icons.Outlined.CompareArrows, contentDescription = stringResource(R.string.compare_title)) }
                     IconButton(onClick = { showTransfers = true }) {
                         BadgedBox(badge = { if (transferHistory.any { it.running }) Badge { Text("1") } }) {
                             Icon(Icons.Outlined.SwapHoriz, contentDescription = stringResource(R.string.transfers_title))
@@ -124,6 +131,7 @@ fun FilesScreen(
             }
         }
     }
+    comparisonFolders?.let { folders -> ExplorerComparisonSheet(folders) { comparisonFolders = null } }
     if (showTransfers) ExplorerTransfersSheet(viewModel.explorerClipboard.transfers) { showTransfers = false }
 
 }

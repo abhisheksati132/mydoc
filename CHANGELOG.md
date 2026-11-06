@@ -3,6 +3,12 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [Unreleased]
+
+### Added
+
+- Read-only folder comparison across open tabs, with streamed content checks, missing-file detection, and explicit unknown results for incomplete scans.
+
 ## [1.9.0] — 2026-11-06
 
 ### Added
