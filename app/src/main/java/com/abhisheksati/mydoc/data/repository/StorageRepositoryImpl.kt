@@ -806,12 +806,14 @@ class StorageRepositoryImpl(
             }
             destinationDir
         }.onFailure { error ->
-            if (error is CancellationException) throw error
+            // Roll back first, then rethrow. Cancellation used to return before the rollback ran,
+            // leaving the entries already written behind with no result to say so.
             // An archive that failed halfway used to leave the earlier entries behind while the
             // UI reported failure; the folder looked half-extracted with nothing saying so.
             for (created in createdDuringRun.asReversed()) {
                 runCatching { if (created.isDirectory) created.deleteRecursively() else created.delete() }
             }
+            if (error is CancellationException) throw error
         }
     }
 
@@ -1254,6 +1256,12 @@ class StorageRepositoryImpl(
             }
             if (deletedIds.isNotEmpty()) {
                 trashDao?.deleteByIds(deletedIds)
+            }
+            // Items that could not be removed used to be folded into a success count, which the UI
+            // then announced as "Permanently deleted N items". A partial batch is reported as one.
+            val failed = items.size - deletedCount
+            if (failed > 0) {
+                throw PartialStorageOperationException(completed = deletedCount, failed = failed)
             }
             Result.success(deletedCount)
         } catch (e: Exception) {

@@ -83,18 +83,11 @@ class PptxParser {
             }
         }
 
-        // 4. Last resort for OLE2 containers whose record layer produced nothing structured.
-        // Gated on the CFBF signature: previously this ran on any file, so a corrupt or
-        // unsupported deck was byte-scraped into six-strings-per-slide slides and presented as
-        // a successfully parsed presentation.
-        if (isOle2) {
-            val fallbackPres = parseBinaryPpt(bytes)
-            if (fallbackPres.slides.isNotEmpty()) {
-                return@withContext fallbackPres.copy(recovered = true)
-            }
-        }
-
-        parseBinaryPptFallback(bytes)
+        // Nothing else is scraped. Bytes that are neither a ZIP (OOXML/ODP) nor a CFBF container
+        // used to be byte-scraped into invented "slides"; a reader is better served by an empty
+        // result than by content the file does not contain. A CFBF deck whose record layer yields
+        // nothing is still recovered, and marked as recovered, by the viewer.
+        return@withContext emptyPresentation()
     }
 
     /* =========================================================================

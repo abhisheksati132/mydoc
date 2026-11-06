@@ -214,11 +214,16 @@ class PptxParserTest {
     }
 
     @Test
-    fun `parse corrupted random bytes returns fallback presentation gracefully`() = runBlocking {
+    fun `random bytes do not become invented slides`() = runBlocking {
+        // Bytes that are neither a ZIP nor a CFBF container used to be byte-scraped into
+        // "slides". Nothing in this input is a presentation, so nothing may be shown as one.
         val randomCorruptBytes = ByteArray(1024) { (it * 37 % 255).toByte() }
         val pres = parser.parse(ByteArrayInputStream(randomCorruptBytes))
         assertNotNull(pres)
-        assertTrue(pres.slides.isNotEmpty())
+        assertTrue(
+            "arbitrary bytes must not be presented as slides",
+            pres.slides.isEmpty()
+        )
     }
 
 
