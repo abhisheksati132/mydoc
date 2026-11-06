@@ -31,6 +31,7 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.DropdownMenuItem
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppDropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -60,6 +61,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -117,6 +120,10 @@ fun FilesScreen(
     var renameTarget by remember { mutableStateOf<File?>(null) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showCompressDialog by remember { mutableStateOf(false) }
+    // Resources, not LocalContext: reading a string through the context is not
+    // configuration-aware, so a locale change would leave stale text in the snackbar.
+    val resources = LocalResources.current
+
     var actionTarget by remember { mutableStateOf<StorageItem?>(null) }
     var showCleaner by remember { mutableStateOf(false) }
     var showAppManager by remember { mutableStateOf(false) }
@@ -157,17 +164,21 @@ fun FilesScreen(
 
     val activeCategory = uiState.activeCategory
     val title = when {
-        !insideBrowse -> "Library"
+        !insideBrowse -> stringResource(R.string.files_title_library)
         activeCategory != null -> activeCategory.displayName
         atStorageRoot -> uiState.storageVolumes.firstOrNull {
             it.path == uiState.currentDirectory.absolutePath
-        }?.title ?: "Internal storage"
+        }?.title ?: stringResource(R.string.files_title_internal)
         else -> uiState.currentDirectory.name
     }
     val subtitle = when {
-        insideBrowse -> if (uiState.filteredItems.size == 1) "1 item" else "${uiState.filteredItems.size} items"
+        insideBrowse -> if (uiState.filteredItems.size == 1) {
+            stringResource(R.string.files_subtitle_one)
+        } else {
+            stringResource(R.string.files_subtitle_many, uiState.filteredItems.size)
+        }
         storageUiState.formattedTotal.isNotEmpty() -> "${storageUiState.formattedFree} free of ${storageUiState.formattedTotal}"
-        else -> "Storage & Folders"
+        else -> stringResource(R.string.files_title_storage_folders)
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -185,8 +196,8 @@ fun FilesScreen(
             val count = trashed.size
             snackbarHostState.currentSnackbarData?.dismiss()
             val result = snackbarHostState.showSnackbar(
-                message = if (count == 1) "Moved 1 item to Recycle Bin" else "Moved $count items to Recycle Bin",
-                actionLabel = "UNDO",
+                message = if (count == 1) resources.getString(R.string.files_moved_one) else resources.getString(R.string.files_moved_many, count),
+                actionLabel = resources.getString(R.string.action_undo),
                 duration = SnackbarDuration.Short
             )
             // Cleared only after the prompt is answered. Clearing it first changed this effect's
@@ -225,15 +236,15 @@ fun FilesScreen(
     val breadcrumbs: List<Pair<String, () -> Unit>> = when {
         !insideBrowse -> emptyList()
         activeCategory != null -> listOf(
-            "Files" to { viewModel.selectCategory(null) },
+            stringResource(R.string.files_crumb_files) to { viewModel.selectCategory(null) },
             activeCategory.displayName to {}
         )
         else -> uiState.breadcrumbTrail.mapIndexed { index, crumb ->
             val volume = uiState.storageVolumes.firstOrNull { it.path == crumb.absolutePath }
             val label = when {
                 volume != null -> volume.title
-                crumb.absolutePath == "/storage/emulated/0" -> "Internal storage"
-                index == 0 -> "Storage"
+                crumb.absolutePath == "/storage/emulated/0" -> stringResource(R.string.files_title_internal)
+                index == 0 -> stringResource(R.string.files_crumb_storage)
                 else -> crumb.name
             }
             label to { viewModel.navigateToCrumb(crumb) }
@@ -272,7 +283,7 @@ fun FilesScreen(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ) {
-                    Icon(Icons.Outlined.Add, contentDescription = "New folder")
+                    Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.action_new_folder))
                 }
             }
         },
@@ -333,7 +344,7 @@ fun FilesScreen(
                             OutlinedTextField(
                                 value = uiState.searchQuery,
                                 onValueChange = { viewModel.setSearchQuery(it) },
-                                placeholder = { Text("Search this folder") },
+                                placeholder = { Text(stringResource(R.string.files_search_this_folder)) },
                                 leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
                                 singleLine = true,
                                 shape = AppRadius.pillShape,
@@ -519,7 +530,7 @@ private fun FilesHeader(
             IconButton(onClick = onSearch) {
                 Icon(
                     imageVector = Icons.Outlined.Search,
-                    contentDescription = "Search",
+                    contentDescription = stringResource(R.string.cd_search),
                     tint = if (isSearchActive) scheme.primary else scheme.onSurface
                 )
             }
@@ -529,11 +540,11 @@ private fun FilesHeader(
             // not on the Library landing / all tab.
             if (isInsideFolder) Box {
                 IconButton(onClick = { menuOpen = true }) {
-                    Icon(Icons.Outlined.MoreVert, contentDescription = "More options", tint = scheme.onSurface)
+                    Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.cd_more_options), tint = scheme.onSurface)
                 }
                 AppDropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     DropdownMenuItem(
-                        text = { Text(if (uiState.isGridView) "List view" else "Grid view") },
+                        text = { Text(stringResource(if (uiState.isGridView) R.string.menu_list_view else R.string.menu_grid_view)) },
                         leadingIcon = {
                             Icon(
                                 imageVector = if (uiState.isGridView) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
@@ -546,7 +557,7 @@ private fun FilesHeader(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text(if (uiState.showHiddenFiles) "Hide hidden files" else "Show hidden files") },
+                        text = { Text(stringResource(if (uiState.showHiddenFiles) R.string.menu_hide_hidden else R.string.menu_show_hidden)) },
                         leadingIcon = {
                             Icon(
                                 imageVector = if (uiState.showHiddenFiles) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
@@ -560,7 +571,7 @@ private fun FilesHeader(
                     )
                     HorizontalDivider()
                     DropdownMenuItem(
-                        text = { Text("New folder") },
+                        text = { Text(stringResource(R.string.action_new_folder)) },
                         leadingIcon = { Icon(Icons.Outlined.CreateNewFolder, contentDescription = null) },
                         onClick = {
                             menuOpen = false
@@ -568,7 +579,7 @@ private fun FilesHeader(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("New file") },
+                        text = { Text(stringResource(R.string.action_new_file)) },
                         leadingIcon = { Icon(Icons.AutoMirrored.Outlined.NoteAdd, contentDescription = null) },
                         onClick = {
                             menuOpen = false
@@ -579,7 +590,7 @@ private fun FilesHeader(
                     DropdownMenuItem(
                         text = {
                             Text(
-                                if (uiState.trashItems.isNotEmpty()) "Recycle Bin (${uiState.trashItems.size})" else "Recycle Bin"
+                                if (uiState.trashItems.isNotEmpty()) stringResource(R.string.menu_recycle_bin_count, uiState.trashItems.size) else stringResource(R.string.menu_recycle_bin)
                             )
                         },
                         leadingIcon = { Icon(Icons.Outlined.DeleteSweep, contentDescription = null) },
@@ -589,7 +600,7 @@ private fun FilesHeader(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Refresh") },
+                        text = { Text(stringResource(R.string.menu_refresh)) },
                         leadingIcon = { Icon(Icons.Outlined.Refresh, contentDescription = null) },
                         onClick = {
                             menuOpen = false
@@ -600,7 +611,7 @@ private fun FilesHeader(
             }
 
             IconButton(onClick = onSettingsClick) {
-                Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = scheme.onSurface)
+                Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.cd_settings), tint = scheme.onSurface)
             }
         }
     )
