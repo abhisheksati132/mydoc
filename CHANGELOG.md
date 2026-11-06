@@ -79,11 +79,13 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 - **Screen titles and Settings groups are TalkBack headings.** The bar title and every settings card
   title carry heading semantics, so a screen reader can jump between them.
 
-- **A growing share of the UI reads from string resources.** The viewer chrome, bottom bar,
-  load-error screen, file dialogs, file browser, storage cleaner, home feed, settings and the
-  photo viewer now use
-  `strings.xml` (up from 5 entries); the rest of the UI still carries literals and is the next
-  slice.
+- **The UI copy now comes from string resources.** Every screen's titles, action labels, content
+  descriptions, empty states, dialogs and progress text read from `strings.xml` (5 entries at the
+  start of this work, 742 now), including the 24 PDF tool names and descriptions, storage
+  category and volume names, and plural-aware counts. Still English by design or for a later
+  pass: the `UserMessages` / `DocumentFormats` error-and-limitation layer, the relative-date
+  formatter in the domain models, the "Slide N" titles the PPTX parser writes into a converted
+  document, and the debug-only design-system preview screen.
 
 ## [1.7.5] — 2026-11-06
 

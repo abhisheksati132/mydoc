@@ -391,7 +391,7 @@ internal fun ToolOptionsSection(
                         text = when (signatureStatus) {
                             SignatureStatus.READY -> "Edit / Redraw Signature"
                             SignatureStatus.UNREADABLE -> "Saved signature can't be opened - redraw it"
-                            SignatureStatus.NONE -> "Draw Signature Now"
+                            SignatureStatus.NONE -> stringResource(R.string.opt_draw_signature)
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (hasSignature) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary,

@@ -440,9 +440,9 @@ private fun InputFilesSection(
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = when {
-                tool == PdfTool.IMAGE_TO_PDF -> "Input images"
-                tool.requiresMultipleInputFiles -> "Input documents"
-                else -> "Input document"
+                tool == PdfTool.IMAGE_TO_PDF -> stringResource(R.string.run_input_images)
+                tool.requiresMultipleInputFiles -> stringResource(R.string.run_input_documents)
+                else -> stringResource(R.string.run_input_document)
             },
             style = typography.labelLarge,
             color = scheme.onSurfaceVariant
@@ -473,8 +473,8 @@ private fun InputFilesSection(
                     Text(
                         text = when {
                             tool.requiresMultipleInputFiles -> "Select 2 or more files"
-                            tool.acceptsMultipleInputFiles -> "Select one or more files"
-                            else -> "Select file to process"
+                            tool.acceptsMultipleInputFiles -> stringResource(R.string.run_select_one_or_more)
+                            else -> stringResource(R.string.run_select_file)
                         },
                         style = typography.bodyLarge,
                         color = scheme.onSurface

@@ -758,4 +758,11 @@
     <string name="tile_scan_label">Scan Doc</string>
     <string name="tile_scan_subtitle">Capture &amp; OCR</string>
     <string name="action_go">Go</string>
+    <string name="opt_draw_signature">Draw Signature Now</string>
+    <string name="run_input_images">Input images</string>
+    <string name="run_input_documents">Input documents</string>
+    <string name="run_input_document">Input document</string>
+    <string name="run_select_one_or_more">Select one or more files</string>
+    <string name="run_select_file">Select file to process</string>
+    <string name="files_empty_short">Empty</string>
 </resources>

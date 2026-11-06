@@ -237,7 +237,7 @@ fun CategoryTile(
             Text(
                 text = when {
                     stat == null -> stringResource(R.string.files_scanning_short)
-                    stat.fileCount == 0 -> "Empty"
+                    stat.fileCount == 0 -> stringResource(R.string.files_empty_short)
                     else -> "${stat.fileCount} · ${stat.formattedSize}"
                 },
                 style = MaterialTheme.typography.bodySmall,
