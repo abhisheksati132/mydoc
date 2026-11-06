@@ -17,7 +17,7 @@
 
 <br/>
 
-[📥 **Download Latest APK (v1.7.5)**](https://github.com/abhisheksati132/mydoc/releases/latest) • [✨ **Features**](#-features) • [🎨 **Brand & Design**](#-brand--design) • [🛡️ **Security & Integrity**](#-security--cryptographic-verification) • [📊 **Supported Formats**](#-format-support-matrix) • [🛠️ **Build & Test**](#-building-from-source)
+[📥 **Download Latest APK (v1.7.6)**](https://github.com/abhisheksati132/mydoc/releases/latest) • [✨ **Features**](#-features) • [🎨 **Brand & Design**](#-brand--design) • [🛡️ **Security & Integrity**](#-security--cryptographic-verification) • [📊 **Supported Formats**](#-format-support-matrix) • [🛠️ **Build & Test**](#-building-from-source)
 
 </div>
 
