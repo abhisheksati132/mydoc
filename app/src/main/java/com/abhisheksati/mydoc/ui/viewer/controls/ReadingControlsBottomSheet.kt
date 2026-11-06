@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
+import com.abhisheksati.mydoc.R
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.net.Uri
@@ -52,8 +53,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.AppSlider
@@ -103,6 +106,7 @@ fun ReadingControlsBottomSheet(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val context = LocalContext.current
+    val resources = LocalResources.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -128,7 +132,7 @@ fun ReadingControlsBottomSheet(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Appearance",
+                    text = stringResource(R.string.appearance_title),
                     style = MaterialTheme.typography.titleLarge
                 )
                 IconButton(
@@ -139,7 +143,7 @@ fun ReadingControlsBottomSheet(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
-                        contentDescription = "Close appearance settings",
+                        contentDescription = stringResource(R.string.appearance_close),
                         tint = colors.textSecondary
                     )
                 }
@@ -148,7 +152,7 @@ fun ReadingControlsBottomSheet(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
 
-            SectionLabel("Reading mode")
+            SectionLabel(stringResource(R.string.appearance_reading_mode))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
@@ -170,7 +174,7 @@ fun ReadingControlsBottomSheet(
                     modifier = Modifier.weight(1f)
                 )
                 ThemeOptionButton(
-                    label = "Comfort",
+                    label = stringResource(R.string.appearance_comfort),
                     isSelected = readingMode == ReadingMode.EYE_COMFORT,
                     onClick = {
                         onReadingModeChange(ReadingMode.EYE_COMFORT)
@@ -190,7 +194,7 @@ fun ReadingControlsBottomSheet(
             Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
 
             // 2. Brightness Section
-            SectionLabel("Brightness")
+            SectionLabel(stringResource(R.string.appearance_brightness))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -232,13 +236,13 @@ fun ReadingControlsBottomSheet(
             Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
 
             // 3. Scroll & Page Layout Mode
-            SectionLabel("Layout")
+            SectionLabel(stringResource(R.string.appearance_layout))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
             ) {
                 ThemeOptionButton(
-                    label = "Scroll",
+                    label = stringResource(R.string.appearance_scroll),
                     icon = Icons.Outlined.SwapVert,
                     isSelected = isContinuousScroll && !isDualPageView,
                     onClick = {
@@ -258,7 +262,7 @@ fun ReadingControlsBottomSheet(
                     modifier = Modifier.weight(1f)
                 )
                 ThemeOptionButton(
-                    label = "Dual-page",
+                    label = stringResource(R.string.appearance_dual_page),
                     icon = Icons.Outlined.ViewWeek,
                     isSelected = isDualPageView,
                     onClick = {
@@ -271,13 +275,13 @@ fun ReadingControlsBottomSheet(
             // 4. Page Fit (Width vs Page)
             if (onFitPageChange != null) {
                 Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
-                SectionLabel("Page fit")
+                SectionLabel(stringResource(R.string.appearance_page_fit))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
                 ) {
                     ThemeOptionButton(
-                        label = "Fit width",
+                        label = stringResource(R.string.appearance_fit_width),
                         icon = Icons.Outlined.FitScreen,
                         isSelected = !isFitPage,
                         onClick = {
@@ -286,7 +290,7 @@ fun ReadingControlsBottomSheet(
                         modifier = Modifier.weight(1f)
                     )
                     ThemeOptionButton(
-                        label = "Fit page",
+                        label = stringResource(R.string.appearance_fit_page),
                         icon = Icons.Outlined.CropFree,
                         isSelected = isFitPage,
                         onClick = {
@@ -300,7 +304,7 @@ fun ReadingControlsBottomSheet(
             Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
 
             // 5. Orientation Lock
-            SectionLabel("Screen orientation")
+            SectionLabel(stringResource(R.string.appearance_orientation))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
@@ -328,14 +332,14 @@ fun ReadingControlsBottomSheet(
                     modifier = Modifier.weight(1f)
                 )
                 ThemeOptionButton(
-                    label = "Portrait",
+                    label = stringResource(R.string.appearance_portrait),
                     icon = Icons.Outlined.StayCurrentPortrait,
                     isSelected = currentOrientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT,
                     onClick = { requestOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT) },
                     modifier = Modifier.weight(1f)
                 )
                 ThemeOptionButton(
-                    label = "Landscape",
+                    label = stringResource(R.string.appearance_landscape),
                     icon = Icons.Outlined.StayCurrentLandscape,
                     isSelected = currentOrientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE,
                     onClick = { requestOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) },
@@ -358,11 +362,11 @@ fun ReadingControlsBottomSheet(
             ) {
                 Column {
                     Text(
-                        text = "Keep screen awake",
+                        text = stringResource(R.string.appearance_keep_awake),
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = "Prevent screen from sleeping while reading",
+                        text = stringResource(R.string.appearance_keep_awake_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -386,12 +390,12 @@ fun ReadingControlsBottomSheet(
             ) {
                 ActionCardButton(
                     icon = Icons.AutoMirrored.Outlined.OpenInNew,
-                    label = "Open with",
+                    label = stringResource(R.string.appearance_open_with),
                     onClick = {
                         onDismiss()
                         val mime = document.mimeType.ifEmpty { "application/pdf" }
                         if (!openFile(context, Uri.parse(document.uri), mime)) {
-                            context.showMessage("No app available to open file")
+                            context.showMessage(resources.getString(R.string.appearance_no_app))
                         }
                     },
                     modifier = Modifier.weight(1f)

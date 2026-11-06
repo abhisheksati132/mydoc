@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.presentation
 
+import com.abhisheksati.mydoc.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -156,7 +158,7 @@ fun PresentationTopBar(
                     IconButton(onClick = onOpenSearch) {
                         Icon(
                             imageVector = Icons.Outlined.Search,
-                            contentDescription = "Search Slides",
+                            contentDescription = stringResource(R.string.pres_search_title),
                             tint = secondaryTextColor
                         )
                     }
@@ -165,7 +167,7 @@ fun PresentationTopBar(
                     IconButton(onClick = onToggleContinuousVertical) {
                         Icon(
                             imageVector = if (isContinuousVertical) Icons.Outlined.ViewCarousel else Icons.Outlined.SwapVert,
-                            contentDescription = if (isContinuousVertical) "Switch to Horizontal Paging" else "Switch to Continuous Vertical",
+                            contentDescription = stringResource(if (isContinuousVertical) R.string.pres_switch_horizontal else R.string.pres_switch_vertical),
                             tint = if (isContinuousVertical) MaterialTheme.colorScheme.primary else secondaryTextColor
                         )
                     }
@@ -174,7 +176,7 @@ fun PresentationTopBar(
                     IconButton(onClick = onStartSlideshow) {
                         Icon(
                             imageVector = Icons.Outlined.PlayArrow,
-                            contentDescription = "Start Slideshow",
+                            contentDescription = stringResource(R.string.pres_start_slideshow),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -184,7 +186,7 @@ fun PresentationTopBar(
                         IconButton(onClick = { isMenuOpen = true }) {
                             Icon(
                                 imageVector = Icons.Outlined.MoreVert,
-                                contentDescription = "More Options",
+                                contentDescription = stringResource(R.string.pres_more_options),
                                 tint = secondaryTextColor
                             )
                         }
@@ -193,7 +195,7 @@ fun PresentationTopBar(
                             onDismissRequest = { isMenuOpen = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text(if (isContinuousVertical) "Switch to Horizontal Pager" else "Switch to Continuous Vertical") },
+                                text = { Text(stringResource(if (isContinuousVertical) R.string.pres_menu_horizontal else R.string.pres_menu_vertical)) },
                                 leadingIcon = {
                                     Icon(
                                         imageVector = if (isContinuousVertical) Icons.Outlined.ViewCarousel else Icons.Outlined.SwapVert,
@@ -206,7 +208,7 @@ fun PresentationTopBar(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text(if (isVisualMode) "Switch to Outline View" else "Switch to Visual View") },
+                                text = { Text(stringResource(if (isVisualMode) R.string.pres_menu_outline else R.string.pres_menu_visual)) },
                                 leadingIcon = {
                                     Icon(
                                         imageVector = if (isVisualMode) Icons.AutoMirrored.Filled.Article else Icons.Default.Slideshow,
@@ -221,10 +223,10 @@ fun PresentationTopBar(
                             DropdownMenuItem(
                                 text = {
                                     Text(when (readingMode) {
-                                        ReadingMode.NORMAL -> "Theme: Dark"
-                                        ReadingMode.INVERTED_DARK -> "Theme: Sepia"
-                                        ReadingMode.SEPIA -> "Theme: Eye Comfort"
-                                        ReadingMode.EYE_COMFORT -> "Theme: Light"
+                                        ReadingMode.NORMAL -> stringResource(R.string.pres_theme_dark)
+                                        ReadingMode.INVERTED_DARK -> stringResource(R.string.pres_theme_sepia)
+                                        ReadingMode.SEPIA -> stringResource(R.string.pres_theme_eye_comfort)
+                                        ReadingMode.EYE_COMFORT -> stringResource(R.string.pres_theme_light)
                                     })
                                 },
                                 leadingIcon = {
@@ -236,7 +238,7 @@ fun PresentationTopBar(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Jump to Slide...") },
+                                text = { Text(stringResource(R.string.pres_jump_to_slide)) },
                                 leadingIcon = {
                                     Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = null)
                                 },
@@ -246,7 +248,7 @@ fun PresentationTopBar(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Thumbnail Strip") },
+                                text = { Text(stringResource(R.string.pres_thumbnail_strip)) },
                                 leadingIcon = {
                                     Icon(Icons.Outlined.ViewCarousel, contentDescription = null)
                                 },
@@ -256,7 +258,7 @@ fun PresentationTopBar(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Speaker Notes") },
+                                text = { Text(stringResource(R.string.pres_speaker_notes)) },
                                 leadingIcon = {
                                     Icon(Icons.Outlined.Description, contentDescription = null)
                                 },
@@ -266,7 +268,7 @@ fun PresentationTopBar(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Share Presentation") },
+                                text = { Text(stringResource(R.string.pres_share)) },
                                 leadingIcon = {
                                     Icon(Icons.Outlined.Share, contentDescription = null)
                                 },
@@ -276,7 +278,7 @@ fun PresentationTopBar(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Open in Office App") },
+                                text = { Text(stringResource(R.string.pres_open_in_office)) },
                                 leadingIcon = {
                                     Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
                                 },
