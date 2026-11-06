@@ -1,6 +1,7 @@
 package com.abhisheksati.mydoc.viewmodel
 
 import androidx.lifecycle.ViewModel
+import com.abhisheksati.mydoc.domain.model.DocumentTypeFilter
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.FileSortField
 import com.abhisheksati.mydoc.domain.model.FileSortOrder
@@ -106,6 +107,35 @@ class FileManagerViewModelTest {
         assertFalse(state.isLoading)
         assertEquals(4, state.items.size)
         assertEquals(4, state.filteredItems.size)
+    }
+
+    @Test
+    fun selectAll_onlyCoversRowsTheFormatChipShows() = runTest(testDispatcher) {
+        // The chip used to filter purely in the composable, so Select All picked up files the
+        // reader could not see and a share, cut or trash then acted on them.
+        createViewModel()
+        advanceUntilIdle()
+
+        viewModel.selectCategory(FileCategory.DOCUMENTS)
+        advanceUntilIdle()
+        viewModel.setDocTypeFilter(DocumentTypeFilter.PDF)
+        advanceUntilIdle()
+
+        val visible = viewModel.uiState.value.filteredItems
+        assertTrue("the chip must narrow the list the ViewModel exposes", visible.isNotEmpty())
+        assertTrue(
+            "only PDFs should remain visible: ${visible.map { it.name }}",
+            visible.all { it.file.extension.equals("pdf", ignoreCase = true) }
+        )
+
+        viewModel.selectAll()
+        advanceUntilIdle()
+
+        assertEquals(visible.map { it.file }.toSet(), viewModel.uiState.value.selectedFiles)
+        assertTrue(
+            "Select All reached a file the chip was hiding",
+            viewModel.uiState.value.selectedFiles.none { !it.extension.equals("pdf", ignoreCase = true) }
+        )
     }
 
     @Test
