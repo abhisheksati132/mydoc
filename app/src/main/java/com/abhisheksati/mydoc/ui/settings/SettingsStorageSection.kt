@@ -38,11 +38,11 @@ fun SettingsStorageSection(
     modifier: Modifier = Modifier
 ) {
     SettingsCard(
-        title = "Storage & files",
+        title = stringResource(R.string.settings_storage_title),
         icon = Icons.Outlined.Storage,
         modifier = modifier
     ) {
-        SettingsSectionLabel(text = "Default startup destination")
+        SettingsSectionLabel(text = stringResource(R.string.settings_startup_destination))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -60,10 +60,10 @@ fun SettingsStorageSection(
 
         if (onOpenStorageCleaner != null) {
             SettingActionRow(
-                title = "Storage cleaner",
-                subtitle = "Scan and clean junk files, APKs, and large downloads",
+                title = stringResource(R.string.settings_cleaner_title),
+                subtitle = stringResource(R.string.settings_cleaner_subtitle),
                 icon = Icons.Outlined.CleaningServices,
-                actionLabel = "Clean",
+                actionLabel = stringResource(R.string.settings_clean),
                 onAction = onOpenStorageCleaner
             )
             SettingsDivider()
@@ -71,10 +71,10 @@ fun SettingsStorageSection(
 
         if (onOpenAppManager != null) {
             SettingActionRow(
-                title = "App manager",
-                subtitle = "Manage installed applications and view permissions",
+                title = stringResource(R.string.settings_app_manager_title),
+                subtitle = stringResource(R.string.settings_app_manager_subtitle),
                 icon = Icons.Outlined.Apps,
-                actionLabel = "Manage",
+                actionLabel = stringResource(R.string.settings_manage),
                 onAction = onOpenAppManager
             )
             SettingsDivider()
@@ -89,8 +89,8 @@ fun SettingsStorageSection(
         }
 
         SettingActionRow(
-            title = "Thumbnail & render cache",
-            subtitle = "Currently using $formattedCache",
+            title = stringResource(R.string.settings_cache_title),
+            subtitle = stringResource(R.string.settings_cache_subtitle, formattedCache),
             icon = Icons.Outlined.Storage,
             actionLabel = stringResource(R.string.clear_cache),
             onAction = onClearCacheClick
@@ -99,8 +99,8 @@ fun SettingsStorageSection(
         if (onClearRecentClick != null) {
             SettingsDivider()
             SettingActionRow(
-                title = "Recent history & progress",
-                subtitle = "Clears the recent list, document reading positions and media resume points. The files themselves stay on the device.",
+                title = stringResource(R.string.settings_history_title),
+                subtitle = stringResource(R.string.settings_history_subtitle),
                 icon = Icons.Outlined.DeleteSweep,
                 actionLabel = stringResource(R.string.clear_cache),
                 onAction = onClearRecentClick

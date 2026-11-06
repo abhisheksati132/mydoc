@@ -25,8 +25,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.update.UpdateManager
 import com.abhisheksati.mydoc.update.UpdateUiState
@@ -49,7 +51,7 @@ fun SettingsAboutSection(
     val scope = rememberCoroutineScope()
 
     SettingsCard(
-        title = "About & updates",
+        title = stringResource(R.string.settings_about_title),
         icon = Icons.Outlined.Info,
         modifier = modifier.combinedClickable(
             interactionSource = remember { MutableInteractionSource() },
@@ -59,8 +61,8 @@ fun SettingsAboutSection(
         )
     ) {
         SettingToggleRow(
-            title = "Check for updates on launch",
-            subtitle = "Check GitHub for a new version when the app starts",
+            title = stringResource(R.string.settings_check_updates_launch),
+            subtitle = stringResource(R.string.settings_check_updates_subtitle),
             icon = Icons.Outlined.Refresh,
             checked = checkUpdatesOnLaunch,
             onCheckedChange = onCheckUpdatesOnLaunchChange
@@ -71,17 +73,17 @@ fun SettingsAboutSection(
         when (val state = updateState) {
             is UpdateUiState.Idle -> {
                 UpdateLine(
-                    title = "Software updates",
-                    detail = "Current version v${updateManager.currentVersionName}",
-                    actionLabel = "Check",
+                    title = stringResource(R.string.settings_updates_title),
+                    detail = stringResource(R.string.settings_current_version, updateManager.currentVersionName),
+                    actionLabel = stringResource(R.string.settings_check),
                     onAction = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } }
                 )
             }
 
             is UpdateUiState.Checking -> {
                 UpdateLine(
-                    title = "Checking for updates…",
-                    detail = "Asking GitHub for the latest release",
+                    title = stringResource(R.string.settings_checking_title),
+                    detail = stringResource(R.string.settings_checking_detail),
                     actionLabel = null,
                     onAction = null
                 )
@@ -89,9 +91,9 @@ fun SettingsAboutSection(
 
             is UpdateUiState.NoUpdate -> {
                 UpdateLine(
-                    title = "App is up to date",
+                    title = stringResource(R.string.settings_up_to_date),
                     detail = "v${state.currentVersion} installed",
-                    actionLabel = "Check again",
+                    actionLabel = stringResource(R.string.settings_check_again),
                     onAction = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
                     leadingCheck = true
                 )
@@ -105,7 +107,7 @@ fun SettingsAboutSection(
                         .padding(vertical = 8.dp)
                 ) {
                     Text(
-                        text = "New version v${release.versionName}",
+                        text = stringResource(R.string.settings_new_version, release.versionName),
                         style = typography.bodyLarge,
                         color = scheme.onSurface
                     )
@@ -131,13 +133,13 @@ fun SettingsAboutSection(
                             onClick = { scope.launch { updateManager.downloadAndInstall(release) } },
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)
                         ) {
-                            Text("Download & install$sizeText")
+                            Text(stringResource(R.string.settings_download_install, sizeText))
                         }
                         TextButton(
                             onClick = { updateManager.dismissUpdate(release.tagName) },
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)
                         ) {
-                            Text("Dismiss", color = scheme.onSurfaceVariant)
+                            Text(stringResource(R.string.settings_dismiss), color = scheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -150,7 +152,7 @@ fun SettingsAboutSection(
                         .padding(vertical = 8.dp)
                 ) {
                     Text(
-                        text = "Downloading ${state.progressPercent}%",
+                        text = stringResource(R.string.settings_downloading, state.progressPercent),
                         style = typography.bodyMedium.withTabularFigures(),
                         color = scheme.onSurface
                     )

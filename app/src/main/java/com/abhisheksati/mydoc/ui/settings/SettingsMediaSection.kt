@@ -1,11 +1,13 @@
 package com.abhisheksati.mydoc.ui.settings
 
+import com.abhisheksati.mydoc.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun SettingsMediaSection(
@@ -16,13 +18,13 @@ fun SettingsMediaSection(
     modifier: Modifier = Modifier
 ) {
     SettingsCard(
-        title = "Video & audio",
+        title = stringResource(R.string.settings_media_title),
         icon = Icons.Outlined.PlayCircle,
         modifier = modifier
     ) {
         SettingToggleRow(
-            title = "Auto-Resume Video",
-            subtitle = "Resume where you left off",
+            title = stringResource(R.string.settings_autoresume_title),
+            subtitle = stringResource(R.string.settings_autoresume_subtitle),
             icon = Icons.Outlined.Speed,
             checked = autoResumeVideo,
             onCheckedChange = onAutoResumeVideoChange
@@ -31,8 +33,8 @@ fun SettingsMediaSection(
         SettingsDivider()
 
         SettingToggleRow(
-            title = "Video Auto-Loop",
-            subtitle = "Loop videos when they end",
+            title = stringResource(R.string.settings_autoloop_title),
+            subtitle = stringResource(R.string.settings_autoloop_subtitle),
             icon = Icons.Outlined.Repeat,
             checked = videoAutoLoop,
             onCheckedChange = onVideoAutoLoopChange
