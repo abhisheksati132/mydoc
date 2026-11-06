@@ -81,13 +81,24 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 - **The UI copy now comes from string resources.** Every screen's titles, action labels, content
   descriptions, empty states, dialogs and progress text read from `strings.xml` (5 entries at the
-  start of this work, 742 now), including the 24 PDF tool names and descriptions, storage
-  category and volume names, and plural-aware counts. Still English by design or for a later
-  pass: the `DocumentFormats` limitation notes, the relative-date formatter in the domain models,
-  the "Slide N" titles the PPTX parser writes into a converted document, and the debug-only
-  design-system preview screen. Failure and status messages travel from the ViewModel as `UiText`
-  (a resource id plus arguments) and are resolved where a configuration exists, so error copy is
-  localisable without giving a ViewModel a Context.
+  start of this work, 779 strings and 6 plural sets now), including the 24 PDF tool names and
+  descriptions, storage category and volume names, and plural-aware counts. Still English by design
+  or for a later pass: the `DocumentFormats` limitation notes, the relative-date formatter in the
+  domain models, the "Slide N" titles the PPTX parser writes into a converted document, and the
+  debug-only design-system preview screen. Failure and status messages travel from the ViewModel as
+  `UiText` (a resource id plus arguments) and are resolved where a configuration exists, so error
+  copy is localisable without giving a ViewModel a Context.
+
+### Known remaining (not addressed in this release)
+
+- Word page furniture: `.docx` headers, footers and sections after the first are still not drawn,
+  and a page break is still our re-pagination rather than the file's.
+- Plain text and Markdown past the reading budget are truncated with a notice and no way to load
+  the rest of the file in the same session.
+- The localisation residuals named above, and accessibility beyond the added headings (roles,
+  content descriptions on custom gestures, contrast and target sizes), are not part of this pass.
+- A `.doc` whose piece table cannot be read falls back to a byte scan; the disclosure headline
+  says "Recovered text", but the format's limitation note still describes the piece-table path.
 
 ## [1.7.5] — 2026-11-06
 
