@@ -87,20 +87,16 @@ internal object Biff8Reader {
             val flags = reader.u8()
             if (count < 0 || flags < 0) break
             val compressed = flags and 0x01 == 0
+            val hasExt = flags and 0x04 != 0
             val hasRich = flags and 0x08 != 0
-            val runs: Int
-            val extended: Int
-            if (hasRich) {
-                runs = reader.u8()
-                extended = reader.u8()
-                reader.skip(2) // unused
-            } else {
-                runs = 0
-                extended = 0
-            }
+            // [MS-XLS] XLUnicodeRichExtendedString: cRun is a 16-bit count and cbExtRst a 32-bit
+            // byte count. They were read as single bytes with a two-byte skip, so any rich or
+            // phonetic string shifted the reader and every later string in the table came out wrong.
+            val runs = if (hasRich) reader.u16() else 0
+            val extended = if (hasExt) reader.u32().coerceIn(0L, 1L shl 20).toInt() else 0
             val text = reader.chars(count, compressed)
-            // Rich-text and phonetic runs are formatting and language hints; a reader needs neither.
-            reader.skip(runs * 4 + extended * 4)
+            // Rich-text runs and phonetic data are formatting and language hints; neither is read.
+            reader.skip(runs * 4 + extended)
             strings.add(text)
         }
         return strings

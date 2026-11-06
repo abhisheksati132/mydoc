@@ -400,12 +400,12 @@ class PdfConversionEngine(private val context: Context) {
     suspend fun pdfToTextOrMarkdown(file: File, onProgress: (ToolProgress) -> Unit): File {
         val srcDoc = Document.openDocument(file.absolutePath)
             ?: throw IllegalArgumentException("Cannot open document")
+        var ocrEngine: OcrEngine? = null
         try {
             val totalPages = srcDoc.countPages()
             val sb = StringBuilder()
             sb.append("# ${file.nameWithoutExtension}\n\n")
 
-            var hasAnyText = false
             for (p in 0 until totalPages) {
                 currentCoroutineContext().ensureActive()
                 val page = srcDoc.loadPage(p)
@@ -424,9 +424,20 @@ class PdfConversionEngine(private val context: Context) {
                 st.destroy()
                 page.destroy()
 
-                val pageStr = pageSb.toString().trim()
+                var pageStr = pageSb.toString().trim()
+                if (pageStr.isBlank()) {
+                    // A scanned page among selectable ones used to be dropped entirely: the OCR
+                    // fallback ran only when no page anywhere had text.
+                    val engine = ocrEngine ?: OcrEngine(context).also { ocrEngine = it }
+                    val ocrPage = srcDoc.loadPage(p)
+                    val pixmap = ocrPage.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, true)
+                    val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
+                    pixmap.destroy()
+                    ocrPage.destroy()
+                    pageStr = runCatching { engine.recognizeText(bmp) }.getOrDefault("").trim()
+                    bmp.recycle()
+                }
                 if (pageStr.isNotBlank()) {
-                    hasAnyText = true
                     sb.append("## Page ${p + 1}\n\n").append(pageStr).append("\n\n")
                 }
 
@@ -434,33 +445,11 @@ class PdfConversionEngine(private val context: Context) {
                 onProgress(ToolProgress(p + 1, totalPages, pct, "Extracting text from page ${p + 1}...", false))
             }
 
-            // OCR fallback for scanned or image-only documents
-            if (!hasAnyText) {
-                OcrEngine(context).use { ocrEngine ->
-                    for (p in 0 until totalPages) {
-                        currentCoroutineContext().ensureActive()
-                        val page = srcDoc.loadPage(p)
-                        val pixmap = page.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, true)
-                        val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
-                        pixmap.destroy()
-                        page.destroy()
-
-                        val ocrText = runCatching { ocrEngine.recognizeText(bmp) }.getOrDefault("")
-                        bmp.recycle()
-
-                        if (ocrText.isNotBlank()) {
-                            sb.append("## Page ${p + 1} (OCR)\n\n").append(ocrText).append("\n\n")
-                        }
-                        val pct = 70 + (((p + 1).toFloat() / totalPages) * 25).toInt()
-                        onProgress(ToolProgress(p + 1, totalPages, pct, "Extracting text via OCR from page ${p + 1}...", false))
-                    }
-                }
-            }
-
             val outFile = createTempOutputFile("extracted", "md")
             outFile.writeText(sb.toString())
             return outFile
         } finally {
+            ocrEngine?.close()
             srcDoc.destroy()
         }
     }
@@ -471,6 +460,7 @@ class PdfConversionEngine(private val context: Context) {
         // Generates an offline valid OOXML .docx with structured paragraphs
         val srcDoc = Document.openDocument(file.absolutePath)
             ?: throw IllegalArgumentException("Cannot open document")
+        var ocrEngine: OcrEngine? = null
         try {
             val totalPages = srcDoc.countPages()
             val paragraphs = mutableListOf<String>()
@@ -479,6 +469,7 @@ class PdfConversionEngine(private val context: Context) {
                 currentCoroutineContext().ensureActive()
                 val page = srcDoc.loadPage(p)
                 val st = page.toStructuredText()
+                val before = paragraphs.size
                 for (b in st.blocks) {
                     val pText = StringBuilder()
                     for (l in b.lines) {
@@ -490,34 +481,28 @@ class PdfConversionEngine(private val context: Context) {
                 st.destroy()
                 page.destroy()
 
+                if (paragraphs.size == before) {
+                    // A scanned page in an otherwise selectable document used to be left out: OCR
+                    // ran only when no page anywhere contributed text.
+                    val engine = ocrEngine ?: OcrEngine(context).also { ocrEngine = it }
+                    val ocrPage = srcDoc.loadPage(p)
+                    val pixmap = ocrPage.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, true)
+                    val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
+                    pixmap.destroy()
+                    ocrPage.destroy()
+                    val ocrText = runCatching { engine.recognizeText(bmp) }.getOrDefault("")
+                    bmp.recycle()
+                    for (l in ocrText.lines()) {
+                        val trimmed = l.trim()
+                        if (trimmed.isNotBlank()) paragraphs.add(trimmed)
+                    }
+                }
+
                 val pct = 10 + (((p + 1).toFloat() / totalPages) * 70).toInt()
                 onProgress(ToolProgress(p + 1, totalPages, pct, "Converting page ${p + 1}...", false))
             }
 
-            // OCR fallback for scanned or image-only PDFs
-            if (paragraphs.isEmpty()) {
-                OcrEngine(context).use { ocrEngine ->
-                    for (p in 0 until totalPages) {
-                        currentCoroutineContext().ensureActive()
-                        val page = srcDoc.loadPage(p)
-                        val pixmap = page.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, true)
-                        val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
-                        pixmap.destroy()
-                        page.destroy()
-
-                        val ocrText = runCatching { ocrEngine.recognizeText(bmp) }.getOrDefault("")
-                        bmp.recycle()
-
-                        for (l in ocrText.lines()) {
-                            val trimmed = l.trim()
-                            if (trimmed.isNotBlank()) paragraphs.add(trimmed)
-                        }
-
-                        val pct = 70 + (((p + 1).toFloat() / totalPages) * 25).toInt()
-                        onProgress(ToolProgress(p + 1, totalPages, pct, "Extracting text via OCR from page ${p + 1}...", false))
-                    }
-                }
-            }
+            ocrEngine?.close()
 
             if (paragraphs.isEmpty()) {
                 paragraphs.add("[Document has no extractable text content]")

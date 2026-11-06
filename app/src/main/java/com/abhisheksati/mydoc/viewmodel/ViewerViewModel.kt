@@ -76,6 +76,9 @@ class ViewerViewModel(
     private var searchJob: Job? = null
     private var activeDocumentFile: DocumentFile = documentFile
 
+    /** Bumped by every load; a result from an older generation is dropped, not published. */
+    private var loadGeneration = 0
+
     val documentUri: String
         get() = activeDocumentFile.uri
 
@@ -114,6 +117,10 @@ class ViewerViewModel(
 
     private fun loadDocument() {
         releaseSession()
+        // One owned load at a time. The constructor and the screen effect can both schedule a
+        // load; without a generation stamp the slower document could publish its renderer, page
+        // count and progress over the faster, newer one.
+        val generation = ++loadGeneration
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
@@ -121,7 +128,10 @@ class ViewerViewModel(
                     isPermissionExpired = false,
                     errorMessage = null,
                     failure = null,
-                    needsReflowFallback = false
+                    needsReflowFallback = false,
+                    // Password prompts belong to the document that raised them.
+                    isPasswordRequired = false,
+                    isPasswordIncorrect = false
                 )
             }
 
@@ -344,9 +354,11 @@ class ViewerViewModel(
                     }
 
                     val chosen = activeRenderer ?: return@withContext
+                    if (generation != loadGeneration) return@withContext
                     rendererSlot.replace(chosen)
 
                     if (chosen.isPasswordProtected) {
+                        if (generation != loadGeneration) return@withContext
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
@@ -381,6 +393,7 @@ class ViewerViewModel(
                             chosen.getPageSize(p)
                         }
 
+                        if (generation != loadGeneration) return@withContext
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
@@ -396,6 +409,7 @@ class ViewerViewModel(
                         prefetchSurroundingPages(initialPage)
                     }
                 } catch (e: Exception) {
+                    if (generation != loadGeneration) return@withContext
                     val isPerm = UserMessages.isPermissionFailure(e)
                     _uiState.update {
                         it.copy(

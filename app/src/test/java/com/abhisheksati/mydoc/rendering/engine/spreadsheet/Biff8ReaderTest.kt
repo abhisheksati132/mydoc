@@ -122,13 +122,19 @@ class Biff8ReaderTest {
     }
 
     @Test
-    fun `a 16-bit string and its rich runs are both stepped over`() {
+    fun `a 16-bit rich string and its phonetic data are stepped over`() {
+        // [MS-XLS] XLUnicodeRichExtendedString: flags bit2 is fExtSt and bit3 is fRichSt; cRun is a
+        // 16-bit count and cbExtRst a 32-bit byte count. Reading them as single bytes shifted the
+        // string table.
         val rich = "café"
         val body = littleInt(1) + littleInt(1) +
-            littleShort(rich.length) + byteArrayOf(0x09, 1, 1, 0, 0) +
+            littleShort(rich.length) + byteArrayOf(0x0D) +   // fHighByte | fExtSt | fRichSt
+            littleShort(1) +                                  // cRun
+            littleInt(8) +                                    // cbExtRst
             ByteBuffer.allocate(rich.length * 2).order(ByteOrder.LITTLE_ENDIAN)
                 .putChar(rich[0]).putChar(rich[1]).putChar(rich[2]).putChar(rich[3]).array() +
-            ByteArray(4) + ByteArray(4) // one rich run and one phonetic run
+            ByteArray(4) +                                    // one rich run
+            ByteArray(8)                                      // phonetic data
         val stream = workbookOf(
             sheets = listOf("Accented"),
             strings = listOf(rich),
@@ -136,6 +142,33 @@ class Biff8ReaderTest {
             sstOverride = body
         )
         assertEquals(rich, Biff8Reader.read(stream)!!.sheets.first().getCellValue(0, 0))
+    }
+
+    @Test
+    fun `a rich string does not shift the strings that follow it`() {
+        // The shift only becomes visible at the next string, which is what a reader sees first when
+        // one cell in a sheet is bold.
+        val first = "bold"
+        val second = "tail"
+        val body = littleInt(2) + littleInt(2) +
+            littleShort(first.length) + byteArrayOf(0x08) +   // fRichSt, compressed
+            littleShort(1) +                                  // cRun
+            first.toByteArray(Charsets.ISO_8859_1) +
+            ByteArray(4) +
+            littleShort(second.length) + byteArrayOf(0) +     // plain
+            second.toByteArray(Charsets.ISO_8859_1)
+        val stream = workbookOf(
+            sheets = listOf("Rich"),
+            strings = listOf(first, second),
+            cells = listOf(
+                record(LABELSST, rowCol(0, 0) + littleInt(0)),
+                record(LABELSST, rowCol(1, 0) + littleInt(1))
+            ),
+            sstOverride = body
+        )
+        val sheet = Biff8Reader.read(stream)!!.sheets.first()
+        assertEquals(first, sheet.getCellValue(0, 0))
+        assertEquals(second, sheet.getCellValue(1, 0))
     }
 
     // ---- record assembly -------------------------------------------------
