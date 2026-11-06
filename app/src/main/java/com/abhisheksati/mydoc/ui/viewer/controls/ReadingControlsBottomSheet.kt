@@ -158,7 +158,7 @@ fun ReadingControlsBottomSheet(
                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
             ) {
                 ThemeOptionButton(
-                    label = "Paper",
+                    label = stringResource(R.string.appearance_paper),
                     isSelected = readingMode == ReadingMode.NORMAL,
                     onClick = {
                         onReadingModeChange(ReadingMode.NORMAL)
@@ -166,7 +166,7 @@ fun ReadingControlsBottomSheet(
                     modifier = Modifier.weight(1f)
                 )
                 ThemeOptionButton(
-                    label = "Sepia",
+                    label = stringResource(R.string.reading_mode_sepia),
                     isSelected = readingMode == ReadingMode.SEPIA,
                     onClick = {
                         onReadingModeChange(ReadingMode.SEPIA)
@@ -182,7 +182,7 @@ fun ReadingControlsBottomSheet(
                     modifier = Modifier.weight(1f)
                 )
                 ThemeOptionButton(
-                    label = "Night",
+                    label = stringResource(R.string.appearance_night),
                     isSelected = readingMode == ReadingMode.INVERTED_DARK,
                     onClick = {
                         onReadingModeChange(ReadingMode.INVERTED_DARK)
@@ -252,7 +252,7 @@ fun ReadingControlsBottomSheet(
                     modifier = Modifier.weight(1f)
                 )
                 ThemeOptionButton(
-                    label = "Paged",
+                    label = stringResource(R.string.appearance_paged),
                     icon = Icons.Outlined.ViewDay,
                     isSelected = !isContinuousScroll && !isDualPageView,
                     onClick = {
@@ -325,7 +325,7 @@ fun ReadingControlsBottomSheet(
                 }
 
                 ThemeOptionButton(
-                    label = "Auto",
+                    label = stringResource(R.string.appearance_auto),
                     icon = Icons.Outlined.ScreenRotation,
                     isSelected = currentOrientation == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED,
                     onClick = { requestOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) },
@@ -402,7 +402,7 @@ fun ReadingControlsBottomSheet(
                 )
                 ActionCardButton(
                     icon = Icons.Outlined.Print,
-                    label = "Print",
+                    label = stringResource(R.string.appearance_print),
                     onClick = {
                         onDismiss()
                         PrintHelper.printDocument(context, document) { msg ->

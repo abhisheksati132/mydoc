@@ -204,7 +204,7 @@ fun ToolsScreen(
                             IconButton(onClick = { searchQuery = "" }) {
                                 Icon(
                                     Icons.Outlined.Close,
-                                    contentDescription = "Clear search",
+                                    contentDescription = stringResource(R.string.cd_clear_search),
                                     tint = colors.inkSecondary
                                 )
                             }
@@ -325,15 +325,15 @@ private fun ToolsHeader(
 ) {
     val scheme = MaterialTheme.colorScheme
     AppTopBar(
-        title = "Tools",
-        subtitle = "$toolCount tools · 6 tasks",
+        title = stringResource(R.string.nav_tools),
+        subtitle = stringResource(R.string.tools_subtitle, toolCount),
         isGlass = false,
         containerColor = Color.Transparent,
         actions = {
             IconButton(onClick = onSearch) {
                 Icon(
                     imageVector = Icons.Outlined.Search,
-                    contentDescription = "Search tools",
+                    contentDescription = stringResource(R.string.cd_search_tools),
                     tint = if (isSearchActive) scheme.primary else scheme.onSurface
                 )
             }
@@ -341,7 +341,7 @@ private fun ToolsHeader(
                 IconButton(onClick = onSettingsClick) {
                     Icon(
                         imageVector = Icons.Outlined.Settings,
-                        contentDescription = "Settings",
+                        contentDescription = stringResource(R.string.cd_settings),
                         tint = scheme.onSurface
                     )
                 }
@@ -441,13 +441,13 @@ private fun ToolsEmptyState(onClear: () -> Unit) {
         }
         Spacer(Modifier.height(16.dp))
         Text(
-            text = "No tools found",
+            text = stringResource(R.string.tools_none_found),
             style = AppTheme.typography.screenTitle,
             color = colors.inkPrimary
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            text = "Try a different action, or clear the filter.",
+            text = stringResource(R.string.tools_none_hint),
             style = AppTheme.typography.body,
             color = colors.inkMuted,
             textAlign = TextAlign.Center

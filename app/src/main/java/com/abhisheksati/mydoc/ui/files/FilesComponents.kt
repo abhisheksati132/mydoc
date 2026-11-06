@@ -353,7 +353,7 @@ fun FileRow(
             IconButton(onClick = onMoreClick, modifier = Modifier.size(48.dp)) {
                 Icon(
                     imageVector = Icons.Outlined.MoreVert,
-                    contentDescription = "More",
+                    contentDescription = stringResource(R.string.cd_more),
                     tint = scheme.onSurfaceVariant
                 )
             }
@@ -589,7 +589,7 @@ fun FilesSelectionBar(
             Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.cd_close_selection), tint = scheme.onSurface)
         }
         Text(
-            text = "$selectedCount selected",
+            text = stringResource(R.string.files_selected_count, selectedCount),
             style = MaterialTheme.typography.titleMedium,
             color = scheme.onSurface,
             modifier = Modifier.weight(1f)
@@ -600,7 +600,7 @@ fun FilesSelectionBar(
             }
         }
         IconButton(onClick = onShare) {
-            Icon(Icons.Outlined.Share, contentDescription = "Share", tint = scheme.onSurface)
+            Icon(Icons.Outlined.Share, contentDescription = stringResource(R.string.action_share), tint = scheme.onSurface)
         }
         Box {
             IconButton(onClick = { isMenuOpen = true }) {
@@ -608,7 +608,7 @@ fun FilesSelectionBar(
             }
             AppDropdownMenu(expanded = isMenuOpen, onDismissRequest = { isMenuOpen = false }) {
                 DropdownMenuItem(
-                    text = { Text("Copy") },
+                    text = { Text(stringResource(R.string.action_copy)) },
                     leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null) },
                     onClick = {
                         isMenuOpen = false
@@ -616,7 +616,7 @@ fun FilesSelectionBar(
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Cut") },
+                    text = { Text(stringResource(R.string.action_cut)) },
                     leadingIcon = { Icon(Icons.Outlined.ContentCut, contentDescription = null) },
                     onClick = {
                         isMenuOpen = false

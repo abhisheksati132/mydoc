@@ -277,7 +277,7 @@ fun StorageCleanerSheet(
                             colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
                             shape = AppRadius.cardShape
                         ) {
-                            Text("Done", color = Color.White)
+                            Text(stringResource(R.string.action_done), color = Color.White)
                         }
                     }
                 }

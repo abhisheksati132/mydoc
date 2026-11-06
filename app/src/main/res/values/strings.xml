@@ -674,4 +674,31 @@
         <item quantity="one">%1$d page</item>
         <item quantity="other">%1$d pages</item>
     </plurals>
+    <string name="cd_pip">PiP</string>
+    <string name="cd_lock_screen">Lock</string>
+    <string name="cd_back_10s">-10s</string>
+    <string name="cd_forward_10s">+10s</string>
+    <string name="tools_subtitle">%1$d tools · 6 tasks</string>
+    <string name="tools_none_found">No tools found</string>
+    <string name="tools_none_hint">Try a different action, or clear the filter.</string>
+    <string name="cd_search_tools">Search tools</string>
+    <string name="crop_deskew_title">Perspective Deskew</string>
+    <string name="crop_full_frame">Full Image Frame</string>
+    <string name="crop_smart_edges">Smart Edge Auto-Detect</string>
+    <string name="crop_apply">Apply Crop</string>
+    <string name="crop_apply_deskew">Apply Deskew</string>
+    <string name="appearance_paper">Paper</string>
+    <string name="appearance_night">Night</string>
+    <string name="appearance_paged">Paged</string>
+    <string name="appearance_auto">Auto</string>
+    <string name="appearance_print">Print</string>
+    <string name="settings_theme">Theme</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_auto">Auto</string>
+    <string name="toggle_on">On</string>
+    <string name="toggle_off">Off</string>
+    <string name="cd_more">More</string>
+    <string name="files_selected_count">%1$d selected</string>
+    <string name="action_cut">Cut</string>
 </resources>

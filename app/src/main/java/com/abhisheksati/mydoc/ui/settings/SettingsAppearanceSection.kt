@@ -47,7 +47,7 @@ fun SettingsAppearanceSection(
         icon = Icons.Outlined.Palette,
         modifier = modifier
     ) {
-        SettingsSectionLabel(text = "Theme")
+        SettingsSectionLabel(text = stringResource(R.string.settings_theme))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -61,13 +61,13 @@ fun SettingsAppearanceSection(
                 onClick = { onThemeChange(AppThemeMode.SYSTEM) }
             )
             ThemeChip(
-                label = "Light",
+                label = stringResource(R.string.theme_light),
                 icon = Icons.Outlined.LightMode,
                 selected = currentTheme == AppThemeMode.LIGHT,
                 onClick = { onThemeChange(AppThemeMode.LIGHT) }
             )
             ThemeChip(
-                label = "Dark",
+                label = stringResource(R.string.theme_dark),
                 icon = Icons.Outlined.DarkMode,
                 selected = currentTheme == AppThemeMode.DARK || currentTheme == AppThemeMode.BLACK,
                 onClick = { onThemeChange(AppThemeMode.DARK) }
@@ -84,19 +84,19 @@ fun SettingsAppearanceSection(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             ThemeChip(
-                label = "Auto",
+                label = stringResource(R.string.theme_auto),
                 icon = Icons.Outlined.BrightnessAuto,
                 selected = glassEffectMode == GlassEffectMode.AUTO,
                 onClick = { onGlassEffectModeChange(GlassEffectMode.AUTO) }
             )
             ThemeChip(
-                label = "On",
+                label = stringResource(R.string.toggle_on),
                 icon = Icons.Outlined.Palette,
                 selected = glassEffectMode == GlassEffectMode.ON,
                 onClick = { onGlassEffectModeChange(GlassEffectMode.ON) }
             )
             ThemeChip(
-                label = "Off",
+                label = stringResource(R.string.toggle_off),
                 icon = Icons.Outlined.Contrast,
                 selected = glassEffectMode == GlassEffectMode.OFF,
                 onClick = { onGlassEffectModeChange(GlassEffectMode.OFF) }

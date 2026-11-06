@@ -489,7 +489,7 @@ fun VideoPlayerScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.cd_back), tint = Color.White)
                     }
 
                     Text(
@@ -531,7 +531,7 @@ fun VideoPlayerScreen(
                             .build()
                         activity?.enterPictureInPictureMode(pipParams)
                     }) {
-                        Icon(Icons.Default.PictureInPicture, contentDescription = "PiP", tint = Color.White)
+                        Icon(Icons.Default.PictureInPicture, contentDescription = stringResource(R.string.cd_pip), tint = Color.White)
                     }
 
                     // Share Video
@@ -540,7 +540,7 @@ fun VideoPlayerScreen(
                             context.showMessage(resources.getString(R.string.video_no_share_app))
                         }
                     }) {
-                        Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
+                        Icon(Icons.Default.Share, contentDescription = stringResource(R.string.action_share), tint = Color.White)
                     }
 
                     // Lock Screen Controls
@@ -548,7 +548,7 @@ fun VideoPlayerScreen(
                         isScreenLocked = true
                         areControlsVisible = false
                     }) {
-                        Icon(Icons.Default.LockOpen, contentDescription = "Lock", tint = Color.White)
+                        Icon(Icons.Default.LockOpen, contentDescription = stringResource(R.string.cd_lock_screen), tint = Color.White)
                     }
                 }
             }
@@ -565,7 +565,7 @@ fun VideoPlayerScreen(
                             .size(48.dp)
                             .background(Color.Black.copy(alpha = 0.5f), CircleShape)
                     ) {
-                        Icon(Icons.Default.FastRewind, contentDescription = "-10s", tint = Color.White, modifier = Modifier.size(28.dp))
+                        Icon(Icons.Default.FastRewind, contentDescription = stringResource(R.string.cd_back_10s), tint = Color.White, modifier = Modifier.size(28.dp))
                     }
 
                     IconButton(
@@ -594,7 +594,7 @@ fun VideoPlayerScreen(
                             .size(48.dp)
                             .background(Color.Black.copy(alpha = 0.5f), CircleShape)
                     ) {
-                        Icon(Icons.Default.FastForward, contentDescription = "+10s", tint = Color.White, modifier = Modifier.size(28.dp))
+                        Icon(Icons.Default.FastForward, contentDescription = stringResource(R.string.cd_forward_10s), tint = Color.White, modifier = Modifier.size(28.dp))
                     }
                 }
 

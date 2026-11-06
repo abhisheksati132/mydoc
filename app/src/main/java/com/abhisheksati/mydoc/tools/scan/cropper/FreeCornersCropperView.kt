@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.tools.scan.cropper
 
+import com.abhisheksati.mydoc.R
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import androidx.activity.compose.BackHandler
@@ -45,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -140,13 +142,13 @@ fun FreeCornersCropperDialog(
                     IconButton(onClick = onDismiss) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "Cancel",
+                            contentDescription = stringResource(R.string.action_cancel),
                             tint = Color.White
                         )
                     }
 
                     Text(
-                        text = "Perspective Deskew",
+                        text = stringResource(R.string.crop_deskew_title),
                         style = AppTheme.typography.titleSmall,
                         color = Color.White
                     )
@@ -164,7 +166,7 @@ fun FreeCornersCropperDialog(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.RotateRight,
-                            contentDescription = "Rotate 90°",
+                            contentDescription = stringResource(R.string.photo_rotate_90),
                             tint = Color.White
                         )
                     }
@@ -621,7 +623,7 @@ private fun FreeCornersCropperCanvas(
                 ) {
                     Icon(
                         imageVector = Icons.Default.RestartAlt,
-                        contentDescription = "Full Image Frame",
+                        contentDescription = stringResource(R.string.crop_full_frame),
                         tint = Color.White
                     )
                 }
@@ -652,7 +654,7 @@ private fun FreeCornersCropperCanvas(
                 ) {
                     Icon(
                         imageVector = Icons.Default.AutoAwesome,
-                        contentDescription = "Smart Edge Auto-Detect",
+                        contentDescription = stringResource(R.string.crop_smart_edges),
                         tint = CaptureChromeColors.gridLine
                     )
                 }
@@ -679,13 +681,13 @@ private fun FreeCornersCropperCanvas(
             ) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Apply Crop",
+                    contentDescription = stringResource(R.string.crop_apply),
                     tint = Color.White,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.size(8.dp))
                 Text(
-                    text = "Apply Deskew",
+                    text = stringResource(R.string.crop_apply_deskew),
                     style = AppTheme.typography.bodyStrong,
                     color = Color.White
                 )
