@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -122,7 +123,10 @@ fun DocumentDetailsDialog(
                     value = "${document.formattedSize} (${NumberFormat.getNumberInstance(Locale.US).format(document.sizeBytes)} bytes)"
                 )
                 if (document.pageCount > 0) {
-                    DetailItem(label = "Pages", value = "${document.pageCount} pages")
+                    DetailItem(
+                    label = stringResource(R.string.tool_result_pages),
+                    value = pluralStringResource(R.plurals.details_pages_count, document.pageCount, document.pageCount)
+                )
                 }
                 if (document.formattedLastOpened.isNotBlank()) {
                     DetailItem(label = stringResource(R.string.details_last_opened), value = document.formattedLastOpened)
@@ -166,7 +170,7 @@ fun DocumentDetailsDialog(
                 ) {
                     DialogActionButton(
                         icon = Icons.Outlined.Share,
-                        label = "Share",
+                        label = stringResource(R.string.menu_share),
                         onClick = {
                             onDismiss()
                             onShare(document)
@@ -202,7 +206,7 @@ fun DocumentDetailsDialog(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Open",
+                    text = stringResource(R.string.action_open),
                     style = typography.label,
                     color = colors.background
                 )

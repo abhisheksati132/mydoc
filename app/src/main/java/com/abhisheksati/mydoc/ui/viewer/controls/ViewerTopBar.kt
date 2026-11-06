@@ -154,7 +154,7 @@ fun ViewerTopBar(
                                     modifier = Modifier.padding(end = 4.dp)
                                 ) {
                                     Text(
-                                        text = "${currentPage + 1}/$pageCount",
+                                        text = stringResource(R.string.viewer_page_ratio, currentPage + 1, pageCount),
                                         style = AppTheme.typography.metadataStrong,
                                         color = colors.accent,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)

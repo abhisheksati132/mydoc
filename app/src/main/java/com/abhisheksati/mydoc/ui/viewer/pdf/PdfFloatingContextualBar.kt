@@ -66,7 +66,7 @@ fun PdfFloatingContextualBar(
                 )
                 FloatingPillItem(
                     icon = Icons.Outlined.Share,
-                    label = "Share",
+                    label = stringResource(R.string.action_share),
                     onClick = onShare
                 )
                 FloatingPillItem(
@@ -76,7 +76,7 @@ fun PdfFloatingContextualBar(
                 )
                 FloatingPillItem(
                     icon = Icons.AutoMirrored.Outlined.VolumeUp,
-                    label = "Speak",
+                    label = stringResource(R.string.action_speak),
                     onClick = onSpeak
                 )
                 IconButton(onClick = onClose) {

@@ -736,4 +736,21 @@
         <item quantity="one">%1$d slide</item>
         <item quantity="other">%1$d slides</item>
     </plurals>
+    <string name="viewer_page_ratio">%1$d/%2$d</string>
+    <string name="photo_counter">%1$d of %2$d</string>
+    <string name="photo_info_label">Info</string>
+    <string name="photo_name">Name</string>
+    <string name="photo_size">Size</string>
+    <string name="photo_iso">ISO</string>
+    <string name="audio_speed">%1$sx Speed</string>
+    <string name="files_item_meta">%1$s · %2$s</string>
+    <string name="files_category_apps">Apps</string>
+    <string name="cd_sort">Sort</string>
+    <string name="clipboard_paste_hint">Go to a folder to paste</string>
+    <string name="action_paste">Paste</string>
+    <string name="action_speak">Speak</string>
+    <plurals name="details_pages_count">
+        <item quantity="one">%1$d page</item>
+        <item quantity="other">%1$d pages</item>
+    </plurals>
 </resources>

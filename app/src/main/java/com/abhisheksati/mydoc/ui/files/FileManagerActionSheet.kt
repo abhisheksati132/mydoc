@@ -144,7 +144,7 @@ fun SingleItemActionBottomSheet(
 
             // Actions
             ItemActionOption(
-                title = "Open",
+                title = stringResource(R.string.action_open),
                 icon = Icons.Outlined.FolderOpen,
                 onClick = onOpen
             )
@@ -159,7 +159,7 @@ fun SingleItemActionBottomSheet(
             }
 
             ItemActionOption(
-                title = "Copy",
+                title = stringResource(R.string.action_copy),
                 icon = Icons.Outlined.ContentCopy,
                 onClick = onCopy
             )
@@ -216,7 +216,7 @@ fun SingleItemActionBottomSheet(
 
             if (!item.isDirectory) {
                 ItemActionOption(
-                    title = "Share",
+                    title = stringResource(R.string.action_share),
                     icon = Icons.Outlined.Share,
                     onClick = onShare
                 )

@@ -80,8 +80,8 @@ fun PhotoInfoSheet(
 
             // File Information
             AppSectionHeader(title = stringResource(R.string.photo_file_information))
-            InfoRow(label = "Name", value = item.displayName)
-            InfoRow(label = "Size", value = item.formattedSize)
+            InfoRow(label = stringResource(R.string.photo_name), value = item.displayName)
+            InfoRow(label = stringResource(R.string.photo_size), value = item.formattedSize)
             val dims = if (exif != null && exif.width > 0 && exif.height > 0) {
                 "${exif.width} × ${exif.height} px"
             } else if (item.width > 0 && item.height > 0) {
@@ -117,7 +117,7 @@ fun PhotoInfoSheet(
                         InfoRow(label = stringResource(R.string.photo_exposure), value = exif.exposureTime)
                     }
                     if (!exif.iso.isNullOrBlank()) {
-                        InfoRow(label = "ISO", value = exif.iso)
+                        InfoRow(label = stringResource(R.string.photo_iso), value = exif.iso)
                     }
                     if (!exif.dateTimeOriginal.isNullOrBlank()) {
                         InfoRow(label = stringResource(R.string.photo_captured), value = exif.dateTimeOriginal)

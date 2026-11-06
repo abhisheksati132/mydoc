@@ -209,7 +209,7 @@ fun AudioPlayerScreen(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.cd_back),
                     tint = colors.ink
                 )
             }
@@ -231,7 +231,7 @@ fun AudioPlayerScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Share,
-                    contentDescription = "Share",
+                    contentDescription = stringResource(R.string.action_share),
                     tint = colors.ink
                 )
             }
@@ -466,7 +466,7 @@ fun AudioPlayerScreen(
                     }
             ) {
                 Text(
-                    text = "${playbackSpeed}x Speed",
+                    text = stringResource(R.string.audio_speed, playbackSpeed.toString()),
                     style = (if (playbackSpeed != 1.0f) typography.captionStrong else typography.caption)
                         .withTabularFigures(),
                     color = if (playbackSpeed != 1.0f) onMintContainer else colors.ink,

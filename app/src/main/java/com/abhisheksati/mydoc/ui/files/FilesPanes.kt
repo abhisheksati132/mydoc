@@ -123,7 +123,7 @@ fun RecentFileRow(
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = "${item.formattedSize} · ${item.formattedLastModified}",
+                text = stringResource(R.string.files_item_meta, item.formattedSize, item.formattedLastModified),
                 style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant,
                 maxLines = 1,
@@ -272,7 +272,7 @@ fun BrowseHomePane(
         }
         item(key = "browse_apps") {
             LocationRow(
-                title = "Apps",
+                title = stringResource(R.string.files_category_apps),
                 meta = if (storageUiState.userAppCount > 0) {
                     "${storageUiState.userAppCount} installed · ${StorageVolume.formatBytes(storageUiState.userAppBytes)}"
                 } else {
@@ -432,7 +432,7 @@ fun DirectoryPane(
         ) {
             Spacer(modifier = Modifier.weight(1f))
             IconButton(onClick = { sortMenuOpen = true }, modifier = Modifier.size(48.dp)) {
-                Icon(Icons.AutoMirrored.Outlined.Sort, contentDescription = "Sort", tint = scheme.onSurfaceVariant)
+                Icon(Icons.AutoMirrored.Outlined.Sort, contentDescription = stringResource(R.string.cd_sort), tint = scheme.onSurfaceVariant)
             }
             IconButton(
                 onClick = onToggleView,

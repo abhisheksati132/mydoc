@@ -206,7 +206,7 @@ fun PhotoViewerScreen(
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.cd_back),
                             tint = contentColor
                         )
                     }
@@ -225,7 +225,7 @@ fun PhotoViewerScreen(
                         )
                         if (photoList.size > 1) {
                             Text(
-                                text = "${pagerState.currentPage + 1} of ${photoList.size}",
+                                text = stringResource(R.string.photo_counter, pagerState.currentPage + 1, photoList.size),
                                 style = typography.caption.withTabularFigures(),
                                 color = secondaryColor
                             )
@@ -405,7 +405,7 @@ fun PhotoViewerScreen(
                         // Info
                         PhotoViewerPillButton(
                             icon = Icons.Default.Info,
-                            label = "Info",
+                            label = stringResource(R.string.photo_info_label),
                             tint = contentColor,
                             onClick = { isInfoSheetOpen = true },
                             modifier = Modifier.weight(1f)

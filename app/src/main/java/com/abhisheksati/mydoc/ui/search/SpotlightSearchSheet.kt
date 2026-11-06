@@ -155,7 +155,7 @@ fun SpotlightSearchSheet(
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.Close,
-                                    contentDescription = "Clear",
+                                    contentDescription = stringResource(R.string.action_clear),
                                     tint = scheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -251,7 +251,7 @@ fun SpotlightSearchSheet(
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "${item.extension.uppercase()} · ${item.formattedSize}",
+                                text = stringResource(R.string.files_item_meta, item.extension.uppercase(), item.formattedSize),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = scheme.onSurfaceVariant,
                                 maxLines = 1,
