@@ -175,7 +175,18 @@ object DocumentStreamResolver {
         // Tier 3: Parse MediaStore ID from MediaDocumentsProvider
         // e.g. content://com.android.providers.media.documents/document/document%3A9637 or document:9637
         try {
-            if (uriString.contains("document%3A") || uriString.contains("document:")) {
+            // Only the platform's own media/download providers use a bare numeric `document:<id>`
+            // this way. A custom or cloud provider's opaque id must not be reinterpreted as a
+            // MediaStore row - that resolves to a different local file than the one that was asked
+            // for, which is document-identity confusion, not a fallback.
+            val authority = runCatching { uri.authority }.getOrNull().orEmpty()
+            val isPlatformMediaProvider =
+                authority == MediaStore.AUTHORITY ||
+                    authority == "com.android.providers.media.documents" ||
+                    authority == "com.android.providers.downloads.documents"
+            if (isPlatformMediaProvider &&
+                (uriString.contains("document%3A") || uriString.contains("document:"))
+            ) {
                 val idStr = uriString.substringAfterLast("%3A").substringAfterLast(":")
                 val id = idStr.toLongOrNull()
                 if (id != null) {

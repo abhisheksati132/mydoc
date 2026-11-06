@@ -183,13 +183,15 @@ fun FilesScreen(
         val trashed = uiState.lastTrashedItems
         if (trashed.isNotEmpty()) {
             val count = trashed.size
-            viewModel.clearLastTrashedItems()
             snackbarHostState.currentSnackbarData?.dismiss()
             val result = snackbarHostState.showSnackbar(
                 message = if (count == 1) "Moved 1 item to Recycle Bin" else "Moved $count items to Recycle Bin",
                 actionLabel = "UNDO",
                 duration = SnackbarDuration.Short
             )
+            // Cleared only after the prompt is answered. Clearing it first changed this effect's
+            // own key, which cancelled the effect - and with it the Undo that had just appeared.
+            viewModel.clearLastTrashedItems()
             if (result == SnackbarResult.ActionPerformed) viewModel.undoTrash(trashed)
         }
     }

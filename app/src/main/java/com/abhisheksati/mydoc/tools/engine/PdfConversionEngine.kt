@@ -315,8 +315,17 @@ class PdfConversionEngine(private val context: Context) {
                     )
                 }
 
-                val outWidth = (maxWidthPt * stitchScale).toInt().coerceAtLeast(1)
-                val outHeight = (totalHeightPt * stitchScale).toInt().coerceAtLeast(1)
+                var outWidth = (maxWidthPt * stitchScale).toInt().coerceAtLeast(1)
+                var outHeight = (totalHeightPt * stitchScale).toInt().coerceAtLeast(1)
+                // The loop above stops at MIN_STITCH_SCALE even when the result is still over the
+                // budget, and the allocation then went ahead anyway - the OOM the budget exists to
+                // prevent. Scale down to the budget exactly when that happens.
+                val stitchedPixels = outWidth.toLong() * outHeight.toLong()
+                if (stitchedPixels > MAX_STITCHED_PIXELS) {
+                    val factor = kotlin.math.sqrt(MAX_STITCHED_PIXELS.toDouble() / stitchedPixels.toDouble())
+                    outWidth = (outWidth * factor).toInt().coerceAtLeast(1)
+                    outHeight = (outHeight * factor).toInt().coerceAtLeast(1)
+                }
                 val stitchedBitmap = Bitmap.createBitmap(outWidth, outHeight, Bitmap.Config.ARGB_8888)
                 try {
                     val canvas = Canvas(stitchedBitmap)

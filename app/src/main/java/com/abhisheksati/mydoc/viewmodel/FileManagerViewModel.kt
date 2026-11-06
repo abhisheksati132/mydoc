@@ -752,7 +752,21 @@ class FileManagerViewModel(
             FileSortOrder(field, isAscending = true)
         }
         _uiState.update { it.copy(sortOrder = newOrder) }
-        loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+        reloadCurrentSource()
+    }
+
+    /**
+     * Sorting or revealing hidden files must reload whatever is on screen. It used to call
+     * `loadDirectory` unconditionally, which drops the active category and leaves the reader in a
+     * folder they had not opened.
+     */
+    private fun reloadCurrentSource() {
+        val category = _uiState.value.activeCategory
+        if (category != null) {
+            selectCategory(category)
+        } else {
+            loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+        }
     }
 
     fun toggleViewMode() {
@@ -765,7 +779,7 @@ class FileManagerViewModel(
         val next = !_uiState.value.showHiddenFiles
         _uiState.update { it.copy(showHiddenFiles = next) }
         settingsRepository?.setShowHiddenFiles(next)
-        loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+        reloadCurrentSource()
     }
 
     fun setSearchQuery(query: String) {

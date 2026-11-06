@@ -190,7 +190,9 @@ fun OcrResultSheet(
                         Text(
                             text = text.ifBlank { "No text detected in this image." },
                             style = typography.body,
-                            color = colors.textPrimary
+                            // The plate is always black, so the ink must be the on-dark token; the
+                            // theme's primary ink is near-black in light mode (~1.2:1 here).
+                            color = DocumentCanvasColors.onDarkInk
                         )
                     }
                 }
