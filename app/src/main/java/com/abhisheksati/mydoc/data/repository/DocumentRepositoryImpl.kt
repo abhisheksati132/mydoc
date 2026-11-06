@@ -89,7 +89,8 @@ class DocumentRepositoryImpl(
             val deviceDocs = mutableListOf<DocumentFile>()
             val seenPaths = mutableSetOf<String>()
             val seenUris = mutableSetOf<String>()
-            val seenIdentity = mutableSetOf<String>()
+            // Identity is the URI (or the real path), not name+size: two different files can
+            // share both of those, and one of them used to disappear from the Library.
 
             try {
                 val uri = MediaStore.Files.getContentUri("external")
@@ -142,11 +143,9 @@ class DocumentRepositoryImpl(
 
                         val name = cursor.getString(nameCol) ?: file.name
                         val size = cursor.getLong(sizeCol)
-                        val identity = identityOf(name, size)
-                        if (seenPaths.contains(data) || seenUris.contains(docUri) || seenIdentity.contains(identity)) continue
+                        if (seenPaths.contains(data) || seenUris.contains(docUri)) continue
                         seenPaths.add(data)
                         seenUris.add(docUri)
-                        seenIdentity.add(identity)
 
                         val mime = cursor.getString(mimeCol) ?: "application/octet-stream"
                         val dateModified = cursor.getLong(dateCol) * 1000L
@@ -178,12 +177,10 @@ class DocumentRepositoryImpl(
                 val recentUri = recent.uri
                 val recentPath = try { Uri.parse(recentUri).path } catch (_: Exception) { null }
                 val isSeen = seenUris.contains(recentUri) ||
-                    (recentPath != null && seenPaths.contains(recentPath)) ||
-                    seenIdentity.contains(identityOf(recent.displayName, recent.sizeBytes))
+                    (recentPath != null && seenPaths.contains(recentPath))
                 if (!isSeen) {
                     seenUris.add(recentUri)
                     if (recentPath != null) seenPaths.add(recentPath)
-                    seenIdentity.add(identityOf(recent.displayName, recent.sizeBytes))
                     deviceDocs.add(
                         DocumentFile(
                             uri = recent.uri,
@@ -404,8 +401,6 @@ class DocumentRepositoryImpl(
             )
         )
     }
-
-    private fun identityOf(name: String, sizeBytes: Long) = "$name|$sizeBytes"
 
     private fun extractMetadata(uri: Uri): DocumentMetadata {
         var displayName: String? = null

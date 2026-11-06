@@ -139,7 +139,11 @@ class PdfEditingEngine(private val context: Context) {
         FileInputStream(file).use { fis ->
             PDDocument.load(fis).use { doc ->
                 val totalPages = doc.numberOfPages
-                val targetPageIdx = options.signaturePage.coerceIn(0, totalPages - 1)
+                // A negative choice means the last page; a fixed sentinel signed page 1000 of a
+                // longer document instead.
+                val targetPageIdx =
+                    if (options.signaturePage < 0) totalPages - 1
+                    else options.signaturePage.coerceIn(0, totalPages - 1)
                 val pdImage = LosslessFactory.createFromImage(doc, sigBmp)
 
                 val page = doc.getPage(targetPageIdx)

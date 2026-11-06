@@ -396,7 +396,9 @@ internal fun ToolOptionsSection(
                 Text(text = "PLACEMENT PAGE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)) {
-                    listOf("First Page" to 0, "Last Page" to 999).forEach { (label, pg) ->
+                    // "Last page" is a choice, not page 999: a document with 1000 pages would have
+                    // signed its 1000th and called it the last.
+                    listOf("First Page" to 0, "Last Page" to -1).forEach { (label, pg) ->
                         AppFilterChip(
                             label = label,
                             isSelected = options.signaturePage == pg,
@@ -408,7 +410,8 @@ internal fun ToolOptionsSection(
                 Text(text = "POSITION", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                 Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)) {
-                    listOf("Bottom Right" to Pair(0.75f, 0.85f), "Bottom Center" to Pair(0.5f, 0.85f), "Bottom Left" to Pair(0.25f, 0.85f)).forEach { (label, coords) ->
+                    // PDF y grows upwards, so a bottom preset is a small fraction, not a large one.
+                    listOf("Bottom Right" to Pair(0.75f, 0.15f), "Bottom Center" to Pair(0.5f, 0.15f), "Bottom Left" to Pair(0.25f, 0.15f)).forEach { (label, coords) ->
                         val isSel = kotlin.math.abs(options.signatureXPercent - coords.first) < 0.05f && kotlin.math.abs(options.signatureYPercent - coords.second) < 0.05f
                         AppFilterChip(
                             label = label,

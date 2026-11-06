@@ -71,7 +71,12 @@ object XlsxReader {
                 val path = when {
                     target == null -> ""
                     target.startsWith("/") -> target.drop(1)
-                    else -> "xl/" + target.removePrefix("./")
+                    else -> {
+                        // Some writers already give the package path; prefixing it unconditionally
+                        // produced "xl/xl/worksheets/...", which the entry map never contains.
+                        val clean = target.removePrefix("./")
+                        if (clean.startsWith("xl/")) clean else "xl/$clean"
+                    }
                 }
                 Triple(name, path, hidden)
             }
@@ -326,7 +331,13 @@ object XlsxReader {
                             val col = ref?.let { XlsxRefs.parseCell(it)?.second } ?: nextCol
                             nextCol = col + 1
                             val cell = readCell(p)
-                            if (col < MaxColumns && cell != null) rd.cells[col] = cell
+                            if (col < MaxColumns) {
+                                if (cell != null) rd.cells[col] = cell
+                            } else if (sheet.parseFailure == null) {
+                                // Dropping a column silently is how a wide sheet looked complete
+                                // while half of it was missing; the sheet says so instead.
+                                sheet.parseFailure = "columns beyond $MaxColumns are not shown"
+                            }
                         }
                     }
                     "mergeCell" -> p.attr("ref")?.let { XlsxRefs.parseRange(it) }?.let { sheet.merges.add(it) }

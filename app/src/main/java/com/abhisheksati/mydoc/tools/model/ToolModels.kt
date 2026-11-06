@@ -114,7 +114,8 @@ data class ToolOptions(
     val signatureBitmapFile: File? = null,
     val signaturePage: Int = 0,
     val signatureXPercent: Float = 0.5f,
-    val signatureYPercent: Float = 0.8f,
+    /** Fractions of the page box, measured from the bottom-left as PDF does. */
+    val signatureYPercent: Float = 0.15f,
     val signatureScale: Float = 0.3f,
     val annotationText: String = "APPROVED",
     val annotationType: String = "STAMP",

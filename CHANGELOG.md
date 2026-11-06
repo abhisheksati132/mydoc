@@ -23,6 +23,13 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   runs only for a CFBF container, and the viewer marks that result as recovered.
 - **Cancelled archive extraction rolls back before it returns**, and a partly failed permanent
   delete reports its completed and failed counts instead of announcing the whole batch as deleted.
+- **The Library no longer hides one of two files that share a name and a size.** Deduplication uses
+  the URI and real path, not name plus byte count.
+- **`.xlsx` fallback paths resolve once** (a relationship that already names `xl/...` no longer
+  becomes `xl/xl/...`), and a sheet whose columns run past the grid's limit says so instead of
+  looking complete.
+- **Sign PDF's "Last Page" is the last page.** It was a fixed sentinel of 999, which signed page 1000
+  of a longer document; the bottom presets were also flipped because PDF y grows upwards.
 
 ## [1.7.5] — 2026-11-06
 
