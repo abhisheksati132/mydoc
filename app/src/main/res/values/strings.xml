@@ -169,4 +169,27 @@
     <string name="cd_select_all">Select all</string>
     <string name="cd_share_selected">Share selected</string>
     <string name="cd_remove_selected">Remove selected from recents</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_subtitle">MyDoc %1$s</string>
+    <string name="settings_freed_mb">Freed %1$.1f MB</string>
+    <string name="settings_privacy_security">Privacy &amp; security</string>
+    <string name="settings_app_lock_title">Biometric App Lock</string>
+    <string name="settings_app_lock_subtitle">Require fingerprint or device PIN to open app</string>
+    <string name="settings_app_lock_needs_keyguard">App lock requires a screen lock (PIN, pattern, or fingerprint)</string>
+    <string name="settings_clear_history_title">Clear recent history?</string>
+    <string name="settings_clear_history_message">This removes the recent list, the page each document was left on, and the resume points for audio and video. Nothing is deleted from storage — your files stay exactly where they are. This cannot be undone.</string>
+    <string name="settings_clear_history_confirm">Clear</string>
+    <string name="settings_reading_title">Reading &amp; documents</string>
+    <string name="settings_default_reading_mode">Default reading mode</string>
+    <string name="reading_mode_normal">Normal</string>
+    <string name="reading_mode_sepia">Sepia</string>
+    <string name="settings_pdf_page_scaling">PDF page scaling</string>
+    <string name="settings_fit_width">Fit Width</string>
+    <string name="settings_fit_page">Fit Whole Page</string>
+    <string name="settings_double_tap_title">Double-Tap Quick Zoom</string>
+    <string name="settings_double_tap_subtitle">Double tap a page to zoom to 2.5×</string>
+    <string name="settings_keep_awake_title">Keep Screen Awake While Reading</string>
+    <string name="settings_keep_awake_subtitle">Stop the screen sleeping while reading</string>
+    <string name="settings_volume_keys_title">Volume Button Page Turning</string>
+    <string name="settings_volume_keys_subtitle">Volume keys flip pages</string>
 </resources>

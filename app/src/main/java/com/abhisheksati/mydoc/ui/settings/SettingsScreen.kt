@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
@@ -46,7 +47,6 @@ import com.abhisheksati.mydoc.update.UpdateManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Locale
 import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 @SuppressLint("LocalContextGetResourceValueCall")
@@ -63,6 +63,9 @@ fun SettingsScreen(
     val updateState by updateManager.state.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val resources = LocalResources.current
+    // Read here: the toggle callback is not composable.
+    val keyguardMessage = stringResource(R.string.settings_app_lock_needs_keyguard)
     val scheme = MaterialTheme.colorScheme
     val haptic = LocalHapticFeedback.current
 
@@ -111,8 +114,8 @@ fun SettingsScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             AppTopBar(
-                title = "Settings",
-                subtitle = "MyDoc ${updateManager.currentVersionName}",
+                title = stringResource(R.string.settings_title),
+                subtitle = stringResource(R.string.settings_subtitle, updateManager.currentVersionName),
                 onBack = onBackClick,
                 isGlass = false,
                 containerColor = androidx.compose.ui.graphics.Color.Transparent
@@ -179,7 +182,7 @@ fun SettingsScreen(
                             cacheSizeBytes = withContext(Dispatchers.IO) { settingsRepository.getCacheSizeBytes(context) }
                             val freedMb = freed / (1024.0 * 1024.0)
                             val toastText = if (freedMb >= 0.1) {
-                                String.format(Locale.US, "Freed %.1f MB", freedMb)
+                                resources.getString(R.string.settings_freed_mb, freedMb)
                             } else {
                                 cacheClearedMessage
                             }
@@ -200,19 +203,19 @@ fun SettingsScreen(
 
                 // 5. PRIVACY & SECURITY
                 SettingsCard(
-                    title = "Privacy & security",
+                    title = stringResource(R.string.settings_privacy_security),
                     icon = Icons.Outlined.Security
                 ) {
                     SettingToggleRow(
-                        title = "Biometric App Lock",
-                        subtitle = "Require fingerprint or device PIN to open app",
+                        title = stringResource(R.string.settings_app_lock_title),
+                        subtitle = stringResource(R.string.settings_app_lock_subtitle),
                         icon = Icons.Outlined.Security,
                         checked = biometricLockEnabled,
                         onCheckedChange = { isChecked ->
                             if (isChecked) {
                                 val km = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
                                 if (km == null || !km.isDeviceSecure) {
-                                    context.showMessage("App lock requires a screen lock (PIN, pattern, or fingerprint)")
+                                    context.showMessage(keyguardMessage)
                                 } else {
                                     settingsRepository.setBiometricLockEnabled(true)
                                 }
@@ -237,11 +240,9 @@ fun SettingsScreen(
         if (showClearHistoryConfirmation) {
             AppDialog(
                 isOpen = true,
-                title = "Clear recent history?",
-                message = "This removes the recent list, the page each document was left on, and the " +
-                    "resume points for audio and video. Nothing is deleted from storage — your files " +
-                    "stay exactly where they are. This cannot be undone.",
-                confirmLabel = "Clear",
+                title = stringResource(R.string.settings_clear_history_title),
+                message = stringResource(R.string.settings_clear_history_message),
+                confirmLabel = stringResource(R.string.settings_clear_history_confirm),
                 isDestructive = true,
                 onDismissRequest = { showClearHistoryConfirmation = false },
                 onConfirm = {

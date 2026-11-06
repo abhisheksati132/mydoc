@@ -16,8 +16,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 
 @Composable
@@ -35,17 +37,17 @@ fun SettingsReadingSection(
     modifier: Modifier = Modifier
 ) {
     SettingsCard(
-        title = "Reading & documents",
+        title = stringResource(R.string.settings_reading_title),
         icon = Icons.AutoMirrored.Outlined.MenuBook,
         modifier = modifier
     ) {
-        SettingsSectionLabel(text = "Default reading mode")
+        SettingsSectionLabel(text = stringResource(R.string.settings_default_reading_mode))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             ChoiceChip(
-                label = "Normal",
+                label = stringResource(R.string.reading_mode_normal),
                 selected = currentReadingMode == ReadingMode.NORMAL,
                 onClick = { onReadingModeChange(ReadingMode.NORMAL) }
             )
@@ -56,7 +58,7 @@ fun SettingsReadingSection(
                 onClick = { onReadingModeChange(ReadingMode.INVERTED_DARK) }
             )
             ChoiceChip(
-                label = "Sepia",
+                label = stringResource(R.string.reading_mode_sepia),
                 selected = currentReadingMode == ReadingMode.SEPIA,
                 onClick = { onReadingModeChange(ReadingMode.SEPIA) }
             )
@@ -64,18 +66,18 @@ fun SettingsReadingSection(
 
         SettingsDivider(modifier = Modifier.padding(top = 12.dp))
 
-        SettingsSectionLabel(text = "PDF page scaling")
+        SettingsSectionLabel(text = stringResource(R.string.settings_pdf_page_scaling))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             ChoiceChip(
-                label = "Fit Width",
+                label = stringResource(R.string.settings_fit_width),
                 selected = pdfFitMode == "FIT_WIDTH",
                 onClick = { onPdfFitModeChange("FIT_WIDTH") }
             )
             ChoiceChip(
-                label = "Fit Whole Page",
+                label = stringResource(R.string.settings_fit_page),
                 selected = pdfFitMode == "FIT_PAGE",
                 onClick = { onPdfFitModeChange("FIT_PAGE") }
             )
@@ -84,8 +86,8 @@ fun SettingsReadingSection(
         SettingsDivider(modifier = Modifier.padding(top = 12.dp))
 
         SettingToggleRow(
-            title = "Double-Tap Quick Zoom",
-            subtitle = "Double tap a page to zoom to 2.5×",
+            title = stringResource(R.string.settings_double_tap_title),
+            subtitle = stringResource(R.string.settings_double_tap_subtitle),
             icon = Icons.Outlined.Speed,
             checked = doubleTapZoom,
             onCheckedChange = onDoubleTapZoomChange
@@ -94,8 +96,8 @@ fun SettingsReadingSection(
         SettingsDivider()
 
         SettingToggleRow(
-            title = "Keep Screen Awake While Reading",
-            subtitle = "Stop the screen sleeping while reading",
+            title = stringResource(R.string.settings_keep_awake_title),
+            subtitle = stringResource(R.string.settings_keep_awake_subtitle),
             icon = Icons.Outlined.LightMode,
             checked = keepScreenOn,
             onCheckedChange = onKeepScreenOnChange
@@ -104,8 +106,8 @@ fun SettingsReadingSection(
         SettingsDivider()
 
         SettingToggleRow(
-            title = "Volume Button Page Turning",
-            subtitle = "Volume keys flip pages",
+            title = stringResource(R.string.settings_volume_keys_title),
+            subtitle = stringResource(R.string.settings_volume_keys_subtitle),
             icon = Icons.Outlined.Vibration,
             checked = volumeKeyTurning,
             onCheckedChange = onVolumeKeyTurningChange
