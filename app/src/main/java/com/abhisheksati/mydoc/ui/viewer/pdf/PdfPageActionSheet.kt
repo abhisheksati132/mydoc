@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.pdf
 
+import com.abhisheksati.mydoc.R
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
@@ -54,7 +56,7 @@ fun PdfPageActionSheet(
                 .padding(bottom = 24.dp)
         ) {
             Text(
-                text = "Page ${pageNum + 1}",
+                text = stringResource(R.string.page_label, pageNum + 1),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
@@ -62,26 +64,26 @@ fun PdfPageActionSheet(
 
             PageAction(
                 icon = Icons.Outlined.ContentCopy,
-                title = "Copy page text",
-                supporting = "Copy all digital text from this page",
+                title = stringResource(R.string.page_copy_title),
+                supporting = stringResource(R.string.page_copy_supporting),
                 onClick = onCopyPageText
             )
             PageAction(
                 icon = Icons.AutoMirrored.Outlined.VolumeUp,
-                title = "Read page aloud",
-                supporting = "Listen with the offline speech synthesizer",
+                title = stringResource(R.string.page_read_title),
+                supporting = stringResource(R.string.page_read_supporting),
                 onClick = onReadPageAloud
             )
             PageAction(
                 icon = Icons.Outlined.Share,
-                title = "Share page text",
-                supporting = "Send this page's text to another app",
+                title = stringResource(R.string.page_share_title),
+                supporting = stringResource(R.string.page_share_supporting),
                 onClick = onSharePageText
             )
             PageAction(
                 icon = Icons.Outlined.TextFields,
-                title = "Extract text with OCR",
-                supporting = "Recognize printed or handwritten text",
+                title = stringResource(R.string.page_ocr_title),
+                supporting = stringResource(R.string.page_ocr_supporting),
                 onClick = onExtractOcr
             )
         }

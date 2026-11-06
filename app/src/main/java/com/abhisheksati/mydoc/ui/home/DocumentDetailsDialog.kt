@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.home
 
+import com.abhisheksati.mydoc.R
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,9 +27,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
@@ -61,6 +64,7 @@ fun DocumentDetailsDialog(
 ) {
     if (document == null) return
     val context = LocalContext.current
+    val resources = LocalResources.current
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val isOled = LocalIsOled.current
@@ -87,7 +91,7 @@ fun DocumentDetailsDialog(
                 )
                 Spacer(modifier = Modifier.width(AppSpacing.paddingSmall))
                 Text(
-                    text = "Document details",
+                    text = stringResource(R.string.details_dialog_title),
                     style = typography.titleSmall,
                     color = colors.textPrimary
                 )
@@ -107,28 +111,36 @@ fun DocumentDetailsDialog(
                 AppDivider()
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
 
-                DetailItem(label = "Format", value = "${document.typeBadge} (${document.extension.uppercase().ifEmpty { "N/A" }})")
                 DetailItem(
-                    label = "File size",
+                    label = stringResource(R.string.details_format),
+                    value = "${document.typeBadge} (${
+                        document.extension.uppercase().ifEmpty { stringResource(R.string.details_format_na) }
+                    })"
+                )
+                DetailItem(
+                    label = stringResource(R.string.details_file_size),
                     value = "${document.formattedSize} (${NumberFormat.getNumberInstance(Locale.US).format(document.sizeBytes)} bytes)"
                 )
                 if (document.pageCount > 0) {
                     DetailItem(label = "Pages", value = "${document.pageCount} pages")
                 }
                 if (document.formattedLastOpened.isNotBlank()) {
-                    DetailItem(label = "Last opened", value = document.formattedLastOpened)
+                    DetailItem(label = stringResource(R.string.details_last_opened), value = document.formattedLastOpened)
                 }
-                DetailItem(label = "MIME type", value = document.mimeType.ifEmpty { "Unknown" })
+                DetailItem(
+                    label = stringResource(R.string.details_mime),
+                    value = document.mimeType.ifEmpty { stringResource(R.string.photo_unknown) }
+                )
 
                 val descriptor = DocumentFormats.forExtension(document.extension)
                 if (descriptor != null) {
-                    DetailItem(label = "Rendering", value = descriptor.fidelity.label())
+                    DetailItem(label = stringResource(R.string.details_rendering), value = descriptor.fidelity.label())
                     if (descriptor.limitations.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                         AppDivider()
                         Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
                         Text(
-                            text = "Not shown in MyDoc",
+                            text = stringResource(R.string.details_not_shown),
                             style = typography.overline,
                             color = colors.textSecondary
                         )
@@ -163,12 +175,12 @@ fun DocumentDetailsDialog(
                     )
                     DialogActionButton(
                         icon = Icons.AutoMirrored.Outlined.OpenInNew,
-                        label = "Open with",
+                        label = stringResource(R.string.details_open_with),
                         onClick = {
                             onDismiss()
                             val mime = document.mimeType.ifEmpty { "application/pdf" }
                             if (!openFile(context, Uri.parse(document.uri), mime)) {
-                                context.showMessage("No app available")
+                                context.showMessage(resources.getString(R.string.details_no_app))
                             }
                         },
                         modifier = Modifier.weight(1f)
@@ -222,7 +234,7 @@ fun DocumentDetailsDialog(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Remove",
+                        text = stringResource(R.string.action_remove),
                         style = typography.label,
                         color = colors.error
                     )
