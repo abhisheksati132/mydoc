@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.settings
 
+import com.abhisheksati.mydoc.R
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -20,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
@@ -41,7 +43,7 @@ fun SettingsAppearanceSection(
     val haptic = LocalHapticFeedback.current
 
     SettingsCard(
-        title = "Appearance",
+        title = stringResource(R.string.appearance_title),
         icon = Icons.Outlined.Palette,
         modifier = modifier
     ) {
@@ -53,7 +55,7 @@ fun SettingsAppearanceSection(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             ThemeChip(
-                label = "System",
+                label = stringResource(R.string.settings_system),
                 icon = Icons.Outlined.BrightnessAuto,
                 selected = currentTheme == AppThemeMode.SYSTEM,
                 onClick = { onThemeChange(AppThemeMode.SYSTEM) }
@@ -74,7 +76,7 @@ fun SettingsAppearanceSection(
 
         SettingsDivider(modifier = Modifier.padding(top = 12.dp))
 
-        SettingsSectionLabel(text = "Glass effects")
+        SettingsSectionLabel(text = stringResource(R.string.settings_glass_effects))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -104,8 +106,8 @@ fun SettingsAppearanceSection(
         SettingsDivider(modifier = Modifier.padding(top = 12.dp))
 
         SettingToggleRow(
-            title = "Pure AMOLED Black",
-            subtitle = "Pitch black background, saves battery on OLED",
+            title = stringResource(R.string.settings_amoled_title),
+            subtitle = stringResource(R.string.settings_amoled_subtitle),
             icon = Icons.Outlined.Contrast,
             checked = amoledBlack,
             onCheckedChange = onAmoledBlackChange
@@ -114,8 +116,8 @@ fun SettingsAppearanceSection(
         SettingsDivider()
 
         SettingToggleRow(
-            title = "Tactile Vibration Haptics",
-            subtitle = "Vibrate on taps and gestures",
+            title = stringResource(R.string.settings_haptics_title),
+            subtitle = stringResource(R.string.settings_haptics_subtitle),
             icon = Icons.Outlined.Vibration,
             checked = hapticFeedbackEnabled,
             onCheckedChange = {

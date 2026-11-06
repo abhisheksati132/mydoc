@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.media
 
+import com.abhisheksati.mydoc.R
 import android.app.Activity
 import android.app.PictureInPictureParams
 import android.content.Context
@@ -76,6 +77,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -83,6 +85,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -144,6 +147,7 @@ fun VideoPlayerScreen(
     autoLoop: Boolean = true
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val activity = context as? Activity
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
@@ -449,7 +453,7 @@ fun VideoPlayerScreen(
                     .padding(16.dp)
                     .background(Color.Black.copy(alpha = 0.6f), CircleShape)
             ) {
-                Icon(Icons.Default.Lock, contentDescription = "Unlock", tint = colors.accent)
+                Icon(Icons.Default.Lock, contentDescription = stringResource(R.string.video_unlock), tint = colors.accent)
             }
         }
 
@@ -504,14 +508,14 @@ fun VideoPlayerScreen(
                         resizeModeIndex = (resizeModeIndex + 1) % VideoResizeMode.entries.size
                         context.showMessage(VideoResizeMode.entries[resizeModeIndex].label)
                     }) {
-                        Icon(Icons.Outlined.AspectRatio, contentDescription = "Aspect Ratio", tint = Color.White)
+                        Icon(Icons.Outlined.AspectRatio, contentDescription = stringResource(R.string.video_aspect_ratio), tint = Color.White)
                     }
 
                     // Screen Rotation Lock Toggle
                     IconButton(onClick = {
                         orientationMode = (orientationMode + 1) % 3
                     }) {
-                        Icon(Icons.Default.ScreenRotation, contentDescription = "Rotation", tint = Color.White)
+                        Icon(Icons.Default.ScreenRotation, contentDescription = stringResource(R.string.video_rotation), tint = Color.White)
                     }
 
                     // Picture-in-Picture Button
@@ -532,8 +536,8 @@ fun VideoPlayerScreen(
 
                     // Share Video
                     IconButton(onClick = {
-                        if (!shareFile(context, item.uri, item.mimeType, "Share video")) {
-                            context.showMessage("No app available to share this video")
+                        if (!shareFile(context, item.uri, item.mimeType, resources.getString(R.string.video_share_label))) {
+                            context.showMessage(resources.getString(R.string.video_no_share_app))
                         }
                     }) {
                         Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
@@ -652,11 +656,11 @@ fun VideoPlayerScreen(
                         IconButton(onClick = {
                             isLooping = !isLooping
                             exoPlayer.repeatMode = if (isLooping) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
-                            context.showMessage(if (isLooping) "Repeat: ON" else "Repeat: OFF")
+                            context.showMessage(resources.getString(if (isLooping) R.string.video_repeat_on else R.string.video_repeat_off))
                         }) {
                             Icon(
                                 Icons.Default.Repeat,
-                                contentDescription = "Repeat",
+                                contentDescription = stringResource(R.string.cd_repeat),
                                 tint = if (isLooping) colors.accent else Color.White
                             )
                         }
@@ -708,7 +712,7 @@ fun VideoPlayerScreen(
                     .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
                 Text(
-                    text = "Playback Speed",
+                    text = stringResource(R.string.video_playback_speed),
                     style = typography.bodyStrong,
                     color = Color.White
                 )
@@ -733,7 +737,7 @@ fun VideoPlayerScreen(
                             style = if (playbackSpeed == spd) typography.bodyStrong else typography.body
                         )
                         if (playbackSpeed == spd) {
-                            Text("Active", color = colors.accent, style = typography.caption)
+                            Text(stringResource(R.string.video_active), color = colors.accent, style = typography.caption)
                         }
                     }
                 }

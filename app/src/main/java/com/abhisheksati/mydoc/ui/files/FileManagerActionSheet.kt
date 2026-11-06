@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.files
 
+import com.abhisheksati.mydoc.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
@@ -40,6 +41,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -149,7 +151,7 @@ fun SingleItemActionBottomSheet(
 
             if (!item.isDirectory && onOpenInTools != null) {
                 ItemActionOption(
-                    title = "Open in PDF tools…",
+                    title = stringResource(R.string.action_open_pdf_tools),
                     icon = Icons.Outlined.Build,
                     tint = colors.accent,
                     onClick = onOpenInTools
@@ -163,19 +165,19 @@ fun SingleItemActionBottomSheet(
             )
 
             ItemActionOption(
-                title = "Move (Cut)",
+                title = stringResource(R.string.action_move_cut),
                 icon = Icons.Outlined.ContentCut,
                 onClick = onMove
             )
 
             ItemActionOption(
-                title = "Rename",
+                title = stringResource(R.string.action_rename),
                 icon = Icons.Outlined.DriveFileRenameOutline,
                 onClick = onRename
             )
 
             ItemActionOption(
-                title = "Move to Recycle Bin",
+                title = stringResource(R.string.photo_move_to_bin_title),
                 icon = Icons.Outlined.Delete,
                 tint = colors.error,
                 onClick = onDelete
@@ -183,7 +185,7 @@ fun SingleItemActionBottomSheet(
 
             if (item.isDirectory) {
                 ItemActionOption(
-                    title = if (isPinned) "Unpin from Quick Access" else "Pin to Quick Access",
+                    title = stringResource(if (isPinned) R.string.action_unpin_quick_access else R.string.action_pin_quick_access),
                     icon = if (isPinned) Icons.Filled.Bookmark else Icons.Outlined.Bookmark,
                     tint = colors.accent,
                     onClick = onTogglePin
@@ -193,7 +195,7 @@ fun SingleItemActionBottomSheet(
             val isZip = item.name.endsWith(".zip", ignoreCase = true) || item.name.endsWith(".jar", ignoreCase = true)
             if (isZip) {
                 ItemActionOption(
-                    title = "Extract ZIP Archive",
+                    title = stringResource(R.string.action_extract_zip),
                     icon = Icons.Outlined.FolderZip,
                     tint = colors.accent,
                     onClick = onExtractZip
@@ -201,13 +203,13 @@ fun SingleItemActionBottomSheet(
             }
 
             ItemActionOption(
-                title = "Compress to ZIP",
+                title = stringResource(R.string.dialog_compress_zip),
                 icon = Icons.Outlined.Archive,
                 onClick = onCompressToZip
             )
 
             ItemActionOption(
-                title = "Details & Checksum",
+                title = stringResource(R.string.action_details_checksum),
                 icon = Icons.Outlined.Info,
                 onClick = onDetails
             )

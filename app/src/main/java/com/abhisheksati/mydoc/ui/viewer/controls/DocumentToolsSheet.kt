@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
+import com.abhisheksati.mydoc.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -96,14 +98,22 @@ fun DocumentToolsSheet(
         }
     }
 
-    val filters = remember {
+    // Labels are read in composition; the chip list is rebuilt only when they change with the
+    // configuration, not on every recomposition.
+    val allLabel = stringResource(R.string.tools_filter_all)
+    val organizeLabel = stringResource(R.string.tools_filter_organize)
+    val editLabel = stringResource(R.string.tools_filter_edit_sign)
+    val compressLabel = stringResource(R.string.tools_filter_compress)
+    val convertLabel = stringResource(R.string.tools_filter_convert)
+    val secureLabel = stringResource(R.string.tools_filter_secure)
+    val filters = remember(allLabel, organizeLabel, editLabel, compressLabel, convertLabel, secureLabel) {
         listOf(
-            ToolFilter(null, Icons.Outlined.AllInclusive, "All"),
-            ToolFilter(ToolGroup.ORGANIZE, Icons.AutoMirrored.Outlined.CallSplit, "Organize"),
-            ToolFilter(ToolGroup.EDIT_SIGN, Icons.Outlined.Edit, "Edit & Sign"),
-            ToolFilter(ToolGroup.COMPRESS, Icons.Outlined.Compress, "Compress"),
-            ToolFilter(ToolGroup.CONVERT, Icons.Outlined.Difference, "Convert"),
-            ToolFilter(ToolGroup.SECURE, Icons.Outlined.Security, "Secure")
+            ToolFilter(null, Icons.Outlined.AllInclusive, allLabel),
+            ToolFilter(ToolGroup.ORGANIZE, Icons.AutoMirrored.Outlined.CallSplit, organizeLabel),
+            ToolFilter(ToolGroup.EDIT_SIGN, Icons.Outlined.Edit, editLabel),
+            ToolFilter(ToolGroup.COMPRESS, Icons.Outlined.Compress, compressLabel),
+            ToolFilter(ToolGroup.CONVERT, Icons.Outlined.Difference, convertLabel),
+            ToolFilter(ToolGroup.SECURE, Icons.Outlined.Security, secureLabel)
         )
     }
 
@@ -132,7 +142,7 @@ fun DocumentToolsSheet(
                 .padding(bottom = 24.dp)
         ) {
             Text(
-                text = "Document tools",
+                text = stringResource(R.string.tools_sheet_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(horizontal = 24.dp)
@@ -149,7 +159,7 @@ fun DocumentToolsSheet(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Search actions") },
+                placeholder = { Text(stringResource(R.string.tools_search_actions)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Search,
@@ -212,7 +222,7 @@ fun DocumentToolsSheet(
                 if (filteredTools.isEmpty()) {
                     item {
                         Text(
-                            text = "No in-app tools for this format yet.",
+                            text = stringResource(R.string.tools_none_for_format),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

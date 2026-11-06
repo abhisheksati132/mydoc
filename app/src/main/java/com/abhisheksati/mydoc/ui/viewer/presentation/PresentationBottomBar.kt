@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.presentation
 
+import com.abhisheksati.mydoc.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -118,7 +120,7 @@ fun PresentationBottomBar(
                                     color = if (isSelected) MaterialTheme.colorScheme.primary else textColor
                                 )
                                 Text(
-                                    text = slide?.title ?: "Slide ${index + 1}",
+                                    text = slide?.title ?: stringResource(R.string.slide_label, index + 1),
                                     style = typography.labelSmall,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
@@ -147,7 +149,7 @@ fun PresentationBottomBar(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = "Previous Slide",
+                    contentDescription = stringResource(R.string.cd_previous_slide),
                     tint = if (currentSlideIndex > 0) textColor else secondaryTextColor.copy(alpha = 0.3f)
                 )
             }
@@ -155,7 +157,7 @@ fun PresentationBottomBar(
             IconButton(onClick = onToggleThumbnailStrip) {
                 Icon(
                     imageVector = Icons.Outlined.ViewCarousel,
-                    contentDescription = "Toggle Thumbnails",
+                    contentDescription = stringResource(R.string.cd_toggle_thumbnails),
                     tint = if (isThumbnailStripOpen) MaterialTheme.colorScheme.primary else secondaryTextColor
                 )
             }
@@ -169,7 +171,7 @@ fun PresentationBottomBar(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Slide ${currentSlideIndex + 1} of $effectiveSlideCount",
+                    text = stringResource(R.string.slide_of, currentSlideIndex + 1, effectiveSlideCount),
                     style = MaterialTheme.typography.labelMedium,
                     color = textColor
                 )
@@ -183,7 +185,7 @@ fun PresentationBottomBar(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Description,
-                    contentDescription = "Speaker Notes",
+                    contentDescription = stringResource(R.string.cd_speaker_notes),
                     tint = if (hasNotes) MaterialTheme.colorScheme.primary else secondaryTextColor.copy(alpha = 0.25f)
                 )
             }
@@ -194,7 +196,7 @@ fun PresentationBottomBar(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
-                    contentDescription = "Next Slide",
+                    contentDescription = stringResource(R.string.cd_next_slide),
                     tint = if (currentSlideIndex < effectiveSlideCount - 1) textColor else secondaryTextColor.copy(alpha = 0.3f)
                 )
             }

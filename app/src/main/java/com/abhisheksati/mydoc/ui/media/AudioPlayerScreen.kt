@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.media
 
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.util.UserMessages
 import android.media.MediaPlayer
 import android.widget.Toast
@@ -46,8 +47,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.MyDocApp
@@ -77,6 +80,7 @@ fun AudioPlayerScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val colors = AppTheme.colors
     val typography = AppTheme.typography
     val haptics = rememberAppHaptics()
@@ -135,7 +139,7 @@ fun AudioPlayerScreen(
                 isPlaying = true
             }
         } catch (e: Exception) {
-            context.showMessage("MyDoc can't play this audio file.")
+            context.showMessage(resources.getString(R.string.audio_cant_play))
         }
 
         onDispose {
@@ -211,7 +215,7 @@ fun AudioPlayerScreen(
             }
 
             Text(
-                text = "Audio Player",
+                text = stringResource(R.string.audio_player_title),
                 style = typography.titleSmall,
                 color = colors.ink
             )
@@ -219,8 +223,8 @@ fun AudioPlayerScreen(
             IconButton(
                 onClick = {
                     haptics.tap()
-                    if (!shareFile(context, item.uri, item.mimeType.ifEmpty { "audio/*" }, "Share Audio")) {
-                        context.showMessage("No app available to share this audio")
+                    if (!shareFile(context, item.uri, item.mimeType.ifEmpty { resources.getString(R.string.audio_mime_fallback) }, resources.getString(R.string.audio_share_label))) {
+                        context.showMessage(resources.getString(R.string.audio_no_share_app))
                     }
                 },
                 modifier = Modifier.size(48.dp)
@@ -250,7 +254,7 @@ fun AudioPlayerScreen(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Outlined.Audiotrack,
-                        contentDescription = "Audio track",
+                        contentDescription = stringResource(R.string.cd_audio_track),
                         tint = onMintContainer,
                         modifier = Modifier.size(90.dp)
                     )
@@ -368,7 +372,7 @@ fun AudioPlayerScreen(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.FastRewind,
-                        contentDescription = "Rewind 10 seconds",
+                        contentDescription = stringResource(R.string.cd_rewind),
                         tint = colors.ink,
                         modifier = Modifier.size(24.dp)
                     )
@@ -426,7 +430,7 @@ fun AudioPlayerScreen(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.FastForward,
-                        contentDescription = "Forward 10 seconds",
+                        contentDescription = stringResource(R.string.cd_forward),
                         tint = colors.ink,
                         modifier = Modifier.size(24.dp)
                     )
@@ -488,13 +492,13 @@ fun AudioPlayerScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Repeat,
-                        contentDescription = "Auto Loop",
+                        contentDescription = stringResource(R.string.cd_auto_loop),
                         tint = if (isLooping) onMintContainer else colors.ink,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (isLooping) "Looping" else "Loop Off",
+                        text = stringResource(if (isLooping) R.string.audio_loop_on else R.string.audio_loop_off),
                         style = if (isLooping) typography.captionStrong else typography.caption,
                         color = if (isLooping) onMintContainer else colors.ink
                     )
