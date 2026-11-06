@@ -102,7 +102,12 @@ class DocumentTtsManager(private val context: Context) : TextToSpeech.OnInitList
 
         val params = Bundle()
         params.putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "chunk_$currentChunkIndex")
-        tts?.speak(chunk, TextToSpeech.QUEUE_FLUSH, params, "chunk_$currentChunkIndex")
+        val queued = tts?.speak(chunk, TextToSpeech.QUEUE_FLUSH, params, "chunk_$currentChunkIndex")
+        // The engine answers ERROR synchronously for a chunk it refuses (too long, language gone);
+        // without this check the UI stayed on PLAYING with nothing being spoken.
+        if (queued != TextToSpeech.SUCCESS) {
+            _playbackState.value = TtsPlaybackState.ERROR
+        }
     }
 
     fun pause() {
@@ -131,30 +136,40 @@ class DocumentTtsManager(private val context: Context) : TextToSpeech.OnInitList
     }
 
     private fun chunkText(text: String): List<String> {
+        val limit = 500
         val result = mutableListOf<String>()
-        val paragraphs = text.split(Regex("\n+"))
-        for (para in paragraphs) {
+        fun flushChunk(buffer: StringBuilder) {
+            val chunk = buffer.toString().trim()
+            if (chunk.isNotEmpty()) result.add(chunk)
+            buffer.setLength(0)
+        }
+        for (para in text.split(Regex("\n+"))) {
             val trimmed = para.trim()
             if (trimmed.isEmpty()) continue
-            if (trimmed.length < 500) {
+            if (trimmed.length <= limit) {
                 result.add(trimmed)
-            } else {
-                // Split long paragraphs by sentences
-                val sentences = trimmed.split(Regex("(?<=[.!?])\\s+"))
-                var currentBuffer = StringBuilder()
-                for (sentence in sentences) {
-                    if (currentBuffer.length + sentence.length > 500) {
-                        result.add(currentBuffer.toString().trim())
-                        currentBuffer = StringBuilder()
-                    }
-                    currentBuffer.append(sentence).append(" ")
-                }
-                if (currentBuffer.isNotBlank()) {
-                    result.add(currentBuffer.toString().trim())
-                }
+                continue
             }
+            // Split long paragraphs by sentences. A sentence that is itself longer than the limit
+            // (a URL, a CJK run with no spaces) is cut at a space near the limit rather than handed
+            // to the engine whole, where it would be rejected or read in one unbounded utterance.
+            val buffer = StringBuilder()
+            for (sentence in trimmed.split(Regex("(?<=[.!?])\\s+"))) {
+                var piece = sentence
+                while (piece.length > limit) {
+                    flushChunk(buffer)
+                    val space = piece.lastIndexOf(' ', limit)
+                    val cut = if (space > limit / 2) space else limit
+                    result.add(piece.substring(0, cut).trim())
+                    piece = piece.substring(cut).trimStart()
+                }
+                if (piece.isEmpty()) continue
+                if (buffer.length + piece.length + 1 > limit) flushChunk(buffer)
+                buffer.append(piece).append(' ')
+            }
+            flushChunk(buffer)
         }
-        return if (result.isEmpty()) listOf(text) else result
+        return result.ifEmpty { listOf(text.trim()) }.filter { it.isNotEmpty() }
     }
 
     fun shutdown() {

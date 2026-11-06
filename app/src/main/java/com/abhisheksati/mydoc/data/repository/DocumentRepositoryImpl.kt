@@ -38,9 +38,9 @@ class DocumentRepositoryImpl(
     override fun getRecents(): Flow<List<DocumentFile>> {
         return combine(
             recentDao.getAllRecents(),
-            favoriteDao.getAllFavorites()
+            favoriteDao.getFavoriteUris()
         ) { recents, favorites ->
-            val favUris = favorites.map { it.uri }.toSet()
+            val favUris = favorites.toSet()
             recents.map { recent ->
                 DocumentFile(
                     uri = recent.uri,
@@ -79,10 +79,10 @@ class DocumentRepositoryImpl(
     }
 
     override fun getAllDeviceDocuments(): Flow<List<DocumentFile>> = combine(
-        favoriteDao.getAllFavorites(),
+        favoriteDao.getFavoriteUris(),
         recentDao.getAllRecents()
     ) { favorites, recents ->
-        val favUris = favorites.map { it.uri }.toSet()
+        val favUris = favorites.toSet()
         val recentsMap = recents.associateBy { it.uri }
 
         withContext(Dispatchers.IO) {

@@ -19,6 +19,13 @@ interface FavoriteDao {
     @Query("SELECT * FROM favorite_documents ORDER BY addedTimestamp DESC LIMIT :limit")
     fun getAllFavorites(limit: Int = MAX_LISTED): Flow<List<FavoriteDocumentEntity>>
 
+    /**
+     * Membership is not the paged list: asking "is this a favourite" against the first
+     * [MAX_LISTED] rows reported favourites 501 and on as not favourited.
+     */
+    @Query("SELECT uri FROM favorite_documents")
+    fun getFavoriteUris(): Flow<List<String>>
+
     @Query("SELECT EXISTS(SELECT 1 FROM favorite_documents WHERE uri = :uri)")
     suspend fun isFavorite(uri: String): Boolean
 

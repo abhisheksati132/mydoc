@@ -22,11 +22,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -41,6 +43,9 @@ import com.abhisheksati.mydoc.designsystem.components.AppTopBar
 import com.abhisheksati.mydoc.ui.appmanager.AppManagerSheet
 import com.abhisheksati.mydoc.ui.cleaner.StorageCleanerSheet
 import com.abhisheksati.mydoc.update.UpdateManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 import com.abhisheksati.mydoc.designsystem.components.showMessage
 
@@ -53,10 +58,11 @@ fun SettingsScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     onDesignSystemPreviewClick: () -> Unit = {},
-    onClearRecent: (() -> Unit)? = null
+    onClearRecent: (suspend () -> Unit)? = null
 ) {
     val updateState by updateManager.state.collectAsState()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val scheme = MaterialTheme.colorScheme
     val haptic = LocalHapticFeedback.current
 
@@ -84,7 +90,12 @@ fun SettingsScreen(
 
     // LIBRARY
     val startupTab by settingsRepository.defaultStartupTab.collectAsState()
-    var cacheSizeBytes by remember { mutableLongStateOf(settingsRepository.getCacheSizeBytes(context)) }
+    var cacheSizeBytes by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(Unit) {
+        // The size is a recursive walk of both cache trees; doing it in composition stalled the
+        // first frame of Settings on a device with a large render cache.
+        cacheSizeBytes = withContext(Dispatchers.IO) { settingsRepository.getCacheSizeBytes(context) }
+    }
     // Read through resources, not LocalContext, so a configuration change re-composes
     // with the right values instead of leaving a stale string in the callback.
     val cacheClearedMessage = stringResource(R.string.cache_cleared)
@@ -163,15 +174,17 @@ fun SettingsScreen(
                     onStartupTabChange = { settingsRepository.setDefaultStartupTab(it) },
                     onClearCacheClick = {
                         if (hapticFeedbackEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        val freed = settingsRepository.clearCache(context)
-                        cacheSizeBytes = settingsRepository.getCacheSizeBytes(context)
-                        val freedMb = freed / (1024.0 * 1024.0)
-                        val toastText = if (freedMb >= 0.1) {
-                            String.format(Locale.US, "Freed %.1f MB", freedMb)
-                        } else {
-                            cacheClearedMessage
+                        scope.launch {
+                            val freed = withContext(Dispatchers.IO) { settingsRepository.clearCache(context) }
+                            cacheSizeBytes = withContext(Dispatchers.IO) { settingsRepository.getCacheSizeBytes(context) }
+                            val freedMb = freed / (1024.0 * 1024.0)
+                            val toastText = if (freedMb >= 0.1) {
+                                String.format(Locale.US, "Freed %.1f MB", freedMb)
+                            } else {
+                                cacheClearedMessage
+                            }
+                            context.showMessage(toastText)
                         }
-                        context.showMessage(toastText)
                     },
                     // Clearing history is one tap away from erasing every reading position, so it
                     // asks first and says what goes and what stays.
@@ -233,8 +246,17 @@ fun SettingsScreen(
                 onDismissRequest = { showClearHistoryConfirmation = false },
                 onConfirm = {
                     showClearHistoryConfirmation = false
-                    onClearRecent?.invoke()
-                    context.showMessage(recentHistoryClearedMessage)
+                    val clear = onClearRecent
+                    if (clear == null) {
+                        context.showMessage(recentHistoryClearedMessage)
+                    } else {
+                        // Announce the clear only once the database work has returned, not when
+                        // the coroutine that does it is merely launched.
+                        scope.launch {
+                            clear()
+                            context.showMessage(recentHistoryClearedMessage)
+                        }
+                    }
                 }
             )
         }

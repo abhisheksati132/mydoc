@@ -113,29 +113,67 @@ class AppManagerHelper(private val context: Context) {
 
             val sanitizedName = app.appName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
             val sanitizedVersion = app.versionName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+            // The package is part of the name: two installations can share a label and version
+            // (a patch, a beta channel) and used to collide on one export path.
+            val baseName = "${sanitizedName}_${app.packageName.replace('.', '_')}_v$sanitizedVersion"
             if (app.isSplitApk && app.splitApkFiles.isNotEmpty()) {
-                val targetZip = File(targetDir, "${sanitizedName}_v${sanitizedVersion}.apks")
                 val allApks = listOf(app.apkFile) + app.splitApkFiles
-                ZipOutputStream(FileOutputStream(targetZip)).use { zos ->
-                    for (apk in allApks) {
-                        if (!apk.exists()) continue
-                        zos.putNextEntry(ZipEntry(apk.name))
-                        FileInputStream(apk).use { it.copyTo(zos) }
-                        zos.closeEntry()
+                val target = writeStaged(targetDir, baseName, "apks") { staging ->
+                    ZipOutputStream(FileOutputStream(staging)).use { zos ->
+                        for (apk in allApks) {
+                            if (!apk.exists()) continue
+                            zos.putNextEntry(ZipEntry(apk.name))
+                            FileInputStream(apk).use { it.copyTo(zos) }
+                            zos.closeEntry()
+                        }
                     }
                 }
-                Result.success(targetZip)
+                Result.success(target)
             } else {
-                val targetFile = File(targetDir, "${sanitizedName}_v${sanitizedVersion}.apk")
-                FileInputStream(app.apkFile).use { input ->
-                    FileOutputStream(targetFile).use { output ->
-                        input.copyTo(output)
+                val target = writeStaged(targetDir, baseName, "apk") { staging ->
+                    FileInputStream(app.apkFile).use { input ->
+                        FileOutputStream(staging).use { output ->
+                            input.copyTo(output)
+                        }
                     }
                 }
-                Result.success(targetFile)
+                Result.success(target)
             }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Writes through a unique staging file and only then publishes it, so a failed export leaves
+     * no half-written artifact under the real name and never truncates an earlier export.
+     */
+    private fun writeStaged(dir: File, baseName: String, extension: String, write: (File) -> Unit): File {
+        val staging = File.createTempFile("$baseName.", ".$extension.tmp", dir)
+        try {
+            write(staging)
+            val target = uniqueTarget(dir, "$baseName.$extension")
+            if (!staging.renameTo(target)) {
+                staging.copyTo(target, overwrite = false)
+                staging.delete()
+            }
+            return target
+        } catch (t: Throwable) {
+            staging.delete()
+            throw t
+        }
+    }
+
+    private fun uniqueTarget(dir: File, name: String): File {
+        val first = File(dir, name)
+        if (!first.exists()) return first
+        val stem = name.substringBeforeLast('.')
+        val ext = name.substringAfterLast('.', "")
+        var index = 2
+        while (true) {
+            val candidate = File(dir, if (ext.isEmpty()) "$stem ($index)" else "$stem ($index).$ext")
+            if (!candidate.exists()) return candidate
+            index++
         }
     }
 

@@ -279,5 +279,9 @@ enum class PdfTool(
         icon = Icons.Outlined.CameraAlt,
         defaultSuffix = "scanned",
         acceptsNonPdfInput = true
-    )
+    );
+
+    /** A tool may take several files even when one is enough (Image to PDF appends each). */
+    val acceptsMultipleInputFiles: Boolean
+        get() = requiresMultipleInputFiles || this == IMAGE_TO_PDF
 }

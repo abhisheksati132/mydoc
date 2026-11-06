@@ -53,11 +53,17 @@ class PdfConversionEngine(private val context: Context) {
     private fun createTempOutputFile(prefix: String, ext: String): File =
         PdfToolUtils.createTempOutputFile(context.cacheDir, prefix, ext)
 
-    suspend fun imagesToPdf(files: List<File>, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File {
+    suspend fun imagesToPdf(
+        files: List<File>,
+        options: ToolOptions,
+        onProgress: (ToolProgress) -> Unit,
+        onSkipped: (List<String>) -> Unit = {}
+    ): File {
         val outDoc = AndroidPdfDocument()
         try {
             val total = files.size
             var added = 0
+            val skipped = mutableListOf<String>()
 
             files.forEachIndexed { index, imgFile ->
                 currentCoroutineContext().ensureActive()
@@ -70,7 +76,13 @@ class PdfConversionEngine(private val context: Context) {
                     PageSizeFormat.LETTER -> (max(
                         PageSizeFormat.LETTER.widthPt, PageSizeFormat.LETTER.heightPt) * PAGE_SUPERSAMPLE).toInt()
                 }
-                val bitmap = decodeSampled(imgFile, budgetPx) ?: return@forEachIndexed
+                val bitmap = decodeSampled(imgFile, budgetPx)
+                if (bitmap == null) {
+                    // An unreadable image is left out, but the caller is told: a file that silently
+                    // loses pages must not be presented as a complete conversion.
+                    skipped.add(imgFile.name)
+                    return@forEachIndexed
+                }
 
                 val (pageWidth, pageHeight) = when (options.pageSizeFormat) {
                     PageSizeFormat.A4 -> Pair(PageSizeFormat.A4.widthPt.toInt(), PageSizeFormat.A4.heightPt.toInt())
@@ -106,6 +118,7 @@ class PdfConversionEngine(private val context: Context) {
             if (added == 0) {
                 throw IllegalArgumentException("None of the selected files could be decoded as an image.")
             }
+            if (skipped.isNotEmpty()) onSkipped(skipped.toList())
 
             val outFile = createTempOutputFile("converted", "pdf")
             FileOutputStream(outFile).use { outDoc.writeTo(it) }

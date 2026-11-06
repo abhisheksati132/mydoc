@@ -695,7 +695,13 @@ fun StorageCleanerSheet(
                             }
                             app.showMessage(msg)
                         } else {
-                            app.showMessage("Cleaned ${moved.size} files and $deletedDirs folders (${formatSize(cleanedBytes ?: 0L)} freed).")
+                            // The files went to the Bin, which sits on the same volume: nothing is
+                            // freed until it is emptied, so the message says "reclaimable" rather
+                            // than claiming the space back now.
+                            app.showMessage(
+                                "Moved ${moved.size} files and deleted $deletedDirs folders " +
+                                    "(${formatSize(cleanedBytes ?: 0L)} reclaimable once the Bin is emptied)."
+                            )
                         }
                         isCleaning = false
                     }

@@ -106,6 +106,7 @@ class PdfToolsEngine(private val context: Context) {
 
             val initialSizeBytes = inputFiles.sumOf { it.length() }
             val initialPages = primaryFile?.let { countDocumentPages(it) } ?: 0
+            var skippedImages: List<String> = emptyList()
 
             onProgress(ToolProgress(10, 100, 15, "Executing ${tool.title}...", false))
 
@@ -124,7 +125,7 @@ class PdfToolsEngine(private val context: Context) {
                 PdfTool.REPAIR -> repairPdf(requirePrimaryFile(), onProgress)
 
                 // 3. Convert (to PDF)
-                PdfTool.IMAGE_TO_PDF -> imagesToPdf(inputFiles, options, onProgress)
+                PdfTool.IMAGE_TO_PDF -> imagesToPdf(inputFiles, options, onProgress) { skippedImages = it }
                 PdfTool.TEXT_TO_PDF -> textOrCsvToPdf(requirePrimaryFile(), onProgress)
 
                 // 4. Convert (from PDF)
@@ -146,7 +147,7 @@ class PdfToolsEngine(private val context: Context) {
                 PdfTool.STRIP_METADATA -> stripMetadata(requirePrimaryFile(), onProgress)
 
                 // 7. Scan
-                PdfTool.SCAN_TO_PDF -> imagesToPdf(inputFiles, options, onProgress)
+                PdfTool.SCAN_TO_PDF -> imagesToPdf(inputFiles, options, onProgress) { skippedImages = it }
             }
 
             currentCoroutineContext().ensureActive()
@@ -179,6 +180,9 @@ class PdfToolsEngine(private val context: Context) {
                     val lost = initialPages - finalPages
                     warningNote = "Recovered $finalPages of $initialPages pages. $lost damaged page(s) could not be restored."
                 }
+            } else if (skippedImages.isNotEmpty()) {
+                warningNote = "${skippedImages.size} of ${inputFiles.size} images could not be read and " +
+                    "were left out: ${skippedImages.joinToString(", ")}."
             }
 
             ToolExecutionResult(
@@ -260,8 +264,12 @@ class PdfToolsEngine(private val context: Context) {
 
     private val conversionEngine by lazy { PdfConversionEngine(context) }
 
-    private suspend fun imagesToPdf(files: List<File>, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File =
-        conversionEngine.imagesToPdf(files, options, onProgress)
+    private suspend fun imagesToPdf(
+        files: List<File>,
+        options: ToolOptions,
+        onProgress: (ToolProgress) -> Unit,
+        onSkipped: (List<String>) -> Unit
+    ): File = conversionEngine.imagesToPdf(files, options, onProgress, onSkipped)
 
     private suspend fun textOrCsvToPdf(file: File, onProgress: (ToolProgress) -> Unit): File =
         conversionEngine.textOrCsvToPdf(file, onProgress)

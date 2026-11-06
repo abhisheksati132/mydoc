@@ -151,6 +151,17 @@ fun ViewerScaffold(
     var isAppearanceSheetOpen by remember { mutableStateOf(false) }
     var isDocumentDetailsOpen by remember { mutableStateOf(false) }
 
+    // When no owner supplies bookmark state, read it from the store and refresh after each toggle.
+    // The fallback used to write the bookmark while the icon stayed hollow, so a tap looked lost.
+    var storedBookmarks by remember(document.uri) {
+        mutableStateOf(app?.settingsRepository?.getBookmarks(document.uri) ?: emptySet())
+    }
+    val effectiveBookmarked = if (onToggleBookmark == null) {
+        storedBookmarks.contains(currentPage)
+    } else {
+        isBookmarked
+    }
+
     // Reading immersion: hide system bars when controls are hidden
     val activity = context as? Activity
     val window = activity?.window
@@ -224,7 +235,7 @@ fun ViewerScaffold(
             pageCount = pageCount,
             visible = isControlsVisible,
             isCondensed = isCondensed,
-            isBookmarked = isBookmarked,
+            isBookmarked = effectiveBookmarked,
             onBackClick = onBackClick,
             onSearchClick = { onSearchClick?.invoke() },
             onToggleBookmark = {
@@ -232,6 +243,7 @@ fun ViewerScaffold(
                     onToggleBookmark()
                 } else {
                     app?.settingsRepository?.toggleBookmark(document.uri, currentPage)
+                    storedBookmarks = app?.settingsRepository?.getBookmarks(document.uri) ?: emptySet()
                 }
             },
             onShareClick = onShareClick,
@@ -268,7 +280,7 @@ fun ViewerScaffold(
             isCondensed = isCondensed,
             hasOutline = capabilities.supportsOutline && sheetItems.isNotEmpty(),
             onOutlineClick = { onOutlineClick?.invoke() },
-            onPagesClick = { onPagesClick?.invoke() },
+            onPagesClick = onPagesClick,
             onAppearanceClick = { isAppearanceSheetOpen = true },
             onPageScrubbed = { targetPage -> onPageScrubbed?.invoke(targetPage) },
             sheetItems = sheetItems,

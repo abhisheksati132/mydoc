@@ -437,7 +437,11 @@ private fun InputFilesSection(
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = if (tool.requiresMultipleInputFiles) "Input documents" else "Input document",
+            text = when {
+                tool == PdfTool.IMAGE_TO_PDF -> "Input images"
+                tool.requiresMultipleInputFiles -> "Input documents"
+                else -> "Input document"
+            },
             style = typography.labelLarge,
             color = scheme.onSurfaceVariant
         )
@@ -451,7 +455,7 @@ private fun InputFilesSection(
                     .clip(AppRadius.cardShape)
                     .background(scheme.surfaceContainerHigh)
                     .clickable {
-                        if (tool.requiresMultipleInputFiles) onPickMultiple() else onPickSingle()
+                        if (tool.acceptsMultipleInputFiles) onPickMultiple() else onPickSingle()
                     }
                     .padding(horizontal = 16.dp),
                 contentAlignment = Alignment.Center
@@ -465,7 +469,11 @@ private fun InputFilesSection(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (tool.requiresMultipleInputFiles) "Select 2 or more files" else "Select file to process",
+                        text = when {
+                            tool.requiresMultipleInputFiles -> "Select 2 or more files"
+                            tool.acceptsMultipleInputFiles -> "Select one or more files"
+                            else -> "Select file to process"
+                        },
                         style = typography.bodyLarge,
                         color = scheme.onSurface
                     )
@@ -523,7 +531,7 @@ private fun InputFilesSection(
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            if (tool.requiresMultipleInputFiles) {
+            if (tool.acceptsMultipleInputFiles) {
                 OutlinedButton(
                     onClick = onAddMore,
                     modifier = Modifier.fillMaxWidth(),

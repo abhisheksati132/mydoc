@@ -134,6 +134,9 @@ class MainActivity : ComponentActivity() {
      * lock protected the screen but not the bytes.
      */
     private var pendingIntent: Intent? = null
+    // The launch intent is handled before setContent, so the event flow has no subscriber yet.
+    // The flag makes a cold Quick Scan survive until composition can read it.
+    private val pendingQuickScan = java.util.concurrent.atomic.AtomicBoolean(false)
 
     @Volatile
     private var isContentReady = false
@@ -246,6 +249,7 @@ class MainActivity : ComponentActivity() {
                 // on the floor. The request is state now, and a pending one resolves to Home.
                 var quickScanRequested by remember { mutableStateOf(false) }
                 LaunchedEffect(Unit) {
+                    if (pendingQuickScan.getAndSet(false)) quickScanRequested = true
                     MainActivity.quickScanEvents.collect { quickScanRequested = true }
                 }
 
@@ -400,9 +404,7 @@ class MainActivity : ComponentActivity() {
                                                     {}
                                                 },
                                                 onClearRecent = {
-                                                    lifecycleScope.launch {
-                                                        app.libraryRepository.clearAllRecents()
-                                                    }
+                                                    app.libraryRepository.clearAllRecents()
                                                 }
                                             )
                                         }
@@ -575,6 +577,7 @@ class MainActivity : ComponentActivity() {
         if (intent == null) return
 
         if (intent.action == ACTION_QUICK_SCAN) {
+            pendingQuickScan.set(true)
             quickScanEvents.tryEmit(Unit)
             return
         }

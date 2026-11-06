@@ -69,7 +69,9 @@ fun ViewerBottomBar(
     visible: Boolean,
     hasOutline: Boolean,
     onOutlineClick: () -> Unit,
-    onPagesClick: () -> Unit,
+    // Null when the reader has no page grid: a disabled control is honest, a tappable one that
+    // does nothing is not.
+    onPagesClick: (() -> Unit)?,
     onAppearanceClick: () -> Unit,
     onPageScrubbed: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -204,7 +206,8 @@ fun ViewerBottomBar(
                         icon = Icons.Outlined.PhotoLibrary,
                         label = "Pages",
                         contentDescription = "Thumbnail page grid",
-                        onClick = onPagesClick,
+                        enabled = onPagesClick != null,
+                        onClick = { onPagesClick?.invoke() },
                         modifier = Modifier.weight(1f)
                     )
 

@@ -44,6 +44,25 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 - **PDF page geometry is resolved off the main thread.** Each scrolled-in page read the cached size
   or opened the page while composing, behind a render holding the renderer lock, so the first frame
   of a new page could stall.
+- **Settings measures and clears the cache off the main thread**, and says "history cleared" only
+  after the database work has returned rather than when its coroutine starts.
+- **A Quick Scan launched from a cold start opens the scanner.** The launch intent was handled before
+  the event flow had a subscriber, so the request was dropped.
+- **Read-aloud splits over-long sentences and reports engine refusals.** A sentence past the chunk
+  limit (a URL, a run of CJK) went to the speech engine whole, an empty chunk could be queued, and a
+  synchronous `ERROR` left the UI showing "playing".
+- **The storage cleaner no longer claims space back it has not freed.** Its files go to the Bin on the
+  same volume, so the completion message now says how much is reclaimable once the Bin is emptied.
+- **Image to PDF accepts several images at once**, and an image it cannot decode is named in the
+  result instead of being silently dropped from an otherwise "completed" PDF.
+- **Exported APKs no longer collide or leave partial files.** The name now includes the package, and
+  the export is staged and then published under a free name.
+- **A favourite past the 500th is still shown as a favourite.** Membership is read from its own query
+  instead of the paged favourites list.
+- **Reader chrome stops offering controls that do nothing.** Pages is disabled when a viewer has no
+  page grid, and a bookmark tapped without a per-viewer handler now lights the icon.
+- **The page organizer renders a thumbnail whenever its tile is on screen.** It pre-rendered every
+  page and kept only the last 35, so earlier tiles stayed blank for the rest of the session.
 
 ## [1.7.5] — 2026-11-06
 
