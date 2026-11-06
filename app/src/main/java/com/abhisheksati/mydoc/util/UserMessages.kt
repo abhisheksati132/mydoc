@@ -70,7 +70,7 @@ object UserMessages {
             cause is SecurityException || text.contains("EACCES") ||
                 text.contains("Permission denied", ignoreCase = true) -> R.string.user_reason_no_permission
             text.contains("ENOENT") -> R.string.user_reason_missing
-            text.contains("ENOSPC") -> R.string.user_reason_no_space
+            text.contains("ENOSPC") || text.contains("not enough free space", ignoreCase = true) -> R.string.user_reason_no_space
             text.contains("EROFS") || text.contains("read-only", ignoreCase = true) -> R.string.user_reason_read_only
             text.contains("EXDEV") -> R.string.user_reason_cross_volume
             else -> null

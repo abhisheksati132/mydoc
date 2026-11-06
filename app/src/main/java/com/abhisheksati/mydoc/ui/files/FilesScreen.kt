@@ -107,7 +107,8 @@ fun FilesPaneScreen(
     onOpenInTools: ((File) -> Unit)? = null,
     hazeState: dev.chrisbanes.haze.HazeState? = null,
     glassMotion: com.abhisheksati.mydoc.designsystem.components.GlassMotionState? = null,
-    workspaceInsets: Boolean = false
+    workspaceInsets: Boolean = false,
+    onShowTransfers: () -> Unit = {}
 ) {
 
     val uiState by viewModel.uiState.collectAsState()
@@ -132,6 +133,10 @@ fun FilesPaneScreen(
     var showCleaner by remember { mutableStateOf(false) }
     var showAppManager by remember { mutableStateOf(false) }
     var showInsights by remember { mutableStateOf(false) }
+    var showFolderInsights by remember { mutableStateOf(false) }
+    var archiveTarget by remember { mutableStateOf<File?>(null) }
+    val transfers by viewModel.explorerClipboard.transfers.state.collectAsState()
+    val isTransferring = transfers.any { it.running }
 
     val pinnedFoldersManager = remember { PinnedFoldersManager(context) }
     val pinnedFolders by pinnedFoldersManager.pinnedFolders.collectAsState()
@@ -337,6 +342,7 @@ fun FilesPaneScreen(
                             onSettingsClick = onSettingsClick,
                             workspaceInsets = workspaceInsets,
                             onAdvancedSearch = { showAdvancedSearch = true },
+                            onFolderInsights = { showFolderInsights = true },
                             onToggleView = { viewModel.toggleViewMode() },
                             onToggleHidden = { viewModel.toggleHiddenFiles() },
                             onNewFolder = { showNewFolderDialog = true },
@@ -412,10 +418,8 @@ fun FilesPaneScreen(
                                 onOpenItem = { item ->
                                     when {
                                         item.isDirectory -> viewModel.loadDirectory(item.file)
-                                        item.fileType == StorageFileType.ARCHIVE ||
-                                                item.name.endsWith(".zip", ignoreCase = true) -> {
-                                            actionTarget = item
-                                        }
+                                        item.name.endsWith(".zip", ignoreCase = true) -> archiveTarget = item.file
+                                        item.fileType == StorageFileType.ARCHIVE -> actionTarget = item
                                         item.fileType == StorageFileType.IMAGE -> {
                                             val siblingImages = uiState.filteredItems
                                                 .filter { it.fileType == StorageFileType.IMAGE }
@@ -467,7 +471,9 @@ fun FilesPaneScreen(
                 FileManagerClipboardBar(
                     clipboardState = uiState.clipboardState,
                     onCancel = { viewModel.cancelClipboard() },
-                    onPaste = { viewModel.pasteClipboard() },
+                    onPaste = { viewModel.pasteClipboard(); onShowTransfers() },
+                    isTransferring = isTransferring,
+                    onShowTransfers = onShowTransfers,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(horizontal = 16.dp, vertical = 12.dp)
@@ -505,9 +511,17 @@ fun FilesPaneScreen(
         singleItemActionTarget = actionTarget,
         onDismissSingleItemAction = { actionTarget = null },
         onRequestRename = { renameTarget = it },
-        onOpenFile = { file -> onOpenFile(file, null) },
+        onOpenFile = { file -> if (file.extension.equals("zip", true)) archiveTarget = file else onOpenFile(file, null) },
         onOpenInTools = onOpenInTools
     )
+
+    archiveTarget?.let { archive -> ExplorerArchiveSheet(archive,
+        onDismiss = { archiveTarget = null },
+        onExtract = { archiveTarget = null; viewModel.extractArchive(archive) },
+        canExtract = uiState.activeOperation == null && !isTransferring) }
+    if (showFolderInsights) ExplorerFolderInsightsSheet(uiState.currentDirectory,
+        onDismiss = { showFolderInsights = false },
+        onOpenFolder = { folder -> showFolderInsights = false; viewModel.loadDirectory(folder) })
 
     if (showAdvancedSearch) ExplorerSearchDialog(
         directory = uiState.currentDirectory,
@@ -558,7 +572,8 @@ private fun FilesHeader(
     onOpenTrash: () -> Unit,
     onRefresh: () -> Unit,
     workspaceInsets: Boolean = false,
-    onAdvancedSearch: () -> Unit = {}
+    onAdvancedSearch: () -> Unit = {},
+    onFolderInsights: () -> Unit = {}
 ) {
     val scheme = MaterialTheme.colorScheme
     var menuOpen by remember { mutableStateOf(false) }
@@ -587,6 +602,9 @@ private fun FilesHeader(
                     Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.cd_more_options), tint = scheme.onSurface)
                 }
                 AppDropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    if (uiState.isBrowsingStorage && uiState.activeCategory == null) DropdownMenuItem(
+                        text = { Text(stringResource(R.string.folder_insights_title)) },
+                        onClick = { menuOpen = false; onFolderInsights() })
                     DropdownMenuItem(text = { Text(stringResource(R.string.explorer_advanced_search)) }, onClick = { menuOpen = false; onAdvancedSearch() })
                     DropdownMenuItem(
                         text = { Text(stringResource(if (uiState.isGridView) R.string.menu_list_view else R.string.menu_grid_view)) },

@@ -41,7 +41,9 @@ fun FileManagerClipboardBar(
     clipboardState: ClipboardState?,
     onCancel: () -> Unit,
     onPaste: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isTransferring: Boolean = false,
+    onShowTransfers: () -> Unit = {}
 ) {
     val scheme = MaterialTheme.colorScheme
 
@@ -73,7 +75,7 @@ fun FileManagerClipboardBar(
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (clip.items.size == 1) {
+                            text = if (isTransferring) stringResource(R.string.transfers_active) else if (clip.items.size == 1) {
                                 "1 item ready to ${if (isCopy) "copy" else "move"}"
                             } else {
                                 "${clip.items.size} items ready to ${if (isCopy) "copy" else "move"}"
@@ -84,7 +86,7 @@ fun FileManagerClipboardBar(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = stringResource(R.string.clipboard_paste_hint),
+                            text = stringResource(if (isTransferring) R.string.transfers_details_hint else R.string.clipboard_paste_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = scheme.onSurfaceVariant,
                             maxLines = 1,
@@ -92,13 +94,14 @@ fun FileManagerClipboardBar(
                         )
                     }
                     TextButton(
-                        onClick = onCancel,
+                        onClick = if (isTransferring) onShowTransfers else onCancel,
                         contentPadding = PaddingValues(horizontal = 10.dp)
                     ) {
-                        Text(stringResource(R.string.action_cancel), color = scheme.onSurfaceVariant)
+                        Text(stringResource(if (isTransferring) R.string.transfers_details else R.string.action_cancel), color = scheme.onSurfaceVariant)
                     }
                     Button(
                         onClick = onPaste,
+                        enabled = !isTransferring,
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
                     ) {
                         Icon(

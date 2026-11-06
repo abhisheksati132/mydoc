@@ -282,6 +282,28 @@ class FileManagerViewModelTest {
         } finally { owner.clear() }
     }
 
+    @Test fun closingTransferTabDoesNotCancelSharedTransfer() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        fakeRepo.copyGate = kotlinx.coroutines.CompletableDeferred()
+        val workspace = ExplorerWorkspaceViewModel(viewModel, fakeRepo, null, androidx.lifecycle.SavedStateHandle())
+        val owner = androidx.lifecycle.ViewModelStore().apply { put("workspace", workspace) }
+        try {
+            val id = workspace.add()!!
+            advanceUntilIdle()
+            val child = workspace.tabs.value.last().browser
+            child.toggleSelection(File(tempDir, "report.pdf"))
+            child.copySelected()
+            child.pasteClipboard()
+            assertTrue(viewModel.explorerClipboard.transfers.state.value.first().running)
+            workspace.close(id)
+            fakeRepo.copyGate!!.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(com.abhisheksati.mydoc.domain.model.TransferStatus.COMPLETED, viewModel.explorerClipboard.transfers.state.value.first().status)
+            assertEquals(null, viewModel.explorerClipboard.state.value)
+        } finally { fakeRepo.copyGate!!.complete(Unit); owner.clear() }
+    }
+
     @Test
     fun explorerWorkspaceRestoresLocationsAndLimitsTabs() = runTest(testDispatcher) {
         createViewModel()
@@ -306,6 +328,7 @@ class FileManagerViewModelTest {
     ) : StorageRepository {
         override suspend fun renameBatch(plan: com.abhisheksati.mydoc.domain.model.ExplorerRenamePlan) = com.abhisheksati.mydoc.domain.model.ExplorerRenameResult(false)
         override suspend fun pendingRenameRecovery(): List<String> = emptyList()
+        var copyGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
         var lastPasteTarget: File? = null
         override suspend fun getStorageVolumes(): List<StorageVolume> = volumes
 
@@ -328,6 +351,7 @@ class FileManagerViewModelTest {
 
         override suspend fun copy(sources: List<File>, targetDir: File, onProgress: (Int, Int) -> Unit): Result<Int> {
             lastPasteTarget = targetDir
+            copyGate?.await()
             return Result.success(sources.size)
         }
 

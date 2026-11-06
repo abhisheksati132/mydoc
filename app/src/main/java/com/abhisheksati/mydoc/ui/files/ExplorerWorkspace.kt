@@ -8,6 +8,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.VerticalSplit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -64,6 +65,8 @@ fun FilesScreen(
     val secondary by workspace.secondary.collectAsState()
     val focused by workspace.focused.collectAsState()
     val savedStates = rememberSaveableStateHolder()
+    var showTransfers by remember { mutableStateOf(false) }
+    val transferHistory by viewModel.explorerClipboard.transfers.state.collectAsState()
     BoxWithConstraints(modifier.fillMaxSize()) {
         val wide = maxWidth >= 900.dp
         Column {
@@ -84,6 +87,11 @@ fun FilesScreen(
                                     Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.explorer_close_tab, label))
                                 }
                             }
+                        }
+                    }
+                    IconButton(onClick = { showTransfers = true }) {
+                        BadgedBox(badge = { if (transferHistory.any { it.running }) Badge { Text("1") } }) {
+                            Icon(Icons.Outlined.SwapHoriz, contentDescription = stringResource(R.string.transfers_title))
                         }
                     }
                     IconButton(onClick = { workspace.add() }, enabled = tabs.size < 6) { Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.explorer_new_tab)) }
@@ -109,11 +117,13 @@ fun FilesScreen(
                             FilesPaneScreen(tab.browser, homeViewModel, storageViewModel, onOpenFile, onLibraryItemClick,
                                 onLibraryItemDetails, onSettingsClick, onSpotlightSearch, isActive = isActive && (focused == tab.id || !wide),
                                 onOpenInTools = onOpenInTools, hazeState = hazeState, glassMotion = glassMotion,
-                                workspaceInsets = true)
+                                workspaceInsets = true, onShowTransfers = { showTransfers = true })
                         }
                     }
                 }
             }
         }
     }
+    if (showTransfers) ExplorerTransfersSheet(viewModel.explorerClipboard.transfers) { showTransfers = false }
+
 }

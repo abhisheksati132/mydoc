@@ -11,7 +11,6 @@ import com.abhisheksati.mydoc.util.UserMessages
 import com.abhisheksati.mydoc.domain.model.ClipboardState
 import com.abhisheksati.mydoc.domain.model.DocumentTypeFilter
 import com.abhisheksati.mydoc.domain.model.FileCategory
-import com.abhisheksati.mydoc.domain.model.PartialStorageOperationException
 import com.abhisheksati.mydoc.domain.model.FileSortField
 import com.abhisheksati.mydoc.domain.model.FileSortOrder
 import com.abhisheksati.mydoc.domain.model.FolderProperties
@@ -101,6 +100,7 @@ class FileManagerViewModel(
     val uiState: StateFlow<FileManagerUiState> = _uiState.asStateFlow()
 
     init {
+        explorerClipboard.bind(viewModelScope, storageRepository)
         viewModelScope.launch { refreshRenameRecovery() }
         viewModelScope.launch { explorerClipboard.state.collect { clip -> _uiState.update { it.copy(clipboardState = clip) } } }
         viewModelScope.launch { explorerClipboard.revision.drop(1).collect { reloadCurrentSource() } }
@@ -328,53 +328,7 @@ class FileManagerViewModel(
     }
 
     fun pasteClipboard() {
-        val targetDir = _uiState.value.currentDirectory
-        viewModelScope.launch {
-            val clip = explorerClipboard.beginPaste() ?: return@launch
-            var pasted = false
-            try {
-                _uiState.update {
-                    it.copy(
-                        activeOperation = if (clip.operation == ClipboardOperation.COPY) "Copying items..." else "Moving items...",
-                        isLoading = true
-                    )
-                }
-
-                val result = if (clip.operation == ClipboardOperation.COPY) {
-                    storageRepository.copy(clip.items, targetDir)
-                } else {
-                    storageRepository.move(clip.items, targetDir)
-                }
-
-                result.onSuccess { count ->
-                    pasted = true
-                    _uiState.update {
-                        it.copy(
-                            clipboardState = null,
-                            activeOperation = null,
-                            isLoading = false,
-                            userMessage = if (count == 1) UiText.Res(R.string.fm_pasted_one) else UiText.Res(R.string.fm_pasted_many, listOf(count))
-                        )
-                    }
-                    loadDirectory(targetDir, addToHistory = false)
-                    refreshVolumes()
-                }.onFailure { err ->
-                    _uiState.update {
-                        it.copy(
-                            activeOperation = null,
-                            isLoading = false,
-                            userMessage = UserMessages.actionFailed(R.string.action_paste, err)
-                        )
-                    }
-                    // A partial batch really did write the items that succeeded; leaving the listing
-                    // stale would tell the reader nothing arrived.
-                    if (err is PartialStorageOperationException) {
-                        loadDirectory(targetDir, addToHistory = false)
-                    }
-                    refreshVolumes()
-                }
-            } finally { explorerClipboard.endPaste(pasted) }
-        }
+        explorerClipboard.paste(_uiState.value.currentDirectory)
     }
 
     fun searchAdvanced(options: ExplorerSearchOptions) {

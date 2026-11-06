@@ -3,6 +3,14 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [1.9.0] — 2026-11-06
+
+### Added
+
+- Browse ZIP folders and file sizes before choosing to extract the archive.
+- Folder insights show total content size, immediate subfolder sizes, and the 20 largest files, including hidden files and marking incomplete scans.
+- A shared transfer center tracks copy/move progress, session history and actionable errors across tabs. Stop finishes the current item safely; remaining items stay on the clipboard.
+
 ## [1.8.0] — 2026-11-06
 
 ### Added
