@@ -5,6 +5,25 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Reader sessions no longer publish a document the reader already left.** Every load carries a
+  generation stamp; a slower load's renderer, page count and error are dropped instead of replacing
+  the newer one, and password prompts reset per document.
+- **`xls` rich and phonetic strings no longer shift the string table.** `cRun` is a 16-bit count and
+  `cbExtRst` a 32-bit byte count; reading them as single bytes made one bold cell corrupt every
+  later string in the sheet.
+- **A scanned page among selectable ones is no longer dropped.** PDF text and Word export OCR each
+  page with no text layer instead of OCR-ing only when no page anywhere has text.
+- **RTF toggles mean on when they carry no parameter.** Reading the missing `b`/`i`/`ul` parameter
+  as zero removed every bold, italic and underline in the document.
+- **A stale folder reply can no longer replace the folder on screen.** Directory and category
+  requests carry a generation stamp.
+- **Bytes that are not a presentation do not become invented slides.** The byte-scrape fallback now
+  runs only for a CFBF container, and the viewer marks that result as recovered.
+- **Cancelled archive extraction rolls back before it returns**, and a partly failed permanent
+  delete reports its completed and failed counts instead of announcing the whole batch as deleted.
+
 ## [1.7.5] — 2026-11-06
 
 ### Fixed
