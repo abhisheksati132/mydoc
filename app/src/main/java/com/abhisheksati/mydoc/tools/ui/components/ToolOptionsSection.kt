@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
 import com.abhisheksati.mydoc.designsystem.components.horizontalScrollWithFade
@@ -148,6 +149,9 @@ internal fun ToolOptionsSection(
                 OutlinedTextField(
                     value = options.userPassword,
                     onValueChange = { p -> onOptionsChange { it.copy(userPassword = p) } },
+                    // A password typed into a plain text field is readable over a shoulder and
+                    // lands in every screenshot of the sheet.
+                    visualTransformation = PasswordVisualTransformation(),
                     placeholder = { Text("Enter password to open file") },
                     singleLine = true,
                     isError = passwordHasInvalidChar,
@@ -199,6 +203,9 @@ internal fun ToolOptionsSection(
                 OutlinedTextField(
                     value = options.userPassword,
                     onValueChange = { p -> onOptionsChange { it.copy(userPassword = p) } },
+                    // A password typed into a plain text field is readable over a shoulder and
+                    // lands in every screenshot of the sheet.
+                    visualTransformation = PasswordVisualTransformation(),
                     placeholder = { Text("Enter password to unlock") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),

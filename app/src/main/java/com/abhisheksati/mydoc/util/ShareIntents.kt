@@ -26,9 +26,11 @@ fun Uri.toShareableUri(context: Context): Uri? {
         ?.let { return it }
 
     return runCatching {
-        val sharedDir = File(context.cacheDir, "shared").apply { mkdirs() }
+        // One directory per handoff: a basename-only staging path made two same-named files share a
+        // URI, so the recipient got the last copy twice and an earlier grant could read it.
+        val sharedDir = File(context.cacheDir, "shared/${java.util.UUID.randomUUID()}").apply { mkdirs() }
         val copy = File(sharedDir, file.name)
-        file.copyTo(copy, overwrite = true)
+        file.copyTo(copy, overwrite = false)
         FileProvider.getUriForFile(context, authority(context), copy)
     }.getOrNull()
 }

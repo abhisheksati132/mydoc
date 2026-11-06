@@ -70,13 +70,17 @@ fun StoragePermissionBanner(
 fun shareFiles(context: Context, files: List<File>) {
     if (files.isEmpty()) return
     try {
-        val sharedDir = File(context.cacheDir, "shared").apply { if (!exists()) mkdirs() }
+        val sharedRoot = File(context.cacheDir, "shared").apply { if (!exists()) mkdirs() }
+        // Each attachment gets its own directory. Staging both under cache/shared/<basename> made
+        // two same-named files resolve to one URI, so the recipient received the last copy twice -
+        // and an earlier grant could read the replacement through it.
         val uris = files.map { file ->
-            val shareFile = if (file.parentFile?.absolutePath == sharedDir.absolutePath) {
+            val shareFile = if (file.parentFile?.absolutePath?.startsWith(sharedRoot.absolutePath) == true) {
                 file
             } else {
-                val dest = File(sharedDir, file.name)
-                file.copyTo(dest, overwrite = true)
+                val stageDir = File(sharedRoot, java.util.UUID.randomUUID().toString()).apply { mkdirs() }
+                val dest = File(stageDir, file.name)
+                file.copyTo(dest, overwrite = false)
                 dest
             }
             FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", shareFile)

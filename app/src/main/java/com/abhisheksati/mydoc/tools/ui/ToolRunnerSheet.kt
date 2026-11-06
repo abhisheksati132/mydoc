@@ -229,7 +229,11 @@ fun ToolRunnerSheet(
 
                     val canRun = when (tool) {
                         PdfTool.EXTRACT_PAGES -> inputUris.isNotEmpty() && toolOptions.pageRange.isNotBlank()
-                        PdfTool.REMOVE_PAGES, PdfTool.CROP -> inputUris.isNotEmpty() && toolOptions.pageRange.isNotBlank()
+                        PdfTool.REMOVE_PAGES -> inputUris.isNotEmpty() && toolOptions.pageRange.isNotBlank()
+                        // Crop applies to every page when the range is left blank - that is what the
+                        // field's helper text promises and what the engine does; requiring a range
+                        // made the advertised default impossible to run.
+                        PdfTool.CROP -> inputUris.isNotEmpty()
                         PdfTool.REDACT -> inputUris.isNotEmpty() && toolOptions.redactQuery.isNotBlank()
                         PdfTool.MERGE -> inputUris.size >= 2
                         PdfTool.PROTECT -> inputUris.isNotEmpty() &&

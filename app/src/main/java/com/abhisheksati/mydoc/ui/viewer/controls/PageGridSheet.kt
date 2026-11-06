@@ -6,6 +6,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -129,14 +133,23 @@ fun PageGridSheet(
             OutlinedTextField(
                 value = jumpQuery,
                 onValueChange = { input ->
-                    val filtered = input.filter { it.isDigit() }
-                    jumpQuery = filtered
-                    val pageNum = filtered.toIntOrNull()
-                    if (pageNum != null && pageNum in 1..pageCount) {
-                        onPageSelected(pageNum - 1)
-                        onDismiss()
-                    }
+                    // Jumping as soon as the digits parsed sent "12" to page 1 on the first
+                    // keystroke; the page is chosen when the reader submits the field.
+                    jumpQuery = input.filter { it.isDigit() }.take(6)
                 },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Go
+                ),
+                keyboardActions = KeyboardActions(
+                    onGo = {
+                        val pageNum = jumpQuery.toIntOrNull()
+                        if (pageNum != null && pageNum in 1..pageCount) {
+                            onPageSelected(pageNum - 1)
+                            onDismiss()
+                        }
+                    }
+                ),
                 placeholder = { Text("Jump to page (1 - $pageCount)") },
                 leadingIcon = {
                     Icon(

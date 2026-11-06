@@ -82,6 +82,44 @@ class SpreadsheetFormatsTest {
         }
     }
 
+    @Test
+    fun fods_repeatedCellsAndRowsKeepTheirValuesAndCoordinates() {
+        // Both repetitions are format semantics, not a compression trick: a repeated cell is that
+        // value in every column it spans, and a repeated row is that row N times. The reader used
+        // to store the value once, clamp column runs to 100 and drop row runs entirely, which moved
+        // every later cell and value.
+        val xml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <office:document xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
+                             xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0"
+                             xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0">
+              <office:body><office:spreadsheet>
+                <table:table table:name="Repeats">
+                  <table:table-row>
+                    <table:table-cell table:number-columns-repeated="3"><text:p>same</text:p></table:table-cell>
+                    <table:table-cell><text:p>after</text:p></table:table-cell>
+                    <table:table-cell table:number-columns-repeated="999"/>
+                    <table:table-cell><text:p>far</text:p></table:table-cell>
+                  </table:table-row>
+                  <table:table-row table:number-rows-repeated="2">
+                    <table:table-cell><text:p>row</text:p></table:table-cell>
+                  </table:table-row>
+                  <table:table-row><table:table-cell><text:p>last</text:p></table:table-cell></table:table-row>
+                </table:table>
+              </office:spreadsheet></office:body>
+            </office:document>
+        """.trimIndent()
+
+        val sheet = parseText(xml, "fods").sheets.single()
+        assertEquals("same", sheet.getCellValue(0, 0))
+        assertEquals("the repeated cell must reach every column it spans", "same", sheet.getCellValue(0, 2))
+        assertEquals("after", sheet.getCellValue(0, 3))
+        assertEquals("a 999-column gap must keep its width", "far", sheet.getCellValue(0, 1003))
+        assertEquals("row", sheet.getCellValue(1, 0))
+        assertEquals("the repeated row must be reproduced", "row", sheet.getCellValue(2, 0))
+        assertEquals("the row after a run must land after it", "last", sheet.getCellValue(3, 0))
+    }
+
     private val flatOdf = """
         <?xml version="1.0" encoding="UTF-8"?>
         <office:document xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"

@@ -102,26 +102,25 @@ fun openPresentationInOfficeApp(context: Context, document: DocumentFile) {
         } else {
             leafName
         }
-        val targetFile = File(sharedDir, safeName)
+        // A basename-only staging path was reused whenever a non-empty file already existed, so a
+        // second `report.pptx` - or an edited one - was handed over as the earlier copy. Each
+        // handoff gets its own directory and always writes the bytes the reader is looking at.
+        val handoffDir = File(sharedDir, "handoff-${java.util.UUID.randomUUID()}").apply { mkdirs() }
+        val targetFile = File(handoffDir, safeName)
 
-        if (!targetFile.exists() || targetFile.length() == 0L) {
-            val stream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri)
-            stream?.use { input ->
-                targetFile.outputStream().use { output ->
-                    input.copyTo(output)
-                }
+        val stream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri)
+            ?: return
+        stream.use { input ->
+            targetFile.outputStream().use { output ->
+                input.copyTo(output)
             }
         }
 
-        val shareUri = if (targetFile.exists() && targetFile.length() > 0L) {
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                targetFile
-            )
-        } else {
-            uri
-        }
+        val shareUri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            targetFile
+        )
 
         val intent = Intent(Intent.ACTION_VIEW).apply {
             setDataAndType(shareUri, mimeType)

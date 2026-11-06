@@ -452,26 +452,23 @@ fun PhotoViewerScreen(
                         val app = context.applicationContext as? MyDocApp
                         val file = itemToDelete.filePath?.let { File(it).takeIf { f -> f.exists() } }
                         val trashTarget = file?.let { f -> app?.let { a -> f to a } }
-                        val recoverable = trashTarget != null
+                        // The dialog promises the Recycle Bin, so a photo the app cannot move
+                        // there is left alone: falling back to ContentResolver deletion destroyed
+                        // it for good and only explained afterwards that it had not been trashed.
+                        if (trashTarget == null) {
+                            context.showMessage(
+                                "This photo can't be moved to the Recycle Bin, so it was not deleted."
+                            )
+                            return@launch
+                        }
                         val success = withContext(Dispatchers.IO) {
-                            val done = if (trashTarget != null) {
-                                trashTarget.second.storageRepository
-                                    .moveToTrash(listOf(trashTarget.first)).isSuccess
-                            } else {
-                                try {
-                                    context.contentResolver.delete(itemToDelete.uri, null, null) > 0
-                                } catch (e: Exception) {
-                                    false
-                                }
-                            }
+                            val done = trashTarget.second.storageRepository
+                                .moveToTrash(listOf(trashTarget.first)).isSuccess
                             if (done) app?.mediaRepository?.invalidateMediaSnapshot()
                             done
                         }
                         if (success) {
-                            context.showMessage(
-                                if (recoverable) "Photo moved to Recycle Bin"
-                                else "Photo deleted. MyDoc could not move it to the Recycle Bin."
-                            )
+                            context.showMessage("Photo moved to Recycle Bin")
                             onDeletePhoto?.invoke(itemToDelete)
                             val idx = photoList.indexOf(itemToDelete)
                             if (idx >= 0) {

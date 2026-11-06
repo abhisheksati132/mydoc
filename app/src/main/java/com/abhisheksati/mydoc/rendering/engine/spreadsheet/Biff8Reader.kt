@@ -303,11 +303,13 @@ internal object Biff8Reader {
 
     /**
      * An RK value is either a 30-bit integer or the top half of an IEEE-754 double, with two flag
-     * bits stolen from its low end; bit 0 says which, bit 1 says the real value is hundredths.
+     * bits stolen from its low end: bit 0 (fX100) says the value is hundredths, bit 1 (fInt) says
+     * it is the signed 30-bit integer. The two were read the other way round, so an integer RK
+     * such as 42 arrived as a reinterpreted double.
      */
     private fun decodeRk(raw: Long): Double {
-        val asInt = (raw and 1L) != 0L
-        val divide = (raw and 2L) != 0L
+        val divide = (raw and 1L) != 0L
+        val asInt = (raw and 2L) != 0L
         val value = if (asInt) {
             (raw.toInt() shr 2).toDouble()
         } else {

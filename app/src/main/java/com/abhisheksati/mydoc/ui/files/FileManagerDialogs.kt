@@ -254,19 +254,21 @@ fun DeleteConfirmationDialog(
             BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
             AppRadius.modalShape
         ),
-        title = { Text("Delete", color = colors.textPrimary) },
+        title = { Text("Move to Bin", color = colors.textPrimary) },
         text = {
             OverlaySystemBars()
+            // The operation moves the selection to the Recycle Bin; calling it a permanent delete
+            // told the reader the opposite of what would happen.
             val message = if (count == 1 && fileNamePreview != null) {
-                "Are you sure you want to permanently delete \"$fileNamePreview\"?"
+                "Move \"$fileNamePreview\" to the Recycle Bin?"
             } else {
-                "Are you sure you want to permanently delete these $count items?"
+                "Move these $count items to the Recycle Bin?"
             }
             Text(message, color = colors.textSecondary)
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Delete", color = colors.error, style = AppTheme.typography.bodyStrong)
+                Text("Move to Bin", color = colors.error, style = AppTheme.typography.bodyStrong)
             }
         },
         dismissButton = {

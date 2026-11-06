@@ -13,6 +13,7 @@ import com.abhisheksati.mydoc.domain.model.PartialStorageOperationException
 import com.abhisheksati.mydoc.domain.model.FileSortField
 import com.abhisheksati.mydoc.domain.model.FileSortOrder
 import com.abhisheksati.mydoc.domain.model.FolderProperties
+import com.abhisheksati.mydoc.domain.model.StorageFileType
 import com.abhisheksati.mydoc.domain.model.StorageItem
 import com.abhisheksati.mydoc.domain.model.StorageVolume
 import com.abhisheksati.mydoc.data.local.SettingsRepository
@@ -151,7 +152,7 @@ class FileManagerViewModel(
                 sortOrder = _uiState.value.sortOrder
             )
 
-            val filtered = filterItems(items, _uiState.value.searchQuery)
+            val filtered = visibleItems(items, _uiState.value)
 
             _uiState.update {
                 it.copy(
@@ -588,7 +589,12 @@ class FileManagerViewModel(
     }
 
     fun setDocTypeFilter(filter: DocumentTypeFilter) {
-        _uiState.update { it.copy(docTypeFilter = filter) }
+        _uiState.update { state ->
+            // Changing what is visible changes what Select All would select, so the selection is
+            // cleared rather than left pointing at rows the user can no longer see.
+            val next = state.copy(docTypeFilter = filter, selectedFiles = emptySet(), isSelectionMode = false)
+            next.copy(filteredItems = visibleItems(next.items, next))
+        }
     }
 
     fun selectCategory(category: FileCategory?) {
@@ -611,7 +617,7 @@ class FileManagerViewModel(
                 )
             }
             val items = storageRepository.queryCategory(category)
-            val filtered = filterItems(items, _uiState.value.searchQuery)
+            val filtered = visibleItems(items, _uiState.value)
             _uiState.update {
                 it.copy(
                     items = items,
@@ -764,8 +770,7 @@ class FileManagerViewModel(
 
     fun setSearchQuery(query: String) {
         _uiState.update { state ->
-            val filtered = filterItems(state.items, query)
-            state.copy(searchQuery = query, filteredItems = filtered)
+            state.copy(searchQuery = query, filteredItems = visibleItems(state.items, state.copy(searchQuery = query)))
         }
     }
 
@@ -809,10 +814,38 @@ class FileManagerViewModel(
         _uiState.update { it.copy(userMessage = null) }
     }
 
-    private fun filterItems(items: List<StorageItem>, query: String): List<StorageItem> {
+    private fun visibleItems(items: List<StorageItem>, state: FileManagerUiState): List<StorageItem> =
+        filterItems(
+            items = items,
+            query = state.searchQuery,
+            docFilter = state.docTypeFilter,
+            documentsOnly = state.activeCategory == FileCategory.DOCUMENTS
+        )
+
+    /**
+     * The one projection the list, the item count and Select All all read. The document-type chip
+     * used to filter only inside the composable, so selecting all picked up files the chip had
+     * hidden - and a share, cut or trash then acted on them.
+     */
+    private fun filterItems(
+        items: List<StorageItem>,
+        query: String,
+        docFilter: DocumentTypeFilter,
+        documentsOnly: Boolean
+    ): List<StorageItem> {
         val q = query.trim().lowercase(Locale.ROOT)
-        if (q.isEmpty()) return items
-        return items.filter { it.name.lowercase(Locale.ROOT).contains(q) }
+        val searched = if (q.isEmpty()) items else items.filter { it.name.lowercase(Locale.ROOT).contains(q) }
+        if (!documentsOnly || docFilter == DocumentTypeFilter.ALL) return searched
+        return searched.filter { item ->
+            when (docFilter) {
+                DocumentTypeFilter.ALL -> true
+                DocumentTypeFilter.PDF -> item.fileType == StorageFileType.PDF
+                DocumentTypeFilter.WORD -> item.fileType == StorageFileType.WORD
+                DocumentTypeFilter.EXCEL -> item.fileType == StorageFileType.EXCEL
+                DocumentTypeFilter.PPT -> item.fileType == StorageFileType.PPT
+                DocumentTypeFilter.TEXT -> item.fileType == StorageFileType.CODE_TEXT
+            }
+        }
     }
 
     private fun buildBreadcrumb(directory: File): List<File> {

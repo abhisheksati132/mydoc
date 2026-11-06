@@ -417,22 +417,9 @@ fun DirectoryPane(
 
     val isDocumentsCategory = uiState.activeCategory == FileCategory.DOCUMENTS
 
-    val displayedItems = remember(uiState.filteredItems, isDocumentsCategory, selectedDocFilter) {
-        if (!isDocumentsCategory || selectedDocFilter == DocumentTypeFilter.ALL) {
-            uiState.filteredItems
-        } else {
-            uiState.filteredItems.filter { item ->
-                when (selectedDocFilter) {
-                    DocumentTypeFilter.ALL -> true
-                    DocumentTypeFilter.PDF -> item.fileType == StorageFileType.PDF
-                    DocumentTypeFilter.WORD -> item.fileType == StorageFileType.WORD
-                    DocumentTypeFilter.EXCEL -> item.fileType == StorageFileType.EXCEL
-                    DocumentTypeFilter.PPT -> item.fileType == StorageFileType.PPT
-                    DocumentTypeFilter.TEXT -> item.fileType == StorageFileType.CODE_TEXT
-                }
-            }
-        }
-    }
+    // The ViewModel applies the document-type chip itself now, so the rows drawn here are exactly
+    // the rows Select All selects and the count above the list reports.
+    val displayedItems = uiState.filteredItems
 
     Column(modifier = modifier) {
         Row(

@@ -78,22 +78,29 @@ class Biff8ReaderTest {
     }
 
     @Test
-    fun `an integer rk and a hundredth rk decode the way the spec says`() {
-        // RK bit 0 says the value is a 30-bit integer, bit 1 says divide by 100. The fixture happens
-        // to contain only the double form, so the other two are assembled here.
-        val intRk = (42 shl 2) or 1
-        val hundredthsRk = (1234 shl 2) or 3
+    fun `rk flags follow the spec, not the swapped order the reader used`() {
+        // [MS-XLS] RkNumber: bit 0 is fX100 (divide by 100), bit 1 is fInt (a signed 30-bit
+        // integer). The reader had them the other way round, so an integer RK arrived as a
+        // reinterpreted double and every hundredths value was off by a factor of 10,000.
+        val plainInteger = (42 shl 2) or 2                  // fInt
+        val hundredthsInteger = (1234 shl 2) or 3           // fInt | fX100
+        // A double RK keeps the top 30 bits of the IEEE-754 value in the record's 32 bits.
+        val doubledRk = (java.lang.Double.doubleToLongBits(2.5) ushr 32).toInt() and 0xFFFF_FFFC.toInt()
         val stream = workbookOf(
             sheets = listOf("Numbers"),
             strings = emptyList(),
             cells = listOf(
-                record(RK, rowCol(0, 0) + littleInt(intRk)),
-                record(RK, rowCol(1, 0) + littleInt(hundredthsRk))
+                record(RK, rowCol(0, 0) + littleInt(plainInteger)),
+                record(RK, rowCol(1, 0) + littleInt(hundredthsInteger)),
+                record(RK, rowCol(2, 0) + littleInt(doubledRk))
             )
         )
         val sheet = Biff8Reader.read(stream)!!.sheets.first()
-        assertEquals("42", sheet.getCellValue(0, 0))
-        assertEquals("12.34", sheet.getCellValue(1, 0))
+        assertEquals("an integer RK must read as its integer", "42", sheet.getCellValue(0, 0))
+        assertEquals("fX100 must divide by 100", "12.34", sheet.getCellValue(1, 0))
+        assertEquals("a double RK must keep its double", "2.5", sheet.getCellValue(2, 0))
+        // Guard the encoding itself so this test cannot drift back to the swapped convention.
+        assertTrue("integer flag is bit 1", (plainInteger and 3) == 2)
     }
 
     @Test

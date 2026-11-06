@@ -64,8 +64,13 @@ internal class Ole2File(private val data: ByteArray) {
             }
         }
 
-        // 3. Assemble FAT table
-        val fatIntCount = maxOf(numFatSectors * (sectorSize / 4), fatSectorLocations.size * (sectorSize / 4), 1024)
+        // 3. Assemble FAT table. The sector count is read straight from the header, so a few hundred
+        // bytes of crafted file could ask for a gigabyte-scale array before anything is validated.
+        // The container cannot hold more sectors than it has bytes, so the file size is the ceiling.
+        val declaredFatInts = numFatSectors.coerceAtLeast(0).toLong() * (sectorSize / 4)
+        val ceiling = data.size.toLong() + 1024L
+        val listedFatInts = (fatSectorLocations.size.toLong() * (sectorSize / 4)).coerceAtMost(ceiling)
+        val fatIntCount = maxOf(declaredFatInts.coerceAtMost(ceiling), listedFatInts, 1024L).toInt()
         fat = IntArray(fatIntCount)
         var fatIndex = 0
         for (fatSec in fatSectorLocations) {

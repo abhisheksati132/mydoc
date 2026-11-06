@@ -476,7 +476,13 @@ class PptxParser {
                         val entryMap = mutableMapOf<String, ByteArray>()
                         val entries = zip.entries()
                         var mediaCount = 0
-                        while (entries.hasMoreElements()) {
+                        var currentTotal = 0L
+                        var entryCount = 0
+                        // The cached-file route used to carry only the per-entry cap, so a package of
+                        // many individually legal entries could inflate past the aggregate the
+                        // in-memory route enforces. Same budgets on both routes now.
+                        while (entries.hasMoreElements() && entryCount < 2_500 && currentTotal < MAX_TOTAL_BYTES) {
+                            entryCount++
                             val entry = entries.nextElement()
                             if (!entry.isDirectory) {
                                 val norm = entry.name.replace('\\', '/').trimStart('/').lowercase()
@@ -487,6 +493,7 @@ class PptxParser {
                                     mediaCount++
                                 }
                                 val data = readBoundedStream(zip.getInputStream(entry), entry)
+                                currentTotal += data.size
                                 entryMap[norm] = data
                             }
                         }

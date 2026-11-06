@@ -644,9 +644,11 @@ class StorageRepositoryImpl(
             // Build the archive under a private name. A compression that dies halfway used to
             // leave a real .zip on disk that opens as a truncated archive — and it also left the
             // private name itself behind, because nothing took it back.
-            val staging = File(parentDir, ".${destFile.name}.tmp")
+            // A fixed ".name.tmp" name truncated whatever already sat at that path - a file the
+            // listing never shows, silently overwritten. The staging name is unique per run, so it
+            // cannot collide with anything and is always ours to remove.
+            val staging = File.createTempFile(".${destFile.name}.", ".tmp", parentDir)
             val destPreExisted = destFile.exists()
-            val stagingWasPreExisting = staging.exists()
             try {
                 ZipOutputStream(BufferedOutputStream(FileOutputStream(staging), 32 * 1024)).use { zos ->
                     val buffer = ByteArray(32 * 1024)
@@ -681,8 +683,8 @@ class StorageRepositoryImpl(
                 destFile
             } catch (t: Throwable) {
                 // Cancellation lands here too. A half-written archive is not the user's output, and
-                // neither is the private staging name — before this, both stayed on disk.
-                if (!stagingWasPreExisting) discardPartial(staging)
+                // staging is always this run's file now, so it always goes.
+                discardPartial(staging)
                 if (!destPreExisted) discardPartial(destFile)
                 throw t
             }

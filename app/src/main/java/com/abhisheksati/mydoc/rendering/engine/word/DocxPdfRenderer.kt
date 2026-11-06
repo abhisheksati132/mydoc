@@ -231,13 +231,30 @@ internal object DocxPdfRenderer {
                         width = 0f
                     }
                     val word = if (current.isEmpty() || !spaceBefore) token else " $token"
-                    var measured = piecePaint.measureText(word)
-                    var text = word
+                    val measured = piecePaint.measureText(word)
                     if (measured > limit && current.isEmpty()) {
-                        text = trimTo(token, piecePaint, limit)
-                        measured = piecePaint.measureText(text)
+                        // A token wider than the line - a URL, an identifier, or a CJK run with no
+                        // spaces - used to be trimmed to a prefix with the remainder discarded while
+                        // the conversion still reported success. It is broken across lines instead.
+                        var rest = word
+                        while (rest.isNotEmpty()) {
+                            val fits = prefixThatFits(rest, piecePaint, limit)
+                            val take = if (fits.isEmpty()) rest.substring(0, 1) else fits
+                            val taken = piecePaint.measureText(take)
+                            if (take.length == rest.length) {
+                                current.add(Piece(take, piecePaint, taken))
+                                width = taken
+                            } else {
+                                lines.add(mutableListOf(Piece(take, piecePaint, taken)))
+                                rest = rest.substring(take.length)
+                                continue
+                            }
+                            rest = ""
+                        }
+                        spaceBefore = false
+                        continue
                     }
-                    current.add(Piece(text, piecePaint, measured))
+                    current.add(Piece(word, piecePaint, measured))
                     width += measured
                     spaceBefore = false
                 }
@@ -247,10 +264,18 @@ internal object DocxPdfRenderer {
             return lines
         }
 
-        private fun trimTo(token: String, paint: TextPaint, limit: Float): String {
-            var end = token.length
-            while (end > 1 && paint.measureText(token.substring(0, end)) > limit) end--
-            return token.substring(0, end)
+        /** Longest prefix of [text] that fits in [limit], never splitting a surrogate pair. */
+        private fun prefixThatFits(text: String, paint: TextPaint, limit: Float): String {
+            val count = paint.breakText(text, true, limit, null)
+            if (count <= 0) return ""
+            var end = count.coerceAtMost(text.length)
+            if (end < text.length &&
+                Character.isHighSurrogate(text[end - 1]) &&
+                Character.isLowSurrogate(text[end])
+            ) {
+                end -= 1
+            }
+            return if (end <= 0) "" else text.substring(0, end)
         }
 
         private fun paint(

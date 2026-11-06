@@ -327,6 +327,14 @@ class SpreadsheetParser {
             var maxRow = 0
             var maxCol = 0
             var curRepeatCols = 1
+            var curRepeatRows = 1
+            // The grid the reader can show, and a ceiling on the cells a repeated ODS range may
+            // expand into.
+            val maxOdsColumns = 1_024
+            val maxOdsCells = 200_000
+            // The values written by the current row, so a repeated row can be reproduced at the
+            // following coordinates instead of being dropped.
+            val rowValues = mutableListOf<Pair<Int, String>>()
             var cells = mutableMapOf<Pair<Int, Int>, String>()
             val cellTextBuilder = StringBuilder()
 
@@ -350,12 +358,18 @@ class SpreadsheetParser {
                             name.equals("table-row", ignoreCase = true) -> {
                                 inRow = true
                                 colIndex = 0
+                                rowValues.clear()
+                                val repRows = parser.getAttributeValue(null, "table:number-rows-repeated")
+                                    ?: parser.getAttributeValue(null, "number-rows-repeated")
+                                curRepeatRows = (repRows?.toIntOrNull() ?: 1).coerceIn(1, 1_000)
                             }
                             name.equals("table-cell", ignoreCase = true) -> {
                                 inCell = true
                                 cellTextBuilder.clear()
                                 val repVal = parser.getAttributeValue(null, "table:number-columns-repeated") ?: parser.getAttributeValue(null, "number-columns-repeated")
-                                curRepeatCols = repVal?.toIntOrNull()?.coerceIn(1, 100) ?: 1
+                                // A repeated cell is the same value in every column it spans. The
+                                // old clamp to 100 silently moved every later cell in the row.
+                                curRepeatCols = (repVal?.toIntOrNull() ?: 1).coerceIn(1, 1_024)
                             }
                             name.equals("p", ignoreCase = true) -> {
                                 inP = true
@@ -378,15 +392,32 @@ class SpreadsheetParser {
                             name.equals("table-cell", ignoreCase = true) -> {
                                 val text = cellTextBuilder.toString().trim()
                                 if (text.isNotEmpty()) {
-                                    cells[Pair(rowIndex, colIndex)] = text
-                                    if (colIndex > maxCol) maxCol = colIndex
+                                    for (r in 0 until curRepeatCols) {
+                                        val col = colIndex + r
+                                        if (col >= maxOdsColumns || cells.size >= maxOdsCells) break
+                                        cells[Pair(rowIndex, col)] = text
+                                        rowValues.add(col to text)
+                                    }
+                                    if (colIndex + curRepeatCols - 1 > maxCol) {
+                                        maxCol = minOf(colIndex + curRepeatCols - 1, maxOdsColumns - 1)
+                                    }
                                     if (rowIndex > maxRow) maxRow = rowIndex
                                 }
                                 colIndex += curRepeatCols
                                 inCell = false
                             }
                             name.equals("table-row", ignoreCase = true) -> {
-                                rowIndex++
+                                // A repeated row is the same row N times; its values were dropped
+                                // entirely before, so every following row moved up.
+                                for (r in 1 until curRepeatRows) {
+                                    if (cells.size >= maxOdsCells) break
+                                    for ((col, value) in rowValues) {
+                                        cells[Pair(rowIndex + r, col)] = value
+                                    }
+                                    if (rowIndex + r > maxRow) maxRow = rowIndex + r
+                                }
+                                rowIndex += curRepeatRows
+                                curRepeatRows = 1
                                 inRow = false
                             }
                             name.equals("table", ignoreCase = true) -> {

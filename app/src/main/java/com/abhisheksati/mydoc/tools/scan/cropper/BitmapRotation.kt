@@ -34,13 +34,14 @@ object BitmapRotation {
         val out = createBitmap(outWidth, outHeight, config)
         val matrix = Matrix().apply {
             postRotate(degrees.toFloat())
-            if (swapsAxes(degrees)) {
-                // A quarter turn moves the origin; translate so the rotated image lands inside
-                // the swapped box rather than partly off it.
-                when (((degrees % 360) + 360) % 360) {
-                    90 -> postTranslate(outHeight.toFloat(), 0f)
-                    270 -> postTranslate(0f, outWidth.toFloat())
-                }
+            // A rotation about the origin leaves the image outside a positive-coordinate bitmap,
+            // so each turn is followed by the translation that brings it back into the output box.
+            // 180 needs this as much as a quarter turn: without it the whole image is drawn at
+            // negative coordinates and the result is blank.
+            when (((degrees % 360) + 360) % 360) {
+                90 -> postTranslate(outHeight.toFloat(), 0f)
+                180 -> postTranslate(outWidth.toFloat(), outHeight.toFloat())
+                270 -> postTranslate(0f, outWidth.toFloat())
             }
         }
         Canvas(out).drawBitmap(src, matrix, Paint(Paint.FILTER_BITMAP_FLAG))
