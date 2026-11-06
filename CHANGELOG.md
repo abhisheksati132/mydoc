@@ -80,7 +80,7 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   title carry heading semantics, so a screen reader can jump between them.
 
 - **Reader chrome and the load-error screen read from string resources.** Titles, action labels,
-  content descriptions and the problem copy are externalised (`strings.xml` grew from 5 to 76
+  content descriptions and the problem copy are externalised (`strings.xml` grew from 5 to 73
   entries); the rest of the UI still carries literals and is the next slice.
 
 ## [1.7.5] — 2026-11-06
