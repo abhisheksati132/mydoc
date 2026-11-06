@@ -76,6 +76,9 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   selected volume's `VOLUME_NAME`, the app footprint is only counted on internal storage, and the
   cleaner names the root it will scan.
 
+- **Screen titles and Settings groups are TalkBack headings.** The bar title and every settings card
+  title carry heading semantics, so a screen reader can jump between them.
+
 ## [1.7.5] — 2026-11-06
 
 ### Fixed

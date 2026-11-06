@@ -17,6 +17,8 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
@@ -64,6 +66,9 @@ fun AppTopBar(
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Text(
                             text = title,
+                            // One heading per screen, so TalkBack users can jump to it instead of
+                            // walking the bar's back button and every action.
+                            modifier = Modifier.semantics { heading() },
                             style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
