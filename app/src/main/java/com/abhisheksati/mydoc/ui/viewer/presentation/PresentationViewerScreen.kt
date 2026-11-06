@@ -70,6 +70,7 @@ import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.domain.model.RenderFidelity
 import com.abhisheksati.mydoc.ui.viewer.FidelityNotice
 import com.abhisheksati.mydoc.ui.viewer.fidelityDisclosureFor
+import com.abhisheksati.mydoc.rendering.engine.OfficeSourceReader
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxParser
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxPresentation
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxSlide
@@ -200,7 +201,21 @@ fun PresentationViewerScreen(
                     ?: throw IllegalStateException("Could not open presentation stream")
                 inputStream.use { input ->
                     tempFile.outputStream().use { output ->
-                        input.copyTo(output)
+                        // A stream can lie about its length, so the budget is enforced while copying.
+                        val chunk = ByteArray(64 * 1024)
+                        var written = 0L
+                        while (true) {
+                            val read = input.read(chunk)
+                            if (read < 0) break
+                            written += read
+                            if (written > OfficeSourceReader.MAX_SOURCE_BYTES) {
+                                throw IllegalStateException(
+                                    "This presentation is larger than MyDoc can open " +
+                                        "(${OfficeSourceReader.MAX_SOURCE_BYTES / (1024 * 1024)} MB budget)."
+                                )
+                            }
+                            output.write(chunk, 0, read)
+                        }
                     }
                 }
 
@@ -209,7 +224,8 @@ fun PresentationViewerScreen(
                     val parsed = tempFile.inputStream().use { PptxParser().parse(it, context.cacheDir) }
                     presentationData = parsed
                 } catch (e: Throwable) {
-                    android.util.Log.w("PresentationViewer", "Native parser failed: ${e.message}")
+                    SecureLog.warn("PresentationViewer", "native presentation parse failed") { document.displayName }
+                    errorMessage = UserMessages.readFailure("PresentationViewer", e)
                 }
 
                 // A binary .ppt whose record layer produced nothing still holds readable strings.
@@ -221,6 +237,7 @@ fun PresentationViewerScreen(
                         val fallback = PptxParser().parseBinaryPptFallback(tempFile.readBytes())
                         if (fallback.slides.isNotEmpty()) {
                             presentationData = fallback.copy(recovered = true)
+                            errorMessage = null
                         }
                     } catch (_: Throwable) {}
                 }
@@ -228,6 +245,8 @@ fun PresentationViewerScreen(
                 isLoading = false
             } catch (t: Throwable) {
                 SecureLog.error("PresentationViewer", "could not load presentation", t) { document.displayName }
+                cachedFileOnDisk?.delete()
+                cachedFileOnDisk = null
                 errorMessage = UserMessages.readFailure("PresentationViewer", t)
                 isLoading = false
             }

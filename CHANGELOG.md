@@ -35,6 +35,15 @@ versions follow the `versionName` in `app/build.gradle.kts`.
   allocation and then leaves a spinner behind.
 - **Saving a tool's output no longer copies on the main thread**, so the app stays responsive while
   a large result is written to the destination the reader picked.
+- **A damaged presentation says so instead of opening as an empty deck.** The native parser's
+  failure used to be logged and discarded, leaving a blank slide counter; it now reaches the error
+  state, which clears again if the `.ppt` recovery produces slides.
+- **Every Office viewer reads under the same 64 MB budget.** The presentation viewer staged its copy
+  with an unbounded `copyTo`, so a stream that lied about its size could fill the cache directory;
+  the copy now stops at the budget and reports why.
+- **PDF page geometry is resolved off the main thread.** Each scrolled-in page read the cached size
+  or opened the page while composing, behind a render holding the renderer lock, so the first frame
+  of a new page could stall.
 
 ## [1.7.5] — 2026-11-06
 

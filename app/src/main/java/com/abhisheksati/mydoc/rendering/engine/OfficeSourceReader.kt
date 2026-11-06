@@ -30,8 +30,13 @@ object OfficeSourceReader {
     private const val Tag = "OfficeSource"
     private const val DEFAULT_CHUNK = 64 * 1024
 
-    /** The limit the DOCX converter already documented, now enforced before allocating. */
-    const val MAX_SOURCE_BYTES = 200L * 1024 * 1024
+    /**
+     * The whole source is held in memory, copied again by the DOCX reader and joined by the
+     * decompressed parts, so the budget is what one conversion may peak at - not what the file may
+     * be. At 64 MB the worst case stays under a typical 256 MB app heap; DOCX already refused
+     * anything above 50 MB, and the larger figure only allocated 200 MB in order to reject it.
+     */
+    const val MAX_SOURCE_BYTES = 64L * 1024 * 1024
 
     fun read(context: Context, uri: Uri, displayName: String): OfficeSource {
         val declaredSize = DocumentStreamResolver.sourceStamp(context, uri).first

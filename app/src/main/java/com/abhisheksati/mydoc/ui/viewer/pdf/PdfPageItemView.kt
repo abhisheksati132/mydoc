@@ -66,7 +66,15 @@ internal fun PageItemView(
     onLongPressOffset: ((Int, Offset, Size) -> Unit)? = null
 ) {
     val haptic = rememberGatedHaptics()
-    val (origWidth, origHeight) = remember(pageIndex) { viewModel.getPageSize(pageIndex) }
+    // Reading the cache is free; a cache miss is resolved off the main thread so a page render
+    // holding the renderer lock cannot stall this frame.
+    var pageSize by remember(pageIndex) { mutableStateOf(viewModel.peekPageSize(pageIndex)) }
+    LaunchedEffect(pageIndex) {
+        if (pageSize == null) {
+            pageSize = withContext(Dispatchers.Default) { viewModel.getPageSize(pageIndex) }
+        }
+    }
+    val (origWidth, origHeight) = pageSize ?: Pair(595f, 842f)
     val rawRatio = if (origHeight > 0f && origWidth > 0f) origWidth / origHeight else 0.707f
     val aspectRatio = if (rawRatio.isFinite() && rawRatio > 0.05f) rawRatio else 0.707f
 

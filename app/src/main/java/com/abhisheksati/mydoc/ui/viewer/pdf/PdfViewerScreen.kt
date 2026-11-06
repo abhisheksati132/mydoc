@@ -119,7 +119,7 @@ fun PdfViewerScreen(
 
     val handleLongPressOffset: (Int, Offset, Size) -> Unit = { pIdx, offset, itemSize ->
         coroutineScope.launch {
-            val (w, h) = viewModel.getPageSize(pIdx)
+            val (w, h) = withContext(Dispatchers.Default) { viewModel.getPageSize(pIdx) }
             if (w > 0 && h > 0 && itemSize.width > 0 && itemSize.height > 0) {
                 val pdfX = (offset.x / itemSize.width) * w
                 val pdfY = (offset.y / itemSize.height) * h

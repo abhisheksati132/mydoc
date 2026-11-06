@@ -519,6 +519,9 @@ class ViewerViewModel(
         return rend.getPageSize(pageIndex)
     }
 
+    /** Page size only when already cached; safe to call from composition. */
+    fun peekPageSize(pageIndex: Int): Pair<Float, Float>? = renderer?.peekPageSize(pageIndex)
+
     private var prefetchJob: Job? = null
 
     private fun prefetchSurroundingPages(currentPage: Int) {

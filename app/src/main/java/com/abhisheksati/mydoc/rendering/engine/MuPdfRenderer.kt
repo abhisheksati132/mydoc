@@ -131,6 +131,8 @@ class MuPdfRenderer(
         }
     }
 
+    override fun peekPageSize(pageIndex: Int): Pair<Float, Float>? = pageSizeCache[pageIndex]
+
     override fun getPageSize(pageIndex: Int): Pair<Float, Float> {
         pageSizeCache[pageIndex]?.let { return it }
         return lock.withLock {
@@ -294,7 +296,7 @@ class MuPdfRenderer(
                 }
             }
 
-            baseBitmap = if (raw != null && (raw.width != outWidth || raw.height != outHeight)) {
+            val base = if (raw.width != outWidth || raw.height != outHeight) {
                 val scaled = Bitmap.createScaledBitmap(raw, outWidth, outHeight, true)
                 if (scaled !== raw && !raw.isRecycled) {
                     raw.recycle()
@@ -303,32 +305,31 @@ class MuPdfRenderer(
             } else {
                 raw
             }
-
-            if (baseBitmap == null) return@withLock null
+            baseBitmap = base
 
             val finalBitmap = when (mode) {
                 ReadingMode.INVERTED_DARK -> {
-                    val converted = AndroidPdfRenderer.invertBitmapColors(baseBitmap)
-                    if (converted !== baseBitmap && !baseBitmap.isRecycled) {
-                        baseBitmap.recycle()
+                    val converted = AndroidPdfRenderer.invertBitmapColors(base)
+                    if (converted !== base && !base.isRecycled) {
+                        base.recycle()
                     }
                     converted
                 }
                 ReadingMode.SEPIA -> {
-                    val converted = AndroidPdfRenderer.applySepiaFilter(baseBitmap)
-                    if (converted !== baseBitmap && !baseBitmap.isRecycled) {
-                        baseBitmap.recycle()
+                    val converted = AndroidPdfRenderer.applySepiaFilter(base)
+                    if (converted !== base && !base.isRecycled) {
+                        base.recycle()
                     }
                     converted
                 }
                 ReadingMode.EYE_COMFORT -> {
-                    val converted = AndroidPdfRenderer.applyEyeComfortFilter(baseBitmap)
-                    if (converted !== baseBitmap && !baseBitmap.isRecycled) {
-                        baseBitmap.recycle()
+                    val converted = AndroidPdfRenderer.applyEyeComfortFilter(base)
+                    if (converted !== base && !base.isRecycled) {
+                        base.recycle()
                     }
                     converted
                 }
-                ReadingMode.NORMAL -> baseBitmap
+                ReadingMode.NORMAL -> base
             }
             finalBitmap
         } catch (_: Throwable) {

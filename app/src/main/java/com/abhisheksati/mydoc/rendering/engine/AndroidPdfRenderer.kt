@@ -74,6 +74,8 @@ class AndroidPdfRenderer(
     override val pageCount: Int
         get() = lock.withLock { pdfRenderer?.pageCount ?: 0 }
 
+    override fun peekPageSize(pageIndex: Int): Pair<Float, Float>? = pageSizeCache[pageIndex]
+
     override fun getPageSize(pageIndex: Int): Pair<Float, Float> {
         pageSizeCache[pageIndex]?.let { return it }
         return lock.withLock {

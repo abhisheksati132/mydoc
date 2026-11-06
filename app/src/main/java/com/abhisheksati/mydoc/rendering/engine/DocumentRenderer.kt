@@ -37,6 +37,12 @@ interface DocumentRenderer {
 
     fun authenticatePassword(password: String): Boolean
     fun getPageSize(pageIndex: Int): Pair<Float, Float>
+    /**
+     * The page size only if it is already known. Composition must not take the renderer lock: a
+     * render on another thread holds it, and waiting there stalls the frame. Callers use this for
+     * the first layout and move [getPageSize] to a background dispatcher.
+     */
+    fun peekPageSize(pageIndex: Int): Pair<Float, Float>? = null
     fun renderPage(pageIndex: Int, scale: Float, mode: ReadingMode): Bitmap?
     fun getCachedPage(pageIndex: Int, scale: Float, mode: ReadingMode): Bitmap? = null
     fun renderRegion(
