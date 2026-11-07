@@ -12,6 +12,8 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -395,6 +397,16 @@ fun FileGridCell(
                         .size(22.dp)
                         .background(scheme.surface, CircleShape)
                 )
+            } else {
+                IconButton(
+                    onClick = onMoreClick,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(48.dp)
+                        .background(scheme.surface, CircleShape)
+                ) {
+                    Icon(Icons.Outlined.MoreVert,
+                        contentDescription = stringResource(R.string.more_options_for_file, item.name),
+                        tint = scheme.onSurfaceVariant)
+                }
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -515,6 +527,7 @@ fun FilesEmptyState(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun FilesSelectionBar(
     selectedCount: Int,
@@ -531,78 +544,69 @@ fun FilesSelectionBar(
 ) {
     val scheme = MaterialTheme.colorScheme
     var isMenuOpen by remember { mutableStateOf(false) }
+    val hasSelection = selectedCount > 0
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(scheme.surfaceContainer)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onClose) {
-            Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.cd_close_selection), tint = scheme.onSurface)
-        }
-        Text(
-            text = stringResource(R.string.files_selected_count, selectedCount),
-            style = MaterialTheme.typography.titleMedium,
-            color = scheme.onSurface,
-            modifier = Modifier.weight(1f)
-        )
-        if (selectedCount < totalCount) {
-            IconButton(onClick = onSelectAll) {
-                Icon(Icons.Outlined.SelectAll, contentDescription = stringResource(R.string.cd_select_all), tint = scheme.onSurface)
+    Column(modifier.fillMaxWidth().background(scheme.surfaceContainer).padding(horizontal = 8.dp, vertical = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onClose) {
+                Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.cd_close_selection))
             }
-        }
-        IconButton(onClick = onShare) {
-            Icon(Icons.Outlined.Share, contentDescription = stringResource(R.string.action_share), tint = scheme.onSurface)
-        }
-        Box {
-            IconButton(onClick = { isMenuOpen = true }) {
-                Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.cd_more_actions), tint = scheme.onSurface)
+            Text(stringResource(R.string.files_selected_count, selectedCount),
+                style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            if (selectedCount < totalCount) {
+                IconButton(onClick = onSelectAll) {
+                    Icon(Icons.Outlined.SelectAll, contentDescription = stringResource(R.string.cd_select_all))
+                }
             }
-            AppDropdownMenu(expanded = isMenuOpen, onDismissRequest = { isMenuOpen = false }) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_copy)) },
-                    leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null) },
-                    onClick = {
-                        isMenuOpen = false
-                        onCopy()
+            Box {
+                IconButton(onClick = { isMenuOpen = true }, enabled = hasSelection) {
+                    Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.cd_more_actions))
+                }
+                AppDropdownMenu(expanded = isMenuOpen, onDismissRequest = { isMenuOpen = false }) {
+                    if (onRename != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_rename)) },
+                            leadingIcon = { Icon(Icons.Outlined.DriveFileRenameOutline, contentDescription = null) },
+                            onClick = {
+                                isMenuOpen = false
+                                onRename()
+                            }
+                        )
                     }
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_cut)) },
-                    leadingIcon = { Icon(Icons.Outlined.ContentCut, contentDescription = null) },
-                    onClick = {
-                        isMenuOpen = false
-                        onCut()
-                    }
-                )
-                if (onRename != null) {
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_rename)) },
-                        leadingIcon = { Icon(Icons.Outlined.DriveFileRenameOutline, contentDescription = null) },
+                        text = { Text(stringResource(R.string.dialog_compress_zip)) },
+                        leadingIcon = { Icon(Icons.Outlined.FolderZip, contentDescription = null) },
                         onClick = {
                             isMenuOpen = false
-                            onRename()
+                            onCompress()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.photo_move_to_bin_title), color = scheme.error) },
+                        leadingIcon = { Icon(Icons.Outlined.Delete, contentDescription = null, tint = scheme.error) },
+                        onClick = {
+                            isMenuOpen = false
+                            onDelete()
                         }
                     )
                 }
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.dialog_compress_zip)) },
-                    leadingIcon = { Icon(Icons.Outlined.FolderZip, contentDescription = null) },
-                    onClick = {
-                        isMenuOpen = false
-                        onCompress()
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.photo_move_to_bin_title), color = scheme.error) },
-                    leadingIcon = { Icon(Icons.Outlined.Delete, contentDescription = null, tint = scheme.error) },
-                    onClick = {
-                        isMenuOpen = false
-                        onDelete()
-                    }
-                )
+            }
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            TextButton(onClick = onCopy, enabled = hasSelection) {
+                Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.action_copy))
+            }
+            TextButton(onClick = onCut, enabled = hasSelection) {
+                Icon(Icons.Outlined.ContentCut, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.action_move))
+            }
+            TextButton(onClick = onShare, enabled = hasSelection) {
+                Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.action_share))
             }
         }
     }

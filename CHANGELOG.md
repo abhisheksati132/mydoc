@@ -7,6 +7,8 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ### Changed
 
+- Grid previews expose named per-file actions, and the selection bar offers direct Copy, Move and Share controls that wrap with larger text.
+- Single-file actions consistently use Move instead of Move (Cut).
 - File rows show two-line names and wrapping metadata; grid cells grow with text size and use wider preview proportions at larger text.
 - Home groups Browse files and preview controls together and lets them wrap below the recent-files heading.
 - File browsing shows the active sort field and direction in a labelled control with its menu anchored beside it.
@@ -14,6 +16,8 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ### Fixed
 
+- Single-file Copy/Move targets exactly the requested file without toggling it out of an existing selection or including unrelated files.
+- A busy transfer keeps its clipboard and the current selection intact and reports that a transfer is in progress.
 - Folder loading no longer exposes stale rows or presents an empty folder before loading finishes.
 - Empty searches offer a scrollable Clear search and filters action that restores the current folder or category.
 - Folder and category list/grid positions survive recreation while newly opened sources start at the top.

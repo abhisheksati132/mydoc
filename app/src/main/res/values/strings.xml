@@ -423,6 +423,7 @@
     <string name="settings_haptics_title">Tactile Vibration Haptics</string>
     <string name="settings_haptics_subtitle">Vibrate on taps and gestures</string>
     <string name="action_open_pdf_tools">Open in PDF tools…</string>
+    <string name="action_move">Move</string>
     <string name="action_move_cut">Move (Cut)</string>
     <string name="action_move_to_bin">Move to Recycle Bin</string>
     <string name="action_unpin_quick_access">Unpin from Quick Access</string>

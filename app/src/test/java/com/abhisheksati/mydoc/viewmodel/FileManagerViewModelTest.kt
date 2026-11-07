@@ -138,6 +138,53 @@ class FileManagerViewModelTest {
         assertEquals(4, state.filteredItems.size)
     }
 
+    @Test fun copyItemTargetsExactlyTheRequestedFileEvenWhenItWasSelected() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        val target = File(tempDir, "report.pdf")
+        viewModel.toggleSelection(target)
+        viewModel.toggleSelection(File(tempDir, "notes.txt"))
+        viewModel.copyItem(target)
+        advanceUntilIdle()
+        assertEquals(listOf(target), viewModel.explorerClipboard.state.value?.items)
+        assertEquals(com.abhisheksati.mydoc.domain.model.ClipboardOperation.COPY, viewModel.explorerClipboard.state.value?.operation)
+        assertTrue(viewModel.uiState.value.selectedFiles.isEmpty())
+    }
+
+    @Test fun moveItemDoesNotIncludeAnUnrelatedSelection() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        val target = File(tempDir, "report.pdf")
+        viewModel.toggleSelection(File(tempDir, "notes.txt"))
+        viewModel.cutItem(target)
+        advanceUntilIdle()
+        assertEquals(listOf(target), viewModel.explorerClipboard.state.value?.items)
+        assertEquals(com.abhisheksati.mydoc.domain.model.ClipboardOperation.CUT, viewModel.explorerClipboard.state.value?.operation)
+        assertFalse(viewModel.uiState.value.isSelectionMode)
+    }
+
+    @Test fun aBusyClipboardKeepsBothTheTransferAndNewSelectionIntact() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        val original = File(tempDir, "report.pdf")
+        val next = File(tempDir, "notes.txt")
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        fakeRepo.copyGate = gate
+        try {
+            viewModel.copyItem(original)
+            viewModel.pasteClipboard()
+            advanceUntilIdle()
+            viewModel.toggleSelection(next)
+            viewModel.copyItem(next)
+            assertEquals(listOf(original), viewModel.explorerClipboard.state.value?.items)
+            assertEquals(setOf(next), viewModel.uiState.value.selectedFiles)
+            assertEquals(com.abhisheksati.mydoc.util.UiText.Res(R.string.transfers_active), viewModel.uiState.value.userMessage)
+        } finally {
+            gate.complete(Unit)
+            advanceUntilIdle()
+        }
+    }
+
     @Test fun refreshKeepsActiveCategory() = runTest(testDispatcher) {
         createViewModel()
         advanceUntilIdle()

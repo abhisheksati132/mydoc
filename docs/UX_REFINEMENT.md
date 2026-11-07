@@ -43,3 +43,12 @@ Scope: the folder/category browse → loading → results/empty → clear-filter
 - Grid minimum cell width scales with text size. Large-text previews use a wider aspect ratio to avoid enormous square previews in a single column.
 
 Verification: loading and metadata regressions reproduced before fixes. Final debug/test APK builds, 487 unit tests and lint passed (zero lint errors). Sixteen focused API 35 tests passed, including five new browse checks, large-text/RTL layout controls, list/grid restoration and existing core UX. Actual unmatched-search recovery and 2x text list/grid rendering checked on the emulator. Logs and screenshots are ignored local artifacts under `app/build/experience-*`. Physical-phone performance and a full TalkBack/keyboard walkthrough remain unverified.
+
+## File actions pass — 2026-11-07
+
+- Grid cells expose the same file-specific More actions name as list rows. The 48 dp control uses a stable surface over previews and is replaced by the checked-state indicator during selection. Its click does not open the file.
+- Selection has direct labelled Copy, Move and Share buttons in a wrapping action group. Close, Select all and overflow remain in the count row; Rename, compression and the destructive bin action remain in the overflow. Existing deletion confirmation is retained.
+- Single-item Copy/Move uses an explicit target rather than toggling the selection and then copying/cutting. Shared clipboard preparation retains the existing batch messages and clears selection only after acceptance. A rejected request during transfer leaves the clipboard and selection untouched and reports Transfer in progress.
+- No file is moved merely by choosing Move: the existing destination-specific Paste step and transfer handling remain in effect.
+
+Verification: missing grid actions and direct selection actions reproduced before implementation. Final debug/test builds, 490 unit tests and lint passed (zero errors). Twenty focused device tests passed, including large-text direct actions, independent grid overflow clicks, selection checkboxes, Rename access and prior browse/layout/restoration cases. Unit tests cover selected-target copy, unrelated-selection move and clipboard rejection during a gated transfer. The real grid action sheet, one-item copy, destination-labelled clipboard, cancellation and selection controls at normal/2x system text were inspected on the API 35 emulator. Physical-device timing and an exhaustive keyboard/TalkBack walkthrough remain unverified.

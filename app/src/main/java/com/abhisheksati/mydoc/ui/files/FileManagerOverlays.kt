@@ -213,13 +213,11 @@ fun FileManagerOverlays(
             },
             onCopy = {
                 onDismissSingleItemAction()
-                viewModel.toggleSelection(item.file)
-                viewModel.copySelected()
+                viewModel.copyItem(item.file)
             },
             onMove = {
                 onDismissSingleItemAction()
-                viewModel.toggleSelection(item.file)
-                viewModel.cutSelected()
+                viewModel.cutItem(item.file)
             },
             onRename = {
                 onDismissSingleItemAction()

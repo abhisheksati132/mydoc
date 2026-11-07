@@ -165,7 +165,7 @@ fun SingleItemActionBottomSheet(
             )
 
             ItemActionOption(
-                title = stringResource(R.string.action_move_cut),
+                title = stringResource(R.string.action_move),
                 icon = Icons.Outlined.ContentCut,
                 onClick = onMove
             )

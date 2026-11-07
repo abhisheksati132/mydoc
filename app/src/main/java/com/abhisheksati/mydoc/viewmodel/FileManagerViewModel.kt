@@ -340,34 +340,32 @@ class FileManagerViewModel(
         }
     }
 
-    fun copySelected() {
-        val selected = _uiState.value.selectedFiles.toList()
-        if (selected.isEmpty()) return
-        if (!explorerClipboard.set(ClipboardState(ClipboardOperation.COPY, selected))) return
-        _uiState.update {
-            it.copy(
-                clipboardState = ClipboardState(ClipboardOperation.COPY, selected),
-                selectedFiles = emptySet(),
-                isSelectionMode = false,
-                userMessage = if (selected.size == 1) {
-                    UiText.Res(R.string.fm_copied_one)
-                } else {
-                    UiText.Res(R.string.fm_copied_many, listOf(selected.size))
-                }
-            )
-        }
-    }
+    fun copySelected() = prepareClipboard(ClipboardOperation.COPY, _uiState.value.selectedFiles.toList())
 
-    fun cutSelected() {
-        val selected = _uiState.value.selectedFiles.toList()
-        if (selected.isEmpty()) return
-        if (!explorerClipboard.set(ClipboardState(ClipboardOperation.CUT, selected))) return
+    fun cutSelected() = prepareClipboard(ClipboardOperation.CUT, _uiState.value.selectedFiles.toList())
+
+    fun copyItem(file: File) = prepareClipboard(ClipboardOperation.COPY, listOf(file))
+
+    fun cutItem(file: File) = prepareClipboard(ClipboardOperation.CUT, listOf(file))
+
+    private fun prepareClipboard(operation: ClipboardOperation, files: List<File>) {
+        if (files.isEmpty()) return
+        val clipboard = ClipboardState(operation, files)
+        // A running transfer owns the clipboard; rejection must not change the current selection.
+        if (!explorerClipboard.set(clipboard)) {
+            _uiState.update { it.copy(userMessage = UiText.Res(R.string.transfers_active)) }
+            return
+        }
         _uiState.update {
             it.copy(
-                clipboardState = ClipboardState(ClipboardOperation.CUT, selected),
+                clipboardState = clipboard,
                 selectedFiles = emptySet(),
                 isSelectionMode = false,
-                userMessage = UiText.Res(R.string.fm_moving_many, listOf(selected.size))
+                userMessage = when {
+                    operation == ClipboardOperation.CUT -> UiText.Res(R.string.fm_moving_many, listOf(files.size))
+                    files.size == 1 -> UiText.Res(R.string.fm_copied_one)
+                    else -> UiText.Res(R.string.fm_copied_many, listOf(files.size))
+                }
             )
         }
     }
