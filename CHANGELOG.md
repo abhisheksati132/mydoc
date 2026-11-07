@@ -5,6 +5,8 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+## [1.9.3] — 2026-11-07
+
 ### Changed
 
 - Home groups the recent-files view switch with its section controls.
