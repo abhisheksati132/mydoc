@@ -5,6 +5,8 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+## [1.9.2] — 2026-11-07
+
 ### Changed
 
 - Recent files use compact rows by default, with optional previews and preserved selection, share and details actions.
