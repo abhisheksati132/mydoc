@@ -37,6 +37,7 @@ fun SettingsReadingSection(
     modifier: Modifier = Modifier
 ) {
     SettingsCard(
+        showHeader = false,
         title = stringResource(R.string.settings_reading_title),
         icon = Icons.AutoMirrored.Outlined.MenuBook,
         modifier = modifier

@@ -51,6 +51,7 @@ fun SettingsAboutSection(
     val scope = rememberCoroutineScope()
 
     SettingsCard(
+        showHeader = false,
         title = stringResource(R.string.settings_about_title),
         icon = Icons.Outlined.Info,
         modifier = modifier.combinedClickable(

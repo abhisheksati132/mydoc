@@ -220,6 +220,7 @@ fun SettingsScreen(
                     if (selectedCategory == SettingsCategory.PRIVACY) {
                         // 5. PRIVACY & SECURITY
                         SettingsCard(
+                            showHeader = false,
                             title = stringResource(R.string.settings_privacy_security),
                             icon = Icons.Outlined.Security
                         ) {

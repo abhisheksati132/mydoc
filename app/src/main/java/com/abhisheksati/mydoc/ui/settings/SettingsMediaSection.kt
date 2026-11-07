@@ -18,6 +18,7 @@ fun SettingsMediaSection(
     modifier: Modifier = Modifier
 ) {
     SettingsCard(
+        showHeader = false,
         title = stringResource(R.string.settings_media_title),
         icon = Icons.Outlined.PlayCircle,
         modifier = modifier

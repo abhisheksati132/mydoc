@@ -27,6 +27,22 @@ import org.junit.Test
 class CoreUxOnDeviceTest {
     @get:Rule val compose = createComposeRule()
 
+    @Test fun toolsCategorySearchShowsRecoveryWhenOnlyOtherCategoriesMatch() {
+        val application = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.app.Application>()
+        val viewModel = com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel(application)
+        compose.setContent {
+            AppDesignSystemTheme {
+                com.abhisheksati.mydoc.tools.ui.ToolsScreen(viewModel, {})
+            }
+        }
+        compose.onNodeWithText("All categories").performClick()
+        compose.onNodeWithText("Secure").performClick()
+        compose.onNodeWithContentDescription("Search tools").performClick()
+        compose.onNode(hasSetTextAction()).performTextInput("merge")
+        compose.onNodeWithText("Clear filters").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Merge PDF").assertIsDisplayed()
+    }
+
     @Test fun searchFieldKeepsItsAccessibleNameAfterTyping() {
         compose.setContent { AppDesignSystemTheme { SpotlightSearchSheet(emptyList(), {}, {}) } }
         val input = compose.onNode(hasSetTextAction())

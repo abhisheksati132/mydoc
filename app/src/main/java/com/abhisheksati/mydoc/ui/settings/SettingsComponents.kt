@@ -39,6 +39,7 @@ fun SettingsCard(
     title: String,
     icon: ImageVector,
     modifier: Modifier = Modifier,
+    showHeader: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -51,7 +52,7 @@ fun SettingsCard(
         elevation = 2.dp
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(
+            if (showHeader) Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -79,7 +80,7 @@ fun SettingsCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 4.dp),
+                    .padding(top = if (showHeader) 4.dp else 0.dp),
                 content = content
             )
         }

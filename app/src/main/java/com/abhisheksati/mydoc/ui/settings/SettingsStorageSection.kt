@@ -39,6 +39,7 @@ fun SettingsStorageSection(
     modifier: Modifier = Modifier
 ) {
     SettingsCard(
+        showHeader = false,
         title = stringResource(R.string.settings_storage_title),
         icon = Icons.Outlined.Storage,
         modifier = modifier

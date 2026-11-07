@@ -41,6 +41,7 @@ fun SettingsAppearanceSection(
     val haptic = LocalHapticFeedback.current
 
     SettingsCard(
+        showHeader = false,
         title = stringResource(R.string.appearance_title),
         icon = Icons.Outlined.Palette,
         modifier = modifier

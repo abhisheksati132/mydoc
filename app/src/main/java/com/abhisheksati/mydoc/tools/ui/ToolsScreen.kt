@@ -38,8 +38,11 @@ import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Transform
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +56,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -86,7 +91,7 @@ private data class ToolNavCategory(
  * Organize, Edit & Sign, Compress, Convert, Secure, Scan.
  */
 private val toolCategories = listOf(
-    ToolNavCategory(null, Icons.Outlined.AllInclusive, R.string.tools_cat_all),
+    ToolNavCategory(null, Icons.Outlined.AllInclusive, R.string.tools_all_categories),
     ToolNavCategory(ToolGroup.ORGANIZE, Icons.AutoMirrored.Outlined.CallSplit, R.string.tools_filter_organize),
     ToolNavCategory(ToolGroup.EDIT_SIGN, Icons.Outlined.Draw, R.string.tools_filter_edit_sign),
     ToolNavCategory(ToolGroup.COMPRESS, Icons.Outlined.Compress, R.string.tools_filter_compress),
@@ -128,6 +133,7 @@ fun ToolsScreen(
 
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
+    var categoryMenuExpanded by remember { mutableStateOf(false) }
     var selectedGroup by rememberSaveable { mutableStateOf<ToolGroup?>(null) }
     val searchFocusRequester = remember { FocusRequester() }
 
@@ -150,7 +156,10 @@ fun ToolsScreen(
             }
         }
     }
-    val groupedTools = remember(filteredTools) { filteredTools.groupBy { it.group } }
+    val visibleTools = remember(filteredTools, selectedGroup) {
+        filteredTools.filter { selectedGroup == null || it.group == selectedGroup }
+    }
+    val groupedTools = remember(visibleTools) { visibleTools.groupBy { it.group } }
 
     Column(
         modifier = modifier
@@ -226,39 +235,31 @@ fun ToolsScreen(
             }
         }
 
-        // Horizontal Category Filter Pills
-        androidx.compose.foundation.layout.FlowRow(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            toolCategories.forEach { category ->
-                val selected = selectedGroup == category.group
-                FilterChip(
-                    selected = selected,
-                    onClick = { selectedGroup = if (selected) null else category.group },
-                    label = {
-                        Text(
-                            text = stringResource(category.labelRes),
-                            style = if (selected) AppTheme.typography.captionStrong else AppTheme.typography.caption
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = category.icon,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = colors.accent.copy(alpha = 0.14f),
-                        selectedLabelColor = colors.accent,
-                        selectedLeadingIconColor = colors.accent,
-                        containerColor = colors.surface,
-                        labelColor = colors.inkSecondary,
-                        iconColor = colors.inkSecondary
-                    ),
-                    shape = AppRadius.pillShape
-                )
+        // Keep every category one tap away without pushing tools below three rows of chips.
+        Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+            val activeCategory = toolCategories.first { it.group == selectedGroup }
+            OutlinedButton(onClick = { categoryMenuExpanded = true }, shape = AppRadius.pillShape) {
+                Icon(activeCategory.icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.size(8.dp))
+                Text(stringResource(activeCategory.labelRes), modifier = Modifier.weight(1f, fill = false))
+                Spacer(Modifier.size(8.dp))
+                Icon(Icons.Outlined.ExpandMore, contentDescription = null)
+            }
+            DropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
+                toolCategories.forEach { category ->
+                    DropdownMenuItem(
+                        modifier = Modifier.semantics { selected = selectedGroup == category.group },
+                        text = { Text(stringResource(category.labelRes)) },
+                        leadingIcon = { Icon(category.icon, contentDescription = null) },
+                        trailingIcon = {
+                            if (selectedGroup == category.group) Icon(Icons.Outlined.Check, contentDescription = null)
+                        },
+                        onClick = {
+                            selectedGroup = category.group
+                            categoryMenuExpanded = false
+                        }
+                    )
+                }
             }
         }
 
@@ -270,7 +271,7 @@ fun ToolsScreen(
                 .navigationBarsPadding(),
             contentPadding = PaddingValues(top = 8.dp, bottom = LocalFloatingChromeInset.current + 24.dp)
         ) {
-            if (filteredTools.isEmpty()) {
+            if (visibleTools.isEmpty()) {
                 item(key = "empty") {
                     ToolsEmptyState(
                         onClear = {

@@ -330,6 +330,13 @@ fun HomeFeedPane(
                             style = AppTheme.typography.heading,
                             color = colors.ink
                         )
+                        IconButton(onClick = { showRecentPreviews = !showRecentPreviews }) {
+                            Icon(
+                                if (showRecentPreviews) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
+                                contentDescription = stringResource(if (showRecentPreviews) R.string.home_show_file_list else R.string.home_show_previews),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                         TextButton(onClick = onNavigateToLibrary) {
                             Text(stringResource(R.string.home_browse_files), style = AppTheme.typography.captionStrong,
                                 color = colors.accent, maxLines = 1)
@@ -337,14 +344,6 @@ fun HomeFeedPane(
                     }
                 }
 
-                item(key = "recent_view_control") {
-                    TextButton(onClick = { showRecentPreviews = !showRecentPreviews }) {
-                        Icon(if (showRecentPreviews) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
-                            contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(if (showRecentPreviews) R.string.home_show_file_list else R.string.home_show_previews))
-                    }
-                }
                 if (!showRecentPreviews) {
                     items(remainingRecents, key = { it.uri }) { item ->
                         RecentFileRow(

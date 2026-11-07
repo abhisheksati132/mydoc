@@ -5,6 +5,16 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+### Changed
+
+- Home groups the recent-files view switch with its section controls.
+- Settings category pages display their heading once.
+- Tools category navigation uses a compact menu with an explicit selected state.
+
+### Fixed
+
+- Searching within a tool category shows a recovery action when matches exist only in other categories.
+
 ## [1.9.2] — 2026-11-07
 
 ### Changed
