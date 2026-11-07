@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.designsystem
 
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -94,5 +95,25 @@ class CoreUxOnDeviceTest {
         compose.onNodeWithText("report.pdf").assertIsDisplayed()
         compose.onNodeWithText("Browse files").performClick()
         compose.runOnIdle { assertEquals(1, browsed); assertEquals(1, dismissed) }
+    }
+
+    @Test fun everySettingsCategoryIsReachableWithLargeText() {
+        var selected: com.abhisheksati.mydoc.ui.settings.SettingsCategory? = null
+        val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        compose.setContent {
+            val density = LocalDensity.current
+            AppDesignSystemTheme {
+                CompositionLocalProvider(LocalDensity provides Density(density.density, 2f)) {
+                    androidx.compose.foundation.layout.Column(Modifier.width(320.dp)
+                        .verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                        com.abhisheksati.mydoc.ui.settings.SettingsCategoryIndex(onSelect = { selected = it })
+                    }
+                }
+            }
+        }
+        com.abhisheksati.mydoc.ui.settings.SettingsCategory.entries.forEach { category ->
+            compose.onNodeWithText(context.getString(category.title)).performScrollTo().performClick()
+            compose.runOnIdle { assertEquals(category, selected) }
+        }
     }
 }

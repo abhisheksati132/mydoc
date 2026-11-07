@@ -1,15 +1,15 @@
 package com.abhisheksati.mydoc.ui.settings
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import android.app.KeyguardManager
 import android.content.Context
 import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -17,19 +17,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -108,132 +107,154 @@ fun SettingsScreen(
     val biometricLockEnabled by settingsRepository.isBiometricLockEnabled.collectAsState()
     val checkUpdatesOnLaunch by settingsRepository.checkUpdatesOnLaunch.collectAsState()
 
+    var selectedCategoryName by rememberSaveable { mutableStateOf<String?>(null) }
+    val selectedCategory = SettingsCategory.entries.firstOrNull { it.name == selectedCategoryName }
+    val categoryStates = rememberSaveableStateHolder()
+    BackHandler(enabled = selectedCategory != null) { selectedCategoryName = null }
+    val navigateBack = { if (selectedCategory != null) selectedCategoryName = null else onBackClick() }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = scheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             AppTopBar(
-                title = stringResource(R.string.settings_title),
-                subtitle = stringResource(R.string.settings_subtitle, updateManager.currentVersionName),
-                onBack = onBackClick,
+                title = stringResource(selectedCategory?.title ?: R.string.settings_title),
+                subtitle = if (selectedCategory == null) stringResource(R.string.settings_subtitle, updateManager.currentVersionName) else null,
+                onBack = navigateBack,
                 isGlass = false,
                 containerColor = androidx.compose.ui.graphics.Color.Transparent
             )
         }
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .verticalScroll(rememberScrollState())
-                    .navigationBarsPadding()
-                    .padding(top = 4.dp, bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // 1. LOOK
-                SettingsAppearanceSection(
-                    currentTheme = currentTheme,
-                    amoledBlack = amoledBlack,
-                    hapticFeedbackEnabled = hapticFeedbackEnabled,
-                    glassEffectMode = glassEffectMode,
-                    onThemeChange = { settingsRepository.setThemeMode(it) },
-                    onAmoledBlackChange = { settingsRepository.setAmoledBlack(it) },
-                    onHapticFeedbackChange = { settingsRepository.setHapticFeedbackEnabled(it) },
-                    onGlassEffectModeChange = { settingsRepository.setGlassEffectMode(it) }
-                )
-
-                // 2. READING
-                SettingsReadingSection(
-                    currentReadingMode = currentReadingMode,
-                    pdfFitMode = pdfFitMode,
-                    doubleTapZoom = doubleTapZoom,
-                    keepScreenOn = keepScreenOn,
-                    volumeKeyTurning = volumeKeyTurning,
-                    onReadingModeChange = { settingsRepository.setDefaultReadingMode(it) },
-                    onPdfFitModeChange = { mode ->
-                        settingsRepository.updateReadingPrefs {
-                            it.copy(isFitPage = mode == "FIT_PAGE")
-                        }
-                    },
-                    onDoubleTapZoomChange = { settingsRepository.setDoubleTapZoom(it) },
-                    onKeepScreenOnChange = { settingsRepository.setKeepScreenOn(it) },
-                    onVolumeKeyTurningChange = { settingsRepository.setVolumeKeyPageTurning(it) }
-                )
-
-                // 3. MEDIA
-                SettingsMediaSection(
-                    autoResumeVideo = autoResumeVideo,
-                    videoAutoLoop = videoAutoLoop,
-                    onAutoResumeVideoChange = { settingsRepository.setAutoResumeVideo(it) },
-                    onVideoAutoLoopChange = { settingsRepository.setVideoAutoLoop(it) }
-                )
-
-                // 4. LIBRARY & STORAGE
-                SettingsStorageSection(
-                    startupTab = startupTab,
-                    cacheSizeBytes = cacheSizeBytes,
-                    onStartupTabChange = { settingsRepository.setDefaultStartupTab(it) },
-                    onClearCacheClick = {
-                        if (hapticFeedbackEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        scope.launch {
-                            val freed = withContext(Dispatchers.IO) { settingsRepository.clearCache(context) }
-                            cacheSizeBytes = withContext(Dispatchers.IO) { settingsRepository.getCacheSizeBytes(context) }
-                            val freedMb = freed / (1024.0 * 1024.0)
-                            val toastText = if (freedMb >= 0.1) {
-                                resources.getString(R.string.settings_freed_mb, freedMb)
-                            } else {
-                                cacheClearedMessage
-                            }
-                            context.showMessage(toastText)
-                        }
-                    },
-                    // Clearing history is one tap away from erasing every reading position, so it
-                    // asks first and says what goes and what stays.
-                    onClearRecentClick = if (onClearRecent == null) null else {
-                        {
-                            if (hapticFeedbackEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            showClearHistoryConfirmation = true
-                        }
-                    },
-                    onOpenStorageCleaner = { showStorageCleaner = true },
-                    onOpenAppManager = { showAppManager = true }
-                )
-
-                // 5. PRIVACY & SECURITY
-                SettingsCard(
-                    title = stringResource(R.string.settings_privacy_security),
-                    icon = Icons.Outlined.Security
+            categoryStates.SaveableStateProvider(selectedCategory?.name ?: "index") {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .verticalScroll(rememberScrollState())
+                        .navigationBarsPadding()
+                        .padding(top = 4.dp, bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    SettingToggleRow(
-                        title = stringResource(R.string.settings_app_lock_title),
-                        subtitle = stringResource(R.string.settings_app_lock_subtitle),
-                        icon = Icons.Outlined.Security,
-                        checked = biometricLockEnabled,
-                        onCheckedChange = { isChecked ->
-                            if (isChecked) {
-                                val km = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
-                                if (km == null || !km.isDeviceSecure) {
-                                    context.showMessage(keyguardMessage)
-                                } else {
-                                    settingsRepository.setBiometricLockEnabled(true)
-                                }
-                            } else {
-                                settingsRepository.setBiometricLockEnabled(false)
-                            }
-                        }
-                    )
-                }
+                    if (selectedCategory == null) SettingsCategoryIndex(onSelect = { selectedCategoryName = it.name })
 
-                // 6. ABOUT & UPDATES
-                SettingsAboutSection(
-                    updateManager = updateManager,
-                    updateState = updateState,
-                    checkUpdatesOnLaunch = checkUpdatesOnLaunch,
-                    onCheckUpdatesOnLaunchChange = { settingsRepository.setCheckUpdatesOnLaunch(it) },
-                    onDesignSystemPreviewClick = onDesignSystemPreviewClick
-                )
+                    if (selectedCategory == SettingsCategory.APPEARANCE) {
+                        // 1. LOOK
+                        SettingsAppearanceSection(
+                            currentTheme = currentTheme,
+                            amoledBlack = amoledBlack,
+                            hapticFeedbackEnabled = hapticFeedbackEnabled,
+                            glassEffectMode = glassEffectMode,
+                            onThemeChange = { settingsRepository.setThemeMode(it) },
+                            onAmoledBlackChange = { settingsRepository.setAmoledBlack(it) },
+                            onHapticFeedbackChange = { settingsRepository.setHapticFeedbackEnabled(it) },
+                            onGlassEffectModeChange = { settingsRepository.setGlassEffectMode(it) }
+                        )
+                    }
+
+                    if (selectedCategory == SettingsCategory.READING) {
+                        // 2. READING
+                        SettingsReadingSection(
+                            currentReadingMode = currentReadingMode,
+                            pdfFitMode = pdfFitMode,
+                            doubleTapZoom = doubleTapZoom,
+                            keepScreenOn = keepScreenOn,
+                            volumeKeyTurning = volumeKeyTurning,
+                            onReadingModeChange = { settingsRepository.setDefaultReadingMode(it) },
+                            onPdfFitModeChange = { mode ->
+                                settingsRepository.updateReadingPrefs {
+                                    it.copy(isFitPage = mode == "FIT_PAGE")
+                                }
+                            },
+                            onDoubleTapZoomChange = { settingsRepository.setDoubleTapZoom(it) },
+                            onKeepScreenOnChange = { settingsRepository.setKeepScreenOn(it) },
+                            onVolumeKeyTurningChange = { settingsRepository.setVolumeKeyPageTurning(it) }
+                        )
+                    }
+
+                    if (selectedCategory == SettingsCategory.MEDIA) {
+                        // 3. MEDIA
+                        SettingsMediaSection(
+                            autoResumeVideo = autoResumeVideo,
+                            videoAutoLoop = videoAutoLoop,
+                            onAutoResumeVideoChange = { settingsRepository.setAutoResumeVideo(it) },
+                            onVideoAutoLoopChange = { settingsRepository.setVideoAutoLoop(it) }
+                        )
+                    }
+
+                    if (selectedCategory == SettingsCategory.STORAGE) {
+                        // 4. LIBRARY & STORAGE
+                        SettingsStorageSection(
+                            startupTab = startupTab,
+                            cacheSizeBytes = cacheSizeBytes,
+                            onStartupTabChange = { settingsRepository.setDefaultStartupTab(it) },
+                            onClearCacheClick = {
+                                if (hapticFeedbackEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                scope.launch {
+                                    val freed = withContext(Dispatchers.IO) { settingsRepository.clearCache(context) }
+                                    cacheSizeBytes = withContext(Dispatchers.IO) { settingsRepository.getCacheSizeBytes(context) }
+                                    val freedMb = freed / (1024.0 * 1024.0)
+                                    val toastText = if (freedMb >= 0.1) {
+                                        resources.getString(R.string.settings_freed_mb, freedMb)
+                                    } else {
+                                        cacheClearedMessage
+                                    }
+                                    context.showMessage(toastText)
+                                }
+                            },
+                            // Clearing history is one tap away from erasing every reading position, so it
+                            // asks first and says what goes and what stays.
+                            onClearRecentClick = if (onClearRecent == null) null else {
+                                {
+                                    if (hapticFeedbackEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    showClearHistoryConfirmation = true
+                                }
+                            },
+                            onOpenStorageCleaner = { showStorageCleaner = true },
+                            onOpenAppManager = { showAppManager = true }
+                        )
+                    }
+
+                    if (selectedCategory == SettingsCategory.PRIVACY) {
+                        // 5. PRIVACY & SECURITY
+                        SettingsCard(
+                            title = stringResource(R.string.settings_privacy_security),
+                            icon = Icons.Outlined.Security
+                        ) {
+                            SettingToggleRow(
+                                title = stringResource(R.string.settings_app_lock_title),
+                                subtitle = stringResource(R.string.settings_app_lock_subtitle),
+                                icon = Icons.Outlined.Security,
+                                checked = biometricLockEnabled,
+                                onCheckedChange = { isChecked ->
+                                    if (isChecked) {
+                                        val km = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+                                        if (km == null || !km.isDeviceSecure) {
+                                            context.showMessage(keyguardMessage)
+                                        } else {
+                                            settingsRepository.setBiometricLockEnabled(true)
+                                        }
+                                    } else {
+                                        settingsRepository.setBiometricLockEnabled(false)
+                                    }
+                                }
+                            )
+                        }
+                    }
+
+                    if (selectedCategory == SettingsCategory.ABOUT) {
+                        // 6. ABOUT & UPDATES
+                        SettingsAboutSection(
+                            updateManager = updateManager,
+                            updateState = updateState,
+                            checkUpdatesOnLaunch = checkUpdatesOnLaunch,
+                            onCheckUpdatesOnLaunchChange = { settingsRepository.setCheckUpdatesOnLaunch(it) },
+                            onDesignSystemPreviewClick = onDesignSystemPreviewClick
+                        )
+                    }
+                }
             }
         }
 

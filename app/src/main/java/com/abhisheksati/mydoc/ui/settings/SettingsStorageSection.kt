@@ -26,6 +26,7 @@ import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.domain.model.HomeTab
 import java.util.Locale
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun SettingsStorageSection(
     startupTab: HomeTab,
@@ -43,7 +44,7 @@ fun SettingsStorageSection(
         modifier = modifier
     ) {
         SettingsSectionLabel(text = stringResource(R.string.settings_startup_destination))
-        Row(
+        androidx.compose.foundation.layout.FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {

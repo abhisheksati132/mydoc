@@ -5,6 +5,21 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+### Changed
+
+- Recent files use compact rows by default, with optional previews and preserved selection, share and details actions.
+- Library prioritizes search and pinned locations, with a concise storage summary.
+- Indexed and folder searches share an accessible field and show their scope explicitly; advanced search is available beside the folder query.
+- Workspace commands have their own menu, and clipboard instructions name the destination folder.
+- Settings is organized into six categories with Back navigation and saved scroll positions; update checks remain available in About.
+- Tool categories are fully visible and descriptions can wrap to two lines.
+
+### Fixed
+
+- File search keeps its accessible name while typing, and file-row option buttons identify the target file.
+- Home headings, Settings explanations and choice controls reflow with larger text.
+- Compact thumbnail badges use file-type icons at larger text sizes to prevent clipped lettering.
+
 ## [1.9.1] — 2026-11-07
 
 ### Added

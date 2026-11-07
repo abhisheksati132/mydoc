@@ -147,7 +147,7 @@
     <string name="cleaner_result_complete">Moved %1$d files and deleted %2$d folders (%3$s reclaimable once the Bin is emptied).</string>
     <string name="cd_expand">Expand</string>
     <string name="home_document_fallback">Document</string>
-    <string name="cd_search_documents">Search documents</string>
+    <string name="cd_search_documents">Search files</string>
     <string name="cd_dismiss">Dismiss</string>
     <string name="home_recent_documents">Recent Documents</string>
     <string name="home_view_all">View all</string>
@@ -941,4 +941,11 @@
         <item quantity="one">%d item</item>
         <item quantity="other">%d items</item>
     </plurals>
+    <string name="settings_appearance_summary">Theme, glass effects and haptics</string>
+    <string name="settings_reading_summary">Reading appearance and page controls</string>
+    <string name="settings_media_summary">Playback and resume preferences</string>
+    <string name="settings_storage_summary">Startup tab, cache and file utilities</string>
+    <string name="settings_privacy_summary">App lock and device security</string>
+    <string name="settings_about_summary">Version, update checks and project details</string>
+    <string name="search_folder_recursive_scope">This folder and subfolders: %1$s</string>
 </resources>

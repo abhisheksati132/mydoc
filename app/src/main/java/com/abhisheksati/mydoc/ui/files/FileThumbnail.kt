@@ -275,7 +275,8 @@ private fun TypePlate(
             .background(container),
         contentAlignment = Alignment.Center
     ) {
-        if (badge != null) {
+        // Compact decorative plates use an icon when enlarged text would wrap inside the thumbnail.
+        if (badge != null && androidx.compose.ui.platform.LocalDensity.current.fontScale <= 1.3f) {
             Text(
                 text = badge,
                 color = tint,
@@ -284,7 +285,7 @@ private fun TypePlate(
         } else {
             Icon(
                 imageVector = getFileTypeIcon(type),
-                contentDescription = null,
+                contentDescription = badge,
                 tint = tint,
                 modifier = Modifier.size(22.dp)
             )

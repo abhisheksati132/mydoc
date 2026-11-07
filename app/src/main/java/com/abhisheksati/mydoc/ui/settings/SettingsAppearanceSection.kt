@@ -1,13 +1,10 @@
 package com.abhisheksati.mydoc.ui.settings
 
 import com.abhisheksati.mydoc.R
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BrightnessAuto
 import androidx.compose.material.icons.outlined.Check
@@ -28,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.data.local.AppThemeMode
 import com.abhisheksati.mydoc.designsystem.components.GlassEffectMode
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun SettingsAppearanceSection(
     currentTheme: AppThemeMode,
@@ -48,10 +46,8 @@ fun SettingsAppearanceSection(
         modifier = modifier
     ) {
         SettingsSectionLabel(text = stringResource(R.string.settings_theme))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+        androidx.compose.foundation.layout.FlowRow(
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             ThemeChip(
@@ -77,10 +73,8 @@ fun SettingsAppearanceSection(
         SettingsDivider(modifier = Modifier.padding(top = 12.dp))
 
         SettingsSectionLabel(text = stringResource(R.string.settings_glass_effects))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+        androidx.compose.foundation.layout.FlowRow(
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             ThemeChip(

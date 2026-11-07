@@ -1,7 +1,6 @@
 package com.abhisheksati.mydoc.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun SettingsReadingSection(
     currentReadingMode: ReadingMode,
@@ -42,7 +42,7 @@ fun SettingsReadingSection(
         modifier = modifier
     ) {
         SettingsSectionLabel(text = stringResource(R.string.settings_default_reading_mode))
-        Row(
+        androidx.compose.foundation.layout.FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -67,7 +67,7 @@ fun SettingsReadingSection(
         SettingsDivider(modifier = Modifier.padding(top = 12.dp))
 
         SettingsSectionLabel(text = stringResource(R.string.settings_pdf_page_scaling))
-        Row(
+        androidx.compose.foundation.layout.FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {

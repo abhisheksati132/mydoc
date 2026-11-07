@@ -1,13 +1,13 @@
 package com.abhisheksati.mydoc.ui.files
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.material.icons.outlined.Tab
 import com.abhisheksati.mydoc.designsystem.components.showMessage
 import kotlinx.coroutines.launch
 import com.abhisheksati.mydoc.designsystem.components.LocalFloatingChromeInset
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -47,8 +47,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
@@ -61,12 +59,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
@@ -80,8 +76,6 @@ import com.abhisheksati.mydoc.designsystem.animation.AppMotion
 import com.abhisheksati.mydoc.designsystem.components.AppTopBar
 import com.abhisheksati.mydoc.data.local.PinnedFoldersManager
 import com.abhisheksati.mydoc.data.local.StoragePermissionHelper
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.domain.model.FileSortField
 import com.abhisheksati.mydoc.domain.model.LibraryItem
 import com.abhisheksati.mydoc.domain.model.StorageFileType
@@ -348,7 +342,11 @@ fun FilesPaneScreen(
                                 query = uiState.searchQuery, onQueryChange = viewModel::setSearchQuery,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                             )
-                            Text(stringResource(if (isBrowsingFolder) R.string.search_folder_scope else R.string.search_category_scope, title),
+                            Text(stringResource(when {
+                                uiState.advancedSearch?.recursive == true -> R.string.search_folder_recursive_scope
+                                isBrowsingFolder -> R.string.search_folder_scope
+                                else -> R.string.search_category_scope
+                            }, title),
                                 modifier = Modifier.padding(horizontal = 20.dp), style = MaterialTheme.typography.labelMedium)
                             androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
                                 androidx.compose.material3.TextButton(onClick = { showAdvancedSearch = true }) { Text(stringResource(R.string.explorer_advanced_search)) }
