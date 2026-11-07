@@ -1,5 +1,8 @@
 package com.abhisheksati.mydoc.ui.files
 
+import com.abhisheksati.mydoc.designsystem.components.showMessage
+import kotlinx.coroutines.launch
+import com.abhisheksati.mydoc.designsystem.components.LocalFloatingChromeInset
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -13,7 +16,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -34,7 +36,12 @@ import androidx.compose.material3.DropdownMenuItem
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppDropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import com.abhisheksati.mydoc.designsystem.components.GlassSurface
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -84,7 +91,6 @@ import com.abhisheksati.mydoc.viewmodel.FileManagerUiState
 import com.abhisheksati.mydoc.viewmodel.FileManagerViewModel
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import java.io.File
-import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 /**
  * Files-first home: Recents and Browse share one header, one storage readout
@@ -108,10 +114,16 @@ fun FilesPaneScreen(
     hazeState: dev.chrisbanes.haze.HazeState? = null,
     glassMotion: com.abhisheksati.mydoc.designsystem.components.GlassMotionState? = null,
     workspaceInsets: Boolean = false,
-    onShowTransfers: () -> Unit = {}
+    onShowTransfers: () -> Unit = {},
+    workspaceMenu: @Composable androidx.compose.foundation.layout.ColumnScope.(() -> Unit) -> Unit = {}
 ) {
 
+    val chromeInset = LocalFloatingChromeInset.current
+    val density = LocalDensity.current
+    var clipboardHeight by remember { mutableIntStateOf(0) }
     val uiState by viewModel.uiState.collectAsState()
+    val clipboardInset = if (uiState.isBrowsingStorage && uiState.clipboardState != null)
+        with(density) { clipboardHeight.toDp() } else 0.dp
     val storageUiState by storageViewModel.uiState.collectAsState()
     val homeUiState by homeViewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -121,6 +133,7 @@ fun FilesPaneScreen(
     var showNewFileDialog by remember { mutableStateOf(false) }
     var renameTarget by remember { mutableStateOf<File?>(null) }
     var showAdvancedSearch by remember { mutableStateOf(false) }
+    var showSaveSearch by remember { mutableStateOf(false) }
     var batchRenameFiles by remember { mutableStateOf<List<File>?>(null) }
     var showRenameRecovery by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -191,10 +204,15 @@ fun FilesPaneScreen(
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val messageScope = androidx.compose.runtime.rememberCoroutineScope()
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let {
-            context.showMessage(it.resolve(context))
+            val message = it.resolve(context)
+            // SnackbarHostState queues calls. This scope survives consuming the message key,
+            // while disposal of this pane cancels messages belonging to that pane.
+            if (isActive) messageScope.launch { snackbarHostState.showSnackbar(message, withDismissAction = true) }
+            else context.showMessage(message)
             viewModel.consumeMessage()
         }
     }
@@ -264,38 +282,6 @@ fun FilesPaneScreen(
         modifier = modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier
-                    .navigationBarsPadding()
-                    .padding(
-                        start = AppSpacing.medium,
-                        end = AppSpacing.medium,
-                        top = AppSpacing.medium,
-                        bottom = AppSpacing.navBarHeight + AppSpacing.medium
-                    )
-            ) { data ->
-                Snackbar(
-                    snackbarData = data,
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                    actionColor = MaterialTheme.colorScheme.primary
-                )
-            }
-        },
-        floatingActionButton = {
-            if (isBrowsingFolder && !uiState.isSelectionMode && uiState.clipboardState == null) {
-                FloatingActionButton(
-                    onClick = { showNewFolderDialog = true },
-                    modifier = Modifier.padding(bottom = AppSpacing.navBarHeight + AppSpacing.medium),
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ) {
-                    Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.action_new_folder))
-                }
-            }
-        },
         topBar = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 if (uiState.isSelectionMode) {
@@ -341,8 +327,10 @@ fun FilesPaneScreen(
                             },
                             onSettingsClick = onSettingsClick,
                             workspaceInsets = workspaceInsets,
+                            workspaceMenu = workspaceMenu,
                             onAdvancedSearch = { showAdvancedSearch = true },
                             onFolderInsights = { showFolderInsights = true },
+                            onResetFolderView = viewModel::resetFolderView,
                             onToggleView = { viewModel.toggleViewMode() },
                             onToggleHidden = { viewModel.toggleHiddenFiles() },
                             onNewFolder = { showNewFolderDialog = true },
@@ -372,6 +360,7 @@ fun FilesPaneScreen(
                         if (uiState.advancedSearch != null) {
                             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text(stringResource(R.string.explorer_search_scope, uiState.currentDirectory.name), modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
+                                androidx.compose.material3.TextButton(onClick = { showSaveSearch = true }) { Text(stringResource(R.string.saved_search_save)) }
                                 androidx.compose.material3.TextButton(onClick = { viewModel.clearAdvancedSearch() }) { Text(stringResource(R.string.explorer_clear_search)) }
                             }
                             if (uiState.searchIncomplete) Text(stringResource(R.string.explorer_search_incomplete), color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp))
@@ -393,91 +382,114 @@ fun FilesPaneScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                if (!hasPermission) {
-                    StoragePermissionBanner(
-                        onRequestPermission = {
-                            StoragePermissionHelper.launchManageStorageSettings(context)
-                        }
-                    )
-                }
+            val listInset = chromeInset + clipboardInset
+            CompositionLocalProvider(LocalFloatingChromeInset provides listInset) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    if (!hasPermission) {
+                        StoragePermissionBanner(
+                            onRequestPermission = {
+                                StoragePermissionHelper.launchManageStorageSettings(context)
+                            }
+                        )
+                    }
 
-                Box(modifier = Modifier.weight(1f)) {
-                    AnimatedContent(
-                        targetState = insideBrowse,
-                        transitionSpec = {
-                            val forward = targetState
-                            AppMotion.peerEnter(forward) togetherWith AppMotion.peerExit(forward)
-                        },
-                        label = "libraryPane",
-                        modifier = Modifier.fillMaxSize()
-                    ) { isInside ->
-                        if (isInside) {
-                            DirectoryPane(
-                                uiState = uiState,
-                                onOpenItem = { item ->
-                                    when {
-                                        item.isDirectory -> viewModel.loadDirectory(item.file)
-                                        item.name.endsWith(".zip", ignoreCase = true) -> archiveTarget = item.file
-                                        item.fileType == StorageFileType.ARCHIVE -> actionTarget = item
-                                        item.fileType == StorageFileType.IMAGE -> {
-                                            val siblingImages = uiState.filteredItems
-                                                .filter { it.fileType == StorageFileType.IMAGE }
-                                                .map { it.file }
-                                            onOpenFile(item.file, siblingImages)
+                    Box(modifier = Modifier.weight(1f)) {
+                        AnimatedContent(
+                            targetState = insideBrowse,
+                            transitionSpec = {
+                                val forward = targetState
+                                AppMotion.peerEnter(forward) togetherWith AppMotion.peerExit(forward)
+                            },
+                            label = "libraryPane",
+                            modifier = Modifier.fillMaxSize()
+                        ) { isInside ->
+                            if (isInside) {
+                                DirectoryPane(
+                                    uiState = uiState,
+                                    onOpenItem = { item ->
+                                        when {
+                                            item.isDirectory -> viewModel.loadDirectory(item.file)
+                                            item.name.endsWith(".zip", ignoreCase = true) -> archiveTarget = item.file
+                                            item.fileType == StorageFileType.ARCHIVE -> actionTarget = item
+                                            item.fileType == StorageFileType.IMAGE -> {
+                                                val siblingImages = uiState.filteredItems
+                                                    .filter { it.fileType == StorageFileType.IMAGE }
+                                                    .map { it.file }
+                                                onOpenFile(item.file, siblingImages)
+                                            }
+                                            else -> onOpenFile(item.file, null)
                                         }
-                                        else -> onOpenFile(item.file, null)
-                                    }
-                                },
-                                onMoreItem = { actionTarget = it },
-                                onToggleSelection = { viewModel.toggleSelection(it.file) },
-                                onToggleView = { viewModel.toggleViewMode() },
-                                onSort = { field: FileSortField -> viewModel.toggleSort(field) },
-                                onDocFilter = { viewModel.setDocTypeFilter(it) },
-                                modifier = Modifier.fillMaxSize(),
-                                hazeState = hazeState,
-                                glassMotion = glassMotion
-                            )
-                        } else {
-                            BrowseHomePane(
-                                storageUiState = storageUiState,
-                                volumes = storageUiState.volumes.ifEmpty { uiState.storageVolumes },
-                                pinnedFolders = pinnedFolders,
-                                trashCount = uiState.trashItems.size,
-                                onBrowseInternal = {
-                                    viewModel.startBrowsingStorage()
-                                },
-                                onBrowseVolume = { volume: StorageVolume ->
-                                    viewModel.startBrowsingStorage(volume.file)
-                                },
-                                onCategory = { category -> viewModel.selectCategory(category) },
-                                onFolder = { folder -> viewModel.startBrowsingStorage(folder) },
-                                onOpenTrash = { viewModel.openTrash() },
-                                onApps = { showAppManager = true },
-                                onInsights = { showInsights = true },
-                                onClean = { showCleaner = true },
-                                modifier = Modifier.fillMaxSize(),
-                                hazeState = hazeState,
-                                glassMotion = glassMotion
-                            )
+                                    },
+                                    onMoreItem = { actionTarget = it },
+                                    onToggleSelection = { viewModel.toggleSelection(it.file) },
+                                    onToggleView = { viewModel.toggleViewMode() },
+                                    onSort = { field: FileSortField -> viewModel.toggleSort(field) },
+                                    onDocFilter = { viewModel.setDocTypeFilter(it) },
+                                    modifier = Modifier.fillMaxSize(),
+                                    hazeState = hazeState,
+                                    glassMotion = glassMotion
+                                )
+                            } else {
+                                BrowseHomePane(
+                                    storageUiState = storageUiState,
+                                    volumes = storageUiState.volumes.ifEmpty { uiState.storageVolumes },
+                                    pinnedFolders = pinnedFolders,
+                                    trashCount = uiState.trashItems.size,
+                                    onBrowseInternal = {
+                                        viewModel.startBrowsingStorage()
+                                    },
+                                    onBrowseVolume = { volume: StorageVolume ->
+                                        viewModel.startBrowsingStorage(volume.file)
+                                    },
+                                    onCategory = { category -> viewModel.selectCategory(category) },
+                                    onFolder = { folder -> viewModel.startBrowsingStorage(folder) },
+                                    onOpenTrash = { viewModel.openTrash() },
+                                    onApps = { showAppManager = true },
+                                    onInsights = { showInsights = true },
+                                    onClean = { showCleaner = true },
+                                    modifier = Modifier.fillMaxSize(),
+                                    hazeState = hazeState,
+                                    glassMotion = glassMotion
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            // Category views aggregate files from many folders, so there is no
-            // single destination to paste into; only offer it while browsing.
-            if (isBrowsingFolder) {
-                FileManagerClipboardBar(
-                    clipboardState = uiState.clipboardState,
-                    onCancel = { viewModel.cancelClipboard() },
-                    onPaste = { viewModel.pasteClipboard(); onShowTransfers() },
-                    isTransferring = isTransferring,
-                    onShowTransfers = onShowTransfers,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                )
+            }
+            // Notices and clipboard actions share a layout so their entrance animations cannot overlap.
+            Column(
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, bottom = chromeInset + 12.dp),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.End
+            ) {
+                if (isBrowsingFolder && !uiState.isSelectionMode && uiState.clipboardState == null) {
+                    GlassSurface(shape = RoundedCornerShape(28.dp), hazeState = hazeState, motion = glassMotion) {
+                        IconButton(onClick = { showNewFolderDialog = true }, modifier = Modifier.size(56.dp)) {
+                            Icon(Icons.Outlined.Add, tint = MaterialTheme.colorScheme.onSurface,
+                                contentDescription = stringResource(R.string.action_new_folder))
+                        }
+                    }
+                }
+                SnackbarHost(hostState = snackbarHostState) { data ->
+                    Snackbar(snackbarData = data,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        dismissActionContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionColor = MaterialTheme.colorScheme.primary)
+                }
+                // Category views do not provide a single paste destination.
+                if (isBrowsingFolder) {
+                    FileManagerClipboardBar(
+                        clipboardState = uiState.clipboardState,
+                        onHeightChanged = { clipboardHeight = it },
+                        onCancel = { viewModel.cancelClipboard() },
+                        onPaste = { viewModel.pasteClipboard(); onShowTransfers() },
+                        isTransferring = isTransferring,
+                        onShowTransfers = onShowTransfers
+                    )
+                }
             }
         }
     }
@@ -515,14 +527,22 @@ fun FilesPaneScreen(
         onOpenInTools = onOpenInTools
     )
 
-    archiveTarget?.let { archive -> ExplorerArchiveSheet(archive,
-        onDismiss = { archiveTarget = null },
+    archiveTarget?.let { archive ->
+        DisposableEffect(archive) { onDispose { viewModel.cancelArchivePreview() } }
+        ExplorerArchiveSheet(archive,
+        onDismiss = { viewModel.cancelArchivePreview(); archiveTarget = null },
         onExtract = { archiveTarget = null; viewModel.extractArchive(archive) },
-        canExtract = uiState.activeOperation == null && !isTransferring) }
+        canExtract = uiState.activeOperation == null && !isTransferring,
+        onOpenMember = { member, stamp -> viewModel.openArchiveMember(archive, member, File(context.cacheDir, "shared/archive-previews"), stamp) { prepared ->
+            archiveTarget = null
+            if (prepared.extension.equals("zip", true)) archiveTarget = prepared else onOpenFile(prepared, null)
+        } },
+        onExtractSelected = { selected, stamp -> archiveTarget = null; viewModel.extractArchiveSelection(archive, selected, stamp) }) }
     if (showFolderInsights) ExplorerFolderInsightsSheet(uiState.currentDirectory,
         onDismiss = { showFolderInsights = false },
         onOpenFolder = { folder -> showFolderInsights = false; viewModel.loadDirectory(folder) })
 
+    if (showSaveSearch) SaveExplorerSearchDialog(onDismiss = { showSaveSearch = false }, onSave = viewModel::saveCurrentSearch)
     if (showAdvancedSearch) ExplorerSearchDialog(
         directory = uiState.currentDirectory,
         initial = uiState.advancedSearch,
@@ -573,7 +593,9 @@ private fun FilesHeader(
     onRefresh: () -> Unit,
     workspaceInsets: Boolean = false,
     onAdvancedSearch: () -> Unit = {},
-    onFolderInsights: () -> Unit = {}
+    onFolderInsights: () -> Unit = {},
+    onResetFolderView: () -> Unit = {},
+    workspaceMenu: @Composable androidx.compose.foundation.layout.ColumnScope.(() -> Unit) -> Unit = {}
 ) {
     val scheme = MaterialTheme.colorScheme
     var menuOpen by remember { mutableStateOf(false) }
@@ -594,17 +616,19 @@ private fun FilesHeader(
                 )
             }
 
-            // The overflow menu (view toggle, hidden files, new folder/file, recycle bin,
-            // refresh) is a folder-browsing affordance — only show it inside internal storage,
-            // not on the Library landing / all tab.
-            if (isInsideFolder) Box {
+            Box {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.cd_more_options), tint = scheme.onSurface)
                 }
                 AppDropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    workspaceMenu { menuOpen = false }
+                    if (isInsideFolder) {
+                    HorizontalDivider()
                     if (uiState.isBrowsingStorage && uiState.activeCategory == null) DropdownMenuItem(
                         text = { Text(stringResource(R.string.folder_insights_title)) },
                         onClick = { menuOpen = false; onFolderInsights() })
+                    if (uiState.isBrowsingStorage && uiState.activeCategory == null) DropdownMenuItem(
+                        text = { Text(stringResource(R.string.folder_view_reset)) }, onClick = { menuOpen = false; onResetFolderView() })
                     DropdownMenuItem(text = { Text(stringResource(R.string.explorer_advanced_search)) }, onClick = { menuOpen = false; onAdvancedSearch() })
                     DropdownMenuItem(
                         text = { Text(stringResource(if (uiState.isGridView) R.string.menu_list_view else R.string.menu_grid_view)) },
@@ -670,6 +694,7 @@ private fun FilesHeader(
                             onRefresh()
                         }
                     )
+                    }
                 }
             }
 

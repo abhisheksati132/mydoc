@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.files
 
+import com.abhisheksati.mydoc.designsystem.components.LocalFloatingChromeInset
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -174,7 +175,7 @@ fun BrowseHomePane(
     LazyColumn(
         state = listState,
         modifier = modifier.then(if (hazeState != null) Modifier.hazeSource(hazeState) else Modifier),
-        contentPadding = PaddingValues(bottom = 120.dp)
+        contentPadding = PaddingValues(bottom = LocalFloatingChromeInset.current + 24.dp)
     ) {
         if (!storageUiState.errorMessage.isNullOrBlank()) {
             item(key = "storage_error_banner") {
@@ -412,8 +413,8 @@ fun DirectoryPane(
     val listState = rememberLazyListState()
     val gridState = rememberLazyGridState()
     if (glassMotion != null) {
-        TrackGlassMotion(listState, glassMotion)
-        TrackGlassMotion(gridState, glassMotion)
+        if (uiState.isGridView) TrackGlassMotion(gridState, glassMotion)
+        else TrackGlassMotion(listState, glassMotion)
     }
     val hazeModifier = if (hazeState != null) Modifier.hazeSource(hazeState) else Modifier
 
@@ -536,7 +537,7 @@ fun DirectoryPane(
             LazyVerticalGrid(
                 state = gridState,
                 columns = GridCells.Adaptive(minSize = 108.dp),
-                contentPadding = PaddingValues(start = 10.dp, top = 4.dp, end = 10.dp, bottom = 120.dp),
+                contentPadding = PaddingValues(start = 10.dp, top = 4.dp, end = 10.dp, bottom = LocalFloatingChromeInset.current + 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier
@@ -560,7 +561,7 @@ fun DirectoryPane(
         } else {
             LazyColumn(
                 state = listState,
-                contentPadding = PaddingValues(top = 4.dp, bottom = 120.dp),
+                contentPadding = PaddingValues(top = 4.dp, bottom = LocalFloatingChromeInset.current + 24.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(hazeModifier)

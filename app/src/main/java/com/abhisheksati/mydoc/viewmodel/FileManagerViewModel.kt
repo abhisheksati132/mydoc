@@ -35,6 +35,15 @@ import com.abhisheksati.mydoc.domain.model.ExplorerRenamePlan
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.drop
+import com.abhisheksati.mydoc.data.local.ExplorerPreferences
+import com.abhisheksati.mydoc.domain.model.FolderViewPreferences
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.abhisheksati.mydoc.data.local.ExplorerZipExtraction
+import com.abhisheksati.mydoc.data.local.ZipArchiveChanged
+import com.abhisheksati.mydoc.data.local.ZipPreviewCacheFull
+import com.abhisheksati.mydoc.data.local.ZipExtractionRecovery
+import com.abhisheksati.mydoc.domain.model.ArchiveStamp
 
 @Immutable
 data class FileManagerUiState(
@@ -72,7 +81,8 @@ class FileManagerViewModel(
     private val storageRepository: StorageRepository,
     baseDir: File? = null,
     private val settingsRepository: SettingsRepository? = null,
-    val explorerClipboard: ExplorerClipboard = ExplorerClipboard()
+    val explorerClipboard: ExplorerClipboard = ExplorerClipboard(),
+    val explorerPreferences: ExplorerPreferences = settingsRepository?.explorerPreferences ?: ExplorerPreferences()
 ) : ViewModel() {
 
     private val backStack = ArrayDeque<File>()
@@ -80,6 +90,9 @@ class FileManagerViewModel(
     /** Bumped by every directory/category request; an older, slower reply must not land. */
     private var listRequestGeneration = 0
     private var advancedSearchJob: Job? = null
+    private var savedSearchOpenJob: Job? = null
+    private var categorySortOrder = FileSortOrder()
+    private var archivePreviewJob: Job? = null
 
     private val initialDir: File = baseDir ?: try {
         Environment.getExternalStorageDirectory() ?: File("/")
@@ -101,6 +114,14 @@ class FileManagerViewModel(
 
     init {
         explorerClipboard.bind(viewModelScope, storageRepository)
+        viewModelScope.launch {
+            explorerPreferences.folderViews.collect {
+                val state = _uiState.value
+                if (state.isBrowsingStorage && state.activeCategory == null) {
+                    applyFolderView(folderView(state.currentDirectory))
+                }
+            }
+        }
         viewModelScope.launch { refreshRenameRecovery() }
         viewModelScope.launch { explorerClipboard.state.collect { clip -> _uiState.update { it.copy(clipboardState = clip) } } }
         viewModelScope.launch { explorerClipboard.revision.drop(1).collect { reloadCurrentSource() } }
@@ -146,7 +167,7 @@ class FileManagerViewModel(
         }
     }
 
-    fun loadDirectory(directory: File, addToHistory: Boolean = true) {
+    fun loadDirectory(directory: File, addToHistory: Boolean = true, restoreView: Boolean = true) {
         advancedSearchJob?.cancel()
         val originCategory = _uiState.value.activeCategory
         if (addToHistory && directory.absolutePath != _uiState.value.currentDirectory.absolutePath) {
@@ -157,9 +178,13 @@ class FileManagerViewModel(
 
         val generation = ++listRequestGeneration
         viewModelScope.launch {
+            if (generation != listRequestGeneration) return@launch
+            val view = if (restoreView) folderView(directory) else FolderViewPreferences(_uiState.value.sortOrder, _uiState.value.isGridView)
             _uiState.update {
                 it.copy(
                     currentDirectory = directory,
+                    sortOrder = view.sortOrder,
+                    isGridView = view.grid,
                     advancedSearch = null,
                     searchIncomplete = false,
                     breadcrumbTrail = buildBreadcrumb(directory),
@@ -182,11 +207,12 @@ class FileManagerViewModel(
             )
 
             if (generation != listRequestGeneration) return@launch
-            val filtered = visibleItems(items, _uiState.value)
+            val sorted = sortSearchResults(items, _uiState.value.sortOrder)
+            val filtered = visibleItems(sorted, _uiState.value)
 
             _uiState.update {
                 it.copy(
-                    items = items,
+                    items = sorted,
                     filteredItems = filtered,
                     isLoading = false
                 )
@@ -331,13 +357,20 @@ class FileManagerViewModel(
         explorerClipboard.paste(_uiState.value.currentDirectory)
     }
 
-    fun searchAdvanced(options: ExplorerSearchOptions) {
+    fun searchAdvanced(options: ExplorerSearchOptions) = searchAdvancedAt(_uiState.value.currentDirectory, options)
+
+    private fun searchAdvancedAt(root: File, options: ExplorerSearchOptions, navigate: Boolean = false) {
         if (!options.isValid) return
         advancedSearchJob?.cancel()
         val generation = ++listRequestGeneration
-        val root = _uiState.value.currentDirectory
         val hidden = _uiState.value.showHiddenFiles
-        _uiState.update { it.copy(advancedSearch = options, searchQuery = "", items = emptyList(), filteredItems = emptyList(), selectedFiles = emptySet(), isSelectionMode = false, isLoading = true, searchIncomplete = false) }
+        if (navigate) backStack.clear()
+        val view = folderView(root)
+        _uiState.update { it.copy(currentDirectory = root, breadcrumbTrail = buildBreadcrumb(root),
+            isBrowsingStorage = true, activeCategory = null,
+            sortOrder = if (navigate) view.sortOrder else it.sortOrder, isGridView = if (navigate) view.grid else it.isGridView,
+            canGoBack = if (navigate) true else it.canGoBack,
+            advancedSearch = options, searchQuery = "", items = emptyList(), filteredItems = emptyList(), selectedFiles = emptySet(), isSelectionMode = false, isLoading = true, searchIncomplete = false) }
         advancedSearchJob = viewModelScope.launch {
             try {
                 val result = ExplorerSearch().search(root, options, hidden)
@@ -354,6 +387,57 @@ class FileManagerViewModel(
     }
 
     fun clearAdvancedSearch() = loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+
+    fun saveCurrentSearch(label: String): Boolean {
+        val state = _uiState.value
+        val options = state.advancedSearch ?: return false
+        return explorerPreferences.saveSearch(label, state.currentDirectory, options)
+    }
+
+    fun openSavedSearch(id: String): Job? {
+        val saved = explorerPreferences.savedSearches.value.firstOrNull { it.id == id } ?: return null
+        val generation = listRequestGeneration
+        savedSearchOpenJob?.cancel()
+        return viewModelScope.launch {
+            val folder = File(saved.directory)
+            val available = withContext(Dispatchers.IO) { runCatching { folder.isDirectory && folder.canRead() }.getOrDefault(false) }
+            if (generation != listRequestGeneration) return@launch
+            if (!available) {
+                _uiState.update { it.copy(userMessage = UiText.Res(R.string.saved_search_folder_missing)) }
+                return@launch
+            }
+            // The availability check must finish before replacing the current folder/search.
+            if (explorerPreferences.savedSearches.value.none { it.id == id }) return@launch
+            searchAdvancedAt(folder, saved.optionsAt(), navigate = true)
+        }.also { savedSearchOpenJob = it }
+    }
+
+    private fun folderView(directory: File): FolderViewPreferences = explorerPreferences.folderView(directory)
+        ?: FolderViewPreferences(grid = settingsRepository?.filesGridView?.value ?: false)
+
+    private fun applyFolderView(view: FolderViewPreferences) {
+        _uiState.update { current ->
+            val sorted = sortSearchResults(current.items, view.sortOrder)
+            val next = current.copy(sortOrder = view.sortOrder, isGridView = view.grid, items = sorted)
+            next.copy(filteredItems = visibleItems(sorted, next))
+        }
+    }
+
+    fun resetFolderView() {
+        val state = _uiState.value
+        if (!state.isBrowsingStorage || state.activeCategory != null) return
+        if (!explorerPreferences.resetFolderView(state.currentDirectory)) {
+            _uiState.update { it.copy(userMessage = UiText.Res(R.string.folder_view_failed)) }
+        } else applyFolderView(folderView(state.currentDirectory))
+    }
+
+    private fun rememberFolderView() {
+        val state = _uiState.value
+        if (state.isBrowsingStorage && state.activeCategory == null &&
+            !explorerPreferences.setFolderView(state.currentDirectory, FolderViewPreferences(state.sortOrder, state.isGridView))) {
+            _uiState.update { it.copy(userMessage = UiText.Res(R.string.folder_view_failed)) }
+        }
+    }
 
     fun applyBatchRename(plan: ExplorerRenamePlan) {
         if (!plan.canApply || _uiState.value.activeOperation != null) return
@@ -663,6 +747,8 @@ class FileManagerViewModel(
             _uiState.update {
                 it.copy(
                     activeCategory = category,
+                    sortOrder = categorySortOrder,
+                    isGridView = settingsRepository?.filesGridView?.value ?: false,
                     isLoading = true,
                     selectedFiles = emptySet(),
                     isSelectionMode = false,
@@ -671,10 +757,11 @@ class FileManagerViewModel(
             }
             val items = storageRepository.queryCategory(category)
             if (generation != listRequestGeneration) return@launch
-            val filtered = visibleItems(items, _uiState.value)
+            val sorted = sortSearchResults(items, _uiState.value.sortOrder)
+            val filtered = visibleItems(sorted, _uiState.value)
             _uiState.update {
                 it.copy(
-                    items = items,
+                    items = sorted,
                     filteredItems = filtered,
                     isLoading = false
                 )
@@ -758,6 +845,45 @@ class FileManagerViewModel(
         }
     }
 
+    fun cancelArchivePreview() { archivePreviewJob?.cancel() }
+
+    fun openArchiveMember(archive: File, member: String, cacheRoot: File, expected: ArchiveStamp?, onReady: (File) -> Unit) {
+        if (_uiState.value.activeOperation != null) return
+        _uiState.update { it.copy(activeOperation = "ZIP preview", isLoading = true) }
+        archivePreviewJob = viewModelScope.launch {
+            try {
+                val file = ExplorerZipExtraction().preview(archive, member, cacheRoot, expected)
+                _uiState.update { it.copy(activeOperation = null, isLoading = false) }
+                onReady(file)
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) { _uiState.update { it.copy(userMessage = zipEntryFailure(e)) } }
+            finally { _uiState.update { it.copy(activeOperation = null, isLoading = false) } }
+        }
+    }
+
+    fun extractArchiveSelection(archive: File, selected: Set<String>, expected: ArchiveStamp?) {
+        if (_uiState.value.activeOperation != null || selected.isEmpty()) return
+        _uiState.update { it.copy(activeOperation = "ZIP extraction", isLoading = true) }
+        viewModelScope.launch {
+            try {
+                val parent = requireNotNull(archive.parentFile)
+                val output = ExplorerZipExtraction().extract(archive, selected, parent, expected)
+                _uiState.update { it.copy(userMessage = UiText.Res(R.string.fm_extracted, listOf(output.name))) }
+                reloadCurrentSource()
+                refreshVolumes()
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) { _uiState.update { it.copy(userMessage = zipEntryFailure(e)) } }
+            finally { _uiState.update { it.copy(activeOperation = null, isLoading = false) } }
+        }
+    }
+
+    private fun zipEntryFailure(error: Exception): UiText = when (error) {
+        is ZipPreviewCacheFull -> UiText.Res(R.string.zip_preview_full)
+        is ZipArchiveChanged -> UiText.Res(R.string.zip_changed)
+        is ZipExtractionRecovery -> UiText.Res(R.string.zip_recovery, listOf(error.directory.absolutePath))
+        else -> UiText.Joined(listOf(UiText.Res(R.string.zip_member_failed), UserMessages.actionFailed(R.string.fm_verb_extraction, error)))
+    }
+
     fun extractArchive(file: File) {
         val parent = file.parentFile ?: _uiState.value.currentDirectory
         val folderName = file.nameWithoutExtension.ifEmpty { "Extracted" }
@@ -806,6 +932,8 @@ class FileManagerViewModel(
             FileSortOrder(field, isAscending = true)
         }
         _uiState.update { it.copy(sortOrder = newOrder) }
+        if (_uiState.value.activeCategory != null) categorySortOrder = newOrder
+        rememberFolderView()
         reloadCurrentSource()
     }
 
@@ -820,14 +948,15 @@ class FileManagerViewModel(
         if (category != null) {
             selectCategory(category)
         } else {
-            loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+            loadDirectory(_uiState.value.currentDirectory, addToHistory = false, restoreView = false)
         }
     }
 
     fun toggleViewMode() {
         val next = !_uiState.value.isGridView
         _uiState.update { it.copy(isGridView = next) }
-        settingsRepository?.setFilesGridView(next)
+        if (_uiState.value.isBrowsingStorage && _uiState.value.activeCategory == null) rememberFolderView()
+        else settingsRepository?.setFilesGridView(next)
     }
 
     fun toggleHiddenFiles() {
@@ -958,12 +1087,13 @@ class FileManagerViewModel(
     class Factory(
         private val storageRepository: StorageRepository,
         private val settingsRepository: SettingsRepository? = null,
-        private val clipboard: ExplorerClipboard = ExplorerClipboard()
+        private val clipboard: ExplorerClipboard = ExplorerClipboard(),
+        private val preferences: ExplorerPreferences = settingsRepository?.explorerPreferences ?: ExplorerPreferences()
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(FileManagerViewModel::class.java)) {
-                return FileManagerViewModel(storageRepository, settingsRepository = settingsRepository, explorerClipboard = clipboard) as T
+                return FileManagerViewModel(storageRepository, settingsRepository = settingsRepository, explorerClipboard = clipboard, explorerPreferences = preferences) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }

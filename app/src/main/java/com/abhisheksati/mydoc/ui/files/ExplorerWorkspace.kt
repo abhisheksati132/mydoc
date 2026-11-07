@@ -6,7 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CompareArrows
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.SwapHoriz
@@ -67,12 +67,21 @@ fun FilesScreen(
     val focused by workspace.focused.collectAsState()
     val savedStates = rememberSaveableStateHolder()
     var showTransfers by remember { mutableStateOf(false) }
+    var showSavedSearches by remember { mutableStateOf(false) }
+    var savedSearchRequest by remember { mutableStateOf<String?>(null) }
     var comparisonFolders by remember { mutableStateOf<List<File>?>(null) }
     val transferHistory by viewModel.explorerClipboard.transfers.state.collectAsState()
     BoxWithConstraints(modifier.fillMaxSize()) {
         val wide = maxWidth >= 900.dp
+        LaunchedEffect(savedSearchRequest) {
+            savedSearchRequest?.let { id ->
+                val target = if (wide) focused else active
+                (tabs.firstOrNull { it.id == target } ?: tabs.firstOrNull { it.id == active })?.browser?.openSavedSearch(id)
+                savedSearchRequest = null
+            }
+        }
         Column {
-            Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
+            if (tabs.size > 1) Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
                 Row(Modifier.fillMaxWidth().statusBarsPadding(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Row(Modifier.weight(1f).horizontalScroll(rememberScrollState())) {
                         tabs.forEach { tab ->
@@ -89,16 +98,6 @@ fun FilesScreen(
                                     Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.explorer_close_tab, label))
                                 }
                             }
-                        }
-                    }
-                    IconButton(onClick = {
-                        comparisonFolders = tabs.mapNotNull { tab ->
-                            tab.browser.uiState.value.takeIf { it.isBrowsingStorage && it.activeCategory == null }?.currentDirectory
-                        }
-                    }) { Icon(Icons.Outlined.CompareArrows, contentDescription = stringResource(R.string.compare_title)) }
-                    IconButton(onClick = { showTransfers = true }) {
-                        BadgedBox(badge = { if (transferHistory.any { it.running }) Badge { Text("1") } }) {
-                            Icon(Icons.Outlined.SwapHoriz, contentDescription = stringResource(R.string.transfers_title))
                         }
                     }
                     IconButton(onClick = { workspace.add() }, enabled = tabs.size < 6) { Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.explorer_new_tab)) }
@@ -124,13 +123,32 @@ fun FilesScreen(
                             FilesPaneScreen(tab.browser, homeViewModel, storageViewModel, onOpenFile, onLibraryItemClick,
                                 onLibraryItemDetails, onSettingsClick, onSpotlightSearch, isActive = isActive && (focused == tab.id || !wide),
                                 onOpenInTools = onOpenInTools, hazeState = hazeState, glassMotion = glassMotion,
-                                workspaceInsets = true, onShowTransfers = { showTransfers = true })
+                                workspaceInsets = tabs.size > 1, onShowTransfers = { showTransfers = true },
+                                workspaceMenu = { closeMenu ->
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.saved_searches_title)) },
+                                        onClick = { closeMenu(); showSavedSearches = true })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.compare_title)) }, onClick = {
+                                        closeMenu()
+                                        comparisonFolders = tabs.mapNotNull { entry -> entry.browser.uiState.value.takeIf { it.isBrowsingStorage && it.activeCategory == null }?.currentDirectory }
+                                    })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.transfers_title)) },
+                                        onClick = { closeMenu(); showTransfers = true })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.explorer_new_tab)) }, enabled = tabs.size < 6,
+                                        onClick = { closeMenu(); workspace.add() })
+                                    if (wide) DropdownMenuItem(text = { Text(stringResource(if (secondary == null) R.string.explorer_split else R.string.explorer_single_pane)) },
+                                        onClick = { closeMenu(); workspace.toggleSplit() })
+                                })
                         }
                     }
                 }
             }
         }
     }
+    if (showSavedSearches) ExplorerSavedSearchesSheet(viewModel.explorerPreferences,
+        onDismiss = { showSavedSearches = false }, onRun = { id ->
+            showSavedSearches = false
+            savedSearchRequest = id
+        })
     comparisonFolders?.let { folders -> ExplorerComparisonSheet(folders) { comparisonFolders = null } }
     if (showTransfers) ExplorerTransfersSheet(viewModel.explorerClipboard.transfers) { showTransfers = false }
 

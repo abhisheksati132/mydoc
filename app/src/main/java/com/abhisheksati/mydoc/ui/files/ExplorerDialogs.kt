@@ -23,12 +23,12 @@ fun ExplorerSearchDialog(directory: File, initial: ExplorerSearchOptions?, onDis
     var extension by remember { mutableStateOf(initial?.extension.orEmpty()) }
     var minimum by remember { mutableStateOf(initial?.minBytes?.div(1024)?.toString().orEmpty()) }
     var maximum by remember { mutableStateOf(initial?.maxBytes?.div(1024)?.toString().orEmpty()) }
-    var days by remember { mutableStateOf(initial?.modifiedAfter?.let { ((System.currentTimeMillis() - it) / 86_400_000L).coerceAtLeast(1).toString() }.orEmpty()) }
+    var days by remember { mutableStateOf(initial?.modifiedWithinDays?.toString() ?: initial?.modifiedAfter?.let { ((System.currentTimeMillis() - it) / 86_400_000L).coerceAtLeast(1).toString() }.orEmpty()) }
     var recursive by remember { mutableStateOf(initial?.recursive ?: false) }
     fun bytes(text: String): Long? = text.toLongOrNull()?.takeIf { it in 0..(Long.MAX_VALUE / 1024) }?.times(1024)
     val dayCount = days.toLongOrNull()?.takeIf { it in 1..365_000 }
     val options = ExplorerSearchOptions(name, extension, bytes(minimum), bytes(maximum),
-        if (days.isBlank()) null else dayCount?.let { System.currentTimeMillis() - it * 86_400_000L }, recursive)
+        if (days.isBlank()) null else dayCount?.let { System.currentTimeMillis() - it * 86_400_000L }, recursive, dayCount?.toInt())
     val valid = options.isValid && (minimum.isBlank() || bytes(minimum) != null) &&
         (maximum.isBlank() || bytes(maximum) != null) && (days.isBlank() || dayCount != null)
     AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.explorer_advanced_search)) },

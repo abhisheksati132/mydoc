@@ -12,8 +12,8 @@ plugins {
 //   4. Tag & push: git tag v1.2.1 && git push origin v1.2.1
 //   5. Create GitHub Release with tag "v1.2.1" — the in-app updater reads this tag
 // -----------------------------------------------------------------------------
-val APP_VERSION_NAME = "1.9.0"
-val APP_VERSION_CODE = 180  // Increment by 1 every release, never decrease
+val APP_VERSION_NAME = "1.9.1"
+val APP_VERSION_CODE = 181  // Increment by 1 every release, never decrease
 
 android {
     namespace = "com.abhisheksati.mydoc"
@@ -165,6 +165,8 @@ dependencies {
 
     // Glass backdrop blur engine
     implementation(libs.haze)
+    implementation(libs.haze.glass)
+    implementation(libs.haze.blur)
 
     // Align serialization with Room 2.8's room-migration (kotlinx-serialization-json 1.8.1);
     // lifecycle otherwise pins the app classpath to 1.7.3 and Room's schema parser crashes.

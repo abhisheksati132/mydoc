@@ -16,6 +16,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.data.local.ExplorerArchive
 import com.abhisheksati.mydoc.data.local.ExplorerFolderInsights
@@ -27,12 +29,15 @@ import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExplorerArchiveSheet(file: File, onDismiss: () -> Unit, onExtract: () -> Unit, canExtract: Boolean = true) {
+fun ExplorerArchiveSheet(file: File, onDismiss: () -> Unit, onExtract: () -> Unit, canExtract: Boolean = true,
+                         onOpenMember: ((String, ArchiveStamp?) -> Unit)? = null,
+                         onExtractSelected: ((Set<String>, ArchiveStamp?) -> Unit)? = null) {
     var index by remember(file) { mutableStateOf<ArchiveIndex?>(null) }
     var failed by remember(file) { mutableStateOf(false) }
     var folder by rememberSaveable(file.absolutePath) { mutableStateOf("") }
     var query by rememberSaveable(file.absolutePath) { mutableStateOf("") }
     var confirm by remember { mutableStateOf(false) }
+    var selected by remember(file) { mutableStateOf(emptySet<String>()) }
     LaunchedEffect(file) {
         try { index = ExplorerArchive().read(file) }
         catch (e: CancellationException) { throw e }
@@ -53,6 +58,11 @@ fun ExplorerArchiveSheet(file: File, onDismiss: () -> Unit, onExtract: () -> Uni
             if (loaded != null) {
                 item {
                     Text(stringResource(R.string.archive_summary, loaded.fileCount, displayBytes(loaded.totalBytes)))
+                    if (onExtractSelected != null) {
+                        Text(stringResource(R.string.zip_selection_help), style = MaterialTheme.typography.bodySmall)
+                        if (selected.isNotEmpty()) TextButton(onClick = { selected = emptySet() }, enabled = canExtract) { Text(stringResource(R.string.zip_clear_selection, selected.size)) }
+                        if (!canExtract) { Text(stringResource(R.string.zip_working)); LinearProgressIndicator(Modifier.fillMaxWidth()) }
+                    }
                     if (folder.isNotEmpty()) TextButton(onClick = { folder = folder.removeSuffix("/").substringBeforeLast('/', "").let { if (it.isEmpty()) "" else "$it/" }; query = "" }) { Text(stringResource(R.string.archive_up)) }
                     Text(if (folder.isEmpty()) "/" else folder, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
@@ -60,23 +70,41 @@ fun ExplorerArchiveSheet(file: File, onDismiss: () -> Unit, onExtract: () -> Uni
                 val children = loaded.children(folder).filter { it.name.contains(query, ignoreCase = true) }
                 if (children.isEmpty()) item { Text(stringResource(R.string.archive_empty), Modifier.padding(vertical = 20.dp)) }
                 items(children, key = { it.path }) { node ->
+                    val inherited = selected.any { it.endsWith('/') && node.path != it && node.path.startsWith(it) }
+                    val selectionLabel = stringResource(R.string.zip_select_entry, node.path)
                     ListItem(
                         headlineContent = { Text(node.name) },
                         supportingContent = { Text(if (node.directory) stringResource(R.string.archive_folder) else displayBytes(node.bytes)) },
                         leadingContent = if (node.directory) { { Icon(Icons.Outlined.Folder, contentDescription = null) } } else null,
-                        modifier = if (node.directory) Modifier.clickable { folder = node.path; query = "" } else Modifier
+                        trailingContent = if (onExtractSelected != null) { {
+                            Checkbox(checked = node.path in selected || inherited, enabled = canExtract && !inherited,
+                                modifier = Modifier.semantics { contentDescription = selectionLabel },
+                                onCheckedChange = { checked ->
+                                    selected = if (checked) selected.filterNot { node.directory && it.startsWith(node.path) }.toSet() + node.path else selected - node.path
+                                })
+                        } } else null,
+                        modifier = when {
+                            node.directory -> Modifier.clickable(enabled = canExtract) { folder = node.path; query = "" }
+                            onOpenMember != null -> Modifier.clickable(enabled = canExtract) { onOpenMember(node.path, loaded.stamp) }
+                            else -> Modifier
+                        }
                     )
                 }
-                item { Button(onClick = { confirm = true }, enabled = canExtract && loaded.fileCount > 0, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.archive_extract_all)) } }
+                item { Button(onClick = { confirm = true }, enabled = canExtract && (loaded.fileCount > 0 || selected.isNotEmpty()), modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(if (selected.isNotEmpty()) R.string.zip_extract_selected else R.string.archive_extract_all))
+                } }
             }
             item { TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.tools_close)) } }
         }
     }
 
     if (confirm) AlertDialog(onDismissRequest = { confirm = false },
-        title = { Text(stringResource(R.string.archive_extract_all)) },
-        text = { Text(stringResource(R.string.archive_confirm, file.name)) },
-        confirmButton = { TextButton(onClick = { confirm = false; onExtract() }) { Text(stringResource(R.string.archive_extract_all)) } },
+        title = { Text(stringResource(if (selected.isNotEmpty()) R.string.zip_extract_selected else R.string.archive_extract_all)) },
+        text = { Text(if (selected.isNotEmpty()) stringResource(R.string.zip_selected_confirm, selected.size) else stringResource(R.string.archive_confirm, file.name)) },
+        confirmButton = { TextButton(enabled = canExtract, onClick = {
+            confirm = false
+            if (selected.isNotEmpty()) onExtractSelected?.invoke(selected, index?.stamp) else onExtract()
+        }) { Text(stringResource(if (selected.isNotEmpty()) R.string.zip_extract_selected else R.string.archive_extract_all)) } },
         dismissButton = { TextButton(onClick = { confirm = false }) { Text(stringResource(R.string.action_cancel)) } })
 }
 

@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.tools.ui
 
+import com.abhisheksati.mydoc.designsystem.components.LocalFloatingChromeInset
 import com.abhisheksati.mydoc.R
 import androidx.compose.ui.res.stringResource
 import androidx.annotation.StringRes
@@ -273,7 +274,7 @@ fun ToolsScreen(
                 .fillMaxSize()
                 .then(if (hazeState != null) Modifier.hazeSource(hazeState) else Modifier)
                 .navigationBarsPadding(),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 120.dp)
+            contentPadding = PaddingValues(top = 8.dp, bottom = LocalFloatingChromeInset.current + 24.dp)
         ) {
             if (filteredTools.isEmpty()) {
                 item(key = "empty") {

@@ -46,6 +46,11 @@ class SettingsRepository(private val context: Context) {
 
     private val prefs: SharedPreferences = context.getSharedPreferences("mydoc_settings", Context.MODE_PRIVATE)
 
+    val explorerPreferences = ExplorerPreferences(
+        read = { prefs.getString("explorer_preferences_v1", null) },
+        write = { prefs.edit().putString("explorer_preferences_v1", it).apply() }
+    )
+
     private val _themeMode = MutableStateFlow(loadThemeMode())
     val themeMode: StateFlow<AppThemeMode> = _themeMode.asStateFlow()
 

@@ -8,10 +8,12 @@ data class ExplorerSearchOptions(
     val minBytes: Long? = null,
     val maxBytes: Long? = null,
     val modifiedAfter: Long? = null,
-    val recursive: Boolean = false
+    val recursive: Boolean = false,
+    val modifiedWithinDays: Int? = null
 ) {
     val isValid: Boolean get() = (minBytes == null || minBytes >= 0) &&
-        (maxBytes == null || maxBytes >= 0) && (minBytes == null || maxBytes == null || minBytes <= maxBytes)
+        (maxBytes == null || maxBytes >= 0) && (minBytes == null || maxBytes == null || minBytes <= maxBytes) &&
+        (modifiedWithinDays == null || modifiedWithinDays in 1..365_000)
 
     fun matches(item: StorageItem): Boolean = item.name.contains(name.trim(), ignoreCase = true) &&
         (extension.isBlank() || !item.isDirectory && item.file.extension.equals(extension.trim().removePrefix("."), true)) &&

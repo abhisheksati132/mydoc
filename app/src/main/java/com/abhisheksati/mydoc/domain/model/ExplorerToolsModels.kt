@@ -3,7 +3,8 @@ package com.abhisheksati.mydoc.domain.model
 import java.io.File
 
 data class ArchiveNode(val path: String, val name: String, val directory: Boolean, val bytes: Long)
-data class ArchiveIndex(val entries: List<ArchiveNode>, val fileCount: Int, val totalBytes: Long) {
+data class ArchiveStamp(val bytes: Long, val modified: Long)
+data class ArchiveIndex(val entries: List<ArchiveNode>, val fileCount: Int, val totalBytes: Long, val stamp: ArchiveStamp? = null) {
     fun children(folder: String): List<ArchiveNode> = entries.filter { node ->
         node.path != folder && node.path.removeSuffix("/").substringBeforeLast('/', "").let {
             (if (it.isEmpty()) "" else "$it/") == folder

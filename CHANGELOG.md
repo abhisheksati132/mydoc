@@ -5,9 +5,20 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+## [1.9.1] — 2026-11-07
+
 ### Added
 
+- Open individual ZIP files as temporary copies and extract selected entries into a new folder, with checksum, size and stale-archive checks.
+- Named saved searches reopen folders and filters, with relative date windows and local persistence.
+- Folders remember their sort order and list/grid layout across tabs and restarts, with a reset option.
 - Read-only folder comparison across open tabs, with streamed content checks, missing-file detection, and explicit unknown results for incomplete scans.
+
+### Changed
+
+- Refined Ink & Seal navigation with restrained optical glass, equal-width tabs, visible focus, and opaque contrast fallbacks.
+- Simplified the single-tab Library header and measured floating-navigation clearance for lists, clipboard actions and snackbars.
+- Glass responds to power/contrast changes; reduced motion also applies to root-tab transitions.
 
 ## [1.9.0] — 2026-11-06
 

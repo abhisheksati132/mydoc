@@ -1,7 +1,7 @@
 package com.abhisheksati.mydoc.viewmodel
 
 import com.abhisheksati.mydoc.R
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.abhisheksati.mydoc.domain.model.DocumentTypeFilter
 import com.abhisheksati.mydoc.domain.model.FileCategory
 import com.abhisheksati.mydoc.domain.model.FileSortField
@@ -35,6 +35,7 @@ class FileManagerViewModelTest {
     private lateinit var testDispatcher: TestDispatcher
     private lateinit var fakeRepo: FakeStorageRepository
     private lateinit var tempDir: File
+    private val modelOwner = androidx.lifecycle.ViewModelStore()
     private lateinit var viewModel: FileManagerViewModel
 
     @Before
@@ -67,28 +68,24 @@ class FileManagerViewModelTest {
         )
     }
 
-    private fun createViewModel(): FileManagerViewModel {
+    private fun createViewModel(preferences: com.abhisheksati.mydoc.data.local.ExplorerPreferences? = null): FileManagerViewModel {
         val vm = FileManagerViewModel(
             storageRepository = fakeRepo,
-            baseDir = tempDir
+            baseDir = tempDir,
+            explorerPreferences = preferences ?: com.abhisheksati.mydoc.data.local.ExplorerPreferences()
         )
         viewModel = vm
+        modelOwner.put("browser", vm)
         return vm
     }
 
     @After
     fun tearDown() {
         if (::viewModel.isInitialized) {
-            try {
-                val method = ViewModel::class.java.getDeclaredMethod("clear")
-                method.isAccessible = true
-                method.invoke(viewModel)
-            } catch (_: Exception) {
-                try {
-                    val method = ViewModel::class.java.getDeclaredMethod("onCleared")
-                    method.isAccessible = true
-                    method.invoke(viewModel)
-                } catch (_: Exception) {}
+            val job = viewModel.viewModelScope.coroutineContext[kotlinx.coroutines.Job]
+            runTest(testDispatcher) {
+                modelOwner.clear()
+                job?.join()
             }
         }
         testDispatcher.scheduler.advanceUntilIdle()
@@ -320,6 +317,87 @@ class FileManagerViewModelTest {
             assertEquals(6, workspace.tabs.value.size)
             assertEquals(null, workspace.add())
         } finally { owner.clear() }
+    }
+
+    @Test fun folderViewsRestoreAndUpdateOtherTabs() = runTest(testDispatcher) {
+        createViewModel()
+        viewModel.startBrowsingStorage(tempDir)
+        advanceUntilIdle()
+        val workspace = ExplorerWorkspaceViewModel(viewModel, fakeRepo, null, androidx.lifecycle.SavedStateHandle())
+        val owner = androidx.lifecycle.ViewModelStore().apply { put("workspace", workspace) }
+        try {
+            workspace.add(); advanceUntilIdle()
+            val other = workspace.tabs.value.last().browser
+            viewModel.toggleViewMode()
+            viewModel.toggleSort(FileSortField.SIZE)
+            advanceUntilIdle()
+            assertTrue(other.uiState.value.isGridView)
+            assertEquals(FileSortField.SIZE, other.uiState.value.sortOrder.field)
+            val child = tempDir.resolve("child").apply { mkdir() }
+            viewModel.loadDirectory(child); advanceUntilIdle()
+            assertFalse(viewModel.uiState.value.isGridView)
+            assertEquals(FileSortField.NAME, viewModel.uiState.value.sortOrder.field)
+            viewModel.loadDirectory(tempDir); advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.isGridView)
+            viewModel.resetFolderView(); advanceUntilIdle()
+            assertFalse(other.uiState.value.isGridView)
+            assertEquals(FileSortField.NAME, other.uiState.value.sortOrder.field)
+        } finally { owner.clear() }
+    }
+
+    @Test fun resetClearsUnsavedLayoutAfterStorageWriteRecovers() = runTest(testDispatcher) {
+        var failing = true
+        val preferences = com.abhisheksati.mydoc.data.local.ExplorerPreferences(write = {
+            if (failing) throw java.io.IOException("failed")
+        })
+        createViewModel(preferences)
+        viewModel.startBrowsingStorage(tempDir); advanceUntilIdle()
+        viewModel.toggleViewMode(); advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.isGridView)
+        assertEquals(null, preferences.folderView(tempDir))
+        failing = false
+        viewModel.resetFolderView(); advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isGridView)
+    }
+
+    @Test fun categoriesDoNotInheritFolderOverrides() = runTest(testDispatcher) {
+        createViewModel()
+        viewModel.startBrowsingStorage(tempDir); advanceUntilIdle()
+        viewModel.toggleViewMode(); viewModel.toggleSort(FileSortField.SIZE); advanceUntilIdle()
+        viewModel.exitToHub(); viewModel.selectCategory(FileCategory.IMAGES); advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isGridView)
+        assertEquals(FileSortField.NAME, viewModel.uiState.value.sortOrder.field)
+        viewModel.toggleSort(FileSortField.DATE); advanceUntilIdle()
+        viewModel.loadDirectory(tempDir); advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.isGridView)
+        assertEquals(FileSortField.SIZE, viewModel.uiState.value.sortOrder.field)
+        viewModel.selectCategory(FileCategory.IMAGES); advanceUntilIdle()
+        assertEquals(FileSortField.DATE, viewModel.uiState.value.sortOrder.field)
+    }
+
+    @Test fun savedSearchWinsAgainstQueuedDirectoryLoad() = runTest(testDispatcher) {
+        createViewModel(); advanceUntilIdle()
+        val target = tempDir.resolve("saved").apply { mkdir() }
+        val preferences = viewModel.explorerPreferences
+        assertTrue(preferences.saveSearch("Reports", target, com.abhisheksati.mydoc.domain.model.ExplorerSearchOptions(name = "report")))
+        viewModel.loadDirectory(tempDir)
+        viewModel.openSavedSearch(preferences.savedSearches.value.single().id)?.join()
+        advanceUntilIdle()
+        // The IO search may finish later, but its folder and filters are installed atomically.
+        assertEquals(target, viewModel.uiState.value.currentDirectory)
+        assertEquals("report", viewModel.uiState.value.advancedSearch?.name)
+        assertTrue(viewModel.uiState.value.isBrowsingStorage)
+    }
+
+    @Test fun missingSavedFolderKeepsCurrentLocation() = runTest(testDispatcher) {
+        createViewModel(); advanceUntilIdle()
+        val preferences = viewModel.explorerPreferences
+        preferences.saveSearch("Missing", tempDir.resolve("missing"), com.abhisheksati.mydoc.domain.model.ExplorerSearchOptions())
+        viewModel.openSavedSearch(preferences.savedSearches.value.single().id)?.join()
+        advanceUntilIdle()
+        assertEquals(tempDir, viewModel.uiState.value.currentDirectory)
+        assertEquals(null, viewModel.uiState.value.advancedSearch)
+        assertTrue(viewModel.uiState.value.userMessage != null)
     }
 
     private class FakeStorageRepository(

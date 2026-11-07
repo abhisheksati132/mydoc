@@ -1,24 +1,15 @@
 package com.abhisheksati.mydoc.designsystem.components
 
-import com.abhisheksati.mydoc.R
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
@@ -28,40 +19,27 @@ import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.FolderCopy
 import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.compose.animation.core.Animatable
-import androidx.compose.runtime.LaunchedEffect
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
-import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.domain.model.HomeTab
 import dev.chrisbanes.haze.HazeState
 
-/**
- * Floating glass pill navigation for the three root tabs: Home, Library, Tools.
- *
- * Part of the "Ink & Seal" chrome:
- * - Backdrop blur via [GlassSurface] and [HazeState]
- * - 1dp specular rim highlight + soft inner shadow
- * - Seal teal marks the active tab; the pill itself carries the selection
- * - High-performance solid fallback when glass effects are disabled
- *
- * Each item is a real tab: selectable semantics for TalkBack and a 48dp touch
- * target, which the visual pill alone would not provide.
- */
+/** A bounded glass dock; equal tab widths leave room for larger text and translations. */
 @Composable
 fun BottomNavBar(
     currentTab: HomeTab,
@@ -72,86 +50,42 @@ fun BottomNavBar(
     onScanClick: () -> Unit = {}
 ) {
     val haptics = rememberAppHaptics()
-    val colors = AppTheme.colors
-
-    // Glass thickens on touch: a damped spring kicks the blur up on tab change
-    // and relaxes back, so the bar responds to interaction, not just scroll.
-    val reducedMotion = LocalReducedMotion.current
-    LaunchedEffect(currentTab, motion, reducedMotion) {
-        val target = motion ?: return@LaunchedEffect
-        if (reducedMotion) {
-            target.interaction = 0f
-            return@LaunchedEffect
-        }
-        target.interaction = 1f
-        val decay = Animatable(1f)
-        decay.animateTo(0f, spring(dampingRatio = 0.55f, stiffness = 300f)) {
-            target.interaction = value
-        }
-        target.interaction = 0f
-    }
-
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 10.dp),
+        modifier = modifier.fillMaxWidth().navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         GlassSurface(
-            shape = AppRadius.glassNavShape,
+            shape = RoundedCornerShape(36.dp),
             hazeState = hazeState,
             motion = motion,
-            elevation = 10.dp,
-            modifier = Modifier.wrapContentWidth()
+            elevation = 8.dp,
+            modifier = Modifier.widthIn(max = 400.dp).fillMaxWidth()
         ) {
             Row(
-                modifier = Modifier
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                modifier = Modifier.selectableGroup().padding(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Home Tab
-                NavPillItem(
-                    selected = currentTab == HomeTab.HOME,
-                    label = stringResource(R.string.nav_home),
-                    selectedIcon = Icons.Filled.AutoStories,
-                    unselectedIcon = Icons.Outlined.AutoStories,
-                    onClick = {
-                        if (currentTab != HomeTab.HOME) {
-                            haptics.tick()
-                            onTabSelected(HomeTab.HOME)
+                val tabs = listOf(HomeTab.HOME, HomeTab.LIBRARY, HomeTab.TOOLS)
+                val labels = listOf(R.string.nav_home, R.string.nav_library, R.string.nav_tools)
+                val filled = listOf(Icons.Filled.AutoStories, Icons.Filled.FolderCopy, Icons.Filled.Widgets)
+                val outlined = listOf(Icons.Outlined.AutoStories, Icons.Outlined.FolderCopy, Icons.Outlined.Widgets)
+                tabs.forEachIndexed { index, tab ->
+                    NavPillItem(
+                        selected = currentTab == tab,
+                        label = stringResource(labels[index]),
+                        selectedIcon = filled[index],
+                        unselectedIcon = outlined[index],
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            if (currentTab != tab) {
+                                haptics.tick()
+                                onTabSelected(tab)
+                            }
                         }
-                    }
-                )
-
-                // Library Tab
-                NavPillItem(
-                    selected = currentTab == HomeTab.LIBRARY,
-                    label = stringResource(R.string.nav_library),
-                    selectedIcon = Icons.Filled.FolderCopy,
-                    unselectedIcon = Icons.Outlined.FolderCopy,
-                    onClick = {
-                        if (currentTab != HomeTab.LIBRARY) {
-                            haptics.tick()
-                            onTabSelected(HomeTab.LIBRARY)
-                        }
-                    }
-                )
-
-                // Tools Tab
-                NavPillItem(
-                    selected = currentTab == HomeTab.TOOLS,
-                    label = stringResource(R.string.nav_tools),
-                    selectedIcon = Icons.Filled.Widgets,
-                    unselectedIcon = Icons.Outlined.Widgets,
-                    onClick = {
-                        if (currentTab != HomeTab.TOOLS) {
-                            haptics.tick()
-                            onTabSelected(HomeTab.TOOLS)
-                        }
-                    }
-                )
+                    )
+                }
             }
         }
     }
@@ -163,46 +97,31 @@ private fun NavPillItem(
     label: String,
     selectedIcon: ImageVector,
     unselectedIcon: ImageVector,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    val colors = AppTheme.colors
-    val containerColor by animateColorAsState(
-        targetValue = if (selected) colors.accentContainer else Color.Transparent,
-        animationSpec = spring(stiffness = 500f),
-        label = "pillContainer"
+    val scheme = MaterialTheme.colorScheme
+    val reducedMotion = LocalReducedMotion.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val focused by interactionSource.collectIsFocusedAsState()
+    val container by animateColorAsState(
+        if (selected) scheme.primaryContainer else Color.Transparent,
+        animationSpec = if (reducedMotion) snap() else tween(160), label = "dockSelection"
     )
-    val contentColor by animateColorAsState(
-        targetValue = if (selected) colors.accent else colors.inkSecondary,
-        animationSpec = spring(stiffness = 500f),
-        label = "pillContent"
-    )
-
-    Row(
-        modifier = Modifier
-            .heightIn(min = 48.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(containerColor)
-            .selectable(
-                selected = selected,
-                role = Role.Tab,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            )
-            .padding(horizontal = 14.dp, vertical = 7.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    val foreground = if (selected) scheme.onPrimaryContainer else AppTheme.colors.ink
+    val shape = RoundedCornerShape(28.dp)
+    Column(
+        modifier = modifier.heightIn(min = 60.dp).clip(shape).background(container)
+            .then(if (focused) Modifier.border(2.dp, scheme.primary, shape) else Modifier)
+            .selectable(selected = selected, role = Role.Tab,
+                interactionSource = interactionSource, onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 7.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically)
     ) {
-        Icon(
-            imageVector = if (selected) selectedIcon else unselectedIcon,
-            contentDescription = label,
-            tint = contentColor,
-            modifier = Modifier.size(19.dp)
-        )
-        Text(
-            text = label,
-            style = if (selected) AppTheme.typography.captionStrong else AppTheme.typography.caption,
-            color = contentColor
-        )
+        Icon(if (selected) selectedIcon else unselectedIcon,
+            contentDescription = null, tint = foreground, modifier = Modifier.size(23.dp))
+        Text(label, style = if (selected) AppTheme.typography.captionStrong else AppTheme.typography.caption,
+            color = foreground, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }

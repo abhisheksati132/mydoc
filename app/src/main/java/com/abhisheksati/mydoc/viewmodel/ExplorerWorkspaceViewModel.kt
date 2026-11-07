@@ -44,7 +44,7 @@ class ExplorerWorkspaceViewModel(
     private fun createBrowser(id: Int): FileManagerViewModel {
         val store = ViewModelStore().also { stores[id] = it }
         val owner = object : ViewModelStoreOwner { override val viewModelStore = store }
-        return ViewModelProvider.create(owner, FileManagerViewModel.Factory(repository, settings, root.explorerClipboard))[FileManagerViewModel::class]
+        return ViewModelProvider.create(owner, FileManagerViewModel.Factory(repository, settings, root.explorerClipboard, root.explorerPreferences))[FileManagerViewModel::class]
     }
 
     private fun observe(tab: ExplorerTab) {

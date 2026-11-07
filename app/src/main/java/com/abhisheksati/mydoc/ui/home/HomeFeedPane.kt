@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.home
 
+import com.abhisheksati.mydoc.designsystem.components.LocalFloatingChromeInset
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -22,7 +23,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -196,7 +196,7 @@ fun HomeFeedPane(
                 start = AppSpacing.medium,
                 end = AppSpacing.medium,
                 top = 0.dp,
-                bottom = 96.dp // Ample space for floating glass bottom navigation
+                bottom = LocalFloatingChromeInset.current + 24.dp
             ),
             verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)
         ) {
@@ -857,11 +857,10 @@ private fun HomeRecentsSelectionBar(
         shape = AppRadius.cardShape,
         elevation = 6.dp,
         modifier = modifier
-            .navigationBarsPadding()
             .padding(
                 start = AppSpacing.medium,
                 end = AppSpacing.medium,
-                bottom = AppSpacing.navBarHeight + AppSpacing.small
+                bottom = LocalFloatingChromeInset.current + AppSpacing.small
             )
     ) {
         Row(

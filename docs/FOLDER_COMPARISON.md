@@ -10,7 +10,7 @@ Commands: `./gradlew.bat testDebugUnitTest --tests "*ExplorerComparisonTest"`; `
 
 ## Use
 
-Open the first folder in Library, add a tab, and navigate that tab to the second folder. Tap Compare folders beside the tab controls. Choose the two folders and select Compare contents. Hide matching files is on by default; turn it off to inspect matches. Cancel stops the scan; Close dismisses it.
+Open the first folder in Library, add a tab, and navigate that tab to the second folder. Open Explorer tools beside the tab controls and choose Compare folders. Choose the two folders and select Compare contents. Hide matching files is on by default; turn it off to inspect matches. Cancel stops the scan; Close dismisses it.
 
 Paths are relative to the compared folders. Counts include files and unmatched folders; matching folders themselves are omitted. No synchronization or copying is performed. Results describe a best-effort snapshot, not a transaction: avoid editing either folder during comparison. Unknown results must be checked manually. Saved searches and per-folder preferences are separate follow-up features, outside this slice.
 

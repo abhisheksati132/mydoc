@@ -27,7 +27,7 @@ Commands: `./gradlew.bat testDebugUnitTest assembleDebug lintDebug`; focused tes
 
 ## Using the tools
 
-Tap a ZIP in Library to browse it. Tap folders to enter them, use Up or Back to return, and filter names in the current archive folder. Extract all asks for confirmation. This browser reads ZIP metadata; it does not open embedded files or support encrypted/RAR/7z browsing.
+Tap a ZIP in Library to browse it. Tap folders to enter them, use Up or Back to return, and filter names in the current archive folder. Extract all asks for confirmation. The browser reads ZIP metadata. Tap a file to open a temporary copy, or select entries and confirm Extract selected to create a new folder beside the ZIP. Encrypted/RAR/7z browsing is unsupported.
 
 Inside a storage folder, open the menu and choose Folder insights. Tap a subfolder to browse it. The scan is a snapshot: concurrent changes can alter totals. Logical bytes exclude filesystem allocation and linked files; hidden files are included.
 

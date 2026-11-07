@@ -1,5 +1,7 @@
 package com.abhisheksati.mydoc.designsystem.tokens
 
+import com.abhisheksati.mydoc.designsystem.components.LocalGlassEnvironment
+import com.abhisheksati.mydoc.designsystem.components.rememberGlassEnvironment
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -175,11 +177,12 @@ fun AppDesignSystemTheme(
         }
     }
 
+    val glassEnvironment = rememberGlassEnvironment()
     CompositionLocalProvider(
+        LocalGlassEnvironment provides glassEnvironment,
         LocalAppColors provides colors,
         LocalIsDark provides darkTheme,
-        LocalIsOled provides (darkTheme && amoledBlack),
-        dev.chrisbanes.haze.LocalHazeStyle provides dev.chrisbanes.haze.HazeDefaults.style(backgroundColor = Color.Transparent)
+        LocalIsOled provides (darkTheme && amoledBlack)
     ) {
         MaterialTheme(
             colorScheme = materialColorScheme,

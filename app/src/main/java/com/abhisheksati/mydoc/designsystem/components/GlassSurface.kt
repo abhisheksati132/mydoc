@@ -1,9 +1,6 @@
 package com.abhisheksati.mydoc.designsystem.components
 
-import android.app.ActivityManager
-import android.content.Context
 import android.os.Build
-import android.os.PowerManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -25,33 +22,30 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.addOutline
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.lerp
 import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
-import com.abhisheksati.mydoc.designsystem.tokens.ContinuousCornerShape
 import com.abhisheksati.mydoc.designsystem.tokens.glassRimBrush
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
-import kotlin.math.max
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.HazeColorEffect
+import dev.chrisbanes.haze.blur.hazeBlur
+import dev.chrisbanes.haze.glass.GlassStyle
+import dev.chrisbanes.haze.glass.hazeGlass
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 /**
  * User control for glass effects:
  * - AUTO: Enabled on Android 12+ (API 31+) if not in Battery Saver or Low-RAM device.
- * - ON: Forces live blur on API 31+.
+ * - ON: Enables live material on API 31+, while retaining the contrast fallback.
  * - OFF: Always uses high-performance solid tinted fallbacks.
  */
 enum class GlassEffectMode {
@@ -63,45 +57,28 @@ enum class GlassEffectMode {
 val LocalGlassEffectMode = staticCompositionLocalOf { GlassEffectMode.AUTO }
 
 /**
- * Checks whether live backdrop blur should be active.
- */
-fun isGlassEffectActive(context: Context, mode: GlassEffectMode): Boolean {
-    if (mode == GlassEffectMode.OFF) return false
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
-
-    if (mode == GlassEffectMode.ON) return true
-
-    // AUTO mode checks system power and memory health
-    val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
-    if (powerManager?.isPowerSaveMode == true) return false
-
-    val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-    if (activityManager?.isLowRamDevice == true) return false
-
-    return true
-}
-
-/**
  * Scroll-driven glass response: 0f at rest, ramps to 1f over the first
- * [RAMP_PX] of scroll. Drives progressive blur radius and tint density so
+ * [GlassMotionState.RAMP_PX] of scroll. Drives tint density so
  * chrome thickens like real glass under moving content.
  */
 @Stable
 class GlassMotionState(initial: Float = 0f) {
     var progress: Float by mutableFloatStateOf(initial)
-    var interaction: Float by mutableFloatStateOf(0f)
 
     companion object {
         const val RAMP_PX = 240f
     }
 }
 
+internal fun glassScrollProgress(index: Int, offset: Int): Float =
+    if (index > 0) 1f else (offset / GlassMotionState.RAMP_PX).coerceIn(0f, 1f)
+
 @Composable
 fun TrackGlassMotion(listState: LazyListState, motion: GlassMotionState) {
     LaunchedEffect(listState, motion) {
-        snapshotFlow { listState.firstVisibleItemScrollOffset }
-            .collect { offset ->
-                motion.progress = (offset / GlassMotionState.RAMP_PX).coerceIn(0f, 1f)
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .collect { (index, offset) ->
+                motion.progress = glassScrollProgress(index, offset)
             }
     }
 }
@@ -109,9 +86,9 @@ fun TrackGlassMotion(listState: LazyListState, motion: GlassMotionState) {
 @Composable
 fun TrackGlassMotion(gridState: LazyGridState, motion: GlassMotionState) {
     LaunchedEffect(gridState, motion) {
-        snapshotFlow { gridState.firstVisibleItemScrollOffset }
-            .collect { offset ->
-                motion.progress = (offset / GlassMotionState.RAMP_PX).coerceIn(0f, 1f)
+        snapshotFlow { gridState.firstVisibleItemIndex to gridState.firstVisibleItemScrollOffset }
+            .collect { (index, offset) ->
+                motion.progress = glassScrollProgress(index, offset)
             }
     }
 }
@@ -130,36 +107,9 @@ fun rememberGlassMotion(gridState: LazyGridState): GlassMotionState {
     return motion
 }
 
-/**
- * The core "Ink & Seal" chrome surface.
- *
- * Optics model (Apple Liquid Glass anatomy):
- * 1. Near-transparent base — the Haze style's backgroundColor is transparent so
- *    the blurred content itself supplies the color (vibrancy), instead of an
- *    opaque plate painted over the blur.
- * 2. Low-alpha tint that thickens with scroll via [motion].
- * 3. Fine noise (0.04) so large blurred fields don't band.
- * 4. Directional specular edge: a top-arc highlight fading out mid-face, not a
- *    uniform all-around stroke.
- * 5. Inner shadow drawn UNDER content — occlusion, not a film on top.
- * 6. Tinted drop shadows in light mode (accent-tinted spot).
- * 7. Continuous-curvature corners by default ([ContinuousCornerShape]).
- *
- * Falls back to a solid plate on API < 31, battery saver, low-RAM, or when no
- * [hazeState] is supplied (e.g. modal sheets, which live in their own window
- * and cannot sample the app window behind them).
+/** Shared navigation material. Optical refraction is limited to rounded chrome on API 33+.
+ * Arbitrary shapes retain backdrop blur; unsupported devices and disabled effects use solid fill.
  */
-// Vibrancy: luminance-preserving saturation lift (s = 1.18) applied to the live
-// blur so content color reads louder through the glass instead of muted.
-private val Vibrancy = ColorMatrix(
-    floatArrayOf(
-        1.14166f, -0.12870f, -0.01296f, 0f, 0f,
-        -0.03834f, 1.05130f, -0.01296f, 0f, 0f,
-        -0.03834f, -0.12870f, 1.16704f, 0f, 0f,
-        0f, 0f, 0f, 1f, 0f
-    )
-)
-
 @Composable
 fun GlassSurface(
     modifier: Modifier = Modifier,
@@ -174,26 +124,16 @@ fun GlassSurface(
     innerShadowColor: Color? = null,
     content: @Composable BoxScope.() -> Unit
 ) {
-    val context = LocalContext.current
     val mode = LocalGlassEffectMode.current
     val colors = AppTheme.colors
 
-    val glassActive = remember(mode, context) {
-        isGlassEffectActive(context, mode)
-    }
+    val glassActive = shouldUseLiveGlass(mode, LocalGlassEnvironment.current)
 
     val actualBackground = backgroundColor ?: colors.surface
     val actualTint = tint ?: colors.glassTint
     val actualRimTop = rimTop ?: colors.glassRimTop
     val actualRimBottom = rimBottom ?: colors.glassRimBottom
     val actualInnerShadow = innerShadowColor ?: colors.glassInnerShadow
-
-    val reducedMotion = LocalReducedMotion.current
-    val progress = if (reducedMotion) {
-        0f
-    } else {
-        max(motion?.progress ?: 0f, (motion?.interaction ?: 0f) * 0.6f)
-    }
 
     // Specular rim. The rule lives in glassRimBrush so sheets, dialogs and menus cannot drift
     // from surfaces: even hairline on dark and AMOLED, directional glass on ivory.
@@ -245,31 +185,36 @@ fun GlassSurface(
         )
         .clip(shape)
 
-    val styledModifier = if (glassActive && hazeState != null) {
-        baseModifier
-            .hazeEffect(
-                state = hazeState,
-                style = HazeStyle(
-                    backgroundColor = Color.Transparent,
-                    tint = HazeTint(
-                        actualTint.copy(
-                            alpha = actualTint.alpha * (0.75f + 0.25f * progress)
-                        )
-                    ),
-                    blurRadius = lerp(12.dp, 28.dp, progress),
-                    noiseFactor = 0.04f
-                )
-            )
-            .graphicsLayer { colorFilter = ColorFilter.colorMatrix(Vibrancy) }
-            .then(specularAndInnerShadow)
-    } else {
-        // Solid fallback: plates the surface where live blur cannot run (old
-        // APIs, battery saver, or modal windows that cannot sample the app
-        // window behind them). Callers may pass a translucent
-        // [backgroundColor] to keep some depth.
-        baseModifier
-            .background(color = actualBackground, shape = shape)
-            .then(specularAndInnerShadow)
+    val isDark = AppTheme.isDark
+    val progress = if (LocalReducedMotion.current) 0f else (motion?.progress ?: 0f).coerceIn(0f, 1f)
+    val opticalTint = tint ?: colors.surface.copy(alpha = (if (isDark) 0.78f else 0.64f) + progress * 0.04f)
+    val glassStyle = remember(shape, opticalTint, isDark) {
+        GlassStyle.regular.then {
+            shape(shape as? RoundedCornerShape ?: RoundedCornerShape(AppRadius.large))
+            tint(opticalTint)
+            optics { copy(refractionStrength = 0.5f, refractionDisplacement = 10.dp) }
+            // Use the app theme even when it differs from Android's system theme.
+            specularIntensity(if (isDark) 0.38f else 0.6f)
+            edgeShadow(Color.Black.copy(alpha = if (isDark) 0.32f else 0.12f))
+            ambientResponse(if (isDark) 0.08f else 0.12f)
+            contrast(if (isDark) 0.08f else 0f)
+            whitePoint(if (isDark) -0.22f else 0f)
+            chromaMultiplier(1.1f)
+            chromaticAberrationStrength(0f)
+        }
+    }
+    val blurStyle = remember(actualTint) { HazeBlurStyle {
+        backgroundColor(Color.Transparent)
+        blurRadius(24.dp)
+        colorEffects(listOf(HazeColorEffect.tint(actualTint)))
+        noiseFactor(0.02f)
+    } }
+    val styledModifier = when {
+        glassActive && hazeState != null && shape is RoundedCornerShape && Build.VERSION.SDK_INT >= 33 ->
+            baseModifier.hazeGlass(input = HazeInput.Sources(hazeState), style = glassStyle)
+        glassActive && hazeState != null ->
+            baseModifier.hazeBlur(input = HazeInput.Sources(hazeState), style = blurStyle).then(specularAndInnerShadow)
+        else -> baseModifier.background(color = actualBackground, shape = shape).then(specularAndInnerShadow)
     }
 
     Box(

@@ -39,6 +39,9 @@ fun rememberReducedMotion(): State<Boolean> {
             false,
             observer
         )
+        context.contentResolver.registerContentObserver(
+            Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE), false, observer
+        )
         try {
             awaitCancellation()
         } finally {

@@ -45,6 +45,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import com.abhisheksati.mydoc.designsystem.components.LocalFloatingChromeInset
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -134,6 +140,7 @@ fun HomeScreen(
     TrackGlassMotion(homeListState, glassMotion)
 
     val tabs = remember { listOf(HomeTab.HOME, HomeTab.LIBRARY, HomeTab.TOOLS) }
+    val reducedMotion = LocalReducedMotion.current
     val pagerState = rememberPagerState(
         initialPage = tabs.indexOf(currentTab).coerceAtLeast(0),
         pageCount = { tabs.size }
@@ -151,7 +158,7 @@ fun HomeScreen(
     LaunchedEffect(currentTab) {
         val targetPage = tabs.indexOf(currentTab)
         if (targetPage >= 0 && pagerState.currentPage != targetPage) {
-            pagerState.animateScrollToPage(targetPage)
+            if (reducedMotion) pagerState.scrollToPage(targetPage) else pagerState.animateScrollToPage(targetPage)
         }
     }
 
@@ -171,6 +178,10 @@ fun HomeScreen(
         viewModel.selectTab(HomeTab.HOME)
     }
 
+    val density = LocalDensity.current
+    var footerHeight by remember { mutableIntStateOf(0) }
+    val footerInset = if (footerHeight > 0) with(density) { footerHeight.toDp() } else 112.dp
+
     val fileManagerState by fileManagerViewModel.uiState.collectAsStateWithLifecycle()
 
     Box(
@@ -186,98 +197,102 @@ fun HomeScreen(
             currentTab == HomeTab.LIBRARY -> !(fileManagerState.isSelectionMode || fileManagerState.isBrowsingStorage)
             else -> true
         }
-        HorizontalPager(
-            state = pagerState,
-            beyondViewportPageCount = 1,
-            userScrollEnabled = isPagerScrollEnabled,
-            modifier = Modifier.fillMaxSize()
-        ) { page ->
-            val tab = tabs[page]
-            tabStateHolder.SaveableStateProvider(tab.name) {
-                when (tab) {
-                    HomeTab.HOME -> {
-                        HomeFeedPane(
-                            continueItems = uiState.continueItems,
-                            recentItems = uiState.recentLibraryItems,
-                            onLibraryItemClick = onLibraryItemClick,
-                            onLibraryItemDetails = { item ->
-                                selectedDocForDetails = item.toDocumentFile()
-                            },
-                            onRemoveFromRecents = { item ->
-                                viewModel.removeFromRecents(item.toDocumentFile())
-                            },
-                            onShareDocument = { item ->
-                                onShareDocument(item.toDocumentFile())
-                            },
-                            selectedRecentUris = selectedRecentUris,
-                            onToggleRecentSelection = { item -> viewModel.toggleRecentSelection(item.uri) },
-                            onSelectAllRecents = { items ->
-                                viewModel.selectAllRecents(items.map { it.uri })
-                            },
-                            onClearRecentSelection = { viewModel.clearRecentSelection() },
-                            onShareSelectedRecents = { items ->
-                                val uris = items.map { Uri.parse(it.uri) }
-                                if (!shareUris(context, uris, resources.getString(R.string.home_share_label))) {
-                                    context.showMessage(resources.getString(R.string.home_share_failed))
-                                }
-                            },
-                            onRemoveSelectedRecents = { items ->
-                                viewModel.removeFromRecents(items.map { it.toDocumentFile() })
-                            },
-                            onSpotlightSearch = onSpotlightSearch,
-                            onSettingsClick = onSettingsClick,
-                            onScanClick = { documentScanner() },
-                            onNavigateToLibrary = { viewModel.selectTab(HomeTab.LIBRARY) },
-                            errorMessage = uiState.errorMessage,
-                            isLoading = uiState.isLoading,
-                            onDismissError = { viewModel.clearError() },
-                            hazeState = hazeState,
-                            listState = homeListState,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                    HomeTab.LIBRARY -> {
-                        FilesScreen(
-                            viewModel = fileManagerViewModel,
-                            homeViewModel = viewModel,
-                            storageViewModel = storageViewModel,
-                            onOpenFile = onOpenFile,
-                            onLibraryItemClick = onLibraryItemClick,
-                            onLibraryItemDetails = { item ->
-                                selectedDocForDetails = item.toDocumentFile()
-                            },
-                            onSettingsClick = onSettingsClick,
-                            onSpotlightSearch = onSpotlightSearch,
-                            isActive = currentTab == HomeTab.LIBRARY && pagerState.currentPage == 1,
-                            onOpenInTools = { viewModel.selectTab(HomeTab.TOOLS) },
-                            hazeState = hazeState,
-                            glassMotion = glassMotion,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                    HomeTab.TOOLS -> {
-                        ToolsScreen(
-                            viewModel = toolsViewModel,
-                            onToolClick = { tool ->
-                                if (tool == PdfTool.SCAN_TO_PDF) {
-                                    documentScanner()
-                                } else {
-                                    toolsViewModel.selectTool(tool)
-                                }
-                            },
-                            onSettingsClick = onSettingsClick,
-                            hazeState = hazeState,
-                            glassMotion = glassMotion,
-                            modifier = Modifier.fillMaxSize()
-                        )
+        CompositionLocalProvider(LocalFloatingChromeInset provides footerInset) {
+            HorizontalPager(
+                state = pagerState,
+                beyondViewportPageCount = 1,
+                userScrollEnabled = isPagerScrollEnabled,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                val tab = tabs[page]
+                tabStateHolder.SaveableStateProvider(tab.name) {
+                    when (tab) {
+                        HomeTab.HOME -> {
+                            HomeFeedPane(
+                                continueItems = uiState.continueItems,
+                                recentItems = uiState.recentLibraryItems,
+                                onLibraryItemClick = onLibraryItemClick,
+                                onLibraryItemDetails = { item ->
+                                    selectedDocForDetails = item.toDocumentFile()
+                                },
+                                onRemoveFromRecents = { item ->
+                                    viewModel.removeFromRecents(item.toDocumentFile())
+                                },
+                                onShareDocument = { item ->
+                                    onShareDocument(item.toDocumentFile())
+                                },
+                                selectedRecentUris = selectedRecentUris,
+                                onToggleRecentSelection = { item -> viewModel.toggleRecentSelection(item.uri) },
+                                onSelectAllRecents = { items ->
+                                    viewModel.selectAllRecents(items.map { it.uri })
+                                },
+                                onClearRecentSelection = { viewModel.clearRecentSelection() },
+                                onShareSelectedRecents = { items ->
+                                    val uris = items.map { Uri.parse(it.uri) }
+                                    if (!shareUris(context, uris, resources.getString(R.string.home_share_label))) {
+                                        context.showMessage(resources.getString(R.string.home_share_failed))
+                                    }
+                                },
+                                onRemoveSelectedRecents = { items ->
+                                    viewModel.removeFromRecents(items.map { it.toDocumentFile() })
+                                },
+                                onSpotlightSearch = onSpotlightSearch,
+                                onSettingsClick = onSettingsClick,
+                                onScanClick = { documentScanner() },
+                                onNavigateToLibrary = { viewModel.selectTab(HomeTab.LIBRARY) },
+                                errorMessage = uiState.errorMessage,
+                                isLoading = uiState.isLoading,
+                                onDismissError = { viewModel.clearError() },
+                                hazeState = hazeState,
+                                listState = homeListState,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                        HomeTab.LIBRARY -> {
+                            FilesScreen(
+                                viewModel = fileManagerViewModel,
+                                homeViewModel = viewModel,
+                                storageViewModel = storageViewModel,
+                                onOpenFile = onOpenFile,
+                                onLibraryItemClick = onLibraryItemClick,
+                                onLibraryItemDetails = { item ->
+                                    selectedDocForDetails = item.toDocumentFile()
+                                },
+                                onSettingsClick = onSettingsClick,
+                                onSpotlightSearch = onSpotlightSearch,
+                                isActive = currentTab == HomeTab.LIBRARY && pagerState.currentPage == 1,
+                                onOpenInTools = { viewModel.selectTab(HomeTab.TOOLS) },
+                                hazeState = hazeState,
+                                glassMotion = glassMotion,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                        HomeTab.TOOLS -> {
+                            ToolsScreen(
+                                viewModel = toolsViewModel,
+                                onToolClick = { tool ->
+                                    if (tool == PdfTool.SCAN_TO_PDF) {
+                                        documentScanner()
+                                    } else {
+                                        toolsViewModel.selectTool(tool)
+                                    }
+                                },
+                                onSettingsClick = onSettingsClick,
+                                hazeState = hazeState,
+                                glassMotion = glassMotion,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                 }
             }
+
         }
 
         // FLOATING GLASS BOTTOM NAVIGATION & UPDATE BANNER
         Column(
             modifier = Modifier
+                .onSizeChanged { footerHeight = it.height }
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
         ) {
@@ -449,7 +464,7 @@ fun HomeScreen(
                 onTabSelected = { tab ->
                     val page = tabs.indexOf(tab)
                     if (page >= 0 && page != pagerState.currentPage) {
-                        scope.launch { pagerState.animateScrollToPage(page) }
+                        scope.launch { if (reducedMotion) pagerState.scrollToPage(page) else pagerState.animateScrollToPage(page) }
                     }
                     viewModel.selectTab(tab)
                 },
