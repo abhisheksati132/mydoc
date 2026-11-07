@@ -5,6 +5,8 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+## [1.9.5] — 2026-11-07
+
 ### Changed
 
 - Transfer history uses status cards, shows progress only while an operation is active, and explains the next step after stopping.
