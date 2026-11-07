@@ -106,6 +106,38 @@ class FileManagerViewModelTest {
         assertEquals(FileCategory.IMAGES, viewModel.uiState.value.activeCategory)
     }
 
+    @Test fun clearingSearchFiltersKeepsCategoryAndRestoresItsFiles() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        viewModel.selectCategory(FileCategory.DOCUMENTS)
+        advanceUntilIdle()
+        viewModel.setDocTypeFilter(DocumentTypeFilter.PDF)
+        viewModel.setSearchQuery("missing")
+        assertTrue(viewModel.uiState.value.filteredItems.isEmpty())
+        viewModel.clearSearchFilters()
+        advanceUntilIdle()
+        val state = viewModel.uiState.value
+        assertEquals(FileCategory.DOCUMENTS, state.activeCategory)
+        assertEquals(DocumentTypeFilter.ALL, state.docTypeFilter)
+        assertEquals("", state.searchQuery)
+        assertEquals(4, state.filteredItems.size)
+    }
+
+    @Test fun clearingAdvancedFiltersReturnsToTheFolderWithoutAHiddenQuery() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        viewModel.searchAdvanced(com.abhisheksati.mydoc.domain.model.ExplorerSearchOptions(name = "missing"))
+        advanceUntilIdle()
+        viewModel.setSearchQuery("missing")
+        viewModel.clearSearchFilters()
+        advanceUntilIdle()
+        val state = viewModel.uiState.value
+        assertEquals(tempDir, state.currentDirectory)
+        assertEquals(null, state.advancedSearch)
+        assertEquals("", state.searchQuery)
+        assertEquals(4, state.filteredItems.size)
+    }
+
     @Test fun refreshKeepsActiveCategory() = runTest(testDispatcher) {
         createViewModel()
         advanceUntilIdle()

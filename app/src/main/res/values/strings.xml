@@ -951,4 +951,5 @@
     <string name="settings_privacy_summary">App lock and device security</string>
     <string name="settings_about_summary">Version, update checks and project details</string>
     <string name="search_folder_recursive_scope">This folder and subfolders: %1$s</string>
+    <string name="files_loading">Loading files…</string>
 </resources>

@@ -993,6 +993,12 @@ class FileManagerViewModel(
         reloadCurrentSource()
     }
 
+    fun clearSearchFilters() {
+        setSearchQuery("")
+        setDocTypeFilter(DocumentTypeFilter.ALL)
+        if (_uiState.value.advancedSearch != null) clearAdvancedSearch()
+    }
+
     fun setSearchQuery(query: String) {
         _uiState.update { state ->
             state.copy(searchQuery = query, filteredItems = visibleItems(state.items, state.copy(searchQuery = query)))

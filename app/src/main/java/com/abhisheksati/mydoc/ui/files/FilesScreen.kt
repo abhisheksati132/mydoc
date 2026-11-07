@@ -440,7 +440,8 @@ fun FilesPaneScreen(
                                     onDocFilter = { viewModel.setDocTypeFilter(it) },
                                     modifier = Modifier.fillMaxSize(),
                                     hazeState = hazeState,
-                                    glassMotion = glassMotion
+                                    glassMotion = glassMotion,
+                                    onClearFilters = viewModel::clearSearchFilters
                                 )
                             } else {
                                 BrowseHomePane(

@@ -5,6 +5,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.material.icons.outlined.Search
 import com.abhisheksati.mydoc.designsystem.components.LocalFloatingChromeInset
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import com.abhisheksati.mydoc.designsystem.components.SkeletonBlock
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -418,7 +422,8 @@ fun DirectoryPane(
     onDocFilter: (DocumentTypeFilter) -> Unit,
     modifier: Modifier = Modifier,
     hazeState: HazeState? = null,
-    glassMotion: GlassMotionState? = null
+    glassMotion: GlassMotionState? = null,
+    onClearFilters: (() -> Unit)? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     var sortMenuOpen by remember { mutableStateOf(false) }
@@ -544,28 +549,41 @@ fun DirectoryPane(
         val inSelectionMode = uiState.isSelectionMode
         val selectedFiles = uiState.selectedFiles
 
-        if (displayedItems.isEmpty()) {
+        val hasFilters = uiState.searchQuery.isNotBlank() || uiState.advancedSearch != null ||
+            (isDocumentsCategory && selectedDocFilter != DocumentTypeFilter.ALL)
+        if (uiState.isLoading) {
+            Column(
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(stringResource(R.string.files_loading), style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                repeat(4) { SkeletonBlock(Modifier.fillMaxWidth().height(72.dp)) }
+            }
+        } else if (displayedItems.isEmpty()) {
             FilesEmptyState(
                 icon = Icons.Outlined.FolderOpen,
-                title = if (uiState.searchQuery.isNotEmpty()) {
+                title = if (uiState.searchQuery.isNotBlank() || uiState.advancedSearch != null) {
                     stringResource(R.string.empty_no_matches)
                 } else if (isDocumentsCategory && selectedDocFilter != DocumentTypeFilter.ALL) {
                     stringResource(R.string.empty_no_documents, selectedDocFilter.label)
                 } else {
                     stringResource(R.string.empty_folder)
                 },
-                message = if (uiState.searchQuery.isNotEmpty()) {
+                message = if (uiState.searchQuery.isNotBlank() || uiState.advancedSearch != null) {
                     stringResource(R.string.empty_try_search)
                 } else if (isDocumentsCategory && selectedDocFilter != DocumentTypeFilter.ALL) {
                     stringResource(R.string.empty_no_files_in_documents, selectedDocFilter.label)
                 } else {
                     stringResource(R.string.empty_create_hint)
-                }
+                },
+                actionLabel = if (hasFilters && onClearFilters != null) stringResource(R.string.search_clear_filters) else null,
+                onAction = if (hasFilters) onClearFilters else null
             )
         } else if (uiState.isGridView) {
             LazyVerticalGrid(
                 state = gridState,
-                columns = GridCells.Adaptive(minSize = 108.dp),
+                columns = GridCells.Adaptive(minSize = 108.dp * LocalDensity.current.fontScale.coerceAtLeast(1f)),
                 contentPadding = PaddingValues(start = 10.dp, top = 4.dp, end = 10.dp, bottom = LocalFloatingChromeInset.current + 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),

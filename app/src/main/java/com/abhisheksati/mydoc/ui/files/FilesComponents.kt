@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -55,6 +57,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -275,7 +278,7 @@ fun FileRow(
                 text = item.name,
                 style = MaterialTheme.typography.bodyLarge,
                 color = scheme.onSurface,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
             Spacer(Modifier.height(2.dp))
@@ -283,12 +286,10 @@ fun FileRow(
                 text = if (item.isDirectory) {
                     item.formattedSize
                 } else {
-                    "${item.formattedSize} · ${item.formattedLastModified}"
+                    listOf(item.formattedSize, item.formattedLastModified).filter { it.isNotBlank() }.joinToString(" · ")
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = scheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                color = scheme.onSurfaceVariant
             )
         }
 
@@ -356,7 +357,7 @@ fun FileGridCell(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f)
+                .aspectRatio(if (LocalDensity.current.fontScale > 1.3f) 2f else 1f)
                 .clip(AppRadius.insetShape)
                 .background(if (isSelected) scheme.primaryContainer else scheme.surfaceContainerLow)
         ) {
@@ -478,7 +479,8 @@ fun FilesEmptyState(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 32.dp, vertical = 48.dp),
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 32.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
@@ -494,13 +496,15 @@ fun FilesEmptyState(
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            color = scheme.onSurface
+            color = scheme.onSurface,
+            textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(4.dp))
         Text(
             text = message,
             style = MaterialTheme.typography.bodyMedium,
-            color = scheme.onSurfaceVariant
+            color = scheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
         )
         if (actionLabel != null && onAction != null) {
             Spacer(Modifier.height(12.dp))

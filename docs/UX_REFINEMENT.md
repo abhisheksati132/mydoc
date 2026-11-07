@@ -32,3 +32,14 @@ Settings has a six-entry index. Each category retains its existing controls and 
 - Reviewed light and dark Home, Library, Tools, folder menus, indexed/folder search and clipboard placement. Clipboard was cancelled without pasting during the visual check.
 - Reviewed Home, Search and Settings at native 2x text. Focused component tests exercise 320 dp layouts. The final decorative thumbnail fallback was additionally checked at native 2x text after the functional device run; the final build and lint include that change.
 - No new dependencies, renderer upgrades or preference migrations. Physical-phone frame time, full TalkBack traversal and a hardware-keyboard walkthrough remain unverified.
+
+## Everyday browsing pass — 2026-11-07
+
+Scope: the folder/category browse → loading → results/empty → clear-filters flow, plus file-row and grid readability. This pass does not establish quality of every reader, media screen or file operation.
+
+- While loading, show a named static placeholder state instead of exposing previous-location rows or claiming the folder is empty. Existing navigation remains available; the loading label uses a polite accessibility live region.
+- Empty query, document-type and advanced-search results offer Clear search and filters. Clear ordinary filters in place; clearing an advanced search returns to its folder. Unit tests verify that the query/type filter is cleared and the location remains correct.
+- Empty-state content can scroll in a short viewport. Filenames use two lines; size/date metadata can wrap fully, and absent dates do not leave a dangling separator.
+- Grid minimum cell width scales with text size. Large-text previews use a wider aspect ratio to avoid enormous square previews in a single column.
+
+Verification: loading and metadata regressions reproduced before fixes. Final debug/test APK builds, 487 unit tests and lint passed (zero lint errors). Sixteen focused API 35 tests passed, including five new browse checks, large-text/RTL layout controls, list/grid restoration and existing core UX. Actual unmatched-search recovery and 2x text list/grid rendering checked on the emulator. Logs and screenshots are ignored local artifacts under `app/build/experience-*`. Physical-phone performance and a full TalkBack/keyboard walkthrough remain unverified.
