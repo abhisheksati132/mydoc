@@ -72,7 +72,8 @@ class FileManagerViewModelTest {
         val vm = FileManagerViewModel(
             storageRepository = fakeRepo,
             baseDir = tempDir,
-            explorerPreferences = preferences ?: com.abhisheksati.mydoc.data.local.ExplorerPreferences()
+            explorerPreferences = preferences ?: com.abhisheksati.mydoc.data.local.ExplorerPreferences(),
+            ioDispatcher = testDispatcher
         )
         viewModel = vm
         modelOwner.put("browser", vm)
@@ -91,6 +92,73 @@ class FileManagerViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
         Dispatchers.resetMain()
         tempDir.deleteRecursively()
+    }
+
+    @Test fun refreshKeepsActiveCategory() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        viewModel.selectCategory(FileCategory.IMAGES)
+        advanceUntilIdle()
+        viewModel.refreshCurrentSource()
+        advanceUntilIdle()
+        assertEquals(FileCategory.IMAGES, viewModel.uiState.value.activeCategory)
+        assertFalse(viewModel.uiState.value.isLoading)
+    }
+
+    @Test fun refreshRerunsAdvancedSearchWithoutDroppingIt() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        val options = com.abhisheksati.mydoc.domain.model.ExplorerSearchOptions(name = "report")
+        viewModel.searchAdvanced(options)
+        advanceUntilIdle()
+        viewModel.refreshCurrentSource()
+        advanceUntilIdle()
+        assertEquals(options, viewModel.uiState.value.advancedSearch)
+    }
+
+    @Test fun dismissedPropertiesDialogIsNotReopenedByStaleInspection() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        fakeRepo.propertiesGate = gate
+        viewModel.inspectItem(tempDir)
+        advanceUntilIdle()
+        viewModel.dismissPropertiesDialog()
+        gate.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(null, viewModel.uiState.value.selectedProperties)
+    }
+
+    @Test fun staleInspectionDoesNotOverwriteNewerOne() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        fakeRepo.propertiesGate = gate
+        viewModel.inspectItem(tempDir)
+        advanceUntilIdle()
+        fakeRepo.propertiesGate = null
+        val file = File(tempDir, "report.pdf")
+        viewModel.inspectItem(file)
+        advanceUntilIdle()
+        assertEquals(file, viewModel.uiState.value.selectedProperties?.file)
+        gate.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(file, viewModel.uiState.value.selectedProperties?.file)
+    }
+
+    @Test fun chipCountsSurviveChipSelection() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        viewModel.selectCategory(FileCategory.DOCUMENTS)
+        advanceUntilIdle()
+        viewModel.setDocTypeFilter(DocumentTypeFilter.PDF)
+        advanceUntilIdle()
+        val state = viewModel.uiState.value
+        assertEquals(1, state.filteredItems.size)
+        val counts = documentTypeCounts(state.items, state.searchQuery)
+        assertEquals(4, counts[DocumentTypeFilter.ALL])
+        assertEquals(1, counts[DocumentTypeFilter.PDF])
+        assertEquals(1, counts[DocumentTypeFilter.TEXT])
     }
 
     @Test fun leavingSearchClearsItsScopeBeforeCategoryRefresh() = runTest(testDispatcher) {
@@ -407,6 +475,7 @@ class FileManagerViewModelTest {
         override suspend fun renameBatch(plan: com.abhisheksati.mydoc.domain.model.ExplorerRenamePlan) = com.abhisheksati.mydoc.domain.model.ExplorerRenameResult(false)
         override suspend fun pendingRenameRecovery(): List<String> = emptyList()
         var copyGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+        var propertiesGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
         var lastPasteTarget: File? = null
         override suspend fun getStorageVolumes(): List<StorageVolume> = volumes
 
@@ -436,8 +505,9 @@ class FileManagerViewModelTest {
         override suspend fun move(sources: List<File>, targetDir: File, onProgress: (Int, Int) -> Unit): Result<Int> =
             Result.success(sources.size)
 
-        override suspend fun getFolderProperties(directory: File): FolderProperties =
-            FolderProperties(
+        override suspend fun getFolderProperties(directory: File): FolderProperties {
+            propertiesGate?.await()
+            return FolderProperties(
                 file = directory,
                 totalSizeBytes = 1024L,
                 totalFilesCount = 4,
@@ -445,6 +515,7 @@ class FileManagerViewModelTest {
                 isReadable = true,
                 isWritable = true
             )
+        }
 
         override suspend fun calculateHash(file: File, algorithm: String): String = "mock_hash"
 

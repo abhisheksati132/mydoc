@@ -62,6 +62,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,6 +87,20 @@ import com.abhisheksati.mydoc.viewmodel.FileManagerUiState
 import com.abhisheksati.mydoc.viewmodel.FileManagerViewModel
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import java.io.File
+
+// Dialog targets survive recreation as paths; the file is re-statted on restore.
+private val FilePathSaver = Saver<File?, String>(
+    save = { it?.absolutePath ?: "" },
+    restore = { if (it.isEmpty()) null else File(it) }
+)
+internal val FileListSaver = Saver<List<File>?, ArrayList<String>>(
+    save = { it?.mapTo(ArrayList()) { f -> f.absolutePath } ?: arrayListOf() },
+    restore = { if (it.isEmpty()) null else it.map(::File) }
+)
+private val StorageItemPathSaver = Saver<StorageItem?, String>(
+    save = { it?.path ?: "" },
+    restore = { if (it.isEmpty()) null else StorageItem(file = File(it)) }
+)
 
 /**
  * Files-first home: Recents and Browse share one header, one storage readout
@@ -124,25 +139,25 @@ fun FilesPaneScreen(
     val context = LocalContext.current
 
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
-    var showNewFolderDialog by remember { mutableStateOf(false) }
-    var showNewFileDialog by remember { mutableStateOf(false) }
-    var renameTarget by remember { mutableStateOf<File?>(null) }
-    var showAdvancedSearch by remember { mutableStateOf(false) }
-    var showSaveSearch by remember { mutableStateOf(false) }
-    var batchRenameFiles by remember { mutableStateOf<List<File>?>(null) }
-    var showRenameRecovery by remember { mutableStateOf(false) }
-    var showDeleteConfirm by remember { mutableStateOf(false) }
-    var showCompressDialog by remember { mutableStateOf(false) }
+    var showNewFolderDialog by rememberSaveable { mutableStateOf(false) }
+    var showNewFileDialog by rememberSaveable { mutableStateOf(false) }
+    var renameTarget by rememberSaveable(stateSaver = FilePathSaver) { mutableStateOf<File?>(null) }
+    var showAdvancedSearch by rememberSaveable { mutableStateOf(false) }
+    var showSaveSearch by rememberSaveable { mutableStateOf(false) }
+    var batchRenameFiles by rememberSaveable(stateSaver = FileListSaver) { mutableStateOf<List<File>?>(null) }
+    var showRenameRecovery by rememberSaveable { mutableStateOf(false) }
+    var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
+    var showCompressDialog by rememberSaveable { mutableStateOf(false) }
     // Resources, not LocalContext: reading a string through the context is not
     // configuration-aware, so a locale change would leave stale text in the snackbar.
     val resources = LocalResources.current
 
-    var actionTarget by remember { mutableStateOf<StorageItem?>(null) }
-    var showCleaner by remember { mutableStateOf(false) }
-    var showAppManager by remember { mutableStateOf(false) }
-    var showInsights by remember { mutableStateOf(false) }
-    var showFolderInsights by remember { mutableStateOf(false) }
-    var archiveTarget by remember { mutableStateOf<File?>(null) }
+    var actionTarget by rememberSaveable(stateSaver = StorageItemPathSaver) { mutableStateOf<StorageItem?>(null) }
+    var showCleaner by rememberSaveable { mutableStateOf(false) }
+    var showAppManager by rememberSaveable { mutableStateOf(false) }
+    var showInsights by rememberSaveable { mutableStateOf(false) }
+    var showFolderInsights by rememberSaveable { mutableStateOf(false) }
+    var archiveTarget by rememberSaveable(stateSaver = FilePathSaver) { mutableStateOf<File?>(null) }
     val transfers by viewModel.explorerClipboard.transfers.state.collectAsState()
     val isTransferring = transfers.any { it.running }
 
@@ -331,7 +346,7 @@ fun FilesPaneScreen(
                             onNewFile = { showNewFileDialog = true },
                             onOpenTrash = { viewModel.openTrash() },
                             onRefresh = {
-                                viewModel.loadDirectory(uiState.currentDirectory, addToHistory = false)
+                                viewModel.refreshCurrentSource()
                                 viewModel.refreshVolumes()
                                 storageViewModel.refresh()
                             }
@@ -340,7 +355,8 @@ fun FilesPaneScreen(
                         if (isSearchActive) {
                             com.abhisheksati.mydoc.ui.search.FileSearchField(
                                 query = uiState.searchQuery, onQueryChange = viewModel::setSearchQuery,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                autoFocus = isActive
                             )
                             Text(stringResource(when {
                                 uiState.advancedSearch?.recursive == true -> R.string.search_folder_recursive_scope

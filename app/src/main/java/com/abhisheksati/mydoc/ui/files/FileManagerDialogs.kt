@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,7 +68,7 @@ fun NewFolderDialog(
     onDismiss: () -> Unit,
     onConfirm: (name: String) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
     val colors = LocalAppColors.current
     val isOled = LocalIsOled.current
@@ -127,7 +128,7 @@ fun NewFileDialog(
     onConfirm: (name: String) -> Unit
 ) {
     val defaultFileName = stringResource(R.string.dialog_new_file_default)
-    var name by remember { mutableStateOf(defaultFileName) }
+    var name by rememberSaveable { mutableStateOf(defaultFileName) }
     val focusRequester = remember { FocusRequester() }
     val colors = LocalAppColors.current
     val isOled = LocalIsOled.current
@@ -187,7 +188,7 @@ fun RenameDialog(
     onDismiss: () -> Unit,
     onConfirm: (newName: String) -> Unit
 ) {
-    var name by remember { mutableStateOf(file.name) }
+    var name by rememberSaveable { mutableStateOf(file.name) }
     val focusRequester = remember { FocusRequester() }
     val colors = LocalAppColors.current
     val isOled = LocalIsOled.current
@@ -458,7 +459,7 @@ fun CompressDialog(
     onDismiss: () -> Unit,
     onConfirm: (name: String) -> Unit
 ) {
-    var name by remember { mutableStateOf(defaultName) }
+    var name by rememberSaveable { mutableStateOf(defaultName) }
     val focusRequester = remember { FocusRequester() }
     val colors = LocalAppColors.current
     val isOled = LocalIsOled.current

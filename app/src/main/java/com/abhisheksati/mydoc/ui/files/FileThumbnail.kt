@@ -159,6 +159,11 @@ private fun tintFor(type: StorageFileType, isDark: Boolean = false): Color = if 
  * converter the viewer uses. Everything else is a quiet format plate so the list never
  * invents a page.
  */
+/** Path/URI alone never changes when a file is edited in place; size+mtime make the cache key
+ *  change with the content, so a stale thumbnail is not served forever. */
+internal fun thumbnailKey(id: String, sizeBytes: Long, lastModified: Long): String =
+    "$id|$sizeBytes|$lastModified"
+
 @Composable
 fun StorageThumbnail(
     item: StorageItem,
@@ -177,17 +182,17 @@ fun StorageThumbnail(
             )
         }
         item.fileType == StorageFileType.PDF -> PdfThumbnail(
-            key = item.path,
+            key = thumbnailKey(item.path, item.sizeBytes, item.lastModified),
             modifier = modifier,
             load = { item.file }
         )
         item.fileType == StorageFileType.CODE_TEXT -> TextThumbnail(
-            key = item.path,
+            key = thumbnailKey(item.path, item.sizeBytes, item.lastModified),
             modifier = modifier,
             load = { readTextFile(item.file) }
         )
         item.extension in officePreviewExtensions -> OfficeThumbnail(
-            key = item.path,
+            key = thumbnailKey(item.path, item.sizeBytes, item.lastModified),
             modifier = modifier,
             badgeType = item.fileType,
             convert = { context ->
@@ -220,17 +225,17 @@ fun LibraryThumbnail(
             )
         }
         item.extension == "pdf" -> PdfThumbnail(
-            key = item.uri,
+            key = thumbnailKey(item.uri, item.sizeBytes, item.lastModified),
             modifier = modifier,
             load = { findLibraryPdf(context, item) }
         )
         item.extension in textPreviewExtensions -> TextThumbnail(
-            key = item.uri,
+            key = thumbnailKey(item.uri, item.sizeBytes, item.lastModified),
             modifier = modifier,
             load = { readLibraryText(context, item) }
         )
         item.extension in officePreviewExtensions -> OfficeThumbnail(
-            key = item.uri,
+            key = thumbnailKey(item.uri, item.sizeBytes, item.lastModified),
             modifier = modifier,
             badgeType = genericTypeFor(item.extension),
             badge = item.typeBadge,

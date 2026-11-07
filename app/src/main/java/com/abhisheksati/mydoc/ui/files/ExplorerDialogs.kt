@@ -6,6 +6,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -19,12 +20,12 @@ import java.io.File
 
 @Composable
 fun ExplorerSearchDialog(directory: File, initial: ExplorerSearchOptions?, onDismiss: () -> Unit, onSearch: (ExplorerSearchOptions) -> Unit) {
-    var name by remember { mutableStateOf(initial?.name.orEmpty()) }
-    var extension by remember { mutableStateOf(initial?.extension.orEmpty()) }
-    var minimum by remember { mutableStateOf(initial?.minBytes?.div(1024)?.toString().orEmpty()) }
-    var maximum by remember { mutableStateOf(initial?.maxBytes?.div(1024)?.toString().orEmpty()) }
-    var days by remember { mutableStateOf(initial?.modifiedWithinDays?.toString() ?: initial?.modifiedAfter?.let { ((System.currentTimeMillis() - it) / 86_400_000L).coerceAtLeast(1).toString() }.orEmpty()) }
-    var recursive by remember { mutableStateOf(initial?.recursive ?: false) }
+    var name by rememberSaveable { mutableStateOf(initial?.name.orEmpty()) }
+    var extension by rememberSaveable { mutableStateOf(initial?.extension.orEmpty()) }
+    var minimum by rememberSaveable { mutableStateOf(initial?.minBytes?.div(1024)?.toString().orEmpty()) }
+    var maximum by rememberSaveable { mutableStateOf(initial?.maxBytes?.div(1024)?.toString().orEmpty()) }
+    var days by rememberSaveable { mutableStateOf(initial?.modifiedWithinDays?.toString() ?: initial?.modifiedAfter?.let { ((System.currentTimeMillis() - it) / 86_400_000L).coerceAtLeast(1).toString() }.orEmpty()) }
+    var recursive by rememberSaveable { mutableStateOf(initial?.recursive ?: false) }
     fun bytes(text: String): Long? = text.toLongOrNull()?.takeIf { it in 0..(Long.MAX_VALUE / 1024) }?.times(1024)
     val dayCount = days.toLongOrNull()?.takeIf { it in 1..365_000 }
     val options = ExplorerSearchOptions(name, extension, bytes(minimum), bytes(maximum),
@@ -50,13 +51,13 @@ fun ExplorerSearchDialog(directory: File, initial: ExplorerSearchOptions?, onDis
 
 @Composable
 fun ExplorerRenameDialog(files: List<File>, onDismiss: () -> Unit, onApply: (ExplorerRenamePlan) -> Unit) {
-    var prefix by remember { mutableStateOf("") }
-    var suffix by remember { mutableStateOf("") }
-    var find by remember { mutableStateOf("") }
-    var replacement by remember { mutableStateOf("") }
-    var numbered by remember { mutableStateOf(false) }
-    var preserveExtension by remember { mutableStateOf(true) }
-    var start by remember { mutableStateOf("1") }
+    var prefix by rememberSaveable { mutableStateOf("") }
+    var suffix by rememberSaveable { mutableStateOf("") }
+    var find by rememberSaveable { mutableStateOf("") }
+    var replacement by rememberSaveable { mutableStateOf("") }
+    var numbered by rememberSaveable { mutableStateOf(false) }
+    var preserveExtension by rememberSaveable { mutableStateOf(true) }
+    var start by rememberSaveable { mutableStateOf("1") }
     var plan by remember { mutableStateOf<ExplorerRenamePlan?>(null) }
     var previewOptions by remember { mutableStateOf<ExplorerRenameOptions?>(null) }
     var failed by remember { mutableStateOf(false) }

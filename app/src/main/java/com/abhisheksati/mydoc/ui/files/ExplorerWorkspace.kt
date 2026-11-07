@@ -13,6 +13,7 @@ import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.VerticalSplit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -66,10 +67,10 @@ fun FilesScreen(
     val secondary by workspace.secondary.collectAsState()
     val focused by workspace.focused.collectAsState()
     val savedStates = rememberSaveableStateHolder()
-    var showTransfers by remember { mutableStateOf(false) }
-    var showSavedSearches by remember { mutableStateOf(false) }
-    var savedSearchRequest by remember { mutableStateOf<String?>(null) }
-    var comparisonFolders by remember { mutableStateOf<List<File>?>(null) }
+    var showTransfers by rememberSaveable { mutableStateOf(false) }
+    var showSavedSearches by rememberSaveable { mutableStateOf(false) }
+    var savedSearchRequest by rememberSaveable { mutableStateOf<String?>(null) }
+    var comparisonFolders by rememberSaveable(stateSaver = FileListSaver) { mutableStateOf<List<File>?>(null) }
     val transferHistory by viewModel.explorerClipboard.transfers.state.collectAsState()
     BoxWithConstraints(modifier.fillMaxSize()) {
         val wide = maxWidth >= 900.dp

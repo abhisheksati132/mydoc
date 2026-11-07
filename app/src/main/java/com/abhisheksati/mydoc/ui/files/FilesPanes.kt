@@ -55,8 +55,8 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import com.abhisheksati.mydoc.domain.model.StorageFileType
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -78,6 +78,7 @@ import com.abhisheksati.mydoc.domain.model.StorageVolume
 import com.abhisheksati.mydoc.ui.storage.StorageAnalysisUiState
 import com.abhisheksati.mydoc.ui.storage.StorageCategoryType
 import com.abhisheksati.mydoc.viewmodel.FileManagerUiState
+import com.abhisheksati.mydoc.viewmodel.documentTypeCounts
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import java.io.File
@@ -421,6 +422,11 @@ fun DirectoryPane(
     val selectedDocFilter = uiState.docTypeFilter
     val listState = rememberLazyListState()
     val gridState = rememberLazyGridState()
+    // A new folder/category/search starts at the top; the old scroll offset pointed into unrelated rows.
+    LaunchedEffect(uiState.currentDirectory, uiState.activeCategory, uiState.advancedSearch) {
+        listState.scrollToItem(0)
+        gridState.scrollToItem(0)
+    }
     if (glassMotion != null) {
         if (uiState.isGridView) TrackGlassMotion(gridState, glassMotion)
         else TrackGlassMotion(listState, glassMotion)
@@ -432,6 +438,9 @@ fun DirectoryPane(
     // The ViewModel applies the document-type chip itself now, so the rows drawn here are exactly
     // the rows Select All selects and the count above the list reports.
     val displayedItems = uiState.filteredItems
+    val docCounts = remember(uiState.items, uiState.searchQuery) {
+        documentTypeCounts(uiState.items, uiState.searchQuery)
+    }
 
     Column(modifier = modifier) {
         Row(
@@ -493,14 +502,7 @@ fun DirectoryPane(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 DocumentTypeFilter.entries.forEach { filter ->
-                    val count = when (filter) {
-                        DocumentTypeFilter.ALL -> uiState.filteredItems.size
-                        DocumentTypeFilter.PDF -> uiState.filteredItems.count { it.fileType == StorageFileType.PDF }
-                        DocumentTypeFilter.WORD -> uiState.filteredItems.count { it.fileType == StorageFileType.WORD }
-                        DocumentTypeFilter.EXCEL -> uiState.filteredItems.count { it.fileType == StorageFileType.EXCEL }
-                        DocumentTypeFilter.PPT -> uiState.filteredItems.count { it.fileType == StorageFileType.PPT }
-                        DocumentTypeFilter.TEXT -> uiState.filteredItems.count { it.fileType == StorageFileType.CODE_TEXT }
-                    }
+                    val count = docCounts[filter] ?: 0
                     FilterChip(
                         selected = selectedDocFilter == filter,
                         onClick = { onDocFilter(filter) },

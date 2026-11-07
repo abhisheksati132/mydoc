@@ -121,6 +121,7 @@ fun ToolsScreen(
     viewModel: ToolsViewModel,
     onToolClick: (PdfTool) -> Unit,
     modifier: Modifier = Modifier,
+    isActive: Boolean = true,
     onSettingsClick: (() -> Unit)? = null,
     hazeState: HazeState? = null,
     glassMotion: GlassMotionState? = null
@@ -137,8 +138,10 @@ fun ToolsScreen(
     var selectedGroup by rememberSaveable { mutableStateOf<ToolGroup?>(null) }
     val searchFocusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(isSearchActive) {
-        if (isSearchActive) searchFocusRequester.requestFocus()
+    // The pager keeps this screen composed off-screen; requesting focus there stole it from the
+    // visible tab and popped the keyboard over it.
+    LaunchedEffect(isSearchActive, isActive) {
+        if (isSearchActive && isActive) searchFocusRequester.requestFocus()
     }
 
     val allTools = PdfTool.entries

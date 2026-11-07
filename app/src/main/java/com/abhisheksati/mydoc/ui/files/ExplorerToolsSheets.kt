@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -27,6 +28,11 @@ import com.abhisheksati.mydoc.util.UserMessages
 import kotlinx.coroutines.CancellationException
 import java.io.File
 
+private val StringSetSaver = Saver<Set<String>, ArrayList<String>>(
+    save = { ArrayList(it) },
+    restore = { it.toSet() }
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExplorerArchiveSheet(file: File, onDismiss: () -> Unit, onExtract: () -> Unit, canExtract: Boolean = true,
@@ -36,8 +42,8 @@ fun ExplorerArchiveSheet(file: File, onDismiss: () -> Unit, onExtract: () -> Uni
     var failed by remember(file) { mutableStateOf(false) }
     var folder by rememberSaveable(file.absolutePath) { mutableStateOf("") }
     var query by rememberSaveable(file.absolutePath) { mutableStateOf("") }
-    var confirm by remember { mutableStateOf(false) }
-    var selected by remember(file) { mutableStateOf(emptySet<String>()) }
+    var confirm by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
+    var selected by rememberSaveable(file.absolutePath, stateSaver = StringSetSaver) { mutableStateOf(emptySet<String>()) }
     LaunchedEffect(file) {
         try { index = ExplorerArchive().read(file) }
         catch (e: CancellationException) { throw e }

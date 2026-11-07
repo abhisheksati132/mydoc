@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -45,6 +46,12 @@ private data class DocumentFilters(
     val sortOrder: DocumentSortOrder,
     val errorMessage: String? = null
 )
+
+/** Selection survives only for rows still visible in recents; the hero card is not a recent row. */
+internal fun pruneRecentSelection(selected: Set<String>, recents: List<LibraryItem>, heroUri: String?): Set<String> {
+    val visible = recents.mapTo(HashSet()) { it.uri }
+    return selected.filterTo(HashSet()) { it != heroUri && it in visible }
+}
 
 class HomeViewModel(
     private val repository: DocumentRepository,
@@ -136,6 +143,11 @@ class HomeViewModel(
             isLoading = false,
             errorMessage = errorMessage
         )
+    }.onEach { state ->
+        // A selected row that became the hero or left recents is no longer a row; keeping its URI
+        // produced a "0 selected" bar whose Share/Remove silently acted on fewer items.
+        val heroUri = state.continueItems.firstOrNull()?.uri
+        _selectedRecentUris.update { pruneRecentSelection(it, state.recentLibraryItems, heroUri) }
     }.flowOn(Dispatchers.Default)
      .stateIn(
         scope = viewModelScope,
@@ -191,6 +203,7 @@ class HomeViewModel(
     }
 
     fun clearAllRecents() {
+        clearRecentSelection()
         viewModelScope.launch {
             libraryRepository.clearAllRecents()
         }

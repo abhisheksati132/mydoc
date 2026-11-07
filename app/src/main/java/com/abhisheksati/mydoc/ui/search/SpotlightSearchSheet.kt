@@ -41,7 +41,15 @@ import com.abhisheksati.mydoc.designsystem.components.AppTopBar
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.domain.model.DocumentFilter
 import com.abhisheksati.mydoc.domain.model.LibraryItem
+import com.abhisheksati.mydoc.domain.model.MediaKind
 import com.abhisheksati.mydoc.ui.files.LibraryThumbnail
+
+/** Media means every indexed photo/video/audio kind, not a hand-picked extension list that
+ *  silently drops heic, gif, webm, m4a and friends. */
+internal fun spotlightFilterMatches(item: LibraryItem, filter: String): Boolean = when {
+    filter == "Media" -> item.kind != MediaKind.DOCUMENT
+    else -> DocumentFilter.fromLabel(filter)?.matches(item.extension) ?: true
+}
 
 /**
  * Document search across the library, on the same Material 3 surface language as
@@ -63,11 +71,7 @@ fun SpotlightSearchSheet(
     val filteredItems = remember(items, query, selectedFilter) {
         val q = query.trim().lowercase()
         items.filter { item ->
-            val matchesFilter = when {
-                selectedFilter == "Media" ->
-                    item.extension.lowercase() in setOf("jpg", "jpeg", "png", "webp", "mp4", "mp3", "mkv", "mov", "wav", "flac")
-                else -> DocumentFilter.fromLabel(selectedFilter)?.matches(item.extension) ?: true
-            }
+            val matchesFilter = spotlightFilterMatches(item, selectedFilter)
             val matchesQuery = if (q.isEmpty()) true else {
                 item.name.lowercase().contains(q) ||
                     item.extension.lowercase().contains(q)

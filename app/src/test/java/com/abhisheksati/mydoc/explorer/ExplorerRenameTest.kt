@@ -85,6 +85,20 @@ class ExplorerRenameTest {
         assertTrue(temp.root.listFiles()!!.any { it.name.startsWith(".mydoc-rename-") && it.readText() == "A" })
         assertEquals("B", b.readText())
     }
+    // Only meaningful where the filesystem is case-insensitive (Windows locally, emulated
+    // /sdcard on device); on a case-sensitive CI runner the target does not exist and there is
+    // no false conflict to reproduce. File equality is also case-insensitive on Windows, so
+    // canApply/apply are platform no-ops there and are deliberately not asserted.
+    @Test fun caseOnlyRenameIsNotAConflictWithItself() = runBlocking {
+        val source = temp.newFile("Report.TXT").apply { writeText("payload") }
+        org.junit.Assume.assumeTrue(java.io.File(temp.root, "report.txt").exists())
+        val plan = ExplorerRename().preview(listOf(source), ExplorerRenameOptions(find = "Report", replacement = "report"))
+        val entry = plan.entries.single()
+        assertNull("a case-only rename targets the source file itself, not a collision", entry.problem)
+        assertEquals("report.TXT", entry.target.name)
+        assertEquals("payload", source.readText())
+    }
+
     @Test fun failedRollbackKeepsJournalPointingAtActualFiles() = runBlocking {
         val a = temp.newFile("a.txt").apply { writeText("A") }
         val b = temp.newFile("b.txt").apply { writeText("B") }

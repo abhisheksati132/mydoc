@@ -39,7 +39,9 @@ class ExplorerRename(
                 !source.exists() || Files.isSymbolicLink(source.toPath()) -> "source"
                 name.isBlank() || name in setOf(".", "..") || name.any { it.isISOControl() || it in "/\\:*?\"<>|" } || name.toByteArray(Charsets.UTF_8).size > 255 -> "name"
                 options.start < 0 -> "number"
-                target.exists() && target.absolutePath !in sourcePaths -> "conflict"
+                // On case-insensitive storage (emulated /sdcard) a case-only rename targets the
+                // source itself; exists() alone must not condemn it as a collision.
+                target.exists() && target.absolutePath !in sourcePaths && !Files.isSameFile(source.toPath(), target.toPath()) -> "conflict"
                 sources.any { other -> other != source && source.toPath().startsWith(other.toPath()) } -> "nested"
                 else -> null
             }

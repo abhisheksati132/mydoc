@@ -37,6 +37,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.drop
 import com.abhisheksati.mydoc.data.local.ExplorerPreferences
 import com.abhisheksati.mydoc.domain.model.FolderViewPreferences
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.abhisheksati.mydoc.data.local.ExplorerZipExtraction
@@ -76,19 +77,35 @@ data class FileManagerUiState(
     val renameRecovery: List<String> = emptyList()
 )
 
+/** Chip counts describe the searched items, not the chip-filtered rows: picking PDF must not erase the Word count. */
+internal fun documentTypeCounts(items: List<StorageItem>, query: String): Map<DocumentTypeFilter, Int> {
+    val q = query.trim().lowercase(Locale.ROOT)
+    val searched = if (q.isEmpty()) items else items.filter { it.name.lowercase(Locale.ROOT).contains(q) }
+    return mapOf(
+        DocumentTypeFilter.ALL to searched.size,
+        DocumentTypeFilter.PDF to searched.count { it.fileType == StorageFileType.PDF },
+        DocumentTypeFilter.WORD to searched.count { it.fileType == StorageFileType.WORD },
+        DocumentTypeFilter.EXCEL to searched.count { it.fileType == StorageFileType.EXCEL },
+        DocumentTypeFilter.PPT to searched.count { it.fileType == StorageFileType.PPT },
+        DocumentTypeFilter.TEXT to searched.count { it.fileType == StorageFileType.CODE_TEXT }
+    )
+}
 
 class FileManagerViewModel(
     private val storageRepository: StorageRepository,
     baseDir: File? = null,
     private val settingsRepository: SettingsRepository? = null,
     val explorerClipboard: ExplorerClipboard = ExplorerClipboard(),
-    val explorerPreferences: ExplorerPreferences = settingsRepository?.explorerPreferences ?: ExplorerPreferences()
+    val explorerPreferences: ExplorerPreferences = settingsRepository?.explorerPreferences ?: ExplorerPreferences(),
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
 
     private val backStack = ArrayDeque<File>()
 
     /** Bumped by every directory/category request; an older, slower reply must not land. */
     private var listRequestGeneration = 0
+    /** Bumped by every inspection and by dismissal; a slow walk/hash must not reopen a closed dialog. */
+    private var inspectGeneration = 0
     private var advancedSearchJob: Job? = null
     private var savedSearchOpenJob: Job? = null
     private var categorySortOrder = FileSortOrder()
@@ -241,8 +258,13 @@ class FileManagerViewModel(
         }
 
         val parent = _uiState.value.currentDirectory.parentFile
-        if (parent != null && parent.exists() && parent.canRead()) {
-            loadDirectory(parent, addToHistory = false)
+        if (parent != null) {
+            viewModelScope.launch {
+                // Statting the parent here put disk IO on the main thread inside the back gesture.
+                val accessible = withContext(ioDispatcher) { parent.exists() && parent.canRead() }
+                if (accessible) loadDirectory(parent, addToHistory = false)
+                else if (_uiState.value.isBrowsingStorage) exitToHub()
+            }
             return true
         }
 
@@ -400,7 +422,7 @@ class FileManagerViewModel(
         savedSearchOpenJob?.cancel()
         return viewModelScope.launch {
             val folder = File(saved.directory)
-            val available = withContext(Dispatchers.IO) { runCatching { folder.isDirectory && folder.canRead() }.getOrDefault(false) }
+            val available = withContext(ioDispatcher) { runCatching { folder.isDirectory && folder.canRead() }.getOrDefault(false) }
             if (generation != listRequestGeneration) return@launch
             if (!available) {
                 _uiState.update { it.copy(userMessage = UiText.Res(R.string.saved_search_folder_missing)) }
@@ -937,6 +959,9 @@ class FileManagerViewModel(
         reloadCurrentSource()
     }
 
+    /** Refresh stays on the current surface: re-run the search, re-query the category, or reload the folder. */
+    fun refreshCurrentSource() = reloadCurrentSource()
+
     /**
      * Sorting or revealing hidden files must reload whatever is on screen. It used to call
      * `loadDirectory` unconditionally, which drops the active category and leaves the reader in a
@@ -973,23 +998,27 @@ class FileManagerViewModel(
     }
 
     fun inspectItem(file: File) {
+        val generation = ++inspectGeneration
         viewModelScope.launch {
-            val props = if (file.isDirectory) {
-                storageRepository.getFolderProperties(file)
-            } else {
-                FolderProperties(
-                    file = file,
-                    totalSizeBytes = file.length(),
-                    totalFilesCount = 1,
-                    totalFoldersCount = 0,
-                    isReadable = file.canRead(),
-                    isWritable = file.canWrite()
-                )
+            val (props, checksum) = withContext(ioDispatcher) {
+                val props = if (file.isDirectory) {
+                    storageRepository.getFolderProperties(file)
+                } else {
+                    FolderProperties(
+                        file = file,
+                        totalSizeBytes = file.length(),
+                        totalFilesCount = 1,
+                        totalFoldersCount = 0,
+                        isReadable = file.canRead(),
+                        isWritable = file.canWrite()
+                    )
+                }
+                val checksum = if (!file.isDirectory && file.length() < 250_000_000L) {
+                    storageRepository.calculateHash(file, "SHA-256")
+                } else null
+                props to checksum
             }
-            val checksum = if (!file.isDirectory && file.length() < 250_000_000L) {
-                storageRepository.calculateHash(file, "SHA-256")
-            } else null
-
+            if (generation != inspectGeneration) return@launch
             _uiState.update {
                 it.copy(
                     selectedProperties = props,
@@ -1000,6 +1029,7 @@ class FileManagerViewModel(
     }
 
     fun dismissPropertiesDialog() {
+        ++inspectGeneration
         _uiState.update {
             it.copy(
                 selectedProperties = null,

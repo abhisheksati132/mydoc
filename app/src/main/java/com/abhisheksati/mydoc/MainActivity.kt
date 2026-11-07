@@ -150,6 +150,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // uiMode is not in configChanges, so a dark-mode switch recreates the activity; without
+        // this, Settings/Search were dumped back to Home. The lock flag stays fail-closed.
+        if (savedInstanceState != null) {
+            isSettingsOpen = savedInstanceState.getBoolean("settings_open")
+            isSpotlightSearchOpen = savedInstanceState.getBoolean("spotlight_open")
+            isDesignSystemPreviewOpen = savedInstanceState.getBoolean("design_preview_open")
+        }
+
         val app = application as MyDocApp
         if (app.settingsRepository.isBiometricLockEnabled.value) {
             isAppUnlocked = false
@@ -515,6 +523,13 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean("settings_open", isSettingsOpen)
+        outState.putBoolean("spotlight_open", isSpotlightSearchOpen)
+        outState.putBoolean("design_preview_open", isDesignSystemPreviewOpen)
     }
 
     override fun onStop() {

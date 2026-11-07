@@ -21,11 +21,13 @@ import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 
 /** One accessible field for indexed-library and current-folder queries. Scope is shown beside it. */
 @Composable
-internal fun FileSearchField(query: String, onQueryChange: (String) -> Unit, modifier: Modifier = Modifier) {
+internal fun FileSearchField(query: String, onQueryChange: (String) -> Unit, modifier: Modifier = Modifier, autoFocus: Boolean = true) {
     val label = stringResource(R.string.search_files_label)
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
-    LaunchedEffect(Unit) { focus.requestFocus(); keyboard?.show() }
+    LaunchedEffect(autoFocus) {
+        if (autoFocus) { focus.requestFocus(); keyboard?.show() }
+    }
     OutlinedTextField(
         value = query, onValueChange = onQueryChange, singleLine = true,
         label = { Text(label) }, placeholder = { Text(stringResource(R.string.search_name_or_type)) },

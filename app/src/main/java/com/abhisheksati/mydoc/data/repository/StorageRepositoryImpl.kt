@@ -362,11 +362,6 @@ class StorageRepositoryImpl(
         if (!targetDir.exists() || !targetDir.isDirectory) {
             return@withContext Result.failure(IllegalArgumentException("Target must be a directory"))
         }
-        if (!hasRoomFor(targetDir, totalBytesOf(sources))) {
-            return@withContext Result.failure(
-                java.io.IOException("Not enough free space on ${targetDir.name} for this move")
-            )
-        }
 
         val total = sources.size
         var moved = 0
@@ -401,6 +396,14 @@ class StorageRepositoryImpl(
                 // original is provably untouched; if part of the original was already removed, the
                 // copy is the surviving version of that part and destroying it was the data-loss
                 // bug this replaces.
+                // Only the copy path writes bytes; a same-volume rename above needs no free space.
+                if (!hasRoomFor(targetDir, totalBytesOf(listOf(src)))) {
+                    failed++
+                    firstError = firstError ?: java.io.IOException(
+                        "Not enough free space on ${targetDir.name} for this move"
+                    )
+                    continue
+                }
                 val copyError = copyAndVerify(src, dest)
                 if (copyError != null) {
                     discardPartial(dest)

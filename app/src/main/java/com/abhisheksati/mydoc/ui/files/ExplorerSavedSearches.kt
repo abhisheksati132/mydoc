@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -15,7 +16,7 @@ import com.abhisheksati.mydoc.data.local.ExplorerPreferences
 
 @Composable
 fun SaveExplorerSearchDialog(onDismiss: () -> Unit, onSave: (String) -> Boolean) {
-    var label by remember { mutableStateOf("") }
+    var label by rememberSaveable { mutableStateOf("") }
     var failed by remember { mutableStateOf(false) }
     val valid = label.trim().length in 1..80 && label.none { it.isISOControl() }
     AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.saved_search_save)) },

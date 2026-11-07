@@ -12,6 +12,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,8 +44,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import com.abhisheksati.mydoc.designsystem.components.LocalFloatingChromeInset
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableIntStateOf
@@ -83,6 +86,8 @@ import com.abhisheksati.mydoc.update.UpdateUiState
 import com.abhisheksati.mydoc.viewmodel.FileManagerViewModel
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import java.io.File
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import com.abhisheksati.mydoc.designsystem.components.showMessage
 import com.abhisheksati.mydoc.util.shareUris
@@ -146,21 +151,13 @@ fun HomeScreen(
         pageCount = { tabs.size }
     )
 
-    // Sync pager swipe with ViewModel currentTab
-    LaunchedEffect(pagerState.currentPage) {
-        val targetTab = tabs.getOrNull(pagerState.currentPage)
-        if (targetTab != null && targetTab != currentTab) {
-            viewModel.selectTab(targetTab)
-        }
-    }
-
-    // Sync programmatic tab changes with pager
-    LaunchedEffect(currentTab) {
-        val targetPage = tabs.indexOf(currentTab)
-        if (targetPage >= 0 && pagerState.currentPage != targetPage) {
-            if (reducedMotion) pagerState.scrollToPage(targetPage) else pagerState.animateScrollToPage(targetPage)
-        }
-    }
+    SyncTabPager(
+        pagerState = pagerState,
+        currentTab = currentTab,
+        tabs = tabs,
+        reducedMotion = reducedMotion,
+        onTabSettled = viewModel::selectTab
+    )
 
     // Back exits a recents selection before it exits the tab, same as the Library.
     BackHandler(enabled = currentTab == HomeTab.HOME && selectedRecentUris.isNotEmpty()) {
@@ -278,6 +275,7 @@ fun HomeScreen(
                                     }
                                 },
                                 onSettingsClick = onSettingsClick,
+                                isActive = currentTab == HomeTab.TOOLS && pagerState.currentPage == 2,
                                 hazeState = hazeState,
                                 glassMotion = glassMotion,
                                 modifier = Modifier.fillMaxSize()
@@ -592,3 +590,41 @@ private fun LibraryItem.toDocumentFile() = DocumentFile(
     lastPage = lastPage,
     isFavorite = isFavorite
 )
+
+/**
+ * Keeps the tab and its pager in sync without deadlocking them. The tab observer only fires once
+ * the pager has fully settled: syncing on every currentPage change meant a Home→Tools animation
+ * crossing Library rewrote currentTab mid-flight, which restarted the tab effect and cancelled
+ * the animation — the pager froze between pages with the nav on the wrong tab. The tab effect
+ * also snaps a fractional offset restored after process recreation, which nothing else settles.
+ */
+@Composable
+internal fun SyncTabPager(
+    pagerState: PagerState,
+    currentTab: HomeTab,
+    tabs: List<HomeTab>,
+    reducedMotion: Boolean,
+    onTabSettled: (HomeTab) -> Unit
+) {
+    val latestTab by rememberUpdatedState(currentTab)
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.isScrollInProgress to pagerState.currentPage }
+            .collectLatest { (scrolling, page) ->
+                if (!scrolling) {
+                    // A retargeted animation passes through a momentary settle; let the new
+                    // scroll start before adopting its intermediate page as the selected tab.
+                    delay(32)
+                    val tab = tabs.getOrNull(page) ?: return@collectLatest
+                    if (tab != latestTab) onTabSettled(tab)
+                }
+            }
+    }
+    LaunchedEffect(currentTab) {
+        val targetPage = tabs.indexOf(currentTab)
+        if (targetPage >= 0 &&
+            (pagerState.currentPage != targetPage || pagerState.currentPageOffsetFraction != 0f)
+        ) {
+            if (reducedMotion) pagerState.scrollToPage(targetPage) else pagerState.animateScrollToPage(targetPage)
+        }
+    }
+}
