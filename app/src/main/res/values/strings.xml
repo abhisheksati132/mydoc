@@ -924,4 +924,10 @@
     <string name="search_files_label">Search files</string>
     <string name="home_recent_files_count">Recent files (%1$d)</string>
     <string name="home_browse_files">Browse files</string>
+    <string name="recent_file_metadata">%1$s · %2$s · %3$s</string>
+    <string name="more_options_for_file">More options for %1$s</string>
+    <string name="home_show_previews">Show previews</string>
+    <string name="home_show_file_list">Show file list</string>
+    <string name="storage_capacity_summary">%1$s free of %2$s</string>
+    <string name="files_browse_subtitle">Folders and file types</string>
 </resources>

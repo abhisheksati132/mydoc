@@ -199,8 +199,7 @@ fun FilesPaneScreen(
         } else {
             stringResource(R.string.files_subtitle_many, uiState.filteredItems.size)
         }
-        storageUiState.formattedTotal.isNotEmpty() -> "${storageUiState.formattedFree} free of ${storageUiState.formattedTotal}"
-        else -> stringResource(R.string.files_title_storage_folders)
+        else -> stringResource(R.string.files_browse_subtitle)
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -447,6 +446,7 @@ fun FilesPaneScreen(
                                     onApps = { showAppManager = true },
                                     onInsights = { showInsights = true },
                                     onClean = { showCleaner = true },
+                                    onSearch = onSpotlightSearch,
                                     modifier = Modifier.fillMaxSize(),
                                     hazeState = hazeState,
                                     glassMotion = glassMotion
@@ -608,7 +608,7 @@ private fun FilesHeader(
         contentInsets = if (workspaceInsets) WindowInsets(0, 0, 0, 0) else androidx.compose.material3.TopAppBarDefaults.windowInsets,
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         actions = {
-            IconButton(onClick = onSearch) {
+            if (isInsideFolder) IconButton(onClick = onSearch) {
                 Icon(
                     imageVector = Icons.Outlined.Search,
                     contentDescription = stringResource(R.string.cd_search),

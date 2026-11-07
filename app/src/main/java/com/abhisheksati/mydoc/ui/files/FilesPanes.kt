@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.files
 
+import androidx.compose.material.icons.outlined.Search
 import com.abhisheksati.mydoc.designsystem.components.LocalFloatingChromeInset
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -155,6 +156,7 @@ fun BrowseHomePane(
     onApps: () -> Unit,
     onInsights: () -> Unit,
     onClean: () -> Unit,
+    onSearch: () -> Unit,
     modifier: Modifier = Modifier,
     hazeState: HazeState? = null,
     glassMotion: GlassMotionState? = null
@@ -208,29 +210,39 @@ fun BrowseHomePane(
             }
         }
 
+        item(key = "browse_search") {
+            androidx.compose.material3.OutlinedButton(onClick = onSearch,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Icon(Icons.Outlined.Search, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.search_files_label))
+            }
+        }
+        if (pinnedFolders.isNotEmpty()) {
+            item(key = "browse_pinned_header") {
+                FilesSectionHeader(title = stringResource(R.string.section_pinned))
+            }
+            items(pinnedFolders, key = { "pin_${it.absolutePath}" }) { folder ->
+                LocationRow(
+                    title = folder.name,
+                    meta = folder.absolutePath,
+                    icon = Icons.Outlined.Folder,
+                    onClick = { onFolder(folder) },
+                    modifier = Modifier.padding(horizontal = 10.dp)
+                )
+            }
+        }
+
         item(key = "browse_storage") {
             StorageOverviewCard(
                 usedRatio = storageUiState.usedRatio,
-                formattedUsed = storageUiState.formattedUsed,
                 formattedTotal = storageUiState.formattedTotal,
                 formattedFree = storageUiState.formattedFree,
-                usedPercentage = storageUiState.usedPercentage,
                 reclaimableBytes = storageUiState.cleanSummary.totalReclaimableBytes,
                 onBrowse = onBrowseInternal,
                 onInsights = onInsights,
                 onClean = if (storageUiState.cleanSummary.totalReclaimableBytes > 0) onClean else null,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-        }
-
-        item(key = "browse_categories_header") {
-            FilesSectionHeader(title = stringResource(R.string.section_categories))
-        }
-        item(key = "browse_categories") {
-            CategoryShortcutGrid(
-                storageUiState = storageUiState,
-                onCategory = onCategory,
-                modifier = Modifier.padding(horizontal = 16.dp)
             )
         }
 
@@ -253,19 +265,17 @@ fun BrowseHomePane(
             }
         }
 
-        if (pinnedFolders.isNotEmpty()) {
-            item(key = "browse_pinned_header") {
-                FilesSectionHeader(title = stringResource(R.string.section_pinned))
-            }
-            items(pinnedFolders, key = { "pin_${it.absolutePath}" }) { folder ->
-                LocationRow(
-                    title = folder.name,
-                    meta = folder.absolutePath,
-                    icon = Icons.Outlined.Folder,
-                    onClick = { onFolder(folder) },
-                    modifier = Modifier.padding(horizontal = 10.dp)
-                )
-            }
+
+
+        item(key = "browse_categories_header") {
+            FilesSectionHeader(title = stringResource(R.string.section_categories))
+        }
+        item(key = "browse_categories") {
+            CategoryShortcutGrid(
+                storageUiState = storageUiState,
+                onCategory = onCategory,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
         }
 
         item(key = "browse_trash_header") {
@@ -310,8 +320,9 @@ private fun CategoryShortcutGrid(
     onCategory: (FileCategory) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val columns = if (androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f) 1 else 3
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        shortcutCategories.chunked(3).forEach { row ->
+        shortcutCategories.chunked(columns).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEach { type ->
                     val stat = storageUiState.categories.firstOrNull { it.type == type }
@@ -322,7 +333,7 @@ private fun CategoryShortcutGrid(
                         modifier = Modifier.weight(1f)
                     )
                 }
-                repeat(3 - row.size) {
+                repeat(columns - row.size) {
                     Spacer(Modifier.weight(1f))
                 }
             }

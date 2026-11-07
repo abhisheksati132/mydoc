@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -49,5 +51,29 @@ class CoreUxOnDeviceTest {
         assertTrue(layouts.isNotEmpty())
         assertEquals("Setting explanation must lay out every character", explanation.length,
             layouts.single().getLineEnd(layouts.single().lineCount - 1, visibleEnd = true))
+    }
+
+    @Test fun recentFileActionsAndSelectionRemainAvailableInListView() {
+        val file = com.abhisheksati.mydoc.domain.model.LibraryItem(
+            "file:///fixture/Quarterly-report.pdf", "Quarterly-report.pdf",
+            com.abhisheksati.mydoc.domain.model.MediaKind.DOCUMENT, "application/pdf", 4096, 1L)
+        var selected by androidx.compose.runtime.mutableStateOf(false)
+        var details = 0
+        var shares = 0
+        var removals = 0
+        compose.setContent {
+            AppDesignSystemTheme {
+                com.abhisheksati.mydoc.ui.home.RecentFileRow(file, selected, selected,
+                    { selected = !selected }, { selected = true }, { details++ }, { shares++ }, { removals++ })
+            }
+        }
+        fun menu() = compose.onNodeWithContentDescription("More options for Quarterly-report.pdf").performClick()
+        menu(); compose.onNodeWithText("Details").performClick()
+        menu(); compose.onNodeWithText("Share").performClick()
+        menu(); compose.onNodeWithText("Remove from recents").performClick()
+        compose.runOnIdle { assertEquals(1, details); assertEquals(1, shares); assertEquals(1, removals) }
+        compose.onNodeWithText(file.name).performTouchInput { longClick() }
+        compose.onNodeWithText(file.name).assertIsOn().performClick()
+        compose.runOnIdle { assertFalse(selected) }
     }
 }

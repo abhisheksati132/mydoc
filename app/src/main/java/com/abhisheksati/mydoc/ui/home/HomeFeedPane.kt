@@ -66,6 +66,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.runtime.setValue
 import android.provider.DocumentsContract
 import androidx.compose.ui.Alignment
@@ -173,7 +177,9 @@ fun HomeFeedPane(
         }
     }
 
-    val heroItem = continueItems.firstOrNull() ?: recentItems.firstOrNull()
+    var showRecentPreviews by rememberSaveable { mutableStateOf(false) }
+    val previewColumns = if (LocalDensity.current.fontScale > 1.3f) 1 else 2
+    val heroItem = continueItems.firstOrNull()
     val remainingRecents = if (heroItem != null) {
         recentItems.filter { it.uri != heroItem.uri }
     } else {
@@ -212,7 +218,7 @@ fun HomeFeedPane(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Brand lockup: Seal + wordmark, per docs/brand-identity.md Â§3.
+                        // Brand lockup: Seal + wordmark, per docs/brand-identity.md §3.
                         SealMark(modifier = Modifier.size(30.dp))
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
@@ -304,7 +310,7 @@ fun HomeFeedPane(
                         }
                     )
                 }
-            } else {
+            } else if (recentItems.isEmpty()) {
                 // CURATED FIRST-RUN EMPTY STATE
                 item(key = "first_run_empty_state") {
                     FirstRunPaperCard(
@@ -325,6 +331,7 @@ fun HomeFeedPane(
                     ) {
                         Text(
                             text = stringResource(R.string.home_recent_files_count, remainingRecents.size),
+                            modifier = Modifier.align(Alignment.CenterVertically),
                             style = AppTheme.typography.heading,
                             color = colors.ink
                         )
@@ -335,8 +342,30 @@ fun HomeFeedPane(
                     }
                 }
 
+                item(key = "recent_view_control") {
+                    TextButton(onClick = { showRecentPreviews = !showRecentPreviews }) {
+                        Icon(if (showRecentPreviews) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
+                            contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(if (showRecentPreviews) R.string.home_show_file_list else R.string.home_show_previews))
+                    }
+                }
+                if (!showRecentPreviews) {
+                    items(remainingRecents, key = { it.uri }) { item ->
+                        RecentFileRow(
+                            item = item, selected = item.uri in selectedRecentUris, selectionMode = isRecentsSelectionActive,
+                            onClick = {
+                                if (isRecentsSelectionActive) onToggleRecentSelection(item)
+                                else { haptics.click(); onLibraryItemClick(item) }
+                            },
+                            onLongClick = { haptics.snap(); onToggleRecentSelection(item) },
+                            onDetails = { onLibraryItemDetails(item) }, onShare = { onShareDocument(item) },
+                            onRemove = { onRemoveFromRecents(item) }
+                        )
+                    }
+                } else {
                 // 2-Column Grid of Paper Cards (chunked in pairs)
-                val chunkedRecents = remainingRecents.chunked(2)
+                val chunkedRecents = remainingRecents.chunked(previewColumns)
                 items(
                     items = chunkedRecents,
                     key = { chunk -> chunk.joinToString(",") { it.uri } }
@@ -369,11 +398,12 @@ fun HomeFeedPane(
                                 )
                             }
                         }
-                        if (pair.size == 1) {
+                        if (pair.size == 1 && previewColumns == 2) {
                             Spacer(modifier = Modifier.weight(1f))
                         }
                     }
-                }
+                }                }
+
             }
         }
 
@@ -398,6 +428,7 @@ fun HomeFeedPane(
 /**
  * Hero Card: Real rendered page thumbnail + Seal teal progress bar + Fraunces title.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun ContinueReadingHeroCard(
     item: LibraryItem,
@@ -423,7 +454,7 @@ private fun ContinueReadingHeroCard(
             // Real document page thumbnail with shared-element transition
             Box(
                 modifier = Modifier
-                    .size(width = 76.dp, height = 104.dp)
+                    .size(width = 56.dp, height = 76.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(colors.surfaceMuted)
                     .border(width = 1.dp, color = colors.cardBorder, shape = RoundedCornerShape(8.dp))
@@ -455,9 +486,8 @@ private fun ContinueReadingHeroCard(
                 )
 
                 // Metadata row in JetBrains Mono
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     if (item.pageCount > 0) {
                         Text(
@@ -466,7 +496,7 @@ private fun ContinueReadingHeroCard(
                             color = colors.inkSecondary
                         )
                         Text(
-                            text = "â€¢",
+                            text = "•",
                             style = AppTheme.typography.metadata,
                             color = colors.cardBorder
                         )
@@ -499,10 +529,9 @@ private fun ContinueReadingHeroCard(
 
                 Spacer(modifier = Modifier.height(2.dp))
 
-                Row(
+                androidx.compose.foundation.layout.FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         text = item.formattedLastModified,
@@ -536,7 +565,7 @@ private fun ContinueReadingHeroCard(
  * 2-Column Recent Paper Card:
  * Tactile paper surface + real thumbnail + Fraunces title + JetBrains Mono metadata.
  */
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun RecentPaperCard(
     item: LibraryItem,
@@ -606,7 +635,7 @@ private fun RecentPaperCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.MoreVert,
-                                contentDescription = stringResource(R.string.cd_options),
+                                contentDescription = stringResource(R.string.more_options_for_file, item.name),
                                 tint = colors.inkSecondary,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -651,16 +680,15 @@ private fun RecentPaperCard(
             ) {
                 Text(
                     text = item.name,
-                    style = AppTheme.typography.documentName,
+                    style = AppTheme.typography.bodyLarge,
                     color = colors.ink,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Row(
+                androidx.compose.foundation.layout.FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         text = item.formattedSize,

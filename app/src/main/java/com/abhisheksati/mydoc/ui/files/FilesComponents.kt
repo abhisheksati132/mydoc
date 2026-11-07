@@ -104,13 +104,12 @@ fun FilesSectionHeader(
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun StorageOverviewCard(
     usedRatio: Float,
-    formattedUsed: String,
     formattedTotal: String,
     formattedFree: String,
-    usedPercentage: Int,
     reclaimableBytes: Long,
     onBrowse: () -> Unit,
     onInsights: () -> Unit,
@@ -118,78 +117,26 @@ fun StorageOverviewCard(
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
-    GlassSurface(
-        shape = AppRadius.largeShape,
-        elevation = 3.dp,
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(AppRadius.largeShape)
-            .clickable(onClick = onBrowse)
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(R.string.files_title_internal),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = scheme.onSurface,
-                    modifier = Modifier.weight(1f)
-                )
-                Icon(
-                    imageVector = Icons.Outlined.ChevronRight,
-                    contentDescription = null,
-                    tint = scheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
-                )
+    Card(modifier = modifier.fillMaxWidth(), shape = AppRadius.largeShape,
+        colors = CardDefaults.cardColors(containerColor = scheme.surface)) {
+        Column(Modifier.padding(12.dp)) {
+            Row(Modifier.fillMaxWidth().clip(AppRadius.cardShape).clickable(onClick = onBrowse).padding(4.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(Icons.Outlined.Folder, contentDescription = null, modifier = Modifier.size(24.dp), tint = scheme.primary)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(stringResource(R.string.files_title_internal), style = MaterialTheme.typography.titleSmall, color = scheme.onSurface)
+                    Text(stringResource(R.string.storage_capacity_summary, formattedFree.ifEmpty { "—" }, formattedTotal.ifEmpty { "—" }),
+                        style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+                }
+                Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = scheme.onSurfaceVariant)
             }
-            Spacer(Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = if (formattedUsed.isNotEmpty()) formattedUsed else "—",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = scheme.onSurface
-                )
-                Text(
-                    text = if (formattedTotal.isNotEmpty()) "  of $formattedTotal used" else "  calculating",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = scheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-            }
-            Spacer(Modifier.height(12.dp))
-            LinearProgressIndicator(
-                progress = { usedRatio.coerceIn(0f, 1f) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(CircleShape),
-                color = scheme.tertiary,
-                trackColor = scheme.surfaceVariant,
-                gapSize = 0.dp,
-                drawStopIndicator = {}
-            )
-            Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(
-                        R.string.files_storage_line,
-                        formattedFree.ifEmpty { "—" },
-                        usedPercentage
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = scheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f)
-                )
-                if (reclaimableBytes > 0 && onClean != null) {
-                    TextButton(onClick = onClean, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)) {
-                        Text(
-                            text = stringResource(R.string.files_free, StorageVolume.formatBytes(reclaimableBytes)),
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
-                } else {
-                    TextButton(onClick = onInsights, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)) {
-                        Text(stringResource(R.string.files_insights), style = MaterialTheme.typography.labelLarge)
-                    }
+            LinearProgressIndicator(progress = { usedRatio.coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(4.dp).clip(CircleShape),
+                color = scheme.primary, trackColor = scheme.surfaceVariant, gapSize = 0.dp, drawStopIndicator = {})
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onInsights) { Text(stringResource(R.string.files_insights)) }
+                if (reclaimableBytes > 0 && onClean != null) TextButton(onClick = onClean) {
+                    Text(stringResource(R.string.files_free, StorageVolume.formatBytes(reclaimableBytes)))
                 }
             }
         }
@@ -357,7 +304,7 @@ fun FileRow(
             IconButton(onClick = onMoreClick, modifier = Modifier.size(48.dp)) {
                 Icon(
                     imageVector = Icons.Outlined.MoreVert,
-                    contentDescription = stringResource(R.string.cd_more),
+                    contentDescription = stringResource(R.string.more_options_for_file, item.name),
                     tint = scheme.onSurfaceVariant
                 )
             }
