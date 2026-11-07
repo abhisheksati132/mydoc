@@ -5,6 +5,12 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+### Changed
+
+- Home groups Browse files and preview controls together and lets them wrap below the recent-files heading.
+- File browsing shows the active sort field and direction in a labelled control with its menu anchored beside it.
+- Tools section headings align with cards and the first section has tighter spacing below the category selector.
+
 ### Fixed
 
 - Folder and category list/grid positions survive recreation while newly opened sources start at the top.

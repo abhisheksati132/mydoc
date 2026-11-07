@@ -287,16 +287,16 @@ fun ToolsScreen(
                 val groupsToDisplay = selectedGroup?.let { listOf(it) }
                     ?: ToolGroup.entries.filter { !groupedTools[it].isNullOrEmpty() }
 
-                groupsToDisplay.forEach { group ->
+                groupsToDisplay.forEachIndexed { groupIndex, group ->
                     val toolsInGroup = groupedTools[group].orEmpty()
-                    if (toolsInGroup.isEmpty()) return@forEach
+                    if (toolsInGroup.isEmpty()) return@forEachIndexed
 
                     item(key = "header_${group.name}") {
                         Text(
                             text = stringResource(friendlyHeader(group)),
                             style = AppTheme.typography.heading,
                             color = colors.inkPrimary,
-                            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 8.dp)
+                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = if (groupIndex == 0) 8.dp else 24.dp, bottom = 8.dp)
                         )
                     }
 

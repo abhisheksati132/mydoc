@@ -113,6 +113,8 @@
     <string name="empty_try_search">Try a different search term.</string>
     <string name="empty_no_files_in_documents">No %1$s files found in your documents.</string>
     <string name="empty_create_hint">Create a folder or add files using the button below.</string>
+    <string name="sort_ascending">Ascending</string>
+    <string name="sort_descending">Descending</string>
     <string name="sort_name">Name</string>
     <string name="sort_date_modified">Date modified</string>
     <string name="sort_size">Size</string>

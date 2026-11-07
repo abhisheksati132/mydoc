@@ -37,3 +37,11 @@ This batch covers Home section controls, Settings heading hierarchy and Tools ca
 - Rendered Home and Tools checked with normal and 2x system text; the category menu exposes all seven choices at 2x. Settings Appearance checked in light theme with the duplicated heading removed. Dark/AMOLED Home and Tools also inspected.
 - Final debug build, Android test build, unit tests (466 passing) and lint passed with zero lint errors. Logs: `app/build/detail-final-checks.log` and `app/build/detail-device-tests.log` (ignored local artifacts).
 - Physical-device frame timing, full TalkBack traversal, keyboard navigation, translated layouts and remaining screens still need their dedicated passes.
+
+## Layout refinement — 2026-11-07
+
+- Home Recent files: treat Browse and the preview/list switch as one trailing action group. At larger text they wrap together below the heading. The heading is exposed to accessibility services.
+- Directory controls: replace the empty leading space with the active sort field and direction; anchor the sort menu to that control and keep the view switch at the trailing edge. Ascending/descending state has a localized accessible description.
+- Tools: align section headings with the 16 dp card edge; reduce excess space before the first group while retaining separation between later groups.
+
+Verification: debug and Android test APK builds, 485 unit tests and lint passed (zero errors). Eleven focused API 35 device tests passed, including grouped actions at 288 dp with 2x text in LTR and RTL, sorting/view callbacks, existing core UX and list/grid restoration. Rendered Home, Documents and Tools checked in light mode; Home and Documents checked in dark/AMOLED with 2x text, including the longer Date modified label. Evidence is in ignored `app/build/layout-*.png` files and `layout-refinement-*.log` logs. Physical-device performance, long-string locales and exhaustive keyboard/TalkBack traversal were not verified. This is a focused layout pass, not a full redesign of every screen.

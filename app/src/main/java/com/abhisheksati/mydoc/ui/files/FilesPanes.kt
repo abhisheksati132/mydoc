@@ -56,6 +56,10 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
@@ -449,24 +453,28 @@ fun DirectoryPane(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 20.dp, end = 8.dp, top = 0.dp, bottom = 0.dp),
+                .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Spacer(modifier = Modifier.weight(1f))
-            IconButton(onClick = { sortMenuOpen = true }, modifier = Modifier.size(48.dp)) {
-                Icon(Icons.AutoMirrored.Outlined.Sort, contentDescription = stringResource(R.string.cd_sort), tint = scheme.onSurfaceVariant)
-            }
-            IconButton(
-                onClick = onToggleView,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Icon(
-                    imageVector = if (uiState.isGridView) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
-                    contentDescription = stringResource(if (uiState.isGridView) R.string.menu_list_view else R.string.menu_grid_view),
-                    tint = scheme.onSurfaceVariant
-                )
-            }
-            Box {
+            val sortDescription = stringResource(R.string.cd_sort)
+            val directionDescription = stringResource(if (uiState.sortOrder.isAscending) R.string.sort_ascending else R.string.sort_descending)
+            Box(Modifier.weight(1f)) {
+                TextButton(
+                    onClick = { sortMenuOpen = true },
+                    modifier = Modifier.semantics {
+                        contentDescription = sortDescription
+                        stateDescription = directionDescription
+                    }
+                ) {
+                    Icon(Icons.AutoMirrored.Outlined.Sort, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(sortLabel(uiState.sortOrder.field), modifier = Modifier.weight(1f, fill = false))
+                    Spacer(Modifier.width(8.dp))
+                    Icon(
+                        if (uiState.sortOrder.isAscending) Icons.Outlined.ArrowUpward else Icons.Outlined.ArrowDownward,
+                        contentDescription = null, modifier = Modifier.size(16.dp)
+                    )
+                }
                 AppDropdownMenu(expanded = sortMenuOpen, onDismissRequest = { sortMenuOpen = false }) {
                     FileSortField.entries.forEach { field ->
                         val active = uiState.sortOrder.field == field
@@ -492,6 +500,13 @@ fun DirectoryPane(
                         )
                     }
                 }
+            }
+            IconButton(onClick = onToggleView, modifier = Modifier.size(48.dp)) {
+                Icon(
+                    imageVector = if (uiState.isGridView) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
+                    contentDescription = stringResource(if (uiState.isGridView) R.string.menu_list_view else R.string.menu_grid_view),
+                    tint = scheme.onSurfaceVariant
+                )
             }
         }
 

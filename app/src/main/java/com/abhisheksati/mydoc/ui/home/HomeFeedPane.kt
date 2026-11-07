@@ -319,29 +319,13 @@ fun HomeFeedPane(
             // RECENT DOCUMENTS SECTION
             if (remainingRecents.isNotEmpty()) {
                 item(key = "recents_header") {
-                    androidx.compose.foundation.layout.FlowRow(
-                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.home_recent_files_count, remainingRecents.size),
-                            modifier = Modifier.align(Alignment.CenterVertically),
-                            style = AppTheme.typography.heading,
-                            color = colors.ink
-                        )
-                        IconButton(onClick = { showRecentPreviews = !showRecentPreviews }) {
-                            Icon(
-                                if (showRecentPreviews) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
-                                contentDescription = stringResource(if (showRecentPreviews) R.string.home_show_file_list else R.string.home_show_previews),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        TextButton(onClick = onNavigateToLibrary) {
-                            Text(stringResource(R.string.home_browse_files), style = AppTheme.typography.captionStrong,
-                                color = colors.accent, maxLines = 1)
-                        }
-                    }
+                    RecentFilesHeader(
+                        count = remainingRecents.size,
+                        showPreviews = showRecentPreviews,
+                        onBrowse = onNavigateToLibrary,
+                        onTogglePreviews = { showRecentPreviews = !showRecentPreviews },
+                        modifier = Modifier.padding(top = AppSpacing.small, bottom = AppSpacing.xSmall)
+                    )
                 }
 
                 if (!showRecentPreviews) {
