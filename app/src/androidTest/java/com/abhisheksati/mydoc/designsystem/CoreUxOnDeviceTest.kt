@@ -76,4 +76,23 @@ class CoreUxOnDeviceTest {
         compose.onNodeWithText(file.name).assertIsOn().performClick()
         compose.runOnIdle { assertFalse(selected) }
     }
+
+    @Test fun indexedSearchFiltersCanBeClearedAndFolderBrowsingRemainsAvailable() {
+        val pdf = com.abhisheksati.mydoc.domain.model.LibraryItem("file:///report.pdf", "report.pdf",
+            com.abhisheksati.mydoc.domain.model.MediaKind.DOCUMENT, "application/pdf", 4096, 1L)
+        val photo = pdf.copy(uri = "file:///photo.jpg", name = "photo.jpg", kind = com.abhisheksati.mydoc.domain.model.MediaKind.PHOTO, mimeType = "image/jpeg")
+        var browsed = 0
+        var dismissed = 0
+        compose.setContent { AppDesignSystemTheme {
+            SpotlightSearchSheet(listOf(pdf, photo), {}, { dismissed++ }, onBrowseFolders = { browsed++ })
+        } }
+        compose.onNodeWithText("Media").performScrollTo().performClick()
+        compose.onNodeWithText("report.pdf").assertDoesNotExist()
+        compose.onNodeWithText("photo.jpg").assertIsDisplayed()
+        compose.onNode(hasSetTextAction()).performTextInput("missing")
+        compose.onNodeWithText("Clear search and filters").performClick()
+        compose.onNodeWithText("report.pdf").assertIsDisplayed()
+        compose.onNodeWithText("Browse files").performClick()
+        compose.runOnIdle { assertEquals(1, browsed); assertEquals(1, dismissed) }
+    }
 }

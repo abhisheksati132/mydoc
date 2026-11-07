@@ -418,7 +418,8 @@ class MainActivity : ComponentActivity() {
                                                     isSpotlightSearchOpen = false
                                                     openLibraryItem(item)
                                                 },
-                                                onDismiss = { isSpotlightSearchOpen = false }
+                                                onDismiss = { isSpotlightSearchOpen = false },
+                                                onBrowseFolders = { homeViewModel.selectTab(com.abhisheksati.mydoc.domain.model.HomeTab.LIBRARY) }
                                             )
                                         }
                                         is ActiveScreen.Photo -> {

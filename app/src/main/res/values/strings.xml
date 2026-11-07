@@ -471,9 +471,9 @@
     <string name="search_placeholder">Search documents, notes, media…</string>
     <string name="search_all_documents">All documents</string>
     <string name="search_results">Results</string>
-    <string name="search_no_docs">No documents found</string>
+    <string name="search_no_docs">No indexed files yet</string>
     <string name="search_no_matches">No matches for \"%1$s\"</string>
-    <string name="search_docs_hint">Documents in your storage will appear here</string>
+    <string name="search_docs_hint">Browse folders to find files outside the index.</string>
     <string name="search_typo_hint">Check for typos or try a different term</string>
     <string name="perm_required_title">Storage access required</string>
     <string name="perm_required_message">Grant All Files Access to browse and manage files across internal storage and SD cards.</string>
@@ -681,7 +681,7 @@
     <string name="cd_lock_screen">Lock</string>
     <string name="cd_back_10s">-10s</string>
     <string name="cd_forward_10s">+10s</string>
-    <string name="tools_subtitle">%1$d tools · 6 tasks</string>
+    <string name="tools_subtitle">%1$d tools · 6 categories</string>
     <string name="tools_none_found">No tools found</string>
     <string name="tools_none_hint">Try a different action, or clear the filter.</string>
     <string name="cd_search_tools">Search tools</string>
@@ -910,7 +910,7 @@
     <string name="saved_search_no_limit">Any</string>
     <string name="folder_view_reset">Reset folder view</string>
     <string name="folder_view_failed">Could not save this folder view. Try again.</string>
-    <string name="workspace_tools">Explorer tools</string>
+    <string name="workspace_tools">Tabs and workspace</string>
     <string name="zip_selection_help">Tap a file to open a temporary copy. Check files or folders to extract; selecting a folder includes everything inside it.</string>
     <string name="zip_select_entry">Select ZIP entry: %1$s</string>
     <string name="zip_clear_selection">Clear selection (%1$d)</string>
@@ -930,4 +930,15 @@
     <string name="home_show_file_list">Show file list</string>
     <string name="storage_capacity_summary">%1$s free of %2$s</string>
     <string name="files_browse_subtitle">Folders and file types</string>
+    <string name="search_name_or_type">Name or file type</string>
+    <string name="search_indexed_files">Indexed files</string>
+    <string name="search_index_scope_hint">Documents and media indexed on this device. Browse folders to find other files.</string>
+    <string name="search_folder_scope">This folder: %1$s</string>
+    <string name="search_category_scope">This category: %1$s</string>
+    <string name="search_clear_filters">Clear search and filters</string>
+    <string name="clipboard_destination">Paste into %1$s</string>
+    <plurals name="search_result_count">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
 </resources>

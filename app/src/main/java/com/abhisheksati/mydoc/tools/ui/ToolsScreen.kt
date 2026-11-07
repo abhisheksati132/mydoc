@@ -114,6 +114,7 @@ private fun friendlyHeader(group: ToolGroup): Int = when (group) {
  * - Seal teal accent indicators.
  * - Tactile paper card tool rows with monospace metadata.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun ToolsScreen(
     viewModel: ToolsViewModel,
@@ -230,11 +231,8 @@ fun ToolsScreen(
         }
 
         // Horizontal Category Filter Pills
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 4.dp),
+        androidx.compose.foundation.layout.FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             toolCategories.forEach { category ->
@@ -392,7 +390,7 @@ private fun ToolRow(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(tool.titleRes),
-                    style = AppTheme.typography.titleSmall,
+                    style = AppTheme.typography.bodyLargeStrong,
                     color = colors.inkPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -401,7 +399,7 @@ private fun ToolRow(
                     text = stringResource(tool.descriptionRes),
                     style = AppTheme.typography.caption,
                     color = colors.inkMuted,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }

@@ -31,6 +31,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -61,25 +63,18 @@ import com.abhisheksati.mydoc.ui.files.LibraryThumbnail
  * Document search across the library, on the same Material 3 surface language as
  * the Files screen: tonal field, filter chips and thumbnail rows.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun SpotlightSearchSheet(
     items: List<LibraryItem>,
     onItemClick: (LibraryItem) -> Unit,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onBrowseFolders: (() -> Unit)? = null
 ) {
-    val searchLabel = stringResource(R.string.search_files_label)
     val scheme = MaterialTheme.colorScheme
-    val focusRequester = remember { FocusRequester() }
-    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
-
     var query by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") }
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-        keyboardController?.show()
-    }
 
     val filteredItems = remember(items, query, selectedFilter) {
         val q = query.trim().lowercase()
@@ -104,71 +99,14 @@ fun SpotlightSearchSheet(
             .navigationBarsPadding()
             .imePadding()
     ) {
-        AppTopBar(
-            title = "",
-            onBack = onDismiss,
-            containerColor = scheme.background,
-            titleContent = {
-                Surface(
-                    shape = CircleShape,
-                    color = scheme.surfaceContainerHigh,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 14.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Search,
-                            contentDescription = null,
-                            tint = scheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
-                        )
-
-                        Spacer(modifier = Modifier.width(10.dp))
-
-                        Box(modifier = Modifier.weight(1f)) {
-                            if (query.isEmpty()) {
-                                Text(
-                                    text = stringResource(R.string.search_placeholder),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = scheme.onSurfaceVariant
-                                )
-                            }
-                            BasicTextField(
-                                value = query,
-                                onValueChange = { query = it },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .focusRequester(focusRequester)
-                                    .semantics { contentDescription = searchLabel },
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(color = scheme.onSurface),
-                                singleLine = true,
-                                cursorBrush = SolidColor(scheme.primary)
-                            )
-                        }
-
-                        if (query.isNotEmpty()) {
-                            IconButton(
-                                onClick = { query = "" },
-                                modifier = Modifier.size(AppSpacing.minTouchTarget)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Close,
-                                    contentDescription = stringResource(R.string.action_clear),
-                                    tint = scheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        )
+        AppTopBar(title = stringResource(R.string.search_indexed_files), onBack = onDismiss,
+            containerColor = scheme.background, isGlass = false)
+        Text(stringResource(R.string.search_index_scope_hint), style = MaterialTheme.typography.bodySmall,
+            color = scheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
+        FileSearchField(query, { query = it }, Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+        if (onBrowseFolders != null) TextButton(onClick = { onDismiss(); onBrowseFolders() }, modifier = Modifier.padding(horizontal = 8.dp)) {
+            Text(stringResource(R.string.home_browse_files))
+        }
 
         val filterPills = listOf("All", "PDF", "Word", "Excel", "PPT", "Media")
         Row(
@@ -187,20 +125,17 @@ fun SpotlightSearchSheet(
             }
         }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        androidx.compose.foundation.layout.FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = stringResource(if (query.isEmpty()) R.string.search_all_documents else R.string.search_results),
+                text = stringResource(R.string.search_results),
                 style = MaterialTheme.typography.titleSmall,
                 color = scheme.onSurface
             )
             Text(
-                text = if (filteredItems.size == 1) "1 item" else "${filteredItems.size} items",
+                text = pluralStringResource(R.plurals.search_result_count, filteredItems.size, filteredItems.size),
                 style = MaterialTheme.typography.labelMedium,
                 color = scheme.onSurfaceVariant
             )
@@ -209,14 +144,16 @@ fun SpotlightSearchSheet(
         if (filteredItems.isEmpty()) {
             AppEmptyState(
                 title = stringResource(
-                        if (query.isEmpty()) R.string.search_no_docs
-                        else R.string.search_no_matches, query
+                        if (items.isEmpty()) R.string.search_no_docs
+                        else R.string.search_no_matches, query.ifBlank { selectedFilter }
                     ),
-                message = if (query.isEmpty()) {
+                message = if (items.isEmpty()) {
                     stringResource(R.string.search_docs_hint)
                 } else {
                     stringResource(R.string.search_typo_hint)
-                }
+                },
+                actionLabel = if (query.isNotEmpty() || selectedFilter != "All") stringResource(R.string.search_clear_filters) else null,
+                onAction = { query = ""; selectedFilter = "All" }
             )
         } else {
             LazyColumn(
@@ -247,10 +184,10 @@ fun SpotlightSearchSheet(
                         )
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = formatMiddleTruncated(item.name, 36),
+                                text = item.name,
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = scheme.onSurface,
-                                maxLines = 1,
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Spacer(modifier = Modifier.height(2.dp))

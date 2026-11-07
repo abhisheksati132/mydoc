@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.files
 
+import androidx.compose.material.icons.outlined.Tab
 import com.abhisheksati.mydoc.designsystem.components.showMessage
 import kotlinx.coroutines.launch
 import com.abhisheksati.mydoc.designsystem.components.LocalFloatingChromeInset
@@ -343,17 +344,16 @@ fun FilesPaneScreen(
                         )
 
                         if (isSearchActive) {
-                            OutlinedTextField(
-                                value = uiState.searchQuery,
-                                onValueChange = { viewModel.setSearchQuery(it) },
-                                placeholder = { Text(stringResource(R.string.files_search_this_folder)) },
-                                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
-                                singleLine = true,
-                                shape = AppRadius.pillShape,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                            com.abhisheksati.mydoc.ui.search.FileSearchField(
+                                query = uiState.searchQuery, onQueryChange = viewModel::setSearchQuery,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                             )
+                            Text(stringResource(if (isBrowsingFolder) R.string.search_folder_scope else R.string.search_category_scope, title),
+                                modifier = Modifier.padding(horizontal = 20.dp), style = MaterialTheme.typography.labelMedium)
+                            androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+                                androidx.compose.material3.TextButton(onClick = { showAdvancedSearch = true }) { Text(stringResource(R.string.explorer_advanced_search)) }
+                                androidx.compose.material3.TextButton(onClick = onSpotlightSearch) { Text(stringResource(R.string.search_indexed_files)) }
+                            }
                         }
 
                         if (uiState.advancedSearch != null) {
@@ -483,6 +483,7 @@ fun FilesPaneScreen(
                 if (isBrowsingFolder) {
                     FileManagerClipboardBar(
                         clipboardState = uiState.clipboardState,
+                        destinationName = title,
                         onHeightChanged = { clipboardHeight = it },
                         onCancel = { viewModel.cancelClipboard() },
                         onPaste = { viewModel.pasteClipboard(); onShowTransfers() },
@@ -617,11 +618,21 @@ private fun FilesHeader(
             }
 
             Box {
+                var workspaceOpen by remember { mutableStateOf(false) }
+                IconButton(onClick = { workspaceOpen = true }) {
+                    Icon(Icons.Outlined.Tab, contentDescription = stringResource(R.string.workspace_tools), tint = scheme.onSurface)
+                }
+                AppDropdownMenu(expanded = workspaceOpen, onDismissRequest = { workspaceOpen = false }) {
+                    workspaceMenu { workspaceOpen = false }
+                    HorizontalDivider()
+                    DropdownMenuItem(text = { Text(stringResource(R.string.cd_settings)) }, onClick = { workspaceOpen = false; onSettingsClick() })
+                }
+            }
+            if (isInsideFolder) Box {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.cd_more_options), tint = scheme.onSurface)
                 }
                 AppDropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    workspaceMenu { menuOpen = false }
                     if (isInsideFolder) {
                     HorizontalDivider()
                     if (uiState.isBrowsingStorage && uiState.activeCategory == null) DropdownMenuItem(
@@ -698,7 +709,7 @@ private fun FilesHeader(
                 }
             }
 
-            IconButton(onClick = onSettingsClick) {
+            if (!isInsideFolder) IconButton(onClick = onSettingsClick) {
                 Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.cd_settings), tint = scheme.onSurface)
             }
         }

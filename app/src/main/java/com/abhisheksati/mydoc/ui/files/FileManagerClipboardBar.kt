@@ -45,7 +45,8 @@ fun FileManagerClipboardBar(
     modifier: Modifier = Modifier,
     isTransferring: Boolean = false,
     onShowTransfers: () -> Unit = {},
-    onHeightChanged: (Int) -> Unit = {}
+    onHeightChanged: (Int) -> Unit = {},
+    destinationName: String? = null
 ) {
     val scheme = MaterialTheme.colorScheme
 
@@ -88,7 +89,9 @@ fun FileManagerClipboardBar(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = stringResource(if (isTransferring) R.string.transfers_details_hint else R.string.clipboard_paste_hint),
+                            text = if (isTransferring) stringResource(R.string.transfers_details_hint)
+                                else destinationName?.let { stringResource(R.string.clipboard_destination, it) }
+                                    ?: stringResource(R.string.clipboard_paste_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = scheme.onSurfaceVariant,
                             maxLines = 1,
