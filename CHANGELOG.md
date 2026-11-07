@@ -5,6 +5,11 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+### Fixed
+
+- Folder and category list/grid positions survive recreation while newly opened sources start at the top.
+- Delayed Up navigation no longer replaces a newer folder or category request.
+
 ## [1.9.4] — 2026-11-07
 
 ### Fixed

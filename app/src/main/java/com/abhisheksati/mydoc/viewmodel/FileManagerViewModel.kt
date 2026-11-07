@@ -259,9 +259,11 @@ class FileManagerViewModel(
 
         val parent = _uiState.value.currentDirectory.parentFile
         if (parent != null) {
+            val generation = ++listRequestGeneration
             viewModelScope.launch {
                 // Statting the parent here put disk IO on the main thread inside the back gesture.
                 val accessible = withContext(ioDispatcher) { parent.exists() && parent.canRead() }
+                if (generation != listRequestGeneration) return@launch
                 if (accessible) loadDirectory(parent, addToHistory = false)
                 else if (_uiState.value.isBrowsingStorage) exitToHub()
             }

@@ -94,6 +94,18 @@ class FileManagerViewModelTest {
         tempDir.deleteRecursively()
     }
 
+    @Test fun pendingUpDoesNotOverrideANewerCategory() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        val child = File(tempDir, "child").apply { mkdirs() }
+        viewModel.loadDirectory(child, addToHistory = false)
+        advanceUntilIdle()
+        assertTrue(viewModel.navigateUp())
+        viewModel.selectCategory(FileCategory.IMAGES)
+        advanceUntilIdle()
+        assertEquals(FileCategory.IMAGES, viewModel.uiState.value.activeCategory)
+    }
+
     @Test fun refreshKeepsActiveCategory() = runTest(testDispatcher) {
         createViewModel()
         advanceUntilIdle()

@@ -22,8 +22,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -56,7 +57,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -420,13 +421,15 @@ fun DirectoryPane(
     // Held by the view model, not here: this pane leaves composition whenever a document opens,
     // and a filter kept in remember came back as ALL after pressing back.
     val selectedDocFilter = uiState.docTypeFilter
-    val listState = rememberLazyListState()
-    val gridState = rememberLazyGridState()
-    // A new folder/category/search starts at the top; the old scroll offset pointed into unrelated rows.
-    LaunchedEffect(uiState.currentDirectory, uiState.activeCategory, uiState.advancedSearch) {
-        listState.scrollToItem(0)
-        gridState.scrollToItem(0)
-    }
+    // Input changes create fresh scroll state; recreation restores the current source's position.
+    val listState = rememberSaveable(
+        uiState.currentDirectory.absolutePath, uiState.activeCategory, uiState.advancedSearch,
+        saver = LazyListState.Saver
+    ) { LazyListState() }
+    val gridState = rememberSaveable(
+        uiState.currentDirectory.absolutePath, uiState.activeCategory, uiState.advancedSearch,
+        saver = LazyGridState.Saver
+    ) { LazyGridState() }
     if (glassMotion != null) {
         if (uiState.isGridView) TrackGlassMotion(gridState, glassMotion)
         else TrackGlassMotion(listState, glassMotion)
