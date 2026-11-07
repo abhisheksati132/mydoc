@@ -6,11 +6,11 @@ Security fixes and updates are provided for the following releases:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 1.7.x   | :white_check_mark: |
-| < 1.7.0 | :x:                |
+| 1.9.x   | :white_check_mark: |
+| < 1.9.0 | :x:                |
 
-Current version: **1.7.6** (`versionCode` 178), produced by the tag-triggered release workflow. The
-1.6.x and 1.5.x lines are not maintained: fixes land on the current build only, so the security
+Current version: **1.9.4** (`versionCode` 184), produced by the tag-triggered release workflow. Older
+lines are not maintained: fixes land on the current build only, so the security
 behaviour described below is the behaviour of the latest release, not of an older APK you may still
 have installed.
 

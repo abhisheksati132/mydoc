@@ -5,6 +5,18 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+## [1.9.4] — 2026-11-07
+
+### Fixed
+
+- Recent files no longer keep selections for files that have left the list, and switching Home tabs settles cleanly on a page instead of freezing between pages — including after rotation mid-scroll.
+- Pull-to-refresh keeps the current file category; opening a folder starts at the top; filter chip counts survive refreshes.
+- Moving or renaming within the same storage volume no longer fails a free-space check, and case-only renames are accepted without false name conflicts.
+- Folder details no longer show stale replies from a previous folder, and folder statistics no longer jank the list while computing.
+- Settings and Search states, open dialogs and the text typed into them survive rotation and other recreation.
+- Spotlight's Media filter covers every supported media extension, and Tools search only takes keyboard focus on the visible tab.
+- Thumbnails refresh when a file's content changes.
+
 ## [1.9.3] — 2026-11-07
 
 ### Changed
