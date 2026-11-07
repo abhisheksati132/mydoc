@@ -921,4 +921,7 @@
     <string name="zip_member_failed">Could not prepare these ZIP entries. Check storage access and free space. Damaged, encrypted, unsupported or oversized content cannot be opened. Try extracting a smaller selection.</string>
     <string name="zip_recovery">Extraction could not finish and cleanup was incomplete. Check this temporary folder before removing anything: %1$s</string>
     <string name="zip_working">Working on files…</string>
+    <string name="search_files_label">Search files</string>
+    <string name="home_recent_files_count">Recent files (%1$d)</string>
+    <string name="home_browse_files">Browse files</string>
 </resources>

@@ -160,8 +160,7 @@ fun SettingToggleRow(
             Text(
                 text = subtitle,
                 style = typography.bodyMedium,
-                color = scheme.onSurfaceVariant,
-                maxLines = 2
+                color = scheme.onSurfaceVariant
             )
         }
         Switch(

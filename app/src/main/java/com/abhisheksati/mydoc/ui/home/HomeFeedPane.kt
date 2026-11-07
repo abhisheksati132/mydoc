@@ -98,6 +98,7 @@ import dev.chrisbanes.haze.hazeSource
  * - 2-column Recent Documents paper cards grid with monospace metadata
  * - Curated first-run state with common quick actions
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun HomeFeedPane(
     continueItems: List<LibraryItem>,
@@ -211,7 +212,7 @@ fun HomeFeedPane(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Brand lockup: Seal + wordmark, per docs/brand-identity.md §3.
+                        // Brand lockup: Seal + wordmark, per docs/brand-identity.md Â§3.
                         SealMark(modifier = Modifier.size(30.dp))
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
@@ -317,42 +318,19 @@ fun HomeFeedPane(
             // RECENT DOCUMENTS SECTION
             if (remainingRecents.isNotEmpty()) {
                 item(key = "recents_header") {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 12.dp, bottom = 4.dp),
+                    androidx.compose.foundation.layout.FlowRow(
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.home_recent_documents),
-                                style = AppTheme.typography.heading,
-                                color = colors.ink
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(colors.surfaceMuted)
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = "${remainingRecents.size}",
-                                    style = AppTheme.typography.metadata,
-                                    color = colors.inkSecondary
-                                )
-                            }
-                        }
-
+                        Text(
+                            text = stringResource(R.string.home_recent_files_count, remainingRecents.size),
+                            style = AppTheme.typography.heading,
+                            color = colors.ink
+                        )
                         TextButton(onClick = onNavigateToLibrary) {
-                            Text(
-                                text = stringResource(R.string.home_view_all),
-                                style = AppTheme.typography.captionStrong,
-                                color = colors.accent
-                            )
+                            Text(stringResource(R.string.home_browse_files), style = AppTheme.typography.captionStrong,
+                                color = colors.accent, maxLines = 1)
                         }
                     }
                 }
@@ -488,7 +466,7 @@ private fun ContinueReadingHeroCard(
                             color = colors.inkSecondary
                         )
                         Text(
-                            text = "•",
+                            text = "â€¢",
                             style = AppTheme.typography.metadata,
                             color = colors.cardBorder
                         )

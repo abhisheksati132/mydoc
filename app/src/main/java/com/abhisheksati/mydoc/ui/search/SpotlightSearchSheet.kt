@@ -37,6 +37,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -66,6 +68,7 @@ fun SpotlightSearchSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val searchLabel = stringResource(R.string.search_files_label)
     val scheme = MaterialTheme.colorScheme
     val focusRequester = remember { FocusRequester() }
     val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
@@ -141,7 +144,8 @@ fun SpotlightSearchSheet(
                                 onValueChange = { query = it },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .focusRequester(focusRequester),
+                                    .focusRequester(focusRequester)
+                                    .semantics { contentDescription = searchLabel },
                                 textStyle = MaterialTheme.typography.bodyMedium.copy(color = scheme.onSurface),
                                 singleLine = true,
                                 cursorBrush = SolidColor(scheme.primary)
