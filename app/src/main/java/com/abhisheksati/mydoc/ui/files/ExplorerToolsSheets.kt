@@ -24,7 +24,6 @@ import com.abhisheksati.mydoc.data.local.ExplorerArchive
 import com.abhisheksati.mydoc.data.local.ExplorerFolderInsights
 import com.abhisheksati.mydoc.data.local.ExplorerTransfers
 import com.abhisheksati.mydoc.domain.model.*
-import com.abhisheksati.mydoc.util.UserMessages
 import kotlinx.coroutines.CancellationException
 import java.io.File
 
@@ -164,7 +163,7 @@ fun ExplorerFolderInsightsSheet(directory: File, onDismiss: () -> Unit, onOpenFo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExplorerTransfersSheet(center: ExplorerTransfers, onDismiss: () -> Unit) {
+fun ExplorerTransfersSheet(center: ExplorerTransfers, onOpenDestination: ((File) -> Unit)? = null, onDismiss: () -> Unit) {
     val transfers by center.state.collectAsState()
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(0.8f).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -175,35 +174,7 @@ fun ExplorerTransfersSheet(center: ExplorerTransfers, onDismiss: () -> Unit) {
             }
             if (transfers.isEmpty()) item { Text(stringResource(R.string.transfers_empty)) }
             items(transfers, key = { it.id }) { transfer ->
-                val failureMessages = remember(transfer.failures) {
-                    transfer.failures.map { failure -> failure.name to UserMessages.actionFailed(
-                        if (transfer.operation == ClipboardOperation.COPY) R.string.transfers_copy else R.string.transfers_move, failure.cause) }
-                }
-                val status = when (transfer.status) {
-                    TransferStatus.RUNNING -> R.string.transfers_running
-                    TransferStatus.STOPPING -> R.string.transfers_stopping
-                    TransferStatus.COMPLETED -> R.string.transfers_completed
-                    TransferStatus.PARTIAL -> R.string.transfers_partial
-                    TransferStatus.FAILED -> R.string.transfers_failed
-                    TransferStatus.CANCELLED -> R.string.transfers_cancelled
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(stringResource(if (transfer.operation == ClipboardOperation.COPY) R.string.transfers_copy else R.string.transfers_move), style = MaterialTheme.typography.titleMedium)
-                    Text(transfer.destination.absolutePath, style = MaterialTheme.typography.bodySmall)
-                    Text(stringResource(status))
-                    Text(stringResource(R.string.transfers_counts, transfer.completed, transfer.total, transfer.failed))
-                    if (transfer.currentName.isNotEmpty()) Text(transfer.currentName, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    LinearProgressIndicator(progress = { ((transfer.completed + transfer.failed).toFloat() / transfer.total.coerceAtLeast(1)).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
-                    if (transfer.failed > 0) {
-                        failureMessages.forEach { (name, message) ->
-                            Text(name, style = MaterialTheme.typography.titleSmall)
-                            Text(message.resolve(LocalContext.current), style = MaterialTheme.typography.bodySmall)
-                        }
-                        Text(stringResource(R.string.transfers_failure_help), color = MaterialTheme.colorScheme.error)
-                    }
-                    if (transfer.running) TextButton(onClick = center::cancel, enabled = transfer.status != TransferStatus.STOPPING) { Text(stringResource(R.string.transfers_stop)) }
-                    HorizontalDivider()
-                }
+                ExplorerTransferCard(transfer, onStop = center::cancel, onOpenDestination = onOpenDestination)
             }
             item { TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.tools_close)) } }
         }

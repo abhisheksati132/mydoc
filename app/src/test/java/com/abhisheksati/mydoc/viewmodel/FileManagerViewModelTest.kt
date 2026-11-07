@@ -185,6 +185,65 @@ class FileManagerViewModelTest {
         }
     }
 
+    @Test fun completedTransferDestinationCanBeOpened() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        val destination = File(tempDir, "destination").apply { mkdirs() }
+        viewModel.openTransferDestination(destination)
+        advanceUntilIdle()
+        assertEquals(destination, viewModel.uiState.value.currentDirectory)
+        assertTrue(viewModel.uiState.value.isBrowsingStorage)
+    }
+
+    @Test fun missingDestinationKeepsTheCurrentViewAndSelection() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        val selected = File(tempDir, "report.pdf")
+        viewModel.toggleSelection(selected)
+        viewModel.setSearchQuery("report")
+        viewModel.openTransferDestination(File(tempDir, "missing"))
+        advanceUntilIdle()
+        assertEquals(tempDir, viewModel.uiState.value.currentDirectory)
+        assertEquals("report", viewModel.uiState.value.searchQuery)
+        assertEquals(setOf(selected), viewModel.uiState.value.selectedFiles)
+        assertEquals(com.abhisheksati.mydoc.util.UiText.Res(R.string.transfers_destination_missing), viewModel.uiState.value.userMessage)
+    }
+
+    @Test fun newerNavigationWinsOverPendingTransferDestination() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        val destination = File(tempDir, "destination").apply { mkdirs() }
+        viewModel.openTransferDestination(destination)
+        viewModel.selectCategory(FileCategory.IMAGES)
+        advanceUntilIdle()
+        assertEquals(FileCategory.IMAGES, viewModel.uiState.value.activeCategory)
+    }
+
+    @Test fun returningToTheHubCancelsAPendingDestinationFromACategory() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        viewModel.selectCategory(FileCategory.IMAGES)
+        advanceUntilIdle()
+        val destination = File(tempDir, "destination").apply { mkdirs() }
+        viewModel.openTransferDestination(destination)
+        viewModel.selectCategory(null)
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isBrowsingStorage)
+        assertEquals(null, viewModel.uiState.value.activeCategory)
+        assertEquals(tempDir, viewModel.uiState.value.currentDirectory)
+    }
+
+    @Test fun newerDestinationRequestReplacesAnOlderOne() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+        val first = File(tempDir, "first").apply { mkdirs() }
+        val second = File(tempDir, "second").apply { mkdirs() }
+        viewModel.openTransferDestination(first)
+        viewModel.openTransferDestination(second)
+        advanceUntilIdle()
+        assertEquals(second, viewModel.uiState.value.currentDirectory)
+    }
+
     @Test fun refreshKeepsActiveCategory() = runTest(testDispatcher) {
         createViewModel()
         advanceUntilIdle()

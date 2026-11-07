@@ -107,7 +107,7 @@ class FileManagerViewModel(
     /** Bumped by every inspection and by dismissal; a slow walk/hash must not reopen a closed dialog. */
     private var inspectGeneration = 0
     private var advancedSearchJob: Job? = null
-    private var savedSearchOpenJob: Job? = null
+    private var checkedNavigationJob: Job? = null
     private var categorySortOrder = FileSortOrder()
     private var archivePreviewJob: Job? = null
 
@@ -418,20 +418,30 @@ class FileManagerViewModel(
 
     fun openSavedSearch(id: String): Job? {
         val saved = explorerPreferences.savedSearches.value.firstOrNull { it.id == id } ?: return null
+        return openCheckedFolder(File(saved.directory), R.string.saved_search_folder_missing) {
+            if (explorerPreferences.savedSearches.value.any { it.id == id }) {
+                searchAdvancedAt(File(saved.directory), saved.optionsAt(), navigate = true)
+            }
+        }
+    }
+
+    fun openTransferDestination(directory: File): Job =
+        openCheckedFolder(directory, R.string.transfers_destination_missing) { startBrowsingStorage(directory) }
+
+    private fun openCheckedFolder(directory: File, missingMessage: Int, onAvailable: () -> Unit): Job {
         val generation = listRequestGeneration
-        savedSearchOpenJob?.cancel()
+        val category = _uiState.value.activeCategory
+        checkedNavigationJob?.cancel()
         return viewModelScope.launch {
-            val folder = File(saved.directory)
-            val available = withContext(ioDispatcher) { runCatching { folder.isDirectory && folder.canRead() }.getOrDefault(false) }
-            if (generation != listRequestGeneration) return@launch
+            val available = withContext(ioDispatcher) { runCatching { directory.isDirectory && directory.canRead() }.getOrDefault(false) }
+            if (generation != listRequestGeneration || category != _uiState.value.activeCategory) return@launch
             if (!available) {
-                _uiState.update { it.copy(userMessage = UiText.Res(R.string.saved_search_folder_missing)) }
+                _uiState.update { it.copy(userMessage = UiText.Res(missingMessage)) }
                 return@launch
             }
-            // The availability check must finish before replacing the current folder/search.
-            if (explorerPreferences.savedSearches.value.none { it.id == id }) return@launch
-            searchAdvancedAt(folder, saved.optionsAt(), navigate = true)
-        }.also { savedSearchOpenJob = it }
+            // Keep the current folder/search intact until the availability check succeeds.
+            onAvailable()
+        }.also { checkedNavigationJob = it }
     }
 
     private fun folderView(directory: File): FolderViewPreferences = explorerPreferences.folderView(directory)

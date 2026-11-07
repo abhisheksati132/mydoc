@@ -31,7 +31,7 @@ Tap a ZIP in Library to browse it. Tap folders to enter them, use Up or Back to 
 
 Inside a storage folder, open the menu and choose Folder insights. Tap a subfolder to browse it. The scan is a snapshot: concurrent changes can alter totals. Logical bytes exclude filesystem allocation and linked files; hidden files are included.
 
-The opposing-arrows button beside the tabs opens Transfers. Paste opens it automatically. It shows the latest 20 transfers; at most one runs at a time. Clear finished removes history, never files. Progress counts selected files/folders, not bytes inside a folder. Stop preserves completed items and leaves failed/unattempted entries on the clipboard. Inspect both sides before retrying a partial move. App-session history is not persisted; transfers do not survive process termination.
+Open Tabs and workspace → Transfers. Paste opens it automatically. It shows the latest 20 transfers; at most one runs at a time. Clear finished removes history, never files. Progress counts selected files/folders, not bytes inside a folder. Stop preserves completed items and leaves failed/unattempted entries on the clipboard. Inspect both sides before retrying a partial move. App-session history is not persisted; transfers do not survive process termination.
 
 ## Validation (2026-11-06)
 
@@ -40,3 +40,13 @@ The opposing-arrows button beside the tabs opens Transfers. Paste opens it autom
 - Debug app/test APK assembly and Android Lint passed; pre-existing warnings remain.
 - ZIP browsing and Back navigation, folder insights, and the transfer entry point were inspected on a disposable emulator. On a short landscape display, scrolling reached the archive extraction controls. No runtime crash was logged.
 - Real-device throughput, app termination during a transfer, and very large directories still need release testing.
+
+## Transfer experience refinement — 2026-11-07
+
+Transfers use individual status cards with explicit operation, status, item counts and destination. The progress bar measures processed top-level items and appears only while running/stopping; failed and stopped terminal results do not display a misleading full bar. Successful results omit the irrelevant zero-failure count. Stopped results explain reviewing source and destination before continuing. Existing detailed failure and partial-move guidance remains visible; retries are still deliberate.
+
+Open destination folder dismisses the sheet and navigates the active phone tab or focused wide-screen pane. The folder availability check runs on IO before replacing the current view. An unavailable folder leaves the current view and selection intact and explains reconnecting storage or choosing another folder. A newer navigation or folder-opening request supersedes the pending check; saved-search and transfer-destination navigation share the same checked-folder mechanism.
+
+The transfer engine, item-boundary cancellation, latest-20 in-memory history, shared clipboard ownership and repository file operations are unchanged. Clear finished removes only history. This is not background or resumable transfer support.
+
+Validation: final app/test APK builds, 495 unit tests and lint passed (zero errors). Nineteen focused API 35 tests passed: terminal progress/status recovery, a narrow 2x-text destination action, stopping behavior, existing archive/insight/real-copy checks, file actions and core UX. A disposable file was copied through the real app, checked byte-for-byte with the original, and reopened from history after navigating away. Removing that test destination produced the recovery message while preserving the current view. Fixtures were removed. Tablet pane routing is implemented but was not run on a tablet; physical-device throughput and exhaustive TalkBack/keyboard traversal remain unverified. Logs/screenshots are ignored artifacts under `app/build/transfers-*`.

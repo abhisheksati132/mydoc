@@ -7,6 +7,8 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ### Changed
 
+- Transfer history uses status cards, shows progress only while an operation is active, and explains the next step after stopping.
+- Transfers can open their destination folder in the active tab or focused pane.
 - Grid previews expose named per-file actions, and the selection bar offers direct Copy, Move and Share controls that wrap with larger text.
 - Single-file actions consistently use Move instead of Move (Cut).
 - File rows show two-line names and wrapping metadata; grid cells grow with text size and use wider preview proportions at larger text.
@@ -16,6 +18,7 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ### Fixed
 
+- Missing transfer destinations report how to recover while preserving the current view; stale destination checks cannot override newer navigation.
 - Single-file Copy/Move targets exactly the requested file without toggling it out of an existing selection or including unrelated files.
 - A busy transfer keeps its clipboard and the current selection intact and reports that a transfer is in progress.
 - Folder loading no longer exposes stale rows or presents an empty folder before loading finishes.

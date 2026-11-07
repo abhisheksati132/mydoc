@@ -69,6 +69,7 @@ fun FilesScreen(
     val savedStates = rememberSaveableStateHolder()
     var showTransfers by rememberSaveable { mutableStateOf(false) }
     var showSavedSearches by rememberSaveable { mutableStateOf(false) }
+    var transferDestinationRequest by rememberSaveable { mutableStateOf<String?>(null) }
     var savedSearchRequest by rememberSaveable { mutableStateOf<String?>(null) }
     var comparisonFolders by rememberSaveable(stateSaver = FileListSaver) { mutableStateOf<List<File>?>(null) }
     val transferHistory by viewModel.explorerClipboard.transfers.state.collectAsState()
@@ -79,6 +80,14 @@ fun FilesScreen(
                 val target = if (wide) focused else active
                 (tabs.firstOrNull { it.id == target } ?: tabs.firstOrNull { it.id == active })?.browser?.openSavedSearch(id)
                 savedSearchRequest = null
+            }
+        }
+        LaunchedEffect(transferDestinationRequest) {
+            transferDestinationRequest?.let { path ->
+                val target = if (wide) focused else active
+                (tabs.firstOrNull { it.id == target } ?: tabs.firstOrNull { it.id == active })
+                    ?.browser?.openTransferDestination(File(path))
+                transferDestinationRequest = null
             }
         }
         Column {
@@ -151,6 +160,10 @@ fun FilesScreen(
             savedSearchRequest = id
         })
     comparisonFolders?.let { folders -> ExplorerComparisonSheet(folders) { comparisonFolders = null } }
-    if (showTransfers) ExplorerTransfersSheet(viewModel.explorerClipboard.transfers) { showTransfers = false }
+    if (showTransfers) ExplorerTransfersSheet(viewModel.explorerClipboard.transfers,
+        onOpenDestination = { folder ->
+            showTransfers = false
+            transferDestinationRequest = folder.absolutePath
+        }, onDismiss = { showTransfers = false })
 
 }

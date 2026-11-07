@@ -953,4 +953,12 @@
     <string name="settings_about_summary">Version, update checks and project details</string>
     <string name="search_folder_recursive_scope">This folder and subfolders: %1$s</string>
     <string name="files_loading">Loading files…</string>
+    <string name="transfers_destination">Destination</string>
+    <string name="transfers_open_destination">Open destination folder</string>
+    <string name="transfers_destination_missing">This folder is unavailable. Reconnect its storage or choose another folder.</string>
+    <string name="transfers_continue_help">Review the source and destination before continuing with unfinished files.</string>
+    <plurals name="transfers_completed_count">
+        <item quantity="one">%1$d of %2$d item completed</item>
+        <item quantity="other">%1$d of %2$d items completed</item>
+    </plurals>
 </resources>

@@ -71,7 +71,7 @@ class ExplorerToolsOnDeviceTest {
             compose.onNodeWithText("Stopping after the current item…").assertIsDisplayed()
             release.complete(Unit)
             compose.waitUntil(10_000) { center.state.value.first().status == TransferStatus.CANCELLED }
-            compose.onNodeWithText("1 of 2 items completed · 0 failed").assertIsDisplayed()
+            compose.onNodeWithText("1 of 2 items completed").assertIsDisplayed()
             compose.onNodeWithText("Clear finished").performClick()
             compose.onNodeWithText("No transfers yet.", substring = true).assertIsDisplayed()
         } finally { release.complete(Unit); owner.cancel() }
