@@ -152,6 +152,9 @@ fun FilesPaneScreen(
     // configuration-aware, so a locale change would leave stale text in the snackbar.
     val resources = LocalResources.current
 
+    var quickPreviewPath by rememberSaveable(uiState.currentDirectory.absolutePath, uiState.activeCategory) {
+        mutableStateOf<String?>(null)
+    }
     var actionTarget by rememberSaveable(stateSaver = StorageItemPathSaver) { mutableStateOf<StorageItem?>(null) }
     var showCleaner by rememberSaveable { mutableStateOf(false) }
     var showAppManager by rememberSaveable { mutableStateOf(false) }
@@ -287,6 +290,27 @@ fun FilesPaneScreen(
         }
     }
 
+    val openStorageItem: (StorageItem) -> Unit = { item ->
+        when {
+            item.isDirectory -> viewModel.loadDirectory(item.file)
+            item.name.endsWith(".zip", ignoreCase = true) -> archiveTarget = item.file
+            item.fileType == StorageFileType.ARCHIVE -> actionTarget = item
+            item.fileType == StorageFileType.IMAGE -> {
+                val siblingImages = uiState.filteredItems
+                    .filter { it.fileType == StorageFileType.IMAGE }
+                    .map { it.file }
+                onOpenFile(item.file, siblingImages)
+            }
+            else -> onOpenFile(item.file, null)
+        }
+    }
+
+    val quickPreviewItem = quickPreviewPath?.let { path -> uiState.items.firstOrNull { it.path == path } }
+    LaunchedEffect(quickPreviewPath, quickPreviewItem, uiState.isLoading, insideBrowse, uiState.isSelectionMode) {
+        if (quickPreviewPath != null && !uiState.isLoading &&
+            (!insideBrowse || quickPreviewItem == null || uiState.isSelectionMode)) quickPreviewPath = null
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -419,20 +443,7 @@ fun FilesPaneScreen(
                             if (isInside) {
                                 DirectoryPane(
                                     uiState = uiState,
-                                    onOpenItem = { item ->
-                                        when {
-                                            item.isDirectory -> viewModel.loadDirectory(item.file)
-                                            item.name.endsWith(".zip", ignoreCase = true) -> archiveTarget = item.file
-                                            item.fileType == StorageFileType.ARCHIVE -> actionTarget = item
-                                            item.fileType == StorageFileType.IMAGE -> {
-                                                val siblingImages = uiState.filteredItems
-                                                    .filter { it.fileType == StorageFileType.IMAGE }
-                                                    .map { it.file }
-                                                onOpenFile(item.file, siblingImages)
-                                            }
-                                            else -> onOpenFile(item.file, null)
-                                        }
-                                    },
+                                    onOpenItem = openStorageItem,
                                     onMoreItem = { actionTarget = it },
                                     onToggleSelection = { viewModel.toggleSelection(it.file) },
                                     onToggleView = { viewModel.toggleViewMode() },
@@ -540,8 +551,18 @@ fun FilesPaneScreen(
         onDismissSingleItemAction = { actionTarget = null },
         onRequestRename = { renameTarget = it },
         onOpenFile = { file -> if (file.extension.equals("zip", true)) archiveTarget = file else onOpenFile(file, null) },
-        onOpenInTools = onOpenInTools
+        onOpenInTools = onOpenInTools,
+        onRequestPreview = { quickPreviewPath = it.path }
     )
+
+    if (isActive && insideBrowse && !uiState.isSelectionMode) quickPreviewItem?.let { item ->
+        FileQuickPreviewSheet(
+            item = item,
+            onDismiss = { quickPreviewPath = null },
+            onOpen = { quickPreviewPath = null; openStorageItem(item) },
+            onMore = { quickPreviewPath = null; actionTarget = item }
+        )
+    }
 
     archiveTarget?.let { archive ->
         DisposableEffect(archive) { onDispose { viewModel.cancelArchivePreview() } }

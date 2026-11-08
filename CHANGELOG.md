@@ -5,6 +5,10 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+### Added
+
+- Quick preview in file and folder action menus, with a large thumbnail, full name and location, format and metadata, plus Open and More actions. Available in list and grid views.
+
 ## [1.9.5] — 2026-11-07
 
 ### Changed

@@ -46,7 +46,8 @@ fun FileManagerOverlays(
     onDismissSingleItemAction: () -> Unit,
     onRequestRename: (File) -> Unit,
     onOpenFile: (File) -> Unit,
-    onOpenInTools: ((File) -> Unit)? = null
+    onOpenInTools: ((File) -> Unit)? = null,
+    onRequestPreview: ((StorageItem) -> Unit)? = null
 ) {
     val context = LocalContext.current
     var singleItemPendingDelete by remember { mutableStateOf<File?>(null) }
@@ -203,6 +204,12 @@ fun FileManagerOverlays(
             item = item,
             isPinned = item.isDirectory && pinnedFoldersManager.isPinned(item.file),
             onDismissRequest = onDismissSingleItemAction,
+            onPreview = onRequestPreview?.let { preview ->
+                {
+                    onDismissSingleItemAction()
+                    preview(item)
+                }
+            },
             onOpen = {
                 onDismissSingleItemAction()
                 if (item.isDirectory) {

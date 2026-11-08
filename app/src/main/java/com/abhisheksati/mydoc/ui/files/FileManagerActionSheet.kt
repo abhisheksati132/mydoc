@@ -32,6 +32,7 @@ import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -73,7 +74,8 @@ fun SingleItemActionBottomSheet(
     onDetails: () -> Unit,
     onShare: () -> Unit,
     modifier: Modifier = Modifier,
-    onOpenInTools: (() -> Unit)? = null
+    onOpenInTools: (() -> Unit)? = null,
+    onPreview: (() -> Unit)? = null
 ) {
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
@@ -148,6 +150,15 @@ fun SingleItemActionBottomSheet(
                 icon = Icons.Outlined.FolderOpen,
                 onClick = onOpen
             )
+
+            if (onPreview != null) {
+                ItemActionOption(
+                    title = stringResource(R.string.quick_preview_title),
+                    icon = Icons.Outlined.Visibility,
+                    tint = colors.accent,
+                    onClick = onPreview
+                )
+            }
 
             if (!item.isDirectory && onOpenInTools != null) {
                 ItemActionOption(
