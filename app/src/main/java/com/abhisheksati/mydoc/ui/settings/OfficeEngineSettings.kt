@@ -20,7 +20,7 @@ import com.abhisheksati.mydoc.util.LocalApkInstaller
 import kotlinx.coroutines.*
 
 @Composable
-fun OfficeEngineSettings() {
+fun OfficeEngineSettings(onInstallApk: (Uri) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val owner = LocalLifecycleOwner.current
@@ -29,17 +29,7 @@ fun OfficeEngineSettings() {
     var message by remember { mutableStateOf<String?>(null) }
     var progress by remember { mutableStateOf<Pair<Long, Long>?>(null) }
     var download by remember { mutableStateOf<Job?>(null) }
-    var pending by rememberSaveableUri()
     val installer = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        val uri = pending
-        pending = null
-        if (uri != null && context.packageManager.canRequestPackageInstalls()) {
-            runCatching { installer.launch(Intent(Intent.ACTION_VIEW).setDataAndType(uri, LocalApkInstaller.MIME)
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION).apply { clipData = android.content.ClipData.newRawUri("Office engine", uri) }) }
-                .onFailure { message = "Unable to open the package installer." }
-        }
-    }
     DisposableEffect(owner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -80,13 +70,7 @@ fun OfficeEngineSettings() {
                         val file = OfficeEngineManager.download(context) { done, total -> scope.launch { progress = done to total } }
                         val uri = LocalApkInstaller.stage(context, Uri.fromFile(file))
                         withContext(Dispatchers.IO) { file.delete() }
-                        if (context.packageManager.canRequestPackageInstalls()) {
-                            installer.launch(Intent(Intent.ACTION_VIEW).setDataAndType(uri, LocalApkInstaller.MIME)
-                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION).apply { clipData = android.content.ClipData.newRawUri("Office engine", uri) })
-                        } else {
-                            pending = uri
-                            permission.launch(Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}")))
-                        }
+                        onInstallApk(uri)
                     } catch (cancelled: CancellationException) { throw cancelled }
                     catch (error: Exception) { message = error.message ?: "Unable to download Office support. Try again." }
                     finally { progress = null; download = null }
@@ -96,7 +80,3 @@ fun OfficeEngineSettings() {
     }
 }
 
-@Composable
-private fun rememberSaveableUri(): MutableState<Uri?> = androidx.compose.runtime.saveable.rememberSaveable(
-    stateSaver = androidx.compose.runtime.saveable.Saver<Uri?, String>(save = { it?.toString() ?: "" }, restore = { it.takeIf(String::isNotEmpty)?.let(Uri::parse) })
-) { mutableStateOf(null) }

@@ -33,6 +33,8 @@ fun FirstRunGuide(onExplore: ()->Unit) {
 @Composable
 fun OnboardingGuide(onDone: (Boolean)->Unit) {
     var page by rememberSaveable { mutableIntStateOf(0) }
+    val scrollState = rememberScrollState()
+    LaunchedEffect(page) { scrollState.scrollTo(0) }
     val titles=listOf("Your files. Your choice.","Find what is inside.","Organise without losing control.")
     val bodies=listOf(
         "Read, browse and organise in one place. Start with a single file, or choose the folders you want MyDoc to access.",
@@ -55,7 +57,7 @@ fun OnboardingGuide(onDone: (Boolean)->Unit) {
                     Text("MYDOC",style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.primary)
                     TextButton(onClick={onDone(false)}) { Text("Skip") }
                 }
-                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(22.dp)) {
+                Column(Modifier.weight(1f).verticalScroll(scrollState),verticalArrangement=Arrangement.spacedBy(22.dp)) {
                 Spacer(Modifier.height(20.dp))
                 Box(Modifier.size(88.dp).background(MaterialTheme.colorScheme.primaryContainer,CircleShape),contentAlignment=Alignment.Center) {
                     Icon(icons[page],contentDescription=null,modifier=Modifier.size(40.dp),tint=MaterialTheme.colorScheme.onPrimaryContainer)

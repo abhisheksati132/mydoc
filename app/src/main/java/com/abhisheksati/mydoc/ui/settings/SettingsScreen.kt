@@ -52,6 +52,7 @@ import com.abhisheksati.mydoc.designsystem.components.showMessage
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
+    onInstallApk: (android.net.Uri) -> Unit,
     updateManager: UpdateManager,
     settingsRepository: SettingsRepository,
     onBackClick: () -> Unit,
@@ -155,7 +156,7 @@ fun SettingsScreen(
                     }
 
                     if (selectedCategory == SettingsCategory.READING) {
-                        OfficeEngineSettings()
+                        OfficeEngineSettings(onInstallApk)
                         // 2. READING
                         SettingsReadingSection(
                             currentReadingMode = currentReadingMode,

@@ -405,6 +405,7 @@ class MainActivity : ComponentActivity() {
                                         }
                                         ActiveScreen.Settings -> {
                                             SettingsScreen(
+                                                onInstallApk = ::requestApkInstallation,
                                                 updateManager = updateManager,
                                                 settingsRepository = app.settingsRepository,
                                                 onBackClick = { isSettingsOpen = false },
@@ -667,6 +668,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun requestApkInstallation(uri: Uri) {
+        if (packageManager.canRequestPackageInstalls()) {
+            com.abhisheksati.mydoc.util.LocalApkInstaller.open(this, uri)
+        } else {
+            pendingInstallUri = uri
+            installPermission.launch(Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                Uri.parse("package:$packageName")))
+        }
+    }
+
     private fun openUriOrFile(
         uri: Uri,
         mimeType: String? = null,
@@ -698,13 +709,7 @@ class MainActivity : ComponentActivity() {
                 lifecycleScope.launch {
                     try {
                         val staged = com.abhisheksati.mydoc.util.LocalApkInstaller.stage(this@MainActivity, uri)
-                        if (packageManager.canRequestPackageInstalls()) {
-                            com.abhisheksati.mydoc.util.LocalApkInstaller.open(this@MainActivity, staged)
-                        } else {
-                            pendingInstallUri = staged
-                            installPermission.launch(Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                                Uri.parse("package:$packageName")))
-                        }
+                        requestApkInstallation(staged)
                     } catch (cancelled: kotlinx.coroutines.CancellationException) {
                         throw cancelled
                     } catch (_: Exception) {
