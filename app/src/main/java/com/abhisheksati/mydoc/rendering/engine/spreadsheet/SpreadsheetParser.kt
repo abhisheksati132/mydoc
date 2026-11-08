@@ -71,6 +71,7 @@ class SpreadsheetParser {
             throw DocumentLoadException(LoadFailure.EXCEEDS_LIMITS, "This spreadsheet exceeds the safety limits MyDoc applies.", e)
         }
         ensureActive()
+        com.abhisheksati.mydoc.rendering.engine.rejectEncryptedOfficeSource(bytes)
 
         if (bytes.isEmpty()) {
             throw DocumentLoadException(LoadFailure.EMPTY_DOCUMENT, "This file is empty (0 bytes).")

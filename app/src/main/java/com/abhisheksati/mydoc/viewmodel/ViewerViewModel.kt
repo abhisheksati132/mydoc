@@ -211,7 +211,7 @@ class ViewerViewModel(
                         _uiState.update {
                             if (generation != loadGeneration) it else it.copy(
                                 isLoading = false,
-                                needsReflowFallback = com.abhisheksati.mydoc.domain.model.DocumentFormats
+                                needsReflowFallback = !com.abhisheksati.mydoc.rendering.engine.OfficeEngineManager.isInstalled(context) && com.abhisheksati.mydoc.domain.model.DocumentFormats
                                     .familyOf(ext) == com.abhisheksati.mydoc.domain.model.DocumentFamily.WORD,
                                 failure = conversion.failure,
                                 errorMessage = conversion.message
@@ -242,7 +242,7 @@ class ViewerViewModel(
                         _uiState.update {
                             if (generation != loadGeneration) it else it.copy(
                                 isLoading = false,
-                                needsReflowFallback = isWord,
+                                needsReflowFallback = isWord && !com.abhisheksati.mydoc.rendering.engine.OfficeEngineManager.isInstalled(context),
                                 failure = com.abhisheksati.mydoc.domain.model.LoadFailure.CONVERSION_FAILED,
                                 errorMessage = if (isWord) {
                                     "MyDoc read the file but could not lay out its pages. " +

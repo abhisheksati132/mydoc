@@ -1,4 +1,5 @@
 <resources>
+    <string name="rendering_information">Rendering information</string>
     <string name="word_engine_licenses">Office engine licenses</string>
     <string name="app_name">MyDoc</string>
     <string name="tile_scan_doc">Quick Scan</string>

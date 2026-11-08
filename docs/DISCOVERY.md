@@ -1,5 +1,7 @@
 # Search, collections and review (1.9.7)
 
+In 1.9.8, rendered Office indexing requires the optional MyDoc Office Engine from Settings → Reading. Without it, filename search and tags remain available and text extraction reports why it is unavailable. PDF and other independent extraction routes remain available.
+
 Open **Search → Contents, tags & smart collections**. Choose files or a folder using Android's picker. MyDoc does not crawl storage without this choice. SAF read grants are retained where supported; a revoked grant, missing file or unavailable provider is shown during refresh/open. **Relink** reconnects a file chosen at a new location while preserving its tags. **Remove from index** never deletes its original.
 
 The private SQLite FTS4 index stores page text and metadata on device, excluding URI/page-number fields from token indexing. Results include a snippet and open the original at the matching rendered page. Queries use quoted prefix tokens, not raw FTS operators. Filenames are also searched. Each document contributes one matching page before the 200-document content-result cap, so a long book cannot hide every other document.
@@ -22,4 +24,4 @@ Storage Cleaner → Duplicates → **Review all duplicate groups** shows thumbna
 
 Reader toolbar buttons share one foreground-only, dirty-frame PixelCopy sampler at 1/6 resolution and no more than 5 Hz. Each button samples its surrounding surface, chooses light/dark ink with hysteresis and falls back to theme ink if capture fails. Sampling stops when controls are hidden or the reader is not foregrounded. This introduces no screenshot storage or network upload.
 
-The introduction appears once for the 1.9.7 guide on Home, can be skipped, does not intercept direct document intents, and requests no permission by itself. Replay it from Settings → About → **Tour & new features**.
+The full-screen introduction appears once for the current welcome guide on Home, can be skipped, does not intercept direct document intents, and requests no permission by itself. Replay it from Settings → About → **Tour & new features**.

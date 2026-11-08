@@ -2,7 +2,6 @@ package com.abhisheksati.mydoc.rendering.engine
 
 import android.content.Context
 import android.net.Uri
-import com.abhisheksati.mydoc.rendering.engine.word.NativeWordCore
 import com.abhisheksati.mydoc.rendering.engine.word.WordEngineConnection
 import com.abhisheksati.mydoc.domain.model.LoadFailure
 import com.abhisheksati.mydoc.util.DocumentIdentity
@@ -27,6 +26,8 @@ internal object NativeOfficeConverter {
 
     suspend fun convert(context: Context, uri: Uri, displayName: String, password: String? = null): OfficeConversion = conversions.withLock {
         withContext(Dispatchers.IO) {
+            if (!OfficeEngineManager.isInstalled(context)) return@withContext OfficeConversion.Failure(
+                LoadFailure.UNSUPPORTED_FORMAT, "Install enhanced Office support from Settings → Reading to render Office pages.")
             val extension = nativeOfficeExtension(displayName)
                 ?: return@withContext OfficeConversion.Failure(LoadFailure.UNSUPPORTED_FORMAT,
                     "This format is not supported by the offline Office renderer.")
@@ -38,7 +39,7 @@ internal object NativeOfficeConverter {
             }
             ensureActive()
             val directory = File(context.cacheDir, "converted_docs").apply { mkdirs() }
-            val target = File(directory, "office_native_${NativeWordCore.VERSION}_r1_${extension}_${DocumentIdentity.ofBytes(bytes)}.pdf")
+            val target = File(directory, "office_native_${OfficeEngineManager.VERSION}_r1_${extension}_${DocumentIdentity.ofBytes(bytes)}.pdf")
             if (target.isFile && target.length() > 16L && validPdf(target, null))
                 return@withContext OfficeConversion.Success(target)
             val jobs = File(context.cacheDir, "word_engine_jobs").apply { mkdirs() }

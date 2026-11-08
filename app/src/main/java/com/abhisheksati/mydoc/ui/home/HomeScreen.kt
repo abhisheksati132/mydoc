@@ -139,10 +139,12 @@ fun HomeScreen(
         }
     }
 
-    val hazeState = remember { dev.chrisbanes.haze.HazeState() }
+    val homeHazeState = remember { dev.chrisbanes.haze.HazeState() }
+    val libraryHazeState = remember { dev.chrisbanes.haze.HazeState() }
+    val toolsHazeState = remember { dev.chrisbanes.haze.HazeState() }
     val homeListState = androidx.compose.foundation.lazy.rememberLazyListState()
-    val glassMotion = remember { GlassMotionState() }
-    TrackGlassMotion(homeListState, glassMotion)
+    val libraryGlassMotion = remember { GlassMotionState() }
+    val toolsGlassMotion = remember { GlassMotionState() }
 
     val tabs = remember { listOf(HomeTab.HOME, HomeTab.LIBRARY, HomeTab.TOOLS) }
     val reducedMotion = LocalReducedMotion.current
@@ -240,7 +242,7 @@ fun HomeScreen(
                                 errorMessage = uiState.errorMessage,
                                 isLoading = uiState.isLoading,
                                 onDismissError = { viewModel.clearError() },
-                                hazeState = hazeState,
+                                hazeState = homeHazeState,
                                 listState = homeListState,
                                 modifier = Modifier.fillMaxSize()
                             )
@@ -259,8 +261,8 @@ fun HomeScreen(
                                 onSpotlightSearch = onSpotlightSearch,
                                 isActive = currentTab == HomeTab.LIBRARY && pagerState.currentPage == 1,
                                 onOpenInTools = { viewModel.selectTab(HomeTab.TOOLS) },
-                                hazeState = hazeState,
-                                glassMotion = glassMotion,
+                                hazeState = libraryHazeState,
+                                glassMotion = libraryGlassMotion,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
@@ -276,8 +278,8 @@ fun HomeScreen(
                                 },
                                 onSettingsClick = onSettingsClick,
                                 isActive = currentTab == HomeTab.TOOLS && pagerState.currentPage == 2,
-                                hazeState = hazeState,
-                                glassMotion = glassMotion,
+                                hazeState = toolsHazeState,
+                                glassMotion = toolsGlassMotion,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
@@ -467,8 +469,8 @@ fun HomeScreen(
                     viewModel.selectTab(tab)
                 },
                 onScanClick = { documentScanner() },
-                hazeState = hazeState,
-                motion = glassMotion
+                hazeState = null,
+                motion = null
             )
         }
     }
@@ -608,12 +610,12 @@ internal fun SyncTabPager(
 ) {
     val latestTab by rememberUpdatedState(currentTab)
     LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.isScrollInProgress to pagerState.currentPage }
+        snapshotFlow { pagerState.isScrollInProgress to pagerState.settledPage }
             .collectLatest { (scrolling, page) ->
                 if (!scrolling) {
+                    delay(32)
                     // A retargeted animation passes through a momentary settle; let the new
                     // scroll start before adopting its intermediate page as the selected tab.
-                    delay(32)
                     val tab = tabs.getOrNull(page) ?: return@collectLatest
                     if (tab != latestTab) onTabSettled(tab)
                 }
@@ -624,7 +626,13 @@ internal fun SyncTabPager(
         if (targetPage >= 0 &&
             (pagerState.currentPage != targetPage || pagerState.currentPageOffsetFraction != 0f)
         ) {
-            if (reducedMotion) pagerState.scrollToPage(targetPage) else pagerState.animateScrollToPage(targetPage)
+            if (reducedMotion) pagerState.scrollToPage(targetPage) else pagerState.animateScrollToPage(
+                targetPage,
+                animationSpec = androidx.compose.animation.core.tween(
+                    com.abhisheksati.mydoc.designsystem.animation.AppMotion.BASE,
+                    easing = androidx.compose.animation.core.FastOutSlowInEasing
+                )
+            )
         }
     }
 }

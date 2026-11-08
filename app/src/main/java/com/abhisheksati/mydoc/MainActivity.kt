@@ -149,6 +149,7 @@ class MainActivity : ComponentActivity() {
             !isContentReady && SystemClock.elapsedRealtime() < splashDeadlineMs
         }
         super.onCreate(savedInstanceState)
+        pendingInstallUri = savedInstanceState?.getString("pending_install_uri")?.let(Uri::parse)
         enableEdgeToEdge()
 
         // uiMode is not in configChanges, so a dark-mode switch recreates the activity; without
@@ -367,6 +368,7 @@ class MainActivity : ComponentActivity() {
                                     val initialIsDocument = initialState is ActiveScreen.Document
 
                                     when {
+                                        reducedMotion -> androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None
                                         // Home list -> document viewer (and back): the hero carries it.
                                         targetIsDocument && initialState is ActiveScreen.Home ->
                                             AppMotion.heroEnter() togetherWith AppMotion.heroExit()
@@ -533,6 +535,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
+        outState.putString("pending_install_uri", pendingInstallUri?.toString())
         outState.putBoolean("settings_open", isSettingsOpen)
         outState.putBoolean("spotlight_open", isSpotlightSearchOpen)
         outState.putBoolean("design_preview_open", isDesignSystemPreviewOpen)
@@ -652,6 +655,18 @@ class MainActivity : ComponentActivity() {
     private fun String.toPathFile(): File? =
         runCatching { Uri.parse(this).path?.let(::File) }.getOrNull()?.takeIf { it.isFile }
 
+    private var pendingInstallUri: Uri? = null
+    private val installPermission = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) {
+        val pending = pendingInstallUri
+        pendingInstallUri = null
+        if (pending != null && packageManager.canRequestPackageInstalls()) {
+            runCatching { com.abhisheksati.mydoc.util.LocalApkInstaller.open(this, pending) }
+                .onFailure { showMessage("Unable to open the package installer") }
+        }
+    }
+
     private fun openUriOrFile(
         uri: Uri,
         mimeType: String? = null,
@@ -678,6 +693,28 @@ class MainActivity : ComponentActivity() {
         val displayName = fileName ?: uri.lastPathSegment ?: "Media"
 
         when {
+            detectedMime == com.abhisheksati.mydoc.util.LocalApkInstaller.MIME ||
+                displayName.endsWith(".apk", ignoreCase = true) -> {
+                lifecycleScope.launch {
+                    try {
+                        val staged = com.abhisheksati.mydoc.util.LocalApkInstaller.stage(this@MainActivity, uri)
+                        if (packageManager.canRequestPackageInstalls()) {
+                            com.abhisheksati.mydoc.util.LocalApkInstaller.open(this@MainActivity, staged)
+                        } else {
+                            pendingInstallUri = staged
+                            installPermission.launch(Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                Uri.parse("package:$packageName")))
+                        }
+                    } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                        throw cancelled
+                    } catch (_: Exception) {
+                        showMessage("Unable to read this APK or open the package installer")
+                    }
+                }
+            }
+            displayName.endsWith(".apks", true) || displayName.endsWith(".xapk", true) -> {
+                showMessage("This is a split app bundle. Open it with a compatible split-package installer.")
+            }
             detectedMime.startsWith("image/") -> {
                 val mediaItem = com.abhisheksati.mydoc.domain.model.MediaItem(
                     id = uri.hashCode().toLong(),

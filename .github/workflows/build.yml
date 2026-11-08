@@ -79,7 +79,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: mydoc-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            office-engine/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
 
@@ -121,7 +123,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: ./gradlew connectedDebugAndroidTest --stacktrace
+          script: bash scripts/run-device-tests.sh
 
       - name: Upload Instrumented Test Report
         if: always()
@@ -130,6 +132,7 @@ jobs:
           name: instrumented-test-report
           path: |
             app/build/reports/androidTests/connected/
+            app/build/outputs/ui-captures/
           if-no-files-found: ignore
           retention-days: 14
 

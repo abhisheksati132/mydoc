@@ -1,5 +1,19 @@
 # Offline Office page rendering
 
+## Optional engine delivery (1.9.8, unreleased)
+
+The `office-engine` Android application module owns the LibreOffice libraries, fonts and assets. They are no longer embedded in the main APK. Without the companion, MyDoc uses its built-in Word reflow, spreadsheet grid and presentation readers, with their existing format and fidelity limits. These readers do not provide equivalent LibreOffice compatibility. Protected OOXML containers are explicitly rejected rather than scraped into invented contents.
+
+Settings → Reading → Enhanced Office support downloads the device ABI package from its versioned Office Engine component release. It verifies SHA-256, package/version and the signing certificate against both the installed app and pinned release certificate, then invokes Android installation. The same card offers removal. Android confirms installation and removal. Debug builds use the matching debug-signed CI engine artifact. Component releases are marked prerelease to exclude them from the app updater's latest-release endpoint; this also protects older app versions that do not filter companion assets.
+
+The companion has its own UID and worker process. The client validates its signing identity and protocol before binding to an explicit service. The service requires a signature permission and checks the caller signing identity again. Read-only source and write-only result file descriptors cross the boundary, rather than arbitrary paths into the main application. Sources remain bounded to 64 MiB and PDFs to 256 MiB. Cancellation kills the companion worker; the next cold start removes abandoned private jobs. Protected preview PDFs remain encrypted and session-owned.
+
+Removal deletes Android-managed companion assets and private data. Existing unprotected previews remain in MyDoc cache. Availability is checked before using conversion caches, so cached pages do not keep the enhanced viewer active after removal. Office content indexing requires the companion; filename search and tags remain usable without it. PDFs and other independent readers retain their own engines. Manual reflow, grid and slideshow inspection modes remain available where supported; enhanced default Office pages use LibreOffice.
+
+CI installs the companion before Office fidelity and password tests and covers disabling the companion. Release builds sign both packages with the configured key, verify signature/package/version/ABI metadata, and publish ABI-specific engine APKs and checksums. New runtime results must be reported separately from the historical results below.
+
+## Rendering pipeline
+
 The primary Word, PowerPoint and Excel page viewers use LibreOfficeKit 26.2.6.3 in a dedicated `:word_engine` process, exports a local PDF, and displays it using the existing page reader. DOCX, DOTX, DOC, DOT, ODT, OTT, FODT and RTF use Writer. PPTX, PPTM, PPSX, POTX, PPT, PPS, POT, ODP, OTP and FODP use Impress. XLSX, XLSM, XLS, ODS, OTS and FODS use Calc. The existing service/process/build-task names keep their `word` prefix for compatibility; the queue, process and engine are shared across all three families.
 
 The simpler Word parser remains available for unprotected reflow reading. Excel opens in page view by default; **Cell grid** in the overflow menu opens the searchable, cached-value grid, with Back returning to the original pages. CSV and TSV open directly in that grid. Page export follows workbook print areas, scaling, page breaks and visible sheets; it is a print layout rather than an interactive spreadsheet. LibreOffice may calculate formulas during import; the separate grid continues to show stored cached results. Presentations are static pages: animations, transitions and media playback are not reproduced. The existing independent slideshow/notes path remains available for unprotected decks and has its own rendering limits.

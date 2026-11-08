@@ -291,7 +291,7 @@ fun HomeFeedPane(
             }
 
             // CONTINUE READING HERO CARD
-            if (isLoading) {
+            if (isLoading && heroItem == null && recentItems.isEmpty()) {
                 item(key = "feed_skeleton") {
                     HomeFeedSkeleton()
                 }

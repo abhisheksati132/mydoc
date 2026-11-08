@@ -13,7 +13,14 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Close
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalAccessibilityManager
+import androidx.compose.material3.Surface
+import androidx.compose.ui.window.Popup
+import kotlinx.coroutines.delay
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -107,56 +114,36 @@ fun FidelityNotice(
     dismissalKey: String? = null
 ) {
     if (disclosure == null) return
-    var dismissed by rememberSaveable(disclosure, dismissalKey) { mutableStateOf(false) }
-    if (dismissed) return
+    var expanded by rememberSaveable(disclosure, dismissalKey) { mutableStateOf(false) }
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
+    val scrollState = rememberScrollState()
+    val accessibility = LocalAccessibilityManager.current
+    LaunchedEffect(expanded, disclosure, scrollState.isScrollInProgress) {
+        if (expanded && !scrollState.isScrollInProgress) {
+            delay(accessibility?.calculateRecommendedTimeoutMillis(3_000, containsText = true) ?: 3_000)
+            expanded = false
+        }
+    }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = AppSpacing.paddingSmall)
-            .widthIn(max = 520.dp)
-            .background(colors.surface, AppRadius.cardShape)
-            .border(
-                BorderStroke(AppSpacing.hairline, colors.line),
-                shape = AppRadius.cardShape
-            )
-            .padding(
-                horizontal = AppSpacing.paddingMedium,
-                vertical = AppSpacing.paddingSmall
-            ),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Info,
-                contentDescription = null,
-                tint = colors.accent,
-                modifier = Modifier.size(16.dp)
-            )
-            Text(
-                text = disclosure.headline,
-                style = typography.captionStrong,
-                color = colors.textPrimary,
-                modifier = Modifier.weight(1f)
-            )
-            IconButton(onClick = { dismissed = true }) {
-                Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.dismiss_rendering_notice),
-                    tint = colors.textSecondary)
+    androidx.compose.foundation.layout.Box(modifier.padding(horizontal = AppSpacing.paddingSmall)) {
+        Surface(shape = AppRadius.cardShape, color = colors.surface) {
+            IconButton(onClick = { expanded = !expanded }) {
+                Icon(Icons.Outlined.Info, contentDescription = stringResource(R.string.rendering_information),
+                    tint = colors.accent, modifier = Modifier.size(20.dp))
             }
         }
-        disclosure.notes.take(2).forEach { note ->
-            Text(
-                text = note,
-                style = typography.micro,
-                color = colors.textSecondary,
-                modifier = Modifier.padding(start = 20.dp)
-            )
+        if (expanded) Popup(alignment = Alignment.TopStart, onDismissRequest = { expanded = false }) {
+            Surface(shape = AppRadius.cardShape, color = colors.surface,
+                border = BorderStroke(AppSpacing.hairline, colors.line), shadowElevation = 4.dp) {
+                Column(Modifier.widthIn(max = 320.dp).heightIn(max = 320.dp).verticalScroll(scrollState).padding(AppSpacing.paddingMedium),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(disclosure.headline, style = typography.captionStrong, color = colors.textPrimary)
+                    disclosure.notes.forEach { note ->
+                        Text(note, style = typography.micro, color = colors.textSecondary)
+                    }
+                }
+            }
         }
     }
 }

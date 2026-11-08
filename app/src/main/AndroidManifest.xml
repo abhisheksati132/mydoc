@@ -6,6 +6,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <uses-permission android:name="com.abhisheksati.mydoc.officeengine.CONVERT" />
+    <uses-permission android:name="com.abhisheksati.mydoc.officeengine.debug.CONVERT" />
 
     <!-- Camera permission for offline document scanning only -->
     <uses-permission android:name="android.permission.CAMERA" />
@@ -26,6 +29,8 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
 
     <queries>
+        <package android:name="com.abhisheksati.mydoc.officeengine" />
+        <package android:name="com.abhisheksati.mydoc.officeengine.debug" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
@@ -157,11 +162,6 @@
                 <data android:mimeType="audio/*" />
             </intent-filter>
         </activity>
-
-        <service
-            android:name=".rendering.engine.word.WordEngineService"
-            android:process=":word_engine"
-            android:exported="false" />
 
         <!-- Quick Settings Tile: Instant Camera Document Scanner -->
         <service

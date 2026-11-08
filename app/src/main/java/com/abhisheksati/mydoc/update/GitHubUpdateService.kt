@@ -74,7 +74,7 @@ class GitHubUpdateService(
             val downloadUrl = asset.optString("browser_download_url", "") ?: ""
             val size = asset.optLong("size", 0)
 
-            if (name.endsWith(".apk", ignoreCase = true)) {
+            if (name.startsWith("mydoc-v") && name.endsWith(".apk", ignoreCase = true)) {
                 apkAssets.add(Triple(name, downloadUrl, size))
             } else if (name.endsWith(".sha256", ignoreCase = true)) {
                 // Strict match: <apk name>.sha256

@@ -33,7 +33,7 @@ object AppMotion {
 
     /** Default settle: quick, effectively no overshoot. */
     fun <T> snappy(): FiniteAnimationSpec<T> =
-        spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessMedium)
+        tween(BASE, easing = FastOutSlowInEasing)
 
     /** Softer settle for large surfaces. */
     fun <T> settle(): FiniteAnimationSpec<T> =
@@ -52,21 +52,17 @@ object AppMotion {
 
     /** Entering a document, photo, video or audio viewer. */
     fun detailEnter(): EnterTransition =
-        slideInVertically(animationSpec = snappy(), initialOffsetY = { it / 10 }) +
-            fadeIn(fadeBase) +
-            scaleIn(initialScale = 0.97f, animationSpec = snappy())
+        slideInVertically(animationSpec = snappy(), initialOffsetY = { it / 24 }) + fadeIn(fadeBase)
 
     fun detailExit(): ExitTransition =
-        fadeOut(fadeFast) + scaleOut(targetScale = 0.98f, animationSpec = snappy())
+        fadeOut(fadeFast)
 
     /** Returning from a viewer back to the list it came from. */
     fun detailReturnEnter(): EnterTransition =
-        fadeIn(fadeBase) + scaleIn(initialScale = 0.98f, animationSpec = snappy())
+        fadeIn(fadeBase)
 
     fun detailReturnExit(): ExitTransition =
-        slideOutVertically(animationSpec = snappy(), targetOffsetY = { it / 10 }) +
-            fadeOut(fadeFast) +
-            scaleOut(targetScale = 0.97f, animationSpec = snappy())
+        slideOutVertically(animationSpec = snappy(), targetOffsetY = { it / 24 }) + fadeOut(fadeFast)
 
     /** Peer screens: Settings and other horizontally-stacked destinations. */
     fun peerEnter(forward: Boolean): EnterTransition =
@@ -80,8 +76,8 @@ object AppMotion {
         } + fadeOut(fadeFast)
 
     /** Fallback for any two screens without a spatial relationship. */
-    fun neutralEnter(): EnterTransition = fadeIn(fadeBase) + scaleIn(initialScale = 0.98f, animationSpec = snappy())
-    fun neutralExit(): ExitTransition = fadeOut(fadeFast) + scaleOut(targetScale = 1.01f, animationSpec = snappy())
+    fun neutralEnter(): EnterTransition = fadeIn(fadeBase)
+    fun neutralExit(): ExitTransition = fadeOut(fadeFast)
 
     /**
      * Hero hand-off: the shared element morphs between the two screens, so the

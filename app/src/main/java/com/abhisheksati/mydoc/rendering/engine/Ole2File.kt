@@ -123,6 +123,8 @@ internal class Ole2File(private val data: ByteArray) {
         }
     }
 
+    fun hasStream(name: String): Boolean = dirEntries.any { it.type == 2 && it.name.equals(name, ignoreCase = true) }
+
     fun getStream(name: String): ByteArray? {
         val entry = dirEntries.find { it.name.equals(name, ignoreCase = true) } ?: return null
         if (entry.startSector < 0 || entry.size <= 0) return null

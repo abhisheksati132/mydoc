@@ -18,6 +18,11 @@ internal class WordEngineResult(val success: Boolean, val processId: Int = -1,
 
 internal object WordEngineConnection {
     suspend fun convert(context: Context, source: File, output: File, password: String? = null): WordEngineResult = withTimeout(60_000) {
+        check(com.abhisheksati.mydoc.rendering.engine.OfficeEngineManager.isInstalled(context))
+        val sourceFd = ParcelFileDescriptor.open(source, ParcelFileDescriptor.MODE_READ_ONLY)
+        val outputFd = try { ParcelFileDescriptor.open(output,
+            ParcelFileDescriptor.MODE_CREATE or ParcelFileDescriptor.MODE_TRUNCATE or ParcelFileDescriptor.MODE_WRITE_ONLY)
+        } catch (error: Throwable) { sourceFd.close(); throw error }
         val bound = AtomicBoolean(false)
         val finished = AtomicBoolean(false)
         val remote = AtomicReference<Messenger?>()
@@ -29,7 +34,7 @@ internal object WordEngineConnection {
         try {
             suspendCancellableCoroutine { continuation ->
                 val replies = Messenger(Handler(Looper.getMainLooper()) { message ->
-                    if (message.what == WordEngineService.RESULT && message.data.getString("id") == id && continuation.isActive) {
+                    if (message.what == WordEngineProtocol.RESULT && message.data.getString("id") == id && continuation.isActive) {
                         continuation.resume(WordEngineResult(message.data.getBoolean("success"), message.data.getInt("pid"),
                             message.data.getBoolean("passwordRequired"), message.data.getBoolean("busy"),
                             message.data.getString("renderPassword")))
@@ -43,12 +48,13 @@ internal object WordEngineConnection {
                         val service = Messenger(binder)
                         remote.set(service)
                         runCatching {
-                            service.send(Message.obtain(null, WordEngineService.CONVERT).apply {
+                            service.send(Message.obtain(null, WordEngineProtocol.CONVERT).apply {
                                 replyTo = replies
                                 data = Bundle().apply {
                                     putString("id", id)
-                                    putString("input", source.absolutePath)
-                                    putString("output", output.absolutePath)
+                                    putParcelable("input", sourceFd)
+                                    putParcelable("output", outputFd)
+                                    putString("extension", source.extension)
                                     putString("password", password)
                                 }
                             })
@@ -60,13 +66,13 @@ internal object WordEngineConnection {
                 }
                 continuation.invokeOnCancellation {
                     finished.set(true)
-                    runCatching { remote.get()?.send(Message.obtain(null, WordEngineService.CANCEL).apply {
+                    runCatching { remote.get()?.send(Message.obtain(null, WordEngineProtocol.CANCEL).apply {
                         data = Bundle().apply { putString("id", id) }
                     }) }
                     unbind()
                 }
                 try {
-                    bound.set(context.bindService(Intent(context, WordEngineService::class.java), connection, Context.BIND_AUTO_CREATE))
+                    bound.set(context.bindService(Intent().setComponent(com.abhisheksati.mydoc.rendering.engine.OfficeEngineManager.component(context)), connection, Context.BIND_AUTO_CREATE))
                     if (!bound.get()) fail()
                     if (finished.get()) unbind()
                 } catch (_: Exception) { fail() }
@@ -74,6 +80,10 @@ internal object WordEngineConnection {
         } finally {
             finished.set(true)
             unbind()
+            sourceFd.close()
+            outputFd.close()
         }
     }
 }
+
+internal object WordEngineProtocol { const val CONVERT = 1; const val CANCEL = 2; const val RESULT = 3 }

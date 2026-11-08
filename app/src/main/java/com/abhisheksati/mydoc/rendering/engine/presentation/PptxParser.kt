@@ -52,6 +52,7 @@ class PptxParser {
             android.util.Log.e("PptxParser", "Error reading presentation", e)
             return@withContext emptyPresentation("File too large or unreadable: ${e.message}")
         }
+        com.abhisheksati.mydoc.rendering.engine.rejectEncryptedOfficeSource(bytes)
         if (bytes.isEmpty()) {
             return@withContext emptyPresentation()
         }

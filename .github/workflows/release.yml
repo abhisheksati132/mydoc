@@ -217,7 +217,7 @@ jobs:
             exit 1
           fi
           shopt -s nullglob
-          APKS=(app/build/outputs/apk/release/*.apk)
+          APKS=(app/build/outputs/apk/release/*.apk office-engine/build/outputs/apk/release/*.apk)
           if [ ${#APKS[@]} -eq 0 ]; then
             echo "ERROR: no release APKs found to verify."
             exit 1
@@ -267,11 +267,17 @@ jobs:
               PACKAGE=$(echo "$BADGE" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")
               VN=$(echo "$BADGE" | sed -n "s/^package:.*versionName='\([^']*\)'.*/\1/p" | head -1)
               VC=$(echo "$BADGE" | sed -n "s/^package:.*versionCode='\([^']*\)'.*/\1/p" | head -1)
-              if [ "$PACKAGE" != "com.abhisheksati.mydoc" ]; then
+              EXPECTED_PACKAGE="com.abhisheksati.mydoc"
+              EXPECTED_VERSION="${RELEASE_TAG#v}"
+              if [[ "$apk" == office-engine/* ]]; then
+                EXPECTED_PACKAGE="com.abhisheksati.mydoc.officeengine"
+                EXPECTED_VERSION="26.2.6.3-1"
+              fi
+              if [ "$PACKAGE" != "$EXPECTED_PACKAGE" ]; then
                 echo "ERROR: $name declares package '$PACKAGE'."
                 exit 1
               fi
-              if [ -n "${RELEASE_TAG#v}" ] && [ "$VN" != "${RELEASE_TAG#v}" ]; then
+              if [ "$VN" != "$EXPECTED_VERSION" ]; then
                 echo "ERROR: $name declares versionName '$VN' but the tag is '$RELEASE_TAG'."
                 exit 1
               fi
@@ -404,6 +410,9 @@ jobs:
           cp app/build/outputs/apk/release/app-x86_64-release.apk release-assets/mydoc-${TAG}-x86_64.apk
           cp app/build/outputs/apk/release/app-universal-release.apk release-assets/mydoc-${TAG}-universal.apk
           cp app/build/outputs/apk/release/app-universal-release.apk release-assets/mydoc-${TAG}.apk
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            cp "office-engine/build/outputs/apk/release/office-engine-${abi}-release.apk" "release-assets/mydoc-office-engine-${abi}.apk"
+          done
           cd release-assets
           for f in mydoc-*.apk; do
             sha256sum "$f" > "${f}.sha256"
@@ -451,11 +460,28 @@ jobs:
           generate_release_notes: true
           body_path: release-assets/release-body.md
           files: |
-            release-assets/mydoc-*.apk
-            release-assets/mydoc-*.apk.sha256
+            release-assets/mydoc-v*.apk
+            release-assets/mydoc-v*.apk.sha256
             release-assets/verification.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # A separate component release keeps older MyDoc updaters from mistaking an engine APK
+      # for an app update. Prerelease marking excludes it from GitHub's /releases/latest.
+      - name: Publish optional Office engine component
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          ENGINE_TAG="office-engine-26.2.6.3-1"
+          if gh release view "$ENGINE_TAG" >/dev/null 2>&1; then
+            echo "Reusing the existing versioned Office engine component."
+          else
+            gh release create "$ENGINE_TAG" --target "$GITHUB_SHA" --prerelease \
+              --title "MyDoc Office Engine 26.2.6.3-1" \
+              --notes "Optional signed Office rendering component for MyDoc. Install from Settings → Reading. This component is separate from app updates." \
+              release-assets/mydoc-office-engine-*.apk release-assets/mydoc-office-engine-*.apk.sha256
+          fi
 
       - name: Cleanup Release Keystore
         if: always()

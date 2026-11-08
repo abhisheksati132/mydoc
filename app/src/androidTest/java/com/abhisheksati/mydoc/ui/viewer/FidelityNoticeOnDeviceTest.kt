@@ -25,29 +25,48 @@ class FidelityNoticeOnDeviceTest {
                 }
             }
         }
+        compose.onNodeWithText("Re-laid out for reading").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Rendering information").assertIsDisplayed().performClick()
         compose.onNodeWithText("Re-laid out for reading").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Dismiss rendering notice").assertIsDisplayed().performClick()
+        compose.onNodeWithContentDescription("Rendering information").performClick()
         compose.onNodeWithText("Re-laid out for reading").assertDoesNotExist()
     }
 
     @Test fun noticeCanBeDismissedWithLargeText() = checkDismiss(LayoutDirection.Ltr)
     @Test fun noticeCanBeDismissedWithLargeRtlText() = checkDismiss(LayoutDirection.Rtl)
 
-    @Test fun newlyReportedLimitationsAreShownAfterDismissal() {
+    @Test fun newLimitationsRemainAvailableOnDemand() {
         val disclosure = mutableStateOf(FidelityDisclosure("Re-laid out for reading", emptyList()))
         compose.setContent { AppDesignSystemTheme { FidelityNotice(disclosure.value) } }
-        compose.onNodeWithContentDescription("Dismiss rendering notice").performClick()
+        compose.onNodeWithContentDescription("Rendering information").performClick()
         compose.runOnIdle { disclosure.value = FidelityDisclosure("Only part of this file was read", listOf("Some pages are missing.")) }
+        compose.onNodeWithText("Only part of this file was read").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Rendering information").performClick()
         compose.onNodeWithText("Only part of this file was read").assertIsDisplayed()
     }
 
-    @Test fun openingAnotherDocumentShowsItsNoticeEvenWithSameLimitations() {
+    @Test fun anotherDocumentStartsWithCollapsedInformation() {
         val document = mutableStateOf("first-document")
         compose.setContent { AppDesignSystemTheme {
             FidelityNotice(FidelityDisclosure("Re-laid out for reading", emptyList()), dismissalKey = document.value)
         } }
-        compose.onNodeWithContentDescription("Dismiss rendering notice").performClick()
+        compose.onNodeWithContentDescription("Rendering information").performClick()
         compose.runOnIdle { document.value = "second-document" }
+        compose.onNodeWithText("Re-laid out for reading").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Rendering information").performClick()
         compose.onNodeWithText("Re-laid out for reading").assertIsDisplayed()
+    }
+
+    @Test fun informationAutomaticallyClosesAfterThreeSeconds() {
+        compose.mainClock.autoAdvance = false
+        compose.setContent { AppDesignSystemTheme {
+            FidelityNotice(FidelityDisclosure("Layout information", emptyList()))
+        } }
+        compose.onNodeWithContentDescription("Rendering information").performClick()
+        compose.mainClock.advanceTimeBy(200)
+        compose.onNodeWithText("Layout information").assertIsDisplayed()
+        compose.mainClock.advanceTimeBy(3_100)
+        compose.onNodeWithText("Layout information").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Rendering information").assertIsDisplayed()
     }
 }

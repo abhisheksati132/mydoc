@@ -14,6 +14,7 @@ captures/
 release-keystore.properties
 context.md
 .kotlin/
+.tools/
 
 # Agent and tooling artifacts
 .agents/

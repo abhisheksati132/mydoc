@@ -129,6 +129,19 @@ class UpdateManagerTest {
     }
 
     @Test
+    fun parseReleaseJsonNeverSelectsOfficeCompanionAsAppUpdate() {
+        val release = GitHubUpdateService().parseReleaseJson("""
+            {"tag_name":"v2.0.0","draft":false,"prerelease":false,"assets":[
+              {"name":"mydoc-office-engine-universal.apk","browser_download_url":"https://github.com/abhisheksati132/mydoc/releases/download/v2.0.0/engine.apk","size":100},
+              {"name":"mydoc-office-engine-universal.apk.sha256","browser_download_url":"https://github.com/abhisheksati132/mydoc/releases/download/v2.0.0/engine.apk.sha256","size":64},
+              {"name":"mydoc-v2.0.0-universal.apk","browser_download_url":"https://github.com/abhisheksati132/mydoc/releases/download/v2.0.0/app.apk","size":50},
+              {"name":"mydoc-v2.0.0-universal.apk.sha256","browser_download_url":"https://github.com/abhisheksati132/mydoc/releases/download/v2.0.0/app.apk.sha256","size":64}
+            ]}
+        """.trimIndent())
+        assertEquals("https://github.com/abhisheksati132/mydoc/releases/download/v2.0.0/app.apk", release?.apkDownloadUrl)
+    }
+
+    @Test
     fun verifyPinnedCertificate_failsIfSignaturesEmpty() {
         val ex = assertThrows(SecurityException::class.java) {
             PackageInstallerHelper.verifyPinnedCertificate(

@@ -10,6 +10,7 @@
 # Nothing is published unless this passes: a signed, checksum-matched APK is not proof that the
 # R8-shrunk release build actually starts.
 set -euo pipefail
+adb install -r office-engine/build/outputs/apk/release/office-engine-x86_64-release.apk
 
 PACKAGE=com.abhisheksati.mydoc
 OUTPUT_DIR=app/build/outputs/apk/release

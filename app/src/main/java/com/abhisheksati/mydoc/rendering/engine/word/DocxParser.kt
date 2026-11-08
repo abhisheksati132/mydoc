@@ -121,6 +121,7 @@ class DocxParser {
             throw DocumentLoadException(LoadFailure.EMPTY_DOCUMENT, "This file is empty (0 bytes).")
         }
         ensureActive()
+        com.abhisheksati.mydoc.rendering.engine.rejectEncryptedOfficeSource(bytes)
 
         val isZip = bytes.size >= 4 && bytes[0] == 0x50.toByte() && bytes[1] == 0x4B.toByte()
         val isOle2 = bytes.size >= 8 &&

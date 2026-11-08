@@ -3,6 +3,7 @@ package com.abhisheksati.mydoc.designsystem.components
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -57,13 +58,27 @@ fun BottomNavBar(
     ) {
         GlassSurface(
             shape = RoundedCornerShape(36.dp),
-            hazeState = hazeState,
-            motion = motion,
+            hazeState = null,
+            motion = null,
             elevation = 8.dp,
             modifier = Modifier.widthIn(max = 400.dp).fillMaxWidth()
         ) {
+            BoxWithConstraints(Modifier.fillMaxWidth().padding(6.dp)) {
+                val tabWidth = (maxWidth - 8.dp) / 3
+                val selectedIndex = listOf(HomeTab.HOME, HomeTab.LIBRARY, HomeTab.TOOLS).indexOf(currentTab).coerceAtLeast(0)
+                val offset by animateDpAsState(
+                    (tabWidth + 4.dp) * selectedIndex,
+                    animationSpec = if (LocalReducedMotion.current) snap() else tween(
+                        com.abhisheksati.mydoc.designsystem.animation.AppMotion.BASE,
+                        easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                    label = "navigationIndicator"
+                )
+                Row(Modifier.matchParentSize()) {
+                    Box(Modifier.offset(x = offset).width(tabWidth).fillMaxHeight()
+                        .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(28.dp)))
+                }
             Row(
-                modifier = Modifier.selectableGroup().padding(6.dp),
+                modifier = Modifier.fillMaxWidth().selectableGroup(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -87,6 +102,7 @@ fun BottomNavBar(
                     )
                 }
             }
+            }
         }
     }
 }
@@ -104,14 +120,14 @@ private fun NavPillItem(
     val reducedMotion = LocalReducedMotion.current
     val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
-    val container by animateColorAsState(
-        if (selected) scheme.primaryContainer else Color.Transparent,
-        animationSpec = if (reducedMotion) snap() else tween(160), label = "dockSelection"
+    val foreground by animateColorAsState(
+        if (selected) scheme.onPrimaryContainer else AppTheme.colors.ink,
+        animationSpec = if (reducedMotion) snap() else tween(
+            com.abhisheksati.mydoc.designsystem.animation.AppMotion.BASE), label = "dockInk"
     )
-    val foreground = if (selected) scheme.onPrimaryContainer else AppTheme.colors.ink
     val shape = RoundedCornerShape(28.dp)
     Column(
-        modifier = modifier.heightIn(min = 60.dp).clip(shape).background(container)
+        modifier = modifier.heightIn(min = 60.dp).clip(shape)
             .then(if (focused) Modifier.border(2.dp, scheme.primary, shape) else Modifier)
             .selectable(selected = selected, role = Role.Tab,
                 interactionSource = interactionSource, onClick = onClick)
@@ -121,7 +137,7 @@ private fun NavPillItem(
     ) {
         Icon(if (selected) selectedIcon else unselectedIcon,
             contentDescription = null, tint = foreground, modifier = Modifier.size(23.dp))
-        Text(label, style = if (selected) AppTheme.typography.captionStrong else AppTheme.typography.caption,
+        Text(label, style = AppTheme.typography.captionStrong,
             color = foreground, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }

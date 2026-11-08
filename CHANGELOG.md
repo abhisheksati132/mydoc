@@ -3,6 +3,22 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [1.9.8] — Unreleased
+
+### Changed
+
+- LibreOffice is a separately installed, signed MyDoc Office Engine package. Settings → Reading offers download, installation and removal. The main APK keeps the built-in Word, spreadsheet and presentation readers, using those when the companion is absent. Enhanced Office pages, protected Office files and rendered Office content indexing require the companion. Installation and removal remain Android-confirmed actions.
+- Rendering limitations open from a compact information button and close after three seconds, with accessibility timeout support and extra time while scrolling.
+- The main dock has stable label metrics, a single moving selection indicator and a solid background. Tab travel and screen transitions use consistent timings; root transitions respect reduced motion.
+- Refresh retains existing file rows, storage summaries and recent-reading content. Directory sorting runs off the main thread and progress no longer shifts the file list.
+- A full-screen, skippable welcome guide introduces access, local search and safe organisation, and can be replayed from Settings → About.
+
+### Fixed
+
+- APK files open Android's installer through a dedicated content-URI flow, including unknown-source permission return and pending-install restoration. General file installation remains separate from MyDoc self-update signature verification. Split archives explain their installer requirement.
+- Built-in Office readers reject encrypted OOXML containers instead of scraping encryption metadata or reporting an empty document as successfully read.
+- Office companion downloads have their own cache and cancellation checks, and companion APKs are excluded from MyDoc's app-update asset selection.
+
 ## [1.9.7] — 2026-11-08
 
 ### Added

@@ -1,0 +1,2 @@
+-keep class org.libreoffice.kit.** { *; }
+-keep class com.abhisheksati.mydoc.rendering.engine.word.WordEngineGuard { *; }

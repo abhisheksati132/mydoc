@@ -403,7 +403,7 @@ fun PresentationViewerScreen(
             observedFidelity = if (presentationData?.recovered == true) {
                 RenderFidelity.RECOVERED_SCRAPE
             } else {
-                null
+                RenderFidelity.STRUCTURED_REFLOW
             },
             extraNotes = listOfNotNull(presentationData?.incompleteReason)
         )

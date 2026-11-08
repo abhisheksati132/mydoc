@@ -174,7 +174,7 @@ fun BrowseHomePane(
     if (glassMotion != null) {
         TrackGlassMotion(listState, glassMotion)
     }
-    if (storageUiState.isLoading) {
+    if (storageUiState.isLoading && storageUiState.volumes.isEmpty()) {
         Column(
             modifier = modifier.then(if (hazeState != null) Modifier.hazeSource(hazeState) else Modifier)
         ) {
@@ -551,7 +551,7 @@ fun DirectoryPane(
 
         val hasFilters = uiState.searchQuery.isNotBlank() || uiState.advancedSearch != null ||
             (isDocumentsCategory && selectedDocFilter != DocumentTypeFilter.ALL)
-        if (uiState.isLoading) {
+        if (uiState.isLoading && displayedItems.isEmpty()) {
             Column(
                 modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)

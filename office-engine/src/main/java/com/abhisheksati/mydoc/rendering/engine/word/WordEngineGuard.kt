@@ -3,7 +3,6 @@ package com.abhisheksati.mydoc.rendering.engine.word
 import android.system.ErrnoException
 import android.system.Os
 import android.system.OsConstants
-import androidx.annotation.Keep
 import java.io.File
 
 internal fun isWordEngineProcess(): Boolean = runCatching {
@@ -14,7 +13,6 @@ internal fun isWordEngineProcess(): Boolean = runCatching {
     }
 }.getOrDefault(false)
 
-@Keep
 internal object WordEngineGuard {
     private var installed = false
     init { System.loadLibrary("wordguard") }

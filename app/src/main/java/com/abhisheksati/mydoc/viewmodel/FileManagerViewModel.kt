@@ -211,6 +211,8 @@ class FileManagerViewModel(
                     isBrowsingStorage = it.isBrowsingStorage || originCategory != null,
                     activeCategory = null,
                     isLoading = true,
+                    items = if (it.currentDirectory == directory && originCategory == null) it.items else emptyList(),
+                    filteredItems = if (it.currentDirectory == directory && originCategory == null) it.filteredItems else emptyList(),
                     selectedFiles = emptySet(),
                     isSelectionMode = false,
                     canGoBack = backStack.isNotEmpty() || hasParent(directory) || it.isBrowsingStorage
@@ -224,13 +226,14 @@ class FileManagerViewModel(
             )
 
             if (generation != listRequestGeneration) return@launch
-            val sorted = sortSearchResults(items, _uiState.value.sortOrder)
-            val filtered = visibleItems(sorted, _uiState.value)
+            val state = _uiState.value
+            val sorted = withContext(ioDispatcher) { sortSearchResults(items, state.sortOrder) }
+            if (generation != listRequestGeneration) return@launch
 
             _uiState.update {
                 it.copy(
                     items = sorted,
-                    filteredItems = filtered,
+                    filteredItems = visibleItems(sorted, it),
                     isLoading = false
                 )
             }

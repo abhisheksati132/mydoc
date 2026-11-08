@@ -78,4 +78,17 @@ class TabPagerSyncOnDeviceTest {
         awaitPage(1)
         compose.waitUntil(5_000) { currentTab == HomeTab.LIBRARY }
     }
+    @Test fun rapidTabChangesFinishOnTheLastRequestedTab() {
+        setPagerContent()
+        compose.mainClock.autoAdvance = false
+        compose.runOnIdle { currentTab = HomeTab.TOOLS }
+        compose.mainClock.advanceTimeBy(64)
+        compose.runOnIdle { currentTab = HomeTab.HOME }
+        compose.mainClock.advanceTimeBy(48)
+        compose.runOnIdle { currentTab = HomeTab.LIBRARY }
+        compose.mainClock.autoAdvance = true
+        awaitPage(1)
+        assertEquals(HomeTab.LIBRARY, currentTab)
+    }
+
 }

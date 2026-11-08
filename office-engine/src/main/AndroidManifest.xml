@@ -1,0 +1,10 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <permission android:name="${applicationId}.CONVERT" android:protectionLevel="signature" />
+    <application android:label="MyDoc Office Engine" android:allowBackup="false" android:extractNativeLibs="true">
+        <service android:name="com.abhisheksati.mydoc.rendering.engine.word.WordEngineService"
+            android:exported="true" android:permission="${applicationId}.CONVERT"
+            android:process=":word_engine">
+            <meta-data android:name="mydoc.office.protocol" android:value="1" />
+        </service>
+    </application>
+</manifest>

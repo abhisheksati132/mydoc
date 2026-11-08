@@ -155,6 +155,7 @@ fun SettingsScreen(
                     }
 
                     if (selectedCategory == SettingsCategory.READING) {
+                        OfficeEngineSettings()
                         // 2. READING
                         SettingsReadingSection(
                             currentReadingMode = currentReadingMode,

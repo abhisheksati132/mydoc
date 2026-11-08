@@ -54,6 +54,17 @@ fun DocumentViewerScreen(
     val app = context.applicationContext as MyDocApp
     val ext = document.extension.lowercase()
     val descriptor = DocumentFormats.forExtension(ext)
+    var officeInstalled by androidx.compose.runtime.remember { mutableStateOf(
+        com.abhisheksati.mydoc.rendering.engine.OfficeEngineManager.isInstalled(context)) }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) officeInstalled =
+                com.abhisheksati.mydoc.rendering.engine.OfficeEngineManager.isInstalled(context)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     val declaredFailure = DocumentFormats.failureFor(ext)
     var isSlideshowActive by rememberSaveable(document.uri) { mutableStateOf(false) }
     var isWordReflowActive by rememberSaveable(document.uri) { mutableStateOf(false) }
@@ -69,6 +80,9 @@ fun DocumentViewerScreen(
     // "file is damaged".
     val viewer = when {
         declaredFailure != null -> ViewerKind.UNSUPPORTED
+        !officeInstalled && descriptor?.family == DocumentFamily.WORD -> ViewerKind.WORD_REFLOW
+        !officeInstalled && descriptor?.family == DocumentFamily.SPREADSHEET -> ViewerKind.SPREADSHEET_GRID
+        !officeInstalled && descriptor?.family == DocumentFamily.PRESENTATION -> ViewerKind.PRESENTATION_SLIDES
         isSpreadsheetGridActive -> ViewerKind.SPREADSHEET_GRID
         descriptor == null -> ViewerKind.PDF_PAGES
         else -> descriptor.viewer

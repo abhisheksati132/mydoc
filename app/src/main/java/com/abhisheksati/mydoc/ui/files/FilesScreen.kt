@@ -1,4 +1,5 @@
 package com.abhisheksati.mydoc.ui.files
+import androidx.compose.foundation.layout.height
 
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
@@ -402,7 +403,9 @@ fun FilesPaneScreen(
                             }
                             if (uiState.searchIncomplete) Text(stringResource(R.string.explorer_search_incomplete), color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp))
                         }
-                        if (uiState.isLoading) androidx.compose.material3.LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        Box(Modifier.fillMaxWidth().height(4.dp)) {
+                            if (uiState.isLoading) androidx.compose.material3.LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        }
                         if (uiState.renameRecovery.isNotEmpty()) androidx.compose.material3.TextButton(onClick = { showRenameRecovery = true }) {
                             Text(stringResource(R.string.explorer_recovery_title), color = MaterialTheme.colorScheme.error)
                         }

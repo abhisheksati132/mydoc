@@ -3,6 +3,7 @@ package com.abhisheksati.mydoc.update
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.ensureActive
 import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
@@ -10,7 +11,7 @@ import java.net.URL
 import java.security.MessageDigest
 import java.util.Locale
 
-class ApkDownloader(private val context: Context) {
+class ApkDownloader(private val context: Context, private val cacheFolder: String = "updates") {
 
     companion object {
         // The universal APK includes all offline Word engine ABIs (~267 MiB in 1.9.6).
@@ -74,7 +75,8 @@ class ApkDownloader(private val context: Context) {
             }
 
             val baseDir = context.cacheDir
-            val updatesDir = File(baseDir, "updates").apply {
+            require(cacheFolder in setOf("updates", "office-engine-download"))
+            val updatesDir = File(baseDir, cacheFolder).apply {
                 if (!exists()) mkdirs()
             }
             // Clean up any stale files in cache/updates before download
@@ -143,6 +145,7 @@ class ApkDownloader(private val context: Context) {
                         var totalRead: Long = 0
 
                         while (input.read(buffer).also { bytesRead = it } != -1) {
+                            kotlinx.coroutines.currentCoroutineContext().ensureActive()
                             totalRead += bytesRead
                             if (totalRead > MAX_DOWNLOAD_SIZE_BYTES) {
                                 throw IllegalStateException("Download aborted: Stream exceeded the $MAX_DOWNLOAD_SIZE_BYTES byte size limit")

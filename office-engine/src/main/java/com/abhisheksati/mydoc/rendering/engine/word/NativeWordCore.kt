@@ -47,7 +47,7 @@ internal object NativeWordCore {
                   </item>
                 </oor:items>
             """.trimIndent())
-            if (!com.abhisheksati.mydoc.BuildConfig.DEBUG) LibreOfficeKit.putenv("SAL_LOG=-WARN-INFO")
+            if (!com.abhisheksati.mydoc.officeengine.BuildConfig.DEBUG) LibreOfficeKit.putenv("SAL_LOG=-WARN-INFO")
             LibreOfficeKit.init(context, profile.absolutePath)
             Office(requireNotNull(LibreOfficeKit.getLibreOfficeKitHandle()) { "Office engine initialization failed" })
                 .also { office = it }

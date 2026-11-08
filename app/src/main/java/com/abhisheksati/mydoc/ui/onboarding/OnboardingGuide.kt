@@ -11,13 +11,20 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.CollectionsBookmark
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 
 @Composable
 fun FirstRunGuide(onExplore: ()->Unit) {
     val prefs=LocalContext.current.getSharedPreferences("mydoc_welcome",0)
-    var visible by remember { mutableStateOf(!prefs.getBoolean("guide_197_seen",false)) }
+    var visible by rememberSaveable { mutableStateOf(!prefs.getBoolean("welcome_v2_seen",false)) }
     if(visible) OnboardingGuide(onDone={explore->
-        prefs.edit().putBoolean("guide_197_seen",true).apply();visible=false
+        prefs.edit().putBoolean("welcome_v2_seen",true).apply();visible=false
         if(explore)onExplore()
     })
 }
@@ -28,22 +35,51 @@ fun OnboardingGuide(onDone: (Boolean)->Unit) {
     var page by rememberSaveable { mutableIntStateOf(0) }
     val titles=listOf("Your files. Your choice.","Find what is inside.","Organise without losing control.")
     val bodies=listOf(
-        "Open a document with Android’s file picker, or grant access to a folder you choose. You can browse selected files without granting access to all storage. Storage and media permissions can be managed in Android Settings.",
-        "Open Search, then Contents, tags & smart collections. Add files or a folder to index text locally. Results include a snippet and open at the matching page. Refresh after files change. Locked files and scanned pages are not text-indexed; OCR is available separately in the reader.",
-        "Add tags to files from different folders and save smart collections using words, tags and file types. In Storage Cleaner, preview duplicate copies and choose which one to keep. Removed copies go to the Recycle Bin. Your original files are never changed by indexing or tagging."
+        "Read, browse and organise in one place. Start with a single file, or choose the folders you want MyDoc to access.",
+        "Find a passage, not just a filename. Add chosen files to your private, on-device search library.",
+        "Bring files together with tags and smart collections. Review duplicate copies before choosing what to remove."
     )
-    Dialog(onDismissRequest={onDone(false)},properties=DialogProperties(usePlatformDefaultWidth=false)) {
-        Surface(Modifier.fillMaxWidth().padding(20.dp),shape=MaterialTheme.shapes.extraLarge) {
-            Column(Modifier.padding(24.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-                Text("MYDOC 1.9.7  •  ${page+1} / 3",style=MaterialTheme.typography.labelLarge)
+    val details=listOf(
+        listOf("Choose your access" to "Opening a file does not require access to all storage.",
+            "Stay in control" to "MyDoc asks for permissions when a workflow needs them. Change access in Android Settings."),
+        listOf("Go straight to the match" to "Search results include a snippet and can open the matching page.",
+            "Choose what to index" to "Refresh after edits. Locked files and scanned pages are not indexed; OCR is a separate reader tool."),
+        listOf("Organise across folders" to "Tags and collection rules leave your original files in place.",
+            "Keep the right copy" to "Preview duplicates, choose a keeper and move unwanted copies to the Recycle Bin.")
+    )
+    val icons=listOf(Icons.Outlined.FolderOpen,Icons.Outlined.Search,Icons.Outlined.CollectionsBookmark)
+    Dialog(onDismissRequest={onDone(false)},properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
+        Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background) {
+            Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal=28.dp,vertical=16.dp)) {
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
+                    Text("MYDOC",style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.primary)
+                    TextButton(onClick={onDone(false)}) { Text("Skip") }
+                }
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(22.dp)) {
+                Spacer(Modifier.height(20.dp))
+                Box(Modifier.size(88.dp).background(MaterialTheme.colorScheme.primaryContainer,CircleShape),contentAlignment=Alignment.Center) {
+                    Icon(icons[page],contentDescription=null,modifier=Modifier.size(40.dp),tint=MaterialTheme.colorScheme.onPrimaryContainer)
+                }
                 Text(titles[page],style=MaterialTheme.typography.headlineMedium)
                 Text(bodies[page],style=MaterialTheme.typography.bodyLarge)
+                details[page].forEach { (title,description) ->
+                    Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                        Text(title,style=MaterialTheme.typography.titleSmall)
+                        Text(description,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                }
+                Row(Modifier.fillMaxWidth().padding(vertical=16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    repeat(3) { index -> Box(Modifier.weight(1f).height(4.dp).background(
+                        if(index==page) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,CircleShape)) }
+                }
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
-                    TextButton(onClick={if(page>0)page-- else onDone(false)}) { Text(if(page>0)"Back" else "Skip") }
+                    TextButton(onClick={if(page>0)page-- else onDone(false)}) { Text(if(page>0)"Back" else "Start browsing") }
                     Button(onClick={if(page<2)page++ else onDone(true)}) { Text(if(page<2)"Next" else "Explore collections") }
                 }
                 if(page==2) TextButton(onClick={onDone(false)}) { Text("Start browsing") }
-                Text("Replay this guide from Settings → About.",style=MaterialTheme.typography.bodySmall)
+                Text("${page+1} of 3 · Replay from Settings → About",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
