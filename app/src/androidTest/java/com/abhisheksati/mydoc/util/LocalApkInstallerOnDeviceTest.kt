@@ -29,7 +29,7 @@ class LocalApkInstallerOnDeviceTest {
         } finally { source.delete() }
     }
 
-    @Test fun engineCleanupPreservesOtherStagedInstallersAndOriginalFiles() = runBlocking {
+    @Test fun engineCleanupPreservesOtherStagedInstallersAndOriginalFiles() = runBlocking<Unit> {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val source = File.createTempFile("installer-cleanup-", ".apk", context.cacheDir)
         try {

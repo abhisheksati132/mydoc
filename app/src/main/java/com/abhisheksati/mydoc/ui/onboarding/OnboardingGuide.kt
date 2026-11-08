@@ -52,6 +52,16 @@ fun OnboardingGuide(onDone: (Boolean)->Unit) {
     )
     val icons=listOf(Icons.Outlined.FolderOpen,Icons.Outlined.Search,Icons.Outlined.CollectionsBookmark)
     Dialog(onDismissRequest={onDone(false)},properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
+        val view = androidx.compose.ui.platform.LocalView.current
+        val dark = com.abhisheksati.mydoc.designsystem.tokens.AppTheme.isDark
+        SideEffect {
+            (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window?.let { window ->
+                androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+                    isAppearanceLightStatusBars = !dark
+                    isAppearanceLightNavigationBars = !dark
+                }
+            }
+        }
         Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background) {
             Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal=28.dp,vertical=16.dp)) {
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
