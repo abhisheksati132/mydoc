@@ -60,7 +60,7 @@ jobs:
             echo "ERROR: No checksum pin is configured for Gradle $DIST_VERSION."
             exit 1
           fi
-          mkdir -p "$GRADLE_USER_HOME/wrapper/dists/gradle-${DIST_VERSION}-bin/manual"
+          mkdir -p "$GRADLE_USER_HOME/verified-gradle"
           archive="$RUNNER_TEMP/gradle-${DIST_VERSION}-bin.zip"
           curl --fail --location --retry 3 --retry-all-errors \
             "https://api.github.com/repos/gradle/gradle-distributions/releases/assets/451669088" \
@@ -68,19 +68,23 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             -o "$archive"
           echo "bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01  $archive" | sha256sum --check --status
-          unzip -q "$archive" -d "$GRADLE_USER_HOME/wrapper/dists/gradle-${DIST_VERSION}-bin/manual"
+          unzip -q "$archive" -d "$GRADLE_USER_HOME/verified-gradle"
           rm "$archive"
-          test -x "$GRADLE_USER_HOME/wrapper/dists/gradle-${DIST_VERSION}-bin/manual/gradle-${DIST_VERSION}/bin/gradle"
+          test -x "$GRADLE_USER_HOME/verified-gradle/gradle-${DIST_VERSION}/bin/gradle"
+          echo "gradle_home=$GRADLE_USER_HOME/verified-gradle/gradle-${DIST_VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+
+      - name: Set verified Gradle home
+        run: echo "GRADLE_HOME=$RUNNER_TEMP/gradle-cold/verified-gradle/gradle-9.6.0" >> "$GITHUB_ENV"
 
       - name: Run Unit Tests
         # Run against an empty Gradle home on purpose: a warm cache or a local keyring lets an
         # artifact pass verification with no entry in the pin file, and the release must not depend
         # on that. $RUNNER_TEMP is per-job, so nothing here is ever reused from a previous release.
         run: |
-          GRADLE_USER_HOME="$RUNNER_TEMP/gradle-cold" ./gradlew testDebugUnitTest --stacktrace
+          GRADLE_USER_HOME="$RUNNER_TEMP/gradle-cold" "$GRADLE_HOME/bin/gradle" testDebugUnitTest --stacktrace
 
       - name: Upload Test Report
         if: always()
@@ -93,7 +97,7 @@ jobs:
           retention-days: 14
 
       - name: Run Lint
-        run: GRADLE_USER_HOME="$RUNNER_TEMP/gradle-cold" ./gradlew lintDebug --stacktrace
+        run: GRADLE_USER_HOME="$RUNNER_TEMP/gradle-cold" "$GRADLE_HOME/bin/gradle" lintDebug --stacktrace
 
       - name: Upload Lint Report
         if: always()
@@ -159,7 +163,7 @@ jobs:
             echo "ERROR: Secret MYDOC_RELEASE_CERT_SHA256 is missing or empty! Release builds require a pinned certificate fingerprint to prevent updater failure."
             exit 1
           fi
-          GRADLE_USER_HOME="$RUNNER_TEMP/gradle-cold" ./gradlew assembleRelease --stacktrace
+          GRADLE_USER_HOME="$RUNNER_TEMP/gradle-cold" "$GRADLE_HOME/bin/gradle" assembleRelease --stacktrace
 
       - name: Install apksigner
         run: sudo apt-get update -y && sudo apt-get install -y apksigner
