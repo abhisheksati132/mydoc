@@ -286,7 +286,7 @@ class XlsxPainter(private val wb: XlsxWorkbook, val theme: PaintTheme) {
             if (inMerge(rowMerges, r, c)) continue
             val x = originX + layout.colX[c] * scale
             val cell = cells?.get(c)
-            val fill = if (cell != null) info(cell).style.fillArgb
+            val fill = sheet.conditionalFills[r to c] ?: if (cell != null) info(cell).style.fillArgb
             else wb.styles.resolve(rowStyle ?: layout.colStyle[c]).fillArgb
             if (fill != null) {
                 fillPaint.color = fill
@@ -347,9 +347,10 @@ class XlsxPainter(private val wb: XlsxWorkbook, val theme: PaintTheme) {
             val st = ci?.style ?: wb.styles.resolve(
                 sheet.rows[m.r1]?.style?.takeIf { it >= 0 } ?: layout.colStyle.getOrElse(m.c1) { 0 }
             )
-            fillPaint.color = st.fillArgb ?: theme.surface
+            val mergeFill = sheet.conditionalFills[m.r1 to m.c1] ?: st.fillArgb
+            fillPaint.color = mergeFill ?: theme.surface
             canvas.drawRect(x0, y0, x1, y1, fillPaint)
-            if (st.fillArgb == null && sheet.showGridLines) {
+            if (mergeFill == null && sheet.showGridLines) {
                 linePaint.color = theme.gridLine; linePaint.strokeWidth = 1f; linePaint.pathEffect = null
                 canvas.drawRect(x0 + 0.5f, y0 + 0.5f, x1 - 0.5f, y1 - 0.5f, linePaint)
             }

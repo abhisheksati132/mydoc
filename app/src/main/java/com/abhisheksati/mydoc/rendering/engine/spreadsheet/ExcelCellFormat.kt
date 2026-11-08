@@ -79,7 +79,7 @@ internal object ExcelCellFormat {
         }
     }
 
-    fun apply(raw: String, code: String?): String {
+    fun apply(raw: String, code: String?, date1904: Boolean = false): String {
         if (code.isNullOrBlank() || code.equals("General", true) || code == "@") return raw
         val value = raw.trim().toDoubleOrNull() ?: return raw
 
@@ -93,7 +93,7 @@ internal object ExcelCellFormat {
         if (body.isBlank()) return raw
 
         return runCatching {
-            if (isDateTime(body)) formatDateTime(value, body) else formatNumber(value, body)
+            if (isDateTime(body)) formatDateTime(value, body, date1904) else formatNumber(value, body)
         }.getOrDefault(raw)
     }
 
@@ -136,8 +136,8 @@ internal object ExcelCellFormat {
     private val DaysShort = arrayOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
     private val DaysLong = arrayOf("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
 
-    private fun formatDateTime(serial: Double, code: String): String {
-        val cal = calendarFor(serial)
+    private fun formatDateTime(serial: Double, code: String, date1904: Boolean): String {
+        val cal = calendarFor(serial, date1904)
         val tokens = tokenize(code)
         val hasAmPm = tokens.any { it.kind == 'a' }
         val sb = StringBuilder()
@@ -175,13 +175,19 @@ internal object ExcelCellFormat {
         return sb.toString().trim()
     }
 
-    private fun calendarFor(serial: Double): Calendar {
+    private fun calendarFor(serial: Double, date1904: Boolean): Calendar {
         val days = Math.floor(serial).toInt()
-        val offset = if (days < 60) days + 1 else days
         val cal = GregorianCalendar(TimeZone.getTimeZone("UTC"), Locale.US)
         cal.clear()
-        cal.set(1899, Calendar.DECEMBER, 30, 0, 0, 0)
-        cal.add(Calendar.DATE, offset)
+        if (date1904) {
+            cal.set(1904, Calendar.JANUARY, 1, 0, 0, 0)
+            cal.add(Calendar.DATE, days)
+        } else {
+            // Excel preserves the Lotus 1-2-3 leap-year bug: serial 60 represents a
+            // fictional 1900-02-29, so dates before it need a one-day adjustment.
+            cal.set(1899, Calendar.DECEMBER, 30, 0, 0, 0)
+            cal.add(Calendar.DATE, if (days < 60) days + 1 else days)
+        }
         val secondsInDay = Math.round((serial - days) * 86400.0).toInt()
         cal.add(Calendar.SECOND, secondsInDay)
         return cal

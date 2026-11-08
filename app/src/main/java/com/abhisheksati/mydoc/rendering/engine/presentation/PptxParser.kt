@@ -598,6 +598,40 @@ class PptxParser {
         }
     }
 
+    private fun formatAutoNumber(type: String, value: Int): String {
+        fun alpha(number: Int, base: Char): String {
+            var n = number.coerceAtLeast(1)
+            val out = StringBuilder()
+            while (n > 0) {
+                n--
+                out.append((base.code + n % 26).toChar())
+                n /= 26
+            }
+            return out.reverse().toString()
+        }
+        fun roman(number: Int): String {
+            var n = number.coerceIn(1, 3999)
+            val out = StringBuilder()
+            for ((amount, symbol) in listOf(1000 to "M", 900 to "CM", 500 to "D", 400 to "CD", 100 to "C", 90 to "XC", 50 to "L", 40 to "XL", 10 to "X", 9 to "IX", 5 to "V", 4 to "IV", 1 to "I")) {
+                while (n >= amount) { out.append(symbol); n -= amount }
+            }
+            return out.toString()
+        }
+        val core = when {
+            type.startsWith("alphaLc") -> alpha(value, 'a')
+            type.startsWith("alphaUc") -> alpha(value, 'A')
+            type.startsWith("romanLc") -> roman(value).lowercase()
+            type.startsWith("romanUc") -> roman(value)
+            else -> value.toString()
+        }
+        return when {
+            type.endsWith("ParenBoth") -> "($core)"
+            type.endsWith("ParenR") -> "$core)"
+            type.endsWith("Period") -> "$core."
+            else -> core
+        }
+    }
+
     private fun isMasterTemplateNoise(text: String): Boolean {
         val lower = text.trim().lowercase()
         if (lower.isBlank()) return true
@@ -1471,6 +1505,7 @@ class PptxParser {
             var curBulletChar: String? = null
             var curIndentLvl = 0
             var curParaAlign = TextAlign.Start
+            val autoNumberCounters = HashMap<Int, Int>()
 
             val curParagraphs = mutableListOf<SlideParagraph>()
             val curRuns = mutableListOf<SlideTextRun>()
@@ -1507,6 +1542,7 @@ class PptxParser {
                             }
 
                             isTag(tagName, "sp") -> {
+                                autoNumberCounters.clear()
                                 inShape = true
                                 inSpPr = false; inLn = false; inTxBody = false; inRPr = false; inDefRPr = false
                                 curOffX = 0L; curOffY = 0L; curExtX = 0L; curExtY = 0L
@@ -1729,7 +1765,12 @@ class PptxParser {
                             }
 
                             isTag(tagName, "buAutoNum") -> {
-                                curBulletChar = "1."
+                                val start = parser.getAttributeValue(null, "startAt")?.toIntOrNull()?.coerceAtLeast(1)
+                                val value = start ?: ((autoNumberCounters[curIndentLvl] ?: 0) + 1)
+                                autoNumberCounters[curIndentLvl] = value
+                                curBulletChar = formatAutoNumber(
+                                    parser.getAttributeValue(null, "type") ?: "arabicPeriod", value
+                                )
                             }
 
                             isTag(tagName, "buNone") -> {

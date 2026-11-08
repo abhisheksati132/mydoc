@@ -30,6 +30,14 @@ data class ColumnInfo(val widthChars: Float?, val hidden: Boolean, val style: In
 
 enum class ValidationKind { LIST, OTHER }
 
+data class CellConditionalRule(
+    val range: CellRange,
+    val operator: String,
+    val formulas: List<String>,
+    val differentialStyle: Int,
+    val priority: Int
+)
+
 class DataValidation(
     var ranges: List<CellRange>,
     val kind: ValidationKind,
@@ -47,6 +55,8 @@ class XlsxSheet(
     val rows = java.util.TreeMap<Int, RowData>()
     val cols = java.util.TreeMap<Int, ColumnInfo>()
     val merges = mutableListOf<CellRange>()
+    val conditionalRules = mutableListOf<CellConditionalRule>()
+    val conditionalFills = HashMap<Pair<Int, Int>, Int>()
     val validations = mutableListOf<DataValidation>()
     var defaultRowHeightPt = 15f
     var defaultColWidthChars = 8.43f
@@ -102,7 +112,9 @@ class XlsxWorkbook(
     val sheets: List<XlsxSheet>,
     val styles: StyleTable,
     val sharedStrings: List<RichText>,
-    val editable: Boolean
+    val editable: Boolean,
+    /** Excel workbooks may count dates from 1904-01-01 instead of the 1900 date system. */
+    val date1904: Boolean = false
 ) {
     /** Sheets whose part could not be read or named but is absent: the workbook is usable, not complete. */
     val failedSheets: List<String>
@@ -125,7 +137,7 @@ class XlsxWorkbook(
         "s", "inlineStr" -> textOf(c)?.text ?: c.raw
         "b" -> if (c.raw.trim() == "1") "TRUE" else "FALSE"
         "str", "e" -> c.raw
-        else -> if (c.raw.isEmpty()) "" else ExcelCellFormat.apply(c.raw, styles.resolve(c.style).numFmtCode)
+        else -> if (c.raw.isEmpty()) "" else ExcelCellFormat.apply(c.raw, styles.resolve(c.style).numFmtCode, date1904)
     }
 
     fun editText(c: CellData): String = when {

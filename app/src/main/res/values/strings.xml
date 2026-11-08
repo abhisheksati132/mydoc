@@ -517,6 +517,9 @@
     <string name="sheet_read_failed">This sheet could not be read: %1$s</string>
     <string name="sheet_search_placeholder">Search sheet cells…</string>
     <string name="cell_label">Cell %1$s</string>
+    <string name="cell_value">Value</string>
+    <string name="cell_formula">Formula</string>
+    <string name="cell_empty">Empty cell</string>
     <string name="tools_all_categories">All categories</string>
     <string name="tools_cat_all">All</string>
     <string name="tools_cat_scan">Scan</string>

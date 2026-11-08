@@ -96,7 +96,8 @@ class StyleTable(
     val themeColors: IntArray,
     val indexedColors: IntArray?,
     val cellStyleXfCount: Int,
-    val hasStylesPart: Boolean
+    val hasStylesPart: Boolean,
+    val differentialFormats: List<XmlEl> = emptyList()
 ) {
     val origFonts = fonts.size
     val origFills = fills.size
@@ -119,6 +120,8 @@ class StyleTable(
     fun numFmtCode(id: Int): String = ExcelCellFormat.codeFor(id, numFmts)
 
     fun color(el: XmlEl?): Int? = el?.let { ColorSpec.fromAttrs(it.attrs)?.resolve(themeColors, indexedColors) }
+
+    fun differentialFill(index: Int): Int? = differentialFormats.getOrNull(index)?.child("fill")?.let(::fillColor)
 
     private fun buildResolved(xf: XmlEl): ResolvedStyle {
         val font = fonts.getOrNull(xf.attrs["fontId"]?.toIntOrNull() ?: 0)

@@ -12,6 +12,7 @@ object XlsxReader {
 
     const val MaxRows = 20_000
     const val MaxColumns = 1024
+    private const val MaxConditionalCells = 2_000_000
 
     fun read(bytes: ByteArray): XlsxWorkbook = bytes.inputStream().use { read(it) }
 
@@ -105,7 +106,68 @@ object XlsxReader {
                 }
             }
         }
-        return XlsxWorkbook(sheets, styles, shared, editable = entries.containsKey("xl/workbook.xml"))
+        sheets.forEach { applyConditionalFills(it, styles) }
+        val workbookBytes = entries["xl/workbook.xml"]
+        return XlsxWorkbook(
+            sheets, styles, shared,
+            editable = workbookBytes != null,
+            date1904 = workbookBytes?.let(::uses1904DateSystem) ?: false
+        )
+    }
+
+    /** Applies supported numeric cellIs rules to populated cells only; range size never drives work. */
+    private fun applyConditionalFills(sheet: XlsxSheet, styles: StyleTable) {
+        var examined = 0
+        for (rule in sheet.conditionalRules.sortedBy { it.priority }) {
+            val fill = styles.differentialFill(rule.differentialStyle) ?: continue
+            val bounds = rule.range
+            val lastRow = minOf(bounds.r2, MaxRows - 1)
+            val lastCol = minOf(bounds.c2, MaxColumns - 1)
+            if (bounds.r1 > lastRow || bounds.c1 > lastCol) continue
+            val firstRow = sheet.rows.ceilingKey(bounds.r1) ?: continue
+            val endRow = sheet.rows.floorKey(lastRow) ?: continue
+            if (firstRow > endRow) continue
+            for ((rowIndex, row) in sheet.rows.subMap(firstRow, true, endRow, true)) {
+                val firstCol = row.cells.ceilingKey(bounds.c1) ?: continue
+                val endCol = row.cells.floorKey(lastCol) ?: continue
+                if (firstCol > endCol) continue
+                for ((colIndex, cell) in row.cells.subMap(firstCol, true, endCol, true)) {
+                    if (++examined > MaxConditionalCells) return
+                    if (sheet.conditionalFills.containsKey(rowIndex to colIndex)) continue
+                    val value = cell.raw.toDoubleOrNull() ?: continue
+                    if (cell.type !in setOf("", "n")) continue
+                    val args = rule.formulas.map { it.removePrefix("=").toDoubleOrNull() }
+                    if (args.any { it == null }) continue
+                    val matches = when (rule.operator) {
+                        "equal" -> args.getOrNull(0)?.let { value == it } == true
+                        "notEqual" -> args.getOrNull(0)?.let { value != it } == true
+                        "greaterThan" -> args.getOrNull(0)?.let { value > it } == true
+                        "lessThan" -> args.getOrNull(0)?.let { value < it } == true
+                        "greaterThanOrEqual" -> args.getOrNull(0)?.let { value >= it } == true
+                        "lessThanOrEqual" -> args.getOrNull(0)?.let { value <= it } == true
+                        "between", "notBetween" -> {
+                            val lo = args.getOrNull(0); val hi = args.getOrNull(1)
+                            if (lo == null || hi == null) false
+                            else (value in minOf(lo, hi)..maxOf(lo, hi)) == (rule.operator == "between")
+                        }
+                        else -> false
+                    }
+                    if (matches) sheet.conditionalFills[rowIndex to colIndex] = fill
+                }
+            }
+        }
+    }
+
+    private fun uses1904DateSystem(bytes: ByteArray): Boolean {
+        val p = parser(bytes)
+        var ev = p.eventType
+        while (ev != XmlPullParser.END_DOCUMENT) {
+            if (ev == XmlPullParser.START_TAG && p.local == "workbookPr") {
+                return p.attr("date1904").let { it == "1" || it.equals("true", ignoreCase = true) }
+            }
+            ev = p.next()
+        }
+        return false
     }
 
     private fun isNeeded(n: String): Boolean =
@@ -187,6 +249,7 @@ object XlsxReader {
         val fonts = mutableListOf<XmlEl>()
         val fills = mutableListOf<XmlEl>()
         val borders = mutableListOf<XmlEl>()
+        val dxfs = mutableListOf<XmlEl>()
         val xfs = mutableListOf<XmlEl>()
         val numFmts = HashMap<Int, String>()
         var indexed: IntArray? = null
@@ -208,6 +271,7 @@ object XlsxReader {
                     section == "borders" && n == "border" && p.depth == 3 -> borders.add(readEl(p))
                     section == "cellXfs" && n == "xf" && p.depth == 3 -> xfs.add(readEl(p))
                     section == "cellStyleXfs" && n == "xf" && p.depth == 3 -> styleXfs++
+                    section == "dxfs" && n == "dxf" && p.depth == 3 -> dxfs.add(readEl(p))
                     section == "colors" && n == "indexedColors" -> {
                         val el = readEl(p)
                         indexed = el.children.filter { it.name == "rgbColor" }
@@ -217,7 +281,7 @@ object XlsxReader {
             }
             ev = p.next()
         }
-        return StyleTable(fonts, fills, borders, xfs, numFmts, theme, indexed, styleXfs, true)
+        return StyleTable(fonts, fills, borders, xfs, numFmts, theme, indexed, styleXfs, true, dxfs)
     }
 
     fun parseSharedStrings(bytes: ByteArray): List<RichText> {
@@ -342,6 +406,7 @@ object XlsxReader {
                     }
                     "mergeCell" -> p.attr("ref")?.let { XlsxRefs.parseRange(it) }?.let { sheet.merges.add(it) }
                     "dataValidation" -> readValidation(p)?.let { sheet.validations.add(it) }
+                    "conditionalFormatting" -> readConditionalFormatting(p)?.let(sheet.conditionalRules::addAll)
                 }
             }
             ev = p.next()
@@ -394,5 +459,21 @@ object XlsxReader {
             ranges, if (type == "list") ValidationKind.LIST else ValidationKind.OTHER,
             f1?.trim(), allowBlank, showDropDown, strict, prompt
         )
+    }
+
+    private fun readConditionalFormatting(p: XmlPullParser): List<CellConditionalRule>? {
+        val ranges = XlsxRefs.parseSqref(p.attr("sqref") ?: return null)
+        if (ranges.isEmpty()) return null
+        val formatting = readEl(p)
+        return formatting.children.asSequence()
+            .filter { it.name == "cfRule" && it.attrs["type"] == "cellIs" }
+            .flatMap { rule ->
+                val operator = rule.attrs["operator"] ?: return@flatMap emptySequence()
+                val dxf = rule.attrs["dxfId"]?.toIntOrNull() ?: return@flatMap emptySequence()
+                val priority = rule.attrs["priority"]?.toIntOrNull() ?: Int.MAX_VALUE
+                val formulas = rule.children.filter { it.name == "formula" }.mapNotNull { it.text?.trim() }
+                if (formulas.isEmpty()) emptySequence()
+                else ranges.asSequence().map { range -> CellConditionalRule(range, operator, formulas, dxf, priority) }
+            }.toList()
     }
 }

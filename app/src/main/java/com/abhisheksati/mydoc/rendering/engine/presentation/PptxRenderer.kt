@@ -20,6 +20,36 @@ import android.text.style.UnderlineSpan
 import java.util.ArrayDeque
 import java.util.zip.ZipInputStream
 
+private fun formatAutoNumber(type: String, value: Int): String {
+    fun alpha(number: Int, base: Char): String {
+        var n = number.coerceAtLeast(1)
+        val out = StringBuilder()
+        while (n > 0) { n--; out.append((base.code + n % 26).toChar()); n /= 26 }
+        return out.reverse().toString()
+    }
+    fun roman(number: Int): String {
+        var n = number.coerceIn(1, 3999)
+        val out = StringBuilder()
+        for ((amount, symbol) in listOf(1000 to "M", 900 to "CM", 500 to "D", 400 to "CD", 100 to "C", 90 to "XC", 50 to "L", 40 to "XL", 10 to "X", 9 to "IX", 5 to "V", 4 to "IV", 1 to "I")) {
+            while (n >= amount) { out.append(symbol); n -= amount }
+        }
+        return out.toString()
+    }
+    val core = when {
+        type.startsWith("alphaLc") -> alpha(value, 'a')
+        type.startsWith("alphaUc") -> alpha(value, 'A')
+        type.startsWith("romanLc") -> roman(value).lowercase()
+        type.startsWith("romanUc") -> roman(value)
+        else -> value.toString()
+    }
+    return when {
+        type.endsWith("ParenBoth") -> "($core)"
+        type.endsWith("ParenR") -> "$core)"
+        type.endsWith("Period") -> "$core."
+        else -> core
+    }
+}
+
 /**
  * Enterprise presentation-to-PDF renderer.
  * Renders a .pptx to one PDF page per slide, at the presentation's real slide size,
@@ -525,7 +555,9 @@ internal object PptxRenderer {
         val layout: OoxmlNode?,
         val master: OoxmlNode?,
         val placeholders: Map<String, Rect>
-    )
+    ) {
+        val autoNumberCounters = HashMap<Int, Int>()
+    }
 
     private class TextInheritance(val bodies: List<OoxmlNode>, val lists: List<OoxmlNode>) {
         fun body(attr: String): String? = bodies.asReversed().firstNotNullOfOrNull { it.attr(attr) }
@@ -552,6 +584,7 @@ internal object PptxRenderer {
     ) {
         val paragraphs = txBody.childrenNamed("a:p")
         if (paragraphs.isEmpty()) return
+        ctx.autoNumberCounters.clear()
         val bodyPr = txBody.child("a:bodyPr")
         fun bodyAttr(name: String) = bodyPr?.attr(name) ?: inherited.body(name)
         fun insetPt(name: String, defaultEmu: Float) = (bodyAttr(name)?.toFloatOrNull() ?: defaultEmu) / EmuPerPoint
@@ -618,11 +651,18 @@ internal object PptxRenderer {
         val out = SpannableStringBuilder()
         var firstSize = 0f
 
+        val level = paragraph.child("a:pPr")?.attr("lvl")?.toIntOrNull() ?: 0
+        val autoNumber = paragraph.child("a:pPr")?.child("a:buAutoNum")
         val bullet = when {
             paragraph.child("a:pPr")?.child("a:buNone") != null -> null
             paragraph.child("a:pPr")?.child("a:buChar") != null ->
                 paragraph.child("a:pPr")?.child("a:buChar")?.attr("char") ?: "•"
-            paragraph.child("a:pPr")?.child("a:buAutoNum") != null -> "•"
+            autoNumber != null -> {
+                val value = autoNumber.attr("startAt")?.toIntOrNull()?.coerceAtLeast(1)
+                    ?: ((ctx.autoNumberCounters[level] ?: 0) + 1)
+                ctx.autoNumberCounters[level] = value
+                formatAutoNumber(autoNumber.attr("type") ?: "arabicPeriod", value)
+            }
             else -> null
         }
         if (bullet != null) out.append(bullet).append("  ")

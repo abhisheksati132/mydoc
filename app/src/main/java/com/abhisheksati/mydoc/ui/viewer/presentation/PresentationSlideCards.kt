@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -207,12 +208,17 @@ fun VisualSlideCard(
                                             }
                                         }
 
+                                        val elementShape = when {
+                                            element.isEllipse -> CircleShape
+                                            element.isRounded -> RoundedCornerShape(18.dp)
+                                            else -> RectangleShape
+                                        }
                                         val shapeModifier = (if (isText) Modifier.fillMaxWidth().heightIn(min = elementHeight) else Modifier.fillMaxSize())
                                             .then(
                                                 if (!isVectorPreset && element.backgroundColor != null && element.backgroundColor != Color.Transparent) {
                                                     Modifier.background(
                                                         color = element.backgroundColor,
-                                                        shape = if (element.isRounded) CircleShape else if (element.isEllipse) CircleShape else RectangleShape
+                                                        shape = elementShape
                                                     )
                                                 } else Modifier
                                             )
@@ -221,7 +227,7 @@ fun VisualSlideCard(
                                                     Modifier.border(
                                                         width = (element.borderWidthDp.takeIf { it > 0f } ?: 1f).dp,
                                                         color = element.borderColor,
-                                                        shape = if (element.isRounded) CircleShape else if (element.isEllipse) CircleShape else RectangleShape
+                                                        shape = elementShape
                                                     )
                                                 } else Modifier
                                             )

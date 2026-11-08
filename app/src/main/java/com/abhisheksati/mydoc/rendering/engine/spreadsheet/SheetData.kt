@@ -6,6 +6,14 @@ data class SheetData(
     val maxCol: Int = 0,
     val cells: Map<Pair<Int, Int>, String> = emptyMap(),
     val columnWidths: Map<Int, Int> = emptyMap(),
+    val defaultRowHeightDp: Int = 20,
+    val rowHeightsDp: Map<Int, Int> = emptyMap(),
+    /** Original formula text keyed by zero-based cell address, without the leading '='. */
+    val formulas: Map<Pair<Int, Int>, String> = emptyMap(),
+    /** Cell colors and emphasis used by the workbook, keyed by zero-based cell address. */
+    val cellStyles: Map<Pair<Int, Int>, SpreadsheetCellStyle> = emptyMap(),
+    /** Dynamic fill colors from supported numeric conditional-formatting rules. */
+    val conditionalFills: Map<Pair<Int, Int>, Int> = emptyMap(),
     /** Ranges where one value visually spans several cells. */
     val mergedRegions: List<CellRange> = emptyList(),
     /** True when the reader stopped early at a safety cap, so the sheet shown is incomplete. */
@@ -32,6 +40,29 @@ data class SheetData(
         }
     }
 }
+
+data class SpreadsheetCellStyle(
+    val fillArgb: Int?,
+    val fontArgb: Int?,
+    val bold: Boolean,
+    val italic: Boolean,
+    val underline: Boolean,
+    val strike: Boolean,
+    val horizontalAlignment: String,
+    val verticalAlignment: String,
+    val wrapText: Boolean,
+    val leftBorder: SpreadsheetBorder? = null,
+    val rightBorder: SpreadsheetBorder? = null,
+    val topBorder: SpreadsheetBorder? = null,
+    val bottomBorder: SpreadsheetBorder? = null
+)
+
+data class SpreadsheetBorder(
+    val colorArgb: Int?,
+    val widthDp: Float,
+    val dashed: Boolean,
+    val double: Boolean
+)
 
 data class SpreadsheetModel(
     val sheets: List<SheetData> = emptyList()

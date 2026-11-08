@@ -5,6 +5,19 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+### Added
+
+- PowerPoint numbered lists now retain common Arabic, alphabetic and Roman numbering with their punctuation and per-level sequence instead of showing every item as `1.`.
+- Excel grid and PDF previews render solid fills for numeric greater/less/equal/between conditional-format rules with supported differential fills.
+- Excel grid and PDF previews preserve custom row heights, wrapped text and common cell borders, including dashed and double edges.
+
+### Fixed
+
+- Rounded PowerPoint shape backgrounds and borders now use rounded corners instead of being stretched into a capsule.
+
+- Excel grid and PDF previews now honor the workbook's 1904 date system instead of formatting those serials as 1900-system dates.
+- Excel grid cells now retain supported workbook fills, font colors, emphasis and alignment instead of flattening every cell to the same appearance.
+
 ## [1.9.6] — 2026-11-08
 
 ### Added
@@ -265,7 +278,7 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 - Word: table columns beyond 24 are dropped, rows are not split across pages, and (`.docx`) page
   furniture is still not rendered.
 - `.xls` rich/phonetic shared strings are still parsed with the old field widths; the ODS limit
-  above is bounded rather than complete; `.xlsx` `date1904` workbooks still display as 1900-system.
+  above is bounded rather than complete.
 - Export/to-PDF: mixed searchable/scanned pages are still OCR'd all-or-nothing, the long-image
   pixel budget is not enforced, and skipped inputs are not reported.
 - Reader sessions: two loads can still race (no generation guard), and cancellation is not checked

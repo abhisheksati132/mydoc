@@ -39,10 +39,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -195,9 +201,11 @@ fun SpreadsheetViewerScreen(
                     val maxCol = maxOf(10, currentSheet.maxCol + 3)
                     val rowHeight = 36.dp
                     val headerColWidth = 44.dp
+                    val gridBorderColor = MaterialTheme.colorScheme.outlineVariant
                     // Widths come from the workbook itself; 110dp is only the fallback for
                     // columns the file never sized.
                     fun widthFor(c: Int) = currentSheet.columnWidths[c]?.dp ?: 110.dp
+                    fun heightFor(r: Int) = (currentSheet.rowHeightsDp[r] ?: currentSheet.defaultRowHeightDp).dp
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         Column(modifier = Modifier.fillMaxSize()) {
@@ -239,7 +247,7 @@ fun SpreadsheetViewerScreen(
                             // Body Grid with Virtualized Rows and Frozen Row Header
                             LazyColumn(state = gridState, modifier = Modifier.fillMaxSize()) {
                                 items(maxRow + 1) { r ->
-                                    Row(modifier = Modifier.height(rowHeight)) {
+                                    Row(modifier = Modifier.height(heightFor(r))) {
                                         // Row Header (frozen horizontally)
                                         Box(
                                             modifier = Modifier
@@ -261,6 +269,7 @@ fun SpreadsheetViewerScreen(
                                         Row(modifier = Modifier.horizontalScroll(horizontalScrollState)) {
                                             for (c in 0..maxCol) {
                                                 val cellText = currentSheet.getCellValue(r, c)
+                                                val cellStyle = currentSheet.cellStyles[r to c]
                                                 val isSelected = state.selectedCell == (r to c)
                                                 val isMatch = state.searchQuery.isNotBlank() && cellText.contains(state.searchQuery, ignoreCase = true)
 
@@ -268,10 +277,22 @@ fun SpreadsheetViewerScreen(
                                                 val cellBg = when {
                                                     isSelected -> colors.accent.copy(alpha = 0.25f)
                                                     isMatch -> DocumentCanvasColors.searchHighlight
+                                                    currentSheet.conditionalFills[r to c] != null -> Color(currentSheet.conditionalFills.getValue(r to c))
                                                     // A merged range keeps its value in the anchor cell;
                                                     // shading the rest shows the span rather than a gap.
                                                     isCovered -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                                    else -> Color.Transparent
+                                                    else -> cellStyle?.fillArgb?.let(::Color) ?: Color.Transparent
+                                                }
+                                                val cellTextColor = cellStyle?.fontArgb?.let(::Color) ?: textColor
+                                                val cellTextAlign = when (cellStyle?.horizontalAlignment) {
+                                                    "center", "centerContinuous" -> TextAlign.Center
+                                                    "right" -> TextAlign.End
+                                                    else -> TextAlign.Start
+                                                }
+                                                val cellVerticalAlignment = when (cellStyle?.verticalAlignment) {
+                                                    "top" -> Alignment.TopStart
+                                                    "center", "distributed", "justify" -> Alignment.CenterStart
+                                                    else -> Alignment.BottomStart
                                                 }
 
                                                 Box(
@@ -283,17 +304,31 @@ fun SpreadsheetViewerScreen(
                                                             color = if (isSelected) colors.accent else MaterialTheme.colorScheme.outlineVariant
                                                         )
                                                         .background(cellBg)
+                                                        .drawBehind { drawSpreadsheetBorders(cellStyle, gridBorderColor) }
                                                         .clickable { viewModel.selectCell(r, c) }
-                                                        .padding(horizontal = 6.dp),
-                                                    contentAlignment = Alignment.CenterStart
+                                                        .padding(horizontal = 6.dp, vertical = if (cellStyle?.wrapText == true) 2.dp else 0.dp),
+                                                    contentAlignment = cellVerticalAlignment
                                                 ) {
                                                     Text(
                                                         text = cellText,
                                                         style = MaterialTheme.typography.bodySmall,
-                                                        color = textColor,
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis,
-                                                        textAlign = TextAlign.Start
+                                                        color = cellTextColor,
+                                                        fontWeight = if (cellStyle?.bold == true) FontWeight.Bold else FontWeight.Normal,
+                                                        fontStyle = if (cellStyle?.italic == true) FontStyle.Italic else FontStyle.Normal,
+                                                        textDecoration = when {
+                                                            cellStyle?.underline == true && cellStyle.strike -> TextDecoration.combine(
+                                                                listOf(TextDecoration.Underline, TextDecoration.LineThrough)
+                                                            )
+                                                            cellStyle?.underline == true -> TextDecoration.Underline
+                                                            cellStyle?.strike == true -> TextDecoration.LineThrough
+                                                            else -> TextDecoration.None
+                                                        },
+                                                        maxLines = if (cellStyle?.wrapText == true) {
+                                                            (heightFor(r).value / 18f).toInt().coerceIn(1, 12)
+                                                        } else 1,
+                                                        softWrap = cellStyle?.wrapText == true,
+                                                        overflow = if (cellStyle?.wrapText == true) TextOverflow.Clip else TextOverflow.Ellipsis,
+                                                        textAlign = cellTextAlign
                                                     )
                                                 }
                                             }
@@ -311,7 +346,9 @@ fun SpreadsheetViewerScreen(
         val selected = state.selectedCell
         if (selected != null) {
             val (r, c) = selected
-            val cellVal = state.currentSheet?.getCellValue(r, c) ?: ""
+            val sheet = state.currentSheet
+            val cellVal = sheet?.getCellValue(r, c).orEmpty()
+            val formula = sheet?.formulas?.get(r to c)
             val cellRef = "${SheetData.columnIndexToLetter(c)}${r + 1}"
 
             ModalBottomSheet(
@@ -332,13 +369,70 @@ fun SpreadsheetViewerScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = cellVal.ifEmpty { "(Empty cell)" },
+                        text = stringResource(R.string.cell_value),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = cellVal.ifEmpty { stringResource(R.string.cell_empty) },
                         style = MaterialTheme.typography.bodyLarge,
                         color = textColor
                     )
+                    if (formula != null) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(R.string.cell_formula),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "=$formula",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = textColor
+                        )
+                    }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
     }
+}
+
+private fun DrawScope.drawSpreadsheetBorders(style: com.abhisheksati.mydoc.rendering.engine.spreadsheet.SpreadsheetCellStyle?, fallback: Color) {
+    style ?: return
+    fun draw(edge: com.abhisheksati.mydoc.rendering.engine.spreadsheet.SpreadsheetBorder?, horizontal: Boolean, leading: Boolean) {
+        edge ?: return
+        val stroke = edge.widthDp.coerceAtLeast(0.5f).dp.toPx()
+        val color = edge.colorArgb?.let(::Color) ?: fallback
+        val dash = if (edge.dashed) PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 3.dp.toPx())) else null
+        val gap = stroke.coerceAtLeast(1.dp.toPx())
+        val center = when {
+            horizontal && leading -> 0f
+            horizontal -> size.height
+            leading -> 0f
+            else -> size.width
+        }
+        fun line(position: Float) {
+            val start: Offset
+            val end: Offset
+            if (horizontal) {
+                start = Offset(0f, position)
+                end = Offset(size.width, position)
+            } else {
+                start = Offset(position, 0f)
+                end = Offset(position, size.height)
+            }
+            drawLine(color, start, end, stroke, pathEffect = dash)
+        }
+        if (edge.double) {
+            line(center + if (leading) gap / 2f else -gap / 2f)
+            line(center + if (leading) gap * 1.5f else -gap * 1.5f)
+        } else line(center)
+    }
+    draw(style.topBorder, horizontal = true, leading = true)
+    draw(style.bottomBorder, horizontal = true, leading = false)
+    draw(style.leftBorder, horizontal = false, leading = true)
+    draw(style.rightBorder, horizontal = false, leading = false)
 }

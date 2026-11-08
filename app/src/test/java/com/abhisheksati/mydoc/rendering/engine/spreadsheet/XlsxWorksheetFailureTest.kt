@@ -31,7 +31,11 @@ class XlsxWorksheetFailureTest {
         </wrongClose></sheetData></worksheet>
     """.trimIndent()
 
-    private fun workbook(sheetNamesAndParts: List<Pair<String, String>>): ByteArray {
+    private fun workbook(
+        sheetNamesAndParts: List<Pair<String, String>>,
+        date1904: Boolean = false,
+        stylesXml: String? = null
+    ): ByteArray {
         val out = ByteArrayOutputStream()
         ZipOutputStream(out).use { zip ->
             fun add(name: String, body: String) {
@@ -59,6 +63,7 @@ class XlsxWorksheetFailureTest {
                 "xl/workbook.xml",
                 """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>""" +
                     "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">" +
+                    (if (date1904) "<workbookPr date1904=\"1\"/>" else "") +
                     "<sheets>" +
                     sheetNamesAndParts.mapIndexed { index, (name, _) ->
                         "<sheet name=\"$name\" sheetId=\"${index + 1}\" r:id=\"rId${index + 1}\"/>"
@@ -74,6 +79,7 @@ class XlsxWorksheetFailureTest {
                     }.joinToString("") +
                     "</Relationships>"
             )
+            stylesXml?.let { add("xl/styles.xml", it) }
             sheetNamesAndParts.forEachIndexed { index, (_, part) ->
                 add("xl/worksheets/sheet${index + 1}.xml", part)
             }
@@ -90,6 +96,92 @@ class XlsxWorksheetFailureTest {
         assertEquals(emptyList<String>(), parsed.failedSheets)
         assertTrue("a complete workbook must not be called partial", !parsed.isPartial)
         parsed.sheets.forEach { assertNull(it.parseFailure) }
+    }
+
+    @Test
+    fun aFormulaKeepsItsExpressionAndCachedDisplayValueInTheGridModel() {
+        val formulaSheet = """
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>
+              <row r="1"><c r="A1"><f>SUM(B1:B2)</f><v>42</v></c></row>
+            </sheetData></worksheet>
+        """.trimIndent()
+
+        val model = XlsxReader.read(workbook(listOf("Formulas" to formulaSheet))).toSpreadsheetModel()
+        val sheet = model.sheets.single()
+
+        assertEquals("42", sheet.getCellValue(0, 0))
+        assertEquals("SUM(B1:B2)", sheet.formulas[0 to 0])
+    }
+
+    @Test
+    fun a1904DateSystemIsReadFromWorkbookProperties() {
+        val parsed = XlsxReader.read(workbook(listOf("Dates" to goodSheet), date1904 = true))
+
+        assertTrue(parsed.date1904)
+        assertEquals("01-01-1904", ExcelCellFormat.apply("0", "dd-mm-yyyy", parsed.date1904))
+        assertEquals("01-01-1900", ExcelCellFormat.apply("1", "dd-mm-yyyy", date1904 = false))
+    }
+
+    @Test
+    fun styledCellsKeepTheirFillFontAndAlignmentInTheGridProjection() {
+        val sheetXml = """
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>
+              <row r="1" ht="36" customHeight="1"><c r="A1" s="1" t="inlineStr"><is><t>Header</t></is></c></row>
+            </sheetData></worksheet>
+        """.trimIndent()
+        val stylesXml = """
+            <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+              <fonts count="2"><font/><font><b/><i/><u/><color rgb="FF123456"/></font></fonts>
+              <fills count="2"><fill><patternFill patternType="none"/></fill>
+                <fill><patternFill patternType="solid"><fgColor rgb="FFFF0000"/><bgColor indexed="64"/></patternFill></fill>
+              </fills>
+              <borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>
+                <border><left/><right style="double"><color rgb="FF0000FF"/></right><top/><bottom/><diagonal/></border>
+              </borders>
+              <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+              <cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
+                <xf numFmtId="0" fontId="1" fillId="1" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+              </cellXfs>
+            </styleSheet>
+        """.trimIndent()
+
+        val model = XlsxReader.read(workbook(listOf("Styled" to sheetXml), stylesXml = stylesXml)).toSpreadsheetModel()
+        val style = requireNotNull(model.sheets.single().cellStyles[0 to 0])
+
+        assertEquals(0xFFFF0000.toInt(), style.fillArgb)
+        assertEquals(0xFF123456.toInt(), style.fontArgb)
+        assertTrue(style.bold)
+        assertTrue(style.italic)
+        assertTrue(style.underline)
+        assertEquals("center", style.horizontalAlignment)
+        assertEquals("center", style.verticalAlignment)
+        assertTrue(style.wrapText)
+        assertEquals(0xFF0000FF.toInt(), style.rightBorder?.colorArgb)
+        assertTrue(style.rightBorder?.double == true)
+        assertEquals(48, model.sheets.single().rowHeightsDp[0])
+    }
+
+    @Test
+    fun numericConditionalFillIsEvaluatedAndProjected() {
+        val sheetXml = """
+            <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>
+              <row r="1"><c r="A1"><v>8</v></c><c r="B1"><v>2</v></c></row>
+            </sheetData><conditionalFormatting sqref="A1:B1"><cfRule type="cellIs" dxfId="0" priority="1" operator="greaterThan"><formula>5</formula></cfRule></conditionalFormatting></worksheet>
+        """.trimIndent()
+        val stylesXml = """
+            <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+              <fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFF0000"/></patternFill></fill></fills>
+              <dxfs count="1"><dxf><fill><patternFill patternType="solid"><fgColor rgb="FF00FF00"/></patternFill></fill></dxf></dxfs>
+            </styleSheet>
+        """.trimIndent()
+
+        val model = XlsxReader.read(workbook(listOf("Rules" to sheetXml), stylesXml = stylesXml)).toSpreadsheetModel()
+        val sheet = model.sheets.single()
+
+        assertEquals(0xFF00FF00.toInt(), sheet.conditionalFills[0 to 0])
+        assertNull(sheet.conditionalFills[0 to 1])
     }
 
     @Test
