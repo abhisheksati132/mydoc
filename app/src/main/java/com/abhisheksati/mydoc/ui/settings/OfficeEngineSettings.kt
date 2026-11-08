@@ -53,12 +53,13 @@ fun OfficeEngineSettings(onInstallApk: (Uri) -> Unit) {
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (installed && bytes > 0) Text("Package and native libraries: ${bytes / (1024 * 1024)} MB. Android Settings shows total storage, including engine data.",
             style = MaterialTheme.typography.bodySmall)
-        if (!installed) Text("A separate download of approximately 90–120 MB, depending on your device. Android confirms installation. You can remove it at any time.",
+        if (!installed) Text("This is a large, separate download; progress shows the transferred size. Android confirms installation. You can remove the engine at any time.",
             style = MaterialTheme.typography.bodySmall)
         progress?.let { (done, total) ->
             if (total > 0) LinearProgressIndicator(progress = { (done.toFloat() / total).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
             else LinearProgressIndicator(Modifier.fillMaxWidth())
-            Text("${done / (1024 * 1024)} MB downloaded", style = MaterialTheme.typography.bodySmall)
+            Text(if (total > 0) "${done / (1024 * 1024)} / ${total / (1024 * 1024)} MB" else "${done / (1024 * 1024)} MB downloaded",
+                style = MaterialTheme.typography.bodySmall)
         }
         message?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

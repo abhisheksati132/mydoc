@@ -20,7 +20,7 @@ MyDoc brings your everyday file essentials together in one thoughtfully designed
 
 Android 8.0+ &nbsp; · &nbsp; Free & open source
 
-**In development for 1.9.8:** optional LibreOffice support through a separate MyDoc Office Engine, quieter reader information, APK installation, steadier navigation and refresh, and a full-screen welcome guide. Built-in Office readers remain available without the engine. The latest published release is 1.9.7; see [Releases](https://github.com/abhisheksati132/mydoc/releases).
+**MyDoc 1.9.8:** optional LibreOffice support through a separate MyDoc Office Engine, quieter reader information, APK installation, steadier navigation and refresh, and a full-screen welcome guide. Built-in Office readers remain available without the engine. Find signed downloads in [Releases](https://github.com/abhisheksati132/mydoc/releases).
 
 [What’s new](CHANGELOG.md) &nbsp; / &nbsp; [Share an idea](https://github.com/abhisheksati132/mydoc/issues)
 
