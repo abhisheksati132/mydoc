@@ -422,10 +422,10 @@ private suspend fun convertOfficeToPdf(
     extension: String,
     uri: Uri,
     displayName: String
-): File? = when (extension) {
-    "docx" -> DocxConverter.convertDocxToPdf(context, uri, displayName).pdfFile
-    "pptx" -> PptxConverter.convertPptxToPdf(context, uri, displayName).pdfFile
-    "xlsx" -> XlsxConverter.convertXlsxToPdf(context, uri, displayName)
+): File? = when (DocumentFormats.converterFor(extension)) {
+    com.abhisheksati.mydoc.domain.model.ConverterKind.DOCX_TO_PDF -> DocxConverter.convertDocxToPdf(context, uri, displayName).pdfFile
+    com.abhisheksati.mydoc.domain.model.ConverterKind.PPTX_TO_PDF -> PptxConverter.convertPptxToPdf(context, uri, displayName).pdfFile
+    com.abhisheksati.mydoc.domain.model.ConverterKind.XLSX_TO_PDF -> XlsxConverter.convertXlsxToPdf(context, uri, displayName)
     else -> null
 }
 

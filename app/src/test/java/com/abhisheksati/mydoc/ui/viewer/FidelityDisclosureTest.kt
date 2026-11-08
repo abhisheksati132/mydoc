@@ -42,7 +42,7 @@ class FidelityDisclosureTest {
     @Test
     fun `a runtime scrape downgrades the declared level`() {
         val declared = DocumentFormats.forExtension("docx")!!.fidelity
-        assertEquals(RenderFidelity.STRUCTURED_REFLOW, declared)
+        assertEquals(RenderFidelity.FIXED_LAYOUT, declared)
 
         val scraped = fidelityDisclosure(
             descriptor = DocumentFormats.forExtension("docx"),
@@ -53,9 +53,9 @@ class FidelityDisclosureTest {
 
     @Test
     fun `an observed level can never upgrade what the reader is told`() {
-        // A .doc scraped into the reflow viewer is still text-only; claiming more would lie.
+        // A text-only deck cannot be upgraded by an optimistic runtime observation.
         val doc = fidelityDisclosure(
-            descriptor = DocumentFormats.forExtension("doc"),
+            descriptor = DocumentFormats.forExtension("ppt"),
             observedFidelity = RenderFidelity.STRUCTURED_REFLOW
         )!!
         assertTrue(doc.headline.contains("Text only", ignoreCase = true))

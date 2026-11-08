@@ -170,7 +170,7 @@ fun DocumentViewerScreen(
                     onToolsClick = onToolsClick,
                     onSelectTool = onSelectTool,
                     onDocumentUpdated = onDocumentUpdated,
-                    onReflowClick = if (isWord) {
+                    onReflowClick = if (isWord && !viewerState.isWordEncrypted) {
                         { isWordReflowActive = true }
                     } else {
                         null

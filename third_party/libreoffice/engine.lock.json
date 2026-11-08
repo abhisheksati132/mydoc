@@ -1,0 +1,10 @@
+{
+  "version": "26.2.6.3",
+  "source": "https://github.com/LibreOffice/core/tree/libreoffice-26.2.6.3",
+  "certificateSha256": "af71ba344cab259fa625f079ff520f511d17a372bb2e8fa27532791bd5fea8cb",
+  "packages": [
+    {"abi": "x86_64", "code": 129, "sha256": "cfaf9eea5fd695c449e92eb10cc0b1617ec51d068345068cea9b7e1c67968df5"},
+    {"abi": "armeabi-v7a", "code": 130, "sha256": "1b8ede653604d7a2df9a090cd333942d115132f4ed19bbb84b3ee1d17b5dcf37"},
+    {"abi": "arm64-v8a", "code": 131, "sha256": "751ac3836890b79a56801bf6d9a2788cda3761ab5131a4f0b6abfbad822bb475"}
+  ]
+}

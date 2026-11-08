@@ -55,7 +55,7 @@ Please do not open public issues detailing reproducible exploit details before a
 ### 1. On-Device Document Processing
 All document reading, parsing, conversion, and compression operations are performed locally using embedded native rendering libraries:
 - **PDF Rendering:** MuPDF 1.28.5 Fitz native vector engine with viewport tiling and thread-safe locking.
-- **Office Documents:** Word, Excel and PowerPoint files are parsed on-device by the app's own Kotlin OOXML parsers. No Apache POI, no third-party Office library and no cloud service is involved. Office-to-PDF conversion is no longer offered.
+- **Office Documents:** Word-family pages are converted locally using the bundled LibreOfficeKit engine in a dedicated worker process. PowerPoint and spreadsheet page conversion and the simpler reflow readers use MyDoc's Kotlin parsers. No document is sent to a cloud conversion service. See [Word engine boundaries and provenance](docs/WORD_ENGINE.md).
 - **PDF Manipulation & Tools:** Apache PDFBox 2.0.27.0 (merge, split, compress, watermark, reorder, sign).
 - **Text Recognition:** Google ML Kit on-device text recognition (`com.google.mlkit:text-recognition:16.0.1`, the bundled-model artifact). The models ship inside the APK — `assets/mlkit-google-ocr-models/**` plus `lib/<abi>/libmlkit_google_ocr_pipeline.so`, both read out of a built artifact — so nothing is downloaded on first use. The document itself is never sent.
 - **Multimedia Engine:** Google AndroidX Media3 ExoPlayer (hardware-accelerated, zero JNI crash risk).
@@ -63,16 +63,18 @@ All document reading, parsing, conversion, and compression operations are perfor
 Document and media content does not leave the device through MyDoc: no code path uploads one. The only outbound connection MyDoc itself makes is the optional GitHub update check and download described in section 5. Separately, ML Kit's Google DataTransport/Firebase components are packaged in the APK and registered in its merged manifest (section 4). MyDoc never invokes them, and no traffic from them was observed while testing — that is a report about what was measured, not proof that they cannot transmit.
 
 ### 2. No WebView in Document Pipeline
-MyDoc does not use WebViews in its document rendering pipeline. Document parsing and layout are handled completely via native Kotlin and C++ vector renderers to prevent cross-site scripting (XSS), JavaScript injection, and WebView sandbox escape vulnerabilities.
+MyDoc does not use WebViews in its document rendering pipeline. Document parsing and layout use Kotlin and native engines. A separate Settings dialog displays bundled, static license text in a WebView with scripting, file/content access, network loads and navigation disabled; it never receives a user document.
 
 ### 3. ZIP Bomb & Untrusted Input Safety
-Each OOXML parser applies strict bounds while decompressing (`.docx`, `.pptx`, `.xlsx`):
+MyDoc's Kotlin OOXML parsers apply bounds while decompressing (`.docx` reflow, `.pptx`, `.xlsx`):
 - Maximum single entry size: 25 MB
 - Maximum entry count: 10,000 (Word, PowerPoint) and 2,000 (Excel)
 - Maximum total uncompressed size: 100 MB (Excel)
 - Maximum compression ratio: 100:1 (PowerPoint, anti-decompression bomb protection)
 
-These decompression safety bounds are enforced directly within each parser engine (`DocxParser`, `PptxParser`, and `SpreadsheetParser`), verifying uncompressed size before inflating entries to prevent memory exhaustion and zip-bomb attacks.
+These bounds apply to `DocxParser`, `PptxParser`, and `SpreadsheetParser`. They are not a claim about LibreOffice's internal decompression. The Word page worker instead has a 64 MiB source limit, 60-second timeout, 256 MiB per-file output limit, and accepts 1–4000 PDF pages. It runs outside the reader, installs and verifies a kernel filter blocking internet sockets/connections and executable launches, and disables macros, active objects and link updates. The worker shares the app UID and is not a complete filesystem sandbox. A native memory failure can terminate the worker; the reader receives a conversion failure rather than claiming the document is damaged.
+
+Protected Word previews remain encrypted with a random session key and are deleted when the viewer closes. Source passwords and preview keys are not persisted. A process interruption can leave an encrypted preview in private evictable cache; it does not leave a reusable unlocked cache. Source files remain unchanged.
 
 ### 4. No app-side telemetry
 MyDoc contains no advertising SDK, no crash-reporting SDK and no analytics library, and its own code collects no usage data, identifiers or documents. Calling the whole APK "zero telemetry" would overstate that: ML Kit's `text-recognition` dependency transitively pulls in `com.google.android.datatransport`, `com.google.firebase` and `com.google.android.gms` artifacts, and the packaged APK's merged manifest registers their transport plumbing — `TransportBackendDiscovery` with a `cct.CctBackendFactory` backend, `JobInfoSchedulerService` and `AlarmManagerSchedulerBroadcastReceiver`. That is Google's own usage/metrics machinery: MyDoc does not configure it, name an endpoint for it, or call into it, and auditing this build observed no request from it and no document content leaving the device. Because it is third-party code inside the distributed artifact, the stronger claim — that nothing can ever leave the device — is not one this project makes from source inspection alone. OCR is the only feature that depends on ML Kit, so a build without that transport is a build without on-device OCR.

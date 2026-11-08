@@ -46,6 +46,7 @@ class MyDocApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        if (com.abhisheksati.mydoc.rendering.engine.word.isWordEngineProcess()) return
         database = AppDatabase.getInstance(this)
         documentRepository = DocumentRepositoryImpl(this, database)
         mediaRepository = MediaRepositoryImpl(this, database)

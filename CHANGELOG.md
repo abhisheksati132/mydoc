@@ -7,7 +7,10 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ### Added
 
-- Word DOCX/DOTX embedded DrawingML raster pictures render in paginated and reflow views; image-only paragraphs are preserved, unsupported DrawingML pictures show a placeholder, and direct table-cell pictures appear in reflow. Floating wrapping, picture effects, older VML pictures and converted table pictures remain limited.
+- Full offline Word page rendering for DOCX/DOTX, DOC/DOT, ODT/OTT/FODT and RTF using LibreOfficeKit. Headers, footers, merged tables and embedded table pictures retain their document layout. Bundled fonts improve consistency; missing-font substitutions can still change pagination. App downloads are substantially larger.
+- Password-protected Word opening with encrypted temporary previews and a dedicated conversion worker that keeps native failures outside the reader.
+
+- Word DOCX/DOTX embedded DrawingML raster pictures also render in the simpler reflow view; image-only paragraphs and direct table-cell pictures are preserved. Reflow retains simpler positioning and effect support than the primary page viewer.
 - Quick preview in file and folder action menus, with a large thumbnail, full name and location, format and metadata, plus Open and More actions. Available in list and grid views.
 
 ### Changed
@@ -15,6 +18,8 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 - DOCX/DOTX paragraphs preserve left/center/right alignment, before/after spacing, left/right indents and manual page breaks, including properties inherited from named paragraph styles. Pictures follow their paragraph alignment.
 
 ### Fixed
+
+- Rechecking an unlocked PDF's password status no longer resets the native decryption key, preserving readable text and pages after authentication.
 
 - Office thumbnail and viewer conversions no longer run concurrently within the same format family, preventing shared temporary PDFs from interfering with document opening.
 - Word manual line breaks and blank paragraphs retain their vertical space; a page break before list text keeps its marker, and continued headings keep their level without a second outline entry.

@@ -2,6 +2,12 @@
 
 Approved build order: Word → PowerPoint → Excel → remaining supported formats.
 
+## Current Word implementation
+
+The primary page viewer now uses the offline LibreOfficeKit engine for DOCX/DOTX, DOC/DOT, ODT/OTT/FODT and RTF. This supersedes the custom page renderer and the Word limitations described in the historical increments below. Headers, footers, merged tables, table pictures and colored text have dedicated device regressions. Password-protected Word files use the existing unlock dialog and an encrypted session-only page preview. Font substitution and cross-application pagination differences remain disclosed.
+
+See [Word engine architecture, limits and verification](WORD_ENGINE.md) and [source/license provenance](../third_party/libreoffice/README.md). PowerPoint and spreadsheet engines are unchanged by this work. Broader independent Microsoft Office reference comparisons remain outstanding; do not market universal pixel-perfect compatibility.
+
 | Module | Responsibility | Depends on |
 | --- | --- | --- |
 | fidelity-corpus | Synthetic source documents, reference exports, content and visual checks | — |

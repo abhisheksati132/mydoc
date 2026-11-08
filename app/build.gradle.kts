@@ -4,6 +4,14 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+@org.gradle.work.DisableCachingByDefault(because = "Verified upstream downloads use a separate persistent cache")
+abstract class PrepareWordEngineTask : Exec() {
+    @get:org.gradle.api.tasks.OutputDirectory
+    abstract val nativeDirectory: org.gradle.api.file.DirectoryProperty
+    @get:org.gradle.api.tasks.OutputDirectory
+    abstract val assetDirectory: org.gradle.api.file.DirectoryProperty
+}
+
 // --- Single Source of Truth for versioning -----------------------------------
 // To release a new version:
 //   1. Bump APP_VERSION_NAME below (e.g. "1.2.1")
@@ -20,6 +28,7 @@ android {
     // AndroidX 2026 releases (camera 1.6, media3 1.11, lifecycle 2.11) publish AAR
     // metadata that requires compileSdk 36+; targetSdk stays 35 deliberately.
     compileSdk = 37
+    ndkVersion = "29.0.14206865"
 
     signingConfigs {
         create("release") {
@@ -121,6 +130,22 @@ android {
         }
     }
 }
+
+val prepareWordEngine = tasks.register<PrepareWordEngineTask>("prepareWordEngine") {
+    inputs.files(rootProject.file("scripts/prepare_word_engine.py"), rootProject.file("third_party/libreoffice/engine.lock.json"),
+        file("src/main/cpp/word_guard.c"))
+    nativeDirectory.set(layout.buildDirectory.dir("generated/word-engine/lib"))
+    assetDirectory.set(layout.buildDirectory.dir("generated/word-engine/assets"))
+    commandLine(if (System.getProperty("os.name").startsWith("Windows")) "python" else "python3",
+        rootProject.file("scripts/prepare_word_engine.py").absolutePath,
+        "--sdk", androidComponents.sdkComponents.sdkDirectory.get().asFile.absolutePath, "--install-ndk",
+        "--output", layout.buildDirectory.dir("generated/word-engine").get().asFile.absolutePath)
+}
+androidComponents.onVariants { variant ->
+    variant.sources.assets?.addGeneratedSourceDirectory(prepareWordEngine) { it.assetDirectory }
+    variant.sources.jniLibs?.addGeneratedSourceDirectory(prepareWordEngine) { it.nativeDirectory }
+}
+tasks.named("preBuild") { dependsOn(prepareWordEngine) }
 
 dependencies {
     lintChecks(project(":lint-rules"))

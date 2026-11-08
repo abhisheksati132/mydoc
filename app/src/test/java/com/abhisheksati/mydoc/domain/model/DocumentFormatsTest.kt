@@ -51,7 +51,7 @@ class DocumentFormatsTest {
 
     @Test
     fun paginatedWordFormatsRequireTheirConverter() {
-        for (ext in listOf("docx", "dotx", "odt", "ott")) {
+        for (ext in listOf("docx", "dotx", "doc", "dot", "odt", "ott", "fodt", "rtf")) {
             assertEquals(ext, ConverterKind.DOCX_TO_PDF, DocumentFormats.converterFor(ext))
             assertEquals(ext, ViewerKind.CONVERTED_PAGES, DocumentFormats.viewerFor(ext))
         }

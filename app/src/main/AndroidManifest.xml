@@ -158,6 +158,11 @@
             </intent-filter>
         </activity>
 
+        <service
+            android:name=".rendering.engine.word.WordEngineService"
+            android:process=":word_engine"
+            android:exported="false" />
+
         <!-- Quick Settings Tile: Instant Camera Document Scanner -->
         <service
             android:name=".tiles.ScanTileService"

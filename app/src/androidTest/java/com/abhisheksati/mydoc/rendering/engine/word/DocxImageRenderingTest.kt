@@ -141,6 +141,12 @@ class DocxImageRenderingTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val source = File.createTempFile("word-race-", ".docx", context.cacheDir)
         java.util.zip.ZipOutputStream(source.outputStream()).use { zip ->
+            zip.putNextEntry(java.util.zip.ZipEntry("[Content_Types].xml"))
+            zip.write("""<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>""".toByteArray())
+            zip.closeEntry()
+            zip.putNextEntry(java.util.zip.ZipEntry("_rels/.rels"))
+            zip.write("""<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="office" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""".toByteArray())
+            zip.closeEntry()
             zip.putNextEntry(java.util.zip.ZipEntry("word/document.xml"))
             zip.write(("<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>" + java.util.UUID.randomUUID() + "</w:t></w:r></w:p></w:body></w:document>").toByteArray())
             zip.closeEntry()

@@ -50,6 +50,7 @@ data class ViewerUiState(
     val isThumbnailStripVisible: Boolean = false,
     val isPasswordRequired: Boolean = false,
     val isPasswordIncorrect: Boolean = false,
+    val isWordEncrypted: Boolean = false,
     val isLoading: Boolean = true,
     val isPermissionExpired: Boolean = false,
     val errorMessage: String? = null,
@@ -77,6 +78,8 @@ class ViewerViewModel(
         get() = rendererSlot.current
     private var searchJob: Job? = null
     private var activeDocumentFile: DocumentFile = documentFile
+    private var wordPassword: String? = null
+    private var waitingForWordPassword = false
 
     /** Bumped by every load; a result from an older generation is dropped, not published. */
     private var loadGeneration = 0
@@ -95,6 +98,10 @@ class ViewerViewModel(
      */
     fun open(document: DocumentFile) {
         if (document.uri == activeDocumentFile.uri && _uiState.value.pageCount > 0) return
+        if (document.uri != activeDocumentFile.uri) {
+            wordPassword = null
+            waitingForWordPassword = false
+        }
         activeDocumentFile = document
         loadDocument()
     }
@@ -134,6 +141,7 @@ class ViewerViewModel(
                     // Password prompts belong to the document that raised them.
                     isPasswordRequired = false,
                     isPasswordIncorrect = false,
+                    isWordEncrypted = false,
                     conversionNotes = emptyList()
                 )
             }
@@ -147,7 +155,7 @@ class ViewerViewModel(
                     val ext = activeDocumentFile.extension.lowercase().ifEmpty { "pdf" }
 
                     // Which converter, if any, is decided by the format registry rather than a
-                    // local list. Formats with no converter (legacy .doc/.xls, CSV, ODS, binary
+                    // local list. Formats with no converter (legacy .xls, CSV, ODS, binary
                     // decks) must never be handed to a converter that cannot read them, and a
                     // single-engine format whose converter failed must not fall through to MuPDF,
                     // which would report a healthy file as damaged.
@@ -167,7 +175,8 @@ class ViewerViewModel(
                                 com.abhisheksati.mydoc.rendering.engine.word.DocxConverter.convertDocxToPdf(
                                     context = context,
                                     uri = uri,
-                                    displayName = activeDocumentFile.displayName
+                                    displayName = activeDocumentFile.displayName,
+                                    password = wordPassword
                                 )
 
                             com.abhisheksati.mydoc.domain.model.ConverterKind.XLSX_TO_PDF ->
@@ -182,10 +191,15 @@ class ViewerViewModel(
                     val convertedPdfFile: java.io.File? = conversion?.pdfFile
 
                     if (conversion is com.abhisheksati.mydoc.rendering.engine.OfficeConversion.Failure) {
-                        android.util.Log.w(
-                            "ViewerLoad",
-                            "${activeDocumentFile.displayName} not converted: ${conversion.message}"
-                        )
+                        if (generation != loadGeneration) return@withContext
+                        if (conversion.failure == com.abhisheksati.mydoc.domain.model.LoadFailure.PASSWORD_PROTECTED &&
+                            com.abhisheksati.mydoc.domain.model.DocumentFormats.familyOf(ext) == com.abhisheksati.mydoc.domain.model.DocumentFamily.WORD) {
+                            waitingForWordPassword = true
+                            _uiState.update { it.copy(isLoading = false, isPasswordRequired = true,
+                                isPasswordIncorrect = wordPassword != null, errorMessage = null, failure = null) }
+                            return@withContext
+                        }
+                        SecureLog.warn("ViewerLoad", "document conversion failed") { conversion.message }
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
@@ -196,6 +210,17 @@ class ViewerViewModel(
                             )
                         }
                         return@withContext
+                    }
+
+                    if (conversion is com.abhisheksati.mydoc.rendering.engine.OfficeConversion.Success) {
+                        if (generation != loadGeneration) {
+                            if (conversion.deleteWhenClosed) conversion.pdf.delete()
+                            return@withContext
+                        }
+                        if (conversion.deleteWhenClosed) sessionTempFiles.add(conversion.pdf)
+                        waitingForWordPassword = false
+                        wordPassword = null
+                        _uiState.update { it.copy(isWordEncrypted = conversion.renderPassword != null) }
                     }
 
                     conversion?.note?.let { note ->
@@ -284,6 +309,10 @@ class ViewerViewModel(
                             mimeType = "application/pdf"
                         )
                         mupdf = opened
+                        val renderPassword = (conversion as? com.abhisheksati.mydoc.rendering.engine.OfficeConversion.Success)?.renderPassword
+                        if (opened.isPasswordProtected && renderPassword != null) {
+                            check(opened.authenticatePassword(renderPassword)) { "The protected Word preview could not be unlocked" }
+                        }
                         if (opened.isPasswordProtected) {
                             activeRenderer = opened
                         } else if (opened.pageCount > 0) {
@@ -451,6 +480,12 @@ class ViewerViewModel(
     }
 
     fun authenticatePassword(password: String) {
+        if (waitingForWordPassword) {
+            wordPassword = password
+            waitingForWordPassword = false
+            loadDocument()
+            return
+        }
         val rend = renderer ?: return
         viewModelScope.launch(ioDispatcher) {
             val success = rend.authenticatePassword(password)
@@ -735,6 +770,8 @@ class ViewerViewModel(
     }
 
     override fun onCleared() {
+        wordPassword = null
+        waitingForWordPassword = false
         super.onCleared()
         releaseSession()
     }

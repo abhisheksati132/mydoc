@@ -14,6 +14,12 @@ it as well.
 
 ## Components linked into the app
 
+### LibreOfficeKit Word engine
+- **Version**: 26.2.6.3; copyright LibreOffice contributors and The Document Foundation.
+- **Use**: Full offline Word-family page conversion in a dedicated process, with bundled fonts and native dependencies (including NSS/NSPR and SQLite).
+- **Licenses/source/build provenance**: [Complete engine notices](third_party/libreoffice/README.md), including exact upstream source and F-Droid source/build links. The MPL/GPL/LGPL texts, upstream NOTICE and complete third-party/font license collection are packaged under `assets/licences/libreoffice` as well as retained in this repository.
+- Native libraries/runtime assets are unmodified; the three modified Java adapters are published under their existing MPL 2.0 headers. This is an independent integration, not a LibreOffice-endorsed application.
+
 ### 1. Artifex MuPDF
 - **Project**: [MuPDF](https://mupdf.com/) — `com.artifex.mupdf:fitz:1.28.5`
 - **Copyright**: © Artifex Software, Inc.

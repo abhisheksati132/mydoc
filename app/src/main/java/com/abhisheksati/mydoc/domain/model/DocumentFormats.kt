@@ -100,9 +100,6 @@ data class FormatDescriptor(
     val isSupported: Boolean get() = viewer != ViewerKind.UNSUPPORTED
 }
 
-private const val OFFICE_LAYOUT_LIMIT =
-    "Charts, page headers/footers and vector pictures are not rendered; footnotes appear at the end"
-
 /** Charts the deck carries in its own parts, and the part of one MyDoc leaves out. */
 private const val CHART_LIMIT =
     "Bar, line and pie charts are drawn from the values stored in the chart itself, in our own colours; " +
@@ -152,66 +149,13 @@ private val descriptors: List<FormatDescriptor> = buildList {
         )
     )
 
-    // ---- Word processing ----
-    add(
-        FormatDescriptor(
-            extension = "docx",
-            family = DocumentFamily.WORD,
-            viewer = ViewerKind.CONVERTED_PAGES,
-            converter = ConverterKind.DOCX_TO_PDF,
-            thumbnail = ThumbnailKind.VIA_CONVERTER,
-            fidelity = RenderFidelity.STRUCTURED_REFLOW,
-            limitations = listOf(
-                OFFICE_LAYOUT_LIMIT,
-                "Page breaks follow our own re-pagination, so page numbers can differ from Word",
-                "Raster pictures render at text anchors without floating wrapping, cropping or effects. Converted table cells use image markers; direct cell pictures appear in reflow."
-            )
-        )
-    )
-    add(FormatDescriptor("dotx", DocumentFamily.WORD, ViewerKind.CONVERTED_PAGES, ConverterKind.DOCX_TO_PDF, ThumbnailKind.VIA_CONVERTER, RenderFidelity.STRUCTURED_REFLOW, listOf(OFFICE_LAYOUT_LIMIT)))
-
-    // ODT is a zip carrying content.xml, which the same parser already reads.
-    add(
-        FormatDescriptor(
-            extension = "odt",
-            family = DocumentFamily.WORD,
-            viewer = ViewerKind.CONVERTED_PAGES,
-            converter = ConverterKind.DOCX_TO_PDF,
-            thumbnail = ThumbnailKind.VIA_CONVERTER,
-            fidelity = RenderFidelity.STRUCTURED_REFLOW,
-            limitations = listOf("Styles, images and page masters from styles.xml are not applied")
-        )
-    )
-    add(FormatDescriptor("ott", DocumentFamily.WORD, ViewerKind.CONVERTED_PAGES, ConverterKind.DOCX_TO_PDF, ThumbnailKind.VIA_CONVERTER, RenderFidelity.STRUCTURED_REFLOW, listOf("Styles, images and page masters from styles.xml are not applied")))
-    add(FormatDescriptor("fodt", DocumentFamily.WORD, ViewerKind.WORD_REFLOW, ConverterKind.NONE, ThumbnailKind.ICON_ONLY, RenderFidelity.STRUCTURED_REFLOW, listOf("Flat ODF: images and styles are not rendered")))
-
-    // Legacy binary Word has no layout engine here; say so instead of inventing one.
-    add(
-        FormatDescriptor(
-            extension = "doc",
-            family = DocumentFamily.WORD,
-            viewer = ViewerKind.WORD_REFLOW,
-            converter = ConverterKind.NONE,
-            thumbnail = ThumbnailKind.ICON_ONLY,
-            fidelity = RenderFidelity.TEXT_ONLY,
-            limitations = listOf(
-                "Text only: the characters and paragraph breaks come from the Word 97 piece table, but formatting, table structure and images are not decoded",
-                "Headers, footers and footnotes of a binary .doc are not read"
-            )
-        )
-    )
-    add(FormatDescriptor("dot", DocumentFamily.WORD, ViewerKind.WORD_REFLOW, ConverterKind.NONE, ThumbnailKind.ICON_ONLY, RenderFidelity.TEXT_ONLY, listOf("Text only: the characters and paragraph breaks come from the Word 97 piece table, but formatting, table structure and images are not decoded")))
-    add(
-        FormatDescriptor(
-            extension = "rtf",
-            family = DocumentFamily.WORD,
-            viewer = ViewerKind.WORD_REFLOW,
-            converter = ConverterKind.NONE,
-            thumbnail = ThumbnailKind.ICON_ONLY,
-            fidelity = RenderFidelity.STRUCTURED_REFLOW,
-            limitations = listOf("Character and paragraph properties are read; tables, images and styles are not")
-        )
-    )
+    // ---- Word processing: native offline page layout, including legacy Word ----
+    for (extension in listOf("docx", "dotx", "doc", "dot", "odt", "ott", "fodt", "rtf")) {
+        add(FormatDescriptor(extension, DocumentFamily.WORD, ViewerKind.CONVERTED_PAGES,
+            ConverterKind.DOCX_TO_PDF, ThumbnailKind.VIA_CONVERTER, RenderFidelity.FIXED_LAYOUT,
+            listOf("Fonts may be substituted, so pagination can differ from the source application",
+                "External linked content, macros and active objects are not loaded")))
+    }
 
     // ---- Spreadsheets ----
     add(

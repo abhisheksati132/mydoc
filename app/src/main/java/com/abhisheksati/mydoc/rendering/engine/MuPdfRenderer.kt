@@ -29,6 +29,9 @@ class MuPdfRenderer(
 
     private val lock = java.util.concurrent.locks.ReentrantLock()
     private var document: Document? = null
+    // MuPDF's needsPassword() retries an empty password and can overwrite an unlocked key.
+    // Once authenticated, never probe it again during this renderer's lifetime.
+    private var passwordAuthenticated = false
 
     companion object {
         init {
@@ -74,7 +77,7 @@ class MuPdfRenderer(
     }
 
     override val isPasswordProtected: Boolean
-        get() = lock.withLock { document?.needsPassword() == true }
+        get() = lock.withLock { !passwordAuthenticated && document?.needsPassword() == true }
 
     /** Fitz takes the password itself and then reads the document, so it is the engine that can. */
     override val supportsPasswordAuthentication: Boolean
@@ -83,7 +86,8 @@ class MuPdfRenderer(
     override fun authenticatePassword(password: String): Boolean {
         return lock.withLock {
             val doc = document ?: return@withLock false
-            doc.authenticatePassword(password)
+            if (passwordAuthenticated) return@withLock true
+            doc.authenticatePassword(password).also { passwordAuthenticated = it }
         }
     }
 
@@ -529,6 +533,7 @@ class MuPdfRenderer(
             } catch (_: Throwable) {
             }
             document = null
+            passwordAuthenticated = false
         }
     }
 }
