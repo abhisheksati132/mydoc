@@ -53,6 +53,8 @@ fun SettingsAboutSection(
     val typography = MaterialTheme.typography
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    var showGuide by rememberSaveable { mutableStateOf(false) }
+    if(showGuide) com.abhisheksati.mydoc.ui.onboarding.OnboardingGuide { showGuide = false }
     var showWordLicenses by rememberSaveable { mutableStateOf(false) }
     if (showWordLicenses) WordEngineLicensesDialog { showWordLicenses = false }
 
@@ -77,6 +79,7 @@ fun SettingsAboutSection(
 
         SettingsDivider()
 
+        TextButton(onClick = { showGuide = true }) { Text("Tour & new features") }
         TextButton(onClick = { showWordLicenses = true }) {
             Text(stringResource(R.string.word_engine_licenses))
         }

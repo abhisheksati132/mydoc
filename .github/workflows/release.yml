@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*'
+    branches: [main]
+    paths: ['.github/release-request.json']
   workflow_dispatch:
     inputs:
       tag_name:
@@ -12,6 +14,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   release:
@@ -34,6 +37,30 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
+
+      # An explicit marker is used by connector-based publishing, which has no shell Git
+      # credential. It may contain no source changes and must name a green CI parent.
+      - name: Verify explicit release request
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re, subprocess
+          from pathlib import Path
+          request = json.loads(Path('.github/release-request.json').read_text())
+          version = re.search(r'val APP_VERSION_NAME = "([^"]+)"', Path('app/build.gradle.kts').read_text()).group(1)
+          assert request['version'] == version and re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version)
+          parent = subprocess.check_output(['git','rev-parse','HEAD^'], text=True).strip()
+          assert request['commit'] == parent, 'Release request must name its immediate parent'
+          changed = subprocess.check_output(['git','diff','--name-only',parent,'HEAD'],text=True).splitlines()
+          assert changed == ['.github/release-request.json'], 'Release request must contain no source edits'
+          Path(os.environ['RUNNER_TEMP'], 'release-parent').write_text(parent)
+          PY
+          PARENT=$(cat "$RUNNER_TEMP/release-parent")
+          VERIFIED=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$PARENT&per_page=100" --jq '.workflow_runs | any(.name == "CI Build" and .event == "push" and .conclusion == "success")')
+          test "$VERIFIED" = true
 
       - name: Set up JDK 21
         uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
@@ -416,6 +443,7 @@ jobs:
         uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
         with:
           tag_name: ${{ steps.vars.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           name: mydoc ${{ steps.vars.outputs.tag }}
           draft: false
           prerelease: false

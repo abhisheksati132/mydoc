@@ -125,14 +125,14 @@ fun ViewerTopBar(
                                 .padding(horizontal = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            IconButton(
+                            AdaptiveIconButton(
                                 onClick = onBackClick,
                                 modifier = Modifier.size(48.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                                     contentDescription = stringResource(R.string.viewer_back),
-                                    tint = colors.inkPrimary,
+                                    tint = androidx.compose.material3.LocalContentColor.current,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -163,39 +163,39 @@ fun ViewerTopBar(
                                 }
                             }
 
-                            IconButton(
+                            AdaptiveIconButton(
                                 onClick = onSearchClick,
                                 modifier = Modifier.size(48.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.Search,
                                     contentDescription = stringResource(R.string.viewer_search),
-                                    tint = colors.inkSecondary,
+                                    tint = androidx.compose.material3.LocalContentColor.current,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
 
-                            IconButton(
+                            AdaptiveIconButton(
                                 onClick = onToggleBookmark,
                                 modifier = Modifier.size(48.dp)
                             ) {
                                 Icon(
                                     imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
                                     contentDescription = if (isBookmarked) stringResource(R.string.viewer_bookmark_remove) else stringResource(R.string.viewer_bookmark_add),
-                                    tint = if (isBookmarked) colors.accent else colors.inkSecondary,
+                                    tint = androidx.compose.material3.LocalContentColor.current,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
 
                             Box {
-                                IconButton(
+                                AdaptiveIconButton(
                                     onClick = { isMoreMenuOpen = true },
                                     modifier = Modifier.size(48.dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Outlined.MoreVert,
                                         contentDescription = stringResource(R.string.viewer_more_options),
-                                        tint = colors.inkSecondary,
+                                        tint = androidx.compose.material3.LocalContentColor.current,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -236,11 +236,11 @@ fun ViewerTopBar(
                                 .padding(horizontal = 6.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            IconButton(onClick = onBackClick) {
+                            AdaptiveIconButton(onClick = onBackClick) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                                     contentDescription = stringResource(R.string.viewer_back),
-                                    tint = colors.inkPrimary
+                                    tint = androidx.compose.material3.LocalContentColor.current
                                 )
                             }
 
@@ -265,28 +265,28 @@ fun ViewerTopBar(
                                 }
                             }
 
-                            IconButton(onClick = onSearchClick) {
+                            AdaptiveIconButton(onClick = onSearchClick) {
                                 Icon(
                                     imageVector = Icons.Outlined.Search,
                                     contentDescription = stringResource(R.string.viewer_search),
-                                    tint = colors.inkSecondary
+                                    tint = androidx.compose.material3.LocalContentColor.current
                                 )
                             }
 
-                            IconButton(onClick = onToggleBookmark) {
+                            AdaptiveIconButton(onClick = onToggleBookmark) {
                                 Icon(
                                     imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
                                     contentDescription = if (isBookmarked) stringResource(R.string.viewer_bookmark_remove) else stringResource(R.string.viewer_bookmark_add),
-                                    tint = if (isBookmarked) colors.accent else colors.inkSecondary
+                                    tint = androidx.compose.material3.LocalContentColor.current
                                 )
                             }
 
                             Box {
-                                IconButton(onClick = { isMoreMenuOpen = true }) {
+                                AdaptiveIconButton(onClick = { isMoreMenuOpen = true }) {
                                     Icon(
                                         imageVector = Icons.Outlined.MoreVert,
                                         contentDescription = stringResource(R.string.viewer_more_options),
-                                        tint = colors.inkSecondary
+                                        tint = androidx.compose.material3.LocalContentColor.current
                                     )
                                 }
 

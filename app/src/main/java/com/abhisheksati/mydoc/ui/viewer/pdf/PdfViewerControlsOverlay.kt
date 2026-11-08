@@ -46,6 +46,9 @@ fun BoxScope.PdfViewerControlsOverlay(
     hazeState: dev.chrisbanes.haze.HazeState? = null
 ) {
     // Clean, condensing Top Toolbar on a GlassSurface
+    com.abhisheksati.mydoc.ui.viewer.controls.AdaptiveInkProvider(
+        enabled=state.areControlsVisible && !state.isSearchOpen
+    ) {
     ViewerTopBar(
         title = document.displayName,
         currentPage = state.currentPage,
@@ -69,6 +72,7 @@ fun BoxScope.PdfViewerControlsOverlay(
         hazeState = hazeState,
         modifier = Modifier.align(Alignment.TopCenter)
     )
+    }
 
     // Silence for a real PDF; for an Office file laid out by our converter this says what did not
     // survive the conversion.

@@ -124,6 +124,7 @@ class MainActivity : ComponentActivity() {
     private var currentAudio by mutableStateOf<com.abhisheksati.mydoc.domain.model.MediaItem?>(null)
     private var isSettingsOpen by mutableStateOf(false)
     private var isSpotlightSearchOpen by mutableStateOf(false)
+    private var isDiscoveryRequested by mutableStateOf(false)
     private var isDesignSystemPreviewOpen by mutableStateOf(false)
     private var isAppUnlocked by mutableStateOf(true)
 
@@ -420,6 +421,7 @@ class MainActivity : ComponentActivity() {
                                             // updates recompose only this destination.
                                             val libraryState by homeViewModel.uiState.collectAsStateWithLifecycle()
                                             SpotlightSearchSheet(
+                                                initialContents = isDiscoveryRequested,
                                                 items = libraryState.libraryItems.ifEmpty { libraryState.recentLibraryItems },
                                                 onItemClick = { item ->
                                                     isSpotlightSearchOpen = false
@@ -497,6 +499,10 @@ class MainActivity : ComponentActivity() {
                                             }
                                         }
                                         ActiveScreen.Home -> {
+                                            com.abhisheksati.mydoc.ui.onboarding.FirstRunGuide(onExplore = {
+                                                isDiscoveryRequested = true
+                                                isSpotlightSearchOpen = true
+                                            })
                                             HomeScreen(
                                                 quickScanRequested = quickScanRequested,
                                                 onQuickScanShown = { quickScanRequested = false },
@@ -509,7 +515,7 @@ class MainActivity : ComponentActivity() {
                                                 onDocumentClick = { doc -> currentDocument = doc },
                                                 onOpenFile = { file, siblings -> handleOpenFile(file, siblings) },
                                                 onSettingsClick = { isSettingsOpen = true },
-                                                onSpotlightSearch = { isSpotlightSearchOpen = true },
+                                                onSpotlightSearch = { isDiscoveryRequested = false; isSpotlightSearchOpen = true },
                                                 onShareDocument = { doc -> shareDocument(doc) }
                                             )
                                         }

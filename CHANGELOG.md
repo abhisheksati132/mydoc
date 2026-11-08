@@ -3,9 +3,17 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
-## [Unreleased]
+## [1.9.7] — 2026-11-08
 
 ### Added
+
+- Opt-in, on-device document content indexing with result snippets and matching-page navigation; refresh, stop, remove and relink controls make index scope and stale snapshots explicit.
+- Cross-folder file tags and named smart collections combining content/name queries, tags and file types.
+- Duplicate review with thumbnails, paths, explicit keeper choice and a full-content hash recheck before Trash. Chosen keepers are protected from other cleaner categories.
+- Shared, dirty-frame-only adaptive ink sampling for individual reader toolbar buttons, with contrast hysteresis and foreground/visibility gating.
+- A three-step introduction explaining file access, content search, collections and duplicate review; replay from Settings → About.
+- Local search snapshots and tags are excluded from Android cloud backup and device transfer.
+
 
 - Use the bundled offline LibreOffice engine for PowerPoint slide pages and Excel print-layout pages, including legacy PPT/XLS and OpenDocument files.
 - Keep Excel’s searchable cell grid available from page view.

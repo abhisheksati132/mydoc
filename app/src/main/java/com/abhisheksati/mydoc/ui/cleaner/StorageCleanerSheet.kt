@@ -87,6 +87,9 @@ fun StorageCleanerSheet(
     var cleanDuplicates by remember { mutableStateOf(false) }
     var cleanEmptyFolders by remember { mutableStateOf(false) }
 
+    var duplicateKeepers by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(mapOf<String,String>()) }
+    var showDuplicateReview by remember { mutableStateOf(false) }
+
     // Expanded states
     var expandDuplicates by remember { mutableStateOf(false) }
     var expandLargeFiles by remember { mutableStateOf(false) }
@@ -110,8 +113,8 @@ fun StorageCleanerSheet(
     val selectedFiles = buildList {
         if (cleanTempFiles) addAll(res.tempFiles)
         if (cleanApks) addAll(res.apkFiles)
-        if (cleanDuplicates) res.duplicateGroups.forEach { addAll(it.duplicates) }
-    }.distinctBy { it.absolutePath }
+        if (cleanDuplicates) addAll(duplicateCopies(res.duplicateGroups, duplicateKeepers))
+    }.distinctBy { it.absolutePath }.filterNot { it.absolutePath in duplicateKeepers.values }
     val selectedEmptyDirs = if (cleanEmptyFolders) res.emptyFolders else emptyList()
     // One stat per selected file: it used to run on every recomposition of the sheet, on the
     // main thread, while the reader was watching the checkbox respond.
@@ -119,6 +122,12 @@ fun StorageCleanerSheet(
         value = withContext(Dispatchers.IO) { selectedFiles.sumOf { it.length() } }
     }
     val hasSelection = selectedFiles.isNotEmpty() || selectedEmptyDirs.isNotEmpty()
+
+    if(showDuplicateReview) DuplicateReview(res.duplicateGroups,duplicateKeepers,
+        onKeep={checksum,path ->
+            duplicateKeepers=if(path==null) duplicateKeepers-checksum else duplicateKeepers+(checksum to path)
+            cleanDuplicates=duplicateKeepers.isNotEmpty()
+        },onPreview={file ->showDuplicateReview=false;onFileClick(file)},onDismiss={showDuplicateReview=false})
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -383,49 +392,10 @@ fun StorageCleanerSheet(
                                 )
 
                                 if (expandDuplicates) {
-                                    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)) {
-                                        Text(
-                                            text = stringResource(R.string.cleaner_keeping_original),
-                                            style = typography.micro,
-                                            color = colors.textSecondary
-                                        )
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        for (group in res.duplicateGroups.take(10)) {
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(vertical = 4.dp),
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Column(modifier = Modifier.weight(1f)) {
-                                                    Text(
-                                                        text = group.original.name,
-                                                        style = typography.label,
-                                                        color = colors.textPrimary,
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis
-                                                    )
-                                                    Text(
-                                                        text = pluralStringResource(R.plurals.cleaner_duplicate_count, group.duplicates.size, group.duplicates.size),
-                                                        style = typography.micro,
-                                                        color = colors.textSecondary
-                                                    )
-                                                }
-                                                Text(
-                                                    text = formatSize(group.wastedBytes),
-                                                    style = typography.metadataStrong,
-                                                    color = colors.warning
-                                                )
-                                            }
-                                        }
-                                        if (res.duplicateGroups.size > 10) {
-                                            Text(
-                                                text = stringResource(R.string.cleaner_dup_more, res.duplicateGroups.size - 10),
-                                                style = typography.micro,
-                                                color = colors.textSecondary
-                                            )
-                                        }
+                                    Text("${duplicateKeepers.size} groups reviewed. Choose the copies to keep before cleanup.",
+                                        modifier=Modifier.padding(horizontal=16.dp),style=typography.caption)
+                                    TextButton(onClick={showDuplicateReview=true},modifier=Modifier.padding(horizontal=8.dp)) {
+                                        Text("Review all duplicate groups")
                                     }
                                 }
                             }
@@ -692,7 +662,10 @@ fun StorageCleanerSheet(
                             if (selectedFiles.isEmpty()) {
                                 emptyList()
                             } else {
-                            app.storageRepository.moveToTrash(selectedFiles).getOrElse { error ->
+                            val duplicatePaths = duplicateCopies(res.duplicateGroups,duplicateKeepers).map { it.absolutePath }.toSet()
+                            val verified = verifiedDuplicateCopies(res.duplicateGroups,duplicateKeepers)
+                            val safeFiles = selectedFiles.filter { it.absolutePath !in duplicatePaths || it.absolutePath in verified }
+                            app.storageRepository.moveToTrash(safeFiles).getOrElse { error ->
                                 app.showMessage(
                                     UserMessages.actionFailed(R.string.dialog_move_to_bin, error, "Cleaner")
                                         .resolve(app)

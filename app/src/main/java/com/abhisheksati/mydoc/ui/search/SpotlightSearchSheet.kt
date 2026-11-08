@@ -62,8 +62,14 @@ fun SpotlightSearchSheet(
     onItemClick: (LibraryItem) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    onBrowseFolders: (() -> Unit)? = null
+    onBrowseFolders: (() -> Unit)? = null,
+    initialContents: Boolean = false
 ) {
+    var showContents by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialContents) }
+    if (showContents) {
+        com.abhisheksati.mydoc.discovery.DiscoveryScreen(onBack = { showContents = false }, onOpen = onItemClick)
+        return
+    }
     val scheme = MaterialTheme.colorScheme
     var query by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") }
@@ -91,6 +97,9 @@ fun SpotlightSearchSheet(
             containerColor = scheme.background, isGlass = false)
         Text(stringResource(R.string.search_index_scope_hint), style = MaterialTheme.typography.bodySmall,
             color = scheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
+        TextButton(onClick = { showContents = true }, modifier = Modifier.padding(horizontal = 8.dp)) {
+            Text("Contents, tags & smart collections")
+        }
         FileSearchField(query, { query = it }, Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         if (onBrowseFolders != null) TextButton(onClick = { onDismiss(); onBrowseFolders() }, modifier = Modifier.padding(horizontal = 8.dp)) {
             Text(stringResource(R.string.home_browse_files))

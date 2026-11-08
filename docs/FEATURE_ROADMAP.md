@@ -1,4 +1,9 @@
-# Proposed next capabilities
+# Next capabilities
+
+Shipped in 1.9.7: opt-in content search, cross-folder tags and smart collections, explicit duplicate review, adaptive reader toolbar ink and focused onboarding. See [Discovery and review](DISCOVERY.md) for actual scope and limits.
+
+The historical recommendations below motivated these features. Organisation rules and named workspaces remain future work; indexing scanned pages, background indexing, broader file lifecycle tracking, and network storage also remain separate projects.
+
 
 These are recommendations, not shipped features or a commitment to implement all at once. Keep the Ink & Seal interface calm; surface advanced capabilities when relevant.
 
