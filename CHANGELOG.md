@@ -5,6 +5,8 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+## [1.9.6] — 2026-11-08
+
 ### Added
 
 - Full offline Word page rendering for DOCX/DOTX, DOC/DOT, ODT/OTT/FODT and RTF using LibreOfficeKit. Headers, footers, merged tables and embedded table pictures retain their document layout. Bundled fonts improve consistency; missing-font substitutions can still change pagination. App downloads are substantially larger.
@@ -18,6 +20,8 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 - DOCX/DOTX paragraphs preserve left/center/right alignment, before/after spacing, left/right indents and manual page breaks, including properties inherited from named paragraph styles. Pictures follow their paragraph alignment.
 
 ### Fixed
+
+- The updater accommodates the larger offline-engine package with a bounded 384 MiB download budget. Releases also include an x86_64 APK so supported devices can select their smaller matching download.
 
 - Rechecking an unlocked PDF's password status no longer resets the native decryption key, preserving readable text and pages after authentication.
 

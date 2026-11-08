@@ -13,7 +13,8 @@ import java.util.Locale
 class ApkDownloader(private val context: Context) {
 
     companion object {
-        const val MAX_DOWNLOAD_SIZE_BYTES = 200L * 1024 * 1024 // 200 MB
+        // The universal APK includes all offline Word engine ABIs (~267 MiB in 1.9.6).
+        const val MAX_DOWNLOAD_SIZE_BYTES = 384L * 1024 * 1024
         private const val MAX_REDIRECTS = 5
 
         private val ALLOWED_HOSTS = setOf(
@@ -131,7 +132,7 @@ class ApkDownloader(private val context: Context) {
             }
             if (totalBytes > MAX_DOWNLOAD_SIZE_BYTES) {
                 destinationFile.delete()
-                throw IllegalStateException("Download rejected: Content-Length ($totalBytes bytes) exceeds 200 MB cap")
+                throw IllegalStateException("Download rejected: Content-Length ($totalBytes bytes) exceeds the $MAX_DOWNLOAD_SIZE_BYTES byte cap")
             }
 
             try {
@@ -144,7 +145,7 @@ class ApkDownloader(private val context: Context) {
                         while (input.read(buffer).also { bytesRead = it } != -1) {
                             totalRead += bytesRead
                             if (totalRead > MAX_DOWNLOAD_SIZE_BYTES) {
-                                throw IllegalStateException("Download aborted: Stream exceeded 200 MB size limit")
+                                throw IllegalStateException("Download aborted: Stream exceeded the $MAX_DOWNLOAD_SIZE_BYTES byte size limit")
                             }
                             output.write(buffer, 0, bytesRead)
                             onProgress(totalRead, totalBytes)

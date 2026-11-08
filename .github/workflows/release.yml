@@ -342,6 +342,7 @@ jobs:
           mkdir -p release-assets
           cp app/build/outputs/apk/release/app-arm64-v8a-release.apk release-assets/mydoc-${TAG}-arm64-v8a.apk
           cp app/build/outputs/apk/release/app-armeabi-v7a-release.apk release-assets/mydoc-${TAG}-armeabi-v7a.apk
+          cp app/build/outputs/apk/release/app-x86_64-release.apk release-assets/mydoc-${TAG}-x86_64.apk
           cp app/build/outputs/apk/release/app-universal-release.apk release-assets/mydoc-${TAG}-universal.apk
           cp app/build/outputs/apk/release/app-universal-release.apk release-assets/mydoc-${TAG}.apk
           cd release-assets
@@ -350,6 +351,9 @@ jobs:
           done
           ls -lh
           cd ..
+
+          # Lead with the curated changes for this version, before verification evidence.
+          awk -v heading="## [${TAG#v}]" 'index($0, heading)==1 {copy=1; next} copy && /^## \[/ {exit} copy {print}' CHANGELOG.md > release-assets/release-body.md
 
           # H-11: the README tells people to compare the certificate fingerprint against a value
           # published with the release, so the release publishes it. The value is the one apksigner
@@ -373,7 +377,7 @@ jobs:
             else
               echo "- No smoke-test evidence: the emulator step did not complete, so nothing here is executed-verified."
             fi
-          } > release-assets/release-body.md
+          } >> release-assets/release-body.md
           cat release-assets/release-body.md
 
       - name: Publish GitHub Release

@@ -126,4 +126,4 @@ MyDoc follows standard Android architectural best practices with clean layered s
    - **On-Device Processing**: Documents, photos, and media are parsed and manipulated strictly in-process.
    - **Restricted FileProvider**: Root storage and external directory access are forbidden. URIs are granted exclusively from private cache subdirectories (`updates/`, `shared/`, `tools_output/`) and the app-private document cache (`saved_docs/`). Sharing and open-with always use `content://`, never `file://`.
    - **Platform Backup**: Standard Android backup may include the Room database and `saved_docs/` copies; app-lock prefs, updater state, caches, and the encrypted signature are excluded.
-   - **Cryptographic Updater**: Automatic updates query public GitHub Releases with domain allowlisting, 200 MB caps, mandatory SHA-256 validation, and release certificate pinning.
+   - **Cryptographic Updater**: Automatic updates query public GitHub Releases with domain allowlisting, a 384 MiB download cap (including streamed bytes), mandatory SHA-256 validation, and release certificate pinning. ABI-specific downloads are preferred over the larger universal package.

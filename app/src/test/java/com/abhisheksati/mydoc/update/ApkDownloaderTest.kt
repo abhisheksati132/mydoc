@@ -121,7 +121,8 @@ class ApkDownloaderTest {
     }
 
     @Test
-    fun `max download size is capped at 200MB`() {
-        assertEquals(200L * 1024 * 1024, ApkDownloader.MAX_DOWNLOAD_SIZE_BYTES)
+    fun `download budget accommodates the offline engine while remaining bounded`() {
+        assertTrue(267L * 1024 * 1024 < ApkDownloader.MAX_DOWNLOAD_SIZE_BYTES)
+        assertEquals(384L * 1024 * 1024, ApkDownloader.MAX_DOWNLOAD_SIZE_BYTES)
     }
 }

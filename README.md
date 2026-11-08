@@ -20,6 +20,8 @@ MyDoc brings your everyday file essentials together in one thoughtfully designed
 
 Android 8.0+ &nbsp; · &nbsp; Free & open source
 
+**New in 1.9.6:** richer offline Word viewing, password-protected documents and quick file previews.
+
 [What’s new](CHANGELOG.md) &nbsp; / &nbsp; [Share an idea](https://github.com/abhisheksati132/mydoc/issues)
 
 </div>
