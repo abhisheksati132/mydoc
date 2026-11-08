@@ -44,6 +44,34 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
 
+      - name: Install pinned Gradle distribution in cold home
+        env:
+          GRADLE_USER_HOME: ${{ runner.temp }}/gradle-cold
+        run: |
+          set -euo pipefail
+          DIST_URL=$(sed -n 's/^distributionUrl=//p' gradle/wrapper/gradle-wrapper.properties | sed 's/\\:/:/g' | sed 's/\\//g')
+          if [[ "$DIST_URL" != https://services.gradle.org/distributions/gradle-*-bin.zip ]]; then
+            echo "ERROR: Unexpected Gradle distribution URL in gradle-wrapper.properties: $DIST_URL"
+            exit 1
+          fi
+          DIST_VERSION="${DIST_URL##*/gradle-}"
+          DIST_VERSION="${DIST_VERSION%-bin.zip}"
+          if [[ "$DIST_VERSION" != 9.6.0 ]]; then
+            echo "ERROR: No checksum pin is configured for Gradle $DIST_VERSION."
+            exit 1
+          fi
+          mkdir -p "$GRADLE_USER_HOME/wrapper/dists/gradle-${DIST_VERSION}-bin/manual"
+          archive="$RUNNER_TEMP/gradle-${DIST_VERSION}-bin.zip"
+          curl --fail --location --retry 3 --retry-all-errors \
+            "https://api.github.com/repos/gradle/gradle-distributions/releases/assets/451669088" \
+            -H "Accept: application/octet-stream" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -o "$archive"
+          echo "bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01  $archive" | sha256sum --check --status
+          unzip -q "$archive" -d "$GRADLE_USER_HOME/wrapper/dists/gradle-${DIST_VERSION}-bin/manual"
+          rm "$archive"
+          test -x "$GRADLE_USER_HOME/wrapper/dists/gradle-${DIST_VERSION}-bin/manual/gradle-${DIST_VERSION}/bin/gradle"
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
