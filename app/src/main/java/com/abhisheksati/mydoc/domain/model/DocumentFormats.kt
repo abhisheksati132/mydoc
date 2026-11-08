@@ -101,7 +101,7 @@ data class FormatDescriptor(
 }
 
 private const val OFFICE_LAYOUT_LIMIT =
-    "Embedded images, charts and page headers/footers are not rendered; footnote text is collected at the end of the document"
+    "Charts, page headers/footers and vector pictures are not rendered; footnotes appear at the end"
 
 /** Charts the deck carries in its own parts, and the part of one MyDoc leaves out. */
 private const val CHART_LIMIT =
@@ -163,7 +163,8 @@ private val descriptors: List<FormatDescriptor> = buildList {
             fidelity = RenderFidelity.STRUCTURED_REFLOW,
             limitations = listOf(
                 OFFICE_LAYOUT_LIMIT,
-                "Page breaks follow our own re-pagination, so page numbers can differ from Word"
+                "Page breaks follow our own re-pagination, so page numbers can differ from Word",
+                "Raster pictures render at text anchors without floating wrapping, cropping or effects. Converted table cells use image markers; direct cell pictures appear in reflow."
             )
         )
     )

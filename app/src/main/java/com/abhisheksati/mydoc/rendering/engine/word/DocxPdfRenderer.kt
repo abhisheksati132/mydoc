@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.rendering.engine.word
 
+import android.graphics.RectF
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -21,8 +22,8 @@ import org.xmlpull.v1.XmlPullParser
  * Word document opens as paginated pages the same way a converted .pptx or .xlsx does.
  *
  * Typographic rather than faithful: headings, inline emphasis, lists and table grids are
- * reproduced; embedded images and character-level styles from styles.xml are not, because
- * [DocxParser] does not read them.
+ * reproduced, along with embedded raster pictures at their text anchors. Floating wrapping and
+ * character-level styles from styles.xml are not reproduced.
  */
 internal object DocxPdfRenderer {
 
@@ -69,6 +70,7 @@ internal object DocxPdfRenderer {
             for (block in blocks) {
                 if (pageNumber >= MaxPages) break
                 when (block) {
+                    is DocxBlock.Image -> image(block)
                     is DocxBlock.Heading -> heading(block)
                     is DocxBlock.Paragraph -> text(block.runs, BodySize, 0f)
                     is DocxBlock.ListItem -> list(block)
@@ -84,6 +86,26 @@ internal object DocxPdfRenderer {
             currentPage = null
             canvas = null
             return if (pageNumber > 0) doc else null.also { doc.close() }
+        }
+
+        private fun image(block: DocxBlock.Image) {
+            val bitmap = DocxImageDecoder.decode(block.bytes)
+            if (bitmap == null) {
+                text(listOf(DocxRun("[Image unavailable] " + block.description)), BodySize, 0f)
+                return
+            }
+            try {
+                val nativeWidth = block.widthPoints.takeIf { it > 0 } ?: (bitmap.width * 0.75f)
+                val nativeHeight = block.heightPoints.takeIf { it > 0 } ?: (nativeWidth * bitmap.height / bitmap.width)
+                val scale = min(1f, min(section.contentWidth / nativeWidth,
+                    (section.height - section.top - section.bottom - ParagraphGap) / nativeHeight))
+                val width = nativeWidth * scale
+                val height = nativeHeight * scale
+                ensureRoom(height + ParagraphGap)
+                canvas?.drawBitmap(bitmap, null, RectF(section.left, y, section.left + width, y + height),
+                    Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
+                y += height + ParagraphGap
+            } finally { bitmap.recycle() }
         }
 
         private fun heading(block: DocxBlock.Heading) {

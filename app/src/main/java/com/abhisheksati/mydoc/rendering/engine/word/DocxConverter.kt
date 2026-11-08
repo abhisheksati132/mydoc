@@ -11,18 +11,25 @@ import com.abhisheksati.mydoc.rendering.engine.asConversionFailure
 import com.abhisheksati.mydoc.util.DocumentIdentity
 import com.abhisheksati.mydoc.util.SecureLog
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.io.FileOutputStream
 
 object DocxConverter {
 
     private const val Tag = "DocxConvert"
+    private val conversionMutex = Mutex()
 
     /**
      * Converts a .docx into a paginated vector PDF and caches it under a content-keyed name, so an
      * edited or replaced document never reuses the previous conversion.
      */
-    suspend fun convertDocxToPdf(context: Context, uri: Uri, displayName: String): OfficeConversion {
+    suspend fun convertDocxToPdf(context: Context, uri: Uri, displayName: String): OfficeConversion =
+        conversionMutex.withLock { convertLocked(context, uri, displayName) }
+
+    // Thumbnail and reader requests share cache files and sidecars. Publish one conversion at a time.
+    private suspend fun convertLocked(context: Context, uri: Uri, displayName: String): OfficeConversion {
         val source = OfficeSourceReader.read(context, uri, displayName)
         val bytes = when (source) {
             is OfficeSource.Ready -> source.bytes
@@ -30,7 +37,7 @@ object DocxConverter {
         }
 
         val cacheDir = File(context.cacheDir, "converted_docs").apply { mkdirs() }
-        val targetPdf = File(cacheDir, "docx_${DocumentIdentity.ofBytes(bytes)}_${bytes.size}.pdf")
+        val targetPdf = File(cacheDir, "docx_v2_${DocumentIdentity.ofBytes(bytes)}_${bytes.size}.pdf")
         if (targetPdf.isFile && targetPdf.length() > 0L) {
             val noteFile = File(cacheDir, "${targetPdf.name}.note")
             val cachedNote = runCatching { if (noteFile.isFile) noteFile.readText() else null }

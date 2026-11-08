@@ -31,7 +31,7 @@ data class DocxRun(
 data class DocxCell(val blocks: List<DocxBlock>) {
     /** Everything the cell says, for renderers that only draw text. */
     val text: String
-        get() = blocks.mapNotNull { DocxBlock.plainTextOf(it) }.joinToString("\n").trim()
+        get() = blocks.mapNotNull { if (it is DocxBlock.Image) "[Image] " + it.description else DocxBlock.plainTextOf(it) }.joinToString("\n").trim()
 }
 
 sealed class DocxBlock {
@@ -55,10 +55,19 @@ sealed class DocxBlock {
         val fullText: String get() = runs.joinToString("") { it.text }
     }
 
+    class Image(
+        val bytes: ByteArray?,
+        val widthPoints: Float,
+        val heightPoints: Float,
+        val description: String,
+        val floating: Boolean = false
+    ) : DocxBlock()
+
     data class Table(val rows: List<List<DocxCell>>) : DocxBlock()
 
     companion object {
         fun plainTextOf(block: DocxBlock): String? = when (block) {
+            is Image -> null
             is Heading -> block.text
             is Paragraph -> block.fullText.takeIf { it.isNotEmpty() }
             is ListItem -> block.fullText.takeIf { it.isNotEmpty() }
@@ -125,11 +134,11 @@ class DocxParser {
                         entryCount++
                         if (entryCount > 10_000) throw SecurityException("Entry count exceeds limit")
                         if (!entry.isDirectory) {
-                            val norm = entry.name.replace('\\', '/').trimStart('/').lowercase()
+                            val norm = entry.name.replace('\\', '/').trimStart('/').lowercase(java.util.Locale.ROOT)
                             // document.xml alone cannot describe a Word file: hyperlink targets live
                             // in word/_rels/document.xml.rels, list definitions in word/numbering.xml,
                             // heading levels in word/styles.xml, and footnote text in word/footnotes.xml.
-                            val wanted = norm in READER_PARTS
+                            val wanted = norm in READER_PARTS || norm.startsWith("word/media/")
                             if (wanted) {
                                 val data = readBounded(zis, 25 * 1024 * 1024)
                                 totalExtractedBytes += data.size
@@ -160,6 +169,7 @@ class DocxParser {
             entryMap["word/document.xml"]?.let { doc ->
                 val ctx = DocxContext(
                     links = readHyperlinkTargets(entryMap["word/_rels/document.xml.rels"]),
+                    images = readImageTargets(entryMap["word/_rels/document.xml.rels"], entryMap),
                     numbering = readNumberingDefinitions(entryMap["word/numbering.xml"]),
                     styles = readParagraphStyles(entryMap["word/styles.xml"]),
                     footnotes = readNotes(entryMap["word/footnotes.xml"], "w:footnote"),
@@ -474,6 +484,7 @@ class DocxParser {
      */
     internal class DocxContext(
         val links: Map<String, String> = emptyMap(),
+        val images: Map<String, ByteArray> = emptyMap(),
         val numbering: Map<Int, AbstractNumbering> = emptyMap(),
         val styles: Map<String, ParagraphStyle> = emptyMap(),
         val footnotes: Map<Int, List<DocxRun>> = emptyMap(),
@@ -519,7 +530,7 @@ class DocxParser {
 
         /**
          * The parts the readers below interpret. Everything else in the package stays compressed:
-         * images, styles beyond the paragraph definitions, and the binary junk a Word file carries.
+         * styles beyond the paragraph definitions and unrelated binary parts.
          */
         val READER_PARTS = setOf(
             "word/document.xml",
@@ -530,6 +541,63 @@ class DocxParser {
             "word/endnotes.xml",
             "content.xml"
         )
+    }
+
+    /** Resolve only internal image relationships. Never open a linked URL or filesystem path. */
+    private fun readImageTargets(xml: ByteArray?, entries: Map<String, ByteArray>): Map<String, ByteArray> {
+        if (xml == null) return emptyMap()
+        val result = mutableMapOf<String, ByteArray>()
+        val parser = createPullParser(xml)
+        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+            if (parser.eventType == XmlPullParser.START_TAG && parser.name == "Relationship") {
+                val id = parser.getAttributeValue(null, "Id")
+                val type = parser.getAttributeValue(null, "Type").orEmpty()
+                val target = parser.getAttributeValue(null, "Target").orEmpty()
+                val external = parser.getAttributeValue(null, "TargetMode")
+                if (id != null && type.endsWith("/image") && external != "External" &&
+                    !target.contains(':') && !target.contains('\\')) {
+                    val parts = mutableListOf<String>()
+                    val path = if (target.startsWith('/')) target.drop(1) else "word/$target"
+                    var valid = true
+                    for (part in path.split('/')) when (part) {
+                        "", "." -> Unit
+                        ".." -> if (parts.isEmpty()) valid = false else parts.removeAt(parts.lastIndex)
+                        else -> parts.add(part)
+                    }
+                    val key = parts.joinToString("/").lowercase(java.util.Locale.ROOT)
+                    if (valid && key.startsWith("word/media/")) entries[key]?.let { result[id] = it }
+                }
+            }
+            parser.next()
+        }
+        return result
+    }
+
+    /** Pictures become blocks at their text anchor; wrapping/effects are not yet reproduced. */
+    private fun readDrawing(parser: XmlPullParser, ctx: DocxContext): DocxBlock.Image? {
+        var id: String? = null
+        var width = 0f
+        var height = 0f
+        var description = ""
+        var floating = false
+        var hasPicture = false
+        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+            if (parser.eventType == XmlPullParser.START_TAG) when (parser.name) {
+                "wp:anchor" -> floating = true
+                "wp:extent" -> {
+                    width = (parser.getAttributeValue(null, "cx")?.toDoubleOrNull()?.div(12700.0) ?: 0.0).toFloat()
+                    height = (parser.getAttributeValue(null, "cy")?.toDoubleOrNull()?.div(12700.0) ?: 0.0).toFloat()
+                }
+                "wp:docPr" -> description = parser.getAttributeValue(null, "descr")
+                    ?: parser.getAttributeValue(null, "name").orEmpty()
+                "a:blip" -> { hasPicture = true; id = parser.getAttributeValue(null, "r:embed") }
+            }
+            if (parser.eventType == XmlPullParser.END_TAG && parser.name == "w:drawing") break
+            parser.next()
+        }
+        if (!hasPicture) return null
+        return DocxBlock.Image(ctx.images[id], width.takeIf { it.isFinite() && it > 0 } ?: 0f,
+            height.takeIf { it.isFinite() && it > 0 } ?: 0f, description, floating)
     }
 
     private fun attrInt(parser: XmlPullParser, name: String, absent: Int): Int =
@@ -740,7 +808,7 @@ class DocxParser {
         while (parser.eventType != XmlPullParser.END_DOCUMENT) {
             if (parser.eventType == XmlPullParser.START_TAG) {
                 when (parser.name) {
-                    "w:p" -> readParagraph(parser, ctx, counters)?.let { blocks.add(it) }
+                    "w:p" -> blocks.addAll(readParagraph(parser, ctx, counters))
                     "w:tbl" -> readTable(parser, ctx, counters, 0)?.let { blocks.add(it) }
                 }
             }
@@ -770,7 +838,8 @@ class DocxParser {
     }
 
     /** Called on `w:p`'s START_TAG; returns on its END_TAG. */
-    private fun readParagraph(parser: XmlPullParser, ctx: DocxContext, counters: MutableMap<Int, IntArray>): DocxBlock? {
+    private fun readParagraph(parser: XmlPullParser, ctx: DocxContext, counters: MutableMap<Int, IntArray>): List<DocxBlock> {
+        val result = mutableListOf<DocxBlock>()
         var styleId: String? = null
         var directOutline: Int? = null
         var numId: Int? = null
@@ -782,9 +851,21 @@ class DocxParser {
         var underline = false
         var collectingText = false
 
+        fun flushText() {
+            if (runs.any { it.text.isNotEmpty() }) {
+                // An image splits one source paragraph, not one list item into two numbers.
+                if (result.any { it !is DocxBlock.Image }) result.add(DocxBlock.Paragraph(runs.toList()))
+                else paragraphBlock(runs.toList(), styleId, directOutline, numId, ilvl, ctx, counters)?.let(result::add)
+            }
+            runs.clear()
+        }
         while (parser.eventType != XmlPullParser.END_DOCUMENT) {
             when (parser.eventType) {
                 XmlPullParser.START_TAG -> when (parser.name) {
+                    "w:drawing" -> {
+                        flushText()
+                        readDrawing(parser, ctx)?.let(result::add)
+                    }
                     "w:pStyle" -> styleId = parser.getAttributeValue(null, "w:val")
                     "w:outlineLvl" -> directOutline =
                         attrInt(parser, "w:val", -1).takeIf { it >= 0 }?.plus(1)
@@ -820,13 +901,15 @@ class DocxParser {
                     "w:t" -> collectingText = false
                     "w:hyperlink" -> if (links.isNotEmpty()) links.removeAt(links.size - 1)
                     "w:p" -> {
-                        return paragraphBlock(runs, styleId, directOutline, numId, ilvl, ctx, counters)
+                        flushText()
+                        return result
                     }
                 }
             }
             parser.next()
         }
-        return paragraphBlock(runs, styleId, directOutline, numId, ilvl, ctx, counters)
+        flushText()
+        return result
     }
 
     /**
@@ -888,7 +971,7 @@ class DocxParser {
                 }
 
                 XmlPullParser.END_TAG -> if (parser.name == "w:tbl") {
-                    return rows.filter { row -> row.any { cell -> cell.text.isNotEmpty() } }
+                    return rows.filter { row -> row.any { cell -> cell.blocks.isNotEmpty() } }
                         .takeIf { it.isNotEmpty() }
                         ?.let { DocxBlock.Table(it) }
                 }
@@ -932,7 +1015,7 @@ class DocxParser {
             when (parser.eventType) {
                 XmlPullParser.START_TAG -> when (parser.name) {
                     "w:p" -> if (depth < MAX_TABLE_DEPTH) {
-                        readParagraph(parser, ctx, counters)?.let { blocks.add(it) }
+                        blocks.addAll(readParagraph(parser, ctx, counters))
                     } else {
                         skipElement(parser)
                     }

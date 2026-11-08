@@ -27,6 +27,7 @@ object PptxConverter {
      * Converts a .pptx file into a high-fidelity vector PDF file and caches it.
      * Returns the cached File, or null if parsing fails.
      */
+    @Synchronized
     fun convertPptxToPdf(context: Context, uri: Uri, displayName: String): OfficeConversion {
         val source = OfficeSourceReader.read(context, uri, displayName)
         val bytes = when (source) {

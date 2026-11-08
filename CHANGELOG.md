@@ -7,7 +7,12 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ### Added
 
+- Word DOCX/DOTX embedded DrawingML raster pictures render in paginated and reflow views; image-only paragraphs are preserved, unsupported DrawingML pictures show a placeholder, and direct table-cell pictures appear in reflow. Floating wrapping, picture effects, older VML pictures and converted table pictures remain limited.
 - Quick preview in file and folder action menus, with a large thumbnail, full name and location, format and metadata, plus Open and More actions. Available in list and grid views.
+
+### Fixed
+
+- Office thumbnail and viewer conversions no longer run concurrently within the same format family, preventing shared temporary PDFs from interfering with document opening.
 
 ## [1.9.5] — 2026-11-07
 

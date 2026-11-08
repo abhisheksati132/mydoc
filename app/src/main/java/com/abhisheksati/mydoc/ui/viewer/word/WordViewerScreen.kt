@@ -1,5 +1,14 @@
 package com.abhisheksati.mydoc.ui.viewer.word
 
+import androidx.compose.runtime.produceState
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.res.stringResource
+import com.abhisheksati.mydoc.R
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import com.abhisheksati.mydoc.rendering.engine.word.DocxImageDecoder
+
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import androidx.compose.foundation.layout.statusBarsPadding
 import android.net.Uri
@@ -310,6 +319,7 @@ fun WordViewerScreen(
                     val ranges = WordViewerModel.rangesIn(blocks, index, matches)
                     val isActiveBlock = activeMatchBlock == index
                     when (block) {
+                        is DocxBlock.Image -> DocxPictureView(block)
                         is DocxBlock.Heading -> {
                             DocxRunsView(
                                 runs = listOf(DocxRun(block.text)),
@@ -476,18 +486,33 @@ private fun DocxTableView(
                     .background(if (isHeader) borderColor.copy(alpha = 0.15f) else Color.Transparent)
             ) {
                 row.forEach { cell ->
-                    Text(
-                        text = cell.text,
-                        color = textColor,
-                        fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
-                        fontSize = DocumentReadingType.tableCell,
-                        modifier = Modifier
-                            .weight(1f)
-                            .border(0.5.dp, borderColor)
-                            .padding(6.dp)
-                    )
+                    Column(modifier = Modifier.weight(1f).border(0.5.dp, borderColor).padding(6.dp)) {
+                        Text(
+                            text = cell.text,
+                            color = textColor,
+                            fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
+                            fontSize = DocumentReadingType.tableCell
+                        )
+                        cell.blocks.filterIsInstance<DocxBlock.Image>().forEach { DocxPictureView(it) }
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun DocxPictureView(block: DocxBlock.Image) {
+    val bitmap by produceState<android.graphics.Bitmap?>(null, block) {
+        value = withContext(kotlinx.coroutines.Dispatchers.IO) { DocxImageDecoder.decode(block.bytes) }
+    }
+    val image = bitmap
+    if (image != null) {
+        Image(image.asImageBitmap(), contentDescription = block.description.ifBlank { null },
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxWidth().aspectRatio(
+                if (block.widthPoints > 0 && block.heightPoints > 0)
+                    (block.widthPoints / block.heightPoints).coerceIn(0.02f, 50f)
+                else image.width.toFloat() / image.height).padding(vertical = 6.dp))
+    } else Text(stringResource(R.string.word_image_unavailable), modifier = Modifier.padding(8.dp))
 }

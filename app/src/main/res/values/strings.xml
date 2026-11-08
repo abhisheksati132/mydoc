@@ -966,4 +966,5 @@
     <string name="quick_preview_thumbnail">File preview</string>
     <string name="quick_preview_hint">Thumbnail and file details. Open for the full file.</string>
     <string name="quick_preview_file">File</string>
+    <string name="word_image_unavailable">Image unavailable or unsupported</string>
 </resources>

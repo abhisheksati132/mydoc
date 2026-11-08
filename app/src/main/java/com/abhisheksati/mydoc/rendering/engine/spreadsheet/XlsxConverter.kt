@@ -6,10 +6,13 @@ import com.abhisheksati.mydoc.data.local.DocumentStreamResolver
 import com.abhisheksati.mydoc.util.SecureLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.io.FileOutputStream
 
 object XlsxConverter {
+    private val conversionMutex = Mutex()
 
     private val sheetOutlinesMap = java.util.concurrent.ConcurrentHashMap<String, List<com.abhisheksati.mydoc.rendering.engine.OutlineItem>>()
 
@@ -17,6 +20,12 @@ object XlsxConverter {
         sheetOutlinesMap[pdfPath] ?: com.abhisheksati.mydoc.rendering.engine.OutlineCache.loadOutlines(pdfPath)
 
     suspend fun convertXlsxToPdf(
+        context: Context,
+        uri: Uri,
+        displayName: String
+    ): File? = conversionMutex.withLock { convertLocked(context, uri, displayName) }
+
+    private suspend fun convertLocked(
         context: Context,
         uri: Uri,
         displayName: String
