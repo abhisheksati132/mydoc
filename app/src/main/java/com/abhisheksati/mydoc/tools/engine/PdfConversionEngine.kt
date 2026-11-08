@@ -311,33 +311,14 @@ class PdfConversionEngine(private val context: Context) {
                     }
                 }
 
-                var stitchScale = scale
-                while (stitchScale > MIN_STITCH_SCALE &&
-                    (maxWidthPt * stitchScale).toLong() * (totalHeightPt * stitchScale).toLong() > MAX_STITCHED_PIXELS
-                ) {
-                    stitchScale *= 0.75f
-                }
+                val layout = stitchedImageLayout(maxWidthPt, totalHeightPt, scale,
+                    MIN_STITCH_SCALE, MAX_STITCHED_PIXELS)
+                val stitchScale = layout.scale
+                val outWidth = layout.width
+                val outHeight = layout.height
                 if (stitchScale < scale) {
-                    onProgress(
-                        ToolProgress(
-                            0, totalPages, 5,
-                            "Long image is very tall - reduced to ${((stitchScale / scale) * 100).toInt()}% " +
-                                "of the chosen resolution to fit in memory...",
-                            false
-                        )
-                    )
-                }
-
-                var outWidth = (maxWidthPt * stitchScale).toInt().coerceAtLeast(1)
-                var outHeight = (totalHeightPt * stitchScale).toInt().coerceAtLeast(1)
-                // The loop above stops at MIN_STITCH_SCALE even when the result is still over the
-                // budget, and the allocation then went ahead anyway - the OOM the budget exists to
-                // prevent. Scale down to the budget exactly when that happens.
-                val stitchedPixels = outWidth.toLong() * outHeight.toLong()
-                if (stitchedPixels > MAX_STITCHED_PIXELS) {
-                    val factor = kotlin.math.sqrt(MAX_STITCHED_PIXELS.toDouble() / stitchedPixels.toDouble())
-                    outWidth = (outWidth * factor).toInt().coerceAtLeast(1)
-                    outHeight = (outHeight * factor).toInt().coerceAtLeast(1)
+                    onProgress(ToolProgress(0, totalPages, 5,
+                        "Long image reduced to ${((stitchScale / scale) * 100).toInt()}% of the chosen resolution to fit in memory...", false))
                 }
                 val stitchedBitmap = Bitmap.createBitmap(outWidth, outHeight, Bitmap.Config.ARGB_8888)
                 try {
@@ -351,13 +332,16 @@ class PdfConversionEngine(private val context: Context) {
                             Matrix(stitchScale, stitchScale), ColorSpace.DeviceRGB, true
                         )
                         try {
-                            val left = (outWidth - pixmap.width) / 2f
+                            val bounds = page.bounds
+                            val drawnWidth = (bounds.x1 - bounds.x0) * stitchScale
+                            val drawnHeight = (bounds.y1 - bounds.y0) * stitchScale
+                            val left = (outWidth - drawnWidth) / 2f
                             val pageBitmap = Bitmap.createBitmap(
                                 pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888
                             )
                             try {
-                                canvas.drawBitmap(pageBitmap, left, currentY, null)
-                                currentY += pageBitmap.height
+                                canvas.drawBitmap(pageBitmap, null, android.graphics.RectF(left, currentY, left + drawnWidth, currentY + drawnHeight), null)
+                                currentY += drawnHeight
                             } finally {
                                 pageBitmap.recycle()
                             }

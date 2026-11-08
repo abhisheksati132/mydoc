@@ -11,7 +11,7 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.atomic.AtomicBoolean
 
-internal class WordPasswordRequired : IOException("This Word document requires a password")
+internal class WordPasswordRequired : IOException("This document requires a password")
 
 /** The native office API is confined to the dedicated worker process and its single executor. */
 internal object NativeWordCore {
@@ -42,11 +42,14 @@ internal object NativeWordCore {
                   <item oor:path="/org.openoffice.Office.Writer/Content/Update">
                     <prop oor:name="Link" oor:op="fuse"><value>2</value></prop>
                   </item>
+                  <item oor:path="/org.openoffice.Office.Calc/Content/Update">
+                    <prop oor:name="Link" oor:op="fuse"><value>2</value></prop>
+                  </item>
                 </oor:items>
             """.trimIndent())
             if (!com.abhisheksati.mydoc.BuildConfig.DEBUG) LibreOfficeKit.putenv("SAL_LOG=-WARN-INFO")
             LibreOfficeKit.init(context, profile.absolutePath)
-            Office(requireNotNull(LibreOfficeKit.getLibreOfficeKitHandle()) { "Word engine initialization failed" })
+            Office(requireNotNull(LibreOfficeKit.getLibreOfficeKitHandle()) { "Office engine initialization failed" })
                 .also { office = it }
         }
         val url = Uri.fromFile(source).toString()
@@ -65,7 +68,7 @@ internal object NativeWordCore {
         var document: org.libreoffice.kit.Document? = null
         try {
             val opened = engine.documentLoad(url) ?: if (passwordNeeded.get()) throw WordPasswordRequired()
-                else throw IOException("The Word engine could not load this document")
+                else throw IOException("The Office engine could not load this document")
             document = opened
             opened.initializeForRendering()
             val renderPassword = if (passwordNeeded.get()) {
@@ -73,7 +76,7 @@ internal object NativeWordCore {
                 java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(key)
             } else null
             opened.saveAs(Uri.fromFile(output).toString(), "pdf", wordPdfOptions(renderPassword))
-            if (!output.isFile || output.length() == 0L) throw IOException("The Word engine produced no pages")
+            if (!output.isFile || output.length() == 0L) throw IOException("The Office engine produced no pages")
             return renderPassword
         } finally {
             document?.destroy()

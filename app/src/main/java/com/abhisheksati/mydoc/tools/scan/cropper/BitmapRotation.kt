@@ -39,9 +39,9 @@ object BitmapRotation {
             // 180 needs this as much as a quarter turn: without it the whole image is drawn at
             // negative coordinates and the result is blank.
             when (((degrees % 360) + 360) % 360) {
-                90 -> postTranslate(outHeight.toFloat(), 0f)
+                90 -> postTranslate(outWidth.toFloat(), 0f)
                 180 -> postTranslate(outWidth.toFloat(), outHeight.toFloat())
-                270 -> postTranslate(0f, outWidth.toFloat())
+                270 -> postTranslate(0f, outHeight.toFloat())
             }
         }
         Canvas(out).drawBitmap(src, matrix, Paint(Paint.FILTER_BITMAP_FLAG))

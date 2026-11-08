@@ -384,7 +384,7 @@ private fun AppListItem(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = onExtract,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(com.abhisheksati.mydoc.designsystem.tokens.AppSpacing.minTouchTarget)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.FileDownload,
@@ -396,7 +396,7 @@ private fun AppListItem(
 
                     IconButton(
                         onClick = onShare,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(com.abhisheksati.mydoc.designsystem.tokens.AppSpacing.minTouchTarget)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Share,
@@ -408,7 +408,7 @@ private fun AppListItem(
 
                     IconButton(
                         onClick = onOpen,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(com.abhisheksati.mydoc.designsystem.tokens.AppSpacing.minTouchTarget)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.OpenInNew,

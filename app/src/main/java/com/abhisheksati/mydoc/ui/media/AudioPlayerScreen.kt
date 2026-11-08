@@ -120,6 +120,13 @@ fun AudioPlayerScreen(
             mediaPlayer.prepare()
             totalDurationMs = mediaPlayer.duration.toLong().coerceAtLeast(item.durationMs)
             mediaPlayer.isLooping = isLooping
+            mediaPlayer.setOnCompletionListener {
+                isPlaying = false
+                isSeeking = false
+                currentPositionMs = totalDurationMs
+                seekPositionMs = totalDurationMs
+                scope.launch { checkpoints.checkpoint(totalDurationMs, totalDurationMs, force = true) }
+            }
 
             // Auto-resume from database if exists
             if (app != null) {

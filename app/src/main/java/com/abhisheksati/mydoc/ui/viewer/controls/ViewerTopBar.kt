@@ -78,6 +78,7 @@ fun ViewerTopBar(
     onTtsClick: (() -> Unit)? = null,
     onSlideshowClick: (() -> Unit)? = null,
     onReflowClick: (() -> Unit)? = null,
+    reflowLabel: String? = null,
     onDocumentDetailsClick: (() -> Unit)? = null,
     hazeState: dev.chrisbanes.haze.HazeState? = null
 ) {
@@ -208,6 +209,7 @@ fun ViewerTopBar(
                                     onToolsClick = onToolsClick,
                                     onSlideshowClick = onSlideshowClick,
                                     onReflowClick = onReflowClick,
+                                    reflowLabel = reflowLabel,
                                     onDocumentDetailsClick = onDocumentDetailsClick
                                 )
                             }
@@ -297,6 +299,7 @@ fun ViewerTopBar(
                                     onToolsClick = onToolsClick,
                                     onSlideshowClick = onSlideshowClick,
                                     onReflowClick = onReflowClick,
+                                    reflowLabel = reflowLabel,
                                     onDocumentDetailsClick = onDocumentDetailsClick
                                 )
                             }
@@ -318,6 +321,7 @@ private fun OverflowDropdown(
     onToolsClick: (() -> Unit)?,
     onSlideshowClick: (() -> Unit)?,
     onReflowClick: (() -> Unit)?,
+    reflowLabel: String?,
     onDocumentDetailsClick: (() -> Unit)?
 ) {
     AppDropdownMenu(
@@ -379,7 +383,7 @@ private fun OverflowDropdown(
 
         if (onReflowClick != null) {
             OverflowAction(
-                label = stringResource(R.string.viewer_action_reflow),
+                label = reflowLabel ?: stringResource(R.string.viewer_action_reflow),
                 icon = Icons.Outlined.TextFields,
                 onClick = {
                     onDismiss()

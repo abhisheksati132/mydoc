@@ -55,14 +55,21 @@ fun DocumentViewerScreen(
     val ext = document.extension.lowercase()
     val descriptor = DocumentFormats.forExtension(ext)
     val declaredFailure = DocumentFormats.failureFor(ext)
-    var isSlideshowActive by rememberSaveable { mutableStateOf(false) }
-    var isWordReflowActive by rememberSaveable { mutableStateOf(false) }
+    var isSlideshowActive by rememberSaveable(document.uri) { mutableStateOf(false) }
+    var isWordReflowActive by rememberSaveable(document.uri) { mutableStateOf(false) }
+
+    var isSpreadsheetGridActive by rememberSaveable(document.uri) { mutableStateOf(false) }
+
+    androidx.activity.compose.BackHandler(enabled = isSpreadsheetGridActive) {
+        isSpreadsheetGridActive = false
+    }
 
     // Order matters. An explicitly refused format (xlsb, wps) has no descriptor, so checking
     // for a missing descriptor first would send it to MuPDF and report a healthy refusal as
     // "file is damaged".
     val viewer = when {
         declaredFailure != null -> ViewerKind.UNSUPPORTED
+        isSpreadsheetGridActive -> ViewerKind.SPREADSHEET_GRID
         descriptor == null -> ViewerKind.PDF_PAGES
         else -> descriptor.viewer
     }
@@ -104,7 +111,7 @@ fun DocumentViewerScreen(
             SpreadsheetViewerScreen(
                 document = document,
                 viewModel = spreadsheetViewModel,
-                onBackClick = onBackClick,
+                onBackClick = { if (isSpreadsheetGridActive) isSpreadsheetGridActive = false else onBackClick() },
                 onShareClick = onShareClick,
                 onSwipeToNextDocument = onSwipeToNextDocument,
                 onSwipeToPreviousDocument = onSwipeToPreviousDocument,
@@ -170,12 +177,15 @@ fun DocumentViewerScreen(
                     onToolsClick = onToolsClick,
                     onSelectTool = onSelectTool,
                     onDocumentUpdated = onDocumentUpdated,
-                    onReflowClick = if (isWord && !viewerState.isWordEncrypted) {
-                        { isWordReflowActive = true }
-                    } else {
-                        null
-                    },
-                    onSlideshowClick = if (family == DocumentFamily.PRESENTATION) {
+                    onReflowClick = if (!viewerState.isLoading && !viewerState.isOfficeEncrypted && !viewerState.isPasswordRequired) {
+                        when (family) {
+                            DocumentFamily.WORD -> { { isWordReflowActive = true } }
+                            DocumentFamily.SPREADSHEET -> { { isSpreadsheetGridActive = true } }
+                            else -> null
+                        }
+                    } else null,
+                    onSlideshowClick = if (family == DocumentFamily.PRESENTATION && !viewerState.isLoading &&
+                        !viewerState.isOfficeEncrypted && !viewerState.isPasswordRequired) {
                         { isSlideshowActive = true }
                     } else {
                         null

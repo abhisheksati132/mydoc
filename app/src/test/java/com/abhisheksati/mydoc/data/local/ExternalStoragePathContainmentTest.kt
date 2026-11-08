@@ -17,6 +17,20 @@ class ExternalStoragePathContainmentTest {
     }
 
     @Test
+    fun providerIdentityAndDocumentPathAreRequiredForPrimaryFallback() {
+        val parse = DocumentStreamResolver::primaryExternalStoragePath
+        assertEquals("Download/a+b.pdf", parse("content://com.android.externalstorage.documents/document/primary%3ADownload%2Fa+b.pdf"))
+        assertEquals("Download/report.pdf", parse("content://com.android.externalstorage.documents/tree/primary%3ADownload/document/primary%3ADownload%2Freport.pdf"))
+        for (uri in listOf(
+            "content://untrusted.provider/document/primary%3ADownload%2Fsecret.pdf",
+            "content://com.android.externalstorage.documents.evil/document/primary:Download/secret.pdf",
+            "file://com.android.externalstorage.documents/document/primary:Download/secret.pdf",
+            "content://com.android.externalstorage.documents/other?path=primary:Download/secret.pdf",
+            "content://com.android.externalstorage.documents/document/secondary:Download/secret.pdf"
+        )) assertNull(uri, parse(uri))
+    }
+
+    @Test
     fun anOrdinaryRelativePathResolvesInsideTheRoot() {
         val resolved = DocumentStreamResolver.externalStorageChild(root, "Download/report.pdf")
         assertEquals(File(root, "Download/report.pdf").canonicalFile, resolved?.canonicalFile)

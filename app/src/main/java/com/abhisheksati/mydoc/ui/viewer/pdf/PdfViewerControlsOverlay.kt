@@ -62,6 +62,9 @@ fun BoxScope.PdfViewerControlsOverlay(
         onTtsClick = onTtsClick,
         onSlideshowClick = onSlideshowClick,
         onReflowClick = onReflowClick,
+        reflowLabel = if (com.abhisheksati.mydoc.domain.model.DocumentFormats.familyOf(document.extension) ==
+            com.abhisheksati.mydoc.domain.model.DocumentFamily.SPREADSHEET)
+            androidx.compose.ui.res.stringResource(com.abhisheksati.mydoc.R.string.viewer_action_cell_grid) else null,
         onDocumentDetailsClick = onDocumentDetailsClick,
         hazeState = hazeState,
         modifier = Modifier.align(Alignment.TopCenter)

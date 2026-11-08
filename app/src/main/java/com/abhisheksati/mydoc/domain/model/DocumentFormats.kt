@@ -100,15 +100,6 @@ data class FormatDescriptor(
     val isSupported: Boolean get() = viewer != ViewerKind.UNSUPPORTED
 }
 
-/** Charts the deck carries in its own parts, and the part of one MyDoc leaves out. */
-private const val CHART_LIMIT =
-    "Bar, line and pie charts are drawn from the values stored in the chart itself, in our own colours; " +
-        "combo charts and other kinds stay blank"
-
-/** SmartArt keeps its words in a diagram part; the shapes come from a gallery the package lacks. */
-private const val DIAGRAM_LIMIT =
-    "SmartArt is shown as the text its diagram part holds, not as the shapes around it"
-
 private val TEXT_EXTENSIONS = setOf(
     "txt", "md", "log", "json", "xml", "yaml", "yml", "ini", "conf", "sh", "sql",
     "kt", "java", "py", "html", "css", "js", "ts", "c", "cpp", "h", "gradle",
@@ -157,100 +148,25 @@ private val descriptors: List<FormatDescriptor> = buildList {
                 "External linked content, macros and active objects are not loaded")))
     }
 
-    // ---- Spreadsheets ----
-    add(
-        FormatDescriptor(
-            extension = "xlsx",
-            family = DocumentFamily.SPREADSHEET,
-            viewer = ViewerKind.SPREADSHEET_GRID,
-            converter = ConverterKind.XLSX_TO_PDF,
-            thumbnail = ThumbnailKind.VIA_CONVERTER,
-            fidelity = RenderFidelity.STRUCTURED_REFLOW,
-            limitations = listOf("Formulas are shown as their stored cached values — nothing is recalculated")
-        )
-    )
-    add(
-        FormatDescriptor(
-            extension = "xlsm",
-            family = DocumentFamily.SPREADSHEET,
-            viewer = ViewerKind.SPREADSHEET_GRID,
-            converter = ConverterKind.XLSX_TO_PDF,
-            thumbnail = ThumbnailKind.VIA_CONVERTER,
-            fidelity = RenderFidelity.STRUCTURED_REFLOW,
-            limitations = listOf("Macros are never executed", "Formulas are shown as cached values, not recalculated")
-        )
-    )
-    add(
-        FormatDescriptor(
-            extension = "xls",
-            family = DocumentFamily.SPREADSHEET,
-            viewer = ViewerKind.SPREADSHEET_GRID,
-            converter = ConverterKind.NONE,
-            thumbnail = ThumbnailKind.ICON_ONLY,
-            fidelity = RenderFidelity.STRUCTURED_REFLOW,
-            limitations = listOf(
-                "Number formats, styles and charts from the 97-2003 binary are not applied, so dates show as their serial number",
-                "Formula cells show the value Excel last cached — nothing is recalculated"
-            )
-        )
-    )
-    add(
-        FormatDescriptor(
-            extension = "ods",
-            family = DocumentFamily.SPREADSHEET,
-            viewer = ViewerKind.SPREADSHEET_GRID,
-            converter = ConverterKind.NONE,
-            thumbnail = ThumbnailKind.ICON_ONLY,
-            fidelity = RenderFidelity.STRUCTURED_REFLOW,
-            limitations = listOf("Cell styles and number formats are not applied")
-        )
-    )
-    add(FormatDescriptor("fods", DocumentFamily.SPREADSHEET, ViewerKind.SPREADSHEET_GRID, ConverterKind.NONE, ThumbnailKind.ICON_ONLY, RenderFidelity.STRUCTURED_REFLOW, listOf("Cell styles and number formats are not applied")))
-    add(FormatDescriptor("ots", DocumentFamily.SPREADSHEET, ViewerKind.SPREADSHEET_GRID, ConverterKind.NONE, ThumbnailKind.ICON_ONLY, RenderFidelity.STRUCTURED_REFLOW, listOf("Cell styles and number formats are not applied")))
+    // ---- Spreadsheets: Calc page layout with an optional searchable cell grid ----
+    for (extension in listOf("xlsx", "xlsm", "xls", "ods", "ots", "fods")) {
+        add(FormatDescriptor(extension, DocumentFamily.SPREADSHEET, ViewerKind.CONVERTED_PAGES,
+            ConverterKind.XLSX_TO_PDF, ThumbnailKind.VIA_CONVERTER, RenderFidelity.FIXED_LAYOUT,
+            listOf("Fonts may be substituted, so pagination can differ from Excel",
+                "Pages follow the workbook's print areas, scaling and visible sheets",
+                "Macros are disabled; external linked content is not loaded")))
+    }
     add(FormatDescriptor("csv", DocumentFamily.SPREADSHEET, ViewerKind.SPREADSHEET_GRID, ConverterKind.NONE, ThumbnailKind.ICON_ONLY, RenderFidelity.FIXED_LAYOUT))
     add(FormatDescriptor("tsv", DocumentFamily.SPREADSHEET, ViewerKind.SPREADSHEET_GRID, ConverterKind.NONE, ThumbnailKind.ICON_ONLY, RenderFidelity.FIXED_LAYOUT))
 
-    // ---- Presentations ----
-    add(
-        FormatDescriptor(
-            extension = "pptx",
-            family = DocumentFamily.PRESENTATION,
-            viewer = ViewerKind.CONVERTED_PAGES,
-            converter = ConverterKind.PPTX_TO_PDF,
-            thumbnail = ThumbnailKind.VIA_CONVERTER,
-            fidelity = RenderFidelity.FIXED_LAYOUT,
-            limitations = listOf(CHART_LIMIT, DIAGRAM_LIMIT, "Embedded objects are not drawn", "Animations and transitions are not played")
-        )
-    )
-    add(FormatDescriptor("pptm", DocumentFamily.PRESENTATION, ViewerKind.CONVERTED_PAGES, ConverterKind.PPTX_TO_PDF, ThumbnailKind.VIA_CONVERTER, RenderFidelity.FIXED_LAYOUT, listOf("Macros are never executed", CHART_LIMIT, DIAGRAM_LIMIT, "Embedded objects are not drawn")))
-    add(FormatDescriptor("ppsx", DocumentFamily.PRESENTATION, ViewerKind.CONVERTED_PAGES, ConverterKind.PPTX_TO_PDF, ThumbnailKind.VIA_CONVERTER, RenderFidelity.FIXED_LAYOUT, listOf(CHART_LIMIT, DIAGRAM_LIMIT, "Embedded objects are not drawn")))
-    add(FormatDescriptor("potx", DocumentFamily.PRESENTATION, ViewerKind.CONVERTED_PAGES, ConverterKind.PPTX_TO_PDF, ThumbnailKind.VIA_CONVERTER, RenderFidelity.FIXED_LAYOUT, listOf(CHART_LIMIT, DIAGRAM_LIMIT, "Embedded objects are not drawn")))
-    add(
-        FormatDescriptor(
-            extension = "odp",
-            family = DocumentFamily.PRESENTATION,
-            viewer = ViewerKind.PRESENTATION_SLIDES,
-            converter = ConverterKind.NONE,
-            thumbnail = ThumbnailKind.ICON_ONLY,
-            fidelity = RenderFidelity.STRUCTURED_REFLOW,
-            limitations = listOf("Draw styles and master pages are simplified")
-        )
-    )
-    add(FormatDescriptor("otp", DocumentFamily.PRESENTATION, ViewerKind.PRESENTATION_SLIDES, ConverterKind.NONE, ThumbnailKind.ICON_ONLY, RenderFidelity.STRUCTURED_REFLOW, listOf("Draw styles and master pages are simplified")))
-    add(FormatDescriptor("fodp", DocumentFamily.PRESENTATION, ViewerKind.PRESENTATION_SLIDES, ConverterKind.NONE, ThumbnailKind.ICON_ONLY, RenderFidelity.TEXT_ONLY, listOf("Flat ODP: only text frames are recovered")))
-    add(
-        FormatDescriptor(
-            extension = "ppt",
-            family = DocumentFamily.PRESENTATION,
-            viewer = ViewerKind.PRESENTATION_SLIDES,
-            converter = ConverterKind.NONE,
-            thumbnail = ThumbnailKind.ICON_ONLY,
-            fidelity = RenderFidelity.TEXT_ONLY,
-            limitations = listOf("Text only: shape positions, colors and images in binary .ppt are not decoded")
-        )
-    )
-    add(FormatDescriptor("pps", DocumentFamily.PRESENTATION, ViewerKind.PRESENTATION_SLIDES, ConverterKind.NONE, ThumbnailKind.ICON_ONLY, RenderFidelity.TEXT_ONLY, listOf("Text only: shape geometry in binary .pps is not decoded")))
-    add(FormatDescriptor("pot", DocumentFamily.PRESENTATION, ViewerKind.PRESENTATION_SLIDES, ConverterKind.NONE, ThumbnailKind.ICON_ONLY, RenderFidelity.TEXT_ONLY, listOf("Text only: shape geometry in binary .pot is not decoded")))
+    // ---- Presentations: Impress renders modern, legacy and OpenDocument decks ----
+    for (extension in listOf("pptx", "pptm", "ppsx", "potx", "ppt", "pps", "pot", "odp", "otp", "fodp")) {
+        add(FormatDescriptor(extension, DocumentFamily.PRESENTATION, ViewerKind.CONVERTED_PAGES,
+            ConverterKind.PPTX_TO_PDF, ThumbnailKind.VIA_CONVERTER, RenderFidelity.FIXED_LAYOUT,
+            listOf("Fonts may be substituted, so layout can differ from PowerPoint",
+                "Animations, transitions, audio and video are not played in page view",
+                "Macros are disabled; external linked content is not loaded")))
+    }
 
     // ---- Plain text and source ----
     for (ext in TEXT_EXTENSIONS) {

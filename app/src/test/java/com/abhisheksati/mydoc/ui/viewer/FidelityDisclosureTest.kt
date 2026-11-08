@@ -30,13 +30,11 @@ class FidelityDisclosureTest {
     }
 
     @Test
-    fun `recovered and text-only formats say so in their own words`() {
-        // .xls is decoded as BIFF8 now, so it promises a grid and names what it still drops.
+    fun `native legacy Office pages disclose layout and playback limits`() {
         val xls = fidelityDisclosureFor("xls")!!
-        assertTrue(xls.headline.contains("Recovered", ignoreCase = true).not())
-        assertTrue(xls.notes.any { it.contains("97-2003") })
-        assertTrue(xls.notes.any { it.contains("cached", ignoreCase = true) })
-        assertTrue(fidelityDisclosureFor("ppt")!!.headline.contains("Text only", ignoreCase = true))
+        assertEquals(DocumentFormats.forExtension("xls")!!.limitations.first(), xls.headline)
+        assertTrue(xls.notes.any { it.contains("print areas") })
+        assertTrue(fidelityDisclosureFor("ppt")!!.notes.any { it.contains("Animations") })
     }
 
     @Test
@@ -55,7 +53,7 @@ class FidelityDisclosureTest {
     fun `an observed level can never upgrade what the reader is told`() {
         // A text-only deck cannot be upgraded by an optimistic runtime observation.
         val doc = fidelityDisclosure(
-            descriptor = DocumentFormats.forExtension("ppt"),
+            descriptor = DocumentFormats.forExtension("ppt")!!.copy(fidelity = RenderFidelity.TEXT_ONLY),
             observedFidelity = RenderFidelity.STRUCTURED_REFLOW
         )!!
         assertTrue(doc.headline.contains("Text only", ignoreCase = true))
@@ -73,9 +71,10 @@ class FidelityDisclosureTest {
     fun `runtime notes ride along with the format limitations`() {
         val sheet = fidelityDisclosure(
             descriptor = DocumentFormats.forExtension("xlsx"),
+            observedFidelity = RenderFidelity.STRUCTURED_REFLOW,
             extraNotes = listOf("This sheet hit our read limit — later rows are not shown")
         )!!
         assertTrue(sheet.notes.first().contains("read limit"))
-        assertTrue(sheet.notes.any { it.contains("recalculated") })
+        assertTrue(sheet.notes.any { it.contains("print areas") })
     }
 }

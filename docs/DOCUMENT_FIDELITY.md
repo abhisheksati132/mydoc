@@ -1,3 +1,5 @@
+> Current engine routing: Word, PowerPoint and Excel page viewing now shares the offline LibreOfficeKit worker. Excel retains an optional searchable cell grid; CSV/TSV remain grid-only. See [Office engine](WORD_ENGINE.md) for scope, constraints and verification status. The dated increments below describe historical work.
+
 # Document fidelity programme
 
 Approved build order: Word → PowerPoint → Excel → remaining supported formats.

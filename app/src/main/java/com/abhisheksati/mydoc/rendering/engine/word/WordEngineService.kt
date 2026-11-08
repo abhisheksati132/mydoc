@@ -37,6 +37,7 @@ class WordEngineService : Service() {
                     val target = File(output).canonicalFile
                     require(source.path.startsWith(root.path + File.separator))
                     require(target.parentFile == source.parentFile && target.name == "output.pdf")
+                    require(com.abhisheksati.mydoc.rendering.engine.nativeOfficeExtension(source.name) != null)
                     require(source.isFile && source.length() in 1..OfficeSourceReader.MAX_SOURCE_BYTES)
                     WordEngineGuard.installAndVerify()
                     renderPassword = NativeWordCore.convert(this, source, target, password)
@@ -44,7 +45,7 @@ class WordEngineService : Service() {
                 } catch (_: WordPasswordRequired) {
                     passwordRequired = true
                 } catch (error: Throwable) {
-                    com.abhisheksati.mydoc.util.SecureLog.warn("WordEngine", "Word conversion failed") {
+                    com.abhisheksati.mydoc.util.SecureLog.warn("WordEngine", "Office conversion failed") {
                         "${error.javaClass.simpleName}: ${error.message}"
                     }
                 }

@@ -9,6 +9,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -363,7 +364,7 @@ private fun ToolRow(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .clip(AppRadius.cardShape)
-            .clickable(onClick = onClick)
+            .pressScaleEffect(onClick = onClick)
     ) {
         Row(
             modifier = Modifier

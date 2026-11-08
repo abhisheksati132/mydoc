@@ -1,6 +1,8 @@
-# Offline Word page rendering
+# Offline Office page rendering
 
-The primary Word viewer uses LibreOfficeKit 26.2.6.3 in a dedicated `:word_engine` process, exports a local PDF, and displays it using the existing page reader. DOCX, DOTX, DOC, DOT, ODT, OTT, FODT and RTF use this path. The simpler parser remains available for unprotected reflow reading.
+The primary Word, PowerPoint and Excel page viewers use LibreOfficeKit 26.2.6.3 in a dedicated `:word_engine` process, exports a local PDF, and displays it using the existing page reader. DOCX, DOTX, DOC, DOT, ODT, OTT, FODT and RTF use Writer. PPTX, PPTM, PPSX, POTX, PPT, PPS, POT, ODP, OTP and FODP use Impress. XLSX, XLSM, XLS, ODS, OTS and FODS use Calc. The existing service/process/build-task names keep their `word` prefix for compatibility; the queue, process and engine are shared across all three families.
+
+The simpler Word parser remains available for unprotected reflow reading. Excel opens in page view by default; **Cell grid** in the overflow menu opens the searchable, cached-value grid, with Back returning to the original pages. CSV and TSV open directly in that grid. Page export follows workbook print areas, scaling, page breaks and visible sheets; it is a print layout rather than an interactive spreadsheet. LibreOffice may calculate formulas during import; the separate grid continues to show stored cached results. Presentations are static pages: animations, transitions and media playback are not reproduced. The existing independent slideshow/notes path remains available for unprotected decks and has its own rendering limits.
 
 This replaces MyDoc's limited page reconstruction with an office layout engine: headers, footers, table-cell pictures, styles and section layout can survive conversion. It does not promise pixel-identical Microsoft Word output. Missing fonts can change pagination; external content, macros and active objects are disabled. Format details continue to disclose these limits.
 
@@ -12,7 +14,7 @@ This replaces MyDoc's limited page reconstruction with an office layout engine: 
 - Native output files are limited to 256 MiB; accepted PDFs contain 1–4000 pages. A timed-out, cancelled or failed job is removed.
 - The engine profile disables macros, active content and automatic external link updates. Bundled fonts make rendering independent of a network connection.
 - Unprotected output is validated before atomic publication in a versioned, content-addressed cache.
-- Protected Word documents prompt for the source password. Their derived PDFs are encrypted with a fresh random key, not the source password, and removed with the viewer session. Neither key nor source password is persisted. An interrupted process may leave an encrypted preview in Android's private evictable cache.
+- Protected Office documents prompt for the source password. Their derived PDFs are encrypted with a fresh random key, not the source password, and removed with the viewer session. Neither key nor source password is persisted. An interrupted process may leave an encrypted preview in Android's private evictable cache.
 
 ## Builds and provenance
 
@@ -31,3 +33,17 @@ These synthetic and upstream regression fixtures establish particular capabiliti
 515 JVM tests and 24 API 35 x86_64 device tests passed, including the protected Word viewer's full unlock/text/close lifecycle. Debug lint completed with zero errors; debug, AndroidTest and R8-optimized release builds passed. The release build was signed using a temporary local test certificate, not a production release credential, and opened both the layout fixture and the protected fixture through the actual password dialog on the emulator. All 64-bit engine libraries have 16 KiB ELF LOAD alignment; this is a binary inspection, not execution on a 16 KiB device. ARM execution remains untested.
 
 Measured APK sizes for this build: ARM64 approximately 100 MiB, ARMv7 91 MiB, x86_64 107 MiB, universal 267 MiB. These are whole-app download sizes and may change with subsequent builds.
+
+## PowerPoint and Excel extension (current working changes)
+
+Both converters now call the shared native queue, retaining source suffixes so Impress/Calc select the correct import filter. The cache identity includes engine revision, extension and source bytes; PDFs produced by the old custom renderers are not reused. Password prompts, private encrypted previews, cancellation and worker network restrictions apply to all Office page viewers. Native PDF bookmarks provide the outline when available. The original file is never rewritten.
+
+Regression coverage was added for complete PPTX/XLSX packages with two slides/sheets, chart labels, tables and colored images/fills, a legacy binary XLS, cache reuse, source preservation, and protected PPTX/XLSX missing/wrong/correct password behavior. Test additions alone do not establish passing device results; see the current work report for actual execution status. The older verification and APK size measurements above refer to the Word-only implementation. Font substitution, unsupported Office features and unusual print settings still require reference-document comparisons.
+
+### Browser-workspace verification for the Office extension
+
+- `:app:testDebugUnitTest`: 521 passed, 1 skipped (522 total).
+- `:app:compileDebugAndroidTestKotlin`: passed, including the new Impress/Calc fidelity and password-lifecycle tests.
+- All three pinned LibreOffice packages were downloaded, signature/checksum verified, and prepared with NDK 29.0.14206865.
+- The new device tests have not been executed in this workspace. No emulator is configured and the device bridge attempts to write to the read-only home directory. Compilation is not evidence of native runtime fidelity.
+- `:app:lintDebug`: passed (zero errors).

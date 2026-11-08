@@ -7,11 +7,22 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ### Added
 
+- Use the bundled offline LibreOffice engine for PowerPoint slide pages and Excel print-layout pages, including legacy PPT/XLS and OpenDocument files.
+- Keep Excel’s searchable cell grid available from page view.
+- Share Office conversion scheduling, password prompts, encrypted temporary previews and content-addressed caching across Word, PowerPoint and Excel.
+- Retain static presentation-page limitations and workbook print-layout disclosures.
+
 - PowerPoint numbered lists now retain common Arabic, alphabetic and Roman numbering with their punctuation and per-level sequence instead of showing every item as `1.`.
 - Excel grid and PDF previews render solid fills for numeric greater/less/equal/between conditional-format rules with supported differential fills.
 - Excel grid and PDF previews preserve custom row heights, wrapped text and common cell borders, including dashed and double edges.
 
 ### Fixed
+
+
+- Correct rectangular scan rotations and keep long-image PDF export within its allocation and layout budget.
+- Reject obsolete spreadsheet/PDF loads and restrict primary-storage path recovery to the Android external-storage document provider.
+- Restore audio playback state when a track finishes and enlarge app-manager action targets.
+- Give file rows, tool rows and shared press controls a minimum-duration spring response, with immediate scroll cancellation and reduced-motion support.
 
 - Rounded PowerPoint shape backgrounds and borders now use rounded corners instead of being stretched into a capsule.
 

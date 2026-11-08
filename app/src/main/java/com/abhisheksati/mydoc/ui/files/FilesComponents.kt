@@ -6,6 +6,9 @@ import com.abhisheksati.mydoc.R
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import com.abhisheksati.mydoc.designsystem.animation.pressScale
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material3.ripple
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.selection.toggleable
@@ -232,6 +235,7 @@ fun FileRow(
 ) {
     val scheme = MaterialTheme.colorScheme
     val haptics = rememberAppHaptics()
+    val pressInteractions = androidx.compose.runtime.remember { MutableInteractionSource() }
 
     Row(
         modifier = modifier
@@ -252,7 +256,9 @@ fun FileRow(
                         onValueChange = { onClick() }
                     )
                 } else {
-                    Modifier.combinedClickable(
+                    Modifier.pressScale(pressInteractions).combinedClickable(
+                        interactionSource = pressInteractions,
+                        indication = ripple(),
                         onClick = onClick,
                         onLongClick = {
                             haptics.snap()
@@ -327,6 +333,7 @@ fun FileGridCell(
 ) {
     val scheme = MaterialTheme.colorScheme
     val haptics = rememberAppHaptics()
+    val pressInteractions = androidx.compose.runtime.remember { MutableInteractionSource() }
 
     Column(
         modifier = modifier
@@ -345,7 +352,9 @@ fun FileGridCell(
                         onValueChange = { onClick() }
                     )
                 } else {
-                    Modifier.combinedClickable(
+                    Modifier.pressScale(pressInteractions).combinedClickable(
+                        interactionSource = pressInteractions,
+                        indication = ripple(),
                         onClick = onClick,
                         onLongClick = {
                             haptics.snap()

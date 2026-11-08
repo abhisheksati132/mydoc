@@ -59,9 +59,8 @@ class DocumentFormatsTest {
 
     @Test
     fun gridOnlyFormatsAreNeverSentToAConverter() {
-        // ViewerViewModel used to hand xls/ods/csv/tsv to XlsxConverter, which only understands
-        // OOXML; it returned null and the raw file fell through to MuPDF as "damaged".
-        for (ext in listOf("csv", "tsv", "ods", "fods", "ots", "xls")) {
+        // Delimited text stays interactive; it has no stored print layout to render.
+        for (ext in listOf("csv", "tsv")) {
             assertEquals(ext, ConverterKind.NONE, DocumentFormats.converterFor(ext))
             assertEquals(ext, ViewerKind.SPREADSHEET_GRID, DocumentFormats.viewerFor(ext))
         }

@@ -125,7 +125,14 @@ fun SpreadsheetViewerScreen(
         sheetItems = outlineItems,
         onSheetSelect = { viewModel.selectSheet(it) },
         readingPrefs = readingPrefs,
+        observedFidelity = if (com.abhisheksati.mydoc.domain.model.DocumentFormats.converterFor(document.extension) ==
+            com.abhisheksati.mydoc.domain.model.ConverterKind.XLSX_TO_PDF)
+            com.abhisheksati.mydoc.domain.model.RenderFidelity.STRUCTURED_REFLOW else null,
         fidelityNotes = buildList {
+            if (com.abhisheksati.mydoc.domain.model.DocumentFormats.converterFor(document.extension) ==
+                com.abhisheksati.mydoc.domain.model.ConverterKind.XLSX_TO_PDF) {
+                add(stringResource(R.string.sheet_grid_layout_note))
+            }
             if (state.currentSheet?.truncated == true) {
                 add(stringResource(R.string.sheet_read_limit))
             }

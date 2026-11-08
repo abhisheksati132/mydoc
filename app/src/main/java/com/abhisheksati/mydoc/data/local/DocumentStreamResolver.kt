@@ -244,13 +244,8 @@ object DocumentStreamResolver {
         // Tier 4: Parse primary external storage relative path
         // e.g. content://com.android.externalstorage.documents/document/primary%3ADownload%2Freport-1.pdf
         try {
-            if (uriString.contains("primary%3A") || uriString.contains("primary:")) {
-                val encodedPath = if (uriString.contains("primary%3A")) {
-                    uriString.substringAfter("primary%3A")
-                } else {
-                    uriString.substringAfter("primary:")
-                }
-                val relPath = Uri.decode(encodedPath)
+            val relPath = primaryExternalStoragePath(uri.toString())
+            if (relPath != null) {
                 val roots = listOfNotNull(
                     Environment.getExternalStorageDirectory()?.takeIf { it.isDirectory },
                     File("/storage/emulated/0").takeIf { it.isDirectory }
@@ -269,6 +264,21 @@ object DocumentStreamResolver {
 
         return null
     }
+
+    /** Accept only the external-storage provider's document id, never query/fragment text. */
+    internal fun primaryExternalStoragePath(value: String): String? = runCatching {
+        val uri = java.net.URI(value)
+        if (uri.scheme != "content" || uri.rawAuthority != "com.android.externalstorage.documents") return null
+        val path = uri.rawPath ?: return null
+        val encodedId = when {
+            path.startsWith("/document/") -> path.removePrefix("/document/")
+            path.startsWith("/tree/") && "/document/" in path -> path.substringAfter("/document/")
+            else -> return null
+        }
+        // URI path segments use percent encoding, not application/x-www-form-urlencoded '+'.
+        val id = java.net.URLDecoder.decode(encodedId.replace("+", "%2B"), "UTF-8")
+        id.takeIf { it.startsWith("primary:") }?.removePrefix("primary:")
+    }.getOrNull()
 
     /**
      * [relativePath] resolved inside [root], or null when it is absolute, empty, or escapes the root

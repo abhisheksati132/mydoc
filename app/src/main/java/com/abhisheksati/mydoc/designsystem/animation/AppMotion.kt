@@ -23,7 +23,7 @@ import androidx.compose.ui.geometry.Rect
  * - Hero (list row -> viewer): the element itself carries the transition; containers cross-fade.
  * - Detail (container -> viewer): rises ~10% of the viewport, settles, never overshoots.
  * - Peer (tab <-> tab, screen <-> screen): shared horizontal axis, ~1/6 of the width.
- * - Press: 0.972 scale, spring back. See PressScaleEffect.
+ * - Press: a short 0.972 dip, then a restrained spring return. See PressScaleEffect.
  *
  * If a screen needs motion, it uses these — no ad-hoc springs.
  */
@@ -38,6 +38,10 @@ object AppMotion {
     /** Softer settle for large surfaces. */
     fun <T> settle(): FiniteAnimationSpec<T> =
         spring(dampingRatio = 1f, stiffness = Spring.StiffnessMediumLow)
+
+    /** Shared jelly press timings; cancel and reduced-motion paths remain still. */
+    fun <T> pressIn(): FiniteAnimationSpec<T> = spring(dampingRatio = 0.72f, stiffness = 900f)
+    fun <T> pressOut(): FiniteAnimationSpec<T> = spring(dampingRatio = 0.62f, stiffness = 420f)
 
     /** Press-in/out spring with a hint of momentum. */
     fun <T> press(): FiniteAnimationSpec<T> =

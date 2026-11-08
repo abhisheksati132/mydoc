@@ -1,4 +1,4 @@
-# LibreOffice Word engine
+# LibreOffice Office engine
 
 MyDoc integrates LibreOfficeKit **26.2.6.3**, copyright LibreOffice contributors and The Document Foundation. MyDoc is an independent application; no affiliation or endorsement is implied.
 

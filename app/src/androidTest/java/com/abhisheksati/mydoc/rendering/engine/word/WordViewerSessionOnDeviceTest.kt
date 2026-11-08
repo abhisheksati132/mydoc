@@ -39,7 +39,7 @@ class WordViewerSessionOnDeviceTest {
             val state = viewer.uiState.value
             assertFalse("The derived PDF must not ask for a second password", state.isPasswordRequired)
             assertNull(state.errorMessage)
-            assertTrue(state.isWordEncrypted)
+            assertTrue(state.isOfficeEncrypted)
             val text = viewer.getDocumentText().orEmpty()
             assertTrue("Unlocked synthetic fixture text: $text", text.contains("HEADER RETAINED BY WORD ENGINE"))
             assertTrue(privatePreviews().minus(before).isNotEmpty())

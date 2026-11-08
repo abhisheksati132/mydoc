@@ -1,13 +1,10 @@
-package com.abhisheksati.mydoc.rendering.engine.word
+package com.abhisheksati.mydoc.rendering.engine
 
 import android.content.Context
 import android.net.Uri
-import com.abhisheksati.mydoc.rendering.engine.MuPdfRenderer
+import com.abhisheksati.mydoc.rendering.engine.word.NativeWordCore
+import com.abhisheksati.mydoc.rendering.engine.word.WordEngineConnection
 import com.abhisheksati.mydoc.domain.model.LoadFailure
-import com.abhisheksati.mydoc.rendering.engine.OfficeConversion
-import com.abhisheksati.mydoc.rendering.engine.OfficeSource
-import com.abhisheksati.mydoc.rendering.engine.OfficeSourceReader
-import com.abhisheksati.mydoc.rendering.engine.asConversionFailure
 import com.abhisheksati.mydoc.util.DocumentIdentity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -22,11 +19,17 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
-internal object NativeWordConverter {
+/** Shared queue, cache and isolated worker for Writer, Impress and Calc.
+ * The word_engine_jobs directory and worker class names remain stable for existing bindings.
+ */
+internal object NativeOfficeConverter {
     private val conversions = Mutex()
 
     suspend fun convert(context: Context, uri: Uri, displayName: String, password: String? = null): OfficeConversion = conversions.withLock {
         withContext(Dispatchers.IO) {
+            val extension = nativeOfficeExtension(displayName)
+                ?: return@withContext OfficeConversion.Failure(LoadFailure.UNSUPPORTED_FORMAT,
+                    "This format is not supported by the offline Office renderer.")
             if (password != null && password.length > 1024) return@withContext locked()
             val source = OfficeSourceReader.read(context, uri, displayName)
             val bytes = when (source) {
@@ -35,14 +38,12 @@ internal object NativeWordConverter {
             }
             ensureActive()
             val directory = File(context.cacheDir, "converted_docs").apply { mkdirs() }
-            val target = File(directory, "word_native_${NativeWordCore.VERSION}_r3_${DocumentIdentity.ofBytes(bytes)}.pdf")
+            val target = File(directory, "office_native_${NativeWordCore.VERSION}_r1_${extension}_${DocumentIdentity.ofBytes(bytes)}.pdf")
             if (target.isFile && target.length() > 16L && validPdf(target, null))
                 return@withContext OfficeConversion.Success(target)
             val jobs = File(context.cacheDir, "word_engine_jobs").apply { mkdirs() }
-            val job = Files.createTempDirectory(jobs.toPath(), "word-").toFile()
+            val job = Files.createTempDirectory(jobs.toPath(), "office-").toFile()
             try {
-                val extension = displayName.substringAfterLast('.', "docx").lowercase(java.util.Locale.ROOT)
-                    .takeIf { it in setOf("docx", "dotx", "doc", "dot", "odt", "ott", "fodt", "rtf") } ?: "docx"
                 val input = File(job, "input.$extension").apply { writeBytes(bytes) }
                 val output = File(job, "output.pdf")
                 val result = withTimeout(60_000) {
@@ -68,7 +69,7 @@ internal object NativeWordConverter {
                     OfficeConversion.Success(target)
                 }
             } catch (_: TimeoutCancellationException) {
-                OfficeConversion.Failure(LoadFailure.CONVERSION_FAILED, "This Word document took too long to render.")
+                OfficeConversion.Failure(LoadFailure.CONVERSION_FAILED, "This document took too long to render.")
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
@@ -92,8 +93,8 @@ internal object NativeWordConverter {
     }.getOrDefault(false)
 
     private fun locked() = OfficeConversion.Failure(LoadFailure.PASSWORD_PROTECTED,
-        "Enter the password to open this Word document.")
+        "Enter the password to open this document.")
 
     private fun failure() = OfficeConversion.Failure(LoadFailure.CONVERSION_FAILED,
-        "MyDoc could not render the original Word layout. A simplified reading view may still be available.")
+        "MyDoc could not render this document’s original layout.")
 }

@@ -1,5 +1,5 @@
 <resources>
-    <string name="word_engine_licenses">Word engine licenses</string>
+    <string name="word_engine_licenses">Office engine licenses</string>
     <string name="app_name">MyDoc</string>
     <string name="tile_scan_doc">Quick Scan</string>
     <string name="recent_history_cleared">Recent history cleared</string>
@@ -972,4 +972,6 @@
     <string name="quick_preview_file">File</string>
     <string name="word_image_unavailable">Image unavailable or unsupported</string>
     <string name="dismiss_rendering_notice">Dismiss rendering notice</string>
+    <string name="viewer_action_cell_grid">Cell grid</string>
+    <string name="sheet_grid_layout_note">Cell grid shows stored values and supported styles. Charts, drawings and print layout are available in page view.</string>
 </resources>

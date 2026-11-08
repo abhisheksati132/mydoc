@@ -50,7 +50,7 @@ data class ViewerUiState(
     val isThumbnailStripVisible: Boolean = false,
     val isPasswordRequired: Boolean = false,
     val isPasswordIncorrect: Boolean = false,
-    val isWordEncrypted: Boolean = false,
+    val isOfficeEncrypted: Boolean = false,
     val isLoading: Boolean = true,
     val isPermissionExpired: Boolean = false,
     val errorMessage: String? = null,
@@ -78,11 +78,12 @@ class ViewerViewModel(
         get() = rendererSlot.current
     private var searchJob: Job? = null
     private var activeDocumentFile: DocumentFile = documentFile
-    private var wordPassword: String? = null
-    private var waitingForWordPassword = false
+    private var officePassword: String? = null
+    private var waitingForOfficePassword = false
 
     /** Bumped by every load; a result from an older generation is dropped, not published. */
-    private var loadGeneration = 0
+    @Volatile private var loadGeneration = 0
+    private var loadJob: Job? = null
 
     val documentUri: String
         get() = activeDocumentFile.uri
@@ -97,10 +98,11 @@ class ViewerViewModel(
      * native MuPDF document alive for every file that was ever looked at.
      */
     fun open(document: DocumentFile) {
-        if (document.uri == activeDocumentFile.uri && _uiState.value.pageCount > 0) return
+        if (document.uri == activeDocumentFile.uri &&
+            (_uiState.value.pageCount > 0 || loadJob?.isActive == true)) return
         if (document.uri != activeDocumentFile.uri) {
-            wordPassword = null
-            waitingForWordPassword = false
+            officePassword = null
+            waitingForOfficePassword = false
         }
         activeDocumentFile = document
         loadDocument()
@@ -125,14 +127,17 @@ class ViewerViewModel(
     }
 
     private fun loadDocument() {
+        loadJob?.cancel()
         releaseSession()
+        val document = activeDocumentFile
+        val password = officePassword
         // One owned load at a time. The constructor and the screen effect can both schedule a
         // load; without a generation stamp the slower document could publish its renderer, page
         // count and progress over the faster, newer one.
         val generation = ++loadGeneration
-        viewModelScope.launch {
+        loadJob = viewModelScope.launch {
             _uiState.update {
-                it.copy(
+                if (generation != loadGeneration) it else it.copy(
                     isLoading = true,
                     isPermissionExpired = false,
                     errorMessage = null,
@@ -141,24 +146,21 @@ class ViewerViewModel(
                     // Password prompts belong to the document that raised them.
                     isPasswordRequired = false,
                     isPasswordIncorrect = false,
-                    isWordEncrypted = false,
+                    isOfficeEncrypted = false,
                     conversionNotes = emptyList()
                 )
             }
 
             // Restore per-file view state from Room
-            val savedState = repository.getViewState(activeDocumentFile.uri)
+            val savedState = repository.getViewState(document.uri)
 
             withContext(ioDispatcher) {
                 try {
-                    val uri = Uri.parse(activeDocumentFile.uri)
-                    val ext = activeDocumentFile.extension.lowercase().ifEmpty { "pdf" }
+                    val uri = Uri.parse(document.uri)
+                    val ext = document.extension.lowercase().ifEmpty { "pdf" }
 
-                    // Which converter, if any, is decided by the format registry rather than a
-                    // local list. Formats with no converter (legacy .xls, CSV, ODS, binary
-                    // decks) must never be handed to a converter that cannot read them, and a
-                    // single-engine format whose converter failed must not fall through to MuPDF,
-                    // which would report a healthy file as damaged.
+                    // The registry selects the offline Office engine for page-based documents.
+                    // CSV/TSV remain in the grid; failed conversions never fall through to MuPDF.
                     val converter = com.abhisheksati.mydoc.domain.model.DocumentFormats.converterFor(ext)
                     // The office converters report *why* they produced nothing: a document over the
                     // size budget must not be announced as one using unimplemented features.
@@ -168,40 +170,46 @@ class ViewerViewModel(
                                 com.abhisheksati.mydoc.rendering.engine.presentation.PptxConverter.convertPptxToPdf(
                                     context = context,
                                     uri = uri,
-                                    displayName = activeDocumentFile.displayName
+                                    displayName = document.displayName,
+                                    password = password
                                 )
 
                             com.abhisheksati.mydoc.domain.model.ConverterKind.DOCX_TO_PDF ->
                                 com.abhisheksati.mydoc.rendering.engine.word.DocxConverter.convertDocxToPdf(
                                     context = context,
                                     uri = uri,
-                                    displayName = activeDocumentFile.displayName,
-                                    password = wordPassword
+                                    displayName = document.displayName,
+                                    password = password
                                 )
 
                             com.abhisheksati.mydoc.domain.model.ConverterKind.XLSX_TO_PDF ->
-                                com.abhisheksati.mydoc.rendering.engine.spreadsheet.XlsxConverter.convertXlsxToPdf(
+                                com.abhisheksati.mydoc.rendering.engine.spreadsheet.XlsxConverter.convertToPages(
                                     context = context,
                                     uri = uri,
-                                    displayName = activeDocumentFile.displayName
-                                )?.let { com.abhisheksati.mydoc.rendering.engine.OfficeConversion.Success(it) }
+                                    displayName = document.displayName,
+                                    password = password
+                                )
 
                             com.abhisheksati.mydoc.domain.model.ConverterKind.NONE -> null
                         }
+                    if (generation != loadGeneration) {
+                        if (conversion is com.abhisheksati.mydoc.rendering.engine.OfficeConversion.Success && conversion.deleteWhenClosed)
+                            conversion.pdf.delete()
+                        return@withContext
+                    }
                     val convertedPdfFile: java.io.File? = conversion?.pdfFile
 
                     if (conversion is com.abhisheksati.mydoc.rendering.engine.OfficeConversion.Failure) {
                         if (generation != loadGeneration) return@withContext
-                        if (conversion.failure == com.abhisheksati.mydoc.domain.model.LoadFailure.PASSWORD_PROTECTED &&
-                            com.abhisheksati.mydoc.domain.model.DocumentFormats.familyOf(ext) == com.abhisheksati.mydoc.domain.model.DocumentFamily.WORD) {
-                            waitingForWordPassword = true
-                            _uiState.update { it.copy(isLoading = false, isPasswordRequired = true,
-                                isPasswordIncorrect = wordPassword != null, errorMessage = null, failure = null) }
+                        if (conversion.failure == com.abhisheksati.mydoc.domain.model.LoadFailure.PASSWORD_PROTECTED) {
+                            waitingForOfficePassword = true
+                            _uiState.update { if (generation != loadGeneration) it else it.copy(isLoading = false, isPasswordRequired = true,
+                                isPasswordIncorrect = password != null, errorMessage = null, failure = null) }
                             return@withContext
                         }
                         SecureLog.warn("ViewerLoad", "document conversion failed") { conversion.message }
                         _uiState.update {
-                            it.copy(
+                            if (generation != loadGeneration) it else it.copy(
                                 isLoading = false,
                                 needsReflowFallback = com.abhisheksati.mydoc.domain.model.DocumentFormats
                                     .familyOf(ext) == com.abhisheksati.mydoc.domain.model.DocumentFamily.WORD,
@@ -218,21 +226,21 @@ class ViewerViewModel(
                             return@withContext
                         }
                         if (conversion.deleteWhenClosed) sessionTempFiles.add(conversion.pdf)
-                        waitingForWordPassword = false
-                        wordPassword = null
-                        _uiState.update { it.copy(isWordEncrypted = conversion.renderPassword != null) }
+                        waitingForOfficePassword = false
+                        officePassword = null
+                        _uiState.update { if (generation != loadGeneration) it else it.copy(isOfficeEncrypted = conversion.renderPassword != null) }
                     }
 
                     conversion?.note?.let { note ->
-                        _uiState.update { it.copy(conversionNotes = listOf(note)) }
+                        _uiState.update { if (generation != loadGeneration) it else it.copy(conversionNotes = listOf(note)) }
                     }
 
                     if (convertedPdfFile == null && converter != com.abhisheksati.mydoc.domain.model.ConverterKind.NONE) {
-                        SecureLog.warn("ViewerLoad", "no PDF produced for document") { activeDocumentFile.displayName }
+                        SecureLog.warn("ViewerLoad", "no PDF produced for document") { document.displayName }
                         val family = com.abhisheksati.mydoc.domain.model.DocumentFormats.familyOf(ext)
                         val isWord = family == com.abhisheksati.mydoc.domain.model.DocumentFamily.WORD
                         _uiState.update {
-                            it.copy(
+                            if (generation != loadGeneration) it else it.copy(
                                 isLoading = false,
                                 needsReflowFallback = isWord,
                                 failure = com.abhisheksati.mydoc.domain.model.LoadFailure.CONVERSION_FAILED,
@@ -253,11 +261,12 @@ class ViewerViewModel(
                         val resolveResult = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.resolveToCacheFile(
                             context = context,
                             uri = uri,
-                            displayName = activeDocumentFile.displayName,
+                            displayName = document.displayName,
                             targetCacheFile = temp
                         )
                         sessionTempFiles.add(temp)
 
+                        if (generation != loadGeneration) { temp.delete(); return@withContext }
                         if (resolveResult.isFailure) {
                             val exception = resolveResult.exceptionOrNull()
                             val typed = exception as? com.abhisheksati.mydoc.domain.model.DocumentLoadException
@@ -274,7 +283,7 @@ class ViewerViewModel(
                             }
 
                             _uiState.update {
-                                it.copy(
+                                if (generation != loadGeneration) it else it.copy(
                                     isLoading = false,
                                     isPermissionExpired = isPerm,
                                     errorMessage = errorMsg,
@@ -289,10 +298,10 @@ class ViewerViewModel(
                         }
 
                         val resolved = resolveResult.getOrThrow()
-                        if (resolved.newResolvedUri != null && resolved.newResolvedUri.toString() != activeDocumentFile.uri) {
+                        if (resolved.newResolvedUri != null && resolved.newResolvedUri.toString() != document.uri) {
                             // Background update the URI in Room so subsequent launches resolve immediately
                             launch {
-                                repository.replaceDocument(activeDocumentFile.uri, resolved.newResolvedUri)
+                                repository.replaceDocument(document.uri, resolved.newResolvedUri)
                             }
                         }
                         temp
@@ -360,8 +369,9 @@ class ViewerViewModel(
                         )) {
                         PdfOpenOutcome.DAMAGED, PdfOpenOutcome.EMPTY_DOCUMENT -> {
                             activeRenderer?.close()
+                            if (generation != loadGeneration) return@withContext
                             _uiState.update {
-                                it.copy(
+                                if (generation != loadGeneration) it else it.copy(
                                     isLoading = false,
                                     isPermissionExpired = false,
                                     errorMessage = "This document format is damaged or could not be rendered.",
@@ -373,8 +383,9 @@ class ViewerViewModel(
 
                         PdfOpenOutcome.PASSWORD_UNAVAILABLE -> {
                             activeRenderer?.close()
+                            if (generation != loadGeneration) return@withContext
                             _uiState.update {
-                                it.copy(
+                                if (generation != loadGeneration) it else it.copy(
                                     isLoading = false,
                                     isPermissionExpired = false,
                                     isPasswordRequired = false,
@@ -390,13 +401,13 @@ class ViewerViewModel(
                     }
 
                     val chosen = activeRenderer ?: return@withContext
-                    if (generation != loadGeneration) return@withContext
+                    if (generation != loadGeneration) { chosen.close(); return@withContext }
                     rendererSlot.replace(chosen)
 
                     if (chosen.isPasswordProtected) {
                         if (generation != loadGeneration) return@withContext
                         _uiState.update {
-                            it.copy(
+                            if (generation != loadGeneration) it else it.copy(
                                 isLoading = false,
                                 errorMessage = null,
                                 failure = null,
@@ -431,7 +442,7 @@ class ViewerViewModel(
 
                         if (generation != loadGeneration) return@withContext
                         _uiState.update {
-                            it.copy(
+                            if (generation != loadGeneration) it else it.copy(
                                 isLoading = false,
                                 pageCount = totalPages,
                                 currentPage = initialPage,
@@ -441,14 +452,16 @@ class ViewerViewModel(
                             )
                         }
 
-                        repository.updatePageProgress(activeDocumentFile.uri, initialPage, totalPages)
+                        repository.updatePageProgress(document.uri, initialPage, totalPages)
                         prefetchSurroundingPages(initialPage)
                     }
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
                 } catch (e: Exception) {
                     if (generation != loadGeneration) return@withContext
                     val isPerm = UserMessages.isPermissionFailure(e)
                     _uiState.update {
-                        it.copy(
+                        if (generation != loadGeneration) it else it.copy(
                             isLoading = false,
                             isPermissionExpired = isPerm,
                             errorMessage = UserMessages.readFailure("ViewerViewModel", e).resolve(context)
@@ -480,9 +493,9 @@ class ViewerViewModel(
     }
 
     fun authenticatePassword(password: String) {
-        if (waitingForWordPassword) {
-            wordPassword = password
-            waitingForWordPassword = false
+        if (waitingForOfficePassword) {
+            officePassword = password
+            waitingForOfficePassword = false
             loadDocument()
             return
         }
@@ -770,8 +783,8 @@ class ViewerViewModel(
     }
 
     override fun onCleared() {
-        wordPassword = null
-        waitingForWordPassword = false
+        officePassword = null
+        waitingForOfficePassword = false
         super.onCleared()
         releaseSession()
     }
