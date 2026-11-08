@@ -7,5 +7,5 @@ set +e
 RESULT=$?
 set -e
 mkdir -p app/build/outputs
-adb pull /sdcard/Android/data/com.abhisheksati.mydoc.debug/files/ui-captures app/build/outputs/ || true
+adb pull /sdcard/Pictures/MyDocTestCaptures app/build/outputs/ui-captures || true
 exit "$RESULT"

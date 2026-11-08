@@ -82,8 +82,9 @@ fun BoxScope.PdfViewerControlsOverlay(
     if (fidelityDisclosure != null && state.areControlsVisible && !state.isSearchOpen) {
         FidelityNotice(
             disclosure = fidelityDisclosure,
+            dismissalKey = document.uri,
             modifier = Modifier
-                .align(Alignment.TopCenter)
+                .align(Alignment.TopEnd)
                 .statusBarsPadding()
                 .padding(top = ViewerChrome.topBarHeight)
         )

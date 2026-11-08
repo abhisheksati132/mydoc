@@ -43,6 +43,7 @@ fun OnboardingGuide(onDone: (Boolean)->Unit) {
     )
     val details=listOf(
         listOf("Choose your access" to "Opening a file does not require access to all storage.",
+            "Choose Office support" to "Built-in readers work immediately. Add or remove enhanced Office support from Settings → Reading.",
             "Stay in control" to "MyDoc asks for permissions when a workflow needs them. Change access in Android Settings."),
         listOf("Go straight to the match" to "Search results include a snippet and can open the matching page.",
             "Choose what to index" to "Refresh after edits. Locked files and scanned pages are not indexed; OCR is a separate reader tool."),

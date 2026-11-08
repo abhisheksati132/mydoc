@@ -35,6 +35,18 @@ class BrowseExperienceOnDeviceTest {
         compose.onNodeWithText("Loading files…").assertIsDisplayed()
     }
 
+    @Test fun sameFolderRefreshKeepsItsExistingRowsVisible() {
+        val item = StorageItem(File("/sdcard/same/kept.txt"))
+        compose.setContent {
+            AppDesignSystemTheme {
+                DirectoryPane(FileManagerUiState(File("/sdcard/same"), items = listOf(item),
+                    filteredItems = listOf(item), isLoading = true, isRefreshing = true), {}, {}, {}, {}, {}, {})
+            }
+        }
+        compose.onNodeWithText("kept.txt").assertIsDisplayed()
+        compose.onNodeWithText("Loading files…").assertDoesNotExist()
+    }
+
     @Test fun emptySearchOffersAnImmediateRecoveryAction() {
         var cleared = false
         compose.setContent {

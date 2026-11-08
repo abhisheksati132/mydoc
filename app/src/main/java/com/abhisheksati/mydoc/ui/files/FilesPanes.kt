@@ -174,7 +174,8 @@ fun BrowseHomePane(
     if (glassMotion != null) {
         TrackGlassMotion(listState, glassMotion)
     }
-    if (storageUiState.isLoading && storageUiState.volumes.isEmpty()) {
+    if (storageUiState.isLoading && (storageUiState.analyzedVolumePath == null ||
+        storageUiState.analyzedVolumePath != storageUiState.activeVolume?.path)) {
         Column(
             modifier = modifier.then(if (hazeState != null) Modifier.hazeSource(hazeState) else Modifier)
         ) {
@@ -187,6 +188,11 @@ fun BrowseHomePane(
         modifier = modifier.then(if (hazeState != null) Modifier.hazeSource(hazeState) else Modifier),
         contentPadding = PaddingValues(bottom = LocalFloatingChromeInset.current + 24.dp)
     ) {
+        item(key = "storage_refresh_progress") {
+            Box(Modifier.fillMaxWidth().height(4.dp)) {
+                if (storageUiState.isLoading) androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
+            }
+        }
         if (!storageUiState.errorMessage.isNullOrBlank()) {
             item(key = "storage_error_banner") {
                 GlassSurface(
@@ -551,7 +557,7 @@ fun DirectoryPane(
 
         val hasFilters = uiState.searchQuery.isNotBlank() || uiState.advancedSearch != null ||
             (isDocumentsCategory && selectedDocFilter != DocumentTypeFilter.ALL)
-        if (uiState.isLoading && displayedItems.isEmpty()) {
+        if (uiState.isLoading && (!uiState.isRefreshing || displayedItems.isEmpty())) {
             Column(
                 modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)

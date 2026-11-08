@@ -64,6 +64,8 @@ data class FileManagerUiState(
     val docTypeFilter: DocumentTypeFilter = DocumentTypeFilter.ALL,
     val isBrowsingStorage: Boolean = false,
     val isLoading: Boolean = false,
+    /** Existing rows belong to this same source and may stay visible during refresh. */
+    val isRefreshing: Boolean = false,
     val activeOperation: String? = null,
     val userMessage: UiText? = null,
     val canGoBack: Boolean = false,
@@ -211,6 +213,7 @@ class FileManagerViewModel(
                     isBrowsingStorage = it.isBrowsingStorage || originCategory != null,
                     activeCategory = null,
                     isLoading = true,
+                    isRefreshing = it.currentDirectory == directory && originCategory == null && it.items.isNotEmpty(),
                     items = if (it.currentDirectory == directory && originCategory == null) it.items else emptyList(),
                     filteredItems = if (it.currentDirectory == directory && originCategory == null) it.filteredItems else emptyList(),
                     selectedFiles = emptySet(),
@@ -234,7 +237,8 @@ class FileManagerViewModel(
                 it.copy(
                     items = sorted,
                     filteredItems = visibleItems(sorted, it),
-                    isLoading = false
+                    isLoading = false,
+                    isRefreshing = false
                 )
             }
         }
@@ -785,6 +789,9 @@ class FileManagerViewModel(
                     sortOrder = categorySortOrder,
                     isGridView = settingsRepository?.filesGridView?.value ?: false,
                     isLoading = true,
+                    isRefreshing = it.activeCategory == category && it.items.isNotEmpty(),
+                    items = if (it.activeCategory == category) it.items else emptyList(),
+                    filteredItems = if (it.activeCategory == category) it.filteredItems else emptyList(),
                     selectedFiles = emptySet(),
                     isSelectionMode = false,
                     canGoBack = true
@@ -798,7 +805,8 @@ class FileManagerViewModel(
                 it.copy(
                     items = sorted,
                     filteredItems = filtered,
-                    isLoading = false
+                    isLoading = false,
+                    isRefreshing = false
                 )
             }
         }

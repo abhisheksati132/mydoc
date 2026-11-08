@@ -267,7 +267,7 @@ fun ViewerScaffold(
                 disclosure = fidelityDisclosure,
                 dismissalKey = document.uri,
                 modifier = Modifier
-                    .align(Alignment.TopCenter)
+                    .align(Alignment.TopEnd)
                     .statusBarsPadding()
                     .padding(top = ViewerChrome.topBarHeight)
             )

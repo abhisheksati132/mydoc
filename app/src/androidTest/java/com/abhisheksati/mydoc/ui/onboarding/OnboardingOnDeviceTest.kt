@@ -20,7 +20,7 @@ class OnboardingOnDeviceTest {
         compose.onNodeWithText("Next").performClick()
         compose.onNodeWithText("Organise without losing control.").assertIsDisplayed()
         com.abhisheksati.mydoc.DeviceCaptures.save("onboarding-collections")
-        compose.onNodeWithText("Explore collections").performScrollTo().performClick()
+        compose.onNodeWithText("Explore collections").assertIsDisplayed().performClick()
         compose.runOnIdle { assertEquals(true,explored) }
     }
 }

@@ -9,10 +9,13 @@ import com.abhisheksati.mydoc.update.ApkDownloader
 import com.abhisheksati.mydoc.update.PackageInstallerHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 
 /** The optional engine is a signed Android package; no downloaded code runs in MyDoc. */
 object OfficeEngineManager {
+    private val downloads = Mutex()
     const val VERSION = "26.2.6.3"
     const val PACKAGE_VERSION = "$VERSION-1"
     const val PROTOCOL = 1
@@ -37,7 +40,7 @@ object OfficeEngineManager {
             File(info.nativeLibraryDir).listFiles().orEmpty().sumOf { it.length() }
     }.getOrDefault(0L)
 
-    suspend fun download(context: Context, onProgress: (Long, Long) -> Unit): File = withContext(Dispatchers.IO) {
+    suspend fun download(context: Context, onProgress: (Long, Long) -> Unit): File = downloads.withLock { withContext(Dispatchers.IO) {
         check(!BuildConfig.DEBUG) { "For debug builds, install the matching office-engine debug APK from the CI artifacts." }
         val abi = Build.SUPPORTED_ABIS.firstOrNull { it in setOf("arm64-v8a", "armeabi-v7a", "x86_64") }
             ?: error("This device architecture is not supported")
@@ -50,7 +53,7 @@ object OfficeEngineManager {
             verifyArchive(context, apk)
             apk
         } catch (error: Throwable) { apk.delete(); throw error }
-    }
+    } }
 
     @Suppress("DEPRECATION")
     private fun verifyArchive(context: Context, file: File) {

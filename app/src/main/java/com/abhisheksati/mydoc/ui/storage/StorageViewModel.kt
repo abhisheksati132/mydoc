@@ -51,7 +51,7 @@ class StorageViewModel(
 
     fun selectVolume(index: Int) {
         if (index != _uiState.value.selectedVolumeIndex && index in _uiState.value.volumes.indices) {
-            _uiState.update { it.copy(selectedVolumeIndex = index) }
+            _uiState.update { it.copy(selectedVolumeIndex = index, isLoading = true) }
             val volume = _uiState.value.volumes[index]
             scanJob?.cancel()
             scanJob = viewModelScope.launch {
@@ -97,6 +97,7 @@ class StorageViewModel(
         _uiState.update { current ->
             current.copy(
                 isLoading = false,
+                analyzedVolumePath = volume.path,
                 totalBytes = volume.totalBytes,
                 usedBytes = volume.usedBytes,
                 freeBytes = volume.freeBytes,

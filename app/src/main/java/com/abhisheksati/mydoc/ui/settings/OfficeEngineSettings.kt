@@ -57,7 +57,10 @@ fun OfficeEngineSettings(onInstallApk: (Uri) -> Unit) {
         }
         message?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (download?.isActive == true) TextButton(onClick = { download?.cancel(); download = null; progress = null }) { Text("Cancel") }
+            if (download != null) TextButton(enabled = download?.isActive == true,
+                onClick = { download?.cancel(); progress = null }) {
+                Text(if (download?.isActive == true) "Cancel" else "Cancelling…")
+            }
             else if (installed) TextButton(onClick = {
                 runCatching { installer.launch(Intent(Intent.ACTION_DELETE, Uri.parse("package:${OfficeEngineManager.packageName(context)}"))) }
                     .onFailure { message = "Open Android Settings to remove MyDoc Office Engine." }
@@ -79,4 +82,3 @@ fun OfficeEngineSettings(onInstallApk: (Uri) -> Unit) {
         }
     }
 }
-

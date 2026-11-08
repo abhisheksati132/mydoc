@@ -143,6 +143,7 @@ class ApkDownloader(private val context: Context, private val cacheFolder: Strin
                         val buffer = ByteArray(8192)
                         var bytesRead: Int
                         var totalRead: Long = 0
+                        var reportedAt = 0L
 
                         while (input.read(buffer).also { bytesRead = it } != -1) {
                             kotlinx.coroutines.currentCoroutineContext().ensureActive()
@@ -151,9 +152,14 @@ class ApkDownloader(private val context: Context, private val cacheFolder: Strin
                                 throw IllegalStateException("Download aborted: Stream exceeded the $MAX_DOWNLOAD_SIZE_BYTES byte size limit")
                             }
                             output.write(buffer, 0, bytesRead)
-                            onProgress(totalRead, totalBytes)
+                            val now = System.nanoTime()
+                            if (now - reportedAt >= 100_000_000L) {
+                                onProgress(totalRead, totalBytes)
+                                reportedAt = now
+                            }
                         }
                         output.flush()
+                        onProgress(totalRead, totalBytes)
                     }
                 }
             } catch (t: Throwable) {

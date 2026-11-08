@@ -72,6 +72,7 @@ data class StorageAnalysisUiState(
     val userAppBytes: Long = 0L,
     val cleanSummary: StorageCleanQuickSummary = StorageCleanQuickSummary(),
     val lastRefreshedMs: Long = 0L,
+    val analyzedVolumePath: String? = null,
     val errorMessage: String? = null
 ) {
     val activeVolume: StorageVolume?

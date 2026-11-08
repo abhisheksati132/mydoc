@@ -55,6 +55,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -481,10 +482,6 @@ fun PresentationViewerScreen(
                 textColor = textColor,
                 secondaryTextColor = secondaryTextColor
                 )
-                FidelityNotice(
-                    disclosure = fidelityDisclosure,
-                    modifier = Modifier.padding(bottom = AppSpacing.paddingSmall)
-                )
             }
         },
         bottomBar = {
@@ -545,6 +542,10 @@ fun PresentationViewerScreen(
                 .background(bgColor),
             contentAlignment = Alignment.Center
         ) {
+            if (!isSlideshowMode && !isSearchOpen) {
+                FidelityNotice(disclosure = fidelityDisclosure, dismissalKey = document.uri,
+                    modifier = Modifier.align(Alignment.TopEnd).zIndex(1f))
+            }
             if (isLoading) {
                 AppProgressIndicator()
             } else if (errorMessage != null) {
