@@ -37,7 +37,7 @@ object DocxConverter {
         }
 
         val cacheDir = File(context.cacheDir, "converted_docs").apply { mkdirs() }
-        val targetPdf = File(cacheDir, "docx_v2_${DocumentIdentity.ofBytes(bytes)}_${bytes.size}.pdf")
+        val targetPdf = File(cacheDir, "docx_v3_${DocumentIdentity.ofBytes(bytes)}_${bytes.size}.pdf")
         if (targetPdf.isFile && targetPdf.length() > 0L) {
             val noteFile = File(cacheDir, "${targetPdf.name}.note")
             val cachedNote = runCatching { if (noteFile.isFile) noteFile.readText() else null }

@@ -4,6 +4,9 @@ import androidx.compose.runtime.produceState
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.res.stringResource
 import com.abhisheksati.mydoc.R
+import androidx.compose.ui.text.style.TextAlign
+import com.abhisheksati.mydoc.rendering.engine.word.DocxAlignment
+import com.abhisheksati.mydoc.rendering.engine.word.DocxParagraphLayout
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -319,6 +322,7 @@ fun WordViewerScreen(
                     val ranges = WordViewerModel.rangesIn(blocks, index, matches)
                     val isActiveBlock = activeMatchBlock == index
                     when (block) {
+                        DocxBlock.PageBreak -> Spacer(Modifier.height(24.dp))
                         is DocxBlock.Image -> DocxPictureView(block)
                         is DocxBlock.Heading -> {
                             DocxRunsView(
@@ -329,7 +333,8 @@ fun WordViewerScreen(
                                 ranges = ranges,
                                 active = isActiveBlock,
                                 lineHeight = null,
-                                modifier = Modifier.padding(vertical = 8.dp)
+                                modifier = paragraphModifier(block.layout, 8f, 8f),
+                                textAlign = paragraphAlignment(block.layout)
                             )
                         }
 
@@ -341,12 +346,12 @@ fun WordViewerScreen(
                                 ranges = ranges,
                                 active = isActiveBlock
                             )
-                            Spacer(modifier = Modifier.height(6.dp))
+                            Spacer(modifier = Modifier.height(if (block.layout.after == null) 6.dp else 0.dp))
                         }
 
                         is DocxBlock.ListItem -> {
                             Row(
-                                modifier = Modifier.padding(
+                                modifier = paragraphModifier(block.layout).padding(
                                     // A nested level indents; the marker comes from the document's own
                                     // numbering definition, so an ordered list reads "1." here and
                                     // "1." in the converted PDF instead of becoming a bullet.
@@ -368,7 +373,9 @@ fun WordViewerScreen(
                                     bold = false,
                                     ranges = ranges,
                                     active = isActiveBlock,
-                                    lineHeight = DocumentReadingType.bodyLineHeight * readingPrefs.fontScale
+                                    lineHeight = DocumentReadingType.bodyLineHeight * readingPrefs.fontScale,
+                                    textAlign = paragraphAlignment(block.layout),
+                                    modifier = Modifier.fillMaxWidth()
                                 )
                             }
                         }
@@ -397,10 +404,6 @@ private fun DocxParagraphView(
     ranges: List<IntRange>,
     active: Boolean
 ) {
-    if (paragraph.runs.isEmpty()) {
-        Spacer(modifier = Modifier.height(4.dp))
-        return
-    }
     DocxRunsView(
         runs = paragraph.runs,
         textColor = textColor,
@@ -408,7 +411,9 @@ private fun DocxParagraphView(
         bold = false,
         ranges = ranges,
         active = active,
-        lineHeight = DocumentReadingType.bodyLineHeight * fontScale
+        lineHeight = DocumentReadingType.bodyLineHeight * fontScale,
+        modifier = paragraphModifier(paragraph.layout).fillMaxWidth(),
+        textAlign = paragraphAlignment(paragraph.layout)
     )
 }
 
@@ -426,7 +431,8 @@ private fun DocxRunsView(
     active: Boolean,
     lineHeight: androidx.compose.ui.unit.TextUnit?,
     modifier: Modifier = Modifier,
-    linkColor: Color = MaterialTheme.colorScheme.primary
+    linkColor: Color = MaterialTheme.colorScheme.primary,
+    textAlign: TextAlign = TextAlign.Start
 ) {
     val offsets = WordViewerModel.runOffsets(runs)
     val annotatedString = buildAnnotatedString {
@@ -458,8 +464,9 @@ private fun DocxRunsView(
 
     Text(
         text = annotatedString,
-        modifier = modifier,
-        lineHeight = lineHeight ?: androidx.compose.ui.unit.TextUnit.Unspecified
+        modifier = modifier.fillMaxWidth(),
+        lineHeight = lineHeight ?: androidx.compose.ui.unit.TextUnit.Unspecified,
+        textAlign = textAlign
     )
 }
 
@@ -515,4 +522,20 @@ private fun DocxPictureView(block: DocxBlock.Image) {
                     (block.widthPoints / block.heightPoints).coerceIn(0.02f, 50f)
                 else image.width.toFloat() / image.height).padding(vertical = 6.dp))
     } else Text(stringResource(R.string.word_image_unavailable), modifier = Modifier.padding(8.dp))
+}
+
+// Reflow adapts large source indents to a phone while the PDF keeps their physical point values.
+private fun paragraphModifier(layout: DocxParagraphLayout, defaultBefore: Float = 0f, defaultAfter: Float = 0f) =
+    Modifier.padding(start = (layout.left ?: 0f).coerceIn(0f, 96f).dp,
+        end = (layout.right ?: 0f).coerceIn(0f, 96f).dp,
+        top = (layout.before ?: defaultBefore).coerceIn(0f, 72f).dp,
+        bottom = (layout.after ?: defaultAfter).coerceIn(0f, 72f).dp)
+
+private fun paragraphAlignment(layout: DocxParagraphLayout): TextAlign = when (layout.alignment) {
+    DocxAlignment.LEFT -> TextAlign.Left
+    DocxAlignment.CENTER -> TextAlign.Center
+    DocxAlignment.RIGHT -> TextAlign.Right
+    DocxAlignment.JUSTIFY -> TextAlign.Justify
+    DocxAlignment.END -> TextAlign.End
+    else -> TextAlign.Start
 }

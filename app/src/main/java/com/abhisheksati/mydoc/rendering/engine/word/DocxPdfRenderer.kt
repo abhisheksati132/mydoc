@@ -65,16 +65,46 @@ internal object DocxPdfRenderer {
         private var currentPage: PdfDocument.Page? = null
         private var pageNumber = 0
         private var y = section.top
+        private var pendingAfter = 0f
 
         fun write(blocks: List<DocxBlock>): List<OutlineItem> {
             for (block in blocks) {
                 if (pageNumber >= MaxPages) break
+                val layout = when (block) {
+                    is DocxBlock.Image -> block.layout
+                    is DocxBlock.Paragraph -> block.layout
+                    is DocxBlock.Heading -> block.layout
+                    is DocxBlock.ListItem -> block.layout
+                    else -> null
+                }
+                if (layout != null) {
+                    if (layout.pageBreakBefore == true && canvas != null && y > section.top) {
+                        startPage()
+                        pendingAfter = 0f
+                    }
+                    if (canvas == null) startPage()
+                    y += max(pendingAfter, layout.before ?: 0f)
+                    pendingAfter = 0f
+                } else if (block != DocxBlock.PageBreak) {
+                    y += pendingAfter
+                    pendingAfter = 0f
+                }
                 when (block) {
+                    DocxBlock.PageBreak -> {
+                        if (canvas == null) startPage()
+                        startPage()
+                        pendingAfter = 0f
+                    }
                     is DocxBlock.Image -> image(block)
                     is DocxBlock.Heading -> heading(block)
-                    is DocxBlock.Paragraph -> text(block.runs, BodySize, 0f)
+                    is DocxBlock.Paragraph -> text(block.runs, BodySize, 0f, block.layout)
                     is DocxBlock.ListItem -> list(block)
                     is DocxBlock.Table -> table(block.rows)
+                }
+                if (layout != null) pendingAfter = layout.after ?: when (block) {
+                    is DocxBlock.Heading -> ParagraphGap * 0.6f
+                    is DocxBlock.ListItem -> ParagraphGap * 0.5f
+                    else -> ParagraphGap
                 }
             }
             return outlines
@@ -91,20 +121,26 @@ internal object DocxPdfRenderer {
         private fun image(block: DocxBlock.Image) {
             val bitmap = DocxImageDecoder.decode(block.bytes)
             if (bitmap == null) {
-                text(listOf(DocxRun("[Image unavailable] " + block.description)), BodySize, 0f)
+                text(listOf(DocxRun("[Image unavailable] " + block.description)), BodySize, 0f, block.layout)
                 return
             }
             try {
                 val nativeWidth = block.widthPoints.takeIf { it > 0 } ?: (bitmap.width * 0.75f)
                 val nativeHeight = block.heightPoints.takeIf { it > 0 } ?: (nativeWidth * bitmap.height / bitmap.width)
-                val scale = min(1f, min(section.contentWidth / nativeWidth,
+                val (left, availableWidth) = paragraphRegion(block.layout)
+                val scale = min(1f, min(availableWidth / nativeWidth,
                     (section.height - section.top - section.bottom - ParagraphGap) / nativeHeight))
                 val width = nativeWidth * scale
                 val height = nativeHeight * scale
                 ensureRoom(height + ParagraphGap)
-                canvas?.drawBitmap(bitmap, null, RectF(section.left, y, section.left + width, y + height),
+                val x = left + when (block.layout.alignment) {
+                    DocxAlignment.CENTER -> (availableWidth - width) / 2f
+                    DocxAlignment.RIGHT, DocxAlignment.END -> availableWidth - width
+                    else -> 0f
+                }
+                canvas?.drawBitmap(bitmap, null, RectF(x, y, x + width, y + height),
                     Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
-                y += height + ParagraphGap
+                y += height
             } finally { bitmap.recycle() }
         }
 
@@ -112,16 +148,16 @@ internal object DocxPdfRenderer {
             val size = headingSize(block.level)
             val step = size * Leading
             // Keep the heading on the page that carries at least one line under it.
-            ensureRoom(step * 2f)
-            y += step * 0.3f
-            val lines = wrap(listOf(DocxRun(block.text)), size, section.contentWidth, forceBold = true)
+            ensureRoom(step * if (block.isContinuation) 1f else 2f)
+            val (left, width) = paragraphRegion(block.layout)
+            val lines = wrap(listOf(DocxRun(block.text)), size, width, forceBold = true)
             for (line in lines) {
                 ensureRoom(step)
-                drawLine(line, section.left)
+                drawAlignedLine(line, left, width, block.layout.alignment)
                 y += step
             }
-            y += ParagraphGap * 0.6f
-            outlines.add(OutlineItem(title = block.text, pageIndex = pageNumber - 1, level = block.level - 1))
+            if (!block.isContinuation)
+                outlines.add(OutlineItem(title = block.text, pageIndex = pageNumber - 1, level = block.level - 1))
         }
 
         /**
@@ -131,26 +167,43 @@ internal object DocxPdfRenderer {
         private fun list(block: DocxBlock.ListItem) {
             val step = BodySize * Leading
             val markerPaint = paint(BodySize, false, false, false)
-            val indent = ListIndent * (1 + block.level)
-            val lines = wrap(block.runs, BodySize, section.contentWidth - indent, forceBold = false)
+            val (left, width) = paragraphRegion(block.layout)
+            val indent = min(ListIndent * (1 + block.level), (width - 24f).coerceAtLeast(0f))
+            val lines = wrap(block.runs, BodySize, (width - indent).coerceAtLeast(24f), forceBold = false)
             for ((index, line) in lines.withIndex()) {
                 ensureRoom(step)
                 val baseline = y + line.maxOf { -it.paint.fontMetrics.ascent }
-                if (index == 0) canvas?.drawText(block.marker, section.left + 2f, baseline, markerPaint)
-                drawLine(line, section.left + indent, baseline)
+                if (index == 0) canvas?.drawText(block.marker, left + 2f, baseline, markerPaint)
+                drawAlignedLine(line, left + indent, (width - indent).coerceAtLeast(24f), block.layout.alignment, baseline)
                 y += step
             }
-            y += ParagraphGap * 0.5f
         }
 
-        private fun text(runs: List<DocxRun>, size: Float, indent: Float) {
+        private fun text(runs: List<DocxRun>, size: Float, indent: Float, layout: DocxParagraphLayout = DocxParagraphLayout()) {
             val step = size * Leading
-            for (line in wrap(runs, size, section.contentWidth - indent, forceBold = false)) {
+            val (left, width) = paragraphRegion(layout)
+            for (line in wrap(runs, size, (width - indent).coerceAtLeast(24f), forceBold = false)) {
                 ensureRoom(step)
-                drawLine(line, section.left + indent)
+                drawAlignedLine(line, left + indent, (width - indent).coerceAtLeast(24f), layout.alignment)
                 y += step
             }
-            y += ParagraphGap
+        }
+
+        private fun paragraphRegion(layout: DocxParagraphLayout): Pair<Float, Float> {
+            val left = (layout.left ?: 0f).coerceIn(-section.left, section.contentWidth - 24f)
+            val right = (layout.right ?: 0f).coerceIn(-section.right, section.contentWidth - left - 24f)
+            return section.left + left to (section.contentWidth - left - right).coerceAtLeast(24f)
+        }
+
+        private fun drawAlignedLine(line: List<Piece>, left: Float, width: Float,
+            alignment: DocxAlignment?, baseline: Float? = null) {
+            val spare = (width - line.sumOf { it.width.toDouble() }.toFloat()).coerceAtLeast(0f)
+            val offset = when (alignment) {
+                DocxAlignment.CENTER -> spare / 2f
+                DocxAlignment.RIGHT, DocxAlignment.END -> spare
+                else -> 0f
+            }
+            if (baseline == null) drawLine(line, left + offset) else drawLine(line, left + offset, baseline)
         }
 
         private fun table(rows: List<List<DocxCell>>) {
@@ -273,6 +326,17 @@ internal object DocxPdfRenderer {
         }
 
         private fun wrap(runs: List<DocxRun>, size: Float, maxWidth: Float, forceBold: Boolean): List<List<Piece>> {
+            if (runs.any { '\n' in it.text }) {
+                val paragraphs = mutableListOf<MutableList<DocxRun>>(mutableListOf())
+                for (run in runs) {
+                    val parts = run.text.split('\n')
+                    parts.forEachIndexed { index, part ->
+                        if (index > 0) paragraphs.add(mutableListOf())
+                        paragraphs.last().add(run.copy(text = part))
+                    }
+                }
+                return paragraphs.flatMap { wrap(it, size, maxWidth, forceBold) }
+            }
             val limit = max(maxWidth, 24f)
             val lines = mutableListOf<MutableList<Piece>>()
             var current = mutableListOf<Piece>()

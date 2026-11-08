@@ -35,8 +35,9 @@ data class DocxCell(val blocks: List<DocxBlock>) {
 }
 
 sealed class DocxBlock {
-    data class Heading(val text: String, val level: Int = 1) : DocxBlock()
-    data class Paragraph(val runs: List<DocxRun>) : DocxBlock() {
+    data class Heading(val text: String, val level: Int = 1, val layout: DocxParagraphLayout = DocxParagraphLayout(),
+        val isContinuation: Boolean = false) : DocxBlock()
+    data class Paragraph(val runs: List<DocxRun>, val layout: DocxParagraphLayout = DocxParagraphLayout()) : DocxBlock() {
         val fullText: String get() = runs.joinToString("") { it.text }
     }
 
@@ -50,24 +51,28 @@ sealed class DocxBlock {
         val runs: List<DocxRun>,
         val marker: String = "\u2022",
         val level: Int = 0,
-        val ordered: Boolean = false
+        val ordered: Boolean = false,
+        val layout: DocxParagraphLayout = DocxParagraphLayout()
     ) : DocxBlock() {
         val fullText: String get() = runs.joinToString("") { it.text }
     }
+
+    data object PageBreak : DocxBlock()
 
     class Image(
         val bytes: ByteArray?,
         val widthPoints: Float,
         val heightPoints: Float,
         val description: String,
-        val floating: Boolean = false
+        val floating: Boolean = false,
+        val layout: DocxParagraphLayout = DocxParagraphLayout()
     ) : DocxBlock()
 
     data class Table(val rows: List<List<DocxCell>>) : DocxBlock()
 
     companion object {
         fun plainTextOf(block: DocxBlock): String? = when (block) {
-            is Image -> null
+            is Image, PageBreak -> null
             is Heading -> block.text
             is Paragraph -> block.fullText.takeIf { it.isNotEmpty() }
             is ListItem -> block.fullText.takeIf { it.isNotEmpty() }
@@ -180,7 +185,7 @@ class DocxParser {
             }
             if (blocks.isEmpty()) entryMap["content.xml"]?.let { blocks.addAll(parseOdtXml(it)) }
 
-            if (blocks.isEmpty()) {
+            if (blocks.isEmpty() || blocks.all { it is DocxBlock.Paragraph && it.fullText.isEmpty() }) {
                 throw DocumentLoadException(
                     LoadFailure.EMPTY_DOCUMENT,
                     "This document contains no readable content."
@@ -521,7 +526,8 @@ class DocxParser {
         val outlineLevel: Int?,
         val basedOn: String?,
         val numId: Int? = null,
-        val ilvl: Int = 0
+        val ilvl: Int = 0,
+        val layout: DocxParagraphLayout = DocxParagraphLayout()
     )
 
     private companion object {
@@ -574,7 +580,7 @@ class DocxParser {
     }
 
     /** Pictures become blocks at their text anchor; wrapping/effects are not yet reproduced. */
-    private fun readDrawing(parser: XmlPullParser, ctx: DocxContext): DocxBlock.Image? {
+    private fun readDrawing(parser: XmlPullParser, ctx: DocxContext, layout: DocxParagraphLayout): DocxBlock.Image? {
         var id: String? = null
         var width = 0f
         var height = 0f
@@ -597,7 +603,7 @@ class DocxParser {
         }
         if (!hasPicture) return null
         return DocxBlock.Image(ctx.images[id], width.takeIf { it.isFinite() && it > 0 } ?: 0f,
-            height.takeIf { it.isFinite() && it > 0 } ?: 0f, description, floating)
+            height.takeIf { it.isFinite() && it > 0 } ?: 0f, description, floating, layout)
     }
 
     private fun attrInt(parser: XmlPullParser, name: String, absent: Int): Int =
@@ -745,14 +751,16 @@ class DocxParser {
         var outline: Int? = null
         var numId: Int? = null
         var ilvl = 0
+        var layout = DocxParagraphLayout()
         while (parser.eventType != XmlPullParser.END_DOCUMENT) {
             when (parser.eventType) {
                 XmlPullParser.START_TAG -> when (parser.name) {
                     "w:style" -> {
                         styleId = parser.getAttributeValue(null, "w:styleId")
-                        name = ""; basedOn = null; outline = null; numId = null; ilvl = 0
+                        name = ""; basedOn = null; outline = null; numId = null; ilvl = 0; layout = DocxParagraphLayout()
                     }
 
+                    "w:jc", "w:spacing", "w:ind", "w:pageBreakBefore" -> layout = readLayoutProperty(parser, layout)
                     "w:name" -> name = parser.getAttributeValue(null, "w:val") ?: ""
                     "w:basedOn" -> basedOn = parser.getAttributeValue(null, "w:val")
                     "w:outlineLvl" -> outline = attrInt(parser, "w:val", -1).takeIf { it >= 0 }?.plus(1)
@@ -761,7 +769,7 @@ class DocxParser {
                 }
 
                 XmlPullParser.END_TAG -> if (parser.name == "w:style" && styleId != null) {
-                    styles[styleId] = ParagraphStyle(name, outline, basedOn, numId, ilvl)
+                    styles[styleId] = ParagraphStyle(name, outline, basedOn, numId, ilvl, layout)
                     if (numId != null) numIds[styleId] = numId
                     styleId = null
                 }
@@ -769,6 +777,42 @@ class DocxParser {
             parser.next()
         }
         return styles
+    }
+
+    private fun readLayoutProperty(parser: XmlPullParser, layout: DocxParagraphLayout): DocxParagraphLayout {
+        fun points(name: String, negative: Boolean = false): Float? =
+            parser.getAttributeValue(null, name)?.toIntOrNull()?.let {
+                (it / 20f).coerceIn(if (negative) -1440f else 0f, 1440f)
+            }
+        return when (parser.name) {
+            "w:jc" -> layout.copy(alignment = when (parser.getAttributeValue(null, "w:val")) {
+                "left" -> DocxAlignment.LEFT
+                "right" -> DocxAlignment.RIGHT
+                "center" -> DocxAlignment.CENTER
+                "both" -> DocxAlignment.JUSTIFY
+                "start" -> DocxAlignment.START
+                "end" -> DocxAlignment.END
+                else -> layout.alignment
+            })
+            "w:spacing" -> layout.copy(before = points("w:before") ?: layout.before,
+                after = points("w:after") ?: layout.after)
+            "w:ind" -> layout.copy(left = points("w:left", true) ?: layout.left,
+                right = points("w:right", true) ?: layout.right)
+            "w:pageBreakBefore" -> layout.copy(pageBreakBefore = attrOn(parser))
+            else -> layout
+        }
+    }
+
+    private fun DocxContext.styleLayout(styleId: String?): DocxParagraphLayout {
+        var current = styleId
+        var resolved = DocxParagraphLayout()
+        val visited = mutableSetOf<String>()
+        while (current != null && visited.size < 12 && visited.add(current)) {
+            val style = styles[current] ?: break
+            resolved = resolved.over(style.layout)
+            current = style.basedOn
+        }
+        return resolved
     }
 
     private fun DocxContext.styleOutlineAndName(styleId: String?): Pair<Int?, String> {
@@ -840,6 +884,7 @@ class DocxParser {
     /** Called on `w:p`'s START_TAG; returns on its END_TAG. */
     private fun readParagraph(parser: XmlPullParser, ctx: DocxContext, counters: MutableMap<Int, IntArray>): List<DocxBlock> {
         val result = mutableListOf<DocxBlock>()
+        var layout = DocxParagraphLayout()
         var styleId: String? = null
         var directOutline: Int? = null
         var numId: Int? = null
@@ -850,12 +895,21 @@ class DocxParser {
         var italic = false
         var underline = false
         var collectingText = false
+        var firstTextBlock: DocxBlock? = null
 
         fun flushText() {
             if (runs.any { it.text.isNotEmpty() }) {
                 // An image splits one source paragraph, not one list item into two numbers.
-                if (result.any { it !is DocxBlock.Image }) result.add(DocxBlock.Paragraph(runs.toList()))
-                else paragraphBlock(runs.toList(), styleId, directOutline, numId, ilvl, ctx, counters)?.let(result::add)
+                val continuation = layout.over(ctx.styleLayout(styleId)).copy(before = 0f, pageBreakBefore = false)
+                when (val first = firstTextBlock) {
+                    null -> paragraphBlock(runs.toList(), styleId, directOutline, numId, ilvl, ctx, counters, layout)?.let {
+                        firstTextBlock = it
+                        result.add(it)
+                    }
+                    is DocxBlock.Heading -> result.add(DocxBlock.Heading(runs.joinToString("") { it.text }, first.level,
+                        continuation, isContinuation = true))
+                    else -> result.add(DocxBlock.Paragraph(runs.toList(), continuation))
+                }
             }
             runs.clear()
         }
@@ -864,8 +918,11 @@ class DocxParser {
                 XmlPullParser.START_TAG -> when (parser.name) {
                     "w:drawing" -> {
                         flushText()
-                        readDrawing(parser, ctx)?.let(result::add)
+                        readDrawing(parser, ctx, layout.over(ctx.styleLayout(styleId)).let {
+                            if (result.isEmpty()) it else it.copy(before = 0f, pageBreakBefore = false)
+                        })?.let(result::add)
                     }
+                    "w:jc", "w:spacing", "w:ind", "w:pageBreakBefore" -> layout = readLayoutProperty(parser, layout)
                     "w:pStyle" -> styleId = parser.getAttributeValue(null, "w:val")
                     "w:outlineLvl" -> directOutline =
                         attrInt(parser, "w:val", -1).takeIf { it >= 0 }?.plus(1)
@@ -883,7 +940,11 @@ class DocxParser {
                     "w:b", "w:bCs" -> bold = bold || attrOn(parser)
                     "w:i", "w:iCs" -> italic = italic || attrOn(parser)
                     "w:u" -> underline = (parser.getAttributeValue(null, "w:val") ?: "none") != "none"
-                    "w:br", "w:cr" -> runs.add(DocxRun("\n", bold, italic, underline, links.lastOrNull()))
+                    "w:br" -> if (parser.getAttributeValue(null, "w:type") == "page") {
+                        flushText()
+                        result.add(DocxBlock.PageBreak)
+                    } else runs.add(DocxRun("\n", bold, italic, underline, links.lastOrNull()))
+                    "w:cr" -> runs.add(DocxRun("\n", bold, italic, underline, links.lastOrNull()))
                     "w:tab" -> runs.add(DocxRun("\t", bold, italic, underline, links.lastOrNull()))
                     "w:footnoteReference" -> citeNote(parser, ctx, runs, footnote = true)
                     "w:endnoteReference" -> citeNote(parser, ctx, runs, footnote = false)
@@ -902,6 +963,7 @@ class DocxParser {
                     "w:hyperlink" -> if (links.isNotEmpty()) links.removeAt(links.size - 1)
                     "w:p" -> {
                         flushText()
+                        if (result.isEmpty()) result.add(DocxBlock.Paragraph(emptyList(), layout.over(ctx.styleLayout(styleId))))
                         return result
                     }
                 }
@@ -932,23 +994,25 @@ class DocxParser {
         numId: Int?,
         ilvl: Int?,
         ctx: DocxContext,
-        counters: MutableMap<Int, IntArray>
+        counters: MutableMap<Int, IntArray>,
+        layout: DocxParagraphLayout = DocxParagraphLayout()
     ): DocxBlock? {
         if (runs.none { it.text.isNotEmpty() }) return null
+        val resolvedLayout = layout.over(ctx.styleLayout(styleId))
         val (styleOutline, styleName) = ctx.styleOutlineAndName(styleId)
         // A package without styles.xml still names the style it used, so the id stays a last resort;
         // outlineLvl, direct or inherited, is the reliable route.
         val level = directOutline ?: styleOutline ?: headingLevelFromName(styleName)
             ?: headingLevelFromName(styleId ?: "") ?: 0
-        if (level > 0) return DocxBlock.Heading(runs.joinToString("") { it.text }, level)
+        if (level > 0) return DocxBlock.Heading(runs.joinToString("") { it.text }, level, resolvedLayout)
 
         val inherited = ctx.styleNumId(styleId)
         val effectiveNumId = numId ?: inherited.first
         val styleHint = styleName + " " + (styleId ?: "")
         val isList = effectiveNumId != null || numId != null || ilvl != null ||
             styleHint.contains("List", ignoreCase = true)
-        if (!isList) return DocxBlock.Paragraph(runs)
-        return listBlock(runs, ctx, counters, effectiveNumId, ilvl ?: inherited.second, styleHint)
+        if (!isList) return DocxBlock.Paragraph(runs, resolvedLayout)
+        return listBlock(runs, ctx, counters, effectiveNumId, ilvl ?: inherited.second, styleHint).copy(layout = resolvedLayout)
     }
 
     /** Called on `w:tbl`'s START_TAG; returns on its END_TAG. Cells recurse, so nesting is kept. */
@@ -1052,7 +1116,7 @@ class DocxParser {
         numId: Int?,
         ilvl: Int,
         styleHint: String
-    ): DocxBlock {
+    ): DocxBlock.ListItem {
         val numbering = numId?.let { ctx.numbering[it] }
         val level = numbering?.levels?.get(ilvl)
         if (numbering != null && level != null) {

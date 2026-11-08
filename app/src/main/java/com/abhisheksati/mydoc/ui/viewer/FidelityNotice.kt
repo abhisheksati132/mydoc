@@ -13,10 +13,16 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -97,9 +103,12 @@ fun RenderFidelity.label(): String = when (this) {
 @Composable
 fun FidelityNotice(
     disclosure: FidelityDisclosure?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    dismissalKey: String? = null
 ) {
     if (disclosure == null) return
+    var dismissed by rememberSaveable(disclosure, dismissalKey) { mutableStateOf(false) }
+    if (dismissed) return
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
 
@@ -133,8 +142,13 @@ fun FidelityNotice(
             Text(
                 text = disclosure.headline,
                 style = typography.captionStrong,
-                color = colors.textPrimary
+                color = colors.textPrimary,
+                modifier = Modifier.weight(1f)
             )
+            IconButton(onClick = { dismissed = true }) {
+                Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.dismiss_rendering_notice),
+                    tint = colors.textSecondary)
+            }
         }
         disclosure.notes.take(2).forEach { note ->
             Text(

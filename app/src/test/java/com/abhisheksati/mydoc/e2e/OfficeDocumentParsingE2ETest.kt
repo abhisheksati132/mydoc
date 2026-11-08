@@ -266,7 +266,7 @@ class OfficeDocumentParsingE2ETest {
         val query = "times"
         val matchingIndices = blocks.mapIndexedNotNull { index, block ->
             val hasMatch = when (block) {
-                is DocxBlock.Image -> false
+                is DocxBlock.Image, DocxBlock.PageBreak -> false
                 is DocxBlock.Heading -> block.text.contains(query, ignoreCase = true)
                 is DocxBlock.Paragraph -> block.fullText.contains(query, ignoreCase = true)
                 is DocxBlock.ListItem -> block.runs.any { it.text.contains(query, ignoreCase = true) }

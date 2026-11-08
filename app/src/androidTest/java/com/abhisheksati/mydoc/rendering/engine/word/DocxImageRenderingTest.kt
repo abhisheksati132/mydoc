@@ -12,6 +12,131 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 
 class DocxImageRenderingTest {
+    private fun withPdf(blocks: List<DocxBlock>, check: (PdfRenderer) -> Unit) {
+        val rendered = requireNotNull(DocxPdfRenderer.render(blocks, byteArrayOf()))
+        val file = File.createTempFile("word-layout-", ".pdf", InstrumentationRegistry.getInstrumentation().targetContext.cacheDir)
+        try {
+            try { file.outputStream().use { rendered.doc.writeTo(it) } }
+            finally { rendered.doc.close() }
+            ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
+                PdfRenderer(descriptor).use(check)
+            }
+        } finally { file.delete() }
+    }
+
+    private fun inkBands(blocks: List<DocxBlock>): List<Int> {
+        var bands = emptyList<Int>()
+        withPdf(blocks) { pdf ->
+            pdf.openPage(0).use { page ->
+                val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+                try {
+                    bitmap.eraseColor(Color.WHITE)
+                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    val rows = (60..200).filter { y -> (70..120).any { x ->
+                        val pixel = bitmap.getPixel(x, y)
+                        Color.red(pixel) < 80 && Color.green(pixel) < 80 && Color.blue(pixel) < 80
+                    } }
+                    bands = rows.filterIndexed { index, row -> index == 0 || row > rows[index - 1] + 1 }
+                } finally { bitmap.recycle() }
+            }
+        }
+        return bands
+    }
+
+    @Test fun blankParagraphProducesVisibleVerticalSpace() {
+        val bands = inkBands(listOf(DocxBlock.Paragraph(listOf(DocxRun("MMMM"))),
+            DocxBlock.Paragraph(emptyList()), DocxBlock.Paragraph(listOf(DocxRun("MMMM")))))
+        assertEquals(2, bands.size)
+        assertTrue("Blank paragraph must occupy a line", bands[1] - bands[0] in 40..46)
+    }
+
+    @Test fun adjacentParagraphSpacingUsesMaximumRatherThanSum() {
+        val bands = inkBands(listOf(
+            DocxBlock.Paragraph(listOf(DocxRun("MMMM")), DocxParagraphLayout(after = 20f)),
+            DocxBlock.Paragraph(listOf(DocxRun("MMMM")), DocxParagraphLayout(before = 30f))))
+        assertEquals(2, bands.size)
+        assertTrue("Spacing should be 30 points plus line height", bands[1] - bands[0] in 42..46)
+    }
+
+    @Test fun centeredPictureUsesParagraphAlignment() {
+        withPdf(listOf(DocxBlock.Image(pictureBytes(), 72f, 36f, "Red rectangle",
+            layout = DocxParagraphLayout(alignment = DocxAlignment.CENTER)))) { pdf ->
+            pdf.openPage(0).use { page ->
+                val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+                try {
+                    bitmap.eraseColor(Color.WHITE)
+                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    val center = bitmap.getPixel(280, 85)
+                    assertTrue(Color.red(center) > 220 && Color.green(center) < 40)
+                    assertEquals(Color.WHITE, bitmap.getPixel(85, 85))
+                } finally { bitmap.recycle() }
+            }
+        }
+    }
+
+    @Test fun explicitPageBreakCreatesSeparatePages() {
+        withPdf(listOf(DocxBlock.Paragraph(listOf(DocxRun("Before"))), DocxBlock.PageBreak,
+            DocxBlock.Paragraph(listOf(DocxRun("After"))))) { assertEquals(2, it.pageCount) }
+    }
+
+    @Test fun continuedHeadingDoesNotCreateDuplicateOutlineEntry() {
+        val rendered = requireNotNull(DocxPdfRenderer.render(listOf(DocxBlock.Heading("Before", 2),
+            DocxBlock.PageBreak, DocxBlock.Heading("After", 2, isContinuation = true)), byteArrayOf()))
+        try {
+            assertEquals(1, rendered.outlines.size)
+            assertEquals("Before", rendered.outlines.single().title)
+        } finally { rendered.doc.close() }
+    }
+
+    @Test fun pageBreakBeforeFirstParagraphDoesNotInventBlankPage() {
+        withPdf(listOf(DocxBlock.Paragraph(listOf(DocxRun("First")),
+            DocxParagraphLayout(pageBreakBefore = true)))) { assertEquals(1, it.pageCount) }
+    }
+
+    @Test fun pageBreakBeforeLaterParagraphStartsNewPage() {
+        withPdf(listOf(DocxBlock.Paragraph(listOf(DocxRun("First"))),
+            DocxBlock.Paragraph(listOf(DocxRun("Next")), DocxParagraphLayout(pageBreakBefore = true)))) {
+            assertEquals(2, it.pageCount)
+        }
+    }
+
+    @Test fun centeredParagraphMovesActualTextToPageCenter() {
+        withPdf(listOf(DocxBlock.Paragraph(listOf(DocxRun("MMMM")),
+            DocxParagraphLayout(alignment = DocxAlignment.CENTER)))) { pdf ->
+            pdf.openPage(0).use { page ->
+                val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+                try {
+                    bitmap.eraseColor(Color.WHITE)
+                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    var firstInk = page.width
+                    for (y in 60..110) for (x in 0 until page.width) {
+                        val pixel = bitmap.getPixel(x, y)
+                        if (Color.red(pixel) < 80 && Color.green(pixel) < 80 && Color.blue(pixel) < 80)
+                            firstInk = minOf(firstInk, x)
+                    }
+                    assertTrue("Centered text should start near the page center, was $firstInk", firstInk in 260..300)
+                } finally { bitmap.recycle() }
+            }
+        }
+    }
+
+    @Test fun manualLineBreakProducesTwoSeparateTextLines() {
+        withPdf(listOf(DocxBlock.Paragraph(listOf(DocxRun("MMMM\nMMMM"))))) { pdf ->
+            pdf.openPage(0).use { page ->
+                val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+                try {
+                    bitmap.eraseColor(Color.WHITE)
+                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    val rows = (60..120).filter { y -> (70..120).any { x ->
+                        val pixel = bitmap.getPixel(x, y)
+                        Color.red(pixel) < 80 && Color.green(pixel) < 80 && Color.blue(pixel) < 80
+                    } }
+                    val bands = rows.filterIndexed { index, row -> index == 0 || row > rows[index - 1] + 1 }.size
+                    assertEquals(2, bands)
+                } finally { bitmap.recycle() }
+            }
+        }
+    }
     @Test fun simultaneousThumbnailAndViewerConversionsAllProduceUsablePages() = kotlinx.coroutines.runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val source = File.createTempFile("word-race-", ".docx", context.cacheDir)

@@ -33,7 +33,7 @@ Bitmap bounds/sampling: https://developer.android.com/reference/android/graphics
 
 Implemented DrawingML embedded raster pictures in body reading order, including image-only paragraphs, internal relationship resolution, display extents, alt descriptions and anchor-state recording. The page converter now paints pictures; the reflow reader also paints direct table-cell pictures. Broken/unsupported pictures retain a visible placeholder. Converted tables retain image markers rather than silently losing those cells. Conversion cache uses a new renderer version.
 
-Remaining Word work: original paragraph/character styles, spacing, alignment, line layout, explicit page/section breaks, headers/footers, floating positions and wrapping, crop/effects, vector and older VML pictures, converted table pictures and legacy/ODF/RTF image support. The new picture code is not a claim that these layouts match Word.
+Remaining Word work: complete paragraph/character styles and document defaults, line height and paginated justification, first-line/hanging indents, section layout, headers/footers, floating positions and wrapping, crop/effects, vector and older VML pictures, converted table pictures and legacy/ODF/RTF image support. The new picture code is not a claim that these layouts match Word.
 
 PowerPoint, Excel and the remaining-format audit are queued; their rendering behaviour is unchanged by this increment. Reference exports from Word/PowerPoint/Excel or LibreOffice and screenshot comparison have not yet been established.
 
@@ -51,3 +51,19 @@ Achieving broad Office layout fidelity may require a mature layout engine instea
 
 - https://docs.libreoffice.org/libreofficekit.html
 - https://docs.libreoffice.org/android.html
+
+## Second Word increment: paragraph geometry and page breaks
+
+Scope: DOCX/DOTX left/center/right alignment, paragraph spacing before/after, left/right indents, explicit page breaks and page-break-before. Resolve nearest named paragraph styles through bounded, cycle-safe inheritance; direct zero and false values override inherited properties. Carry these properties on headings, list items, paragraphs and pictures. Converted pages overlap adjacent paragraph spacing rather than adding both gaps. Reflow adapts source indents and spacing to a phone and does not reproduce fixed page boundaries.
+
+Preserve manual line breaks separately from page breaks and retain empty paragraphs as vertical space. A list item starting after a page break must keep its marker. Refresh the conversion-cache version so prior layouts are rebuilt.
+
+Still out of scope: full line-height rules, paginated justification and bidi paragraph direction, document defaults/default styles, first-line/hanging indents, section/column breaks, contextual/automatic spacing, table-cell paragraph geometry and floating layout. Inline pictures/text still reflow into separate blocks. Source files remain unchanged.
+
+Reference: https://learn.microsoft.com/en-us/office/open-xml/word/working-with-paragraphs
+
+The shared rendering notice now has a dismiss control, because its text can obscure opening paragraphs in reflow at large text sizes. Dismissal affects only the notice: Document details retains the full limitations, and a different document or changed disclosure shows its notice again.
+
+Manual follow-up: changing the system text size while an externally opened file was active returned to Home; Resume reopened the file. Navigation restoration for this configuration-change path remains unverified/unfixed. Reflow's navigation count follows content blocks rather than original source pages. Viewer footer labels also need further large-text layout work.
+
+Validation: 513 JVM tests passed, including ten paragraph-layout regressions. Seventeen focused API 35 device tests passed: thirteen raster/PDF/opening tests and four notice-interaction tests, including double text size and RTL. Pixel checks cover centered text and pictures, overlapping paragraph spacing, manual line breaks and blank-line height. A two-page synthetic DOCX was inspected manually, including inherited centering and the right-aligned/indented second page. No Office reference export comparison or physical-device performance claim is made.

@@ -10,9 +10,15 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 - Word DOCX/DOTX embedded DrawingML raster pictures render in paginated and reflow views; image-only paragraphs are preserved, unsupported DrawingML pictures show a placeholder, and direct table-cell pictures appear in reflow. Floating wrapping, picture effects, older VML pictures and converted table pictures remain limited.
 - Quick preview in file and folder action menus, with a large thumbnail, full name and location, format and metadata, plus Open and More actions. Available in list and grid views.
 
+### Changed
+
+- DOCX/DOTX paragraphs preserve left/center/right alignment, before/after spacing, left/right indents and manual page breaks, including properties inherited from named paragraph styles. Pictures follow their paragraph alignment.
+
 ### Fixed
 
 - Office thumbnail and viewer conversions no longer run concurrently within the same format family, preventing shared temporary PDFs from interfering with document opening.
+- Word manual line breaks and blank paragraphs retain their vertical space; a page break before list text keeps its marker, and continued headings keep their level without a second outline entry.
+- Rendering notices can be dismissed so they do not keep covering document content at large text sizes; full limitations remain in Document details.
 
 ## [1.9.5] — 2026-11-07
 

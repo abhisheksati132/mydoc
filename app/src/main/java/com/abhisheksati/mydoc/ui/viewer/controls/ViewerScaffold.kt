@@ -265,6 +265,7 @@ fun ViewerScaffold(
         if (fidelityDisclosure != null && isControlsVisible) {
             FidelityNotice(
                 disclosure = fidelityDisclosure,
+                dismissalKey = document.uri,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .statusBarsPadding()
