@@ -28,4 +28,18 @@ class LocalApkInstallerOnDeviceTest {
             assertNotNull("Android must offer a package installer", intent.resolveActivity(context.packageManager))
         } finally { source.delete() }
     }
+
+    @Test fun engineCleanupPreservesOtherStagedInstallersAndOriginalFiles() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val source = File.createTempFile("installer-cleanup-", ".apk", context.cacheDir)
+        try {
+            source.writeText("test package")
+            val ordinary = LocalApkInstaller.stage(context, Uri.fromFile(source))
+            val engine = LocalApkInstaller.stage(context, Uri.fromFile(source), prefix = "office-engine")
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { LocalApkInstaller.clearOfficeEngineStaging(context) }
+            assertTrue(source.isFile)
+            context.contentResolver.openInputStream(ordinary)!!.use { assertEquals("test package", it.reader().readText()) }
+            assertThrows(java.io.FileNotFoundException::class.java) { context.contentResolver.openInputStream(engine) }
+        } finally { source.delete() }
+    }
 }

@@ -14,12 +14,13 @@ import kotlinx.coroutines.withContext
 object LocalApkInstaller {
     const val MIME = "application/vnd.android.package-archive"
 
-    suspend fun stage(context: Context, source: Uri): Uri = withContext(Dispatchers.IO) {
+    suspend fun stage(context: Context, source: Uri, prefix: String = "package"): Uri = withContext(Dispatchers.IO) {
+        require(prefix in setOf("package", "office-engine"))
         val directory = File(context.cacheDir, "shared/installers").apply { mkdirs() }
         directory.listFiles()?.filter { it.isFile && it.lastModified() < System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000 }
             ?.forEach { it.delete() }
         // Never overwrite an APK that Android's installer may still be reading.
-        val target = File(directory, "${UUID.randomUUID()}.apk")
+        val target = File(directory, "$prefix-${UUID.randomUUID()}.apk")
         try {
             val input = if (source.scheme == "file") File(requireNotNull(source.path)).inputStream()
                 else requireNotNull(context.contentResolver.openInputStream(source))
@@ -30,6 +31,13 @@ object LocalApkInstaller {
             target.delete()
             throw error
         }
+    }
+
+    /** Call off the UI thread once Android reports that the engine is installed. */
+    fun clearOfficeEngineStaging(context: Context) {
+        val directory = File(context.cacheDir, "shared/installers").canonicalFile
+        directory.listFiles()?.filter { it.isFile && it.name.startsWith("office-engine-") && it.extension == "apk" }
+            ?.forEach { file -> if (file.canonicalFile.parentFile == directory) file.delete() }
     }
 
     fun open(context: Context, uri: Uri) {

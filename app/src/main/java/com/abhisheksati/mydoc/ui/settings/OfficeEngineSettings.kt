@@ -40,7 +40,12 @@ fun OfficeEngineSettings(onInstallApk: (Uri) -> Unit) {
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer); download?.cancel() }
     }
-    LaunchedEffect(installed) { bytes = withContext(Dispatchers.IO) { OfficeEngineManager.installedBytes(context) } }
+    LaunchedEffect(installed) {
+        bytes = withContext(Dispatchers.IO) {
+            if (installed) LocalApkInstaller.clearOfficeEngineStaging(context)
+            OfficeEngineManager.installedBytes(context)
+        }
+    }
     SettingsCard(title = "Enhanced Office support", icon = Icons.AutoMirrored.Outlined.MenuBook) {
         Text(if (installed) "LibreOffice ${OfficeEngineManager.VERSION} · Installed" else "Built-in readers are active",
             style = MaterialTheme.typography.titleSmall)
@@ -71,7 +76,7 @@ fun OfficeEngineSettings(onInstallApk: (Uri) -> Unit) {
                 download = scope.launch {
                     try {
                         val file = OfficeEngineManager.download(context) { done, total -> scope.launch { progress = done to total } }
-                        val uri = LocalApkInstaller.stage(context, Uri.fromFile(file))
+                        val uri = LocalApkInstaller.stage(context, Uri.fromFile(file), prefix = "office-engine")
                         withContext(Dispatchers.IO) { file.delete() }
                         onInstallApk(uri)
                     } catch (cancelled: CancellationException) { throw cancelled }
