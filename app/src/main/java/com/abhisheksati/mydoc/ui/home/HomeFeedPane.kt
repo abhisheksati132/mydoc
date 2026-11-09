@@ -94,7 +94,7 @@ import dev.chrisbanes.haze.hazeSource
 
 /**
  * Editorial "Ink & Seal" Home feed:
- * - Wordmark header with Fraunces serif
+ * - Wordmark header with the app type scale
  * - "Continue Reading" Hero paper card with real page thumbnail & Seal teal progress
  * - 2-column Recent Documents paper cards grid with monospace metadata
  * - Curated first-run state with common quick actions
@@ -422,7 +422,7 @@ fun HomeFeedPane(
 }
 
 /**
- * Hero Card: Real rendered page thumbnail + Seal teal progress bar + Fraunces title.
+ * Hero Card: Real rendered page thumbnail + Seal teal progress bar + document title.
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -482,7 +482,7 @@ private fun ContinueReadingHeroCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // Metadata row in JetBrains Mono
+                // Document metadata
                 androidx.compose.foundation.layout.FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -560,7 +560,7 @@ private fun ContinueReadingHeroCard(
 
 /**
  * 2-Column Recent Paper Card:
- * Tactile paper surface + real thumbnail + Fraunces title + JetBrains Mono metadata.
+ * Tactile paper surface + real thumbnail + document title + tabular metadata.
  */
 @OptIn(ExperimentalFoundationApi::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable

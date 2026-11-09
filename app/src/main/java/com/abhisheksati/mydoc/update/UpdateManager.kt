@@ -26,6 +26,7 @@ class UpdateManager(
     val installerHelper: PackageInstallerHelper = PackageInstallerHelper(context)
 ) {
 
+    private val operation = kotlinx.coroutines.sync.Mutex()
     private val prefs = context.getSharedPreferences("mydoc_updater", Context.MODE_PRIVATE)
 
     private val _state = MutableStateFlow<UpdateUiState>(UpdateUiState.Idle)
@@ -49,53 +50,58 @@ class UpdateManager(
     }
 
     suspend fun checkForUpdates(isLaunchCheck: Boolean = false) {
-        // Debug builds use the debug signing key, so a release APK can never install
-        // over them. Don't offer an update the device would reject.
-        if (BuildConfig.DEBUG) {
-            _state.value = UpdateUiState.Idle
-            return
-        }
-        if (isLaunchCheck) {
-            val lastCheckTime = prefs.getLong(KEY_LAST_CHECK_TIME, 0L)
-            val now = System.currentTimeMillis()
-            val twentyFourHours = 24 * 60 * 60 * 1000L
-            if (now - lastCheckTime < twentyFourHours) {
-                // Throttle launch checks to max once every 24 hours
-                return
-            }
-        }
-
-        _state.value = UpdateUiState.Checking
-
-        val result = updateService.fetchLatestRelease()
-        result.onSuccess { release ->
-            // Only stamp the launch-check throttle on a successful fetch, so a transient failure
-            // (offline, GitHub hiccup) does not suppress checks for the next 24 hours.
-            if (isLaunchCheck) prefs.edit().putLong(KEY_LAST_CHECK_TIME, System.currentTimeMillis()).apply()
-            if (release == null) {
-                _state.value = UpdateUiState.NoUpdate(currentVersionName, null)
-                return
-            }
-
-            val ignoredTag = prefs.getString(KEY_IGNORED_TAG, "")
-            if (isNewerVersion(release.versionName, currentVersionName)) {
-                if (isLaunchCheck && ignoredTag == release.tagName) {
-                    _state.value = UpdateUiState.Idle
-                } else {
-                    _state.value = UpdateUiState.UpdateAvailable(release, currentVersionName)
-                }
-            } else {
-                _state.value = UpdateUiState.NoUpdate(currentVersionName, release)
-            }
-        }.onFailure { error ->
-            if (!isLaunchCheck) {
-                _state.value = UpdateUiState.Error(
-                    error.localizedMessage ?: "Unable to check for updates. Please verify your connection."
-                )
-            } else {
-                // Quietly ignore launch check failures
+        if (!operation.tryLock()) return
+        try {
+            // Debug builds use the debug signing key, so a release APK can never install
+            // over them. Don't offer an update the device would reject.
+            if (BuildConfig.DEBUG) {
                 _state.value = UpdateUiState.Idle
+                return
             }
+            if (isLaunchCheck) {
+                val lastCheckTime = prefs.getLong(KEY_LAST_CHECK_TIME, 0L)
+                val now = System.currentTimeMillis()
+                val twentyFourHours = 24 * 60 * 60 * 1000L
+                if (now - lastCheckTime < twentyFourHours) {
+                    // Throttle launch checks to max once every 24 hours
+                    return
+                }
+            }
+
+            _state.value = UpdateUiState.Checking
+
+            val result = updateService.fetchLatestRelease()
+            result.onSuccess { release ->
+                // Only stamp the launch-check throttle on a successful fetch, so a transient failure
+                // (offline, GitHub hiccup) does not suppress checks for the next 24 hours.
+                if (isLaunchCheck) prefs.edit().putLong(KEY_LAST_CHECK_TIME, System.currentTimeMillis()).apply()
+                if (release == null) {
+                    _state.value = UpdateUiState.NoUpdate(currentVersionName, null)
+                    return
+                }
+
+                val ignoredTag = prefs.getString(KEY_IGNORED_TAG, "")
+                if (isNewerVersion(release.versionName, currentVersionName)) {
+                    if (isLaunchCheck && ignoredTag == release.tagName) {
+                        _state.value = UpdateUiState.Idle
+                    } else {
+                        _state.value = UpdateUiState.UpdateAvailable(release, currentVersionName)
+                    }
+                } else {
+                    _state.value = UpdateUiState.NoUpdate(currentVersionName, release)
+                }
+            }.onFailure { error ->
+                if (!isLaunchCheck) {
+                    _state.value = UpdateUiState.Error(
+                        error.localizedMessage ?: "Unable to check for updates. Please verify your connection."
+                    )
+                } else {
+                    // Quietly ignore launch check failures
+                    _state.value = UpdateUiState.Idle
+                }
+            }
+        } finally {
+            operation.unlock()
         }
     }
 
@@ -107,46 +113,45 @@ class UpdateManager(
     }
 
     suspend fun downloadAndInstall(release: AppRelease) {
-        _state.value = UpdateUiState.Downloading(0, 0, release.apkSizeBytes)
+        if (!operation.tryLock()) return
+        try {
+            _state.value = UpdateUiState.Downloading(0, 0, release.apkSizeBytes)
 
-        // Delete old APK files before attempt
-        cleanUpdatesCache()
-
-        val expectedChecksum = runCatching {
-            if (release.checksumUrl.isNullOrBlank()) {
-                throw IllegalStateException("Checksum URL is missing for release ${release.tagName}")
-            }
-            apkDownloader.fetchChecksumText(release.checksumUrl)
-        }.getOrElse { ex ->
+            // Delete old APK files before attempt
             cleanUpdatesCache()
-            _state.value = UpdateUiState.Error("Could not retrieve the update checksum from GitHub. Try again or download the APK from GitHub Releases.")
-            return
-        }
 
-        val targetName = "mydoc-v${release.versionName}.apk"
-        val downloadResult = apkDownloader.downloadApk(
-            downloadUrl = release.apkDownloadUrl,
-            targetFileName = targetName,
-            expectedSha256 = expectedChecksum,
-            onProgress = { downloaded, total ->
+            val targetName = "mydoc-v${release.versionName}.apk"
+            val onProgress: (Long, Long) -> Unit = { downloaded, total ->
                 val percent = if (total > 0) ((downloaded * 100) / total).toInt() else 0
                 _state.value = UpdateUiState.Downloading(percent, downloaded, total)
             }
-        )
-
-        downloadResult.onSuccess { file ->
-            _state.value = UpdateUiState.ReadyToInstall(file, release)
-            if (installerHelper.canInstallUnknownApps()) {
-                runCatching {
-                    installerHelper.installApk(file)
-                }.onFailure { ex ->
-                    cleanUpdatesCache()
-                    _state.value = UpdateUiState.Error("The download could not be verified, so it was not installed.")
-                }
+            val downloadResult = runCatching {
+                val checksum = apkDownloader.fetchChecksumText(checkNotNull(release.checksumUrl))
+                apkDownloader.downloadApk(release.apkDownloadUrl, targetName, checksum, onProgress).getOrThrow()
+            }.recoverCatching { error ->
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                val apiUrl = release.assetApiUrl ?: throw error
+                val digest = release.assetSha256 ?: throw error
+                apkDownloader.downloadApk(apiUrl, targetName, digest, onProgress,
+                    accept = "application/octet-stream").getOrThrow()
             }
-        }.onFailure { err ->
-            cleanUpdatesCache()
-            _state.value = UpdateUiState.Error("The download failed. Check your connection and try again.")
+            downloadResult.onSuccess { file ->
+                _state.value = UpdateUiState.ReadyToInstall(file, release)
+                if (installerHelper.canInstallUnknownApps()) {
+                    runCatching {
+                        installerHelper.installApk(file)
+                    }.onFailure { ex ->
+                        cleanUpdatesCache()
+                        _state.value = UpdateUiState.Error("The download could not be verified, so it was not installed.")
+                    }
+                }
+            }.onFailure { err ->
+                if (err is kotlinx.coroutines.CancellationException) throw err
+                cleanUpdatesCache()
+                _state.value = UpdateUiState.Error("The download failed. Check your connection and try again.")
+            }
+        } finally {
+            operation.unlock()
         }
     }
 

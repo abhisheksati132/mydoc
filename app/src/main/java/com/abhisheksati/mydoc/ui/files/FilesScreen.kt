@@ -281,6 +281,7 @@ fun FilesPaneScreen(
     }
 
     if (showAppManager) {
+        BackHandler(enabled = isActive) { showAppManager = false; storageViewModel.refresh() }
         com.abhisheksati.mydoc.ui.appmanager.AppManagerScreen(
             onDismiss = { showAppManager = false; storageViewModel.refresh() },
             onOpenApk = { onOpenFile(it, null) }
@@ -289,6 +290,7 @@ fun FilesPaneScreen(
     }
 
     if (showCleaner) {
+        BackHandler(enabled = isActive) { showCleaner = false; storageViewModel.refresh(); viewModel.refreshVolumes() }
         com.abhisheksati.mydoc.ui.cleaner.StorageCleanerScreen(
             rootDir = android.os.Environment.getExternalStorageDirectory(),
             onDismiss = { showCleaner = false; storageViewModel.refresh(); viewModel.refreshVolumes() },
@@ -297,6 +299,7 @@ fun FilesPaneScreen(
         return
     }
     if (showInsights) {
+        BackHandler(enabled = isActive) { showInsights = false }
         StorageInsightsScreen(
             storageUiState = storageUiState,
             onDismiss = { showInsights = false },
@@ -490,7 +493,8 @@ fun FilesPaneScreen(
                                     modifier = Modifier.fillMaxSize(),
                                     hazeState = hazeState,
                                     glassMotion = glassMotion,
-                                    onClearFilters = viewModel::clearSearchFilters
+                                    onClearFilters = viewModel::clearSearchFilters,
+                                    onImageFolder = viewModel::setImageFolder
                                 )
                             } else {
                                 BrowseHomePane(

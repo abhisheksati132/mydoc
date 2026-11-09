@@ -512,7 +512,7 @@
     <string name="cat_documents">Documents</string>
     <string name="cat_apks">APKs</string>
     <string name="cat_archives">Archives</string>
-    <string name="cat_apps">Apps &amp; Data</string>
+    <string name="cat_apps">Installed app packages</string>
     <string name="cat_large_files">Large Files (&gt;50MB)</string>
     <string name="cat_system_other">System &amp; Other</string>
     <string name="sheet_read_limit">This sheet hit our read limit — later rows are not shown</string>
@@ -1000,4 +1000,7 @@
     <string name="video_skip_forward_seconds">Forward %1$d seconds</string>
     <string name="video_skip_back_seconds">Back %1$d seconds</string>
     <string name="apps_large_filter">Large apps · 100 MB+</string>
+    <string name="video_cannot_play">Could not play this video</string>
+    <string name="video_retry_help">Try again if the file is still available.</string>
+    <string name="video_retry">Retry</string>
 </resources>

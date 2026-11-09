@@ -185,36 +185,45 @@ fun GlassSurface(
         )
         .clip(shape)
 
-    val isDark = AppTheme.isDark
-    val progress = if (LocalReducedMotion.current) 0f else (motion?.progress ?: 0f).coerceIn(0f, 1f)
-    val opticalTint = tint ?: colors.surface.copy(alpha = (if (isDark) 0.78f else 0.64f) + progress * 0.04f)
-    val glassStyle = remember(shape, opticalTint, isDark) {
-        GlassStyle.regular.then {
-            shape(shape as? RoundedCornerShape ?: RoundedCornerShape(AppRadius.large))
-            tint(opticalTint)
-            optics { copy(refractionStrength = 0.5f, refractionDisplacement = 10.dp) }
-            // Use the app theme even when it differs from Android's system theme.
-            specularIntensity(if (isDark) 0.38f else 0.6f)
-            edgeShadow(Color.Black.copy(alpha = if (isDark) 0.32f else 0.12f))
-            ambientResponse(if (isDark) 0.08f else 0.12f)
-            contrast(if (isDark) 0.08f else 0f)
-            whitePoint(if (isDark) -0.22f else 0f)
-            chromaMultiplier(1.1f)
-            chromaticAberrationStrength(0f)
-        }
-    }
-    val blurStyle = remember(actualTint) { HazeBlurStyle {
-        backgroundColor(Color.Transparent)
-        blurRadius(24.dp)
-        colorEffects(listOf(HazeColorEffect.tint(actualTint)))
-        noiseFactor(0.02f)
-    } }
     val styledModifier = when {
-        glassActive && hazeState != null && shape is RoundedCornerShape && Build.VERSION.SDK_INT >= 33 ->
-            baseModifier.hazeGlass(input = HazeInput.Sources(hazeState), style = glassStyle)
-        glassActive && hazeState != null ->
-            baseModifier.hazeBlur(input = HazeInput.Sources(hazeState), style = blurStyle).then(specularAndInnerShadow)
-        else -> baseModifier.background(color = actualBackground, shape = shape).then(specularAndInnerShadow)
+        !glassActive || hazeState == null ->
+            baseModifier.background(color = actualBackground, shape = shape).then(specularAndInnerShadow)
+        shape is RoundedCornerShape && Build.VERSION.SDK_INT >= 33 -> {
+            val isDark = AppTheme.isDark
+            // Tint changes over a handful of steps instead of rebuilding the optical style
+            // on every scroll pixel. Reduced motion uses the resting material.
+            val progress = if (LocalReducedMotion.current) 0f else (motion?.progress ?: 0f).coerceIn(0f, 1f)
+            val densityStep = (progress * 5).toInt() / 5f
+            val opticalTint = tint ?: actualBackground.copy(
+                alpha = (if (isDark) 0.84f else 0.74f) + densityStep * 0.04f
+            )
+            val style = remember(shape, opticalTint, isDark) {
+                GlassStyle.regular.then {
+                    shape(shape)
+                    tint(opticalTint)
+                    optics { copy(refractionStrength = 0.4f, refractionDisplacement = 8.dp) }
+                    specularIntensity(if (isDark) 0.36f else 0.52f)
+                    edgeShadow(Color.Black.copy(alpha = if (isDark) 0.32f else 0.12f))
+                    ambientResponse(if (isDark) 0.08f else 0.12f)
+                    contrast(if (isDark) 0.08f else 0f)
+                    whitePoint(if (isDark) -0.22f else 0f)
+                    chromaMultiplier(1.1f)
+                    chromaticAberrationStrength(0f)
+                }
+            }
+            baseModifier.hazeGlass(input = HazeInput.Sources(hazeState), style = style)
+        }
+        else -> {
+            val style = remember(actualTint) {
+                HazeBlurStyle {
+                    backgroundColor(Color.Transparent)
+                    blurRadius(24.dp)
+                    colorEffects(listOf(HazeColorEffect.tint(actualTint)))
+                    noiseFactor(0.02f)
+                }
+            }
+            baseModifier.hazeBlur(input = HazeInput.Sources(hazeState), style = style).then(specularAndInnerShadow)
+        }
     }
 
     Box(

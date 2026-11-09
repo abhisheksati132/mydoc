@@ -607,6 +607,26 @@ class FileManagerViewModelTest {
         assertEquals(FileSortField.NAME, viewModel.uiState.value.sortOrder.field)
     }
 
+    @Test fun selectingAllInImageFolderUsesOnlyVisibleFiles() = runTest(testDispatcher) {
+        val camera = File(tempDir, "Camera").apply { mkdirs() }
+        val screenshots = File(tempDir, "Screenshots").apply { mkdirs() }
+        val photo = File(camera, "photo.jpg").apply { writeText("Photo") }
+        val screenshot = File(screenshots, "screen.png").apply { writeText("Screenshot") }
+        fakeRepo = FakeStorageRepository(fakeRepo.volumes, listOf(StorageItem(photo), StorageItem(screenshot)))
+        createViewModel()
+        viewModel.selectCategory(FileCategory.IMAGES)
+        advanceUntilIdle()
+
+        viewModel.setImageFolder(camera.absolutePath)
+        viewModel.selectAll()
+        assertEquals(listOf(photo), viewModel.uiState.value.filteredItems.map { it.file })
+        assertEquals(setOf(photo), viewModel.uiState.value.selectedFiles)
+
+        viewModel.clearSearchFilters()
+        assertEquals(setOf(photo, screenshot), viewModel.uiState.value.filteredItems.map { it.file }.toSet())
+        assertTrue(viewModel.uiState.value.selectedFiles.isEmpty())
+    }
+
     @Test fun savedSearchWinsAgainstQueuedDirectoryLoad() = runTest(testDispatcher) {
         createViewModel(); advanceUntilIdle()
         val target = tempDir.resolve("saved").apply { mkdir() }

@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
@@ -74,7 +75,7 @@ fun BottomNavBar(
                     label = "navigationIndicator"
                 )
                 Row(Modifier.matchParentSize()) {
-                    Box(Modifier.offset(x = offset).width(tabWidth).fillMaxHeight()
+                    Box(Modifier.offset { IntOffset(offset.roundToPx(), 0) }.width(tabWidth).fillMaxHeight()
                         .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(28.dp)))
                 }
             Row(

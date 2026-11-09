@@ -106,7 +106,7 @@ fun DocumentViewerScreen(
             onShareClick = onShareClick,
             onSwipeToNextDocument = onSwipeToNextDocument,
             onSwipeToPreviousDocument = onSwipeToPreviousDocument,
-            startInContinuousMode = false,
+            startInSlideshow = true,
             modifier = modifier.fillMaxSize()
         )
         return
@@ -165,8 +165,9 @@ fun DocumentViewerScreen(
             val viewerViewModel: ViewerViewModel = viewModel(
                 factory = ViewerViewModel.Factory(context, app.documentRepository, document)
             )
-            LaunchedEffect(document.uri) {
-                viewerViewModel.open(document)
+            androidx.compose.runtime.DisposableEffect(viewerViewModel, document.uri) {
+                val lease = viewerViewModel.attachReader(document)
+                onDispose { viewerViewModel.detachReader(lease) }
             }
             val viewerState by viewerViewModel.uiState.collectAsStateWithLifecycle()
             val family = descriptor?.family

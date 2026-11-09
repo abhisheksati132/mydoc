@@ -12,6 +12,22 @@ import java.security.MessageDigest
 class UpdateManagerTest {
 
     @Test
+    fun parseReleaseJsonPrefersDeviceAbiOrderAndRejectsIncompatibleSplits() {
+        val service = GitHubUpdateService()
+        val json = """
+            {"tag_name":"v2.0.0","assets":[
+              {"name":"mydoc-v2.0.0-armeabi-v7a.apk","browser_download_url":"https://example.test/arm32"},
+              {"name":"mydoc-v2.0.0-armeabi-v7a.apk.sha256","browser_download_url":"https://example.test/arm32.sha256"},
+              {"name":"mydoc-v2.0.0-arm64-v8a.apk","browser_download_url":"https://example.test/arm64"},
+              {"name":"mydoc-v2.0.0-arm64-v8a.apk.sha256","browser_download_url":"https://example.test/arm64.sha256"}
+            ]}
+        """.trimIndent()
+        val release = service.parseReleaseJson(json, listOf("arm64-v8a", "armeabi-v7a"))
+        assertEquals("https://example.test/arm64", release?.apkDownloadUrl)
+        assertNull(service.parseReleaseJson(json, listOf("x86_64", "x86")))
+    }
+
+    @Test
     fun isNewerVersion_correctlyComparesSemVer() {
         assertTrue(UpdateManager.isNewerVersion("1.0.1", "1.0.0"))
         assertTrue(UpdateManager.isNewerVersion("1.1.0", "1.0.9"))

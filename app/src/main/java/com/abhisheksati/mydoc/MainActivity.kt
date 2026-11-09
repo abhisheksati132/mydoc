@@ -440,8 +440,7 @@ class MainActivity : ComponentActivity() {
                                                 items = screen.allPhotos.ifEmpty { listOf(screen.item) },
                                                 initialIndex = screen.allPhotos.indexOf(screen.item).coerceAtLeast(0),
                                                 mediaRepository = app.mediaRepository,
-                                                onBackClick = { currentPhoto = null },
-                                                onDeletePhoto = { currentPhoto = null }
+                                                onBackClick = { currentPhoto = null }
                                             )
                                         }
                                         is ActiveScreen.Video -> {

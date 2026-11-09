@@ -86,6 +86,7 @@ import com.abhisheksati.mydoc.ui.viewer.controls.PageJumpDialog
 import com.abhisheksati.mydoc.ui.viewer.controls.edgeFlingToDocument
 import com.abhisheksati.mydoc.ui.viewer.controls.PrintHelper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.abhisheksati.mydoc.designsystem.components.showMessage
@@ -159,7 +160,7 @@ fun PresentationViewerScreen(
     modifier: Modifier = Modifier,
     onSwipeToNextDocument: (() -> Unit)? = null,
     onSwipeToPreviousDocument: (() -> Unit)? = null,
-    startInContinuousMode: Boolean = true
+    startInSlideshow: Boolean = false
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -180,7 +181,7 @@ fun PresentationViewerScreen(
     var currentMatchIndex by remember { mutableIntStateOf(0) }
 
     var isThumbnailStripOpen by remember { mutableStateOf(false) }
-    var isSlideshowMode by remember { mutableStateOf(false) }
+    var isSlideshowMode by rememberSaveable(document.uri) { mutableStateOf(startInSlideshow) }
     var isNotesSheetOpen by remember { mutableStateOf(false) }
 
     var zoomScale by remember { mutableFloatStateOf(1f) }
@@ -201,7 +202,7 @@ fun PresentationViewerScreen(
                 val uri = Uri.parse(document.uri)
                 val ext = document.extension.lowercase().ifBlank { "pptx" }
                 val cacheDir = File(context.cacheDir, "pres_cache").apply { mkdirs() }
-                val tempFile = File(cacheDir, "pres_${System.currentTimeMillis()}.$ext")
+                val tempFile = File.createTempFile("pres_", ".$ext", cacheDir)
                 cachedFileOnDisk = tempFile
 
                 val inputStream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri)
@@ -212,6 +213,7 @@ fun PresentationViewerScreen(
                         val chunk = ByteArray(64 * 1024)
                         var written = 0L
                         while (true) {
+                            kotlinx.coroutines.currentCoroutineContext().ensureActive()
                             val read = input.read(chunk)
                             if (read < 0) break
                             written += read
@@ -233,6 +235,7 @@ fun PresentationViewerScreen(
                     val parsed = tempFile.inputStream().use { PptxParser().parse(it, context.cacheDir) }
                     presentationData = parsed
                 } catch (e: Throwable) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
                     SecureLog.warn("PresentationViewer", "native presentation parse failed") { document.displayName }
                     errorMessage = UserMessages.readFailure("PresentationViewer", e).resolve(context)
                 }
@@ -248,11 +251,14 @@ fun PresentationViewerScreen(
                             presentationData = fallback.copy(recovered = true)
                             errorMessage = null
                         }
-                    } catch (_: Throwable) {}
+                    } catch (e: Throwable) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
+                    }
                 }
 
                 isLoading = false
             } catch (t: Throwable) {
+                if (t is kotlinx.coroutines.CancellationException) throw t
                 SecureLog.error("PresentationViewer", "could not load presentation", t) { document.displayName }
                 cachedFileOnDisk?.delete()
                 cachedFileOnDisk = null
@@ -267,10 +273,11 @@ fun PresentationViewerScreen(
     val effectiveSlideCount = if (!isNativeEmpty) rawSlides.size else 0
     val pagerState = rememberPagerState(pageCount = { effectiveSlideCount.coerceAtLeast(1) })
     val lazyListState = rememberLazyListState()
-    var isContinuousVertical by rememberSaveable(document.uri) { mutableStateOf(startInContinuousMode) }
+    var continuousReader by rememberSaveable(document.uri) { mutableStateOf(true) }
+    val isContinuousVertical = continuousReader && !isSlideshowMode
     val effectiveSlides: List<PptxSlide> = if (!isNativeEmpty) rawSlides else emptyList()
 
-    val currentSlideIndex by remember {
+    val currentSlideIndex by remember(isContinuousVertical, effectiveSlideCount) {
         derivedStateOf {
             if (isContinuousVertical) lazyListState.firstVisibleItemIndex.coerceIn(0, (effectiveSlideCount - 1).coerceAtLeast(0))
             else pagerState.currentPage
@@ -278,7 +285,8 @@ fun PresentationViewerScreen(
     }
 
     // Smart Resume: Restore last viewed slide on open
-    LaunchedEffect(effectiveSlideCount) {
+    var resumeReady by remember(document.uri, effectiveSlideCount) { mutableStateOf(false) }
+    LaunchedEffect(document.uri, effectiveSlideCount) {
         if (effectiveSlideCount > 0) {
             withContext(Dispatchers.IO) {
                 val savedState = app?.documentRepository?.getViewState(document.uri)
@@ -290,12 +298,13 @@ fun PresentationViewerScreen(
                     }
                 }
             }
+            resumeReady = true
         }
     }
 
     // Smart Resume: Persist slide progress on change
-    LaunchedEffect(currentSlideIndex, effectiveSlideCount) {
-        if (effectiveSlideCount > 0) {
+    LaunchedEffect(document.uri, currentSlideIndex, effectiveSlideCount, resumeReady) {
+        if (resumeReady && effectiveSlideCount > 0) {
             withContext(Dispatchers.IO) {
                 app?.documentRepository?.updatePageProgress(document.uri, currentSlideIndex, effectiveSlideCount)
                 app?.documentRepository?.saveViewState(
@@ -361,7 +370,10 @@ fun PresentationViewerScreen(
             isSearchOpen = false
             searchQuery = ""
         } else if (isSlideshowMode) {
-            isSlideshowMode = false
+            if (startInSlideshow) onBackClick() else {
+                lazyListState.requestScrollToItem(pagerState.currentPage)
+                isSlideshowMode = false
+            }
         }
     }
 
@@ -449,7 +461,7 @@ fun PresentationViewerScreen(
                 isContinuousVertical = isContinuousVertical,
                 onToggleContinuousVertical = {
                     val newMode = !isContinuousVertical
-                    isContinuousVertical = newMode
+                    continuousReader = newMode
                     scope.launch {
                         if (newMode) {
                             lazyListState.scrollToItem(pagerState.currentPage)
@@ -458,7 +470,10 @@ fun PresentationViewerScreen(
                         }
                     }
                 },
-                onStartSlideshow = { isSlideshowMode = true },
+                onStartSlideshow = {
+                    pagerState.requestScrollToPage(currentSlideIndex)
+                    isSlideshowMode = true
+                },
                 isVisualMode = isVisualMode,
                 onToggleVisualMode = { isVisualMode = !isVisualMode },
                 readingMode = readingMode,
@@ -704,7 +719,12 @@ fun PresentationViewerScreen(
                 // In Slideshow mode: Minimal floating exit button
                 if (isSlideshowMode) {
                     IconButton(
-                        onClick = { isSlideshowMode = false },
+                        onClick = {
+                            if (startInSlideshow) onBackClick() else {
+                                lazyListState.requestScrollToItem(pagerState.currentPage)
+                                isSlideshowMode = false
+                            }
+                        },
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .statusBarsPadding()

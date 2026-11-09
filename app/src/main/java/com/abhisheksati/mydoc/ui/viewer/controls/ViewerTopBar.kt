@@ -59,8 +59,8 @@ import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 
 /**
  * Editorial "Ink & Seal" viewer masthead:
- * - Expanded: full-width glass header with Fraunces serif document title, JetBrains Mono page counter, and actions.
- * - Condensed: collapses on vertical scroll into a floating glass pill with truncated title, monospace page badge, and quick actions.
+ * - Expanded: full-width glass header with document title, tabular page counter, and actions.
+ * - Condensed: collapses on vertical scroll into a floating glass pill with truncated title, page badge, and quick actions.
  */
 @Composable
 fun ViewerTopBar(
@@ -123,7 +123,7 @@ fun ViewerTopBar(
                     GlassSurface(
                         shape = AppRadius.roundShape,
                         elevation = 8.dp,
-                        hazeState = hazeState
+                        hazeState = hazeState.takeIf { condensed == isCondensed }
                     ) {
                         Row(
                             modifier = Modifier
@@ -228,7 +228,7 @@ fun ViewerTopBar(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
                     elevation = 6.dp,
-                    hazeState = hazeState
+                    hazeState = hazeState.takeIf { condensed == isCondensed }
                 ) {
                     Column(
                         modifier = Modifier

@@ -46,7 +46,10 @@ class GitHubUpdateService(
         }
     }
 
-    fun parseReleaseJson(jsonString: String): AppRelease? {
+    fun parseReleaseJson(jsonString: String): AppRelease? =
+        parseReleaseJson(jsonString, android.os.Build.SUPPORTED_ABIS?.toList().orEmpty())
+
+    internal fun parseReleaseJson(jsonString: String, supportedAbis: List<String>): AppRelease? {
         val root = JSONObject(jsonString)
 
         val isDraft = root.optBoolean("draft", false)
@@ -67,6 +70,7 @@ class GitHubUpdateService(
         val assets = root.optJSONArray("assets") ?: return null
         val apkAssets = mutableListOf<Triple<String, String, Long>>()
         val checksumMap = mutableMapOf<String, String>()
+        val apiAssets = mutableMapOf<String, Pair<String, String>>()
 
         for (i in 0 until assets.length()) {
             val asset = assets.optJSONObject(i) ?: continue
@@ -76,6 +80,12 @@ class GitHubUpdateService(
 
             if (name.startsWith("mydoc-v") && name.endsWith(".apk", ignoreCase = true)) {
                 apkAssets.add(Triple(name, downloadUrl, size))
+                val id = asset.optLong("id", 0)
+                val digest = asset.optString("digest", "").takeIf { it.startsWith("sha256:") }
+                    ?.removePrefix("sha256:")
+                if (id > 0 && digest != null && digest.matches(Regex("[a-fA-F0-9]{64}"))) {
+                    apiAssets[name] = "https://api.github.com/repos/$owner/$repo/releases/assets/$id" to digest
+                }
             } else if (name.endsWith(".sha256", ignoreCase = true)) {
                 // Strict match: <apk name>.sha256
                 val exactBaseApkName = name.removeSuffix(".sha256")
@@ -83,28 +93,20 @@ class GitHubUpdateService(
             }
         }
 
-        if (apkAssets.isEmpty()) {
-            return null
-        }
-
-        val supportedAbis = runCatching { android.os.Build.SUPPORTED_ABIS?.toList() }.getOrNull() ?: emptyList()
-        var selectedApk = apkAssets.firstOrNull { apk ->
-            supportedAbis.any { abi -> apk.first.contains(abi, ignoreCase = true) }
-        }
-        if (selectedApk == null) {
-            selectedApk = apkAssets.firstOrNull { it.first.contains("universal", ignoreCase = true) }
-        }
-        if (selectedApk == null) {
-            selectedApk = apkAssets.first()
-        }
+        val baseName = "mydoc-v$versionName"
+        val candidateNames = supportedAbis.map { "$baseName-$it.apk" } +
+            listOf("$baseName-universal.apk", "$baseName.apk")
+        val assetsByName = apkAssets.associateBy { it.first }
+        val selectedApk = candidateNames.firstNotNullOfOrNull(assetsByName::get) ?: return null
 
         val apkName = selectedApk.first
         val apkUrl = selectedApk.second
         val apkSize = selectedApk.third
 
         // Strict: only match <apk name>.sha256 for the selected APK. No fallback to other APKs' checksums!
+        val apiAsset = apiAssets[apkName]
         val checksumUrl = checksumMap[apkName]
-            ?: throw IllegalStateException("Release asset $apkName does not have a matching checksum asset ($apkName.sha256)")
+        if (checksumUrl == null && apiAsset == null) throw IllegalStateException("Release asset $apkName does not have a matching checksum asset ($apkName.sha256)")
 
         return AppRelease(
             tagName = tagName,
@@ -113,7 +115,9 @@ class GitHubUpdateService(
             apkDownloadUrl = apkUrl,
             apkSizeBytes = apkSize,
             checksumUrl = checksumUrl,
-            publishedAt = publishedAt
+            publishedAt = publishedAt,
+            assetApiUrl = apiAsset?.first,
+            assetSha256 = apiAsset?.second
         )
     }
 }

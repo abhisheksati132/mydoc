@@ -178,10 +178,8 @@ class StorageViewModel(
                 val isSystem = (app.flags and ApplicationInfo.FLAG_SYSTEM) != 0
                 if (!isSystem) {
                     appCount++
-                    val apkFile = File(app.sourceDir ?: "")
-                    if (apkFile.exists()) {
-                        appBytes += apkFile.length()
-                    }
+                    appBytes += (listOfNotNull(app.sourceDir) + app.splitSourceDirs.orEmpty())
+                        .sumOf { File(it).length() }
                 }
             }
         } catch (e: Exception) {

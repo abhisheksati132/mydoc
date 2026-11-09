@@ -228,7 +228,7 @@ fun DesignSystemPreviewScreen(
                         Spacer(modifier = Modifier.height(AppSpacing.large))
 
                         // SECTION 3: EDITORIAL TYPE SCALE
-                        AppSectionHeader(title = "3. Typography Scale (Fraunces + Inter + JetBrains Mono)")
+                        AppSectionHeader(title = "3. Typography Scale (Inter)")
 
                         Column(
                             modifier = Modifier
@@ -236,9 +236,9 @@ fun DesignSystemPreviewScreen(
                                 .padding(horizontal = AppSpacing.medium),
                             verticalArrangement = Arrangement.spacedBy(AppSpacing.small)
                         ) {
-                            Text(text = "Fraunces Display (32sp Bold)", style = typography.display, color = colors.textPrimary)
-                            Text(text = "Fraunces Title (24sp SemiBold)", style = typography.title, color = colors.textPrimary)
-                            Text(text = "Fraunces Heading (20sp SemiBold)", style = typography.heading, color = colors.textPrimary)
+                            Text(text = "Inter Display (32sp Semibold)", style = typography.display, color = colors.textPrimary)
+                            Text(text = "Inter Title (24sp SemiBold)", style = typography.title, color = colors.textPrimary)
+                            Text(text = "Inter Heading (20sp SemiBold)", style = typography.heading, color = colors.textPrimary)
                             Text(text = "Document Title: Annual_Report_2026.pdf", style = typography.documentName, color = colors.textPrimary)
                             Text(text = "OVERLINE (11sp Inter SemiBold, tracked)", style = typography.overline, color = colors.accent)
                             Text(text = "Inter Body (14sp) — Fast, tactile reader chrome with authentic paper substrate.", style = typography.body, color = colors.textPrimary)

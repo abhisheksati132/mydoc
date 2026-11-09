@@ -2,12 +2,12 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/brand/readme-hero-dark.svg">
-  <img src="assets/brand/readme-hero-light.svg" width="1200" alt="MyDoc — Your files. Beautifully in order. Read, organise and make more of what’s yours.">
+  <img src="assets/brand/readme-hero-light.svg" width="1200" alt="MyDoc — Your files. In good order. Read, organise and work with files on Android.">
 </picture>
 
 <br><br>
 
-**A calmer home for your files. A capable companion for your documents.**
+**Read documents, organise files, and work with PDFs on Android.**
 
 Find the file. Pick up your reading. Make that PDF work for you.<br>
 MyDoc brings your everyday file essentials together in one thoughtfully designed Android app.
@@ -20,7 +20,7 @@ MyDoc brings your everyday file essentials together in one thoughtfully designed
 
 Android 8.0+ &nbsp; · &nbsp; Free & open source
 
-**MyDoc 1.9.8:** optional LibreOffice support through a separate MyDoc Office Engine, quieter reader information, APK installation, steadier navigation and refresh, and a full-screen welcome guide. Built-in Office readers remain available without the engine. Find signed downloads in [Releases](https://github.com/abhisheksati132/mydoc/releases).
+**MyDoc 2.0.0** brings a dedicated Apps page, a date-grouped photo library, full-page storage tools, and expanded video controls. Install the optional MyDoc Office Engine for enhanced Office rendering. [See the signed release](https://github.com/abhisheksati132/mydoc/releases/tag/v2.0.0).
 
 [What’s new](CHANGELOG.md) &nbsp; / &nbsp; [Share an idea](https://github.com/abhisheksati132/mydoc/issues)
 
@@ -76,7 +76,7 @@ Choose light, dark or pure AMOLED black. Switch between compact file lists and p
 
 ## Your next favourite app is a download away.
 
-Get MyDoc from **[GitHub Releases](https://github.com/abhisheksati132/mydoc/releases/latest)**. Open the latest release, download the **universal APK** if you’re unsure which to choose, and install it on your Android device.
+Get MyDoc from **[GitHub Releases](https://github.com/abhisheksati132/mydoc/releases/latest)**. Choose **ARM64** for a compatible 64-bit ARM phone to download the smaller build. Choose **universal** if you are unsure of your device architecture.
 
 Then open a folder, find something worth reading, and settle in.
 

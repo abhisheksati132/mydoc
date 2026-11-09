@@ -7,5 +7,7 @@ data class AppRelease(
     val apkDownloadUrl: String,
     val apkSizeBytes: Long = 0,
     val checksumUrl: String? = null,
-    val publishedAt: String = ""
+    val publishedAt: String = "",
+    val assetApiUrl: String? = null,
+    val assetSha256: String? = null
 )

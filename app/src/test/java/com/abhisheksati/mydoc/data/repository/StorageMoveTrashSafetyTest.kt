@@ -6,6 +6,7 @@ import com.abhisheksati.mydoc.data.local.entity.TrashEntity
 import com.abhisheksati.mydoc.domain.model.PartialStorageOperationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -258,6 +259,23 @@ class StorageMoveTrashSafetyTest {
     }
 
     @Test
+    fun `concurrent same name trash moves keep both copies`() = runBlocking {
+        val dao = InMemoryTrashDao()
+        val first = File(tempFolder.newFolder("first"), "notes.txt").apply { writeText("first") }
+        val second = File(tempFolder.newFolder("second"), "notes.txt").apply { writeText("second") }
+        val repository = repo(FakeMutator(), dao)
+
+        val firstMove = async { repository.moveToTrash(listOf(first)).getOrThrow().single() }
+        val secondMove = async { repository.moveToTrash(listOf(second)).getOrThrow().single() }
+        val firstEntry = firstMove.await()
+        val secondEntry = secondMove.await()
+
+        assertTrue(firstEntry.trashFile != secondEntry.trashFile)
+        assertEquals("first", firstEntry.trashFile.readText())
+        assertEquals("second", secondEntry.trashFile.readText())
+    }
+
+    @Test
     fun `emptying the bin keeps the record of a file it could not delete`() = runBlocking {
         val dao = InMemoryTrashDao()
         val source = tempFolder.newFolder("trash-src")
@@ -266,7 +284,8 @@ class StorageMoveTrashSafetyTest {
         repo(FakeMutator(forceCopyPath = false), dao).moveToTrash(listOf(keep, stuck))
         assertEquals(2, dao.getAllTrashItemsSync().size)
 
-        val result = repo(FakeMutator(refuse = { it.name.endsWith("stuck.txt") }), dao).emptyTrash()
+        val stuckPath = dao.getAllTrashItemsSync().single { it.displayName == "stuck.txt" }.trashPath
+        val result = repo(FakeMutator(refuse = { it.absolutePath == stuckPath }), dao).emptyTrash()
 
         val failure = partial(result.exceptionOrNull())
         assertEquals(1, failure.completed)

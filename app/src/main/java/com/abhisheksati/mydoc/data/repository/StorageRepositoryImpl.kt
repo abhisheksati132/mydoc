@@ -71,6 +71,7 @@ class StorageRepositoryImpl(
      * the auto-rename probe, so both could pick "report (1).pdf" and one overwrote the other.
      */
     private val mutationLock = Mutex()
+    private val trashLock = Mutex()
 
     private val batchRenamer = com.abhisheksati.mydoc.data.local.ExplorerRename(
         journalDirectory = File(context.filesDir, "rename_journals")
@@ -861,23 +862,10 @@ class StorageRepositoryImpl(
 
             val (selection, selectionArgs, sortOrder) = when (category) {
                 FileCategory.DOCUMENTS -> {
-                    val sel = "${MediaStore.Files.FileColumns.DATA} LIKE '%.pdf' OR " +
-                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.doc' OR " +
-                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.docx' OR " +
-                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.xls' OR " +
-                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.xlsx' OR " +
-                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.ppt' OR " +
-                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.pptx' OR " +
-                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.txt' OR " +
-                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.csv' OR " +
-                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.md' OR " +
-                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.rtf' OR " +
-                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.odt' OR " +
-                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.ods' OR " +
-                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.odp' OR " +
-                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.epub' OR " +
-                            "${MediaStore.Files.FileColumns.DATA} LIKE '%.fb2'"
-                    Triple(sel, null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC")
+                    val extensions = com.abhisheksati.mydoc.domain.model.DocumentFormats.all
+                        .filter { it.isSupported }.map { it.extension }.distinct()
+                    val sel = extensions.joinToString(" OR ") { "${MediaStore.Files.FileColumns.DATA} LIKE ?" }
+                    Triple(sel, extensions.map { "%.$it" }.toTypedArray(), "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC")
                 }
                 FileCategory.IMAGES -> {
                     val sel = "${MediaStore.Files.FileColumns.MEDIA_TYPE} = ${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE} OR " +
@@ -936,14 +924,13 @@ class StorageRepositoryImpl(
 
             context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
                 val dataIndex = cursor.getColumnIndex(MediaStore.Files.FileColumns.DATA)
-                var count = 0
-                while (cursor.moveToNext() && count < 1000) {
+                while (cursor.moveToNext()) {
+                    currentCoroutineContext().ensureActive()
                     val path = if (dataIndex >= 0) cursor.getString(dataIndex) else null
                     if (path != null) {
                         val f = File(path)
                         if (f.exists() && !f.isDirectory) {
                             items.add(StorageItem(f))
-                            count++
                         }
                     }
                 }
@@ -951,6 +938,7 @@ class StorageRepositoryImpl(
         } catch (e: SecurityException) {
             android.util.Log.w("StorageRepository", "Permission denied discovering recent files", e)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             android.util.Log.w("StorageRepository", "Error discovering recent files", e)
         }
         items
@@ -998,11 +986,13 @@ class StorageRepositoryImpl(
     }
 
     private suspend fun scanFilesAwait(context: Context, paths: List<String>) {
-        if (paths.isEmpty()) return
+        val remaining = java.util.concurrent.ConcurrentHashMap.newKeySet<String>().apply { addAll(paths) }
+        if (remaining.isEmpty()) return
+        val outstanding = java.util.concurrent.atomic.AtomicInteger(remaining.size)
         withTimeoutOrNull(2000L) {
             suspendCancellableCoroutine { continuation ->
-                MediaScannerConnection.scanFile(context, paths.toTypedArray(), null) { _, _ ->
-                    if (continuation.isActive) {
+                MediaScannerConnection.scanFile(context, remaining.toTypedArray(), null) { path, _ ->
+                    if (path != null && remaining.remove(path) && outstanding.decrementAndGet() == 0 && continuation.isActive) {
                         continuation.resume(Unit)
                     }
                 }
@@ -1023,326 +1013,326 @@ class StorageRepositoryImpl(
     }.flowOn(Dispatchers.IO)
 
     suspend fun purgeExpiredTrash(): Result<Int> = withContext(Dispatchers.IO) {
-        runCatching {
-            val now = System.currentTimeMillis()
-            val thirtyDaysAgo = now - 30L * 24 * 60 * 60 * 1000
-            val expiredItems = trashDao?.getItemsOlderThan(thirtyDaysAgo) ?: emptyList()
-            val successfullyDeletedIds = mutableListOf<Long>()
+        trashLock.withLock {
+            runCatching {
+                val now = System.currentTimeMillis()
+                val thirtyDaysAgo = now - 30L * 24 * 60 * 60 * 1000
+                val expiredItems = trashDao?.getItemsOlderThan(thirtyDaysAgo) ?: emptyList()
+                val successfullyDeletedIds = mutableListOf<Long>()
 
-            for (expired in expiredItems) {
-                val file = File(expired.trashPath)
-                val deleted = try {
-                    if (!file.exists()) {
-                        true
-                    } else {
-                        if (file.isDirectory) file.deleteRecursively() else file.delete()
+                for (expired in expiredItems) {
+                    val file = File(expired.trashPath)
+                    val deleted = try {
+                        if (!file.exists()) {
+                            true
+                        } else {
+                            if (file.isDirectory) file.deleteRecursively() else file.delete()
+                        }
+                    } catch (_: Exception) {
+                        false
                     }
-                } catch (_: Exception) {
-                    false
+                    if (deleted) {
+                        successfullyDeletedIds.add(expired.id)
+                    }
                 }
-                if (deleted) {
-                    successfullyDeletedIds.add(expired.id)
-                }
-            }
 
-            if (successfullyDeletedIds.isNotEmpty()) {
-                trashDao?.deleteByIds(successfullyDeletedIds)
-            }
-
-            // Orphan accounting. A file in .trash with no row used to be deleted after 24 hours,
-            // which turned a crash between move and insert into permanent data loss. Rows are now
-            // reserved before the move, so an orphan means something unexpected happened; keeping
-            // it costs disk, deleting it can cost a document, so it is logged and left alone.
-            try {
-                val trashDir = getTrashDir()
-                val knownTrashPaths = (trashDao?.getAllTrashItemsSync() ?: emptyList())
-                    .mapNotNull { runCatching { File(it.trashPath).canonicalPath }.getOrNull() }
-                    .toSet()
-                val orphans = (trashDir.listFiles() ?: emptyArray()).filter { diskFile ->
-                    val canonical = runCatching { diskFile.canonicalPath }.getOrNull()
-                    canonical != null && canonical !in knownTrashPaths
+                if (successfullyDeletedIds.isNotEmpty()) {
+                    trashDao?.deleteByIds(successfullyDeletedIds)
                 }
-                if (orphans.isNotEmpty()) {
-                    android.util.Log.w(
-                        "TrashReconciliation",
-                        "Keeping ${orphans.size} trash file(s) with no database record; " +
-                            "empty the Recycle Bin to reclaim them"
-                    )
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                android.util.Log.w("TrashReconciliation", "Orphan accounting failed", e)
-            }
 
-            successfullyDeletedIds.size
+                // Orphan accounting. A file in .trash with no row used to be deleted after 24 hours,
+                // which turned a crash between move and insert into permanent data loss. Rows are now
+                // reserved before the move, so an orphan means something unexpected happened; keeping
+                // it costs disk, deleting it can cost a document, so it is logged and left alone.
+                try {
+                    val trashDir = getTrashDir()
+                    val knownTrashPaths = (trashDao?.getAllTrashItemsSync() ?: emptyList())
+                        .mapNotNull { runCatching { File(it.trashPath).canonicalPath }.getOrNull() }
+                        .toSet()
+                    val orphans = (trashDir.listFiles() ?: emptyArray()).filter { diskFile ->
+                        val canonical = runCatching { diskFile.canonicalPath }.getOrNull()
+                        canonical != null && canonical !in knownTrashPaths
+                    }
+                    if (orphans.isNotEmpty()) {
+                        android.util.Log.w(
+                            "TrashReconciliation",
+                            "Keeping ${orphans.size} trash file(s) with no database record; " +
+                                "empty the Recycle Bin to reclaim them"
+                        )
+                    }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    android.util.Log.w("TrashReconciliation", "Orphan accounting failed", e)
+                }
+
+                successfullyDeletedIds.size
+            }
         }
     }
 
     override suspend fun moveToTrash(files: List<File>): Result<List<TrashItem>> = withContext(Dispatchers.IO) {
-        try {
-            val trashDir = getTrashDir()
-            val trashed = mutableListOf<TrashItem>()
-            val scannedPaths = mutableListOf<String>()
-            val now = System.currentTimeMillis()
+        trashLock.withLock {
+            try {
+                val trashDir = getTrashDir()
+                val trashed = mutableListOf<TrashItem>()
+                val scannedPaths = mutableListOf<String>()
+                val now = System.currentTimeMillis()
 
-            var failed = 0
-            var firstError: Throwable? = null
-            val retained = mutableListOf<String>()
-            for (file in files) {
-                if (!file.exists()) {
-                    failed++
-                    continue
-                }
-                // now is computed once per batch, so same-basename files would collide and
-                // overwrite each other (two DB rows sharing one trashPath). Make the name unique.
-                var trashFileName = "${now}_${file.name}"
-                var destTrashFile = File(trashDir, trashFileName)
-                var collisionIndex = 1
-                while (destTrashFile.exists()) {
-                    trashFileName = "${now}_${collisionIndex}_${file.name}"
-                    destTrashFile = File(trashDir, trashFileName)
-                    collisionIndex++
-                }
-
-                val entity = TrashEntity(
-                    originalPath = file.absolutePath,
-                    trashPath = destTrashFile.absolutePath,
-                    displayName = file.name,
-                    sizeBytes = if (file.isDirectory) 0L else file.length(),
-                    deletedTimestamp = now,
-                    isDirectory = file.isDirectory
-                )
-                // The row is reserved before the file moves. Moving first meant a crash in
-                // between left a file in .trash with no row: Restore could not see it and the
-                // reconciliation in purgeExpiredTrash deleted it, so trashing a file could
-                // destroy it outright.
-                val rowId = trashDao?.insert(entity) ?: 0L
-
-                var trashedNow = entryMutator.rename(file, destTrashFile)
-                var retainedSource = false
-                if (!trashedNow) {
-                    val copyError = copyAndVerify(file, destTrashFile)
-                    if (copyError != null) {
-                        discardPartial(destTrashFile)
-                        if (rowId != 0L) runCatching { trashDao?.deleteByIds(listOf(rowId)) }
+                var failed = 0
+                var firstError: Throwable? = null
+                val retained = mutableListOf<String>()
+                for (file in files) {
+                    if (!file.exists()) {
                         failed++
-                        firstError = firstError ?: copyError
                         continue
                     }
-                    val before = snapshotSource(file)
-                    val survivors = deleteSourceEntries(file)
-                    trashedNow = survivors.isEmpty()
+                    val destTrashFile = File(trashDir, java.util.UUID.randomUUID().toString())
+                    val entity = TrashEntity(
+                        originalPath = file.absolutePath,
+                        trashPath = destTrashFile.absolutePath,
+                        displayName = file.name,
+                        sizeBytes = if (file.isDirectory) 0L else file.length(),
+                        deletedTimestamp = now,
+                        isDirectory = file.isDirectory
+                    )
+                    // The row is reserved before the file moves. Moving first meant a crash in
+                    // between left a file in .trash with no row: Restore could not see it and the
+                    // reconciliation in purgeExpiredTrash deleted it, so trashing a file could
+                    // destroy it outright.
+                    val rowId = trashDao?.insert(entity) ?: 0L
+
+                    var trashedNow = entryMutator.rename(file, destTrashFile)
+                    var retainedSource = false
                     if (!trashedNow) {
-                        // The copy in the Recycle Bin stays, and so does its row: some of the
-                        // original has already been removed, so this is the only complete version
-                        // of those parts. The user is told the item is in both places.
-                        retainedSource = true
-                        retained += file.name
+                        val staged = File(trashDir, ".${destTrashFile.name}.part")
+                        val copyError = copyAndVerify(file, staged)
+                        val publishError = copyError ?: if (!staged.renameTo(destTrashFile)) {
+                            java.io.IOException("Could not finish moving file to the Recycle Bin")
+                        } else null
+                        if (publishError != null) {
+                            discardPartial(staged)
+                            if (rowId != 0L) runCatching { trashDao?.deleteByIds(listOf(rowId)) }
+                            failed++
+                            firstError = firstError ?: publishError
+                            continue
+                        }
+                        val survivors = deleteSourceEntries(file)
+                        trashedNow = survivors.isEmpty()
+                        if (!trashedNow) {
+                            // The copy in the Recycle Bin stays, and so does its row: some of the
+                            // original has already been removed, so this is the only complete version
+                            // of those parts. The user is told the item is in both places.
+                            retainedSource = true
+                            retained += file.name
+                        }
+                    }
+
+                    if (trashedNow || retainedSource) {
+                        destTrashFile.setLastModified(now)
+                        scannedPaths += file.absolutePath
+                        trashed.add(entity.copy(id = rowId).toDomain())
+                    } else {
+                        failed++
+                        if (rowId != 0L) runCatching { trashDao?.deleteByIds(listOf(rowId)) }
+                        discardPartial(destTrashFile)
                     }
                 }
 
-                if (trashedNow || retainedSource) {
-                    destTrashFile.setLastModified(now)
-                    scannedPaths += file.absolutePath
-                    trashed.add(entity.copy(id = rowId).toDomain())
+                // One awaited scan per file capped every delete at 2s; a batch costs one IPC.
+                scanFilesAwait(context, scannedPaths)
+
+                if (trashed.isEmpty() && failed > 0) {
+                    Result.failure(firstError ?: IllegalStateException("Nothing could be moved to the Recycle Bin"))
+                } else if (retained.isNotEmpty()) {
+                    // Reporting the full list as "trashed" would claim the originals are gone when
+                    // they are not, so the partial result carries both counts.
+                    Result.failure(
+                        PartialStorageOperationException(trashed.size, failed, firstError, retained)
+                    )
                 } else {
-                    failed++
-                    if (rowId != 0L) runCatching { trashDao?.deleteByIds(listOf(rowId)) }
-                    discardPartial(destTrashFile)
+                    Result.success(trashed)
                 }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Result.failure(e)
             }
-
-            // One awaited scan per file capped every delete at 2s; a batch costs one IPC.
-            scanFilesAwait(context, scannedPaths)
-
-            // Transactional purge of expired items and orphaned files
-            purgeExpiredTrash()
-
-            if (trashed.isEmpty() && failed > 0) {
-                Result.failure(firstError ?: IllegalStateException("Nothing could be moved to the Recycle Bin"))
-            } else if (retained.isNotEmpty()) {
-                // Reporting the full list as "trashed" would claim the originals are gone when
-                // they are not, so the partial result carries both counts.
-                Result.failure(
-                    PartialStorageOperationException(trashed.size, failed, firstError, retained)
-                )
-            } else {
-                Result.success(trashed)
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Result.failure(e)
         }
     }
 
     override suspend fun restoreFromTrash(items: List<TrashItem>): Result<Int> = withContext(Dispatchers.IO) {
-        try {
-            var restoredCount = 0
-            var failedCount = 0
-            val unresolved = mutableListOf<String>()
-            val restoredPaths = mutableListOf<String>()
-            val trashDir = getTrashDir()
-            // An unreadable bin may mean the volume is simply away. The records stay so the
-            // restore can be retried; only a readable bin that lacks the item proves the content
-            // is gone.
-            if (!trashDir.isDirectory || !trashDir.canRead()) {
-                return@withContext Result.failure(
-                    java.io.IOException("The Recycle Bin storage is unavailable; nothing was restored.")
-                )
-            }
-            for (item in items) {
-                currentCoroutineContext().ensureActive()
-                val trashFile = item.trashFile
-                if (!trashFile.exists()) {
-                    failedCount++
-                    unresolved += item.displayName
-                    trashDao?.deleteByIds(listOf(item.id))
-                    continue
+        trashLock.withLock {
+            try {
+                var restoredCount = 0
+                var failedCount = 0
+                val unresolved = mutableListOf<String>()
+                val restoredPaths = mutableListOf<String>()
+                val trashDir = getTrashDir()
+                // An unreadable bin may mean the volume is simply away. The records stay so the
+                // restore can be retried; only a readable bin that lacks the item proves the content
+                // is gone.
+                if (!trashDir.isDirectory || !trashDir.canRead()) {
+                    return@withLock Result.failure(
+                        java.io.IOException("The Recycle Bin storage is unavailable; nothing was restored.")
+                    )
                 }
+                for (item in items) {
+                    currentCoroutineContext().ensureActive()
+                    val trashFile = item.trashFile
+                    if (!trashFile.exists()) {
+                        failedCount++
+                        unresolved += item.displayName
+                        trashDao?.deleteByIds(listOf(item.id))
+                        continue
+                    }
 
-                val originalParent = item.originalFile.parentFile
-                if (originalParent == null || (!originalParent.exists() && !originalParent.mkdirs())) {
-                    // Nowhere to put it back: keep the record so the item stays recoverable.
-                    failedCount++
-                    unresolved += item.displayName
-                    continue
-                }
-
-                val destFile = getNonConflictingFile(originalParent, item.displayName)
-                var restored = entryMutator.rename(trashFile, destFile)
-                if (!restored) {
-                    if (copyAndVerify(trashFile, destFile) != null) {
-                        discardPartial(destFile)
+                    val originalParent = item.originalFile.parentFile
+                    if (originalParent == null || (!originalParent.exists() && !originalParent.mkdirs())) {
+                        // Nowhere to put it back: keep the record so the item stays recoverable.
                         failedCount++
                         unresolved += item.displayName
                         continue
                     }
-                    val before = snapshotSource(trashFile)
-                    val survivors = deleteSourceEntries(trashFile)
-                    restored = survivors.isEmpty()
-                    if (!restored && !resolvePartialSource(trashFile, destFile, before)) {
-                        // Part of the bin copy is already gone, so the restored copy is the only
-                        // complete version. Count it and leave the record for the survivor.
-                        restoredCount++
+
+                    val destFile = getNonConflictingFile(originalParent, item.displayName)
+                    var restored = entryMutator.rename(trashFile, destFile)
+                    if (!restored) {
+                        if (copyAndVerify(trashFile, destFile) != null) {
+                            discardPartial(destFile)
+                            failedCount++
+                            unresolved += item.displayName
+                            continue
+                        }
+                        val before = snapshotSource(trashFile)
+                        val survivors = deleteSourceEntries(trashFile)
+                        restored = survivors.isEmpty()
+                        if (!restored && !resolvePartialSource(trashFile, destFile, before)) {
+                            // Part of the bin copy is already gone, so the restored copy is the only
+                            // complete version. Count it and leave the record for the survivor.
+                            restoredCount++
+                            restoredPaths += destFile.absolutePath
+                            continue
+                        }
+                    }
+
+                    if (restored) {
                         restoredPaths += destFile.absolutePath
-                        continue
+                        trashDao?.deleteByIds(listOf(item.id))
+                        restoredCount++
+                    } else {
+                        discardPartial(destFile)
+                        failedCount++
+                        unresolved += item.displayName
                     }
                 }
-
-                if (restored) {
-                    restoredPaths += destFile.absolutePath
-                    trashDao?.deleteByIds(listOf(item.id))
-                    restoredCount++
+                scanFilesAwait(context, restoredPaths)
+                if (failedCount == 0) {
+                    Result.success(restoredCount)
                 } else {
-                    discardPartial(destFile)
-                    failedCount++
-                    unresolved += item.displayName
+                    Result.failure(
+                        PartialStorageOperationException(restoredCount, failedCount, null, unresolved)
+                    )
                 }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Result.failure(e)
             }
-            scanFilesAwait(context, restoredPaths)
-            if (failedCount == 0) {
-                Result.success(restoredCount)
-            } else {
-                Result.failure(
-                    PartialStorageOperationException(restoredCount, failedCount, null, unresolved)
-                )
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Result.failure(e)
         }
     }
 
     override suspend fun deletePermanently(items: List<TrashItem>): Result<Int> = withContext(Dispatchers.IO) {
-        try {
-            var deletedCount = 0
-            val deletedIds = mutableListOf<Long>()
-            for (item in items) {
-                val trashFile = item.trashFile
-                val deleted = try {
-                    if (trashFile.exists()) {
-                        if (trashFile.isDirectory) {
-                            trashFile.deleteRecursively()
+        trashLock.withLock {
+            try {
+                var deletedCount = 0
+                val deletedIds = mutableListOf<Long>()
+                for (item in items) {
+                    val trashFile = item.trashFile
+                    val deleted = try {
+                        if (trashFile.exists()) {
+                            if (trashFile.isDirectory) {
+                                trashFile.deleteRecursively()
+                            } else {
+                                trashFile.delete()
+                            }
                         } else {
-                            trashFile.delete()
+                            true
                         }
-                    } else {
-                        true
+                    } catch (_: Exception) {
+                        false
                     }
-                } catch (_: Exception) {
-                    false
+                    if (deleted) {
+                        deletedCount++
+                        deletedIds.add(item.id)
+                    }
                 }
-                if (deleted) {
-                    deletedCount++
-                    deletedIds.add(item.id)
+                if (deletedIds.isNotEmpty()) {
+                    trashDao?.deleteByIds(deletedIds)
                 }
+                // Items that could not be removed used to be folded into a success count, which the UI
+                // then announced as "Permanently deleted N items". A partial batch is reported as one.
+                val failed = items.size - deletedCount
+                if (failed > 0) {
+                    throw PartialStorageOperationException(completed = deletedCount, failed = failed)
+                }
+                Result.success(deletedCount)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Result.failure(e)
             }
-            if (deletedIds.isNotEmpty()) {
-                trashDao?.deleteByIds(deletedIds)
-            }
-            // Items that could not be removed used to be folded into a success count, which the UI
-            // then announced as "Permanently deleted N items". A partial batch is reported as one.
-            val failed = items.size - deletedCount
-            if (failed > 0) {
-                throw PartialStorageOperationException(completed = deletedCount, failed = failed)
-            }
-            Result.success(deletedCount)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Result.failure(e)
         }
     }
 
     override suspend fun emptyTrash(): Result<Int> = withContext(Dispatchers.IO) {
-        try {
-            val trashDir = getTrashDir()
-            val files = trashDir.listFiles()
-            if (files == null) {
-                return@withContext Result.failure(
-                    java.io.IOException("The Recycle Bin folder could not be read.")
-                )
-            }
-            // Rows are removed only for content that is provably gone. Clearing the whole table
-            // after a partial sweep left files sitting in .trash with no record: nothing in the UI
-            // could see them, nothing could retry them, and the space was never reclaimed.
-            val rows = trashDao?.getAllTrashItemsSync().orEmpty()
-            val idsToRemove = mutableListOf<Long>()
-            var deleted = 0
-            var failed = 0
-            val stuck = mutableListOf<String>()
-            for (f in files) {
-                currentCoroutineContext().ensureActive()
-                val gone = try {
-                    if (f.isDirectory) {
-                        f.walkTopDown().sortedByDescending { it.absolutePath.length }
-                            .forEach { node -> entryMutator.delete(node) }
-                    } else {
-                        entryMutator.delete(f)
+        trashLock.withLock {
+            try {
+                val trashDir = getTrashDir()
+                val files = trashDir.listFiles()
+                if (files == null) {
+                    return@withLock Result.failure(
+                        java.io.IOException("The Recycle Bin folder could not be read.")
+                    )
+                }
+                // Rows are removed only for content that is provably gone. Clearing the whole table
+                // after a partial sweep left files sitting in .trash with no record: nothing in the UI
+                // could see them, nothing could retry them, and the space was never reclaimed.
+                val rows = trashDao?.getAllTrashItemsSync().orEmpty()
+                val idsToRemove = mutableListOf<Long>()
+                var deleted = 0
+                var failed = 0
+                val stuck = mutableListOf<String>()
+                for (f in files) {
+                    currentCoroutineContext().ensureActive()
+                    val gone = try {
+                        if (f.isDirectory) {
+                            f.walkTopDown().sortedByDescending { it.absolutePath.length }
+                                .forEach { node -> entryMutator.delete(node) }
+                        } else {
+                            entryMutator.delete(f)
+                        }
+                        !f.exists()
+                    } catch (_: Exception) {
+                        false
                     }
-                    !f.exists()
-                } catch (_: Exception) {
-                    false
+                    if (gone) {
+                        deleted++
+                        rows.firstOrNull { it.trashPath == f.absolutePath }?.let { idsToRemove += it.id }
+                    } else {
+                        failed++
+                        stuck += f.name
+                    }
                 }
-                if (gone) {
-                    deleted++
-                    rows.firstOrNull { it.trashPath == f.absolutePath }?.let { idsToRemove += it.id }
+                // A record whose file is already missing describes nothing recoverable, so it goes too.
+                rows.filter { it.id !in idsToRemove && !File(it.trashPath).exists() }
+                    .forEach { idsToRemove += it.id }
+                if (idsToRemove.isNotEmpty()) trashDao?.deleteByIds(idsToRemove)
+                if (failed == 0) {
+                    Result.success(deleted)
                 } else {
-                    failed++
-                    stuck += f.name
+                    Result.failure(PartialStorageOperationException(deleted, failed, null, stuck))
                 }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Result.failure(e)
             }
-            // A record whose file is already missing describes nothing recoverable, so it goes too.
-            rows.filter { it.id !in idsToRemove && !File(it.trashPath).exists() }
-                .forEach { idsToRemove += it.id }
-            if (idsToRemove.isNotEmpty()) trashDao?.deleteByIds(idsToRemove)
-            if (failed == 0) {
-                Result.success(deleted)
-            } else {
-                Result.failure(PartialStorageOperationException(deleted, failed, null, stuck))
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Result.failure(e)
         }
     }
 }

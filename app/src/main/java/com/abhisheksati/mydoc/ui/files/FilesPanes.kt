@@ -383,7 +383,8 @@ fun DirectoryPane(
     modifier: Modifier = Modifier,
     hazeState: HazeState? = null,
     glassMotion: GlassMotionState? = null,
-    onClearFilters: (() -> Unit)? = null
+    onClearFilters: (() -> Unit)? = null,
+    onImageFolder: (String?) -> Unit = {}
 ) {
     val scheme = MaterialTheme.colorScheme
     var sortMenuOpen by remember { mutableStateOf(false) }
@@ -392,11 +393,11 @@ fun DirectoryPane(
     val selectedDocFilter = uiState.docTypeFilter
     // Input changes create fresh scroll state; recreation restores the current source's position.
     val listState = rememberSaveable(
-        uiState.currentDirectory.absolutePath, uiState.activeCategory, uiState.advancedSearch,
+        uiState.currentDirectory.absolutePath, uiState.activeCategory, uiState.advancedSearch, uiState.imageFolder,
         saver = LazyListState.Saver
     ) { LazyListState() }
     val gridState = rememberSaveable(
-        uiState.currentDirectory.absolutePath, uiState.activeCategory, uiState.advancedSearch,
+        uiState.currentDirectory.absolutePath, uiState.activeCategory, uiState.advancedSearch, uiState.imageFolder,
         saver = LazyGridState.Saver
     ) { LazyGridState() }
     if (glassMotion != null) {
@@ -410,15 +411,12 @@ fun DirectoryPane(
     // The ViewModel applies the document-type chip itself now, so the rows drawn here are exactly
     // the rows Select All selects and the count above the list reports.
     val isImagesCategory = uiState.activeCategory == FileCategory.IMAGES
-    var imageFolder by rememberSaveable(uiState.activeCategory) { mutableStateOf<String?>(null) }
+    val imageFolder = uiState.imageFolder
     val imageFolders = remember(isImagesCategory, uiState.items) {
         if (isImagesCategory) uiState.items.mapNotNull { it.file.parent }.distinct().sorted()
         else emptyList()
     }
-    val displayedItems = remember(uiState.filteredItems, imageFolder, uiState.isSelectionMode) {
-        val folder = imageFolder
-        if (folder == null || uiState.isSelectionMode) uiState.filteredItems else uiState.filteredItems.filter { it.file.parent == folder }
-    }
+    val displayedItems = uiState.filteredItems
     val imageSections = remember(isImagesCategory, displayedItems, uiState.sortOrder) {
         if (isImagesCategory && uiState.sortOrder.field == FileSortField.DATE) {
             val formatter = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM)
@@ -525,10 +523,10 @@ fun DirectoryPane(
                     .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                FilterChip(selected = imageFolder == null, onClick = { imageFolder = null },
+                FilterChip(selected = imageFolder == null, onClick = { onImageFolder(null) },
                     label = { Text(stringResource(R.string.gallery_all_images)) })
                 imageFolders.forEach { folder ->
-                    FilterChip(selected = imageFolder == folder, onClick = { imageFolder = folder },
+                    FilterChip(selected = imageFolder == folder, onClick = { onImageFolder(folder) },
                         label = { Text(java.io.File(folder).name) })
                 }
             }
@@ -539,7 +537,7 @@ fun DirectoryPane(
         val inSelectionMode = uiState.isSelectionMode
         val selectedFiles = uiState.selectedFiles
 
-        val hasFilters = uiState.searchQuery.isNotBlank() || uiState.advancedSearch != null ||
+        val hasFilters = imageFolder != null || uiState.searchQuery.isNotBlank() || uiState.advancedSearch != null ||
             (isDocumentsCategory && selectedDocFilter != DocumentTypeFilter.ALL)
         if (uiState.isLoading && (!uiState.isRefreshing || displayedItems.isEmpty())) {
             Column(
@@ -648,7 +646,6 @@ fun StorageInsightsScreen(
     onClean: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
-    androidx.activity.compose.BackHandler(onBack = onDismiss)
     androidx.compose.material3.Surface(Modifier.fillMaxSize(), color = scheme.background) {
         Column(
             modifier = Modifier
@@ -657,11 +654,12 @@ fun StorageInsightsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(start = 24.dp, end = 24.dp, bottom = 28.dp)
         ) {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.viewer_back)) }
-            Text(
-                text = stringResource(R.string.storage_insights),
-                style = MaterialTheme.typography.titleLarge,
-                color = scheme.onSurface
+            com.abhisheksati.mydoc.designsystem.components.AppTopBar(
+                title = stringResource(R.string.storage_insights),
+                onBack = onDismiss,
+                contentInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
+                isGlass = false,
+                containerColor = scheme.background
             )
             Spacer(Modifier.height(4.dp))
             Text(

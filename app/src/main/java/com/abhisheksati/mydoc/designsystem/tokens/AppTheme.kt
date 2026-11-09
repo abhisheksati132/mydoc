@@ -14,6 +14,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
@@ -178,22 +179,19 @@ fun AppDesignSystemTheme(
     }
 
     val glassEnvironment = rememberGlassEnvironment()
+    val typography = remember { AppTypography() }
+    val materialTypography = remember(typography) { brandMaterialTypography(typography) }
     CompositionLocalProvider(
         LocalGlassEnvironment provides glassEnvironment,
         LocalAppColors provides colors,
+        LocalAppTypography provides typography,
         LocalIsDark provides darkTheme,
         LocalIsOled provides (darkTheme && amoledBlack)
     ) {
         MaterialTheme(
             colorScheme = materialColorScheme,
-            typography = brandMaterialTypography(),
-            content = {
-                CompositionLocalProvider(
-                    LocalAppTypography provides appTypographyFromMaterial(MaterialTheme.typography)
-                ) {
-                    content()
-                }
-            }
+            typography = materialTypography,
+            content = content
         )
     }
 }

@@ -108,6 +108,26 @@ class ViewerViewModel(
         loadDocument()
     }
 
+    private var readerLease = 0
+
+    fun attachReader(document: DocumentFile): Int {
+        val lease = ++readerLease
+        open(document)
+        return lease
+    }
+
+    fun detachReader(lease: Int) {
+        if (readerLease != lease) return
+        ++readerLease
+        ++loadGeneration
+        loadJob?.cancel()
+        loadJob = null
+        officePassword = null
+        waitingForOfficePassword = false
+        releaseSession()
+        _uiState.update { it.copy(pageCount = 0) }
+    }
+
     fun updateDocumentUri(newUri: Uri, onUpdated: ((DocumentFile) -> Unit)? = null) {
         viewModelScope.launch {
             val res = repository.replaceDocument(activeDocumentFile.uri, newUri)
@@ -127,6 +147,7 @@ class ViewerViewModel(
     }
 
     private fun loadDocument() {
+        val generation = ++loadGeneration
         loadJob?.cancel()
         releaseSession()
         val document = activeDocumentFile
@@ -134,7 +155,6 @@ class ViewerViewModel(
         // One owned load at a time. The constructor and the screen effect can both schedule a
         // load; without a generation stamp the slower document could publish its renderer, page
         // count and progress over the faster, newer one.
-        val generation = ++loadGeneration
         loadJob = viewModelScope.launch {
             _uiState.update {
                 if (generation != loadGeneration) it else it.copy(
@@ -401,8 +421,13 @@ class ViewerViewModel(
                     }
 
                     val chosen = activeRenderer ?: return@withContext
-                    if (generation != loadGeneration) { chosen.close(); return@withContext }
-                    rendererSlot.replace(chosen)
+                    val published = withContext(Dispatchers.Main.immediate + kotlinx.coroutines.NonCancellable) {
+                        if (generation != loadGeneration) false else {
+                            rendererSlot.replace(chosen)
+                            true
+                        }
+                    }
+                    if (!published) { chosen.close(); return@withContext }
 
                     if (chosen.isPasswordProtected) {
                         if (generation != loadGeneration) return@withContext
@@ -783,6 +808,7 @@ class ViewerViewModel(
     }
 
     override fun onCleared() {
+        ++loadGeneration
         officePassword = null
         waitingForOfficePassword = false
         super.onCleared()

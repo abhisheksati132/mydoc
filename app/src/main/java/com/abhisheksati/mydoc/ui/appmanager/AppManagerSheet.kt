@@ -1,6 +1,5 @@
 package com.abhisheksati.mydoc.ui.appmanager
 
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.util.UserMessages
@@ -92,7 +91,6 @@ fun AppManagerScreen(
         apkFiles.filter { it.name.contains(searchQuery, ignoreCase = true) }
     }
 
-    androidx.activity.compose.BackHandler(onBack = onDismiss)
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = colors.background
@@ -101,32 +99,14 @@ fun AppManagerScreen(
             modifier = Modifier.fillMaxSize().safeDrawingPadding()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-                // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.viewer_back))
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Column {
-                        Text(
-                            text = stringResource(R.string.files_category_apps),
-                            style = typography.heading,
-                            color = colors.textPrimary
-                        )
-                        Text(
-                            text = if (tab == 2) stringResource(R.string.files_subtitle_many, filteredApks.size)
-                            else stringResource(R.string.app_count_found, filteredApps.size),
-                            style = typography.caption,
-                            color = colors.textSecondary
-                        )
-                    }
-                }
-            }
+            com.abhisheksati.mydoc.designsystem.components.AppTopBar(
+                title = stringResource(R.string.files_category_apps),
+                subtitle = if (tab == 2) stringResource(R.string.files_subtitle_many, filteredApks.size) else stringResource(R.string.app_count_found, filteredApps.size),
+                onBack = onDismiss,
+                contentInsets = WindowInsets(0, 0, 0, 0),
+                isGlass = false,
+                containerColor = colors.background
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 

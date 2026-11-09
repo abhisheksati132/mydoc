@@ -62,6 +62,7 @@ data class FileManagerUiState(
     val searchQuery: String = "",
     val activeCategory: FileCategory? = null,
     val docTypeFilter: DocumentTypeFilter = DocumentTypeFilter.ALL,
+    val imageFolder: String? = null,
     val isBrowsingStorage: Boolean = false,
     val isLoading: Boolean = false,
     /** Existing rows belong to this same source and may stay visible during refresh. */
@@ -770,11 +771,18 @@ class FileManagerViewModel(
         }
     }
 
+    fun setImageFolder(folder: String?) {
+        _uiState.update { state ->
+            val next = state.copy(imageFolder = folder, selectedFiles = emptySet(), isSelectionMode = false)
+            next.copy(filteredItems = visibleItems(next.items, next))
+        }
+    }
+
     fun selectCategory(category: FileCategory?) {
         advancedSearchJob?.cancel()
         _uiState.update { it.copy(advancedSearch = null, searchIncomplete = false) }
         if (category == null) {
-            _uiState.update { it.copy(activeCategory = null, canGoBack = _uiState.value.isBrowsingStorage) }
+            _uiState.update { it.copy(activeCategory = null, imageFolder = null, canGoBack = _uiState.value.isBrowsingStorage) }
             if (_uiState.value.isBrowsingStorage) {
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
             }
@@ -786,6 +794,7 @@ class FileManagerViewModel(
             _uiState.update {
                 it.copy(
                     activeCategory = category,
+                    imageFolder = it.imageFolder.takeIf { _ -> it.activeCategory == category },
                     sortOrder = when {
                         it.activeCategory == category -> it.sortOrder
                         category == FileCategory.IMAGES -> FileSortOrder(FileSortField.DATE, isAscending = false)
@@ -1023,6 +1032,7 @@ class FileManagerViewModel(
     fun clearSearchFilters() {
         setSearchQuery("")
         setDocTypeFilter(DocumentTypeFilter.ALL)
+        if (_uiState.value.imageFolder != null) setImageFolder(null)
         if (_uiState.value.advancedSearch != null) clearAdvancedSearch()
     }
 
@@ -1079,7 +1089,9 @@ class FileManagerViewModel(
 
     private fun visibleItems(items: List<StorageItem>, state: FileManagerUiState): List<StorageItem> =
         filterItems(
-            items = items,
+            items = if (state.activeCategory == FileCategory.IMAGES && state.imageFolder != null) {
+                items.filter { it.file.parent == state.imageFolder }
+            } else items,
             query = state.searchQuery,
             docFilter = state.docTypeFilter,
             documentsOnly = state.activeCategory == FileCategory.DOCUMENTS

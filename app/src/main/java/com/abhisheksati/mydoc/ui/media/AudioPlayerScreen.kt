@@ -99,7 +99,8 @@ fun AudioPlayerScreen(
     var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
     var isLooping by remember { mutableStateOf(false) }
 
-    val mediaPlayer = remember { MediaPlayer() }
+    val mediaPlayer = remember(item.uri) { MediaPlayer() }
+    var ready by remember(item.uri) { mutableStateOf(false) }
     val app = context.applicationContext as? MyDocApp
     // Writes are checkpoints, not every frame; see PlaybackCheckpoints for the rule and what it costs.
     val checkpoints = remember(item.uri, app) {
@@ -113,51 +114,48 @@ fun AudioPlayerScreen(
         onBackClick()
     }
 
-    // Audio Player setup
-    DisposableEffect(item.uri) {
-        try {
-            mediaPlayer.setDataSource(context, item.uri)
-            mediaPlayer.prepare()
-            totalDurationMs = mediaPlayer.duration.toLong().coerceAtLeast(item.durationMs)
-            mediaPlayer.isLooping = isLooping
-            mediaPlayer.setOnCompletionListener {
-                isPlaying = false
-                isSeeking = false
-                currentPositionMs = totalDurationMs
-                seekPositionMs = totalDurationMs
-                scope.launch { checkpoints.checkpoint(totalDurationMs, totalDurationMs, force = true) }
-            }
-
-            // Auto-resume from database if exists
-            if (app != null) {
-                scope.launch {
-                    val saved = app.database.mediaPlaybackDao().getPlaybackPosition(item.uri.toString())
-                    val resume = saved?.let { PlaybackCheckpoints.valueToSave(it.positionMs, totalDurationMs) }
-                    if (resume != null) {
-                        mediaPlayer.seekTo(resume.toInt())
-                        currentPositionMs = resume
-                        checkpoints.seed(resume)
-                    }
-                    mediaPlayer.start()
-                    isPlaying = true
+    DisposableEffect(mediaPlayer) {
+        var resumeJob: kotlinx.coroutines.Job? = null
+        mediaPlayer.setOnErrorListener { _, _, _ ->
+            resumeJob?.cancel()
+            ready = false
+            isPlaying = false
+            context.showMessage(resources.getString(R.string.audio_cant_play))
+            true
+        }
+        mediaPlayer.setOnCompletionListener {
+            isPlaying = false
+            isSeeking = false
+            currentPositionMs = totalDurationMs
+            seekPositionMs = totalDurationMs
+            scope.launch { checkpoints.checkpoint(totalDurationMs, totalDurationMs, force = true) }
+        }
+        mediaPlayer.setOnPreparedListener { player ->
+            totalDurationMs = player.duration.toLong().coerceAtLeast(item.durationMs)
+            player.isLooping = isLooping
+            resumeJob = scope.launch {
+                val saved = app?.database?.mediaPlaybackDao()?.getPlaybackPosition(item.uri.toString())
+                val resume = saved?.let { PlaybackCheckpoints.valueToSave(it.positionMs, totalDurationMs) }
+                if (resume != null) {
+                    player.seekTo(resume.toInt())
+                    currentPositionMs = resume
+                    checkpoints.seed(resume)
                 }
-            } else {
-                mediaPlayer.start()
+                player.start()
+                ready = true
                 isPlaying = true
             }
-        } catch (e: Exception) {
+        }
+        try {
+            mediaPlayer.setDataSource(context, item.uri)
+            mediaPlayer.prepareAsync()
+        } catch (_: Exception) {
             context.showMessage(resources.getString(R.string.audio_cant_play))
         }
 
         onDispose {
-            // No save is attempted from here: this composition's scope is being cancelled, which is
-            // why the old write from onDispose usually never reached the database. The last
-            // checkpoint, and the flush written when playback stopped or the app was backgrounded,
-            // are what survive.
-            try {
-                mediaPlayer.stop()
-                mediaPlayer.release()
-            } catch (_: Exception) {}
+            resumeJob?.cancel()
+            mediaPlayer.release()
         }
     }
 
@@ -397,6 +395,7 @@ fun AudioPlayerScreen(
                     .clip(CircleShape)
                     .clickable {
                         haptics.heavy()
+                        if (!ready) return@clickable
                         if (isPlaying) {
                             try { mediaPlayer.pause() } catch (_: Exception) {}
                             isPlaying = false

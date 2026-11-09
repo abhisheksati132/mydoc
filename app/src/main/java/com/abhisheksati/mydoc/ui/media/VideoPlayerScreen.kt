@@ -164,7 +164,9 @@ fun VideoPlayerScreen(
     val maxSystemVolume = remember { audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC) }
 
     var isPlaying by remember { mutableStateOf(true) }
+    var playbackFailed by remember(item.uri) { mutableStateOf(false) }
     var currentPositionMs by remember { mutableLongStateOf(0L) }
+    var scrubPositionMs by remember { mutableStateOf<Long?>(null) }
     var totalDurationMs by remember { mutableLongStateOf(item.durationMs) }
     var areControlsVisible by remember { mutableStateOf(true) }
     var isLooping by remember { mutableStateOf(autoLoop) }
@@ -286,7 +288,16 @@ fun VideoPlayerScreen(
 
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                playbackFailed = true
+                isPlaying = false
+            }
+
             override fun onTracksChanged(current: Tracks) { tracks = current }
+
+            override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+                currentPositionMs = newPosition.positionMs
+            }
 
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
@@ -336,8 +347,8 @@ fun VideoPlayerScreen(
     }
 
     // Auto-hide controls after 3.5 seconds of inactivity
-    LaunchedEffect(areControlsVisible, isPlaying, playbackMenuOpen, selectedTrackType) {
-        if (areControlsVisible && isPlaying && !isScreenLocked && !playbackMenuOpen && selectedTrackType == null) {
+    LaunchedEffect(areControlsVisible, isPlaying, playbackMenuOpen, selectedTrackType, scrubPositionMs == null) {
+        if (areControlsVisible && isPlaying && !isScreenLocked && !playbackMenuOpen && selectedTrackType == null && scrubPositionMs == null) {
             delay(3500)
             areControlsVisible = false
         }
@@ -694,21 +705,24 @@ fun VideoPlayerScreen(
                             .displayCutoutPadding()
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
+                    val displayedPosition = scrubPositionMs ?: currentPositionMs
                     // Timeline Slider & Time Labels
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = formatTime(currentPositionMs),
+                            text = formatTime(displayedPosition),
                             style = typography.caption.copy(color = Color.White)
                         )
 
                         AppSlider(
-                            value = if (totalDurationMs > 0L) currentPositionMs.toFloat() / totalDurationMs.toFloat() else 0f,
-                            onValueChange = { ratio ->
-                                currentPositionMs = (ratio * totalDurationMs).toLong()
-                                exoPlayer.seekTo(currentPositionMs)
+                            value = if (totalDurationMs > 0L) (displayedPosition.toFloat() / totalDurationMs.toFloat()).coerceIn(0f, 1f) else 0f,
+                            enabled = totalDurationMs > 0L,
+                            onValueChange = { ratio -> scrubPositionMs = (ratio * totalDurationMs).toLong() },
+                            onValueChangeFinished = {
+                                scrubPositionMs?.let(exoPlayer::seekTo)
+                                scrubPositionMs = null
                             },
                             colors = SliderDefaults.colors(
                                 thumbColor = colors.accent,
@@ -772,6 +786,26 @@ fun VideoPlayerScreen(
     }
 
     // Playback Speed Selector Modal Bottom Sheet
+    if (playbackFailed) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = onBackClick,
+            title = { Text(stringResource(R.string.video_cannot_play)) },
+            text = { Text(stringResource(R.string.video_retry_help)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    playbackFailed = false
+                    exoPlayer.prepare()
+                    exoPlayer.play()
+                }) { Text(stringResource(R.string.video_retry)) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = onBackClick) {
+                    Text(stringResource(R.string.cd_back))
+                }
+            }
+        )
+    }
+
     selectedTrackType?.let { type ->
         VideoTrackDialog(tracks, type, onDismiss = { selectedTrackType = null }) { track ->
             val parameters = exoPlayer.trackSelectionParameters.buildUpon().clearOverridesOfType(type)

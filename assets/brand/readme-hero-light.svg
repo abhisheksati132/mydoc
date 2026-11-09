@@ -1,18 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="480" viewBox="0 0 1200 480" role="img" aria-labelledby="title desc">
-<title id="title">MyDoc — Your files. Beautifully in order.</title>
+<title id="title">MyDoc — Your files. In good order.</title>
 <desc id="desc">Warm paper, refined typography and seal teal. Read, organise and make more of your files on Android.</desc>
 <rect width="1200" height="480" rx="24" fill="#F5F3EE"/>
 <g transform="translate(64 54)">
 <rect width="48" height="48" rx="13" fill="#0E5C57"/>
 <path d="M13 33V15L24 26L35 15V33" fill="none" stroke="#F5F3EE" stroke-width="4" stroke-linejoin="round"/>
 <path d="M34 0H39Q48 0 48 10V15Z" fill="#F5F3EE" opacity=".3"/>
-<text x="64" y="36" fill="#1A1712" font-family="Georgia,serif" font-size="38">MyDoc</text>
+<text x="64" y="36" fill="#1A1712" font-family="Inter,Arial,sans-serif" font-size="38">MyDoc</text>
 </g>
-<g font-family="Georgia,serif" font-size="62" fill="#1A1712">
+<g font-family="Inter,Arial,sans-serif" font-size="62" fill="#1A1712">
 <text x="64" y="205">Your files.</text>
-<text x="64" y="278" fill="#0E5C57">Beautifully in order.</text>
+<text x="64" y="278" fill="#0E5C57">In good order.</text>
 </g>
-<text x="67" y="330" fill="#6B6558" font-family="Arial,sans-serif" font-size="21">Read, organise and make more of what’s yours.</text>
+<text x="67" y="330" fill="#6B6558" font-family="Arial,sans-serif" font-size="21">Read, organise and work with files on Android.</text>
 <path d="M66 380H698" stroke="#DEDACF"/>
 <text x="67" y="420" fill="#0E5C57" font-family="Arial,sans-serif" font-size="13" letter-spacing="2.4">MADE FOR ANDROID · OPEN SOURCE · DISTINCTLY MYDOC</text>
 <g transform="translate(815 93)">
@@ -24,7 +24,7 @@
 <rect x="26" y="102" width="176" height="5" rx="2.5" fill="#DEDACF"/>
 <rect x="26" y="121" width="151" height="5" rx="2.5" fill="#DEDACF"/>
 <rect x="26" y="140" width="164" height="5" rx="2.5" fill="#DEDACF"/>
-<text x="26" y="220" fill="#1A1712" font-family="Georgia,serif" font-size="23">A little more calm.</text>
+<text x="26" y="220" fill="#1A1712" font-family="Inter,Arial,sans-serif" font-size="23">A little more calm.</text>
 <text x="26" y="253" fill="#6B6558" font-family="Arial,sans-serif" font-size="10" letter-spacing="1.1">READ · ORGANISE · ENJOY</text>
 <circle cx="224" cy="284" r="36" fill="#0E5C57"/>
 <path d="m211 284 9 9 18-20" fill="none" stroke="#F5F3EE" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>

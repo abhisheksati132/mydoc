@@ -1,6 +1,5 @@
 package com.abhisheksati.mydoc.ui.cleaner
 
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 
 import kotlinx.coroutines.Dispatchers
 import androidx.compose.runtime.produceState
@@ -129,7 +128,6 @@ fun StorageCleanerScreen(
             cleanDuplicates=duplicateKeepers.isNotEmpty()
         },onPreview={file ->showDuplicateReview=false;onFileClick(file)},onDismiss={showDuplicateReview=false})
 
-    androidx.activity.compose.BackHandler(onBack = onDismiss)
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = colors.background
@@ -138,45 +136,14 @@ fun StorageCleanerScreen(
             modifier = Modifier.fillMaxSize().safeDrawingPadding()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-                // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(colors.accent.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.DeleteSweep,
-                            contentDescription = null,
-                            tint = colors.accent,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = stringResource(R.string.cleaner_title),
-                            style = typography.heading,
-                            color = colors.textPrimary
-                        )
-                        Text(
-                            text = stringResource(R.string.cleaner_subtitle, rootLabel),
-                            style = typography.caption,
-                            color = colors.textSecondary
-                        )
-                    }
-                }
-                IconButton(onClick = onDismiss) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.viewer_back), tint = colors.textSecondary)
-                }
-            }
+            com.abhisheksati.mydoc.designsystem.components.AppTopBar(
+                title = stringResource(R.string.cleaner_title),
+                subtitle = stringResource(R.string.cleaner_subtitle, rootLabel),
+                onBack = onDismiss,
+                contentInsets = WindowInsets(0, 0, 0, 0),
+                isGlass = false,
+                containerColor = colors.background
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
