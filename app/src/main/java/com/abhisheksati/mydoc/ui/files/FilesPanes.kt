@@ -58,14 +58,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -77,6 +80,7 @@ import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.components.GlassMotionState
 import com.abhisheksati.mydoc.designsystem.components.TrackGlassMotion
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.domain.model.DocumentTypeFilter
 import com.abhisheksati.mydoc.domain.model.FileCategory
@@ -155,7 +159,6 @@ fun BrowseHomePane(
     storageUiState: StorageAnalysisUiState,
     volumes: List<StorageVolume>,
     pinnedFolders: List<File>,
-    trashCount: Int,
     onBrowseInternal: () -> Unit,
     onBrowseVolume: (StorageVolume) -> Unit,
     onCategory: (FileCategory) -> Unit,
@@ -252,10 +255,9 @@ fun BrowseHomePane(
                 usedRatio = storageUiState.usedRatio,
                 formattedTotal = storageUiState.formattedTotal,
                 formattedFree = storageUiState.formattedFree,
-                reclaimableBytes = storageUiState.cleanSummary.totalReclaimableBytes,
+                onOpenTrash = onOpenTrash,
                 onBrowse = onBrowseInternal,
                 onInsights = onInsights,
-                onClean = if (storageUiState.cleanSummary.totalReclaimableBytes > 0) onClean else null,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
         }
@@ -287,43 +289,20 @@ fun BrowseHomePane(
         item(key = "browse_categories") {
             CategoryShortcutGrid(
                 storageUiState = storageUiState,
-                onCategory = onCategory,
+                onCategory = { if (it == FileCategory.APKS) onApps() else onCategory(it) },
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
         }
 
-        item(key = "browse_trash_header") {
-            FilesSectionHeader(title = stringResource(R.string.section_utilities))
-        }
-        item(key = "browse_apps") {
+        item(key = "browse_cleanup") {
+            FilesSectionHeader(title = stringResource(R.string.settings_cleaner_title))
             LocationRow(
-                title = stringResource(R.string.files_category_apps),
-                meta = if (storageUiState.userAppCount > 0) {
-                    "${storageUiState.userAppCount} installed · ${StorageVolume.formatBytes(storageUiState.userAppBytes)}"
-                } else {
-                    stringResource(R.string.apps_subtitle)
-                },
-                icon = Icons.Outlined.Storage,
-                onClick = onApps,
-                modifier = Modifier.padding(horizontal = 10.dp)
-            )
-        }
-        item(key = "browse_trash") {
-            LocationRow(
-                title = stringResource(R.string.menu_recycle_bin),
-                meta = if (trashCount > 0) stringResource(R.string.trash_meta_count, trashCount) else stringResource(R.string.trash_meta_empty),
+                title = stringResource(R.string.library_review_cleanup),
+                meta = StorageVolume.formatBytes(storageUiState.cleanSummary.totalReclaimableBytes),
                 icon = Icons.Outlined.DeleteSweep,
-                onClick = onOpenTrash,
+                onClick = onClean,
                 modifier = Modifier.padding(horizontal = 10.dp)
             )
-            if (trashCount == 0) {
-                Text(
-                    text = stringResource(R.string.trash_note),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = scheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                )
-            }
         }
     }
 }
@@ -339,7 +318,8 @@ private fun CategoryShortcutGrid(
         shortcutCategories.chunked(columns).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEach { type ->
-                    val stat = storageUiState.categories.firstOrNull { it.type == type }
+                    val statType = if (type == StorageCategoryType.APKS) StorageCategoryType.APPS else type
+                    val stat = storageUiState.categories.firstOrNull { it.type == statType }
                     CategoryTile(
                         type = type,
                         stat = stat,
@@ -356,62 +336,36 @@ private fun CategoryShortcutGrid(
 }
 
 @Composable
-private fun StorageBreakdown(
-    storageUiState: StorageAnalysisUiState,
-    limit: Int = 4
-) {
-    val scheme = MaterialTheme.colorScheme
+private fun StorageBreakdown(storageUiState: StorageAnalysisUiState) {
+    val colors = AppTheme.colors
+    val palette = listOf(colors.accent, colors.accentAmber, colors.accentCyan, colors.accentGreen, colors.accentPink)
     val entries = storageUiState.categories
-        .filter { it.type != StorageCategoryType.APPS && it.type != StorageCategoryType.SYSTEM_OTHER }
+        .filter { it.type != StorageCategoryType.DOWNLOADS && it.type != StorageCategoryType.LARGE_FILES }
         .sortedByDescending { it.bytes }
-        .take(limit)
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        if (entries.isEmpty()) {
-            Text(
-                text = stringResource(R.string.scanning_storage),
-                style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onSurfaceVariant
-            )
-        }
-        entries.forEach { stat ->
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = stat.type.icon,
-                        contentDescription = null,
-                        tint = scheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        text = stringResource(stat.type.titleRes),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = scheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Text(
-                        text = stat.formattedSize,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = scheme.onSurfaceVariant
-                    )
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+        if (entries.isNotEmpty() && storageUiState.totalBytes > 0) {
+            Column(Modifier.width(48.dp).height(260.dp).clip(AppRadius.pillShape)
+                .background(colors.surfaceMuted)) {
+                val free = storageUiState.freeBytes.toFloat() / storageUiState.totalBytes
+                if (free > 0f) Spacer(Modifier.weight(free.coerceAtMost(1f)))
+                entries.forEachIndexed { index, stat ->
+                    if (stat.percentageOfTotal > 0f) {
+                        Spacer(Modifier.weight(stat.percentageOfTotal.coerceAtMost(1f))
+                            .fillMaxWidth().background(palette[index % palette.size]))
+                    }
                 }
-                Spacer(Modifier.height(6.dp))
-                LinearProgressIndicator(
-                    progress = { stat.percentageOfUsed.coerceIn(0f, 1f).coerceAtLeast(0.02f) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp)
-                        .clip(CircleShape),
-                    color = scheme.tertiary,
-                    trackColor = scheme.surfaceVariant,
-                    gapSize = 0.dp,
-                    drawStopIndicator = {}
-                )
+            }
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            entries.forEachIndexed { index, stat ->
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Box(Modifier.size(9.dp).clip(CircleShape).background(palette[index % palette.size]))
+                    Column {
+                        Text(stringResource(stat.type.titleRes), style = AppTheme.typography.caption, color = colors.inkMuted)
+                        Text(stat.formattedSize, style = AppTheme.typography.bodyStrong, color = colors.ink)
+                    }
+                }
             }
         }
     }
@@ -455,7 +409,22 @@ fun DirectoryPane(
 
     // The ViewModel applies the document-type chip itself now, so the rows drawn here are exactly
     // the rows Select All selects and the count above the list reports.
-    val displayedItems = uiState.filteredItems
+    val isImagesCategory = uiState.activeCategory == FileCategory.IMAGES
+    var imageFolder by rememberSaveable(uiState.activeCategory) { mutableStateOf<String?>(null) }
+    val imageFolders = remember(isImagesCategory, uiState.items) {
+        if (isImagesCategory) uiState.items.mapNotNull { it.file.parent }.distinct().sorted()
+        else emptyList()
+    }
+    val displayedItems = remember(uiState.filteredItems, imageFolder, uiState.isSelectionMode) {
+        val folder = imageFolder
+        if (folder == null || uiState.isSelectionMode) uiState.filteredItems else uiState.filteredItems.filter { it.file.parent == folder }
+    }
+    val imageSections = remember(isImagesCategory, displayedItems, uiState.sortOrder) {
+        if (isImagesCategory && uiState.sortOrder.field == FileSortField.DATE) {
+            val formatter = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM)
+            displayedItems.groupBy { formatter.format(java.util.Date(it.lastModified)) }
+        } else emptyMap()
+    }
     val docCounts = remember(uiState.items, uiState.searchQuery) {
         documentTypeCounts(uiState.items, uiState.searchQuery)
     }
@@ -550,6 +519,21 @@ fun DirectoryPane(
             }
         }
 
+        if (isImagesCategory && imageFolders.size > 1 && !uiState.isSelectionMode) {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(selected = imageFolder == null, onClick = { imageFolder = null },
+                    label = { Text(stringResource(R.string.gallery_all_images)) })
+                imageFolders.forEach { folder ->
+                    FilterChip(selected = imageFolder == folder, onClick = { imageFolder = folder },
+                        label = { Text(java.io.File(folder).name) })
+                }
+            }
+        }
+
         // Reading these two fields outside the item lambdas keeps a row's recomposition
         // scoped to selection changes instead of every uiState change.
         val inSelectionMode = uiState.isSelectionMode
@@ -597,18 +581,24 @@ fun DirectoryPane(
                     .fillMaxWidth()
                     .then(hazeModifier)
             ) {
-                items(displayedItems, key = { it.path }) { item ->
-                    val selected = selectedFiles.contains(item.file)
-                    FileGridCell(
-                        item = item,
-                        isSelected = selected,
-                        isSelectionMode = inSelectionMode,
-                        onClick = {
-                            if (uiState.isSelectionMode) onToggleSelection(item) else onOpenItem(item)
-                        },
-                        onLongClick = { onToggleSelection(item) },
-                        onMoreClick = { onMoreItem(item) }
-                    )
+                val sections = imageSections.ifEmpty { mapOf("" to displayedItems) }
+                sections.forEach { (date, files) ->
+                    if (date.isNotEmpty()) item(key = "image_date_$date", span = { GridItemSpan(maxLineSpan) }) {
+                        FilesSectionHeader(title = date)
+                    }
+                    items(files, key = { it.path }) { item ->
+                        FileGridCell(
+                            item = item,
+                            isSelected = selectedFiles.contains(item.file),
+                            isSelectionMode = inSelectionMode,
+                            onClick = {
+                                if (inSelectionMode) onToggleSelection(item) else onOpenItem(item)
+                            },
+                            onLongClick = { onToggleSelection(item) },
+                            onMoreClick = { onMoreItem(item) },
+                            galleryTile = isImagesCategory
+                        )
+                    }
                 }
             }
         } else {
@@ -652,23 +642,22 @@ private fun sortLabel(field: FileSortField): String = when (field) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StorageInsightsSheet(
+fun StorageInsightsScreen(
     storageUiState: StorageAnalysisUiState,
     onDismiss: () -> Unit,
     onClean: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = scheme.surfaceContainerLow
-    ) {
+    androidx.activity.compose.BackHandler(onBack = onDismiss)
+    androidx.compose.material3.Surface(Modifier.fillMaxSize(), color = scheme.background) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .safeDrawingPadding()
                 .verticalScroll(rememberScrollState())
-                .navigationBarsPadding()
                 .padding(start = 24.dp, end = 24.dp, bottom = 28.dp)
         ) {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.viewer_back)) }
             Text(
                 text = stringResource(R.string.storage_insights),
                 style = MaterialTheme.typography.titleLarge,
@@ -676,7 +665,7 @@ fun StorageInsightsSheet(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = if (storageUiState.formattedTotal.isNotEmpty()) {
+                text = if (storageUiState.totalBytes > 0) {
                     "${storageUiState.formattedUsed} used of ${storageUiState.formattedTotal} · ${storageUiState.formattedFree} free"
                 } else {
                     stringResource(R.string.storage_calculating)
@@ -697,16 +686,15 @@ fun StorageInsightsSheet(
                 drawStopIndicator = {}
             )
             Spacer(Modifier.height(24.dp))
-            StorageBreakdown(storageUiState = storageUiState, limit = 10)
+            StorageBreakdown(storageUiState = storageUiState)
             val reclaimable = storageUiState.cleanSummary.totalReclaimableBytes
-            if (reclaimable > 0) {
-                Spacer(Modifier.height(24.dp))
-                Button(
-                    onClick = onClean,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(stringResource(R.string.storage_free_up, StorageVolume.formatBytes(reclaimable)))
-                }
+            Spacer(Modifier.height(24.dp))
+            Button(
+                onClick = onClean,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (reclaimable > 0) stringResource(R.string.storage_free_up, StorageVolume.formatBytes(reclaimable))
+                    else stringResource(R.string.settings_cleaner_title))
             }
         }
     }

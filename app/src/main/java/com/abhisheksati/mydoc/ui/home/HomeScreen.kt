@@ -117,6 +117,7 @@ fun HomeScreen(
 
     val resources = LocalResources.current
     val currentTab by viewModel.currentTab.collectAsStateWithLifecycle()
+    var libraryPageVisible by remember { mutableStateOf(false) }
     val selectedRecentUris by viewModel.selectedRecentUris.collectAsStateWithLifecycle()
 
     var showCameraScanner by remember { mutableStateOf(false) }
@@ -193,7 +194,7 @@ fun HomeScreen(
         val tabStateHolder = rememberSaveableStateHolder()
         val isPagerScrollEnabled = when {
             currentTab == HomeTab.HOME -> selectedRecentUris.isEmpty()
-            currentTab == HomeTab.LIBRARY -> !(fileManagerState.isSelectionMode || fileManagerState.isBrowsingStorage)
+            currentTab == HomeTab.LIBRARY -> !(libraryPageVisible || fileManagerState.isSelectionMode || fileManagerState.isBrowsingStorage)
             else -> true
         }
         CompositionLocalProvider(LocalFloatingChromeInset provides footerInset) {
@@ -263,6 +264,7 @@ fun HomeScreen(
                                 onOpenInTools = { viewModel.selectTab(HomeTab.TOOLS) },
                                 hazeState = libraryHazeState,
                                 glassMotion = libraryGlassMotion,
+                                onPageVisibilityChange = { libraryPageVisible = it },
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
@@ -459,15 +461,9 @@ fun HomeScreen(
                 }
             }
 
-            BottomNavBar(
+            if (currentTab != HomeTab.LIBRARY || !libraryPageVisible) BottomNavBar(
                 currentTab = currentTab,
-                onTabSelected = { tab ->
-                    val page = tabs.indexOf(tab)
-                    if (page >= 0 && page != pagerState.currentPage) {
-                        scope.launch { if (reducedMotion) pagerState.scrollToPage(page) else pagerState.animateScrollToPage(page) }
-                    }
-                    viewModel.selectTab(tab)
-                },
+                onTabSelected = viewModel::selectTab,
                 onScanClick = { documentScanner() },
                 hazeState = null,
                 motion = null
@@ -626,7 +622,11 @@ internal fun SyncTabPager(
         if (targetPage >= 0 &&
             (pagerState.currentPage != targetPage || pagerState.currentPageOffsetFraction != 0f)
         ) {
-            if (reducedMotion) pagerState.scrollToPage(targetPage) else pagerState.animateScrollToPage(
+            if (reducedMotion || kotlin.math.abs(pagerState.currentPage - targetPage) > 1) {
+                pagerState.scrollToPage(targetPage)
+                return@LaunchedEffect
+            }
+            pagerState.animateScrollToPage(
                 targetPage,
                 animationSpec = androidx.compose.animation.core.tween(
                     com.abhisheksati.mydoc.designsystem.animation.AppMotion.BASE,

@@ -18,6 +18,9 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
+import com.abhisheksati.mydoc.designsystem.components.SealMark
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 
 @Composable
 fun FirstRunGuide(onExplore: ()->Unit) {
@@ -53,7 +56,7 @@ fun OnboardingGuide(onDone: (Boolean)->Unit) {
     val icons=listOf(Icons.Outlined.FolderOpen,Icons.Outlined.Search,Icons.Outlined.CollectionsBookmark)
     Dialog(onDismissRequest={onDone(false)},properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
         val view = androidx.compose.ui.platform.LocalView.current
-        val dark = com.abhisheksati.mydoc.designsystem.tokens.AppTheme.isDark
+        val dark = AppTheme.isDark
         SideEffect {
             (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window?.let { window ->
                 androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
@@ -65,15 +68,18 @@ fun OnboardingGuide(onDone: (Boolean)->Unit) {
         Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background) {
             Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal=28.dp,vertical=16.dp)) {
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
-                    Text("MYDOC",style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.primary)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        SealMark(Modifier.size(32.dp))
+                        Text("MyDoc", style = AppTheme.typography.titleSmall, color = AppTheme.colors.ink)
+                    }
                     TextButton(onClick={onDone(false)}) { Text("Skip") }
                 }
                 Column(Modifier.weight(1f).verticalScroll(scrollState),verticalArrangement=Arrangement.spacedBy(22.dp)) {
                 Spacer(Modifier.height(20.dp))
-                Box(Modifier.size(88.dp).background(MaterialTheme.colorScheme.primaryContainer,CircleShape),contentAlignment=Alignment.Center) {
-                    Icon(icons[page],contentDescription=null,modifier=Modifier.size(40.dp),tint=MaterialTheme.colorScheme.onPrimaryContainer)
+                Box(Modifier.fillMaxWidth().height(112.dp).background(AppTheme.colors.surfaceMuted, AppRadius.cardShape),contentAlignment=Alignment.Center) {
+                    Icon(icons[page],contentDescription=null,modifier=Modifier.size(40.dp),tint = AppTheme.colors.accent)
                 }
-                Text(titles[page],style=MaterialTheme.typography.headlineMedium)
+                Text(titles[page], style = AppTheme.typography.title, color = AppTheme.colors.ink)
                 Text(bodies[page],style=MaterialTheme.typography.bodyLarge)
                 details[page].forEach { (title,description) ->
                     Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {

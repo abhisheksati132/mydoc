@@ -1,5 +1,8 @@
 package com.abhisheksati.mydoc.tools.ui
 
+import com.abhisheksati.mydoc.designsystem.components.PaperActionCard
+import androidx.compose.ui.platform.LocalDensity
+
 import androidx.compose.runtime.setValue
 import com.abhisheksati.mydoc.designsystem.components.LocalFloatingChromeInset
 import com.abhisheksati.mydoc.R
@@ -163,7 +166,13 @@ fun ToolsScreen(
     val visibleTools = remember(filteredTools, selectedGroup) {
         filteredTools.filter { selectedGroup == null || it.group == selectedGroup }
     }
-    val groupedTools = remember(visibleTools) { visibleTools.groupBy { it.group } }
+    val featured = if (searchQuery.isBlank() && selectedGroup == null) {
+        listOf(PdfTool.SCAN_TO_PDF, PdfTool.MERGE, PdfTool.SIGN_PDF, PdfTool.COMPRESS)
+    } else emptyList()
+    val groupedTools = remember(visibleTools, featured) {
+        visibleTools.filterNot { it in featured }.groupBy { it.group }
+    }
+    val featuredColumns = if (LocalDensity.current.fontScale >= 1.4f) 1 else 2
 
     Column(
         modifier = modifier
@@ -275,6 +284,33 @@ fun ToolsScreen(
                 .navigationBarsPadding(),
             contentPadding = PaddingValues(top = 8.dp, bottom = LocalFloatingChromeInset.current + 24.dp)
         ) {
+            if (featured.isNotEmpty()) {
+                item(key = "featured_tools_title") {
+                    Text(stringResource(R.string.tools_featured), style = AppTheme.typography.heading,
+                        color = colors.ink, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                }
+                featured.chunked(featuredColumns).forEach { row ->
+                    item(key = "featured_${row.first().name}") {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            row.forEach { tool ->
+                                val tone = when (tool) {
+                                    PdfTool.SCAN_TO_PDF -> colors.accentAmber
+                                    PdfTool.MERGE -> colors.accentCyan
+                                    PdfTool.SIGN_PDF -> colors.accent
+                                    else -> colors.accentGreen
+                                }
+                                PaperActionCard(
+                                    stringResource(tool.titleRes), tool.icon, { onToolClick(tool) },
+                                    modifier = Modifier.weight(1f),
+                                    description = stringResource(tool.descriptionRes),
+                                    tone = tone
+                                )
+                            }
+                        }
+                    }
+                }
+            }
             if (visibleTools.isEmpty()) {
                 item(key = "empty") {
                     ToolsEmptyState(

@@ -8,9 +8,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.abhisheksati.mydoc.data.local.PinnedFoldersManager
 import com.abhisheksati.mydoc.domain.model.StorageItem
-import com.abhisheksati.mydoc.ui.appmanager.AppManagerSheet
-import com.abhisheksati.mydoc.ui.cleaner.StorageCleanerSheet
-import com.abhisheksati.mydoc.ui.storage.StorageViewModel
 import com.abhisheksati.mydoc.viewmodel.FileManagerUiState
 import com.abhisheksati.mydoc.viewmodel.FileManagerViewModel
 import java.io.File
@@ -21,7 +18,6 @@ import java.io.File
 @Composable
 fun FileManagerOverlays(
     viewModel: FileManagerViewModel,
-    storageViewModel: StorageViewModel,
     uiState: FileManagerUiState,
     pinnedFoldersManager: PinnedFoldersManager,
     showNewFolderDialog: Boolean,
@@ -38,10 +34,6 @@ fun FileManagerOverlays(
     onDismissSingleCompress: () -> Unit,
     showExtractConfirmDialogForFile: File?,
     onDismissExtractConfirm: () -> Unit,
-    showStorageCleanerSheet: Boolean,
-    onDismissStorageCleaner: () -> Unit,
-    showAppManagerSheet: Boolean,
-    onDismissAppManager: () -> Unit,
     singleItemActionTarget: StorageItem?,
     onDismissSingleItemAction: () -> Unit,
     onRequestRename: (File) -> Unit,
@@ -148,34 +140,6 @@ fun FileManagerOverlays(
             onConfirm = {
                 onDismissExtractConfirm()
                 viewModel.extractArchive(file)
-            }
-        )
-    }
-
-    if (showStorageCleanerSheet) {
-        StorageCleanerSheet(
-            rootDir = android.os.Environment.getExternalStorageDirectory(),
-            onDismiss = {
-                onDismissStorageCleaner()
-                viewModel.refreshVolumes()
-                storageViewModel.refresh()
-                if (uiState.isBrowsingStorage) {
-                    viewModel.loadDirectory(uiState.currentDirectory, addToHistory = false)
-                }
-            },
-            onFileClick = { file ->
-                onDismissStorageCleaner()
-                onOpenFile(file)
-            }
-        )
-    }
-
-    if (showAppManagerSheet) {
-        AppManagerSheet(
-            onDismiss = {
-                onDismissAppManager()
-                viewModel.refreshVolumes()
-                storageViewModel.refresh()
             }
         )
     }

@@ -1,5 +1,7 @@
 package com.abhisheksati.mydoc.ui.appmanager
 
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.util.UserMessages
 import android.content.Context
@@ -16,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -35,14 +36,10 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
-import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
-import com.abhisheksati.mydoc.designsystem.components.GlassSurface
-import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import androidx.compose.material3.MaterialTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
-import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.tools.appmanager.AppInfoItem
 import com.abhisheksati.mydoc.tools.appmanager.AppManagerHelper
 import java.io.File
@@ -51,8 +48,9 @@ import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppManagerSheet(
-    onDismiss: () -> Unit
+fun AppManagerScreen(
+    onDismiss: () -> Unit,
+    onOpenApk: (java.io.File) -> Unit
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -64,65 +62,45 @@ fun AppManagerSheet(
     var apps by remember { mutableStateOf<List<AppInfoItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var searchQuery by remember { mutableStateOf("") }
-    var showSystemApps by remember { mutableStateOf(false) }
+    var tab by androidx.compose.runtime.saveable.rememberSaveable { mutableIntStateOf(0) }
+    val showSystemApps = tab == 1
+    var apkFiles by remember { mutableStateOf<List<com.abhisheksati.mydoc.domain.model.StorageItem>>(emptyList()) }
+    var largeAppsOnly by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var extractingPackage by remember { mutableStateOf<String?>(null) }
 
-    fun loadApps() {
-        coroutineScope.launch {
-            isLoading = true
-            apps = appHelper.getInstalledApps(includeSystemApps = showSystemApps)
-            isLoading = false
-        }
-    }
-
-    LaunchedEffect(showSystemApps) {
+    LaunchedEffect(tab) {
         // Run in the effect's own scope so a toggle cancels the prior scan instead of launching an
         // unowned coroutine that races it (stale list / isLoading).
         isLoading = true
-        apps = appHelper.getInstalledApps(includeSystemApps = showSystemApps)
+        if (tab == 2) {
+            apkFiles = (context.applicationContext as com.abhisheksati.mydoc.MyDocApp)
+                .storageRepository.queryCategory(com.abhisheksati.mydoc.domain.model.FileCategory.APKS)
+        } else {
+            apps = appHelper.getInstalledApps(includeSystemApps = showSystemApps)
+        }
         isLoading = false
     }
 
-    val filteredApps = remember(apps, searchQuery) {
-        if (searchQuery.isBlank()) apps
-        else apps.filter {
+    val filteredApps = remember(apps, searchQuery, showSystemApps, largeAppsOnly) {
+        apps.filter { it.isSystemApp == showSystemApps && (!largeAppsOnly || it.apkSize >= 100L * 1024L * 1024L) }.filter {
             it.appName.contains(searchQuery, ignoreCase = true) ||
             it.packageName.contains(searchQuery, ignoreCase = true)
-        }
+        }.sortedBy { it.appName.lowercase() }
     }
 
-    val isOled = LocalIsOled.current
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val filteredApks = remember(apkFiles, searchQuery) {
+        apkFiles.filter { it.name.contains(searchQuery, ignoreCase = true) }
+    }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = Color.Transparent,
-        scrimColor = colors.scrim.copy(alpha = 0.45f),
-        dragHandle = null,
-        modifier = Modifier.fillMaxHeight(0.92f)
+    androidx.activity.compose.BackHandler(onBack = onDismiss)
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = colors.background
     ) {
-        OverlaySystemBars()
-        GlassSurface(
-            shape = AppRadius.sheetShape,
-            elevation = 16.dp,
-            modifier = Modifier.fillMaxWidth().fillMaxHeight()
+        Column(
+            modifier = Modifier.fillMaxSize().safeDrawingPadding()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp)
-            ) {
-                // Tactile Glass Drag Handle
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .padding(top = 10.dp, bottom = 12.dp)
-                        .size(width = 36.dp, height = 4.dp)
-                        .clip(CircleShape)
-                        .background(colors.inkMuted.copy(alpha = 0.35f))
-                )
-
                 // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -130,37 +108,23 @@ fun AppManagerSheet(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(colors.accent.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Android,
-                            contentDescription = null,
-                            tint = colors.accent,
-                            modifier = Modifier.size(22.dp)
-                        )
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.viewer_back))
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(Modifier.width(8.dp))
                     Column {
                         Text(
-                            text = stringResource(R.string.app_manager_title),
+                            text = stringResource(R.string.files_category_apps),
                             style = typography.heading,
                             color = colors.textPrimary
                         )
                         Text(
-                            text = stringResource(R.string.app_count_found, filteredApps.size),
+                            text = if (tab == 2) stringResource(R.string.files_subtitle_many, filteredApks.size)
+                            else stringResource(R.string.app_count_found, filteredApps.size),
                             style = typography.caption,
                             color = colors.textSecondary
                         )
                     }
-                }
-
-                IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close), tint = colors.textSecondary)
                 }
             }
 
@@ -172,7 +136,7 @@ fun AppManagerSheet(
                 onValueChange = { searchQuery = it },
                 placeholder = {
                         Text(
-                            stringResource(R.string.app_manager_search),
+                            stringResource(if (tab == 2) R.string.apps_search_apks else R.string.app_manager_search),
                             color = colors.textSecondary,
                             style = AppTheme.typography.label
                         )
@@ -196,21 +160,31 @@ fun AppManagerSheet(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Toggle Chip for System Apps
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.End
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FilterChip(
+                    selected = tab == 0,
+                    onClick = { tab = 0 },
+                    label = { Text(stringResource(R.string.apps_installed_tab)) }
+                )
+                FilterChip(
                     selected = showSystemApps,
-                    onClick = { showSystemApps = !showSystemApps },
-                    label = { Text(stringResource(R.string.app_manager_include_system), style = AppTheme.typography.caption) },
-                    leadingIcon = {
-                        if (showSystemApps) {
-                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
-                        }
-                    }
+                    onClick = { tab = 1 },
+                    label = { Text(stringResource(R.string.apps_system_tab)) }
+                )
+                FilterChip(
+                    selected = tab == 2,
+                    onClick = { tab = 2 },
+                    label = { Text(stringResource(R.string.apps_install_files_tab)) }
+                )
+            }
+
+            if (tab != 2) {
+                FilterChip(
+                    selected = largeAppsOnly,
+                    onClick = { largeAppsOnly = !largeAppsOnly },
+                    label = { Text(stringResource(R.string.apps_large_filter)) }
                 )
             }
 
@@ -225,8 +199,32 @@ fun AppManagerSheet(
                 ) {
                     AppProgressIndicator()
                 }
+            } else if (tab == 2) {
+                if (filteredApks.isEmpty()) {
+                    com.abhisheksati.mydoc.ui.files.FilesEmptyState(
+                        icon = Icons.Outlined.Android,
+                        title = stringResource(R.string.apps_install_files_tab),
+                        message = stringResource(R.string.apps_no_install_files)
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        items(filteredApks, key = { it.path }) { item ->
+                            com.abhisheksati.mydoc.ui.files.LocationRow(
+                                title = item.name,
+                                meta = item.formattedSize,
+                                icon = Icons.Outlined.Android,
+                                onClick = { onOpenApk(item.file) }
+                            )
+                        }
+                    }
+                }
             } else if (filteredApps.isEmpty()) {
-                AppEmptyState(
+                com.abhisheksati.mydoc.ui.files.FilesEmptyState(
+                    icon = Icons.Outlined.Android,
+                    title = stringResource(R.string.files_category_apps),
                     message = if (searchQuery.isBlank()) {
                         stringResource(R.string.app_manager_empty)
                     } else {
@@ -283,7 +281,6 @@ fun AppManagerSheet(
         }
     }
 }
-}
 
 @Composable
 private fun AppListItem(
@@ -296,10 +293,10 @@ private fun AppListItem(
     val colors = AppTheme.colors
     val typography = AppTheme.typography
     val iconBitmap = remember(app.icon) { app.icon?.toImageBitmap() }
+    var actionsOpen by remember { mutableStateOf(false) }
 
-    GlassSurface(
-        shape = AppRadius.cardShape,
-        elevation = 2.dp,
+    Surface(
+        color = colors.background,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -381,41 +378,23 @@ private fun AppListItem(
             if (isExtracting) {
                 AppProgressIndicator()
             } else {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = onExtract,
-                        modifier = Modifier.size(com.abhisheksati.mydoc.designsystem.tokens.AppSpacing.minTouchTarget)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.FileDownload,
-                            contentDescription = stringResource(R.string.cd_extract_apk),
-                            tint = colors.accent,
-                            modifier = Modifier.size(20.dp)
-                        )
+                Box {
+                    IconButton(onClick = { actionsOpen = true }) {
+                        Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.cd_more_actions))
                     }
-
-                    IconButton(
-                        onClick = onShare,
-                        modifier = Modifier.size(com.abhisheksati.mydoc.designsystem.tokens.AppSpacing.minTouchTarget)
+                    com.abhisheksati.mydoc.designsystem.components.AppDropdownMenu(
+                        expanded = actionsOpen, onDismissRequest = { actionsOpen = false }
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Share,
-                            contentDescription = stringResource(R.string.cd_share_apk),
-                            tint = colors.textSecondary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    IconButton(
-                        onClick = onOpen,
-                        modifier = Modifier.size(com.abhisheksati.mydoc.designsystem.tokens.AppSpacing.minTouchTarget)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
-                            contentDescription = stringResource(R.string.cd_launch),
-                            tint = colors.textSecondary,
-                            modifier = Modifier.size(18.dp)
-                        )
+                        listOf(
+                            R.string.cd_launch to onOpen,
+                            R.string.cd_extract_apk to onExtract,
+                            R.string.cd_share_apk to onShare
+                        ).forEach { (label, action) ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(label)) },
+                                onClick = { actionsOpen = false; action() }
+                            )
+                        }
                     }
                 }
             }

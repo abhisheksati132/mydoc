@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Apps
-import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.FilterChip
@@ -34,8 +32,6 @@ fun SettingsStorageSection(
     onStartupTabChange: (HomeTab) -> Unit,
     onClearCacheClick: () -> Unit,
     onClearRecentClick: (() -> Unit)?,
-    onOpenStorageCleaner: (() -> Unit)? = null,
-    onOpenAppManager: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     SettingsCard(
@@ -59,28 +55,6 @@ fun SettingsStorageSection(
         }
 
         SettingsDivider(modifier = Modifier.padding(top = 12.dp))
-
-        if (onOpenStorageCleaner != null) {
-            SettingActionRow(
-                title = stringResource(R.string.settings_cleaner_title),
-                subtitle = stringResource(R.string.settings_cleaner_subtitle),
-                icon = Icons.Outlined.CleaningServices,
-                actionLabel = stringResource(R.string.settings_clean),
-                onAction = onOpenStorageCleaner
-            )
-            SettingsDivider()
-        }
-
-        if (onOpenAppManager != null) {
-            SettingActionRow(
-                title = stringResource(R.string.settings_app_manager_title),
-                subtitle = stringResource(R.string.settings_app_manager_subtitle),
-                icon = Icons.Outlined.Apps,
-                actionLabel = stringResource(R.string.settings_manage),
-                onAction = onOpenAppManager
-            )
-            SettingsDivider()
-        }
 
         val formattedCache = if (cacheSizeBytes < 1024) {
             "$cacheSizeBytes B"
@@ -115,7 +89,7 @@ fun SettingsStorageSection(
  * A settings row whose action is a text button on the right.
  */
 @Composable
-private fun SettingActionRow(
+internal fun SettingActionRow(
     title: String,
     subtitle: String,
     icon: ImageVector,

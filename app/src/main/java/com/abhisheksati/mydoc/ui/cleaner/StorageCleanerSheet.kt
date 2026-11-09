@@ -1,5 +1,7 @@
 package com.abhisheksati.mydoc.ui.cleaner
 
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+
 import kotlinx.coroutines.Dispatchers
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.getValue
@@ -39,7 +41,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
-import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.components.showMessage
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
@@ -52,7 +53,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StorageCleanerSheet(
+fun StorageCleanerScreen(
     rootDir: File,
     onDismiss: () -> Unit,
     onFileClick: (File) -> Unit = {}
@@ -106,7 +107,6 @@ fun StorageCleanerSheet(
     }
 
     val isOled = LocalIsOled.current
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val res = scanResult ?: StorageCleanScanResult()
     // Only the extra copies go; the kept original of every duplicate group stays.
@@ -129,35 +129,15 @@ fun StorageCleanerSheet(
             cleanDuplicates=duplicateKeepers.isNotEmpty()
         },onPreview={file ->showDuplicateReview=false;onFileClick(file)},onDismiss={showDuplicateReview=false})
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = Color.Transparent,
-        scrimColor = colors.scrim.copy(alpha = 0.45f),
-        dragHandle = null,
-        modifier = Modifier.fillMaxHeight(0.92f)
+    androidx.activity.compose.BackHandler(onBack = onDismiss)
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = colors.background
     ) {
-        OverlaySystemBars()
-        GlassSurface(
-            shape = AppRadius.sheetShape,
-            elevation = 16.dp,
-            modifier = Modifier.fillMaxWidth().fillMaxHeight()
+        Column(
+            modifier = Modifier.fillMaxSize().safeDrawingPadding()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 20.dp)
-            ) {
-                // Tactile Glass Drag Handle
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .padding(top = 10.dp, bottom = 12.dp)
-                        .size(width = 36.dp, height = 4.dp)
-                        .clip(CircleShape)
-                        .background(colors.inkMuted.copy(alpha = 0.35f))
-                )
-
                 // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -194,7 +174,7 @@ fun StorageCleanerSheet(
                     }
                 }
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close), tint = colors.textSecondary)
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.viewer_back), tint = colors.textSecondary)
                 }
             }
 
@@ -557,7 +537,6 @@ fun StorageCleanerSheet(
                 }
             }
         }
-    }
 
     if (showConfirm) {
         AlertDialog(

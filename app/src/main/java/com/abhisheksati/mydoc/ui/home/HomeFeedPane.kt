@@ -1,5 +1,7 @@
 package com.abhisheksati.mydoc.ui.home
 
+import com.abhisheksati.mydoc.designsystem.components.PaperActionCard
+
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import com.abhisheksati.mydoc.designsystem.components.LocalFloatingChromeInset
@@ -316,6 +318,22 @@ fun HomeFeedPane(
                 }
             }
 
+            if (heroItem != null || recentItems.isNotEmpty()) {
+                item(key = "home_primary_actions") {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        PaperActionCard(
+                            stringResource(R.string.home_action_open_title), Icons.Outlined.FolderOpen,
+                            onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        PaperActionCard(
+                            stringResource(R.string.home_action_scan_title), Icons.Outlined.CameraAlt,
+                            onClick = onScanClick, modifier = Modifier.weight(1f), tone = colors.accentAmber
+                        )
+                    }
+                }
+            }
+
             // RECENT DOCUMENTS SECTION
             if (remainingRecents.isNotEmpty()) {
                 item(key = "recents_header") {
@@ -415,24 +433,25 @@ private fun ContinueReadingHeroCard(
     val colors = AppTheme.colors
 
     GlassSurface(
-        shape = RoundedCornerShape(16.dp),
-        elevation = 3.dp,
+        shape = AppRadius.cardShape,
+        elevation = 2.dp,
+        backgroundColor = colors.surfaceMuted,
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(AppRadius.cardShape)
             .clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(18.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Real document page thumbnail with shared-element transition
             Box(
                 modifier = Modifier
-                    .size(width = 56.dp, height = 76.dp)
+                    .size(width = 72.dp, height = 100.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(colors.surfaceMuted)
                     .border(width = 1.dp, color = colors.cardBorder, shape = RoundedCornerShape(8.dp))

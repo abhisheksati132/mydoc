@@ -1,4 +1,5 @@
 <resources>
+    <string name="tools_featured">Start here</string>
     <string name="rendering_information">Rendering information</string>
     <string name="word_engine_licenses">Office engine licenses</string>
     <string name="app_name">MyDoc</string>
@@ -975,4 +976,28 @@
     <string name="dismiss_rendering_notice">Dismiss rendering notice</string>
     <string name="viewer_action_cell_grid">Cell grid</string>
     <string name="sheet_grid_layout_note">Cell grid shows stored values and supported styles. Charts, drawings and print layout are available in page view.</string>
+    <string name="apps_installed_tab">Installed apps</string>
+    <string name="apps_system_tab">System apps</string>
+    <string name="apps_install_files_tab">APK files</string>
+    <string name="apps_search_apks">Search install files</string>
+    <string name="apps_no_install_files">No install files here.</string>
+    <string name="gallery_all_images">All images</string>
+    <string name="library_review_cleanup">Review cleanup suggestions</string>
+    <string name="video_audio_tracks">Audio tracks</string>
+    <string name="video_subtitle_tracks">Subtitle tracks</string>
+    <string name="video_load_subtitle">Open subtitle file</string>
+    <string name="video_unsupported_subtitle">Choose an SRT, WebVTT, or TTML subtitle file.</string>
+    <string name="video_clear_loop">Clear A–B loop</string>
+    <string name="video_mark_loop_end">Set loop end (B)</string>
+    <string name="video_mark_loop_start">Set loop start (A)</string>
+    <string name="video_loop_end_invalid">Move at least half a second past A to set B.</string>
+    <string name="video_subtitles_off">Subtitles off</string>
+    <string name="video_track_auto">Automatic</string>
+    <string name="video_track_number">Track %1$d</string>
+    <string name="video_seek_interval">Double-tap skip interval</string>
+    <string name="video_seek_seconds">%1$d seconds</string>
+    <string name="video_change_seek_interval">Change</string>
+    <string name="video_skip_forward_seconds">Forward %1$d seconds</string>
+    <string name="video_skip_back_seconds">Back %1$d seconds</string>
+    <string name="apps_large_filter">Large apps · 100 MB+</string>
 </resources>

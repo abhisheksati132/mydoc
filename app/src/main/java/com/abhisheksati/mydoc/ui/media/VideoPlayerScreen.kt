@@ -14,6 +14,8 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -31,6 +33,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -55,6 +58,7 @@ import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.AspectRatio
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -98,6 +102,8 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem as ExoMediaItem
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.common.Tracks
+import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -144,7 +150,8 @@ fun VideoPlayerScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     autoResume: Boolean = true,
-    autoLoop: Boolean = true
+    autoLoop: Boolean = true,
+    seekSeconds: Int = 10
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -169,6 +176,11 @@ fun VideoPlayerScreen(
     var playerBounds by remember { mutableStateOf<Rect?>(null) }
     var orientationMode by remember { mutableIntStateOf(0) } // 0: Auto, 1: Landscape, 2: Portrait
     var isSpeedSheetOpen by remember { mutableStateOf(false) }
+    var playbackMenuOpen by remember { mutableStateOf(false) }
+    var selectedTrackType by remember { mutableStateOf<Int?>(null) }
+    var tracks by remember { mutableStateOf(Tracks.EMPTY) }
+    var loopStart by remember { mutableStateOf<Long?>(null) }
+    var loopEnd by remember { mutableStateOf<Long?>(null) }
 
     // Gesture feedback overlay state
     var gestureOverlayText by remember { mutableStateOf<String?>(null) }
@@ -206,8 +218,8 @@ fun VideoPlayerScreen(
     // Initialize Media3 ExoPlayer
     val exoPlayer = remember {
         ExoPlayer.Builder(context)
-            .setSeekBackIncrementMs(10000)
-            .setSeekForwardIncrementMs(10000)
+            .setSeekBackIncrementMs(seekSeconds * 1000L)
+            .setSeekForwardIncrementMs(seekSeconds * 1000L)
             .build().apply {
                 val mediaItem = ExoMediaItem.fromUri(item.uri)
                 setMediaItem(mediaItem)
@@ -242,8 +254,40 @@ fun VideoPlayerScreen(
     }
 
     // Track playback updates and auto-save position
+    val subtitlePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            val name = runCatching {
+                context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),
+                    null, null, null)?.use { if (it.moveToFirst()) it.getString(0) else null }
+            }.getOrNull().orEmpty()
+            val mime = when (name.substringAfterLast('.').lowercase(Locale.ROOT)) {
+                "srt" -> "application/x-subrip"
+                "vtt" -> "text/vtt"
+                "ttml", "dfxp" -> "application/ttml+xml"
+                else -> null
+            }
+            if (mime == null) {
+                context.showMessage(resources.getString(R.string.video_unsupported_subtitle))
+            } else {
+                val subtitle = ExoMediaItem.SubtitleConfiguration.Builder(uri)
+                    .setMimeType(mime).setLabel(name).setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build()
+                val media = exoPlayer.currentMediaItem?.buildUpon()
+                    ?.setSubtitleConfigurations(listOf(subtitle))?.build()
+                if (media != null) {
+                    exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters.buildUpon()
+                        .clearOverridesOfType(C.TRACK_TYPE_TEXT)
+                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).build()
+                    exoPlayer.setMediaItem(media, exoPlayer.currentPosition)
+                    exoPlayer.prepare()
+                }
+            }
+        }
+    }
+
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
+            override fun onTracksChanged(current: Tracks) { tracks = current }
+
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
             }
@@ -269,6 +313,9 @@ fun VideoPlayerScreen(
     LaunchedEffect(isPlaying) {
         while (isPlaying) {
             val position = exoPlayer.currentPosition
+            val start = loopStart
+            val end = loopEnd
+            if (start != null && end != null && position >= end) exoPlayer.seekTo(start)
             currentPositionMs = position
             checkpoints.checkpoint(position, exoPlayer.duration)
             delay(250)
@@ -289,8 +336,8 @@ fun VideoPlayerScreen(
     }
 
     // Auto-hide controls after 3.5 seconds of inactivity
-    LaunchedEffect(areControlsVisible, isPlaying) {
-        if (areControlsVisible && isPlaying && !isScreenLocked) {
+    LaunchedEffect(areControlsVisible, isPlaying, playbackMenuOpen, selectedTrackType) {
+        if (areControlsVisible && isPlaying && !isScreenLocked && !playbackMenuOpen && selectedTrackType == null) {
             delay(3500)
             areControlsVisible = false
         }
@@ -327,12 +374,12 @@ fun VideoPlayerScreen(
                             if (offset.x < size.width / 2f) {
                                 // Double tap left: rewind 10s
                                 exoPlayer.seekBack()
-                                gestureOverlayText = "-10s"
+                                gestureOverlayText = "-${seekSeconds}s"
                                 gestureOverlayIcon = Icons.Default.FastRewind
                             } else {
                                 // Double tap right: fast-forward 10s
                                 exoPlayer.seekForward()
-                                gestureOverlayText = "+10s"
+                                gestureOverlayText = "+${seekSeconds}s"
                                 gestureOverlayIcon = Icons.Default.FastForward
                             }
                             scope.launch {
@@ -534,13 +581,47 @@ fun VideoPlayerScreen(
                         Icon(Icons.Default.PictureInPicture, contentDescription = stringResource(R.string.cd_pip), tint = Color.White)
                     }
 
-                    // Share Video
-                    IconButton(onClick = {
-                        if (!shareFile(context, item.uri, item.mimeType, resources.getString(R.string.video_share_label))) {
-                            context.showMessage(resources.getString(R.string.video_no_share_app))
+                    Box {
+                        IconButton(onClick = { playbackMenuOpen = true }) {
+                            Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.cd_more_actions), tint = Color.White)
                         }
-                    }) {
-                        Icon(Icons.Default.Share, contentDescription = stringResource(R.string.action_share), tint = Color.White)
+                        com.abhisheksati.mydoc.designsystem.components.AppDropdownMenu(
+                            expanded = playbackMenuOpen, onDismissRequest = { playbackMenuOpen = false }
+                        ) {
+                            VideoMenuAction(R.string.video_audio_tracks) {
+                                playbackMenuOpen = false
+                                selectedTrackType = C.TRACK_TYPE_AUDIO
+                            }
+                            VideoMenuAction(R.string.video_subtitle_tracks) {
+                                playbackMenuOpen = false
+                                selectedTrackType = C.TRACK_TYPE_TEXT
+                            }
+                            VideoMenuAction(R.string.video_load_subtitle) {
+                                playbackMenuOpen = false
+                                subtitlePicker.launch(arrayOf("*/*"))
+                            }
+                            VideoMenuAction(when {
+                                loopEnd != null -> R.string.video_clear_loop
+                                loopStart != null -> R.string.video_mark_loop_end
+                                else -> R.string.video_mark_loop_start
+                            }) {
+                                playbackMenuOpen = false
+                                val start = loopStart
+                                val position = exoPlayer.currentPosition
+                                when {
+                                    loopEnd != null -> { loopStart = null; loopEnd = null }
+                                    start == null -> loopStart = position
+                                    position > start + 500L -> loopEnd = position
+                                    else -> context.showMessage(resources.getString(R.string.video_loop_end_invalid))
+                                }
+                            }
+                            VideoMenuAction(R.string.action_share) {
+                                playbackMenuOpen = false
+                                if (!shareFile(context, item.uri, item.mimeType, resources.getString(R.string.video_share_label))) {
+                                    context.showMessage(resources.getString(R.string.video_no_share_app))
+                                }
+                            }
+                        }
                     }
 
                     // Lock Screen Controls
@@ -565,7 +646,7 @@ fun VideoPlayerScreen(
                             .size(48.dp)
                             .background(Color.Black.copy(alpha = 0.5f), CircleShape)
                     ) {
-                        Icon(Icons.Default.FastRewind, contentDescription = stringResource(R.string.cd_back_10s), tint = Color.White, modifier = Modifier.size(28.dp))
+                        Icon(Icons.Default.FastRewind, contentDescription = stringResource(R.string.video_skip_back_seconds, seekSeconds), tint = Color.White, modifier = Modifier.size(28.dp))
                     }
 
                     IconButton(
@@ -594,7 +675,7 @@ fun VideoPlayerScreen(
                             .size(48.dp)
                             .background(Color.Black.copy(alpha = 0.5f), CircleShape)
                     ) {
-                        Icon(Icons.Default.FastForward, contentDescription = stringResource(R.string.cd_forward_10s), tint = Color.White, modifier = Modifier.size(28.dp))
+                        Icon(Icons.Default.FastForward, contentDescription = stringResource(R.string.video_skip_forward_seconds, seekSeconds), tint = Color.White, modifier = Modifier.size(28.dp))
                     }
                 }
 
@@ -691,8 +772,18 @@ fun VideoPlayerScreen(
     }
 
     // Playback Speed Selector Modal Bottom Sheet
+    selectedTrackType?.let { type ->
+        VideoTrackDialog(tracks, type, onDismiss = { selectedTrackType = null }) { track ->
+            val parameters = exoPlayer.trackSelectionParameters.buildUpon().clearOverridesOfType(type)
+                .setTrackTypeDisabled(type, track == null && type == C.TRACK_TYPE_TEXT)
+            if (track != null) parameters.setOverrideForType(TrackSelectionOverride(track.first.mediaTrackGroup, track.second))
+            exoPlayer.trackSelectionParameters = parameters.build()
+            selectedTrackType = null
+        }
+    }
+
     if (isSpeedSheetOpen) {
-        val speeds = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
+        val speeds = listOf(0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 2.5f, 3.0f)
         // Landscape gives a sheet about a fifth of the height it gets in portrait. Opening it
         // half-expanded and letting the list scroll is what keeps every speed reachable, and the
         // insets have to be paid on the sides as well as the bottom once the bars rotate.
@@ -757,4 +848,43 @@ private fun formatTime(millis: Long): String {
     } else {
         String.format(Locale.US, "%02d:%02d", minutes, seconds)
     }
+}
+
+@Composable
+private fun VideoMenuAction(label: Int, onClick: () -> Unit) {
+    androidx.compose.material3.DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = onClick)
+}
+
+@androidx.annotation.OptIn(UnstableApi::class)
+@Composable
+private fun VideoTrackDialog(
+    tracks: Tracks,
+    type: Int,
+    onDismiss: () -> Unit,
+    onSelect: (Pair<Tracks.Group, Int>?) -> Unit
+) {
+    val options = tracks.groups.filter { it.type == type }.flatMap { group ->
+        (0 until group.length).filter { group.isTrackSupported(it) }.map { group to it }
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(if (type == C.TRACK_TYPE_TEXT) R.string.video_subtitle_tracks else R.string.video_audio_tracks)) },
+        text = {
+            Column(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) {
+                VideoMenuAction(if (type == C.TRACK_TYPE_TEXT) R.string.video_subtitles_off else R.string.video_track_auto) { onSelect(null) }
+                options.forEachIndexed { number, (group, index) ->
+                    val format = group.getTrackFormat(index)
+                    val name = format.label ?: format.language?.let { Locale.forLanguageTag(it).displayLanguage }
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text(name ?: stringResource(R.string.video_track_number, number + 1)) },
+                        leadingIcon = {
+                            androidx.compose.material3.RadioButton(selected = group.isTrackSelected(index), onClick = null)
+                        },
+                        onClick = { onSelect(group to index) }
+                    )
+                }
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) } }
+    )
 }

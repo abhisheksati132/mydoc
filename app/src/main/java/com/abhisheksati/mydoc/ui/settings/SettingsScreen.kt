@@ -40,8 +40,6 @@ import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.data.local.SettingsRepository
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
 import com.abhisheksati.mydoc.designsystem.components.AppTopBar
-import com.abhisheksati.mydoc.ui.appmanager.AppManagerSheet
-import com.abhisheksati.mydoc.ui.cleaner.StorageCleanerSheet
 import com.abhisheksati.mydoc.update.UpdateManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -75,9 +73,7 @@ fun SettingsScreen(
     val hapticFeedbackEnabled by settingsRepository.isHapticFeedbackEnabled.collectAsState()
     val glassEffectMode by settingsRepository.glassEffectMode.collectAsState()
 
-    var showStorageCleaner by remember { mutableStateOf(false) }
     var showClearHistoryConfirmation by remember { mutableStateOf(false) }
-    var showAppManager by remember { mutableStateOf(false) }
 
     // READING
     val currentReadingMode by settingsRepository.defaultReadingMode.collectAsState()
@@ -89,6 +85,7 @@ fun SettingsScreen(
 
     // MEDIA
     val autoResumeVideo by settingsRepository.autoResumeVideo.collectAsState()
+    val videoSeekSeconds by settingsRepository.videoSeekSeconds.collectAsState()
     val videoAutoLoop by settingsRepository.videoAutoLoop.collectAsState()
 
     // LIBRARY
@@ -181,6 +178,8 @@ fun SettingsScreen(
                         SettingsMediaSection(
                             autoResumeVideo = autoResumeVideo,
                             videoAutoLoop = videoAutoLoop,
+                            videoSeekSeconds = videoSeekSeconds,
+                            onVideoSeekSecondsChange = settingsRepository::setVideoSeekSeconds,
                             onAutoResumeVideoChange = { settingsRepository.setAutoResumeVideo(it) },
                             onVideoAutoLoopChange = { settingsRepository.setVideoAutoLoop(it) }
                         )
@@ -214,8 +213,6 @@ fun SettingsScreen(
                                     showClearHistoryConfirmation = true
                                 }
                             },
-                            onOpenStorageCleaner = { showStorageCleaner = true },
-                            onOpenAppManager = { showAppManager = true }
                         )
                     }
 
@@ -286,20 +283,5 @@ fun SettingsScreen(
             )
         }
 
-        if (showStorageCleaner) {
-            StorageCleanerSheet(
-                rootDir = android.os.Environment.getExternalStorageDirectory(),
-                onDismiss = { showStorageCleaner = false },
-                onFileClick = {
-                    showStorageCleaner = false
-                }
-            )
-        }
-
-        if (showAppManager) {
-            AppManagerSheet(
-                onDismiss = { showAppManager = false }
-            )
-        }
     }
 }

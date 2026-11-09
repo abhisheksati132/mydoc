@@ -786,8 +786,16 @@ class FileManagerViewModel(
             _uiState.update {
                 it.copy(
                     activeCategory = category,
-                    sortOrder = categorySortOrder,
-                    isGridView = settingsRepository?.filesGridView?.value ?: false,
+                    sortOrder = when {
+                        it.activeCategory == category -> it.sortOrder
+                        category == FileCategory.IMAGES -> FileSortOrder(FileSortField.DATE, isAscending = false)
+                        else -> categorySortOrder
+                    },
+                    isGridView = when {
+                        it.activeCategory == category -> it.isGridView
+                        category == FileCategory.IMAGES -> true
+                        else -> settingsRepository?.filesGridView?.value ?: false
+                    },
                     isLoading = true,
                     isRefreshing = it.activeCategory == category && it.items.isNotEmpty(),
                     items = if (it.activeCategory == category) it.items else emptyList(),

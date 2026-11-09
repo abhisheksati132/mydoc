@@ -184,6 +184,7 @@ class MainActivity : ComponentActivity() {
             val glassEffectMode by app.settingsRepository.glassEffectMode.collectAsStateWithLifecycle()
             val hapticsEnabled by app.settingsRepository.isHapticFeedbackEnabled.collectAsStateWithLifecycle()
             val autoResumeVideo by app.settingsRepository.autoResumeVideo.collectAsStateWithLifecycle()
+            val videoSeekSeconds by app.settingsRepository.videoSeekSeconds.collectAsStateWithLifecycle()
             val videoAutoLoop by app.settingsRepository.videoAutoLoop.collectAsStateWithLifecycle()
             val isBiometricLockEnabled by app.settingsRepository.isBiometricLockEnabled.collectAsStateWithLifecycle()
             val isDark = when (themeMode) {
@@ -449,6 +450,7 @@ class MainActivity : ComponentActivity() {
                                                 mediaRepository = app.mediaRepository,
                                                 autoResume = autoResumeVideo,
                                                 autoLoop = videoAutoLoop,
+                                                seekSeconds = videoSeekSeconds,
                                                 onBackClick = { currentVideo = null }
                                             )
                                         }

@@ -45,6 +45,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -157,7 +158,8 @@ fun PresentationViewerScreen(
     onShareClick: () -> Unit,
     modifier: Modifier = Modifier,
     onSwipeToNextDocument: (() -> Unit)? = null,
-    onSwipeToPreviousDocument: (() -> Unit)? = null
+    onSwipeToPreviousDocument: (() -> Unit)? = null,
+    startInContinuousMode: Boolean = true
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -265,7 +267,7 @@ fun PresentationViewerScreen(
     val effectiveSlideCount = if (!isNativeEmpty) rawSlides.size else 0
     val pagerState = rememberPagerState(pageCount = { effectiveSlideCount.coerceAtLeast(1) })
     val lazyListState = rememberLazyListState()
-    var isContinuousVertical by remember { mutableStateOf(false) }
+    var isContinuousVertical by rememberSaveable(document.uri) { mutableStateOf(startInContinuousMode) }
     val effectiveSlides: List<PptxSlide> = if (!isNativeEmpty) rawSlides else emptyList()
 
     val currentSlideIndex by remember {

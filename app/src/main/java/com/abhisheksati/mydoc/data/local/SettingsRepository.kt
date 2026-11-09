@@ -84,6 +84,15 @@ class SettingsRepository(private val context: Context) {
     private val _volumeKeyPageTurning = MutableStateFlow(prefs.getBoolean(KEY_VOLUME_KEY_TURNING, true))
     val volumeKeyPageTurning: StateFlow<Boolean> = _volumeKeyPageTurning.asStateFlow()
 
+    private val _videoSeekSeconds = MutableStateFlow(prefs.getInt(KEY_VIDEO_SEEK_SECONDS, 10).coerceIn(5, 30))
+    val videoSeekSeconds = _videoSeekSeconds.asStateFlow()
+
+    fun setVideoSeekSeconds(seconds: Int) {
+        require(seconds in listOf(5, 10, 15, 30))
+        prefs.edit().putInt(KEY_VIDEO_SEEK_SECONDS, seconds).apply()
+        _videoSeekSeconds.value = seconds
+    }
+
     private val _videoAutoLoop = MutableStateFlow(prefs.getBoolean(KEY_VIDEO_AUTO_LOOP, true))
     val videoAutoLoop: StateFlow<Boolean> = _videoAutoLoop.asStateFlow()
 
@@ -339,6 +348,7 @@ class SettingsRepository(private val context: Context) {
         private const val KEY_SORT_ORDER = "document_sort_order"
         private const val KEY_BIOMETRIC_LOCK = "biometric_lock_enabled"
         private const val KEY_VOLUME_KEY_TURNING = "volume_key_turning"
+        private const val KEY_VIDEO_SEEK_SECONDS = "video_seek_seconds"
         private const val KEY_VIDEO_AUTO_LOOP = "video_auto_loop"
         private const val KEY_DOUBLE_TAP_ZOOM = "double_tap_zoom"
         private const val KEY_FILES_GRID_VIEW = "files_grid_view"

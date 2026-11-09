@@ -106,6 +106,7 @@ fun DocumentViewerScreen(
             onShareClick = onShareClick,
             onSwipeToNextDocument = onSwipeToNextDocument,
             onSwipeToPreviousDocument = onSwipeToPreviousDocument,
+            startInContinuousMode = false,
             modifier = modifier.fillMaxSize()
         )
         return

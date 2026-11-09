@@ -582,15 +582,29 @@ class FileManagerViewModelTest {
         createViewModel()
         viewModel.startBrowsingStorage(tempDir); advanceUntilIdle()
         viewModel.toggleViewMode(); viewModel.toggleSort(FileSortField.SIZE); advanceUntilIdle()
-        viewModel.exitToHub(); viewModel.selectCategory(FileCategory.IMAGES); advanceUntilIdle()
+        viewModel.exitToHub(); viewModel.selectCategory(FileCategory.DOCUMENTS); advanceUntilIdle()
         assertFalse(viewModel.uiState.value.isGridView)
         assertEquals(FileSortField.NAME, viewModel.uiState.value.sortOrder.field)
         viewModel.toggleSort(FileSortField.DATE); advanceUntilIdle()
         viewModel.loadDirectory(tempDir); advanceUntilIdle()
         assertTrue(viewModel.uiState.value.isGridView)
         assertEquals(FileSortField.SIZE, viewModel.uiState.value.sortOrder.field)
-        viewModel.selectCategory(FileCategory.IMAGES); advanceUntilIdle()
+        viewModel.selectCategory(FileCategory.DOCUMENTS); advanceUntilIdle()
         assertEquals(FileSortField.DATE, viewModel.uiState.value.sortOrder.field)
+    }
+
+    @Test fun imagesStartAsNewestFirstGalleryAndRefreshKeepsUserView() = runTest(testDispatcher) {
+        createViewModel()
+        viewModel.selectCategory(FileCategory.IMAGES); advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.isGridView)
+        assertEquals(FileSortField.DATE, viewModel.uiState.value.sortOrder.field)
+        assertFalse(viewModel.uiState.value.sortOrder.isAscending)
+
+        viewModel.toggleViewMode()
+        viewModel.toggleSort(FileSortField.NAME)
+        viewModel.selectCategory(FileCategory.IMAGES); advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isGridView)
+        assertEquals(FileSortField.NAME, viewModel.uiState.value.sortOrder.field)
     }
 
     @Test fun savedSearchWinsAgainstQueuedDirectoryLoad() = runTest(testDispatcher) {

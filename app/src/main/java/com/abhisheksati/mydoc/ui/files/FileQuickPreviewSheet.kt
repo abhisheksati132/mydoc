@@ -38,6 +38,7 @@ internal fun FileQuickPreviewSheet(
     val previewDescription = stringResource(R.string.quick_preview_thumbnail)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        containerColor = AppTheme.colors.surface,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(0.9f)) {
@@ -45,7 +46,7 @@ internal fun FileQuickPreviewSheet(
                 Modifier.fillMaxWidth().padding(start = AppSpacing.screenPadding, end = AppSpacing.small),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(stringResource(R.string.quick_preview_title), style = MaterialTheme.typography.headlineSmall,
+                Text(stringResource(R.string.quick_preview_title), style = AppTheme.typography.titleSmall,
                     modifier = Modifier.weight(1f).semantics { heading() })
                 IconButton(onClick = onDismiss) {
                     Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.quick_preview_close))
@@ -56,21 +57,10 @@ internal fun FileQuickPreviewSheet(
                 contentPadding = PaddingValues(AppSpacing.screenPadding),
                 verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)
             ) {
-                item(key = "thumbnail") {
-                    Box(
-                        Modifier.fillMaxWidth().height(180.dp).clip(AppRadius.cardShape)
-                            .background(scheme.surfaceContainerHigh)
-                            .clearAndSetSemantics { contentDescription = previewDescription },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (item.isDirectory) FolderPlate(size = 72)
-                        else StorageThumbnail(item, Modifier.fillMaxSize())
-                    }
-                }
                 item(key = "name") {
                     Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.small)) {
                         SelectionContainer {
-                            Text(item.name, style = AppTheme.typography.bodyLargeStrong,
+                            Text(item.name, style = AppTheme.typography.title,
                                 modifier = Modifier.semantics { heading() })
                         }
                         Text(stringResource(R.string.quick_preview_hint), style = MaterialTheme.typography.bodySmall,
@@ -94,6 +84,17 @@ internal fun FileQuickPreviewSheet(
                         }
                         Text(item.formattedSize, style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.align(Alignment.CenterVertically))
+                    }
+                }
+                item(key = "thumbnail") {
+                    Box(
+                        Modifier.fillMaxWidth().height(220.dp).clip(AppRadius.cardShape)
+                            .background(AppTheme.colors.surfaceMuted)
+                            .clearAndSetSemantics { contentDescription = previewDescription },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (item.isDirectory) FolderPlate(size = 72)
+                        else StorageThumbnail(item, Modifier.fillMaxSize())
                     }
                 }
                 if (item.formattedLastModified.isNotBlank()) item(key = "modified") {

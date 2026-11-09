@@ -52,7 +52,8 @@ fun FilesScreen(
     isActive: Boolean = true,
     onOpenInTools: ((File) -> Unit)? = null,
     hazeState: HazeState? = null,
-    glassMotion: GlassMotionState? = null
+    glassMotion: GlassMotionState? = null,
+    onPageVisibilityChange: (Boolean) -> Unit = {}
 ) {
     val app = LocalContext.current.applicationContext as MyDocApp
     val workspace: ExplorerWorkspaceViewModel = viewModel(key = "explorer-workspace", factory = remember(viewModel) {
@@ -133,6 +134,7 @@ fun FilesScreen(
                             FilesPaneScreen(tab.browser, homeViewModel, storageViewModel, onOpenFile, onLibraryItemClick,
                                 onLibraryItemDetails, onSettingsClick, onSpotlightSearch, isActive = isActive && (focused == tab.id || !wide),
                                 onOpenInTools = onOpenInTools, hazeState = hazeState, glassMotion = glassMotion,
+                                onPageVisibilityChange = onPageVisibilityChange,
                                 workspaceInsets = tabs.size > 1, onShowTransfers = { showTransfers = true },
                                 workspaceMenu = { closeMenu ->
                                     DropdownMenuItem(text = { Text(stringResource(R.string.saved_searches_title)) },

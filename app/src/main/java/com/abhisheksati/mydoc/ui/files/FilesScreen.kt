@@ -125,6 +125,7 @@ fun FilesPaneScreen(
     hazeState: dev.chrisbanes.haze.HazeState? = null,
     glassMotion: com.abhisheksati.mydoc.designsystem.components.GlassMotionState? = null,
     workspaceInsets: Boolean = false,
+    onPageVisibilityChange: (Boolean) -> Unit = {},
     onShowTransfers: () -> Unit = {},
     workspaceMenu: @Composable androidx.compose.foundation.layout.ColumnScope.(() -> Unit) -> Unit = {}
 ) {
@@ -271,6 +272,40 @@ fun FilesPaneScreen(
             }
             else -> viewModel.navigateUp()
         }
+    }
+
+    val hasDedicatedPage = showAppManager || showCleaner || showInsights
+    DisposableEffect(isActive, hasDedicatedPage) {
+        if (isActive) onPageVisibilityChange(hasDedicatedPage)
+        onDispose { if (isActive && hasDedicatedPage) onPageVisibilityChange(false) }
+    }
+
+    if (showAppManager) {
+        com.abhisheksati.mydoc.ui.appmanager.AppManagerScreen(
+            onDismiss = { showAppManager = false; storageViewModel.refresh() },
+            onOpenApk = { onOpenFile(it, null) }
+        )
+        return
+    }
+
+    if (showCleaner) {
+        com.abhisheksati.mydoc.ui.cleaner.StorageCleanerScreen(
+            rootDir = android.os.Environment.getExternalStorageDirectory(),
+            onDismiss = { showCleaner = false; storageViewModel.refresh(); viewModel.refreshVolumes() },
+            onFileClick = { file -> showCleaner = false; onOpenFile(file, null) }
+        )
+        return
+    }
+    if (showInsights) {
+        StorageInsightsScreen(
+            storageUiState = storageUiState,
+            onDismiss = { showInsights = false },
+            onClean = {
+                showInsights = false
+                showCleaner = true
+            }
+        )
+        return
     }
 
     val breadcrumbs: List<Pair<String, () -> Unit>> = when {
@@ -462,7 +497,6 @@ fun FilesPaneScreen(
                                     storageUiState = storageUiState,
                                     volumes = storageUiState.volumes.ifEmpty { uiState.storageVolumes },
                                     pinnedFolders = pinnedFolders,
-                                    trashCount = uiState.trashItems.size,
                                     onBrowseInternal = {
                                         viewModel.startBrowsingStorage()
                                     },
@@ -526,7 +560,6 @@ fun FilesPaneScreen(
 
     FileManagerOverlays(
         viewModel = viewModel,
-        storageViewModel = storageViewModel,
         uiState = uiState,
         pinnedFoldersManager = pinnedFoldersManager,
         showNewFolderDialog = showNewFolderDialog,
@@ -543,13 +576,6 @@ fun FilesPaneScreen(
         onDismissSingleCompress = {},
         showExtractConfirmDialogForFile = null,
         onDismissExtractConfirm = {},
-        showStorageCleanerSheet = showCleaner,
-        onDismissStorageCleaner = {
-            showCleaner = false
-            storageViewModel.refresh()
-        },
-        showAppManagerSheet = showAppManager,
-        onDismissAppManager = { showAppManager = false },
         singleItemActionTarget = actionTarget,
         onDismissSingleItemAction = { actionTarget = null },
         onRequestRename = { renameTarget = it },
@@ -603,16 +629,7 @@ fun FilesPaneScreen(
         confirmButton = { androidx.compose.material3.TextButton(onClick = { showRenameRecovery = false }) { Text(stringResource(R.string.action_cancel)) } }
     )
 
-    if (showInsights) {
-        StorageInsightsSheet(
-            storageUiState = storageUiState,
-            onDismiss = { showInsights = false },
-            onClean = {
-                showInsights = false
-                showCleaner = true
-            }
-        )
-    }
+
 }
 
 @Composable
@@ -632,6 +649,7 @@ private fun FilesHeader(
     onOpenTrash: () -> Unit,
     onRefresh: () -> Unit,
     workspaceInsets: Boolean = false,
+    onPageVisibilityChange: (Boolean) -> Unit = {},
     onAdvancedSearch: () -> Unit = {},
     onFolderInsights: () -> Unit = {},
     onResetFolderView: () -> Unit = {},

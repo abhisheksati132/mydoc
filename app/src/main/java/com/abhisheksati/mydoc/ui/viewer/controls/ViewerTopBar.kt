@@ -2,8 +2,8 @@ package com.abhisheksati.mydoc.ui.viewer.controls
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -49,6 +49,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.animation.AppMotion
+import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
@@ -83,25 +85,29 @@ fun ViewerTopBar(
     hazeState: dev.chrisbanes.haze.HazeState? = null
 ) {
     val colors = AppTheme.colors
+    val reducedMotion = LocalReducedMotion.current
     var isMoreMenuOpen by remember { mutableStateOf(false) }
 
     AnimatedVisibility(
         visible = visible,
-        enter = slideInVertically(
+        enter = if (reducedMotion) EnterTransition.None else slideInVertically(
             initialOffsetY = { -it },
-            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-        ) + fadeIn(spring(stiffness = Spring.StiffnessMediumLow)),
-        exit = slideOutVertically(
+            animationSpec = AppMotion.snappy()
+        ) + fadeIn(AppMotion.fadeFast),
+        exit = if (reducedMotion) ExitTransition.None else slideOutVertically(
             targetOffsetY = { -it },
-            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-        ) + fadeOut(spring(stiffness = Spring.StiffnessMediumLow)),
+            animationSpec = AppMotion.snappy()
+        ) + fadeOut(AppMotion.fadeFast),
         modifier = modifier
     ) {
         AnimatedContent(
             targetState = isCondensed,
             transitionSpec = {
-                fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) togetherWith
-                    fadeOut(spring(stiffness = Spring.StiffnessMediumLow))
+                if (reducedMotion) {
+                    EnterTransition.None togetherWith ExitTransition.None using null
+                } else {
+                    fadeIn(AppMotion.fadeFast) togetherWith fadeOut(AppMotion.fadeFast)
+                }
             },
             label = "ViewerTopBarCondense"
         ) { condensed ->

@@ -69,6 +69,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.domain.model.StorageItem
 import com.abhisheksati.mydoc.domain.model.StorageVolume
@@ -117,16 +118,19 @@ fun StorageOverviewCard(
     usedRatio: Float,
     formattedTotal: String,
     formattedFree: String,
-    reclaimableBytes: Long,
+    onOpenTrash: () -> Unit,
     onBrowse: () -> Unit,
     onInsights: () -> Unit,
-    onClean: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
     Card(modifier = modifier.fillMaxWidth(), shape = AppRadius.largeShape,
         colors = CardDefaults.cardColors(containerColor = scheme.surface)) {
         Column(Modifier.padding(12.dp)) {
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onInsights) { Text(stringResource(R.string.files_insights)) }
+                TextButton(onClick = onOpenTrash) { Text(stringResource(R.string.menu_recycle_bin)) }
+            }
             Row(Modifier.fillMaxWidth().clip(AppRadius.cardShape).clickable(onClick = onBrowse).padding(4.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Icon(Icons.Outlined.Folder, contentDescription = null, modifier = Modifier.size(24.dp), tint = scheme.primary)
@@ -140,12 +144,7 @@ fun StorageOverviewCard(
             LinearProgressIndicator(progress = { usedRatio.coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(4.dp).clip(CircleShape),
                 color = scheme.primary, trackColor = scheme.surfaceVariant, gapSize = 0.dp, drawStopIndicator = {})
-            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onInsights) { Text(stringResource(R.string.files_insights)) }
-                if (reclaimableBytes > 0 && onClean != null) TextButton(onClick = onClean) {
-                    Text(stringResource(R.string.files_free, StorageVolume.formatBytes(reclaimableBytes)))
-                }
-            }
+
         }
     }
 }
@@ -182,7 +181,7 @@ fun CategoryTile(
             }
             Spacer(Modifier.height(10.dp))
             Text(
-                text = stringResource(type.titleRes),
+                text = stringResource(if (type == StorageCategoryType.APKS) R.string.files_category_apps else type.titleRes),
                 style = MaterialTheme.typography.bodyMedium,
                 color = scheme.onSurface,
                 maxLines = 1,
@@ -284,7 +283,7 @@ fun FileRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = item.name,
-                style = MaterialTheme.typography.bodyLarge,
+                style = AppTheme.typography.bodyLargeStrong,
                 color = scheme.onSurface,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -296,7 +295,7 @@ fun FileRow(
                 } else {
                     listOf(item.formattedSize, item.formattedLastModified).filter { it.isNotBlank() }.joinToString(" · ")
                 },
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTheme.typography.caption,
                 color = scheme.onSurfaceVariant
             )
         }
@@ -329,7 +328,8 @@ fun FileGridCell(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onMoreClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    galleryTile: Boolean = false
 ) {
     val scheme = MaterialTheme.colorScheme
     val haptics = rememberAppHaptics()
@@ -395,6 +395,17 @@ fun FileGridCell(
                 }
             }
 
+            if (galleryTile && !isSelectionMode) {
+                Text(
+                    text = item.formattedSize,
+                    style = AppTheme.typography.caption,
+                    color = androidx.compose.ui.graphics.Color.White,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(6.dp)
+                        .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.66f), CircleShape)
+                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                )
+            }
+
             if (isSelectionMode) {
                 Icon(
                     imageVector = if (isSelected) Icons.Rounded.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
@@ -406,7 +417,7 @@ fun FileGridCell(
                         .size(22.dp)
                         .background(scheme.surface, CircleShape)
                 )
-            } else {
+            } else if (!galleryTile) {
                 IconButton(
                     onClick = onMoreClick,
                     modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(48.dp)
@@ -418,6 +429,7 @@ fun FileGridCell(
                 }
             }
         }
+        if (galleryTile) return@Column
         Spacer(Modifier.height(8.dp))
         Text(
             text = item.name,
@@ -504,15 +516,7 @@ fun FilesEmptyState(
             .padding(horizontal = 32.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            modifier = Modifier
-                .size(64.dp)
-                .clip(CircleShape)
-                .background(scheme.surfaceContainerHigh),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, contentDescription = null, tint = scheme.onSurfaceVariant, modifier = Modifier.size(28.dp))
-        }
+        com.abhisheksati.mydoc.designsystem.components.PaperCompanion(icon)
         Spacer(Modifier.height(16.dp))
         Text(
             text = title,
