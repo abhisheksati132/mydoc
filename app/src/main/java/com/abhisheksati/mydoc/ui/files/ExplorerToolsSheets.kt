@@ -1,5 +1,7 @@
 package com.abhisheksati.mydoc.ui.files
 
+import com.abhisheksati.mydoc.designsystem.components.AppAlertDialog
+import com.abhisheksati.mydoc.designsystem.components.AppModalSheet
 import android.text.format.Formatter
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
@@ -48,7 +50,7 @@ fun ExplorerArchiveSheet(file: File, onDismiss: () -> Unit, onExtract: () -> Uni
         catch (e: CancellationException) { throw e }
         catch (_: Exception) { failed = true }
     }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    AppModalSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         BackHandler(enabled = folder.isNotEmpty()) { folder = folder.removeSuffix("/").substringBeforeLast('/', "").let { if (it.isEmpty()) "" else "$it/" }; query = "" }
         val listState = androidx.compose.foundation.lazy.rememberLazyListState()
         LaunchedEffect(folder) { listState.scrollToItem(0) }
@@ -103,7 +105,7 @@ fun ExplorerArchiveSheet(file: File, onDismiss: () -> Unit, onExtract: () -> Uni
         }
     }
 
-    if (confirm) AlertDialog(onDismissRequest = { confirm = false },
+    if (confirm) AppAlertDialog(onDismissRequest = { confirm = false },
         title = { Text(stringResource(if (selected.isNotEmpty()) R.string.zip_extract_selected else R.string.archive_extract_all)) },
         text = { Text(if (selected.isNotEmpty()) stringResource(R.string.zip_selected_confirm, selected.size) else stringResource(R.string.archive_confirm, file.name)) },
         confirmButton = { TextButton(enabled = canExtract, onClick = {
@@ -123,7 +125,7 @@ fun ExplorerFolderInsightsSheet(directory: File, onDismiss: () -> Unit, onOpenFo
         catch (e: CancellationException) { throw e }
         catch (_: Exception) { failed = true }
     }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    AppModalSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(0.88f).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item {
                 Text(stringResource(R.string.folder_insights_title), style = MaterialTheme.typography.headlineSmall)
@@ -165,7 +167,7 @@ fun ExplorerFolderInsightsSheet(directory: File, onDismiss: () -> Unit, onOpenFo
 @Composable
 fun ExplorerTransfersSheet(center: ExplorerTransfers, onOpenDestination: ((File) -> Unit)? = null, onDismiss: () -> Unit) {
     val transfers by center.state.collectAsState()
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    AppModalSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(0.8f).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 Text(stringResource(R.string.transfers_title), style = MaterialTheme.typography.headlineSmall)

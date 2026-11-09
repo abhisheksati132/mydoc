@@ -8,6 +8,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
+import dev.chrisbanes.haze.hazeSource
+import com.abhisheksati.mydoc.designsystem.components.LocalGlassEffectMode
+import com.abhisheksati.mydoc.designsystem.components.LocalGlassEnvironment
+import com.abhisheksati.mydoc.designsystem.components.shouldUseLiveGlass
+import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,11 +39,8 @@ import com.abhisheksati.mydoc.designsystem.components.showMessage
 import com.abhisheksati.mydoc.util.openFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.domain.model.ReadingPrefs
-import com.abhisheksati.mydoc.domain.model.RenderFidelity
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import com.abhisheksati.mydoc.ui.home.DocumentDetailsDialog
-import com.abhisheksati.mydoc.ui.viewer.FidelityNotice
-import com.abhisheksati.mydoc.ui.viewer.fidelityDisclosureFor
 import androidx.core.net.toUri
 import kotlinx.coroutines.launch
 
@@ -138,8 +140,6 @@ fun ViewerScaffold(
     searchOverlay: @Composable (BoxScope.() -> Unit)? = null,
     ttsBar: @Composable (BoxScope.() -> Unit)? = null,
     passwordDialog: @Composable (() -> Unit)? = null,
-    observedFidelity: RenderFidelity? = null,
-    fidelityNotes: List<String> = emptyList(),
     content: @Composable BoxScope.() -> Unit
 ) {
     val context = LocalContext.current
@@ -216,17 +216,18 @@ fun ViewerScaffold(
 
     val backgroundColor = ViewerThemeTokens.getBackgroundColor(readingPrefs.readingMode, isDark, colors.surface)
 
-    val fidelityDisclosure = remember(document.extension, observedFidelity, fidelityNotes) {
-        fidelityDisclosureFor(document.extension, observedFidelity, fidelityNotes.toList())
-    }
-
+    val readerHaze = remember { dev.chrisbanes.haze.HazeState() }
+    val liveReaderGlass = isControlsVisible && !LocalReducedMotion.current &&
+        LocalGlassEffectMode.current == com.abhisheksati.mydoc.designsystem.components.GlassEffectMode.ON &&
+        shouldUseLiveGlass(LocalGlassEffectMode.current, LocalGlassEnvironment.current)
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(backgroundColor)
     ) {
-        // Main viewer content slot
-        content()
+        // Capture the page alone, so controls never refract themselves.
+        Box(Modifier.matchParentSize().then(if (liveReaderGlass) Modifier.hazeSource(readerHaze) else Modifier),
+            content = content)
 
         // Top Bar
         ViewerTopBar(
@@ -262,17 +263,6 @@ fun ViewerScaffold(
 
         // Sits under the bar and hides with it, so a scraped .doc tells the reader the truth
         // without permanently covering the page.
-        if (fidelityDisclosure != null && isControlsVisible) {
-            FidelityNotice(
-                disclosure = fidelityDisclosure,
-                dismissalKey = document.uri,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .statusBarsPadding()
-                    .padding(top = ViewerChrome.topBarHeight)
-            )
-        }
-
         // Bottom Bar
         ViewerBottomBar(
             currentPage = currentPage,
@@ -288,7 +278,8 @@ fun ViewerScaffold(
             onPageScrubbed = { targetPage -> onPageScrubbed?.invoke(targetPage) },
             sheetItems = sheetItems,
             onSheetSelect = onSheetSelect,
-            modifier = Modifier.align(Alignment.BottomCenter)
+            modifier = Modifier.align(Alignment.BottomCenter),
+            hazeState = readerHaze.takeIf { liveReaderGlass }
         )
 
         // Floating TTS controller slot

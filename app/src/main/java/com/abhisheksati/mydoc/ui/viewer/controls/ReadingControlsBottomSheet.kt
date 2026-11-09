@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
+import com.abhisheksati.mydoc.designsystem.components.AppModalSheet
 import com.abhisheksati.mydoc.R
 import android.app.Activity
 import android.content.pm.ActivityInfo
@@ -40,7 +41,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -109,7 +109,7 @@ fun ReadingControlsBottomSheet(
     val resources = LocalResources.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(
+    AppModalSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,

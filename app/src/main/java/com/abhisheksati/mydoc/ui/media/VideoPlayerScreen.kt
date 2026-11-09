@@ -1,5 +1,7 @@
 package com.abhisheksati.mydoc.ui.media
 
+import com.abhisheksati.mydoc.designsystem.components.AppAlertDialog
+import com.abhisheksati.mydoc.designsystem.components.AppModalSheet
 import com.abhisheksati.mydoc.R
 import android.app.Activity
 import android.app.PictureInPictureParams
@@ -63,7 +65,6 @@ import androidx.compose.material.icons.outlined.AspectRatio
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -841,7 +842,7 @@ fun VideoPlayerScreen(
 
     // Playback Speed Selector Modal Bottom Sheet
     if (showQueue) {
-        androidx.compose.material3.AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showQueue = false },
             title = { Text(stringResource(R.string.video_queue)) },
             text = {
@@ -882,7 +883,7 @@ fun VideoPlayerScreen(
     }
 
     if (playbackFailed) {
-        androidx.compose.material3.AlertDialog(
+        AppAlertDialog(
             onDismissRequest = onBackClick,
             title = { Text(stringResource(R.string.video_cannot_play)) },
             text = { Text(stringResource(R.string.video_retry_help)) },
@@ -916,7 +917,7 @@ fun VideoPlayerScreen(
         // Landscape gives a sheet about a fifth of the height it gets in portrait. Opening it
         // half-expanded and letting the list scroll is what keeps every speed reachable, and the
         // insets have to be paid on the sides as well as the bottom once the bars rotate.
-        ModalBottomSheet(
+        AppModalSheet(
             onDismissRequest = { isSpeedSheetOpen = false },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             containerColor = DarkAppColors.surface,
@@ -995,7 +996,7 @@ private fun VideoTrackDialog(
     val options = tracks.groups.filter { it.type == type }.flatMap { group ->
         (0 until group.length).filter { group.isTrackSupported(it) }.map { group to it }
     }
-    androidx.compose.material3.AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(if (type == C.TRACK_TYPE_TEXT) R.string.video_subtitle_tracks else R.string.video_audio_tracks)) },
         text = {
@@ -1028,7 +1029,7 @@ private fun videoSourceLabel(item: MediaItem, uri: android.net.Uri): String = wh
 private fun NetworkVideoDialog(onDismiss: () -> Unit, onOpen: (android.net.Uri) -> Unit) {
     var input by remember { mutableStateOf("") }
     var invalid by remember { mutableStateOf(false) }
-    androidx.compose.material3.AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.video_network_stream)) },
         text = {

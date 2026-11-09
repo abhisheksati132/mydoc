@@ -1,8 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -51,6 +49,11 @@ import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppSlider
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
+import com.abhisheksati.mydoc.designsystem.animation.AppMotion
+import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.foundation.layout.heightIn
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
@@ -84,19 +87,20 @@ fun ViewerBottomBar(
 ) {
     val colors = AppTheme.colors
 
+    val reducedMotion = LocalReducedMotion.current
     var isDragging by remember { mutableStateOf(false) }
     var scrubPage by remember(currentPage) { mutableFloatStateOf(currentPage.toFloat()) }
 
     AnimatedVisibility(
         visible = visible,
-        enter = slideInVertically(
-            initialOffsetY = { it },
-            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-        ) + fadeIn(spring(stiffness = Spring.StiffnessMediumLow)),
-        exit = slideOutVertically(
-            targetOffsetY = { it },
-            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-        ) + fadeOut(spring(stiffness = Spring.StiffnessMediumLow)),
+        enter = if (reducedMotion) EnterTransition.None else slideInVertically(
+            initialOffsetY = { it / 3 },
+            animationSpec = AppMotion.snappy()
+        ) + fadeIn(AppMotion.snappy()),
+        exit = if (reducedMotion) ExitTransition.None else slideOutVertically(
+            targetOffsetY = { it / 3 },
+            animationSpec = AppMotion.snappy()
+        ) + fadeOut(AppMotion.snappy()),
         modifier = modifier
     ) {
         GlassSurface(
@@ -143,8 +147,8 @@ fun ViewerBottomBar(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(18.dp),
-                            enter = fadeIn(spring(stiffness = Spring.StiffnessMedium)),
-                            exit = fadeOut(spring(stiffness = Spring.StiffnessMedium))
+                            enter = if (reducedMotion) EnterTransition.None else fadeIn(AppMotion.fadeFast),
+                            exit = if (reducedMotion) ExitTransition.None else fadeOut(AppMotion.fadeFast)
                         ) {
                             Box(
                                 modifier = Modifier.fillMaxWidth(),
@@ -190,7 +194,7 @@ fun ViewerBottomBar(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(60.dp)
+                        .heightIn(min = 60.dp)
                         .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -280,7 +284,7 @@ private fun BottomBarActionButton(
 
     Column(
         modifier = modifier
-            .height(56.dp)
+            .heightIn(min = 56.dp)
             .clickable(
                 enabled = enabled,
                 interactionSource = remember { MutableInteractionSource() },
@@ -301,7 +305,8 @@ private fun BottomBarActionButton(
         Text(
             text = label,
             style = AppTheme.typography.caption,
-            color = contentColor
+            color = contentColor,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
     }
 }

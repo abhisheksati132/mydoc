@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
+import com.abhisheksati.mydoc.designsystem.components.AppAlertDialog
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import androidx.compose.foundation.layout.Column
@@ -8,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -49,7 +49,7 @@ fun PageJumpDialog(
         }
     }
 
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(

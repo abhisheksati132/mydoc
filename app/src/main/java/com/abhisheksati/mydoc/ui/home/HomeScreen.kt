@@ -1,6 +1,7 @@
 package com.abhisheksati.mydoc.ui.home
 
 import com.abhisheksati.mydoc.R
+import com.abhisheksati.mydoc.designsystem.components.AppAlertDialog
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -201,7 +202,7 @@ fun HomeScreen(
         CompositionLocalProvider(LocalFloatingChromeInset provides footerInset) {
             HorizontalPager(
                 state = pagerState,
-                beyondViewportPageCount = 1,
+                beyondViewportPageCount = 0,
                 userScrollEnabled = isPagerScrollEnabled,
                 modifier = Modifier.fillMaxSize()
             ) { page ->
@@ -470,8 +471,11 @@ fun HomeScreen(
                 currentTab = currentTab,
                 onTabSelected = viewModel::selectTab,
                 onScanClick = { documentScanner() },
-                hazeState = null,
-                motion = null
+                hazeState = if (reducedMotion || pagerState.isScrollInProgress) null else when (currentTab) {
+                    HomeTab.HOME -> homeHazeState
+                    HomeTab.LIBRARY -> libraryHazeState
+                    HomeTab.TOOLS -> toolsHazeState
+                }
             )
         }
     }
@@ -521,7 +525,7 @@ fun HomeScreen(
             "txt", "md", "csv", "json", "xml", "log" -> listOf(PdfTool.TEXT_TO_PDF)
             else -> emptyList()
         }
-        androidx.compose.material3.AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { toolSource = null },
             title = { Text(source.name, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
             text = {
@@ -663,10 +667,7 @@ internal fun SyncTabPager(
             }
             pagerState.animateScrollToPage(
                 targetPage,
-                animationSpec = androidx.compose.animation.core.tween(
-                    com.abhisheksati.mydoc.designsystem.animation.AppMotion.BASE,
-                    easing = androidx.compose.animation.core.FastOutSlowInEasing
-                )
+                animationSpec = com.abhisheksati.mydoc.designsystem.animation.AppMotion.snappy()
             )
         }
     }

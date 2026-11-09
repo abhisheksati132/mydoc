@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.files
 
+import com.abhisheksati.mydoc.designsystem.components.AppAlertDialog
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppTopBar
 import androidx.compose.foundation.BorderStroke
@@ -31,7 +32,6 @@ import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.Restore
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -233,7 +233,7 @@ fun TrashBinSheet(
     }
 
     if (showEmptyConfirmDialog) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showEmptyConfirmDialog = false },
             shape = AppRadius.modalShape,
             containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
@@ -266,7 +266,7 @@ fun TrashBinSheet(
     }
 
     if (showDeleteConfirmDialog) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
             shape = AppRadius.modalShape,
             containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,

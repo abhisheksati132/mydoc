@@ -17,6 +17,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
+import androidx.compose.ui.res.stringResource
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,7 +30,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 
 /**
@@ -44,14 +46,14 @@ fun SettingsCard(
 ) {
     val scheme = MaterialTheme.colorScheme
 
-    GlassSurface(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        shape = AppRadius.modalShape,
-        elevation = 2.dp
+        shape = AppRadius.xLargeShape,
+        color = scheme.surfaceContainerLow
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(18.dp)) {
             if (showHeader) Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -80,7 +82,8 @@ fun SettingsCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = if (showHeader) 4.dp else 0.dp),
+                    .padding(top = if (showHeader) 12.dp else 0.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
                 content = content
             )
         }
@@ -130,6 +133,7 @@ fun SettingToggleRow(
             // The row is the control. A clickable Row around a live Switch made two focus nodes
             // and two switch states for one setting, so a screen reader announced the pair twice
             // and TalkBack users could toggle the same preference from either node.
+            .clip(AppRadius.insetShape)
             .toggleable(
                 value = checked,
                 role = Role.Switch,
@@ -154,7 +158,7 @@ fun SettingToggleRow(
         ) {
             Text(
                 text = title,
-                style = typography.bodyLarge,
+                style = AppTheme.typography.bodyLargeStrong,
                 color = scheme.onSurface
             )
             Text(
@@ -167,5 +171,32 @@ fun SettingToggleRow(
             checked = checked,
             onCheckedChange = null
         )
+    }
+}
+
+
+@Composable
+internal fun SettingsPageIntro(category: SettingsCategory) {
+    val scheme = MaterialTheme.colorScheme
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        shape = AppRadius.xLargeShape,
+        color = scheme.primaryContainer,
+        contentColor = scheme.onPrimaryContainer
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                Modifier.size(44.dp).clip(AppRadius.insetShape)
+                    .background(scheme.onPrimaryContainer.copy(alpha = 0.10f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(category.icon, contentDescription = null)
+            }
+            Text(stringResource(category.summary), style = AppTheme.typography.body)
+        }
     }
 }

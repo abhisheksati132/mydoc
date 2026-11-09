@@ -2442,5 +2442,20 @@
             <sha256 value="335a9cd93dcb4afab7c4daa34d5d4e24b38443ccef4ae5fffdfd6cf4f718b01e" origin="Publisher module metadata and HTTPS artifact verified"/>
          </artifact>
       </component>
+      <component group="androidx.compose.material3" name="material3-android" version="1.5.0-rc01">
+         <artifact name="material3.aar">
+            <sha256 value="eb055c58e9d81cbf9cb38bca4541a7dc701660e558f37f91edab2d622ac24e9a" origin="Verified against Google Maven module metadata"/>
+         </artifact>
+      </component>
+      <component group="androidx.compose.material3" name="material3-ripple-android" version="1.5.0-rc01">
+         <artifact name="material3-ripple.aar">
+            <sha256 value="9b00179905d1d42a80dd4dc0f1c94b5dc0faecb0e6ecff2d8e1b8f0f98c3025c" origin="Verified against Google Maven module metadata"/>
+         </artifact>
+      </component>
+      <component group="androidx.graphics" name="graphics-shapes-android" version="1.0.1">
+         <artifact name="graphics-shapes-release.aar">
+            <sha256 value="7171269a4122feabb071768df46d10b362e47ac75fd0aa8dbcafa1f44f61b40c" origin="Verified against Google Maven module metadata"/>
+         </artifact>
+      </component>
    </components>
 </verification-metadata>

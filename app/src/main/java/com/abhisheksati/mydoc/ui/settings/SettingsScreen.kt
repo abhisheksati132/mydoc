@@ -136,7 +136,11 @@ fun SettingsScreen(
                         .padding(top = 4.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    if (selectedCategory == null) SettingsCategoryIndex(onSelect = { selectedCategoryName = it.name })
+                    if (selectedCategory == null) {
+                        SettingsCategoryIndex(onSelect = { selectedCategoryName = it.name })
+                    } else {
+                        SettingsPageIntro(selectedCategory)
+                    }
 
                     if (selectedCategory == SettingsCategory.APPEARANCE) {
                         // 1. LOOK
@@ -244,7 +248,7 @@ fun SettingsScreen(
                         }
                     }
 
-                    if (selectedCategory == SettingsCategory.DIAGNOSTICS) DeviceDiagnosticsSection()
+
 
                     if (selectedCategory == SettingsCategory.ABOUT) {
                         // 6. ABOUT & UPDATES

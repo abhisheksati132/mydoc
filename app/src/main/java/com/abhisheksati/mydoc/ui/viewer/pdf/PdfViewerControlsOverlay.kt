@@ -4,18 +4,14 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.abhisheksati.mydoc.domain.model.DocumentFile
-import com.abhisheksati.mydoc.ui.viewer.FidelityNotice
-import com.abhisheksati.mydoc.ui.viewer.fidelityDisclosureFor
 import com.abhisheksati.mydoc.ui.viewer.controls.SearchOverlay
 import com.abhisheksati.mydoc.ui.viewer.controls.ThumbnailStrip
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerBottomBar
-import com.abhisheksati.mydoc.ui.viewer.controls.ViewerChrome
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerTopBar
 import com.abhisheksati.mydoc.viewmodel.ViewerUiState
 import com.abhisheksati.mydoc.viewmodel.ViewerViewModel
@@ -72,22 +68,6 @@ fun BoxScope.PdfViewerControlsOverlay(
         hazeState = hazeState,
         modifier = Modifier.align(Alignment.TopCenter)
     )
-    }
-
-    // Silence for a real PDF; for an Office file laid out by our converter this says what did not
-    // survive the conversion.
-    val fidelityDisclosure = remember(document.extension, state.conversionNotes) {
-        fidelityDisclosureFor(document.extension, extraNotes = state.conversionNotes)
-    }
-    if (fidelityDisclosure != null && state.areControlsVisible && !state.isSearchOpen) {
-        FidelityNotice(
-            disclosure = fidelityDisclosure,
-            dismissalKey = document.uri,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .statusBarsPadding()
-                .padding(top = ViewerChrome.topBarHeight)
-        )
     }
 
     // Search Overlay

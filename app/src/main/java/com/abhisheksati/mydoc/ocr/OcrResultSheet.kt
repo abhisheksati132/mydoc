@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ocr
 
+import com.abhisheksati.mydoc.designsystem.components.AppModalSheet
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.util.UserMessages
 import android.content.ClipData
@@ -59,7 +60,7 @@ fun OcrResultSheet(
     val resources = LocalResources.current
     val clipLabel = stringResource(R.string.ocr_clip_label)
 
-    ModalBottomSheet(
+    AppModalSheet(
         onDismissRequest = onDismiss,
         containerColor = colors.surface,
         dragHandle = { BottomSheetDefaults.DragHandle() },

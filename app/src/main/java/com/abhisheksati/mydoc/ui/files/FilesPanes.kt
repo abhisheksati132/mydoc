@@ -167,7 +167,6 @@ fun BrowseHomePane(
     onApps: () -> Unit,
     onInsights: () -> Unit,
     onClean: () -> Unit,
-    onSearch: () -> Unit,
     modifier: Modifier = Modifier,
     hazeState: HazeState? = null,
     glassMotion: GlassMotionState? = null
@@ -227,14 +226,6 @@ fun BrowseHomePane(
             }
         }
 
-        item(key = "browse_search") {
-            androidx.compose.material3.OutlinedButton(onClick = onSearch,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Icon(Icons.Outlined.Search, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.search_files_label))
-            }
-        }
         if (pinnedFolders.isNotEmpty()) {
             item(key = "browse_pinned_header") {
                 FilesSectionHeader(title = stringResource(R.string.section_pinned))
@@ -258,6 +249,7 @@ fun BrowseHomePane(
                 onOpenTrash = onOpenTrash,
                 onBrowse = onBrowseInternal,
                 onInsights = onInsights,
+                onClean = onClean,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
         }
@@ -294,16 +286,6 @@ fun BrowseHomePane(
             )
         }
 
-        item(key = "browse_cleanup") {
-            FilesSectionHeader(title = stringResource(R.string.settings_cleaner_title))
-            LocationRow(
-                title = stringResource(R.string.library_review_cleanup),
-                meta = StorageVolume.formatBytes(storageUiState.cleanSummary.totalReclaimableBytes),
-                icon = Icons.Outlined.DeleteSweep,
-                onClick = onClean,
-                modifier = Modifier.padding(horizontal = 10.dp)
-            )
-        }
     }
 }
 
@@ -342,32 +324,64 @@ private fun StorageBreakdown(storageUiState: StorageAnalysisUiState) {
     val entries = storageUiState.categories
         .filter { it.type != StorageCategoryType.DOWNLOADS && it.type != StorageCategoryType.LARGE_FILES }
         .sortedByDescending { it.bytes }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-        if (entries.isNotEmpty() && storageUiState.totalBytes > 0) {
-            Column(Modifier.width(48.dp).height(260.dp).clip(AppRadius.pillShape)
-                .background(colors.surfaceMuted)) {
-                val free = storageUiState.freeBytes.toFloat() / storageUiState.totalBytes
-                if (free > 0f) Spacer(Modifier.weight(free.coerceAtMost(1f)))
-                entries.forEachIndexed { index, stat ->
-                    if (stat.percentageOfTotal > 0f) {
-                        Spacer(Modifier.weight(stat.percentageOfTotal.coerceAtMost(1f))
-                            .fillMaxWidth().background(palette[index % palette.size]))
+    val total = storageUiState.totalBytes
+    val free = storageUiState.freeBytes
+    val freeColor = colors.divider
+    val categoryBytes = entries.sumOf { it.bytes }
+    val used = (total - free).coerceIn(0, total.coerceAtLeast(0))
+    val unclassified = (used - categoryBytes).coerceAtLeast(0)
+    val categoriesFit = categoryBytes <= used
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        if (total > 0) {
+            Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+                androidx.compose.foundation.Canvas(Modifier.size(176.dp)) {
+                    val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = 23.dp.toPx())
+                    val inset = stroke.width / 2
+                    val topLeft = androidx.compose.ui.geometry.Offset(inset, inset)
+                    val bounds = androidx.compose.ui.geometry.Size(size.width - stroke.width, size.height - stroke.width)
+                    drawArc(freeColor, 0f, 360f, false, topLeft, bounds, style = stroke)
+                    var start = -90f
+                    if (categoriesFit && entries.isNotEmpty()) {
+                        entries.forEachIndexed { index, stat ->
+                            val sweep = (stat.bytes.toDouble() / total * 360).toFloat()
+                            if (sweep > 0f) drawArc(palette[index % palette.size], start, sweep, false,
+                                topLeft, bounds, style = stroke)
+                            start += sweep
+                        }
+                        if (unclassified > 0) drawArc(colors.inkMuted, start,
+                            (unclassified.toDouble() / total * 360).toFloat(), false, topLeft, bounds, style = stroke)
+                    } else {
+                        drawArc(colors.accent, start, (used.toDouble() / total * 360).toFloat(), false,
+                            topLeft, bounds, style = stroke)
                     }
                 }
-            }
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            entries.forEachIndexed { index, stat ->
-                Row(verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(Modifier.size(9.dp).clip(CircleShape).background(palette[index % palette.size]))
-                    Column {
-                        Text(stringResource(stat.type.titleRes), style = AppTheme.typography.caption, color = colors.inkMuted)
-                        Text(stat.formattedSize, style = AppTheme.typography.bodyStrong, color = colors.ink)
-                    }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(storageUiState.formattedUsed, style = AppTheme.typography.titleSmall)
+                    Text(stringResource(R.string.storage_chart_used), style = AppTheme.typography.caption)
                 }
             }
+            if (!categoriesFit) {
+                Text(stringResource(R.string.storage_chart_overlap), style = AppTheme.typography.caption, color = colors.inkMuted)
+            }
         }
+        entries.forEachIndexed { index, stat ->
+            StorageLegendRow(stringResource(stat.type.titleRes), stat.formattedSize,
+                if (categoriesFit) palette[index % palette.size] else colors.inkMuted)
+        }
+        if (total > 0 && categoriesFit && unclassified > 0) {
+            StorageLegendRow(stringResource(R.string.storage_chart_unclassified), StorageVolume.formatBytes(unclassified), colors.inkMuted)
+        }
+        if (total > 0) StorageLegendRow(stringResource(R.string.storage_chart_free), storageUiState.formattedFree, freeColor)
+    }
+}
+
+@Composable
+private fun StorageLegendRow(label: String, value: String, color: androidx.compose.ui.graphics.Color) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(Modifier.size(9.dp).clip(CircleShape).background(color))
+        Text(label, style = AppTheme.typography.body, modifier = Modifier.weight(1f))
+        Text(value, style = AppTheme.typography.bodyStrong)
     }
 }
 
@@ -617,7 +631,8 @@ fun DirectoryPane(
                             if (uiState.isSelectionMode) onToggleSelection(item) else onOpenItem(item)
                         },
                         onLongClick = { onToggleSelection(item) },
-                        onMoreClick = { onMoreItem(item) }
+                        onMoreClick = { onMoreItem(item) },
+                        showFileSize = !isImagesCategory || inSelectionMode
                     )
                 }
             }
@@ -671,19 +686,7 @@ fun StorageInsightsScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = scheme.onSurfaceVariant
             )
-            Spacer(Modifier.height(14.dp))
-            LinearProgressIndicator(
-                progress = { storageUiState.usedRatio.coerceIn(0f, 1f) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(CircleShape),
-                color = scheme.tertiary,
-                trackColor = scheme.surfaceVariant,
-                gapSize = 0.dp,
-                drawStopIndicator = {}
-            )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
             StorageBreakdown(storageUiState = storageUiState)
             Spacer(Modifier.height(12.dp))
             Text(stringResource(R.string.storage_measurement_note),

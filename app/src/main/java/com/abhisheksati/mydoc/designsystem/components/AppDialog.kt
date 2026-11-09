@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -50,7 +49,7 @@ fun AppDialog(
     val isDark = LocalIsDark.current
     val effectiveDismiss = onDismissRequest ?: onDismiss ?: {}
 
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = effectiveDismiss,
         shape = AppRadius.modalShape,
         containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,

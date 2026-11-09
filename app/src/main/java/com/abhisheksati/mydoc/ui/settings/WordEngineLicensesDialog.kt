@@ -1,11 +1,11 @@
 package com.abhisheksati.mydoc.ui.settings
 
+import com.abhisheksati.mydoc.designsystem.components.AppAlertDialog
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -18,7 +18,7 @@ import com.abhisheksati.mydoc.R
 /** Static, bundled legal text. Scripts, network loads and navigation stay disabled. */
 @Composable
 internal fun WordEngineLicensesDialog(onDismiss: () -> Unit) {
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.word_engine_licenses)) },
         text = {

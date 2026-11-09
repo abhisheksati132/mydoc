@@ -56,7 +56,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.zIndex
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -72,9 +71,6 @@ import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
-import com.abhisheksati.mydoc.domain.model.RenderFidelity
-import com.abhisheksati.mydoc.ui.viewer.FidelityNotice
-import com.abhisheksati.mydoc.ui.viewer.fidelityDisclosureFor
 import com.abhisheksati.mydoc.rendering.engine.OfficeSourceReader
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxParser
 import com.abhisheksati.mydoc.rendering.engine.presentation.PptxPresentation
@@ -408,22 +404,6 @@ fun PresentationViewerScreen(
         ReadingMode.NORMAL -> colors.textSecondary
     }
 
-    val fidelityDisclosure = remember(
-        document.extension,
-        presentationData?.recovered,
-        presentationData?.incompleteReason
-    ) {
-        fidelityDisclosureFor(
-            extension = document.extension,
-            observedFidelity = if (presentationData?.recovered == true) {
-                RenderFidelity.RECOVERED_SCRAPE
-            } else {
-                RenderFidelity.STRUCTURED_REFLOW
-            },
-            extraNotes = listOfNotNull(presentationData?.incompleteReason)
-        )
-    }
-
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -495,9 +475,6 @@ fun PresentationViewerScreen(
                         context.showMessage(msg)
                     }
                 },
-                bgColor = bgColor,
-                textColor = textColor,
-                secondaryTextColor = secondaryTextColor
                 )
             }
         },
@@ -559,10 +536,6 @@ fun PresentationViewerScreen(
                 .background(bgColor),
             contentAlignment = Alignment.Center
         ) {
-            if (!isSlideshowMode && !isSearchOpen) {
-                FidelityNotice(disclosure = fidelityDisclosure, dismissalKey = document.uri,
-                    modifier = Modifier.align(Alignment.TopEnd).zIndex(1f))
-            }
             if (isLoading) {
                 AppProgressIndicator()
             } else if (errorMessage != null) {

@@ -121,6 +121,7 @@ fun StorageOverviewCard(
     onOpenTrash: () -> Unit,
     onBrowse: () -> Unit,
     onInsights: () -> Unit,
+    onClean: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -130,6 +131,7 @@ fun StorageOverviewCard(
             androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = onInsights) { Text(stringResource(R.string.files_insights)) }
                 TextButton(onClick = onOpenTrash) { Text(stringResource(R.string.menu_recycle_bin)) }
+                TextButton(onClick = onClean) { Text(stringResource(R.string.settings_clean)) }
             }
             Row(Modifier.fillMaxWidth().clip(AppRadius.cardShape).clickable(onClick = onBrowse).padding(4.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -157,9 +159,17 @@ fun CategoryTile(
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
+    val colors = AppTheme.colors
+    val tone = when (type) {
+        StorageCategoryType.IMAGES, StorageCategoryType.DOWNLOADS -> colors.accentCyan
+        StorageCategoryType.VIDEOS, StorageCategoryType.ARCHIVES -> colors.accentPink
+        StorageCategoryType.AUDIO, StorageCategoryType.APKS -> colors.accentGreen
+        else -> colors.accent
+    }
     GlassSurface(
         shape = AppRadius.cardShape,
-        elevation = 2.dp,
+        elevation = 0.dp,
+        backgroundColor = colors.surface,
         modifier = modifier
             .clip(AppRadius.cardShape)
             .clickable(onClick = onClick)
@@ -169,20 +179,20 @@ fun CategoryTile(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(AppRadius.insetShape)
-                    .background(scheme.secondaryContainer),
+                    .background(tone.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = type.icon,
                     contentDescription = null,
-                    tint = scheme.onSecondaryContainer,
+                    tint = colors.ink,
                     modifier = Modifier.size(19.dp)
                 )
             }
             Spacer(Modifier.height(10.dp))
             Text(
                 text = stringResource(if (type == StorageCategoryType.APKS) R.string.files_category_apps else type.titleRes),
-                style = MaterialTheme.typography.bodyMedium,
+                style = AppTheme.typography.bodyStrong,
                 color = scheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -230,7 +240,8 @@ fun FileRow(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onMoreClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showFileSize: Boolean = true
 ) {
     val scheme = MaterialTheme.colorScheme
     val haptics = rememberAppHaptics()
@@ -293,7 +304,8 @@ fun FileRow(
                 text = if (item.isDirectory) {
                     item.formattedSize
                 } else {
-                    listOf(item.formattedSize, item.formattedLastModified).filter { it.isNotBlank() }.joinToString(" · ")
+                    listOf(if (showFileSize) item.formattedSize else "", item.formattedLastModified)
+                        .filter { it.isNotBlank() }.joinToString(" · ")
                 },
                 style = AppTheme.typography.caption,
                 color = scheme.onSurfaceVariant
@@ -393,17 +405,6 @@ fun FileGridCell(
                             .background(scheme.primary.copy(alpha = 0.16f))
                     )
                 }
-            }
-
-            if (galleryTile && !isSelectionMode) {
-                Text(
-                    text = item.formattedSize,
-                    style = AppTheme.typography.caption,
-                    color = androidx.compose.ui.graphics.Color.White,
-                    modifier = Modifier.align(Alignment.TopEnd).padding(6.dp)
-                        .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.66f), CircleShape)
-                        .padding(horizontal = 6.dp, vertical = 3.dp)
-                )
             }
 
             if (isSelectionMode) {

@@ -3,6 +3,14 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [2.0.2] — 2026-11-10
+
+- Adopt Material 3 Expressive motion across the app, with reduced-motion support and shared styling for menus, sheets, and dialogs.
+- Redesign Settings and its subpages, simplify Office support, and remove Device & diagnostics.
+- Move Library search and Clean into more accessible locations, add Share to quick preview, and replace the storage stack with a donut chart and category breakdown.
+- Add individual cleanup exclusions and rescan recovery. Remove the floating document layout warning.
+- Prevent cancelled tool runs from overwriting later results, and reduce offscreen tab and reader blur work.
+
 ## [1.9.9] — 2026-11-09
 
 - Retry Office engine downloads through GitHub's asset API when the release download or checksum link fails. Verify the matching asset's SHA-256 and signing certificate before opening the installer.

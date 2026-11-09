@@ -16,7 +16,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -40,7 +39,7 @@ fun AppBottomSheet(
 ) {
     if (!isOpen) return
 
-    ModalBottomSheet(
+    AppModalSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = Color.Transparent,
@@ -48,13 +47,10 @@ fun AppBottomSheet(
         dragHandle = null
     ) {
         OverlaySystemBars()
-        // Modal sheets live in their own window and cannot sample the app
-        // window behind them, so haze cannot blur here: use a translucent
-        // plate that lets the dimmed app ghost through instead.
         GlassSurface(
             shape = AppRadius.glassSheetShape,
-            elevation = 16.dp,
-            backgroundColor = AppTheme.colors.surface.copy(alpha = 0.94f),
+            elevation = 8.dp,
+            backgroundColor = AppTheme.colors.surface,
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(

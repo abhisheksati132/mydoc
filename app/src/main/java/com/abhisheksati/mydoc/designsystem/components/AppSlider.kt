@@ -11,6 +11,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderColors
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -49,13 +50,13 @@ fun AppSlider(
         inactiveTrackColor = appColors.divider
     )
 
+    val sliderState = remember(steps, valueRange) { SliderState(value, steps, valueRange) }
+    sliderState.value = value
     Slider(
-        value = value,
+        state = sliderState,
         onValueChange = onValueChange,
         modifier = modifier,
         enabled = enabled,
-        valueRange = valueRange,
-        steps = steps,
         onValueChangeFinished = {
             haptics.tick()
             onValueChangeFinished?.invoke()

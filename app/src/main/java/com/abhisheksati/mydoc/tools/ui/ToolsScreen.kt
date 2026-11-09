@@ -1,11 +1,15 @@
 package com.abhisheksati.mydoc.tools.ui
 
+import com.abhisheksati.mydoc.designsystem.components.AppDropdownMenu
 import com.abhisheksati.mydoc.designsystem.components.PaperActionCard
 import androidx.compose.ui.platform.LocalDensity
 
 import androidx.compose.runtime.setValue
 import com.abhisheksati.mydoc.designsystem.components.LocalFloatingChromeInset
 import com.abhisheksati.mydoc.R
+import com.abhisheksati.mydoc.designsystem.components.AppSearchField
+import com.abhisheksati.mydoc.designsystem.animation.AppMotion
+import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
 import androidx.compose.ui.res.stringResource
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
@@ -42,7 +46,6 @@ import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Transform
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material.icons.outlined.ExpandMore
@@ -50,8 +53,6 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -191,61 +192,17 @@ fun ToolsScreen(
 
         AnimatedVisibility(
             visible = isSearchActive,
-            enter = fadeIn(),
-            exit = fadeOut()
+            enter = if (LocalReducedMotion.current) androidx.compose.animation.EnterTransition.None else fadeIn(AppMotion.fadeFast),
+            exit = if (LocalReducedMotion.current) androidx.compose.animation.ExitTransition.None else fadeOut(AppMotion.fadeFast)
         ) {
-            GlassSurface(
-                shape = AppRadius.pillShape,
-                elevation = 2.dp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
-            ) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = {
-                        Text(
-                            "Search tools…",
-                            style = AppTheme.typography.body,
-                            color = colors.inkMuted
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Outlined.Search,
-                            contentDescription = null,
-                            tint = colors.inkSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(
-                                    Icons.Outlined.Close,
-                                    contentDescription = stringResource(R.string.cd_clear_search),
-                                    tint = colors.inkSecondary
-                                )
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    shape = AppRadius.pillShape,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = colors.inkPrimary,
-                        unfocusedTextColor = colors.inkPrimary,
-                        focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
-                        unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
-                        focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                        unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                        cursorColor = colors.accent
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(searchFocusRequester)
-                )
-            }
+            AppSearchField(
+                query = searchQuery,
+                onQueryChanged = { searchQuery = it },
+                placeholder = stringResource(R.string.tools_search_placeholder),
+                shape = AppRadius.cardShape,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                    .focusRequester(searchFocusRequester)
+            )
         }
 
         // Keep every category one tap away without pushing tools below three rows of chips.
@@ -258,7 +215,7 @@ fun ToolsScreen(
                 Spacer(Modifier.size(8.dp))
                 Icon(Icons.Outlined.ExpandMore, contentDescription = null)
             }
-            DropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
+            AppDropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
                 toolCategories.forEach { category ->
                     DropdownMenuItem(
                         modifier = Modifier.semantics { selected = selectedGroup == category.group },

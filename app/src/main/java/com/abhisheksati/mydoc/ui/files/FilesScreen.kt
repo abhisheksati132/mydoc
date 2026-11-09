@@ -1,6 +1,7 @@
 package com.abhisheksati.mydoc.ui.files
 import androidx.compose.foundation.layout.height
 
+import com.abhisheksati.mydoc.designsystem.components.AppAlertDialog
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.material.icons.outlined.Tab
@@ -519,7 +520,6 @@ fun FilesPaneScreen(
                                     onApps = { showAppManager = true },
                                     onInsights = { showInsights = true },
                                     onClean = { showCleaner = true },
-                                    onSearch = onSpotlightSearch,
                                     modifier = Modifier.fillMaxSize(),
                                     hazeState = hazeState,
                                     glassMotion = glassMotion
@@ -599,7 +599,8 @@ fun FilesPaneScreen(
             item = item,
             onDismiss = { quickPreviewPath = null },
             onOpen = { quickPreviewPath = null; openStorageItem(item) },
-            onMore = { quickPreviewPath = null; actionTarget = item }
+            onMore = { quickPreviewPath = null; actionTarget = item },
+            onShare = if (item.isDirectory) null else ({ shareFiles(context, listOf(item.file)) })
         )
     }
 
@@ -628,7 +629,7 @@ fun FilesPaneScreen(
     batchRenameFiles?.let { files -> ExplorerRenameDialog(files,
         onDismiss = { batchRenameFiles = null },
         onApply = { plan -> batchRenameFiles = null; viewModel.applyBatchRename(plan) }) }
-    if (showRenameRecovery) androidx.compose.material3.AlertDialog(
+    if (showRenameRecovery) AppAlertDialog(
         onDismissRequest = { showRenameRecovery = false },
         title = { Text(stringResource(R.string.explorer_recovery_title)) },
         text = {
@@ -676,7 +677,7 @@ private fun FilesHeader(
         contentInsets = if (workspaceInsets) WindowInsets(0, 0, 0, 0) else androidx.compose.material3.TopAppBarDefaults.windowInsets,
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         actions = {
-            if (isInsideFolder) IconButton(onClick = onSearch) {
+            IconButton(onClick = onSearch) {
                 Icon(
                     imageVector = Icons.Outlined.Search,
                     contentDescription = stringResource(R.string.cd_search),
@@ -691,8 +692,6 @@ private fun FilesHeader(
                 }
                 AppDropdownMenu(expanded = workspaceOpen, onDismissRequest = { workspaceOpen = false }) {
                     workspaceMenu { workspaceOpen = false }
-                    HorizontalDivider()
-                    DropdownMenuItem(text = { Text(stringResource(R.string.cd_settings)) }, onClick = { workspaceOpen = false; onSettingsClick() })
                 }
             }
             if (isInsideFolder) Box {

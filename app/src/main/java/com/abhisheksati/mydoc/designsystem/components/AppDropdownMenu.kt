@@ -43,9 +43,9 @@ fun AppDropdownMenu(
         offset = offset,
         scrollState = scrollState,
         properties = properties,
-        shape = AppRadius.cardShape,
-        containerColor = colors.surface.copy(alpha = if (AppTheme.isDark) 0.94f else 0.96f),
-        shadowElevation = 12.dp,
+        shape = AppRadius.largeShape,
+        containerColor = colors.surface,
+        shadowElevation = 6.dp,
         tonalElevation = 0.dp,
         border = BorderStroke(1.dp, rimBrush),
         content = content

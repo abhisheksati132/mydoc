@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.files
 
+import com.abhisheksati.mydoc.designsystem.components.AppModalSheet
 import com.abhisheksati.mydoc.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,7 +37,6 @@ import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -81,7 +81,7 @@ fun SingleItemActionBottomSheet(
     val typography = LocalAppTypography.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(
+    AppModalSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
         containerColor = Color.Transparent,

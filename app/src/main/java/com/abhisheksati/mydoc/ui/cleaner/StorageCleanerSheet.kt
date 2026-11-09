@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.cleaner
 
+import com.abhisheksati.mydoc.designsystem.components.AppAlertDialog
 
 import kotlinx.coroutines.Dispatchers
 import androidx.compose.runtime.produceState
@@ -22,6 +23,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -72,6 +75,9 @@ fun StorageCleanerScreen(
     }
 
     var isScanning by remember { mutableStateOf(true) }
+    var scanAttempt by remember { mutableIntStateOf(0) }
+    var scanFailed by remember { mutableStateOf(false) }
+    var excludedPaths by remember { mutableStateOf(emptySet<String>()) }
     var scannedCount by remember { mutableIntStateOf(0) }
     var currentScannedName by remember { mutableStateOf("") }
     var scanResult by remember { mutableStateOf<StorageCleanScanResult?>(null) }
@@ -95,26 +101,45 @@ fun StorageCleanerScreen(
     var expandLargeFiles by remember { mutableStateOf(false) }
 
     // Start scanning on launch
-    LaunchedEffect(rootDir) {
+    LaunchedEffect(rootDir, scanAttempt) {
         isScanning = true
-        val result = cleanerManager.scanDirectory(rootDir) { count, name ->
-            scannedCount = count
-            currentScannedName = name
+        scanFailed = false
+        scanResult = null
+        scannedCount = 0
+        currentScannedName = ""
+        cleanedCount = 0
+        cleanedBytes = null
+        cleanTempFiles = false
+        cleanApks = false
+        cleanDuplicates = false
+        cleanEmptyFolders = false
+        duplicateKeepers = emptyMap()
+        excludedPaths = emptySet()
+        try {
+            scanResult = cleanerManager.scanDirectory(rootDir) { count, name ->
+                scannedCount = count
+                currentScannedName = name
+            }
+        } catch (error: Exception) {
+            if (error is kotlinx.coroutines.CancellationException) throw error
+            scanFailed = true
+        } finally {
+            isScanning = false
         }
-        scanResult = result
-        isScanning = false
     }
 
     val isOled = LocalIsOled.current
 
     val res = scanResult ?: StorageCleanScanResult()
     // Only the extra copies go; the kept original of every duplicate group stays.
-    val selectedFiles = buildList {
+    val candidateFiles = buildList {
         if (cleanTempFiles) addAll(res.tempFiles)
         if (cleanApks) addAll(res.apkFiles)
         if (cleanDuplicates) addAll(duplicateCopies(res.duplicateGroups, duplicateKeepers))
     }.distinctBy { it.absolutePath }.filterNot { it.absolutePath in duplicateKeepers.values }
-    val selectedEmptyDirs = if (cleanEmptyFolders) res.emptyFolders else emptyList()
+    val candidateEmptyDirs = if (cleanEmptyFolders) res.emptyFolders else emptyList()
+    val selectedFiles = candidateFiles.filterNot { it.absolutePath in excludedPaths }
+    val selectedEmptyDirs = candidateEmptyDirs.filterNot { it.absolutePath in excludedPaths }
     // One stat per selected file: it used to run on every recomposition of the sheet, on the
     // main thread, while the reader was watching the checkbox respond.
     val selectedBytesToFree by produceState(0L, selectedFiles) {
@@ -140,6 +165,11 @@ fun StorageCleanerScreen(
                 title = stringResource(R.string.cleaner_title),
                 subtitle = stringResource(R.string.cleaner_subtitle, rootLabel),
                 onBack = onDismiss,
+                actions = {
+                    if (!isScanning && !isCleaning) TextButton(onClick = { scanAttempt++ }) {
+                        Text(stringResource(R.string.cleaner_rescan))
+                    }
+                },
                 contentInsets = WindowInsets(0, 0, 0, 0),
                 isGlass = false,
                 containerColor = colors.background
@@ -147,7 +177,9 @@ fun StorageCleanerScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (isScanning) {
+            if (scanFailed) {
+                Text(stringResource(R.string.cleaner_scan_failed), color = colors.inkMuted)
+            } else if (isScanning) {
                 // Scanning animation state
                 Box(
                     modifier = Modifier
@@ -510,7 +542,7 @@ fun StorageCleanerScreen(
         }
 
     if (showConfirm) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showConfirm = false },
             title = { Text(stringResource(R.string.cleaner_confirm_title)) },
             text = {
@@ -540,12 +572,20 @@ fun StorageCleanerScreen(
                             .padding(8.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        items(selectedFiles) { file ->
+                        items(candidateFiles, key = { it.absolutePath }) { file ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                Checkbox(
+                                    checked = file.absolutePath !in excludedPaths,
+                                    onCheckedChange = { checked ->
+                                        excludedPaths = if (checked) excludedPaths - file.absolutePath
+                                            else excludedPaths + file.absolutePath
+                                    },
+                                    modifier = Modifier.semantics { contentDescription = file.name }
+                                )
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = file.name,
@@ -570,7 +610,7 @@ fun StorageCleanerScreen(
                                 )
                             }
                         }
-                        items(selectedEmptyDirs) { dir ->
+                        items(candidateEmptyDirs, key = { it.absolutePath }) { dir ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
@@ -582,6 +622,14 @@ fun StorageCleanerScreen(
                                     tint = colors.textSecondary
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
+                                Checkbox(
+                                    checked = dir.absolutePath !in excludedPaths,
+                                    onCheckedChange = { checked ->
+                                        excludedPaths = if (checked) excludedPaths - dir.absolutePath
+                                            else excludedPaths + dir.absolutePath
+                                    },
+                                    modifier = Modifier.semantics { contentDescription = dir.name }
+                                )
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = dir.name,
@@ -604,7 +652,7 @@ fun StorageCleanerScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(enabled = hasSelection, onClick = {
                     showConfirm = false
                     coroutineScope.launch {
                         isCleaning = true

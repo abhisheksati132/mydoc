@@ -2,7 +2,6 @@ package com.abhisheksati.mydoc.designsystem.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,6 +34,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
+import com.abhisheksati.mydoc.designsystem.animation.AppMotion
 import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
@@ -52,6 +52,17 @@ fun BottomNavBar(
     onScanClick: () -> Unit = {}
 ) {
     val haptics = rememberAppHaptics()
+    val colors = AppTheme.colors
+    val selectedTone = when (currentTab) {
+        HomeTab.HOME -> colors.accent
+        HomeTab.LIBRARY -> colors.accentCyan
+        HomeTab.TOOLS -> colors.accentGreen
+    }
+    val indicatorColor by animateColorAsState(
+        targetValue = selectedTone.copy(alpha = if (AppTheme.isDark) 0.24f else 0.17f),
+        animationSpec = if (LocalReducedMotion.current) snap() else AppMotion.snappy(),
+        label = "navigationTint"
+    )
     Box(
         modifier = modifier.fillMaxWidth().navigationBarsPadding()
             .padding(horizontal = 16.dp, vertical = 10.dp),
@@ -59,8 +70,8 @@ fun BottomNavBar(
     ) {
         GlassSurface(
             shape = RoundedCornerShape(36.dp),
-            hazeState = null,
-            motion = null,
+            hazeState = hazeState,
+            motion = motion,
             elevation = 8.dp,
             modifier = Modifier.widthIn(max = 400.dp).fillMaxWidth()
         ) {
@@ -69,14 +80,12 @@ fun BottomNavBar(
                 val selectedIndex = listOf(HomeTab.HOME, HomeTab.LIBRARY, HomeTab.TOOLS).indexOf(currentTab).coerceAtLeast(0)
                 val offset by animateDpAsState(
                     (tabWidth + 4.dp) * selectedIndex,
-                    animationSpec = if (LocalReducedMotion.current) snap() else tween(
-                        com.abhisheksati.mydoc.designsystem.animation.AppMotion.BASE,
-                        easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                    animationSpec = if (LocalReducedMotion.current) snap() else AppMotion.snappy(),
                     label = "navigationIndicator"
                 )
                 Row(Modifier.matchParentSize()) {
                     Box(Modifier.offset { IntOffset(offset.roundToPx(), 0) }.width(tabWidth).fillMaxHeight()
-                        .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(28.dp)))
+                        .background(indicatorColor, RoundedCornerShape(28.dp)))
                 }
             Row(
                 modifier = Modifier.fillMaxWidth().selectableGroup(),
@@ -122,9 +131,8 @@ private fun NavPillItem(
     val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
     val foreground by animateColorAsState(
-        if (selected) scheme.onPrimaryContainer else AppTheme.colors.ink,
-        animationSpec = if (reducedMotion) snap() else tween(
-            com.abhisheksati.mydoc.designsystem.animation.AppMotion.BASE), label = "dockInk"
+        if (selected) AppTheme.colors.ink else AppTheme.colors.inkMuted,
+        animationSpec = if (reducedMotion) snap() else AppMotion.snappy(), label = "dockInk"
     )
     val shape = RoundedCornerShape(28.dp)
     Column(

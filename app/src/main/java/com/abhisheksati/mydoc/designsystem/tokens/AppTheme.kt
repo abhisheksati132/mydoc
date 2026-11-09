@@ -7,6 +7,9 @@ import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme
+import androidx.compose.animation.core.snap
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -154,6 +157,7 @@ fun AppDesignSystemTheme(
     // Previews used to default this to true, which rendered a device palette the app never shows.
     dynamicColor: Boolean = false,
     amoledBlack: Boolean = false,
+    reducedMotion: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -181,6 +185,13 @@ fun AppDesignSystemTheme(
     val glassEnvironment = rememberGlassEnvironment()
     val typography = remember { AppTypography() }
     val materialTypography = remember(typography) { brandMaterialTypography(typography) }
+    val motionScheme = remember(reducedMotion) {
+        if (reducedMotion) StillMotionScheme else MotionScheme.expressive()
+    }
+    val shapes = remember {
+        Shapes(extraSmall = AppRadius.microShape, small = AppRadius.insetShape, medium = AppRadius.cardShape,
+            large = AppRadius.largeShape, extraLarge = AppRadius.xLargeShape)
+    }
     CompositionLocalProvider(
         LocalGlassEnvironment provides glassEnvironment,
         LocalAppColors provides colors,
@@ -191,7 +202,19 @@ fun AppDesignSystemTheme(
         MaterialTheme(
             colorScheme = materialColorScheme,
             typography = materialTypography,
+            shapes = shapes,
+            motionScheme = motionScheme,
             content = content
         )
     }
+}
+
+
+private object StillMotionScheme : MotionScheme {
+    override fun <T> defaultSpatialSpec() = snap<T>()
+    override fun <T> fastSpatialSpec() = snap<T>()
+    override fun <T> slowSpatialSpec() = snap<T>()
+    override fun <T> defaultEffectsSpec() = snap<T>()
+    override fun <T> fastEffectsSpec() = snap<T>()
+    override fun <T> slowEffectsSpec() = snap<T>()
 }

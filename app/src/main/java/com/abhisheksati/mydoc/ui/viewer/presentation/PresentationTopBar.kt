@@ -1,15 +1,12 @@
 package com.abhisheksati.mydoc.ui.viewer.presentation
 
 import com.abhisheksati.mydoc.R
+import com.abhisheksati.mydoc.designsystem.components.AppTopBar
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.Slideshow
@@ -25,28 +22,19 @@ import androidx.compose.material.icons.outlined.ViewCarousel
 import androidx.compose.material3.DropdownMenuItem
 import com.abhisheksati.mydoc.designsystem.components.AppDropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.graphics.RectangleShape
-import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.ui.viewer.controls.SearchOverlay
@@ -84,14 +72,12 @@ fun PresentationTopBar(
     onShareClick: () -> Unit,
     onOpenInOfficeApp: () -> Unit,
     onPrintClick: () -> Unit,
-    bgColor: Color,
-    textColor: Color,
-    secondaryTextColor: Color,
     modifier: Modifier = Modifier
 ) {
     if (isSlideshowMode) return
 
     var isMenuOpen by remember { mutableStateOf(false) }
+    val slideCountLabel = pluralStringResource(R.plurals.slides_count, effectiveSlideCount, effectiveSlideCount)
 
     Column(modifier = modifier) {
         if (isSearchOpen) {
@@ -106,70 +92,22 @@ fun PresentationTopBar(
                 onCloseSearch = onCloseSearch
             )
         } else {
-            GlassSurface(
-                shape = RectangleShape,
-                elevation = 4.dp
-            ) {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = document.displayName,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = textColor,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.padding(top = 2.dp)
-                        ) {
-                            Text(
-                                text = document.extension.uppercase(),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            if (effectiveSlideCount > 0) {
-                                Text(
-                                    text = "•",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = secondaryTextColor.copy(alpha = 0.5f)
-                                )
-                                Text(
-                                    text = pluralStringResource(R.plurals.slides_count, effectiveSlideCount, effectiveSlideCount),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = secondaryTextColor
-                                )
-                            }
-                        }
+            AppTopBar(
+                title = document.displayName,
+                subtitle = buildString {
+                    append(document.extension.uppercase(java.util.Locale.ROOT))
+                    if (effectiveSlideCount > 0) {
+                        append(" · ")
+                        append(slideCountLabel)
                     }
                 },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = stringResource(R.string.cd_back),
-                            tint = textColor
-                        )
-                    }
-                },
+                onBack = onBackClick,
                 actions = {
                     // Search
                     IconButton(onClick = onOpenSearch) {
                         Icon(
                             imageVector = Icons.Outlined.Search,
-                            contentDescription = stringResource(R.string.pres_search_title),
-                            tint = secondaryTextColor
-                        )
-                    }
-
-                    // Continuous Vertical vs Horizontal toggle button
-                    IconButton(onClick = onToggleContinuousVertical) {
-                        Icon(
-                            imageVector = if (isContinuousVertical) Icons.Outlined.ViewCarousel else Icons.Outlined.SwapVert,
-                            contentDescription = stringResource(if (isContinuousVertical) R.string.pres_switch_horizontal else R.string.pres_switch_vertical),
-                            tint = if (isContinuousVertical) MaterialTheme.colorScheme.primary else secondaryTextColor
+                            contentDescription = stringResource(R.string.pres_search_title)
                         )
                     }
 
@@ -187,8 +125,7 @@ fun PresentationTopBar(
                         IconButton(onClick = { isMenuOpen = true }) {
                             Icon(
                                 imageVector = Icons.Outlined.MoreVert,
-                                contentDescription = stringResource(R.string.cd_more_actions),
-                                tint = secondaryTextColor
+                                contentDescription = stringResource(R.string.cd_more_actions)
                             )
                         }
                         AppDropdownMenu(
@@ -300,11 +237,8 @@ fun PresentationTopBar(
                             )
                         }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                }
             )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            }
         }
     }
 }

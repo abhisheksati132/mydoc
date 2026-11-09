@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.files
 
+import com.abhisheksati.mydoc.designsystem.components.AppModalSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,6 +8,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -32,11 +34,12 @@ internal fun FileQuickPreviewSheet(
     item: StorageItem,
     onDismiss: () -> Unit,
     onOpen: () -> Unit,
-    onMore: () -> Unit
+    onMore: () -> Unit,
+    onShare: (() -> Unit)? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     val previewDescription = stringResource(R.string.quick_preview_thumbnail)
-    ModalBottomSheet(
+    AppModalSheet(
         onDismissRequest = onDismiss,
         containerColor = AppTheme.colors.surface,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -48,6 +51,9 @@ internal fun FileQuickPreviewSheet(
             ) {
                 Text(stringResource(R.string.quick_preview_title), style = AppTheme.typography.titleSmall,
                     modifier = Modifier.weight(1f).semantics { heading() })
+                if (onShare != null) IconButton(onClick = onShare) {
+                    Icon(Icons.Outlined.Share, contentDescription = stringResource(R.string.action_share))
+                }
                 IconButton(onClick = onDismiss) {
                     Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.quick_preview_close))
                 }

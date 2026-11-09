@@ -66,7 +66,6 @@ import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.ui.viewer.DocumentProblemScreen
 import com.abhisheksati.mydoc.domain.model.ReadingPrefs
-import com.abhisheksati.mydoc.domain.model.RenderFidelity
 import com.abhisheksati.mydoc.domain.model.ViewState
 import com.abhisheksati.mydoc.rendering.engine.word.DocxBlock
 import com.abhisheksati.mydoc.rendering.engine.word.DocxDocument
@@ -240,11 +239,6 @@ fun WordViewerScreen(
         onSearchClick = { isSearchOpen = true },
         onTtsClick = { isTtsVisible = true },
         readingPrefs = readingPrefs,
-        observedFidelity = if (docxData?.usedTextFallback == true) {
-            RenderFidelity.RECOVERED_SCRAPE
-        } else {
-            RenderFidelity.STRUCTURED_REFLOW
-        },
         onPageScrubbed = { page ->
             if (blocks.isNotEmpty()) {
                 val target = page.coerceIn(0, blocks.size - 1)

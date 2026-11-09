@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.discovery
 
+import com.abhisheksati.mydoc.designsystem.components.AppAlertDialog
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
@@ -154,14 +155,14 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
             }
         }
     }
-    if(tagsForUri!=null) AlertDialog(onDismissRequest={tagsForUri=null},title={Text("Tags for ${tagsForName}")},text={
+    if(tagsForUri!=null) AppAlertDialog(onDismissRequest={tagsForUri=null},title={Text("Tags for ${tagsForName}")},text={
         OutlinedTextField(tagsValue,{tagsValue=it.take(1000)},label={Text("Comma-separated tags")},supportingText={Text("Up to 20 tags, 40 characters each. Tags do not move or rename the original file.")})
     },confirmButton={TextButton(onClick={val uri=tagsForUri!!;mutate { store.setTags(uri,tagsValue) };tagsForUri=null}) { Text("Save") }},dismissButton={TextButton(onClick={tagsForUri=null}) { Text("Cancel") }})
-    if(saveDialog) AlertDialog(onDismissRequest={saveDialog=false},title={Text("Save smart collection")},text={
+    if(saveDialog) AppAlertDialog(onDismissRequest={saveDialog=false},title={Text("Save smart collection")},text={
         Column {
             OutlinedTextField(collectionName,{collectionName=it.take(60)},label={Text("Collection name")})
             Text("Uses the current words, tag and file-type filters. Matching files update after indexing. Saving the same name replaces that rule.")
         }
     },confirmButton={TextButton(enabled=collectionName.isNotBlank(),onClick={mutate { store.saveCollection(SmartCollection(collectionName,query,tag,extension)) };saveDialog=false}) { Text("Save") }},dismissButton={TextButton(onClick={saveDialog=false}) { Text("Cancel") }})
-    if(clearDialog) AlertDialog(onDismissRequest={clearDialog=false},title={Text("Clear the local library?")},text={Text("Removes indexed text and tags from MyDoc. Your original files and saved collection rules stay in place.")},confirmButton={TextButton(onClick={mutate { store.clear() };clearDialog=false}) { Text("Clear") }},dismissButton={TextButton(onClick={clearDialog=false}) { Text("Cancel") }})
+    if(clearDialog) AppAlertDialog(onDismissRequest={clearDialog=false},title={Text("Clear the local library?")},text={Text("Removes indexed text and tags from MyDoc. Your original files and saved collection rules stay in place.")},confirmButton={TextButton(onClick={mutate { store.clear() };clearDialog=false}) { Text("Clear") }},dismissButton={TextButton(onClick={clearDialog=false}) { Text("Cancel") }})
 }

@@ -173,7 +173,6 @@ fun TextViewerScreen(
     val colors = LocalAppColors.current
 
     var lines by remember { mutableStateOf<List<String>>(emptyList()) }
-    var truncated by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var loadFailure by remember { mutableStateOf<LoadFailure?>(null) }
@@ -205,7 +204,6 @@ fun TextViewerScreen(
         when (outcome) {
             is TextLoadOutcome.Loaded -> {
                 lines = outcome.lines
-                truncated = outcome.truncated
             }
 
             is TextLoadOutcome.Failed -> {
@@ -335,7 +333,6 @@ fun TextViewerScreen(
         onSearchClick = { isSearchOpen = true },
         onTtsClick = { isTtsVisible = true },
         readingPrefs = readingPrefs,
-        fidelityNotes = if (truncated) listOf(TextBudget.noteFor(TextBudget.DEFAULT)) else emptyList(),
         onPageScrubbed = { page ->
             if (lines.isNotEmpty()) {
                 val target = page.coerceIn(0, (itemCount - 1).coerceAtLeast(0))

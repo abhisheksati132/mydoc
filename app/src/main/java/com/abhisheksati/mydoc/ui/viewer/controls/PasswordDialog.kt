@@ -1,12 +1,12 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
+import com.abhisheksati.mydoc.designsystem.components.AppAlertDialog
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -34,7 +34,7 @@ fun PasswordDialog(
 
     var password by remember { mutableStateOf("") }
 
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onCancel,
         title = {
             Text(

@@ -1,5 +1,7 @@
 package com.abhisheksati.mydoc.ui.files
 
+import com.abhisheksati.mydoc.designsystem.components.AppAlertDialog
+import com.abhisheksati.mydoc.designsystem.components.AppModalSheet
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,7 +21,7 @@ fun SaveExplorerSearchDialog(onDismiss: () -> Unit, onSave: (String) -> Boolean)
     var label by rememberSaveable { mutableStateOf("") }
     var failed by remember { mutableStateOf(false) }
     val valid = label.trim().length in 1..80 && label.none { it.isISOControl() }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.saved_search_save)) },
+    AppAlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.saved_search_save)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(label, { label = it; failed = false }, label = { Text(stringResource(R.string.saved_search_label)) }, singleLine = true)
@@ -35,7 +37,7 @@ fun SaveExplorerSearchDialog(onDismiss: () -> Unit, onSave: (String) -> Boolean)
 fun ExplorerSavedSearchesSheet(preferences: ExplorerPreferences, onDismiss: () -> Unit, onRun: (String) -> Unit) {
     val searches by preferences.savedSearches.collectAsState()
     var deleteFailed by remember { mutableStateOf(false) }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    AppModalSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(0.85f).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 Text(stringResource(R.string.saved_searches_title), style = MaterialTheme.typography.headlineSmall)

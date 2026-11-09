@@ -246,7 +246,8 @@ class MainActivity : ComponentActivity() {
 
             AppDesignSystemTheme(
                 darkTheme = isDark,
-                amoledBlack = isBlack
+                amoledBlack = isBlack,
+                reducedMotion = reducedMotion
             ) {
                 CompositionLocalProvider(
                     LocalGlassEffectMode provides glassEffectMode,

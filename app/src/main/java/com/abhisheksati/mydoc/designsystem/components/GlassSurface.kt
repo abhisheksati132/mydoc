@@ -11,6 +11,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -152,6 +153,8 @@ fun GlassSurface(
             is Outline.Generic -> outline.path
             is Outline.Rectangle -> null
         }
+        val sheen = Brush.verticalGradient(listOf(actualRimTop.copy(alpha = 0.08f), Color.Transparent),
+            endY = size.height.coerceAtLeast(1f))
         val stroke = Stroke(width = 1.dp.toPx())
         onDrawWithContent {
             // Inner shadow UNDER content: the glass edge occluding what lies below.
@@ -159,6 +162,7 @@ fun GlassSurface(
                 brush = innerShadow,
                 size = Size(size.width, innerShadowHeight)
             )
+            drawRect(sheen)
             drawContent()
             if (outlinePath != null) {
                 drawPath(outlinePath, brush = rimBrush, style = stroke)
@@ -192,8 +196,11 @@ fun GlassSurface(
             val isDark = AppTheme.isDark
             // Tint changes over a handful of steps instead of rebuilding the optical style
             // on every scroll pixel. Reduced motion uses the resting material.
-            val progress = if (LocalReducedMotion.current) 0f else (motion?.progress ?: 0f).coerceIn(0f, 1f)
-            val densityStep = (progress * 5).toInt() / 5f
+            val densityStep = if (LocalReducedMotion.current || motion == null) 0f else {
+                remember(motion) {
+                    derivedStateOf { (motion.progress.coerceIn(0f, 1f) * 5).toInt() / 5f }
+                }.value
+            }
             val opticalTint = tint ?: actualBackground.copy(
                 alpha = (if (isDark) 0.84f else 0.74f) + densityStep * 0.04f
             )
@@ -201,7 +208,7 @@ fun GlassSurface(
                 GlassStyle.regular.then {
                     shape(shape)
                     tint(opticalTint)
-                    optics { copy(refractionStrength = 0.4f, refractionDisplacement = 8.dp) }
+                    optics { copy(refractionStrength = 0.48f, refractionDisplacement = 9.dp) }
                     specularIntensity(if (isDark) 0.36f else 0.52f)
                     edgeShadow(Color.Black.copy(alpha = if (isDark) 0.32f else 0.12f))
                     ambientResponse(if (isDark) 0.08f else 0.12f)

@@ -1027,4 +1027,23 @@
     <string name="audio_focus_unavailable">Another app is using audio. Try Play again when it finishes.</string>
     <string name="diagnostics_conversion_failure">Last Office conversion error this session</string>
     <string name="diagnostics_no_failure">None recorded</string>
+    <string name="storage_chart_used">Used</string>
+    <string name="storage_chart_free">Available</string>
+    <string name="storage_chart_overlap">The chart shows used and available space. Category totals below can overlap.</string>
+    <string name="settings_group_experience">App experience</string>
+    <string name="settings_group_device">Device &amp; app</string>
+    <string name="cleaner_rescan">Scan again</string>
+    <string name="cleaner_scan_failed">Could not finish the scan. Check storage access and try again.</string>
+    <string name="storage_chart_unclassified">Unclassified used space</string>
+    <string name="tools_search_placeholder">Search tools…</string>
+    <string name="settings_hero_title">Make MyDoc yours</string>
+    <string name="settings_hero_summary">Choose how MyDoc looks, reads, and works with your files.</string>
+    <string name="office_simple_title">Office support</string>
+    <string name="office_simple_active">Enhanced reading is on</string>
+    <string name="office_simple_builtin">Built-in reading is on</string>
+    <string name="office_simple_summary">Get more accurate layouts for Word, Excel, and PowerPoint.</string>
+    <string name="office_simple_install">Install Office support</string>
+    <string name="office_simple_remove">Remove Office support</string>
+    <string name="office_simple_failed">Could not install Office support. Try again.</string>
+    <string name="office_simple_remove_failed">Remove MyDoc Office Engine in Android Settings.</string>
 </resources>

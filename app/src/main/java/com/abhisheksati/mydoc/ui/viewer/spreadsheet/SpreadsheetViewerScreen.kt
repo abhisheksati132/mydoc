@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.viewer.spreadsheet
 
+import com.abhisheksati.mydoc.designsystem.components.AppModalSheet
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import androidx.compose.foundation.background
@@ -27,7 +28,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -125,31 +125,6 @@ fun SpreadsheetViewerScreen(
         sheetItems = outlineItems,
         onSheetSelect = { viewModel.selectSheet(it) },
         readingPrefs = readingPrefs,
-        observedFidelity = if (com.abhisheksati.mydoc.domain.model.DocumentFormats.converterFor(document.extension) ==
-            com.abhisheksati.mydoc.domain.model.ConverterKind.XLSX_TO_PDF)
-            com.abhisheksati.mydoc.domain.model.RenderFidelity.STRUCTURED_REFLOW else null,
-        fidelityNotes = buildList {
-            if (com.abhisheksati.mydoc.domain.model.DocumentFormats.converterFor(document.extension) ==
-                com.abhisheksati.mydoc.domain.model.ConverterKind.XLSX_TO_PDF) {
-                add(stringResource(R.string.sheet_grid_layout_note))
-            }
-            if (state.currentSheet?.truncated == true) {
-                add(stringResource(R.string.sheet_read_limit))
-            }
-            // A worksheet whose XML could not be parsed reads as an empty sheet unless it says
-            // otherwise, which is how a damaged workbook got presented as a blank one.
-            state.currentSheet?.parseFailure?.let { reason ->
-                add(stringResource(R.string.sheet_read_failed, reason))
-            }
-            val failed = state.model.failedSheets
-            if (failed.isNotEmpty()) {
-                val total = state.model.sheets.size
-                add(
-                    if (failed.size == 1) "1 of $total sheets could not be read: ${failed.first()}"
-                    else "${failed.size} of $total sheets could not be read: ${failed.joinToString(", ")}"
-                )
-            }
-        },
         modifier = modifier
     ) {
         Column(
@@ -203,7 +178,14 @@ fun SpreadsheetViewerScreen(
                 )
             } else {
                 val currentSheet = state.currentSheet
-                if (currentSheet != null) {
+                val parseFailure = currentSheet?.parseFailure
+                if (parseFailure != null) {
+                    Text(
+                        stringResource(R.string.sheet_read_failed, parseFailure),
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.errorContainer).padding(16.dp)
+                    )
+                } else if (currentSheet != null) {
                     val maxRow = maxOf(25, currentSheet.maxRow + 5)
                     val maxCol = maxOf(10, currentSheet.maxCol + 3)
                     val rowHeight = 36.dp
@@ -358,7 +340,7 @@ fun SpreadsheetViewerScreen(
             val formula = sheet?.formulas?.get(r to c)
             val cellRef = "${SheetData.columnIndexToLetter(c)}${r + 1}"
 
-            ModalBottomSheet(
+            AppModalSheet(
                 onDismissRequest = viewModel::clearSelectedCell,
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             ) {

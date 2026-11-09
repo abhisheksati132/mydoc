@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.files
 
+import com.abhisheksati.mydoc.designsystem.components.AppAlertDialog
 import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -22,7 +23,6 @@ import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -73,7 +73,7 @@ fun NewFolderDialog(
     val colors = LocalAppColors.current
     val isOled = LocalIsOled.current
 
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         shape = AppRadius.modalShape,
         containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
@@ -133,7 +133,7 @@ fun NewFileDialog(
     val colors = LocalAppColors.current
     val isOled = LocalIsOled.current
 
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         shape = AppRadius.modalShape,
         containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
@@ -193,7 +193,7 @@ fun RenameDialog(
     val colors = LocalAppColors.current
     val isOled = LocalIsOled.current
 
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         shape = AppRadius.modalShape,
         containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
@@ -250,7 +250,7 @@ fun DeleteConfirmationDialog(
 ) {
     val colors = LocalAppColors.current
     val isOled = LocalIsOled.current
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         shape = AppRadius.modalShape,
         containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
@@ -303,7 +303,7 @@ fun FilePropertiesDialog(
 
     val isOled = LocalIsOled.current
 
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         shape = AppRadius.modalShape,
         containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
@@ -464,7 +464,7 @@ fun CompressDialog(
     val colors = LocalAppColors.current
     val isOled = LocalIsOled.current
 
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         shape = AppRadius.modalShape,
         containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
@@ -527,7 +527,7 @@ fun ExtractConfirmDialog(
     val colors = LocalAppColors.current
     val isOled = LocalIsOled.current
 
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
         shape = AppRadius.modalShape,
         containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,

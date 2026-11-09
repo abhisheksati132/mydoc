@@ -227,7 +227,6 @@ class ViewerViewModel(
                                 isPasswordIncorrect = password != null, errorMessage = null, failure = null) }
                             return@withContext
                         }
-                        com.abhisheksati.mydoc.rendering.engine.OfficeConversionDiagnostics.lastFailure = conversion.failure
                         SecureLog.warn("ViewerLoad", "document conversion failed") { conversion.message }
                         _uiState.update {
                             if (generation != loadGeneration) it else it.copy(

@@ -1,5 +1,7 @@
 package com.abhisheksati.mydoc.ui.files
 
+import com.abhisheksati.mydoc.designsystem.components.AppDropdownMenu
+import com.abhisheksati.mydoc.designsystem.components.AppModalSheet
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,7 +30,7 @@ fun ExplorerComparisonSheet(folders: List<File>, onDismiss: () -> Unit) {
     var differencesOnly by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
     var job by remember { mutableStateOf<Job?>(null) }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    AppModalSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(0.88f).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 Text(stringResource(R.string.compare_title), style = MaterialTheme.typography.headlineSmall)
@@ -85,7 +87,7 @@ private fun ComparisonFolderSelector(label: Int, folders: List<File>, selected: 
         OutlinedButton(onClick = { expanded = true }, enabled = enabled && folders.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
             Text(selected?.absolutePath ?: stringResource(R.string.compare_choose))
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        AppDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             folders.forEach { folder -> DropdownMenuItem(text = { Text(folder.absolutePath) }, onClick = { expanded = false; onSelect(folder) }) }
         }
     }

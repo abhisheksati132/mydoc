@@ -46,8 +46,10 @@ class ToolsViewModel(application: Application) : AndroidViewModel(application) {
     val executionState: StateFlow<ToolExecutionUiState> = _executionState.asStateFlow()
 
     private var executionJob: Job? = null
+    private val executionGeneration = java.util.concurrent.atomic.AtomicInteger()
 
     fun selectTool(tool: PdfTool, preselectedUri: Uri? = null) {
+        cancelExecution()
         _selectedTool.value = tool
         _executionState.value = ToolExecutionUiState.Idle
         _toolOptions.value = ToolOptions()
@@ -85,9 +87,10 @@ class ToolsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun runTool() {
         val tool = _selectedTool.value ?: return
+        if (executionJob?.isActive == true) return
         val uris = _inputUris.value
-
-        executionJob?.cancel()
+        val options = _toolOptions.value
+        val generation = executionGeneration.incrementAndGet()
         _executionState.value = ToolExecutionUiState.Running(ToolProgress(0, 100, 0, "Starting...", true))
 
         executionJob = viewModelScope.launch {
@@ -95,12 +98,15 @@ class ToolsViewModel(application: Application) : AndroidViewModel(application) {
                 val result = engine.executeTool(
                     tool = tool,
                     inputUris = uris,
-                    options = _toolOptions.value,
+                    options = options,
                     onProgress = { progress ->
-                        _executionState.value = ToolExecutionUiState.Running(progress)
+                        if (executionGeneration.get() == generation) {
+                            _executionState.value = ToolExecutionUiState.Running(progress)
+                        }
                     }
                 )
 
+                if (executionGeneration.get() != generation) return@launch
                 if (result.success) {
                     _executionState.value = ToolExecutionUiState.Success(result)
                 } else {
@@ -110,17 +116,20 @@ class ToolsViewModel(application: Application) : AndroidViewModel(application) {
                 // Pressing Cancel is not a failure. Without this branch the cancelled job's own
                 // catch ran after cancelExecution() had already put the panel back to Idle, so the
                 // reader saw a red error panel for an action they took deliberately.
-                if (_executionState.value is ToolExecutionUiState.Running) {
+                if (executionGeneration.get() == generation && _executionState.value is ToolExecutionUiState.Running) {
                     _executionState.value = ToolExecutionUiState.Idle
                 }
                 throw e
             } catch (e: Exception) {
-                _executionState.value = ToolExecutionUiState.Error(e.localizedMessage ?: "Unexpected error occurred.")
+                if (executionGeneration.get() == generation) {
+                    _executionState.value = ToolExecutionUiState.Error(e.localizedMessage ?: "Unexpected error occurred.")
+                }
             }
         }
     }
 
     fun cancelExecution() {
+        executionGeneration.incrementAndGet()
         executionJob?.cancel()
         executionJob = null
         if (_executionState.value is ToolExecutionUiState.Running) {
@@ -150,9 +159,10 @@ class ToolsViewModel(application: Application) : AndroidViewModel(application) {
                         input.copyTo(out)
                     }
                 } ?: throw IllegalStateException("Could not open output destination.")
-                onSuccess()
+                kotlinx.coroutines.withContext(Dispatchers.Main) { onSuccess() }
             } catch (e: Exception) {
-                onError(e.localizedMessage ?: "Failed to save file.")
+                if (e is CancellationException) throw e
+                kotlinx.coroutines.withContext(Dispatchers.Main) { onError(e.localizedMessage ?: "Failed to save file.") }
             }
         }
     }

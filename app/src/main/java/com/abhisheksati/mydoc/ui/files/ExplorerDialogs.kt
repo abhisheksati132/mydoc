@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.files
 
+import com.abhisheksati.mydoc.designsystem.components.AppAlertDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -32,7 +33,7 @@ fun ExplorerSearchDialog(directory: File, initial: ExplorerSearchOptions?, onDis
         if (days.isBlank()) null else dayCount?.let { System.currentTimeMillis() - it * 86_400_000L }, recursive, dayCount?.toInt())
     val valid = options.isValid && (minimum.isBlank() || bytes(minimum) != null) &&
         (maximum.isBlank() || bytes(maximum) != null) && (days.isBlank() || dayCount != null)
-    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.explorer_advanced_search)) },
+    AppAlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.explorer_advanced_search)) },
         text = {
             Column(Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.explorer_search_scope, directory.absolutePath), style = MaterialTheme.typography.bodySmall)
@@ -69,7 +70,7 @@ fun ExplorerRenameDialog(files: List<File>, onDismiss: () -> Unit, onApply: (Exp
         catch (e: kotlinx.coroutines.CancellationException) { throw e }
         catch (_: Exception) { failed = true }
     }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.explorer_batch_rename)) },
+    AppAlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.explorer_batch_rename)) },
         text = {
             Column(Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 ExplorerField(prefix, { prefix = it }, R.string.explorer_prefix)

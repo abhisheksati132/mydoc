@@ -1,6 +1,10 @@
 package com.abhisheksati.mydoc.designsystem.components
 
 import com.abhisheksati.mydoc.R
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,6 +36,7 @@ fun AppSearchField(
     placeholder: String = "Search documents",
     shape: androidx.compose.ui.graphics.Shape = AppRadius.xLargeShape
 ) {
+    val keyboard = LocalSoftwareKeyboardController.current
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val isOled = LocalIsOled.current
@@ -68,7 +73,7 @@ fun AppSearchField(
             if (query.isNotEmpty()) {
                 IconButton(
                     onClick = { onQueryChanged("") },
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
@@ -81,6 +86,8 @@ fun AppSearchField(
         },
         textStyle = typography.body.copy(color = colors.textPrimary),
         singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
         shape = shape,
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = colors.surfaceContainerHigh,

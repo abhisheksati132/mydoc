@@ -2,6 +2,7 @@ package com.abhisheksati.mydoc.ui.appmanager
 
 
 import com.abhisheksati.mydoc.R
+import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.util.UserMessages
 import android.content.Context
 import android.content.Intent
@@ -111,31 +112,11 @@ fun AppManagerScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             // Search Bar & Filters
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = {
-                        Text(
-                            stringResource(if (tab == 2) R.string.apps_search_apks else R.string.app_manager_search),
-                            color = colors.textSecondary,
-                            style = AppTheme.typography.label
-                        )
-                    },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = colors.textSecondary) },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.action_clear), tint = colors.textSecondary)
-                        }
-                    }
-                },
-                singleLine = true,
-                shape = AppRadius.cardShape,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = colors.accent,
-                    unfocusedBorderColor = colors.divider
-                ),
-                modifier = Modifier.fillMaxWidth()
+            AppSearchField(
+                query = searchQuery,
+                onQueryChanged = { searchQuery = it },
+                placeholder = stringResource(if (tab == 2) R.string.apps_search_apks else R.string.app_manager_search),
+                shape = AppRadius.cardShape
             )
 
             Spacer(modifier = Modifier.height(8.dp))
