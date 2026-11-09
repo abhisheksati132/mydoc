@@ -122,6 +122,7 @@ fun HomeScreen(
 
     var showCameraScanner by remember { mutableStateOf(false) }
     var showSignaturePad by remember { mutableStateOf(false) }
+    var toolSource by remember { mutableStateOf<File?>(null) }
     var selectedDocForDetails by remember { mutableStateOf<DocumentFile?>(null) }
     var documentToDelete by remember { mutableStateOf<DocumentFile?>(null) }
 
@@ -261,7 +262,11 @@ fun HomeScreen(
                                 onSettingsClick = onSettingsClick,
                                 onSpotlightSearch = onSpotlightSearch,
                                 isActive = currentTab == HomeTab.LIBRARY && pagerState.currentPage == 1,
-                                onOpenInTools = { viewModel.selectTab(HomeTab.TOOLS) },
+                                onOpenInTools = { toolSource = it },
+                                onMergePdfs = { files ->
+                                    toolsViewModel.selectTool(PdfTool.MERGE)
+                                    toolsViewModel.setInputUris(files.map(Uri::fromFile))
+                                },
                                 hazeState = libraryHazeState,
                                 glassMotion = libraryGlassMotion,
                                 onPageVisibilityChange = { libraryPageVisible = it },
@@ -505,6 +510,36 @@ fun HomeScreen(
                 context.showMessage(resources.getString(R.string.home_document_removed))
             },
             onDismiss = { documentToDelete = null }
+        )
+    }
+
+    toolSource?.let { source ->
+        val extension = source.extension.lowercase(java.util.Locale.ROOT)
+        val tools = when (extension) {
+            "pdf" -> listOf(PdfTool.COMPRESS, PdfTool.SIGN_PDF, PdfTool.PDF_TO_IMAGES)
+            "jpg", "jpeg", "png", "webp", "bmp", "gif" -> listOf(PdfTool.IMAGE_TO_PDF)
+            "txt", "md", "csv", "json", "xml", "log" -> listOf(PdfTool.TEXT_TO_PDF)
+            else -> emptyList()
+        }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { toolSource = null },
+            title = { Text(source.name, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
+            text = {
+                Column {
+                    if (tools.isEmpty()) Text(stringResource(R.string.file_tools_no_match))
+                    tools.forEach { tool ->
+                        androidx.compose.material3.TextButton(onClick = {
+                            toolSource = null
+                            toolsViewModel.selectTool(tool, Uri.fromFile(source))
+                        }) { Text(stringResource(tool.titleRes)) }
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { toolSource = null }) {
+                    Text(stringResource(R.string.action_close))
+                }
+            }
         )
     }
 

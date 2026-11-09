@@ -251,6 +251,10 @@ fun StorageCleanerScreen(
                     contentPadding = PaddingValues(bottom = AppSpacing.paddingLarge),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    item {
+                        Text(stringResource(R.string.cleaner_review_explanation),
+                            style = typography.caption, color = colors.inkMuted)
+                    }
                     // Summary card
                     item {
                         Surface(

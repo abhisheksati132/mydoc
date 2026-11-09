@@ -110,21 +110,63 @@ fun AudioPlayerScreen(
         }
     }
 
+    val audioManager = remember(context) {
+        requireNotNull(context.getSystemService(android.media.AudioManager::class.java))
+    }
+    val audioAttributes = remember {
+        android.media.AudioAttributes.Builder()
+            .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+            .build()
+    }
+    fun pauseAudio() {
+        if (isPlaying) runCatching { mediaPlayer.pause() }
+        isPlaying = false
+    }
+    val focusRequest = remember(mediaPlayer) {
+        android.media.AudioFocusRequest.Builder(android.media.AudioManager.AUDIOFOCUS_GAIN)
+            .setAudioAttributes(audioAttributes)
+            .setWillPauseWhenDucked(true)
+            .setOnAudioFocusChangeListener { change ->
+                if (change < 0) pauseAudio()
+            }
+            .build()
+    }
+    fun startAudio() {
+        if (audioManager.requestAudioFocus(focusRequest) != android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            context.showMessage(resources.getString(R.string.audio_focus_unavailable))
+            return
+        }
+        isPlaying = runCatching { mediaPlayer.start() }.isSuccess
+        if (!isPlaying) audioManager.abandonAudioFocusRequest(focusRequest)
+    }
+    fun stopAudio() {
+        pauseAudio()
+        audioManager.abandonAudioFocusRequest(focusRequest)
+    }
+
     BackHandler {
         onBackClick()
     }
 
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(mediaPlayer) {
         var resumeJob: kotlinx.coroutines.Job? = null
+        val disconnect = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: android.content.Context, intent: android.content.Intent) = stopAudio()
+        }
+        androidx.core.content.ContextCompat.registerReceiver(context, disconnect,
+            android.content.IntentFilter(android.media.AudioManager.ACTION_AUDIO_BECOMING_NOISY),
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
         mediaPlayer.setOnErrorListener { _, _, _ ->
             resumeJob?.cancel()
             ready = false
-            isPlaying = false
+            stopAudio()
             context.showMessage(resources.getString(R.string.audio_cant_play))
             true
         }
         mediaPlayer.setOnCompletionListener {
-            isPlaying = false
+            stopAudio()
             isSeeking = false
             currentPositionMs = totalDurationMs
             seekPositionMs = totalDurationMs
@@ -141,12 +183,12 @@ fun AudioPlayerScreen(
                     currentPositionMs = resume
                     checkpoints.seed(resume)
                 }
-                player.start()
                 ready = true
-                isPlaying = true
+                if (lifecycleOwner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) startAudio()
             }
         }
         try {
+            mediaPlayer.setAudioAttributes(audioAttributes)
             mediaPlayer.setDataSource(context, item.uri)
             mediaPlayer.prepareAsync()
         } catch (_: Exception) {
@@ -155,6 +197,8 @@ fun AudioPlayerScreen(
 
         onDispose {
             resumeJob?.cancel()
+            stopAudio()
+            context.unregisterReceiver(disconnect)
             mediaPlayer.release()
         }
     }
@@ -177,11 +221,11 @@ fun AudioPlayerScreen(
 
     // Backgrounding is a lifecycle transition, not a disposal: the scope is still alive here, so the
     // checkpoint written now is the one that survives a phone call.
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, app) {
         val owner = lifecycleOwner
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP && app != null) {
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                stopAudio()
                 val position = runCatching { mediaPlayer.currentPosition.toLong() }.getOrDefault(0L)
                 scope.launch { checkpoints.checkpoint(position, totalDurationMs, force = true) }
             }
@@ -396,13 +440,7 @@ fun AudioPlayerScreen(
                     .clickable {
                         haptics.heavy()
                         if (!ready) return@clickable
-                        if (isPlaying) {
-                            try { mediaPlayer.pause() } catch (_: Exception) {}
-                            isPlaying = false
-                        } else {
-                            try { mediaPlayer.start() } catch (_: Exception) {}
-                            isPlaying = true
-                        }
+                        if (isPlaying) stopAudio() else startAudio()
                     }
             ) {
                 Box(contentAlignment = Alignment.Center) {

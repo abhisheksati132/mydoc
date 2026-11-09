@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
@@ -358,6 +359,7 @@ class MainActivity : ComponentActivity() {
                         // becomes the document you are reading.
                         SharedTransitionLayout(modifier = Modifier.fillMaxSize()) {
                             val sharedScope = this
+                            val screenState = rememberSaveableStateHolder()
                             AnimatedContent(
                                 targetState = activeScreen,
                                 transitionSpec = {
@@ -507,21 +509,23 @@ class MainActivity : ComponentActivity() {
                                                 isDiscoveryRequested = true
                                                 isSpotlightSearchOpen = true
                                             })
-                                            HomeScreen(
-                                                quickScanRequested = quickScanRequested,
-                                                onQuickScanShown = { quickScanRequested = false },
-                                                viewModel = homeViewModel,
-                                                toolsViewModel = toolsViewModel,
-                                                fileManagerViewModel = fileManagerViewModel,
-                                                storageViewModel = storageViewModel,
-                                                updateManager = updateManager,
-                                                onLibraryItemClick = openLibraryItem,
-                                                onDocumentClick = { doc -> currentDocument = doc },
-                                                onOpenFile = { file, siblings -> handleOpenFile(file, siblings) },
-                                                onSettingsClick = { isSettingsOpen = true },
-                                                onSpotlightSearch = { isDiscoveryRequested = false; isSpotlightSearchOpen = true },
-                                                onShareDocument = { doc -> shareDocument(doc) }
-                                            )
+                                            screenState.SaveableStateProvider("home") {
+                                                HomeScreen(
+                                                    quickScanRequested = quickScanRequested,
+                                                    onQuickScanShown = { quickScanRequested = false },
+                                                    viewModel = homeViewModel,
+                                                    toolsViewModel = toolsViewModel,
+                                                    fileManagerViewModel = fileManagerViewModel,
+                                                    storageViewModel = storageViewModel,
+                                                    updateManager = updateManager,
+                                                    onLibraryItemClick = openLibraryItem,
+                                                    onDocumentClick = { doc -> currentDocument = doc },
+                                                    onOpenFile = { file, siblings -> handleOpenFile(file, siblings) },
+                                                    onSettingsClick = { isSettingsOpen = true },
+                                                    onSpotlightSearch = { isDiscoveryRequested = false; isSpotlightSearchOpen = true },
+                                                    onShareDocument = { doc -> shareDocument(doc) }
+                                                )
+                                            }
                                         }
                                     }
                                 }

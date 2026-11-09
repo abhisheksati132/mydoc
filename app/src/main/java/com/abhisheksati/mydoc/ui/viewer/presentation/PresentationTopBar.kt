@@ -187,7 +187,7 @@ fun PresentationTopBar(
                         IconButton(onClick = { isMenuOpen = true }) {
                             Icon(
                                 imageVector = Icons.Outlined.MoreVert,
-                                contentDescription = stringResource(R.string.pres_more_options),
+                                contentDescription = stringResource(R.string.cd_more_actions),
                                 tint = secondaryTextColor
                             )
                         }
@@ -269,7 +269,7 @@ fun PresentationTopBar(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.pres_share)) },
+                                text = { Text(stringResource(R.string.viewer_action_share)) },
                                 leadingIcon = {
                                     Icon(Icons.Outlined.Share, contentDescription = null)
                                 },

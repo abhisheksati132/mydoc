@@ -179,6 +179,10 @@ fun VideoPlayerScreen(
     var orientationMode by remember { mutableIntStateOf(0) } // 0: Auto, 1: Landscape, 2: Portrait
     var isSpeedSheetOpen by remember { mutableStateOf(false) }
     var playbackMenuOpen by remember { mutableStateOf(false) }
+    var showQueue by remember { mutableStateOf(false) }
+    var showNetworkInput by remember { mutableStateOf(false) }
+    var activeUri by remember(item.uri) { mutableStateOf(item.uri) }
+    var queue by remember(item.uri) { mutableStateOf(listOf(item.uri)) }
     var selectedTrackType by remember { mutableStateOf<Int?>(null) }
     var tracks by remember { mutableStateOf(Tracks.EMPTY) }
     var loopStart by remember { mutableStateOf<Long?>(null) }
@@ -218,11 +222,13 @@ fun VideoPlayerScreen(
     }
 
     // Initialize Media3 ExoPlayer
-    val exoPlayer = remember {
+    val exoPlayer = remember(item.uri) {
         ExoPlayer.Builder(context)
             .setSeekBackIncrementMs(seekSeconds * 1000L)
             .setSeekForwardIncrementMs(seekSeconds * 1000L)
             .build().apply {
+                setAudioAttributes(androidx.media3.common.AudioAttributes.DEFAULT, true)
+                setHandleAudioBecomingNoisy(true)
                 val mediaItem = ExoMediaItem.fromUri(item.uri)
                 setMediaItem(mediaItem)
                 prepare()
@@ -234,25 +240,51 @@ fun VideoPlayerScreen(
         exoPlayer.repeatMode = if (isLooping) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
     }
 
-    // The position the database was last told about. Writes are checkpoints while playing plus a
-    // flush when playback stops or the app is backgrounded; the old write from `onDispose` ran on a
-    // scope that was being cancelled, so it usually never landed.
-    var lastSavedMs by remember(item.uri) { mutableLongStateOf(-1L) }
-
-    val checkpoints = remember(item.uri, mediaRepository) {
+    val checkpointUri = activeUri
+    val checkpoints = remember(checkpointUri, mediaRepository) {
         PlaybackCheckpointWriter { value, duration ->
-            val uri = item.uri.toString()
-            mediaRepository.savePlaybackPosition(uri, value, duration)
+            if (checkpointUri.scheme != "https") {
+                mediaRepository.savePlaybackPosition(checkpointUri.toString(), value, duration)
+            }
         }
     }
+    var resumeReady by remember(checkpointUri) { mutableStateOf(false) }
 
-    // Restore saved playback position
-    LaunchedEffect(item.uri, autoResume) {
-        val savedPos = mediaRepository.getPlaybackPosition(item.uri.toString())
-        if (autoResume && savedPos > 2000L) {
-            exoPlayer.seekTo(savedPos)
-            checkpoints.seed(savedPos)
+    fun addToQueue(uri: android.net.Uri): Int {
+        val existing = queue.indexOf(uri)
+        if (existing >= 0) return existing
+        val index = queue.size
+        queue = queue + uri
+        exoPlayer.addMediaItem(ExoMediaItem.fromUri(uri))
+        isLooping = false
+        return index
+    }
+
+    val queuePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        uris.forEach { addToQueue(it) }
+        showQueue = true
+    }
+
+    fun switchToQueueItem(index: Int) {
+        if (exoPlayer.currentMediaItemIndex != index) {
+            val position = exoPlayer.currentPosition
+            val duration = exoPlayer.duration
+            scope.launch { checkpoints.checkpoint(position, duration, force = true) }
+            exoPlayer.seekToDefaultPosition(index)
         }
+        if (exoPlayer.playbackState == Player.STATE_IDLE) exoPlayer.prepare()
+        exoPlayer.play()
+    }
+
+    LaunchedEffect(checkpointUri, autoResume) {
+        if (autoResume && checkpointUri.scheme != "https") {
+            val saved = mediaRepository.getPlaybackPosition(checkpointUri.toString())
+            if (saved > 2000L && exoPlayer.currentMediaItem?.localConfiguration?.uri == checkpointUri) {
+                exoPlayer.seekTo(saved)
+                checkpoints.seed(saved)
+            }
+        }
+        resumeReady = true
     }
 
     // Track playback updates and auto-save position
@@ -279,7 +311,7 @@ fun VideoPlayerScreen(
                     exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters.buildUpon()
                         .clearOverridesOfType(C.TRACK_TYPE_TEXT)
                         .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).build()
-                    exoPlayer.setMediaItem(media, exoPlayer.currentPosition)
+                    exoPlayer.replaceMediaItem(exoPlayer.currentMediaItemIndex, media)
                     exoPlayer.prepare()
                 }
             }
@@ -288,6 +320,18 @@ fun VideoPlayerScreen(
 
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
+            override fun onMediaItemTransition(mediaItem: ExoMediaItem?, reason: Int) {
+                val uri = mediaItem?.localConfiguration?.uri ?: return
+                if (activeUri == uri) return
+                activeUri = uri
+                totalDurationMs = exoPlayer.duration.takeIf { it > 0L } ?: 0L
+                currentPositionMs = exoPlayer.currentPosition
+                scrubPositionMs = null
+                loopStart = null
+                loopEnd = null
+                playbackFailed = false
+            }
+
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 playbackFailed = true
                 isPlaying = false
@@ -321,7 +365,8 @@ fun VideoPlayerScreen(
     }
 
     // Periodic position polling for the timeline scrubber, and the checkpoint it makes possible.
-    LaunchedEffect(isPlaying) {
+    LaunchedEffect(isPlaying, checkpoints, resumeReady) {
+        if (!resumeReady) return@LaunchedEffect
         while (isPlaying) {
             val position = exoPlayer.currentPosition
             val start = loopStart
@@ -335,11 +380,12 @@ fun VideoPlayerScreen(
     }
 
     val videoLifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    DisposableEffect(videoLifecycleOwner) {
+    DisposableEffect(videoLifecycleOwner, checkpoints, resumeReady) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                if (activity?.isInPictureInPictureMode != true) exoPlayer.pause()
                 // The composition is still alive when the app is backgrounded, so this scope works.
-                scope.launch { checkpoints.checkpoint(exoPlayer.currentPosition, exoPlayer.duration, force = true) }
+                if (resumeReady) scope.launch { checkpoints.checkpoint(exoPlayer.currentPosition, exoPlayer.duration, force = true) }
             }
         }
         videoLifecycleOwner.lifecycle.addObserver(observer)
@@ -551,7 +597,7 @@ fun VideoPlayerScreen(
                     }
 
                     Text(
-                        text = item.displayName,
+                        text = videoSourceLabel(item, activeUri),
                         style = typography.documentName,
                         color = Color.White,
                         maxLines = 1,
@@ -594,11 +640,19 @@ fun VideoPlayerScreen(
 
                     Box {
                         IconButton(onClick = { playbackMenuOpen = true }) {
-                            Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.cd_more_actions), tint = Color.White)
+                            Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.video_playback_options), tint = Color.White)
                         }
                         com.abhisheksati.mydoc.designsystem.components.AppDropdownMenu(
                             expanded = playbackMenuOpen, onDismissRequest = { playbackMenuOpen = false }
                         ) {
+                            VideoMenuAction(R.string.video_queue) {
+                                playbackMenuOpen = false
+                                showQueue = true
+                            }
+                            VideoMenuAction(R.string.video_network_stream) {
+                                playbackMenuOpen = false
+                                showNetworkInput = true
+                            }
                             VideoMenuAction(R.string.video_audio_tracks) {
                                 playbackMenuOpen = false
                                 selectedTrackType = C.TRACK_TYPE_AUDIO
@@ -626,9 +680,9 @@ fun VideoPlayerScreen(
                                     else -> context.showMessage(resources.getString(R.string.video_loop_end_invalid))
                                 }
                             }
-                            VideoMenuAction(R.string.action_share) {
+                            if (activeUri.scheme != "https") VideoMenuAction(R.string.action_share) {
                                 playbackMenuOpen = false
-                                if (!shareFile(context, item.uri, item.mimeType, resources.getString(R.string.video_share_label))) {
+                                if (!shareFile(context, activeUri, if (activeUri == item.uri) item.mimeType else "video/*", resources.getString(R.string.video_share_label))) {
                                     context.showMessage(resources.getString(R.string.video_no_share_app))
                                 }
                             }
@@ -786,6 +840,47 @@ fun VideoPlayerScreen(
     }
 
     // Playback Speed Selector Modal Bottom Sheet
+    if (showQueue) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showQueue = false },
+            title = { Text(stringResource(R.string.video_queue)) },
+            text = {
+                Column(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) {
+                    queue.forEachIndexed { index, uri ->
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text(videoSourceLabel(item, uri)) },
+                            leadingIcon = {
+                                androidx.compose.material3.RadioButton(selected = uri == activeUri, onClick = null)
+                            },
+                            onClick = { switchToQueueItem(index); showQueue = false }
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showQueue = false
+                    queuePicker.launch(arrayOf("video/*"))
+                }) { Text(stringResource(R.string.video_queue_add)) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showQueue = false }) {
+                    Text(stringResource(R.string.action_close))
+                }
+            }
+        )
+    }
+
+    if (showNetworkInput) {
+        NetworkVideoDialog(
+            onDismiss = { showNetworkInput = false },
+            onOpen = { uri ->
+                switchToQueueItem(addToQueue(uri))
+                showNetworkInput = false
+            }
+        )
+    }
+
     if (playbackFailed) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = onBackClick,
@@ -920,5 +1015,46 @@ private fun VideoTrackDialog(
             }
         },
         confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) } }
+    )
+}
+
+private fun videoSourceLabel(item: MediaItem, uri: android.net.Uri): String = when {
+    uri == item.uri -> item.displayName
+    uri.scheme == "https" -> uri.host.orEmpty()
+    else -> uri.lastPathSegment.orEmpty()
+}
+
+@Composable
+private fun NetworkVideoDialog(onDismiss: () -> Unit, onOpen: (android.net.Uri) -> Unit) {
+    var input by remember { mutableStateOf("") }
+    var invalid by remember { mutableStateOf(false) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.video_network_stream)) },
+        text = {
+            androidx.compose.material3.OutlinedTextField(
+                value = input,
+                onValueChange = { input = it; invalid = false },
+                label = { Text(stringResource(R.string.video_network_url)) },
+                isError = invalid,
+                supportingText = { if (invalid) Text(stringResource(R.string.video_network_invalid)) },
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = {
+                val uri = runCatching { java.net.URI(input.trim()) }.getOrNull()
+                if (uri?.scheme != "https" || uri.host.isNullOrBlank() || uri.rawUserInfo != null) {
+                    invalid = true
+                } else {
+                    onOpen(android.net.Uri.parse(uri.toASCIIString()))
+                }
+            }) { Text(stringResource(R.string.action_open)) }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
+            }
+        }
     )
 }

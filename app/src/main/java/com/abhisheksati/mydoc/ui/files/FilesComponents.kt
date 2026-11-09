@@ -553,7 +553,8 @@ fun FilesSelectionBar(
     onRename: (() -> Unit)?,
     onCompress: () -> Unit,
     onDelete: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onMergePdfs: (() -> Unit)? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     var isMenuOpen by remember { mutableStateOf(false) }
@@ -576,6 +577,10 @@ fun FilesSelectionBar(
                     Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.cd_more_actions))
                 }
                 AppDropdownMenu(expanded = isMenuOpen, onDismissRequest = { isMenuOpen = false }) {
+                    if (onMergePdfs != null) {
+                        DropdownMenuItem(text = { Text(stringResource(R.string.library_merge_pdfs)) },
+                            onClick = { isMenuOpen = false; onMergePdfs() })
+                    }
                     if (onRename != null) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_rename)) },

@@ -685,6 +685,9 @@ fun StorageInsightsScreen(
             )
             Spacer(Modifier.height(24.dp))
             StorageBreakdown(storageUiState = storageUiState)
+            Spacer(Modifier.height(12.dp))
+            Text(stringResource(R.string.storage_measurement_note),
+                style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
             val reclaimable = storageUiState.cleanSummary.totalReclaimableBytes
             Spacer(Modifier.height(24.dp))
             Button(

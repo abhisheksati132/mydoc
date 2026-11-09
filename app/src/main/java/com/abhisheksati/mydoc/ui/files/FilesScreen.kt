@@ -122,6 +122,7 @@ fun FilesPaneScreen(
     modifier: Modifier = Modifier,
     isActive: Boolean = true,
     onOpenInTools: ((File) -> Unit)? = null,
+    onMergePdfs: ((List<File>) -> Unit)? = null,
     hazeState: dev.chrisbanes.haze.HazeState? = null,
     glassMotion: com.abhisheksati.mydoc.designsystem.components.GlassMotionState? = null,
     workspaceInsets: Boolean = false,
@@ -377,6 +378,11 @@ fun FilesPaneScreen(
                                     else batchRenameFiles = uiState.selectedFiles.toList()
                                 }
                             } else null,
+                            onMergePdfs = onMergePdfs?.takeIf {
+                                uiState.selectedFiles.size >= 2 && uiState.selectedFiles.all { file ->
+                                    file.extension.equals("pdf", ignoreCase = true) && !file.isDirectory
+                                }
+                            }?.let { merge -> { merge(uiState.filteredItems.map { it.file }.filter { it in uiState.selectedFiles }) } },
                             onCompress = { showCompressDialog = true },
                             onDelete = { showDeleteConfirm = true }
                         )

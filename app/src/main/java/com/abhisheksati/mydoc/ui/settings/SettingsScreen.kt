@@ -244,6 +244,8 @@ fun SettingsScreen(
                         }
                     }
 
+                    if (selectedCategory == SettingsCategory.DIAGNOSTICS) DeviceDiagnosticsSection()
+
                     if (selectedCategory == SettingsCategory.ABOUT) {
                         // 6. ABOUT & UPDATES
                         SettingsAboutSection(

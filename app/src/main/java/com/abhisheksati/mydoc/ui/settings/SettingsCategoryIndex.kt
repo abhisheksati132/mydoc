@@ -26,6 +26,7 @@ internal enum class SettingsCategory(val title: Int, val summary: Int, val icon:
     MEDIA(R.string.settings_media_title, R.string.settings_media_summary, Icons.Outlined.VideoLibrary),
     STORAGE(R.string.settings_storage_title, R.string.settings_storage_summary, Icons.Outlined.Storage),
     PRIVACY(R.string.settings_privacy_security, R.string.settings_privacy_summary, Icons.Outlined.Security),
+    DIAGNOSTICS(R.string.diagnostics_title, R.string.diagnostics_summary, Icons.Outlined.Info),
     ABOUT(R.string.settings_about_title, R.string.settings_about_summary, Icons.Outlined.Info)
 }
 
