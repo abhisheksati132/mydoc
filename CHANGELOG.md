@@ -3,6 +3,11 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [1.9.9] — 2026-11-09
+
+- Retry Office engine downloads through GitHub's asset API when the release download or checksum link fails. Verify the matching asset's SHA-256 and signing certificate before opening the installer.
+- Read checksum files completely, reject invalid checksums and incomplete downloads, and distinguish a checksum fetch failure from a mismatch.
+
 ## [1.9.8] — 2026-11-08
 
 ### Changed

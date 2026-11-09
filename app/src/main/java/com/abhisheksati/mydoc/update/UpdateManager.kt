@@ -119,7 +119,7 @@ class UpdateManager(
             apkDownloader.fetchChecksumText(release.checksumUrl)
         }.getOrElse { ex ->
             cleanUpdatesCache()
-            _state.value = UpdateUiState.Error("That download did not match its published checksum. Try downloading it again.")
+            _state.value = UpdateUiState.Error("Could not retrieve the update checksum from GitHub. Try again or download the APK from GitHub Releases.")
             return
         }
 

@@ -46,7 +46,8 @@ class ApkDownloader(private val context: Context, private val cacheFolder: Strin
 
         fun parseChecksumContent(rawText: String): String? {
             // Checksum files usually look like "hash  filename.apk" or just "hash"
-            return rawText.trim().split("\\s+".toRegex()).firstOrNull()?.takeIf { it.isNotBlank() }
+            return rawText.trim().split("\\s+".toRegex(), limit = 2).firstOrNull()
+                ?.takeIf { it.matches(Regex("[0-9a-fA-F]{64}")) }
         }
 
         fun computeSha256(file: File): String {
@@ -66,7 +67,8 @@ class ApkDownloader(private val context: Context, private val cacheFolder: Strin
         downloadUrl: String,
         targetFileName: String,
         expectedSha256: String,
-        onProgress: (bytesDownloaded: Long, totalBytes: Long) -> Unit
+        onProgress: (bytesDownloaded: Long, totalBytes: Long) -> Unit,
+        accept: String? = null
     ): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
             val cleanExpectedSha256 = expectedSha256.trim().lowercase(Locale.ROOT)
@@ -101,6 +103,8 @@ class ApkDownloader(private val context: Context, private val cacheFolder: Strin
                     readTimeout = 30000
                     instanceFollowRedirects = false
                     setRequestProperty("User-Agent", "mydoc-android-updater")
+                    setRequestProperty("Accept-Encoding", "identity")
+                    if (accept != null) setRequestProperty("Accept", accept)
                 }
 
                 val code = connection.responseCode
@@ -159,6 +163,7 @@ class ApkDownloader(private val context: Context, private val cacheFolder: Strin
                             }
                         }
                         output.flush()
+                        check(totalRead == totalBytes) { "The APK download ended before all bytes arrived." }
                         onProgress(totalRead, totalBytes)
                     }
                 }
@@ -185,14 +190,25 @@ class ApkDownloader(private val context: Context, private val cacheFolder: Strin
             readTimeout = 10000
             setRequestProperty("User-Agent", "mydoc-android-updater")
         }
-        if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-            val buffer = CharArray(16384)
-            val readChars = connection.inputStream.bufferedReader().use { it.read(buffer) }
-            val text = if (readChars > 0) String(buffer, 0, readChars) else ""
-            parseChecksumContent(text)
-                ?: throw IllegalStateException("Empty or invalid checksum content from $checksumUrl")
-        } else {
-            throw IllegalStateException("Failed to fetch checksum file from $checksumUrl: HTTP ${connection.responseCode}")
+        try {
+            check(connection.responseCode == HttpURLConnection.HTTP_OK) {
+                "Failed to fetch checksum file: HTTP ${connection.responseCode}"
+            }
+            val bytes = connection.inputStream.use { input ->
+                val buffer = ByteArray(1025)
+                var length = 0
+                while (length < buffer.size) {
+                    val read = input.read(buffer, length, buffer.size - length)
+                    if (read == -1) break
+                    length += read
+                }
+                check(length <= 1024) { "Checksum file exceeds its size limit" }
+                buffer.copyOf(length)
+            }
+            parseChecksumContent(bytes.toString(Charsets.UTF_8))
+                ?: error("Invalid SHA-256 checksum file")
+        } finally {
+            connection.disconnect()
         }
     }
 }

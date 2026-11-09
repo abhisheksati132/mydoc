@@ -12,6 +12,10 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlinx.coroutines.CancellationException
+import org.json.JSONObject
 
 /** The optional engine is a signed Android package; no downloaded code runs in MyDoc. */
 object OfficeEngineManager {
@@ -47,13 +51,59 @@ object OfficeEngineManager {
         val name = "mydoc-office-engine-$abi.apk"
         val url = "https://github.com/abhisheksati132/mydoc/releases/download/office-engine-$PACKAGE_VERSION/$name"
         val downloader = ApkDownloader(context, "office-engine-download")
-        val checksum = downloader.fetchChecksumText("$url.sha256")
-        val apk = downloader.downloadApk(url, name, checksum, onProgress).getOrThrow()
+        val apk = try {
+            val checksum = downloader.fetchChecksumText("$url.sha256")
+            downloader.downloadApk(url, name, checksum, onProgress).getOrThrow()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (primary: Exception) {
+            try {
+                val (id, checksum) = findEngineAsset(name)
+                downloader.downloadApk(
+                    "https://api.github.com/repos/abhisheksati132/mydoc/releases/assets/$id",
+                    name, checksum, onProgress, accept = "application/octet-stream"
+                ).getOrThrow()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (fallback: Exception) {
+                fallback.addSuppressed(primary)
+                throw IllegalStateException("Could not download and verify the Office engine from GitHub. Try again.", fallback)
+            }
+        }
         try {
             verifyArchive(context, apk)
             apk
         } catch (error: Throwable) { apk.delete(); throw error }
     } }
+
+    private fun findEngineAsset(name: String): Pair<Long, String> {
+        val tag = "office-engine-$PACKAGE_VERSION"
+        val endpoint = "https://api.github.com/repos/abhisheksati132/mydoc/releases/tags/$tag"
+        val connection = URL(endpoint).openConnection() as HttpURLConnection
+        try {
+            connection.connectTimeout = 15_000
+            connection.readTimeout = 30_000
+            connection.instanceFollowRedirects = false
+            connection.setRequestProperty("Accept", "application/vnd.github+json")
+            connection.setRequestProperty("User-Agent", "mydoc-android-updater")
+            check(connection.responseCode == HttpURLConnection.HTTP_OK) { "Office engine metadata is unavailable" }
+            val release = connection.inputStream.bufferedReader().use { JSONObject(it.readText()) }
+            check(release.getString("tag_name") == tag && !release.getBoolean("draft"))
+            val assets = release.getJSONArray("assets")
+            for (index in 0 until assets.length()) {
+                val asset = assets.getJSONObject(index)
+                if (asset.getString("name") != name || asset.optString("state") != "uploaded") continue
+                val id = asset.getLong("id")
+                val digest = asset.getString("digest")
+                check(id > 0 && digest.startsWith("sha256:"))
+                val checksum = requireNotNull(ApkDownloader.parseChecksumContent(digest.removePrefix("sha256:")))
+                return id to checksum
+            }
+            error("No Office engine APK found for this device")
+        } finally {
+            connection.disconnect()
+        }
+    }
 
     @Suppress("DEPRECATION")
     private fun verifyArchive(context: Context, file: File) {
