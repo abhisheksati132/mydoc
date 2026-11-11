@@ -3,6 +3,25 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [2.0.5] — 2026-11-11
+
+### Storage, Thumbnail & Render Cache Engine
+- **Memory & Disk Cache Reclamation**: Repaired thumbnail and render cache clearing in Settings → Storage (`clearCache()`). The cleaner now evicts in-memory thumbnail caches (`clearThumbnailMemoryCache()`), native page render tiles (`TileBitmapCache.clearAll()`), and Coil image caches (`memoryCache?.clear()`, `diskCache?.clear()`).
+- **Multi-Volume Cache Purge**: Recursively purges `context.cacheDir` (safeguarding active APK downloads in `updates/`) and all mounted storage volumes via `context.externalCacheDirs` with write-permission recovery fallback, returning accurate freed byte metrics.
+
+### Distraction-Free Viewing & Unified Reader Experience
+- **Eliminated Intrusive Dialogues**: Completely removed the top-left layout limitation info icon and dialogue box (`FidelityNotice`) across all document viewers.
+- **Presentation Viewer Parity with PDF Viewer**: Re-engineered the PowerPoint / Presentation viewer (`PresentationViewerScreen`) to provide the exact fluid experience as the PDF reader:
+  - **Fluid Gestures**: Integrated `ZoomableViewport` supporting continuous pinch-to-zoom (up to 5x), double-tap zoom, inertia fling, and clamped edge panning.
+  - **Slide Cards**: Rendered slides on elevated Material 3 squircle surfaces (`AppRadius.cardShape`) with slide indicator badges (`X / N`).
+  - **Continuous Vertical Reading**: Defaulted to vertical continuous scroll with clean 16dp spacing and slide jump actions.
+  - **Immersive Controls**: Tap-to-toggle top bar and bottom thumbnail navigation bar with smooth animated slide/fade transitions (`fadeIn() + slideInVertically()`).
+
+### Studio-Grade Material You 3 & Bento Grid UI/UX (Artefact Inspiration)
+- **Library Categories Overhaul**: Redesigned Library category shortcuts from an awkward 3-column layout to a studio-grade 2-box-per-row Bento grid matching Tools "Start here" and inspired by open-source analysis of `Artefact`.
+- **Tactile Bento Cards**: Each category card features 24dp squircle radii (`AppRadius.xLargeShape`), subtle dual-tone vertical tint gradients, tactile spring bounce feedback on touch (`pressScaleEffect(0.96f)`), colored squircle icon badge (38dp), bold title typography (`titleMedium`), and secondary storage capacity metrics (`bodySmall`).
+- **System-Wide Material 3 Expressive**: Harmonized colors, tonal elevations, squircle corners, and responsive font-scale adaptations across all screens.
+
 ## [2.0.4] — 2026-11-11
 
 ### Security, Sandboxing & Storage Integrity

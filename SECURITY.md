@@ -9,7 +9,7 @@ Security fixes and updates are provided for the following releases:
 | 2.0.x   | :white_check_mark: |
 | < 2.0.0 | :x:                |
 
-Current version: **2.0.4** (`versionCode` 194), produced by the tag-triggered release workflow. Older
+Current version: **2.0.5** (`versionCode` 195), produced by the tag-triggered release workflow. Older
 lines are not maintained: fixes land on the current build only, so the security
 behaviour described below is the behaviour of the latest release, not of an older APK you may still
 have installed.

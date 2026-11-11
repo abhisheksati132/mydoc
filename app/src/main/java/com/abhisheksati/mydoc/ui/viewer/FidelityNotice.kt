@@ -113,37 +113,5 @@ fun FidelityNotice(
     modifier: Modifier = Modifier,
     dismissalKey: String? = null
 ) {
-    if (disclosure == null) return
-    var expanded by rememberSaveable(disclosure, dismissalKey) { mutableStateOf(false) }
-    val colors = LocalAppColors.current
-    val typography = LocalAppTypography.current
-    val scrollState = rememberScrollState()
-    val accessibility = LocalAccessibilityManager.current
-    LaunchedEffect(expanded, disclosure, scrollState.isScrollInProgress) {
-        if (expanded && !scrollState.isScrollInProgress) {
-            delay(accessibility?.calculateRecommendedTimeoutMillis(3_000, containsText = true) ?: 3_000)
-            expanded = false
-        }
-    }
-
-    androidx.compose.foundation.layout.Box(modifier.padding(horizontal = AppSpacing.paddingSmall)) {
-        Surface(shape = AppRadius.cardShape, color = colors.surface) {
-            IconButton(onClick = { expanded = !expanded }) {
-                Icon(Icons.Outlined.Info, contentDescription = stringResource(R.string.rendering_information),
-                    tint = colors.accent, modifier = Modifier.size(20.dp))
-            }
-        }
-        if (expanded) Popup(alignment = Alignment.TopStart, onDismissRequest = { expanded = false }) {
-            Surface(shape = AppRadius.cardShape, color = colors.surface,
-                border = BorderStroke(AppSpacing.hairline, colors.line), shadowElevation = 4.dp) {
-                Column(Modifier.widthIn(max = 320.dp).heightIn(max = 320.dp).verticalScroll(scrollState).padding(AppSpacing.paddingMedium),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(disclosure.headline, style = typography.captionStrong, color = colors.textPrimary)
-                    disclosure.notes.forEach { note ->
-                        Text(note, style = typography.micro, color = colors.textSecondary)
-                    }
-                }
-            }
-        }
-    }
+    // Suppressed: do not show layout problem dialogue box or information icon in document viewers
 }

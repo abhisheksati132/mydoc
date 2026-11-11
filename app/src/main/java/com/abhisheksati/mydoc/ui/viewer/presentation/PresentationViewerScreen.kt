@@ -3,6 +3,16 @@ package com.abhisheksati.mydoc.ui.viewer.presentation
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import com.abhisheksati.mydoc.domain.model.RenderFidelity
+import com.abhisheksati.mydoc.ui.viewer.controls.ZoomableViewport
+import com.abhisheksati.mydoc.ui.viewer.controls.rememberZoomState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.ui.viewer.FidelityNotice
 import com.abhisheksati.mydoc.ui.viewer.fidelityDisclosureFor
 import com.abhisheksati.mydoc.util.copyBounded
@@ -185,8 +195,8 @@ fun PresentationViewerScreen(
     var isSlideshowMode by rememberSaveable(document.uri) { mutableStateOf(startInSlideshow) }
     var isNotesSheetOpen by remember { mutableStateOf(false) }
 
-    var zoomScale by remember { mutableFloatStateOf(1f) }
-    var panOffset by remember { mutableStateOf(Offset.Zero) }
+    val zoomState = rememberZoomState(key = document.uri)
+    var isControlsVisible by rememberSaveable { mutableStateOf(true) }
 
     DisposableEffect(document.uri) {
         onDispose {
@@ -326,8 +336,7 @@ fun PresentationViewerScreen(
 
     // Reset zoom when swiping slides
     LaunchedEffect(currentSlideIndex) {
-        zoomScale = 1f
-        panOffset = Offset.Zero
+        zoomState.reset()
     }
 
     // Volume key slide navigation
@@ -417,125 +426,137 @@ fun PresentationViewerScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            Column {
-                PresentationTopBar(
-                document = document,
-                effectiveSlideCount = effectiveSlideCount,
-                isSlideshowMode = isSlideshowMode,
-                isSearchOpen = isSearchOpen,
-                searchQuery = searchQuery,
-                searchMatchesCount = searchMatches.size,
-                currentMatchIndex = currentMatchIndex,
-                onQueryChanged = {
-                    searchQuery = it
-                    currentMatchIndex = 0
-                },
-                onNextMatch = {
-                    if (searchMatches.isNotEmpty()) {
-                        currentMatchIndex = (currentMatchIndex + 1) % searchMatches.size
-                        val target = searchMatches[currentMatchIndex]
-                        scope.launch {
-                            if (isContinuousVertical) lazyListState.animateScrollToItem(target)
-                            else pagerState.animateScrollToPage(target)
+            AnimatedVisibility(
+                visible = isControlsVisible && !isSlideshowMode,
+                enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
+                exit = fadeOut() + slideOutVertically(targetOffsetY = { -it })
+            ) {
+                Column {
+                    PresentationTopBar(
+                        document = document,
+                        effectiveSlideCount = effectiveSlideCount,
+                        isSlideshowMode = isSlideshowMode,
+                        isSearchOpen = isSearchOpen,
+                        searchQuery = searchQuery,
+                        searchMatchesCount = searchMatches.size,
+                        currentMatchIndex = currentMatchIndex,
+                        onQueryChanged = {
+                            searchQuery = it
+                            currentMatchIndex = 0
+                        },
+                        onNextMatch = {
+                            if (searchMatches.isNotEmpty()) {
+                                currentMatchIndex = (currentMatchIndex + 1) % searchMatches.size
+                                val target = searchMatches[currentMatchIndex]
+                                scope.launch {
+                                    if (isContinuousVertical) lazyListState.animateScrollToItem(target)
+                                    else pagerState.animateScrollToPage(target)
+                                }
+                            }
+                        },
+                        onPreviousMatch = {
+                            if (searchMatches.isNotEmpty()) {
+                                currentMatchIndex = (currentMatchIndex - 1 + searchMatches.size) % searchMatches.size
+                                val target = searchMatches[currentMatchIndex]
+                                scope.launch {
+                                    if (isContinuousVertical) lazyListState.animateScrollToItem(target)
+                                    else pagerState.animateScrollToPage(target)
+                                }
+                            }
+                        },
+                        onCloseSearch = {
+                            isSearchOpen = false
+                            searchQuery = ""
+                        },
+                        onOpenSearch = { isSearchOpen = true },
+                        onBackClick = onBackClick,
+                        isContinuousVertical = isContinuousVertical,
+                        onToggleContinuousVertical = {
+                            val newMode = !isContinuousVertical
+                            continuousReader = newMode
+                            scope.launch {
+                                if (newMode) {
+                                    lazyListState.scrollToItem(pagerState.currentPage)
+                                } else {
+                                    pagerState.scrollToPage(lazyListState.firstVisibleItemIndex)
+                                }
+                            }
+                        },
+                        onStartSlideshow = {
+                            pagerState.requestScrollToPage(currentSlideIndex)
+                            isSlideshowMode = true
+                        },
+                        isVisualMode = isVisualMode,
+                        onToggleVisualMode = { isVisualMode = !isVisualMode },
+                        readingMode = readingMode,
+                        onCycleReadingMode = {
+                            readingMode = when (readingMode) {
+                                ReadingMode.NORMAL -> ReadingMode.INVERTED_DARK
+                                ReadingMode.INVERTED_DARK -> ReadingMode.SEPIA
+                                ReadingMode.SEPIA -> ReadingMode.EYE_COMFORT
+                                ReadingMode.EYE_COMFORT -> ReadingMode.NORMAL
+                            }
+                        },
+                        onOpenJumpDialog = { isJumpDialogOpen = true },
+                        onToggleThumbnailStrip = { isThumbnailStripOpen = !isThumbnailStripOpen },
+                        onOpenNotesSheet = { isNotesSheetOpen = true },
+                        onShareClick = onShareClick,
+                        onOpenInOfficeApp = { openPresentationInOfficeApp(context, document) },
+                        onPrintClick = {
+                            PrintHelper.printDocument(context, document) { msg ->
+                                context.showMessage(msg)
+                            }
                         }
-                    }
-                },
-                onPreviousMatch = {
-                    if (searchMatches.isNotEmpty()) {
-                        currentMatchIndex = (currentMatchIndex - 1 + searchMatches.size) % searchMatches.size
-                        val target = searchMatches[currentMatchIndex]
-                        scope.launch {
-                            if (isContinuousVertical) lazyListState.animateScrollToItem(target)
-                            else pagerState.animateScrollToPage(target)
-                        }
-                    }
-                },
-                onCloseSearch = {
-                    isSearchOpen = false
-                    searchQuery = ""
-                },
-                onOpenSearch = { isSearchOpen = true },
-                onBackClick = onBackClick,
-                isContinuousVertical = isContinuousVertical,
-                onToggleContinuousVertical = {
-                    val newMode = !isContinuousVertical
-                    continuousReader = newMode
-                    scope.launch {
-                        if (newMode) {
-                            lazyListState.scrollToItem(pagerState.currentPage)
-                        } else {
-                            pagerState.scrollToPage(lazyListState.firstVisibleItemIndex)
-                        }
-                    }
-                },
-                onStartSlideshow = {
-                    pagerState.requestScrollToPage(currentSlideIndex)
-                    isSlideshowMode = true
-                },
-                isVisualMode = isVisualMode,
-                onToggleVisualMode = { isVisualMode = !isVisualMode },
-                readingMode = readingMode,
-                onCycleReadingMode = {
-                    readingMode = when (readingMode) {
-                        ReadingMode.NORMAL -> ReadingMode.INVERTED_DARK
-                        ReadingMode.INVERTED_DARK -> ReadingMode.SEPIA
-                        ReadingMode.SEPIA -> ReadingMode.EYE_COMFORT
-                        ReadingMode.EYE_COMFORT -> ReadingMode.NORMAL
-                    }
-                },
-                onOpenJumpDialog = { isJumpDialogOpen = true },
-                onToggleThumbnailStrip = { isThumbnailStripOpen = !isThumbnailStripOpen },
-                onOpenNotesSheet = { isNotesSheetOpen = true },
-                onShareClick = onShareClick,
-                onOpenInOfficeApp = { openPresentationInOfficeApp(context, document) },
-                onPrintClick = {
-                    PrintHelper.printDocument(context, document) { msg ->
-                        context.showMessage(msg)
-                    }
-                },
-                )
+                    )
+                }
             }
         },
         bottomBar = {
-            if (effectiveSlideCount > 0 && !isSlideshowMode) {
-                PresentationBottomBar(
-                    effectiveSlideCount = effectiveSlideCount,
-                    currentSlideIndex = currentSlideIndex,
-                    effectiveSlides = effectiveSlides,
-                    isThumbnailStripOpen = isThumbnailStripOpen,
-                    onToggleThumbnailStrip = { isThumbnailStripOpen = !isThumbnailStripOpen },
-                    onSelectSlide = { index ->
-                        scope.launch {
-                            if (isContinuousVertical) {
-                                lazyListState.animateScrollToItem(index)
-                            } else {
-                                pagerState.animateScrollToPage(index)
+            if (effectiveSlideCount > 0) {
+                AnimatedVisibility(
+                    visible = isControlsVisible && !isSlideshowMode,
+                    enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
+                    exit = fadeOut() + slideOutVertically(targetOffsetY = { it })
+                ) {
+                    PresentationBottomBar(
+                        effectiveSlideCount = effectiveSlideCount,
+                        currentSlideIndex = currentSlideIndex,
+                        effectiveSlides = effectiveSlides,
+                        isThumbnailStripOpen = isThumbnailStripOpen,
+                        onToggleThumbnailStrip = { isThumbnailStripOpen = !isThumbnailStripOpen },
+                        onSelectSlide = { index ->
+                            scope.launch {
+                                if (isContinuousVertical) {
+                                    lazyListState.animateScrollToItem(index)
+                                } else {
+                                    pagerState.animateScrollToPage(index)
+                                }
                             }
-                        }
-                    },
-                    onPreviousSlide = {
-                        scope.launch {
-                            if (currentSlideIndex > 0) {
-                                if (isContinuousVertical) lazyListState.animateScrollToItem(currentSlideIndex - 1)
-                                else pagerState.animateScrollToPage(currentSlideIndex - 1)
+                        },
+                        onPreviousSlide = {
+                            scope.launch {
+                                if (currentSlideIndex > 0) {
+                                    if (isContinuousVertical) lazyListState.animateScrollToItem(currentSlideIndex - 1)
+                                    else pagerState.animateScrollToPage(currentSlideIndex - 1)
+                                }
                             }
-                        }
-                    },
-                    onNextSlide = {
-                        scope.launch {
-                            if (currentSlideIndex < effectiveSlideCount - 1) {
-                                if (isContinuousVertical) lazyListState.animateScrollToItem(currentSlideIndex + 1)
-                                else pagerState.animateScrollToPage(currentSlideIndex + 1)
+                        },
+                        onNextSlide = {
+                            scope.launch {
+                                if (currentSlideIndex < effectiveSlideCount - 1) {
+                                    if (isContinuousVertical) lazyListState.animateScrollToItem(currentSlideIndex + 1)
+                                    else pagerState.animateScrollToPage(currentSlideIndex + 1)
+                                }
                             }
-                        }
-                    },
-                    onOpenJumpDialog = { isJumpDialogOpen = true },
-                    onOpenNotesSheet = { isNotesSheetOpen = true },
-                    bgColor = bgColor,
-                    cardBgColor = cardBgColor,
-                    textColor = textColor,
-                    secondaryTextColor = secondaryTextColor
-                )
+                        },
+                        onOpenJumpDialog = { isJumpDialogOpen = true },
+                        onOpenNotesSheet = { isNotesSheetOpen = true },
+                        bgColor = bgColor,
+                        cardBgColor = cardBgColor,
+                        textColor = textColor,
+                        secondaryTextColor = secondaryTextColor
+                    )
+                }
             }
         },
         containerColor = bgColor
@@ -546,11 +567,9 @@ fun PresentationViewerScreen(
                 .edgeFlingToDocument(
                     atFirstPage = { currentSlideIndex == 0 },
                     atLastPage = { currentSlideIndex >= effectiveSlideCount - 1 },
-                    // Presenting is its own mode; a stray fling must not walk out of the deck.
                     onPrevious = if (isSlideshowMode) null else onSwipeToPreviousDocument,
                     onNext = if (isSlideshowMode) null else onSwipeToNextDocument
                 )
-                .padding(if (isSlideshowMode) PaddingValues(0.dp) else innerPadding)
                 .background(bgColor),
             contentAlignment = Alignment.Center
         ) {
@@ -581,123 +600,168 @@ fun PresentationViewerScreen(
                         openPresentationInOfficeApp(context, document)
                     }
                 )
-            } else if (isContinuousVertical) {
-                LazyColumn(
-                    state = lazyListState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = AppSpacing.paddingSmall, vertical = AppSpacing.paddingSmall),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(effectiveSlideCount, key = { it }) { pageIndex ->
-                        val slide = effectiveSlides.getOrNull(pageIndex)
-                        if (slide != null) {
-                            val slideAspect = if (slide.aspectRatio.isFinite() && slide.aspectRatio > 0.1f) slide.aspectRatio else (16f / 9f)
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .aspectRatio(slideAspect),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                val hasMeaningfulVisuals = slide.visualElements.any {
-                                    it.type == VisualElementType.IMAGE ||
-                                    it.tableRows.isNotEmpty() ||
-                                    it.paragraphs.any { p -> p.runs.any { r -> r.text.isNotBlank() } }
-                                }
-
-                                if (isVisualMode && hasMeaningfulVisuals) {
-                                    VisualSlideCard(
-                                        slide = slide,
-                                        cardBgColor = cardBgColor,
-                                        defaultTextColor = textColor,
-                                        highlightQuery = if (isSearchOpen) searchQuery else ""
-                                    )
-                                } else {
-                                    OutlineSlideCard(
-                                        slide = slide,
-                                        cardBgColor = cardBgColor,
-                                        textColor = if (cardBgColor.isColorDark()) DocumentCanvasColors.invertedInk else DocumentCanvasColors.onLightInk,
-                                        highlightQuery = if (isSearchOpen) searchQuery else ""
-                                    )
-                                }
+            } else {
+                ZoomableViewport(
+                    zoomState = zoomState,
+                    isContinuous = isContinuousVertical,
+                    isDualPage = false,
+                    isDoubleTapEnabled = true,
+                    onToggleControls = {
+                        if (!isSlideshowMode) isControlsVisible = !isControlsVisible
+                    },
+                    onPrevPage = {
+                        if (currentSlideIndex > 0) {
+                            scope.launch {
+                                if (isContinuousVertical) lazyListState.animateScrollToItem(currentSlideIndex - 1)
+                                else pagerState.animateScrollToPage(currentSlideIndex - 1)
+                            }
+                        }
+                    },
+                    onNextPage = {
+                        if (currentSlideIndex < effectiveSlideCount - 1) {
+                            scope.launch {
+                                if (isContinuousVertical) lazyListState.animateScrollToItem(currentSlideIndex + 1)
+                                else pagerState.animateScrollToPage(currentSlideIndex + 1)
                             }
                         }
                     }
-                }
-            } else {
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize()
-                ) { pageIndex ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(if (isSlideshowMode) 0.dp else AppSpacing.paddingMedium)
-                            .pointerInput(isSlideshowMode) {
-                                detectTapGestures(
-                                    onTap = { offset ->
-                                        if (isSlideshowMode) {
-                                            val w = size.width
-                                            if (offset.x < w * 0.25f) {
-                                                if (pagerState.currentPage > 0) {
-                                                    scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
-                                                }
+                ) {
+                    if (isContinuousVertical) {
+                        LazyColumn(
+                            state = lazyListState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                top = if (isControlsVisible) innerPadding.calculateTopPadding() + 8.dp else 16.dp,
+                                bottom = if (isControlsVisible) innerPadding.calculateBottomPadding() + 16.dp else 24.dp,
+                                start = 16.dp,
+                                end = 16.dp
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(effectiveSlideCount, key = { it }) { pageIndex ->
+                                val slide = effectiveSlides.getOrNull(pageIndex)
+                                if (slide != null) {
+                                    val slideAspect = if (slide.aspectRatio.isFinite() && slide.aspectRatio > 0.1f) slide.aspectRatio else (16f / 9f)
+                                    Surface(
+                                        shape = AppRadius.cardShape,
+                                        color = cardBgColor,
+                                        tonalElevation = 2.dp,
+                                        shadowElevation = 3.dp,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .aspectRatio(slideAspect)
+                                    ) {
+                                        Box(modifier = Modifier.fillMaxSize()) {
+                                            val hasMeaningfulVisuals = slide.visualElements.any {
+                                                it.type == VisualElementType.IMAGE ||
+                                                it.tableRows.isNotEmpty() ||
+                                                it.paragraphs.any { p -> p.runs.any { r -> r.text.isNotBlank() } }
+                                            }
+
+                                            if (isVisualMode && hasMeaningfulVisuals) {
+                                                VisualSlideCard(
+                                                    slide = slide,
+                                                    cardBgColor = cardBgColor,
+                                                    defaultTextColor = textColor,
+                                                    highlightQuery = if (isSearchOpen) searchQuery else ""
+                                                )
                                             } else {
-                                                if (pagerState.currentPage < effectiveSlideCount - 1) {
-                                                    scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                                                OutlineSlideCard(
+                                                    slide = slide,
+                                                    cardBgColor = cardBgColor,
+                                                    textColor = if (cardBgColor.isColorDark()) DocumentCanvasColors.invertedInk else DocumentCanvasColors.onLightInk,
+                                                    highlightQuery = if (isSearchOpen) searchQuery else ""
+                                                )
+                                            }
+
+                                            Surface(
+                                                shape = AppRadius.pillShape,
+                                                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                                                modifier = Modifier
+                                                    .align(Alignment.BottomEnd)
+                                                    .padding(8.dp)
+                                            ) {
+                                                Text(
+                                                    text = "${pageIndex + 1} / $effectiveSlideCount",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                top = if (isControlsVisible) innerPadding.calculateTopPadding() else 0.dp,
+                                bottom = if (isControlsVisible) innerPadding.calculateBottomPadding() else 0.dp
+                            )
+                        ) { pageIndex ->
+                            val slide = effectiveSlides.getOrNull(pageIndex)
+                            if (slide != null) {
+                                val slideAspect = if (slide.aspectRatio.isFinite() && slide.aspectRatio > 0.1f) slide.aspectRatio else (16f / 9f)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(if (isSlideshowMode) 0.dp else 16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Surface(
+                                        shape = if (isSlideshowMode) RoundedCornerShape(0.dp) else AppRadius.cardShape,
+                                        color = cardBgColor,
+                                        tonalElevation = if (isSlideshowMode) 0.dp else 2.dp,
+                                        shadowElevation = if (isSlideshowMode) 0.dp else 4.dp,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .aspectRatio(slideAspect)
+                                    ) {
+                                        Box(modifier = Modifier.fillMaxSize()) {
+                                            val hasMeaningfulVisuals = slide.visualElements.any {
+                                                it.type == VisualElementType.IMAGE ||
+                                                it.tableRows.isNotEmpty() ||
+                                                it.paragraphs.any { p -> p.runs.any { r -> r.text.isNotBlank() } }
+                                            }
+
+                                            if (isVisualMode && hasMeaningfulVisuals) {
+                                                VisualSlideCard(
+                                                    slide = slide,
+                                                    cardBgColor = cardBgColor,
+                                                    defaultTextColor = textColor,
+                                                    highlightQuery = if (isSearchOpen) searchQuery else ""
+                                                )
+                                            } else {
+                                                OutlineSlideCard(
+                                                    slide = slide,
+                                                    cardBgColor = cardBgColor,
+                                                    textColor = if (cardBgColor.isColorDark()) DocumentCanvasColors.invertedInk else DocumentCanvasColors.onLightInk,
+                                                    highlightQuery = if (isSearchOpen) searchQuery else ""
+                                                )
+                                            }
+
+                                            if (!isSlideshowMode) {
+                                                Surface(
+                                                    shape = AppRadius.pillShape,
+                                                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                                                    modifier = Modifier
+                                                        .align(Alignment.BottomEnd)
+                                                        .padding(8.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "${pageIndex + 1} / $effectiveSlideCount",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                                    )
                                                 }
                                             }
                                         }
-                                    },
-                                    onDoubleTap = {
-                                        zoomScale = if (zoomScale > 1.2f) 1f else 2.5f
-                                        panOffset = Offset.Zero
-                                    }
-                                )
-                            }
-                            .transformable(
-                                state = rememberTransformableState { zoomChange, panChange, _ ->
-                                    zoomScale = (zoomScale * zoomChange).coerceIn(1f, 5f)
-                                    if (zoomScale > 1f) {
-                                        val maxPan = 500f * (zoomScale - 1f)
-                                        panOffset = Offset(
-                                            x = (panOffset.x + panChange.x).coerceIn(-maxPan, maxPan),
-                                            y = (panOffset.y + panChange.y).coerceIn(-maxPan, maxPan)
-                                        )
-                                    } else {
-                                        panOffset = Offset.Zero
                                     }
                                 }
-                            )
-                            .graphicsLayer {
-                                scaleX = zoomScale
-                                scaleY = zoomScale
-                                translationX = panOffset.x
-                                translationY = panOffset.y
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val slide = effectiveSlides.getOrNull(pageIndex)
-                        if (slide != null) {
-                            val hasMeaningfulVisuals = slide.visualElements.any {
-                                it.type == VisualElementType.IMAGE ||
-                                it.tableRows.isNotEmpty() ||
-                                it.paragraphs.any { p -> p.runs.any { r -> r.text.isNotBlank() } }
-                            }
-
-                            if (isVisualMode && hasMeaningfulVisuals) {
-                                VisualSlideCard(
-                                    slide = slide,
-                                    cardBgColor = cardBgColor,
-                                    defaultTextColor = textColor,
-                                    highlightQuery = if (isSearchOpen) searchQuery else ""
-                                )
-                            } else {
-                                OutlineSlideCard(
-                                    slide = slide,
-                                    cardBgColor = cardBgColor,
-                                    textColor = if (cardBgColor.isColorDark()) DocumentCanvasColors.invertedInk else DocumentCanvasColors.onLightInk,
-                                    highlightQuery = if (isSearchOpen) searchQuery else ""
-                                )
                             }
                         }
                     }
@@ -747,15 +811,6 @@ fun PresentationViewerScreen(
                 notes = effectiveSlides.getOrNull(currentSlideIndex)?.notes ?: "",
                 onDismiss = { isNotesSheetOpen = false }
             )
-
-            if (!isSlideshowMode && fidelityDisclosure != null) {
-                FidelityNotice(
-                    disclosure = fidelityDisclosure,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(AppSpacing.paddingSmall)
-                )
-            }
         }
     }
 }

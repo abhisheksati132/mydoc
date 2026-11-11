@@ -258,21 +258,35 @@ class SettingsRepository(private val context: Context) {
     }
 
     fun getCacheSizeBytes(context: Context): Long {
-        return getFolderSize(context.cacheDir) + getFolderSize(context.externalCacheDir)
+        val internal = getFolderSize(context.cacheDir)
+        val externals = context.externalCacheDirs?.filterNotNull()?.sumOf { getFolderSize(it) } ?: 0L
+        return internal + externals
     }
 
     fun clearCache(context: Context): Long {
         val sizeBefore = getCacheSizeBytes(context)
+
+        // 1. Evict in-memory thumbnail and tile render caches
+        runCatching {
+            com.abhisheksati.mydoc.ui.files.clearThumbnailMemoryCache()
+            com.abhisheksati.mydoc.rendering.cache.TileBitmapCache.clearAll()
+            coil.Coil.imageLoader(context).memoryCache?.clear()
+            coil.Coil.imageLoader(context).diskCache?.clear()
+        }
+
+        // 2. Clear internal cacheDir (preserving active updates)
         context.cacheDir.listFiles()?.forEach { file ->
-            // Preserve updates directory so pending or active APK installations are not destroyed
             if (file.name == "updates") return@forEach
             deleteRecursive(file)
         }
-        context.externalCacheDir?.listFiles()?.forEach { file ->
-            deleteRecursive(file)
+
+        // 3. Clear all external cache directories (supports multi-volume SD cards)
+        context.externalCacheDirs?.filterNotNull()?.forEach { dir ->
+            dir.listFiles()?.forEach { file ->
+                deleteRecursive(file)
+            }
         }
-        // NOTE: filesDir/saved_docs (offline document backups) is intentionally NOT cleared here —
-        // this row is labelled "Thumbnail & render cache" and must not destroy readable-offline copies.
+
         val sizeAfter = getCacheSizeBytes(context)
         return (sizeBefore - sizeAfter).coerceAtLeast(0L)
     }
@@ -288,10 +302,15 @@ class SettingsRepository(private val context: Context) {
     }
 
     private fun deleteRecursive(file: File) {
-        if (file.isDirectory) {
-            file.listFiles()?.forEach { deleteRecursive(it) }
-        }
-        file.delete()
+        try {
+            if (file.isDirectory) {
+                file.listFiles()?.forEach { deleteRecursive(it) }
+            }
+            if (!file.delete()) {
+                file.setWritable(true)
+                file.delete()
+            }
+        } catch (_: Throwable) {}
     }
 
     private fun loadThemeMode(): AppThemeMode {

@@ -5,7 +5,12 @@ import androidx.compose.runtime.getValue
 import com.abhisheksati.mydoc.R
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material3.Surface
+import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
 import com.abhisheksati.mydoc.designsystem.animation.pressScale
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material3.ripple
@@ -23,6 +28,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.padding
@@ -163,39 +169,77 @@ fun CategoryTile(
     val scheme = MaterialTheme.colorScheme
     val colors = AppTheme.colors
     val tone = when (type) {
-        StorageCategoryType.IMAGES, StorageCategoryType.DOWNLOADS -> colors.accentCyan
-        StorageCategoryType.VIDEOS, StorageCategoryType.ARCHIVES -> colors.accentPink
-        StorageCategoryType.AUDIO, StorageCategoryType.APKS -> colors.accentGreen
+        StorageCategoryType.DOCUMENTS -> colors.accent
+        StorageCategoryType.DOWNLOADS -> colors.accentCyan
+        StorageCategoryType.IMAGES -> colors.accentAmber
+        StorageCategoryType.VIDEOS -> colors.accentPink
+        StorageCategoryType.AUDIO -> colors.accentGreen
+        StorageCategoryType.APKS -> colors.accent
         else -> colors.accent
     }
-    GlassSurface(
-        shape = AppRadius.cardShape,
-        elevation = 0.dp,
-        backgroundColor = colors.surface,
+    val shape = AppRadius.xLargeShape
+
+    Column(
         modifier = modifier
-            .clip(AppRadius.cardShape)
-            .clickable(onClick = onClick)
+            .heightIn(min = 112.dp)
+            .clip(shape)
+            .background(colors.surface, shape)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        tone.copy(alpha = 0.14f),
+                        tone.copy(alpha = 0.03f)
+                    )
+                ),
+                shape
+            )
+            .border(1.dp, tone.copy(alpha = 0.22f), shape)
+            .pressScaleEffect(onClick = onClick)
+            .padding(14.dp),
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
-                    .clip(AppRadius.insetShape)
-                    .background(tone.copy(alpha = 0.15f)),
+                    .size(38.dp)
+                    .background(tone.copy(alpha = 0.18f), AppRadius.insetShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = type.icon,
                     contentDescription = null,
-                    tint = colors.ink,
-                    modifier = Modifier.size(19.dp)
+                    tint = tone,
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            Spacer(Modifier.height(10.dp))
+            if (stat != null && stat.fileCount > 0) {
+                Surface(
+                    shape = AppRadius.pillShape,
+                    color = tone.copy(alpha = 0.12f)
+                ) {
+                    Text(
+                        text = "${stat.fileCount}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = tone,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 text = stringResource(if (type == StorageCategoryType.APKS) R.string.files_category_apps else type.titleRes),
-                style = AppTheme.typography.bodyStrong,
+                style = MaterialTheme.typography.titleMedium,
                 color = scheme.onSurface,
+                fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -203,7 +247,7 @@ fun CategoryTile(
                 text = when {
                     stat == null -> stringResource(R.string.files_scanning_short)
                     stat.fileCount == 0 -> stringResource(R.string.files_empty_short)
-                    else -> "${stat.fileCount} · ${stat.formattedSize}"
+                    else -> stat.formattedSize
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant,

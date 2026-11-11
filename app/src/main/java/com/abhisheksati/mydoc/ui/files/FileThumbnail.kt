@@ -93,6 +93,11 @@ private val pdfThumbnailCache = object : LruCache<String, ImageBitmap>(MAX_THUMB
     override fun sizeOf(key: String, value: ImageBitmap): Int =
         (value.width * value.height * 4 / 1024).coerceAtLeast(1)
 }
+
+/** Clear all rendered bitmap tiles from memory so cache clearing is immediate. */
+fun clearThumbnailMemoryCache() {
+    pdfThumbnailCache.evictAll()
+}
 private val textPreviewExtensions = setOf("txt", "md", "csv", "log", "json")
 // Formats whose first page the registry says is reachable through a converter.
 private val officePreviewExtensions: Set<String> = DocumentFormats.thumbnailExtensions

@@ -29,9 +29,13 @@ Android 8.0+ · Free and open source · [Changelog](CHANGELOG.md)
 
 ## A workspace that feels like MyDoc
 
-Ink & Seal pairs warm paper, graphite, Inter typography, and a teal seal with Material 3 Expressive motion. Find the same controls in familiar places across Library, Tools, and the readers. Choose light, dark, or AMOLED black and adjust glass and motion in Settings.
+Material You on top of Ink & Seal pairs warm paper, graphite, and a teal seal with Material 3 Expressive motion and dynamic Monet palette support.
+- **Studio-Grade Bento Grid**: Library categories feature an ergonomic 2-box-per-row Bento layout with 24dp squircles, subtle dual-tone tint gradients, and tactile spring feedback.
+- **Unified Viewing Experience**: High-fidelity PDF and Presentation viewers share fluid pinch-to-zoom (`ZoomableViewport`), double-tap zoom, continuous vertical reading, and distraction-free immersion without intrusive dialogs.
+- **Comprehensive Cache Management**: Settings → Storage provides thorough thumbnail and render cache clearing across in-memory bitmaps, Coil cache, and multi-volume storage.
+- **Clean Aesthetic**: Choose Light, Dark, or AMOLED Black with customizable optical glass effects and motion damping in Settings.
 
-Local reading and core document tools run on your device. Office support is a separate, optional download from **Settings → Reading**. Office viewing fidelity varies by format and engine.
+Local reading and core document tools run entirely on your device. Office support is available as a separate, optional download from **Settings → Reading**. Office viewing fidelity varies by format and engine.
 
 ## Get MyDoc for Android
 

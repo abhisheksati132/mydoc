@@ -295,10 +295,13 @@ private fun CategoryShortcutGrid(
     onCategory: (FileCategory) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val columns = if (androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f) 1 else 3
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    val columns = if (androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f) 1 else 2
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         shortcutCategories.chunked(columns).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 row.forEach { type ->
                     val statType = if (type == StorageCategoryType.APKS) StorageCategoryType.APPS else type
                     val stat = storageUiState.categories.firstOrNull { it.type == statType }
