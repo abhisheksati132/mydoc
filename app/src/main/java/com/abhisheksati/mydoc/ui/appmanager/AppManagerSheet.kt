@@ -6,6 +6,7 @@ import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.util.UserMessages
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
@@ -365,25 +366,15 @@ private fun AppListItem(
 
 private fun shareApk(context: Context, apkFile: File) {
     try {
-        val sharedDir = File(context.cacheDir, "shared").apply { if (!exists()) mkdirs() }
-        val shareFile = if (apkFile.parentFile?.absolutePath == sharedDir.absolutePath) {
-            apkFile
-        } else {
-            val dest = File(sharedDir, apkFile.name)
-            apkFile.copyTo(dest, overwrite = true)
-            dest
-        }
-        val uri = FileProvider.getUriForFile(
+        val shared = com.abhisheksati.mydoc.util.shareFile(
             context,
-            "${context.packageName}.fileprovider",
-            shareFile
+            Uri.fromFile(apkFile),
+            "application/vnd.android.package-archive",
+            context.getString(R.string.app_share_chooser)
         )
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/vnd.android.package-archive"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        if (!shared) {
+            context.showMessage(context.getString(R.string.app_share_failed))
         }
-        context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.app_share_chooser)))
     } catch (e: Exception) {
         context.showMessage(context.getString(R.string.app_share_failed))
     }

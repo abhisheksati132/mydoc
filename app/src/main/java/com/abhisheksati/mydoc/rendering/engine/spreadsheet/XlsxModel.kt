@@ -193,8 +193,12 @@ class XlsxWorkbook(
     private fun parseDateSerial(s: String): String? {
         val m = Regex("^(\\d{1,4})[-/.](\\d{1,2})[-/.](\\d{1,4})$").find(s) ?: return null
         val (a, b, c) = m.destructured
-        val (y, mo, d) = if (a.length == 4) Triple(a.toInt(), b.toInt(), c.toInt()) else Triple(c.toInt().let { if (it < 100) it + 2000 else it }, b.toInt(), a.toInt())
-        if (mo !in 1..12 || d !in 1..31) return null
+        val (y, mo, d) = if (a.length == 4) {
+            Triple(a.toIntOrNull() ?: return null, b.toIntOrNull() ?: return null, c.toIntOrNull() ?: return null)
+        } else {
+            Triple((c.toIntOrNull() ?: return null).let { if (it < 100) it + 2000 else it }, b.toIntOrNull() ?: return null, a.toIntOrNull() ?: return null)
+        }
+        if (y !in 1900..9999 || mo !in 1..12 || d !in 1..31) return null
         val cal = java.util.GregorianCalendar(java.util.TimeZone.getTimeZone("UTC")).apply { clear(); set(y, mo - 1, d) }
         val base = java.util.GregorianCalendar(java.util.TimeZone.getTimeZone("UTC")).apply { clear(); set(1899, 11, 30) }
         val days = (cal.timeInMillis - base.timeInMillis) / 86_400_000L

@@ -3,13 +3,52 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
-## [2.0.2] — 2026-11-10
+## [2.0.2] — 2026-11-11
+
+### Security & Hardening
+- Enforce active APK signing certificate SHA-256 fingerprint validation (`MYDOC_RELEASE_CERT_SHA256`) in `PackageInstallerHelper` and release build task graphs.
+- Harden application lock: maintain continuous `FLAG_SECURE` in Android Recents, cancel pending biometric prompts on stop, and prevent biometric lockouts.
+- Enforce strict private storage traversal restrictions on incoming view and share intents.
+- Sandbox Office Companion IPC: seccomp filters block internet socket operations and fork/exec while permitting local `AF_UNIX` IPC; enforce caller signature checks via `checkSignatures()`.
+- Atomic cache and thumbnail persistence using UUID staging files to eliminate partial-write and corrupt cache states.
+- Clean up shared cache directories older than 24 hours on launch.
+
+### Engine & Document Rendering
+- Fix MuPDF use-after-free during page reordering and thumbnail generation; eliminate unsafe manual bitmap recycling during active composition.
+- Fix OLE2 reader integer overflow by migrating sector arithmetic to 64-bit `Long` and bounding FAT allocations by total file sector count.
+- Fix BIFF8 legacy Excel `.xls` reader: resolve `FORMULA` record sentinels, boolean values, error codes, and unicode string handling across `CONTINUE` blocks.
+- Fix RTF reader to properly skip binary data blocks (`\bin`) and ignorable destinations (`\*`).
+- Fix PDF stamp and digital watermark transformations to properly account for page rotation (90°, 180°, 270°).
+- Fix scanner cropper view: eliminate recycled bitmap crashes by decoupling delivered bitmap lifecycle and moving image processing off the Main thread.
+- Retain `ViewerKind.CONVERTED_PAGES` during spreadsheet grid and presentation view switches to prevent redundant document reconversions.
+
+### Explorer & File Management
+- Support Android 10 legacy external storage compatibility and runtime permission fallback for devices upgrading from Android 9/10.
+- Fix Recycle Bin moves for MediaStore photos to resolve physical file paths via `_data` column instead of attempting direct content URI file operations.
+- Handle partial batch operations gracefully in file manager with refreshed status counts and clear selections.
+- Add dismissibility and recovery controls for the rename recovery journal banner.
+- Broaden ZIP extraction path sanitization to preserve nested structures while neutralizing zip-slip attacks.
+
+### UI, Media & Accessibility
+- Adjust semantic tokens in dark mode to pass WCAG AA contrast ratio (>8:1) on glass surfaces and pastel chips.
+- Ensure all interactive toolbar controls, speed pills, and actions meet 48dp minimum touch target recommendations.
+- Video Player: restore system screen brightness on dispose, smooth volume dragging, and hide controls in Picture-in-Picture mode.
+- Audio Player: handle transient audio ducking and restore original playback volume on focus gain; add playback error retry.
+- Photo Viewer: fix pan clamping relative to dynamic viewport dimensions; safely handle photo deletion in empty state.
+- Add Open Source Licenses dialog in Settings → About displaying AGPL-3.0, LibreOffice, MuPDF, and font notices.
+
+## [2.0.1] — 2026-11-10
+
+- Maintenance update: optimize background storage cleaner duplicate scans with canonical path deduplication and time budgets.
+- Improve media playback state persistence across orientation changes.
+
+## [2.0.0] — 2026-11-10
 
 - Adopt Material 3 Expressive motion across the app, with reduced-motion support and shared styling for menus, sheets, and dialogs.
-- Redesign Settings and its subpages, simplify Office support, and remove Device & diagnostics.
+- Modernize glass surfaces using Haze 2.1 backdrop optics.
+- Redesign Settings and its subpages, simplify Office support, and streamline navigation.
 - Move Library search and Clean into more accessible locations, add Share to quick preview, and replace the storage stack with a donut chart and category breakdown.
-- Add individual cleanup exclusions and rescan recovery. Remove the floating document layout warning.
-- Prevent cancelled tool runs from overwriting later results, and reduce offscreen tab and reader blur work.
+- Add individual cleanup exclusions and rescan recovery.
 
 ## [1.9.9] — 2026-11-09
 

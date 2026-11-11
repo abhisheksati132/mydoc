@@ -88,6 +88,7 @@ class StorageRepositoryImpl(
         }
 
     override suspend fun pendingRenameRecovery() = batchRenamer.pendingRecovery()
+    override suspend fun dismissRenameRecovery() = batchRenamer.clearRecoveryJournals()
 
     private companion object {
         /** A write that fills the last of a volume leaves a file that cannot be told from a good one. */
@@ -924,13 +925,30 @@ class StorageRepositoryImpl(
 
             context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
                 val dataIndex = cursor.getColumnIndex(MediaStore.Files.FileColumns.DATA)
+                val sizeIndex = cursor.getColumnIndex(MediaStore.Files.FileColumns.SIZE)
+                val dateIndex = cursor.getColumnIndex(MediaStore.Files.FileColumns.DATE_MODIFIED)
                 while (cursor.moveToNext()) {
                     currentCoroutineContext().ensureActive()
                     val path = if (dataIndex >= 0) cursor.getString(dataIndex) else null
                     if (path != null) {
                         val f = File(path)
-                        if (f.exists() && !f.isDirectory) {
-                            items.add(StorageItem(f))
+                        val size = if (sizeIndex >= 0) cursor.getLong(sizeIndex) else 0L
+                        val dateModified = if (dateIndex >= 0) cursor.getLong(dateIndex) * 1000L else 0L
+                        if (f.exists()) {
+                            if (!f.isDirectory) {
+                                items.add(StorageItem(f))
+                            }
+                        } else if (path.isNotEmpty() && size > 0L) {
+                            items.add(
+                                StorageItem(
+                                    file = f,
+                                    name = f.name,
+                                    path = path,
+                                    isDirectory = false,
+                                    sizeBytes = size,
+                                    lastModified = dateModified
+                                )
+                            )
                         }
                     }
                 }
@@ -1143,9 +1161,9 @@ class StorageRepositoryImpl(
 
                 if (trashed.isEmpty() && failed > 0) {
                     Result.failure(firstError ?: IllegalStateException("Nothing could be moved to the Recycle Bin"))
-                } else if (retained.isNotEmpty()) {
+                } else if (retained.isNotEmpty() || failed > 0) {
                     // Reporting the full list as "trashed" would claim the originals are gone when
-                    // they are not, so the partial result carries both counts.
+                    // some failed or were retained, so the partial result carries all counts.
                     Result.failure(
                         PartialStorageOperationException(trashed.size, failed, firstError, retained)
                     )

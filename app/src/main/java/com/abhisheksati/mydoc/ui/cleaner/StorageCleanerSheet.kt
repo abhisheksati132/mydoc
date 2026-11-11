@@ -656,6 +656,7 @@ fun StorageCleanerScreen(
                     showConfirm = false
                     coroutineScope.launch {
                         isCleaning = true
+                        var partialCleanedCount = 0
                         val moved: List<com.abhisheksati.mydoc.domain.model.TrashItem> =
                             if (selectedFiles.isEmpty()) {
                                 emptyList()
@@ -663,23 +664,30 @@ fun StorageCleanerScreen(
                             val duplicatePaths = duplicateCopies(res.duplicateGroups,duplicateKeepers).map { it.absolutePath }.toSet()
                             val verified = verifiedDuplicateCopies(res.duplicateGroups,duplicateKeepers)
                             val safeFiles = selectedFiles.filter { it.absolutePath !in duplicatePaths || it.absolutePath in verified }
-                            app.storageRepository.moveToTrash(safeFiles).getOrElse { error ->
-                                app.showMessage(
-                                    UserMessages.actionFailed(R.string.dialog_move_to_bin, error, "Cleaner")
-                                        .resolve(app)
-                                )
-                                emptyList()
-                            }
+                            app.storageRepository.moveToTrash(safeFiles).fold(
+                                onSuccess = { it },
+                                onFailure = { error ->
+                                    if (error is com.abhisheksati.mydoc.domain.model.PartialStorageOperationException) {
+                                        partialCleanedCount = error.completed
+                                    }
+                                    app.showMessage(
+                                        UserMessages.actionFailed(R.string.dialog_move_to_bin, error, "Cleaner")
+                                            .resolve(app)
+                                    )
+                                    emptyList()
+                                }
+                            )
                         }
                         val deletedDirs = cleanerManager.deleteEmptyDirectories(selectedEmptyDirs, rootDir)
-                        cleanedCount = moved.size
-                        cleanedBytes = moved.sumOf { it.sizeBytes }
+                        val actualMovedCount = if (moved.isNotEmpty()) moved.size else partialCleanedCount
+                        cleanedCount = actualMovedCount
+                        cleanedBytes = if (moved.isNotEmpty()) moved.sumOf { it.sizeBytes } else 0L
 
-                        val failedFiles = selectedFiles.size - moved.size
+                        val failedFiles = selectedFiles.size - actualMovedCount
                         val failedDirs = selectedEmptyDirs.size - deletedDirs
                         if (failedFiles > 0 || failedDirs > 0) {
                             val msg = buildString {
-                                append(resources.getString(R.string.cleaner_result_partial, moved.size, deletedDirs))
+                                append(resources.getString(R.string.cleaner_result_partial, actualMovedCount, deletedDirs))
                                 if (failedFiles > 0) {
                                     append(resources.getString(R.string.cleaner_failed_files, failedFiles))
                                 }

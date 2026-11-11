@@ -64,12 +64,16 @@ import com.abhisheksati.mydoc.util.UserMessages
 import com.abhisheksati.mydoc.util.shareFile
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 class MainActivity : ComponentActivity() {
+
+    private var stoppedTimestamp: Long = 0L
 
     private sealed interface ActiveScreen {
         data object Lock : ActiveScreen
@@ -225,11 +229,13 @@ class MainActivity : ComponentActivity() {
             }
 
             LaunchedEffect(isAppUnlocked, isBiometricLockEnabled) {
-                if (!isAppUnlocked && isBiometricLockEnabled) {
+                if (isBiometricLockEnabled) {
                     window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
-                    attemptUnlock()
                 } else {
                     window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                }
+                if (!isAppUnlocked && isBiometricLockEnabled) {
+                    attemptUnlock()
                 }
             }
 
@@ -550,10 +556,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        stoppedTimestamp = android.os.SystemClock.elapsedRealtime()
+        BiometricLockHelper.cancelAuthentication()
         val app = application as MyDocApp
         if (app.settingsRepository.isBiometricLockEnabled.value) {
             window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
-            isAppUnlocked = false
         }
     }
 
@@ -561,8 +568,10 @@ class MainActivity : ComponentActivity() {
         super.onRestart()
         val app = application as MyDocApp
         if (app.settingsRepository.isBiometricLockEnabled.value) {
-            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
-            isAppUnlocked = false
+            val elapsed = android.os.SystemClock.elapsedRealtime() - stoppedTimestamp
+            if (stoppedTimestamp > 0L && elapsed > 2500L) {
+                isAppUnlocked = false
+            }
         }
     }
 
@@ -627,6 +636,19 @@ class MainActivity : ComponentActivity() {
         }
 
         if (uri != null) {
+            // Guard against external intents targeting private internal app storage
+            if (uri.scheme == "file") {
+                val path = uri.path
+                if (path != null) {
+                    val canonicalFile = runCatching { File(path).canonicalFile }.getOrNull()
+                    val privateAppDir = filesDir.parentFile?.canonicalPath
+                    if (privateAppDir != null && canonicalFile != null && canonicalFile.path.startsWith(privateAppDir)) {
+                        android.util.Log.w("MainActivity", "Blocked attempt to open internal private file: $path")
+                        showMessage("Cannot open internal private app files.")
+                        return
+                    }
+                }
+            }
             // Consume the intent so subsequent launches or crashes do not re-trigger in an infinite loop
             intent.action = null
             intent.data = null
@@ -655,6 +677,10 @@ class MainActivity : ComponentActivity() {
         if (index < 0) return false
         val next = siblings.getOrNull(index + delta) ?: return false
         currentDocument = next
+        lifecycleScope.launch {
+            val app = application as MyDocApp
+            runCatching { app.documentRepository.registerOpenedDocument(Uri.parse(next.uri)) }
+        }
         return true
     }
 
@@ -821,22 +847,10 @@ class MainActivity : ComponentActivity() {
                             currentDocument = doc
                         }.onFailure { e ->
                             if (file != null) {
-                                try {
-                                    val sharedDir = File(cacheDir, "shared").apply { if (!exists()) mkdirs() }
-                                    val shareFile = if (file.parentFile?.absolutePath == sharedDir.absolutePath) {
-                                        file
-                                    } else {
-                                        val dest = File(sharedDir, file.name)
-                                        file.copyTo(dest, overwrite = true)
-                                        dest
-                                    }
-                                    val shareUri = FileProvider.getUriForFile(this@MainActivity, "${packageName}.fileprovider", shareFile)
-                                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                                        setDataAndType(shareUri, "*/*")
-                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    }
-                                    startActivity(Intent.createChooser(intent, "Open with"))
-                                } catch (_: Exception) {
+                                val opened = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                    com.abhisheksati.mydoc.util.openFile(this@MainActivity, Uri.fromFile(file), "*/*")
+                                }
+                                if (!opened) {
                                     this@MainActivity.showMessage(UserMessages.readFailure("MainActivity", e).resolve(this@MainActivity))
                                 }
                             } else {

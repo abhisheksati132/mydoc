@@ -9,6 +9,9 @@ import com.abhisheksati.mydoc.designsystem.components.showMessage
 import kotlinx.coroutines.launch
 import com.abhisheksati.mydoc.designsystem.components.LocalFloatingChromeInset
 import androidx.activity.compose.BackHandler
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
@@ -26,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.NoteAdd
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.GridView
@@ -172,6 +176,22 @@ fun FilesPaneScreen(
     val pinnedFolders by pinnedFoldersManager.pinnedFolders.collectAsState()
 
     var hasPermission by remember { mutableStateOf(StoragePermissionHelper.hasStoragePermission(context)) }
+    val runtimePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        val granted = StoragePermissionHelper.hasStoragePermission(context)
+        hasPermission = granted
+        if (granted) {
+            viewModel.refreshVolumes()
+            storageViewModel.refresh()
+            if (viewModel.uiState.value.isBrowsingStorage) {
+                viewModel.loadDirectory(
+                    viewModel.uiState.value.currentDirectory,
+                    addToHistory = false
+                )
+            }
+        }
+    }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -451,8 +471,19 @@ fun FilesPaneScreen(
                         Box(Modifier.fillMaxWidth().height(4.dp)) {
                             if (uiState.isLoading) androidx.compose.material3.LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                         }
-                        if (uiState.renameRecovery.isNotEmpty()) androidx.compose.material3.TextButton(onClick = { showRenameRecovery = true }) {
-                            Text(stringResource(R.string.explorer_recovery_title), color = MaterialTheme.colorScheme.error)
+                        if (uiState.renameRecovery.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                androidx.compose.material3.TextButton(onClick = { showRenameRecovery = true }) {
+                                    Text(stringResource(R.string.explorer_recovery_title), color = MaterialTheme.colorScheme.error)
+                                }
+                                androidx.compose.material3.IconButton(onClick = { viewModel.dismissRenameRecovery() }) {
+                                    Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.action_close))
+                                }
+                            }
                         }
 
                         if (breadcrumbs.size > 1) {
@@ -473,7 +504,11 @@ fun FilesPaneScreen(
                     if (!hasPermission) {
                         StoragePermissionBanner(
                             onRequestPermission = {
-                                StoragePermissionHelper.launchManageStorageSettings(context)
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                    StoragePermissionHelper.launchManageStorageSettings(context)
+                                } else {
+                                    runtimePermissionLauncher.launch(StoragePermissionHelper.getRuntimePermissions())
+                                }
                             }
                         )
                     }
@@ -637,7 +672,19 @@ fun FilesPaneScreen(
                 Text(stringResource(R.string.explorer_recovery_help) + "\n\n" + uiState.renameRecovery.joinToString("\n\n"))
             }
         },
-        confirmButton = { androidx.compose.material3.TextButton(onClick = { showRenameRecovery = false }) { Text(stringResource(R.string.action_cancel)) } }
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = {
+                viewModel.dismissRenameRecovery()
+                showRenameRecovery = false
+            }) {
+                Text(stringResource(R.string.settings_dismiss))
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = { showRenameRecovery = false }) {
+                Text(stringResource(R.string.action_close))
+            }
+        }
     )
 
 

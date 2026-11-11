@@ -25,6 +25,10 @@ import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -56,6 +60,7 @@ fun OcrResultSheet(
     val typography = AppTheme.typography
 
     val wordCount = remember(text) { ocrWordCount(text) }
+    val scope = rememberCoroutineScope()
     val charCount = text.length
     val resources = LocalResources.current
     val clipLabel = stringResource(R.string.ocr_clip_label)
@@ -154,15 +159,26 @@ fun OcrResultSheet(
 
                 OutlinedButton(
                     onClick = {
-                        try {
-                            val docsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-                            if (!docsDir.exists()) docsDir.mkdirs()
-                            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-                            val file = File(docsDir, "OCR_Text_$timestamp.txt")
-                            file.writeText(text)
-                            context.showMessage("Saved to Documents/${file.name}")
-                        } catch (e: Exception) {
-                            context.showMessage(UserMessages.actionFailed(R.string.action_save, e, "Ocr").resolve(context))
+                        scope.launch(Dispatchers.IO) {
+                            try {
+                                val docsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+                                if (!docsDir.exists()) docsDir.mkdirs()
+                                val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+                                var candidate = File(docsDir, "OCR_Text_$timestamp.txt")
+                                var counter = 1
+                                while (candidate.exists()) {
+                                    candidate = File(docsDir, "OCR_Text_${timestamp}_$counter.txt")
+                                    counter++
+                                }
+                                candidate.writeText(text)
+                                withContext(Dispatchers.Main) {
+                                    context.showMessage("Saved to Documents/${candidate.name}")
+                                }
+                            } catch (e: Exception) {
+                                withContext(Dispatchers.Main) {
+                                    context.showMessage(UserMessages.actionFailed(R.string.action_save, e, "Ocr").resolve(context))
+                                }
+                            }
                         }
                     },
                     modifier = Modifier.weight(1f),

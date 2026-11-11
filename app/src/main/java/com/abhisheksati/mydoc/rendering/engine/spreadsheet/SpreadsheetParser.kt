@@ -280,29 +280,30 @@ class SpreadsheetParser {
     private fun extractOdfContent(bytes: ByteArray): ByteArray? {
         var contentXml: ByteArray? = null
         try {
-            val zis = ZipInputStream(ByteArrayInputStream(bytes))
-            var entry: ZipEntry? = zis.nextEntry
-            while (entry != null) {
-                if (!entry.isDirectory && entry.name.equals("content.xml", ignoreCase = true)) {
-                    val buf = ByteArray(16_384)
-                    val baos = java.io.ByteArrayOutputStream()
-                    var entryRead = 0L
-                    val maxOdsEntry = 25L * 1024L * 1024L
-                    var n: Int
-                    while (zis.read(buf).also { n = it } != -1) {
-                        if (entryRead + n > maxOdsEntry) {
-                            android.util.Log.w("SpreadsheetParser", "ODS content.xml exceeds 25 MB limit")
-                            contentXml = null
-                            break
+            ZipInputStream(ByteArrayInputStream(bytes)).use { zis ->
+                var entry: ZipEntry? = zis.nextEntry
+                while (entry != null) {
+                    if (!entry.isDirectory && entry.name.equals("content.xml", ignoreCase = true)) {
+                        val buf = ByteArray(16_384)
+                        val baos = java.io.ByteArrayOutputStream()
+                        var entryRead = 0L
+                        val maxOdsEntry = 25L * 1024L * 1024L
+                        var n: Int
+                        while (zis.read(buf).also { n = it } != -1) {
+                            if (entryRead + n > maxOdsEntry) {
+                                android.util.Log.w("SpreadsheetParser", "ODS content.xml exceeds 25 MB limit")
+                                contentXml = null
+                                break
+                            }
+                            baos.write(buf, 0, n)
+                            entryRead += n
                         }
-                        baos.write(buf, 0, n)
-                        entryRead += n
+                        if (entryRead <= maxOdsEntry) contentXml = baos.toByteArray()
+                        break
                     }
-                    if (entryRead <= maxOdsEntry) contentXml = baos.toByteArray()
-                    break
+                    zis.closeEntry()
+                    entry = zis.nextEntry
                 }
-                zis.closeEntry()
-                entry = zis.nextEntry
             }
         } catch (_: Throwable) {
             return null
@@ -362,15 +363,14 @@ class SpreadsheetParser {
                                 rowValues.clear()
                                 val repRows = parser.getAttributeValue(null, "table:number-rows-repeated")
                                     ?: parser.getAttributeValue(null, "number-rows-repeated")
-                                curRepeatRows = (repRows?.toIntOrNull() ?: 1).coerceIn(1, 1_000)
+                                curRepeatRows = (repRows?.toIntOrNull() ?: 1).coerceAtLeast(1)
                             }
-                            name.equals("table-cell", ignoreCase = true) -> {
+                            name.equals("table-cell", ignoreCase = true) || name.equals("covered-table-cell", ignoreCase = true) -> {
                                 inCell = true
                                 cellTextBuilder.clear()
                                 val repVal = parser.getAttributeValue(null, "table:number-columns-repeated") ?: parser.getAttributeValue(null, "number-columns-repeated")
-                                // A repeated cell is the same value in every column it spans. The
-                                // old clamp to 100 silently moved every later cell in the row.
-                                curRepeatCols = (repVal?.toIntOrNull() ?: 1).coerceIn(1, 1_024)
+                                // A repeated cell spans multiple columns. Maintain true column offset even if beyond display limit.
+                                curRepeatCols = (repVal?.toIntOrNull() ?: 1).coerceAtLeast(1)
                             }
                             name.equals("p", ignoreCase = true) -> {
                                 inP = true
@@ -390,17 +390,18 @@ class SpreadsheetParser {
                             name.equals("p", ignoreCase = true) -> {
                                 inP = false
                             }
-                            name.equals("table-cell", ignoreCase = true) -> {
+                            name.equals("table-cell", ignoreCase = true) || name.equals("covered-table-cell", ignoreCase = true) -> {
                                 val text = cellTextBuilder.toString().trim()
                                 if (text.isNotEmpty()) {
-                                    for (r in 0 until curRepeatCols) {
+                                    val insertCount = minOf(curRepeatCols, maxOf(0, maxOdsColumns - colIndex))
+                                    for (r in 0 until insertCount) {
                                         val col = colIndex + r
-                                        if (col >= maxOdsColumns || cells.size >= maxOdsCells) break
+                                        if (cells.size >= maxOdsCells) break
                                         cells[Pair(rowIndex, col)] = text
                                         rowValues.add(col to text)
                                     }
-                                    if (colIndex + curRepeatCols - 1 > maxCol) {
-                                        maxCol = minOf(colIndex + curRepeatCols - 1, maxOdsColumns - 1)
+                                    if (colIndex + insertCount - 1 > maxCol) {
+                                        maxCol = minOf(colIndex + insertCount - 1, maxOdsColumns - 1)
                                     }
                                     if (rowIndex > maxRow) maxRow = rowIndex
                                 }
@@ -410,7 +411,8 @@ class SpreadsheetParser {
                             name.equals("table-row", ignoreCase = true) -> {
                                 // A repeated row is the same row N times; its values were dropped
                                 // entirely before, so every following row moved up.
-                                for (r in 1 until curRepeatRows) {
+                                val insertRows = if (rowValues.isNotEmpty()) minOf(curRepeatRows, 500) else 1
+                                for (r in 1 until insertRows) {
                                     if (cells.size >= maxOdsCells) break
                                     for ((col, value) in rowValues) {
                                         cells[Pair(rowIndex + r, col)] = value
@@ -439,7 +441,12 @@ class SpreadsheetParser {
                 }
                 eventType = parser.next()
             }
-        } catch (_: Throwable) {}
+        } catch (e: Throwable) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            if (sheets.isEmpty()) {
+                throw java.io.IOException("Failed to parse ODS spreadsheet", e)
+            }
+        }
 
         return SpreadsheetModel(sheets)
     }

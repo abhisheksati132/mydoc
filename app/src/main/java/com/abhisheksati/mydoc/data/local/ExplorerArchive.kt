@@ -31,8 +31,9 @@ class ExplorerArchive(private val maxEntries: Int = 10_000) {
         while (entries.hasMoreElements()) {
             currentCoroutineContext().ensureActive()
             val entry = entries.nextElement()
-            val name = entry.name
-            require(name.length <= 4096 && !name.startsWith('/') && '\\' !in name && ':' !in name && name.none { it.isISOControl() }) { "Unsafe archive path" }
+            val rawName = entry.name
+            val name = rawName.replace('\\', '/')
+            require(name.length <= 4096 && !name.startsWith('/') && name.none { it.isISOControl() }) { "Unsafe archive path" }
             val parts = name.removeSuffix("/").split('/')
             require(parts.size <= 64 && parts.all { it.isNotEmpty() && it != "." && it != ".." }) { "Unsafe archive path" }
             val key = parts.joinToString("/")

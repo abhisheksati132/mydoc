@@ -103,12 +103,14 @@ class AppManagerHelper(private val context: Context) {
 
     suspend fun extractApk(app: AppInfoItem): Result<File> = withContext(Dispatchers.IO) {
         try {
-            val targetDir = File(
+            val primaryDir = File(
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                 "MyDoc/ExtractedAPKs"
             )
-            if (!targetDir.exists()) {
-                targetDir.mkdirs()
+            val targetDir = if (primaryDir.exists() || primaryDir.mkdirs()) {
+                primaryDir
+            } else {
+                File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.filesDir, "ExtractedAPKs").apply { mkdirs() }
             }
 
             val sanitizedName = app.appName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
@@ -120,6 +122,20 @@ class AppManagerHelper(private val context: Context) {
                 val allApks = listOf(app.apkFile) + app.splitApkFiles
                 val target = writeStaged(targetDir, baseName, "apks") { staging ->
                     ZipOutputStream(FileOutputStream(staging)).use { zos ->
+                        val infoJson = org.json.JSONObject().apply {
+                            put("pckg", app.packageName)
+                            put("version_name", app.versionName)
+                            put("app_name", app.appName)
+                            val splitsArray = org.json.JSONArray()
+                            for (apk in allApks) {
+                                splitsArray.put(apk.name)
+                            }
+                            put("splits", splitsArray)
+                        }
+                        zos.putNextEntry(ZipEntry("info.json"))
+                        zos.write(infoJson.toString(2).toByteArray(Charsets.UTF_8))
+                        zos.closeEntry()
+
                         for (apk in allApks) {
                             if (!apk.exists()) continue
                             zos.putNextEntry(ZipEntry(apk.name))
@@ -128,6 +144,7 @@ class AppManagerHelper(private val context: Context) {
                         }
                     }
                 }
+                android.media.MediaScannerConnection.scanFile(context, arrayOf(target.absolutePath), null, null)
                 Result.success(target)
             } else {
                 val target = writeStaged(targetDir, baseName, "apk") { staging ->
@@ -137,6 +154,7 @@ class AppManagerHelper(private val context: Context) {
                         }
                     }
                 }
+                android.media.MediaScannerConnection.scanFile(context, arrayOf(target.absolutePath), null, null)
                 Result.success(target)
             }
         } catch (e: Exception) {

@@ -158,7 +158,11 @@ class PdfToolsEngine(private val context: Context) {
 
             val finalSizeBytes = resultFile.length()
             val finalPages = if (resultFile.extension.equals("pdf", ignoreCase = true)) {
-                countDocumentPages(resultFile)
+                val pages = countDocumentPages(resultFile)
+                if (pages <= 0) {
+                    throw IllegalStateException("The tool produced an unreadable or corrupt PDF document.")
+                }
+                pages
             } else {
                 initialPages
             }
@@ -168,7 +172,9 @@ class PdfToolsEngine(private val context: Context) {
                 val savingsPercent = if (initialSizeBytes > 0) {
                     ((initialSizeBytes - finalSizeBytes).toFloat() / initialSizeBytes.toFloat()) * 100f
                 } else 0f
-                if (savingsPercent < 5.0f) {
+                if (resultFile.name.contains("raster")) {
+                    warningNote = "Strong raster compression converted pages to images. Searchable text, links, and forms were not preserved."
+                } else if (savingsPercent < 5.0f) {
                     warningNote = "Compression saved only " +
                         "${String.format(java.util.Locale.US, "%.1f", savingsPercent.coerceAtLeast(0f))}%." +
                         " Images in this document are already optimized."

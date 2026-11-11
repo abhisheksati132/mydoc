@@ -2,6 +2,8 @@
     <string name="tools_featured">Start here</string>
     <string name="rendering_information">Rendering information</string>
     <string name="word_engine_licenses">Office engine licenses</string>
+    <string name="open_source_licenses">Open source licenses</string>
+    <string name="tour_new_features">Tour &amp; new features</string>
     <string name="app_name">MyDoc</string>
     <string name="tile_scan_doc">Quick Scan</string>
     <string name="recent_history_cleared">Recent history cleared</string>
@@ -1046,4 +1048,48 @@
     <string name="office_simple_remove">Remove Office support</string>
     <string name="office_simple_failed">Could not install Office support. Try again.</string>
     <string name="office_simple_remove_failed">Remove MyDoc Office Engine in Android Settings.</string>
+
+    <!-- Cleaner duplicate review strings -->
+    <string name="cleaner_review_duplicates_title">Review duplicate copies</string>
+    <string name="cleaner_review_duplicates_desc">Choose one keeper in each group. Other copies in reviewed groups are selected for Trash. Preview files before confirming. Contents are rechecked before moving.</string>
+    <string name="cleaner_review_image_preview">First-page / image preview</string>
+    <string name="cleaner_review_back">Back to review</string>
+    <string name="cleaner_review_open_original">Open original</string>
+    <string name="cleaner_review_leave_group">Leave this group unchanged</string>
+    <string name="cleaner_review_keep_copy">Keep this copy</string>
+    <string name="cleaner_review_preview">Preview</string>
+    <string name="cleaner_review_done">Done reviewing</string>
+    <string name="cleaner_review_identical_copies">%1$d identical copies • %2$s each</string>
+
+    <!-- Onboarding guide strings -->
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_start_browsing">Start browsing</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_explore_collections">Explore collections</string>
+    <string name="onboarding_replay_hint">%1$d of %2$d · Replay from Settings → About</string>
+
+    <!-- Spotlight search strings -->
+    <string name="spotlight_search_subtitle">Contents, tags &amp; smart collections</string>
+
+    <!-- Discovery & local library strings -->
+    <string name="discovery_add_files">Add files</string>
+    <string name="discovery_add_folder">Add folder</string>
+    <string name="discovery_clear_local_library">Clear local library</string>
+    <string name="discovery_words_search_label">Words inside documents or filename</string>
+    <string name="discovery_tag_label">Tag</string>
+    <string name="discovery_file_type_label">File type (pdf, xlsx…)</string>
+    <string name="discovery_all_selected_files">All selected files</string>
+    <string name="discovery_save_smart_collection">Save smart collection</string>
+    <string name="discovery_delete_collection">Delete collection: %1$s</string>
+    <string name="discovery_relink">Relink</string>
+    <string name="discovery_edit_tags">Edit tags</string>
+    <string name="discovery_remove_from_index">Remove from index</string>
+    <string name="discovery_tags_for_title">Tags for %1$s</string>
+    <string name="discovery_comma_separated_tags">Comma-separated tags</string>
+    <string name="discovery_tags_supporting_text">Up to 20 tags, 40 characters each. Tags do not move or rename the original file.</string>
+    <string name="discovery_collection_name_label">Collection name</string>
+    <string name="discovery_smart_collection_desc">Uses the current words, tag and file-type filters. Matching files update after indexing. Saving the same name replaces that rule.</string>
+    <string name="discovery_clear_library_title">Clear the local library?</string>
+    <string name="discovery_clear_library_desc">Removes indexed text and tags from MyDoc. Your original files and saved collection rules stay in place.</string>
 </resources>

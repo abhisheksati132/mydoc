@@ -71,8 +71,12 @@ fun DocumentViewerScreen(
 
     var isSpreadsheetGridActive by rememberSaveable(document.uri) { mutableStateOf(false) }
 
-    androidx.activity.compose.BackHandler(enabled = isSpreadsheetGridActive) {
-        isSpreadsheetGridActive = false
+    androidx.activity.compose.BackHandler(enabled = isSpreadsheetGridActive || isSlideshowActive || isWordReflowActive) {
+        when {
+            isSpreadsheetGridActive -> isSpreadsheetGridActive = false
+            isSlideshowActive -> isSlideshowActive = false
+            isWordReflowActive -> isWordReflowActive = false
+        }
     }
 
     // Order matters. An explicitly refused format (xlsb, wps) has no descriptor, so checking
@@ -83,7 +87,6 @@ fun DocumentViewerScreen(
         !officeInstalled && descriptor?.family == DocumentFamily.WORD -> ViewerKind.WORD_REFLOW
         !officeInstalled && descriptor?.family == DocumentFamily.SPREADSHEET -> ViewerKind.SPREADSHEET_GRID
         !officeInstalled && descriptor?.family == DocumentFamily.PRESENTATION -> ViewerKind.PRESENTATION_SLIDES
-        isSpreadsheetGridActive -> ViewerKind.SPREADSHEET_GRID
         descriptor == null -> ViewerKind.PDF_PAGES
         else -> descriptor.viewer
     }
@@ -94,20 +97,6 @@ fun DocumentViewerScreen(
             extension = ext,
             onBackClick = onBackClick,
             modifier = modifier.fillMaxSize().statusBarsPadding()
-        )
-        return
-    }
-
-    // Slideshow projection is a mode of the presentation viewer, not a format route.
-    if (isSlideshowActive) {
-        PresentationViewerScreen(
-            document = document,
-            onBackClick = { isSlideshowActive = false },
-            onShareClick = onShareClick,
-            onSwipeToNextDocument = onSwipeToNextDocument,
-            onSwipeToPreviousDocument = onSwipeToPreviousDocument,
-            startInSlideshow = true,
-            modifier = modifier.fillMaxSize()
         )
         return
     }
@@ -172,19 +161,51 @@ fun DocumentViewerScreen(
             val viewerState by viewerViewModel.uiState.collectAsStateWithLifecycle()
             val family = descriptor?.family
             val isWord = family == DocumentFamily.WORD
+            val isSpreadsheet = family == DocumentFamily.SPREADSHEET
+            val isPresentation = family == DocumentFamily.PRESENTATION
 
-            if (isWord && (isWordReflowActive || viewerState.needsReflowFallback)) {
-                WordViewerScreen(
-                    document = document,
-                    onBackClick = {
-                        if (isWordReflowActive) isWordReflowActive = false else onBackClick()
-                    },
-                    onShareClick = onShareClick,
-                    onSwipeToNextDocument = onSwipeToNextDocument,
-                    onSwipeToPreviousDocument = onSwipeToPreviousDocument,
-                    modifier = modifier.fillMaxSize()
-                )
-            } else {
+            when {
+                isWord && (isWordReflowActive || viewerState.needsReflowFallback) -> {
+                    WordViewerScreen(
+                        document = document,
+                        onBackClick = {
+                            if (isWordReflowActive) isWordReflowActive = false else onBackClick()
+                        },
+                        onShareClick = onShareClick,
+                        onSwipeToNextDocument = onSwipeToNextDocument,
+                        onSwipeToPreviousDocument = onSwipeToPreviousDocument,
+                        modifier = modifier.fillMaxSize()
+                    )
+                }
+                isSpreadsheet && isSpreadsheetGridActive -> {
+                    val spreadsheetViewModel: SpreadsheetViewModel = viewModel(
+                        factory = SpreadsheetViewModel.Factory(context, document)
+                    )
+                    LaunchedEffect(document.uri) {
+                        spreadsheetViewModel.open(document)
+                    }
+                    SpreadsheetViewerScreen(
+                        document = document,
+                        viewModel = spreadsheetViewModel,
+                        onBackClick = { isSpreadsheetGridActive = false },
+                        onShareClick = onShareClick,
+                        onSwipeToNextDocument = onSwipeToNextDocument,
+                        onSwipeToPreviousDocument = onSwipeToPreviousDocument,
+                        modifier = modifier.fillMaxSize()
+                    )
+                }
+                isPresentation && isSlideshowActive -> {
+                    PresentationViewerScreen(
+                        document = document,
+                        onBackClick = { isSlideshowActive = false },
+                        onShareClick = onShareClick,
+                        onSwipeToNextDocument = onSwipeToNextDocument,
+                        onSwipeToPreviousDocument = onSwipeToPreviousDocument,
+                        startInSlideshow = true,
+                        modifier = modifier.fillMaxSize()
+                    )
+                }
+                else -> {
                 PdfViewerScreen(
                     document = document,
                     viewModel = viewerViewModel,
@@ -212,7 +233,8 @@ fun DocumentViewerScreen(
                 )
             }
         }
-
-        ViewerKind.UNSUPPORTED -> Unit
     }
+
+    ViewerKind.UNSUPPORTED -> Unit
+}
 }

@@ -17,8 +17,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.MyDocApp
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.domain.model.LibraryItem
 import com.abhisheksati.mydoc.domain.model.MediaKind
 import com.abhisheksati.mydoc.domain.model.ViewState
@@ -47,7 +49,15 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
     var saveDialog by remember { mutableStateOf(false) }
     var collectionName by rememberSaveable { mutableStateOf("") }
     var clearDialog by remember { mutableStateOf(false) }
-    BackHandler { onBack() }
+    BackHandler {
+        job?.cancel()
+        onBack()
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            job?.cancel()
+        }
+    }
     LaunchedEffect(query,tag,extension,revision) {
         delay(180)
         try { results=store.search(query.trim(),tag.trim().lowercase(java.util.Locale.ROOT),extension);collections=store.collections() }
@@ -96,8 +106,8 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
         AppTopBar(title="Contents & collections",onBack=onBack,isGlass=false)
         Text("Search snapshots stay on this device. Up to 1,000 selected files; 200 pages / 200,000 characters per document. Locked files and image-only scans are not text-indexed.",Modifier.padding(horizontal=16.dp),style=MaterialTheme.typography.bodySmall)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal=8.dp)) {
-            TextButton(onClick={pick.launch(arrayOf("*/*"))},enabled=!working) { Text("Add files") }
-            TextButton(onClick={folder.launch(null)},enabled=!working) { Text("Add folder") }
+            TextButton(onClick={pick.launch(arrayOf("*/*"))},enabled=!working) { Text(stringResource(R.string.discovery_add_files)) }
+            TextButton(onClick={folder.launch(null)},enabled=!working) { Text(stringResource(R.string.discovery_add_folder)) }
             TextButton(onClick={
                 working=true
                 job=scope.launch {
@@ -106,25 +116,25 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
                     catch(e: Exception) { message="Refresh failed: ${e.message}" }
                     finally { working=false }
                 }
-            },enabled=!working) { Text("Refresh") }
-            if(working) TextButton(onClick={job?.cancel()}) { Text("Stop") }
-            TextButton(onClick={clearDialog=true},enabled=!working) { Text("Clear local library") }
+            },enabled=!working) { Text(stringResource(R.string.menu_refresh)) }
+            if(working) TextButton(onClick={job?.cancel()}) { Text(stringResource(R.string.action_stop)) }
+            TextButton(onClick={clearDialog=true},enabled=!working) { Text(stringResource(R.string.discovery_clear_local_library)) }
         }
         if(working) LinearProgressIndicator(Modifier.fillMaxWidth())
         Text(message,Modifier.padding(horizontal=16.dp,vertical=4.dp),style=MaterialTheme.typography.bodySmall)
-        OutlinedTextField(query,{query=it.take(300);collectionName=""},label={Text("Words inside documents or filename")},singleLine=true,modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp))
+        OutlinedTextField(query,{query=it.take(300);collectionName=""},label={Text(stringResource(R.string.discovery_words_search_label))},singleLine=true,modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp))
         Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(tag,{tag=it.take(40)},label={Text("Tag")},singleLine=true,modifier=Modifier.weight(1f))
-            OutlinedTextField(extension,{extension=it.take(16)},label={Text("File type (pdf, xlsx…)")},singleLine=true,modifier=Modifier.weight(1f))
+            OutlinedTextField(tag,{tag=it.take(40)},label={Text(stringResource(R.string.discovery_tag_label))},singleLine=true,modifier=Modifier.weight(1f))
+            OutlinedTextField(extension,{extension=it.take(16)},label={Text(stringResource(R.string.discovery_file_type_label))},singleLine=true,modifier=Modifier.weight(1f))
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal=8.dp)) {
-            TextButton(onClick={query="";tag="";extension="";collectionName=""}) { Text("All selected files") }
-            TextButton(onClick={saveDialog=true}) { Text("Save smart collection") }
+            TextButton(onClick={query="";tag="";extension="";collectionName=""}) { Text(stringResource(R.string.discovery_all_selected_files)) }
+            TextButton(onClick={saveDialog=true}) { Text(stringResource(R.string.discovery_save_smart_collection)) }
             for(rule in collections) InputChip(selected=collectionName==rule.name,onClick={
                 collectionName=rule.name;query=rule.query;tag=rule.tag;extension=rule.extension
             },label={Text(rule.name)},modifier=Modifier.padding(horizontal=4.dp))
         }
-        if(collectionName.isNotEmpty()) TextButton(onClick={mutate { store.deleteCollection(collectionName);collectionName="" }}) { Text("Delete collection: $collectionName") }
+        if(collectionName.isNotEmpty()) TextButton(onClick={mutate { store.deleteCollection(collectionName);collectionName="" }}) { Text(stringResource(R.string.discovery_delete_collection, collectionName)) }
         Text("${results.size} results • refresh after changing or moving files",Modifier.padding(horizontal=16.dp,vertical=4.dp),style=MaterialTheme.typography.labelMedium)
         LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             if(results.isEmpty()) item { Text("No matching files. Add documents, refresh the index, or clear the filters.",Modifier.padding(16.dp)) }
@@ -142,27 +152,31 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
                                     val reachable=withContext(Dispatchers.IO) { context.contentResolver.openAssetFileDescriptor(Uri.parse(file.uri),"r")?.use { true } ?: false }
                                     check(reachable) { "File missing or permission expired. Add its new location to reconnect it." }
                                     val kind=when { file.mime.startsWith("image/")->MediaKind.PHOTO;file.mime.startsWith("audio/")->MediaKind.AUDIO;file.mime.startsWith("video/")->MediaKind.VIDEO;else->MediaKind.DOCUMENT }
-                                    if(kind==MediaKind.DOCUMENT && file.snippet.isNotEmpty()) app.documentRepository.saveViewState(ViewState(file.uri,lastPage=file.page))
+                                    if(kind==MediaKind.DOCUMENT && file.snippet.isNotEmpty()) {
+                                        val existing = app.documentRepository.getViewState(file.uri)
+                                        val updated = existing?.copy(lastPage = file.page) ?: ViewState(file.uri, lastPage = file.page)
+                                        app.documentRepository.saveViewState(updated)
+                                    }
                                     onOpen(LibraryItem(file.uri,file.name,kind,file.mime,file.size,file.modified))
                                 } catch(e: Exception) { if(e is CancellationException)throw e;message=e.message ?: "Cannot open this file" }
-                            }}) { Text("Open") }
-                            TextButton(onClick={relinkTarget=file;relink.launch(arrayOf("*/*"))},enabled=!working) { Text("Relink") }
-                            TextButton(onClick={tagsForUri=file.uri;tagsForName=file.name;tagsValue=file.tags}) { Text("Edit tags") }
-                            TextButton(onClick={mutate { store.remove(file.uri) }}) { Text("Remove from index") }
+                            }}) { Text(stringResource(R.string.action_open)) }
+                            TextButton(onClick={relinkTarget=file;relink.launch(arrayOf("*/*"))},enabled=!working) { Text(stringResource(R.string.discovery_relink)) }
+                            TextButton(onClick={tagsForUri=file.uri;tagsForName=file.name;tagsValue=file.tags}) { Text(stringResource(R.string.discovery_edit_tags)) }
+                            TextButton(onClick={mutate { store.remove(file.uri) }}) { Text(stringResource(R.string.discovery_remove_from_index)) }
                         }
                     }
                 }
             }
         }
     }
-    if(tagsForUri!=null) AppAlertDialog(onDismissRequest={tagsForUri=null},title={Text("Tags for ${tagsForName}")},text={
-        OutlinedTextField(tagsValue,{tagsValue=it.take(1000)},label={Text("Comma-separated tags")},supportingText={Text("Up to 20 tags, 40 characters each. Tags do not move or rename the original file.")})
-    },confirmButton={TextButton(onClick={val uri=tagsForUri!!;mutate { store.setTags(uri,tagsValue) };tagsForUri=null}) { Text("Save") }},dismissButton={TextButton(onClick={tagsForUri=null}) { Text("Cancel") }})
-    if(saveDialog) AppAlertDialog(onDismissRequest={saveDialog=false},title={Text("Save smart collection")},text={
+    if(tagsForUri!=null) AppAlertDialog(onDismissRequest={tagsForUri=null},title={Text(stringResource(R.string.discovery_tags_for_title, tagsForName))},text={
+        OutlinedTextField(tagsValue,{tagsValue=it.take(1000)},label={Text(stringResource(R.string.discovery_comma_separated_tags))},supportingText={Text(stringResource(R.string.discovery_tags_supporting_text))})
+    },confirmButton={TextButton(onClick={val uri=tagsForUri!!;mutate { store.setTags(uri,tagsValue) };tagsForUri=null}) { Text(stringResource(R.string.action_save)) }},dismissButton={TextButton(onClick={tagsForUri=null}) { Text(stringResource(R.string.action_cancel)) }})
+    if(saveDialog) AppAlertDialog(onDismissRequest={saveDialog=false},title={Text(stringResource(R.string.discovery_save_smart_collection))},text={
         Column {
-            OutlinedTextField(collectionName,{collectionName=it.take(60)},label={Text("Collection name")})
-            Text("Uses the current words, tag and file-type filters. Matching files update after indexing. Saving the same name replaces that rule.")
+            OutlinedTextField(collectionName,{collectionName=it.take(60)},label={Text(stringResource(R.string.discovery_collection_name_label))})
+            Text(stringResource(R.string.discovery_smart_collection_desc))
         }
-    },confirmButton={TextButton(enabled=collectionName.isNotBlank(),onClick={mutate { store.saveCollection(SmartCollection(collectionName,query,tag,extension)) };saveDialog=false}) { Text("Save") }},dismissButton={TextButton(onClick={saveDialog=false}) { Text("Cancel") }})
-    if(clearDialog) AppAlertDialog(onDismissRequest={clearDialog=false},title={Text("Clear the local library?")},text={Text("Removes indexed text and tags from MyDoc. Your original files and saved collection rules stay in place.")},confirmButton={TextButton(onClick={mutate { store.clear() };clearDialog=false}) { Text("Clear") }},dismissButton={TextButton(onClick={clearDialog=false}) { Text("Cancel") }})
+    },confirmButton={TextButton(enabled=collectionName.isNotBlank(),onClick={mutate { store.saveCollection(SmartCollection(collectionName,query,tag,extension)) };saveDialog=false}) { Text(stringResource(R.string.action_save)) }},dismissButton={TextButton(onClick={saveDialog=false}) { Text(stringResource(R.string.action_cancel)) }})
+    if(clearDialog) AppAlertDialog(onDismissRequest={clearDialog=false},title={Text(stringResource(R.string.discovery_clear_library_title))},text={Text(stringResource(R.string.discovery_clear_library_desc))},confirmButton={TextButton(onClick={mutate { store.clear() };clearDialog=false}) { Text(stringResource(R.string.action_clear)) }},dismissButton={TextButton(onClick={clearDialog=false}) { Text(stringResource(R.string.action_cancel)) }})
 }

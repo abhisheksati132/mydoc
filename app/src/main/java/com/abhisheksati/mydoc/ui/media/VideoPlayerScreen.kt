@@ -170,6 +170,7 @@ fun VideoPlayerScreen(
     var scrubPositionMs by remember { mutableStateOf<Long?>(null) }
     var totalDurationMs by remember { mutableLongStateOf(item.durationMs) }
     var areControlsVisible by remember { mutableStateOf(true) }
+    var volumeAccumulator by remember { mutableFloatStateOf(0f) }
     var isLooping by remember { mutableStateOf(autoLoop) }
     var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
     var resizeModeIndex by remember { mutableIntStateOf(0) }
@@ -197,9 +198,13 @@ fun VideoPlayerScreen(
     val playerContentView = LocalView.current
     DisposableEffect(activity) {
         val window = activity?.window
+        val originalBrightness = window?.attributes?.screenBrightness ?: WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
         window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         onDispose {
             window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            window?.attributes = window?.attributes?.apply {
+                screenBrightness = originalBrightness
+            }
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             // The bars were hidden for playback; the rest of the app needs them back.
             if (window != null) {
@@ -454,6 +459,7 @@ fun VideoPlayerScreen(
                 detectDragGestures(
                     onDragStart = { totalDragY = 0f },
                     onDragEnd = {
+                        volumeAccumulator = 0f
                         scope.launch {
                             delay(600)
                             gestureOverlayText = null
@@ -481,13 +487,16 @@ fun VideoPlayerScreen(
                                     gestureOverlayIcon = Icons.Default.BrightnessMedium
                                 } else {
                                     // Volume control
-                                    val currentVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                                    val delta = -dragAmount.y / (size.height * 0.6f)
-                                    val volStep = if (delta > 0) 1 else -1
-                                    val newVol = (currentVol + volStep).coerceIn(0, maxSystemVolume)
-                                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
-                                    gestureOverlayText = "${((newVol.toFloat() / maxSystemVolume) * 100).toInt()}%"
-                                    gestureOverlayIcon = Icons.AutoMirrored.Filled.VolumeUp
+                                    volumeAccumulator += -dragAmount.y / (size.height * 0.5f)
+                                    val steps = (volumeAccumulator * maxSystemVolume).toInt()
+                                    if (steps != 0) {
+                                        val currentVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                                        val newVol = (currentVol + steps).coerceIn(0, maxSystemVolume)
+                                        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
+                                        volumeAccumulator -= steps.toFloat() / maxSystemVolume
+                                        gestureOverlayText = "${((newVol.toFloat() / maxSystemVolume) * 100).toInt()}%"
+                                        gestureOverlayIcon = Icons.AutoMirrored.Filled.VolumeUp
+                                    }
                                 }
                             }
                         }
@@ -564,7 +573,7 @@ fun VideoPlayerScreen(
 
         // Top and Bottom Controls Overlay
         AnimatedVisibility(
-            visible = areControlsVisible && !isScreenLocked,
+            visible = areControlsVisible && !isScreenLocked && activity?.isInPictureInPictureMode != true,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.fillMaxSize()
@@ -608,19 +617,24 @@ fun VideoPlayerScreen(
                             .padding(horizontal = 8.dp)
                     )
 
-                    // Aspect Ratio Button
-                    IconButton(onClick = {
-                        resizeModeIndex = (resizeModeIndex + 1) % VideoResizeMode.entries.size
-                        context.showMessage(VideoResizeMode.entries[resizeModeIndex].label)
-                    }) {
-                        Icon(Icons.Outlined.AspectRatio, contentDescription = stringResource(R.string.video_aspect_ratio), tint = Color.White)
-                    }
+                    val isLandscape = orientationMode == 1 ||
+                        LocalContext.current.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
-                    // Screen Rotation Lock Toggle
-                    IconButton(onClick = {
-                        orientationMode = (orientationMode + 1) % 3
-                    }) {
-                        Icon(Icons.Default.ScreenRotation, contentDescription = stringResource(R.string.video_rotation), tint = Color.White)
+                    if (isLandscape) {
+                        // Aspect Ratio Button
+                        IconButton(onClick = {
+                            resizeModeIndex = (resizeModeIndex + 1) % VideoResizeMode.entries.size
+                            context.showMessage(VideoResizeMode.entries[resizeModeIndex].label)
+                        }) {
+                            Icon(Icons.Outlined.AspectRatio, contentDescription = stringResource(R.string.video_aspect_ratio), tint = Color.White)
+                        }
+
+                        // Screen Rotation Lock Toggle
+                        IconButton(onClick = {
+                            orientationMode = (orientationMode + 1) % 3
+                        }) {
+                            Icon(Icons.Default.ScreenRotation, contentDescription = stringResource(R.string.video_rotation), tint = Color.White)
+                        }
                     }
 
                     // Picture-in-Picture Button
@@ -679,6 +693,17 @@ fun VideoPlayerScreen(
                                     start == null -> loopStart = position
                                     position > start + 500L -> loopEnd = position
                                     else -> context.showMessage(resources.getString(R.string.video_loop_end_invalid))
+                                }
+                            }
+                            if (!isLandscape) {
+                                VideoMenuAction(R.string.video_aspect_ratio) {
+                                    playbackMenuOpen = false
+                                    resizeModeIndex = (resizeModeIndex + 1) % VideoResizeMode.entries.size
+                                    context.showMessage(VideoResizeMode.entries[resizeModeIndex].label)
+                                }
+                                VideoMenuAction(R.string.video_rotation) {
+                                    playbackMenuOpen = false
+                                    orientationMode = (orientationMode + 1) % 3
                                 }
                             }
                             if (activeUri.scheme != "https") VideoMenuAction(R.string.action_share) {

@@ -26,9 +26,19 @@ fun Uri.toShareableUri(context: Context): Uri? {
         ?.let { return it }
 
     return runCatching {
+        // Opportunistic cleanup of stale shared directories older than 24 hours
+        val rootShared = File(context.cacheDir, "shared")
+        if (rootShared.isDirectory) {
+            val oneDayAgo = System.currentTimeMillis() - 86_400_000L
+            rootShared.listFiles()?.forEach { dir ->
+                if (dir.isDirectory && dir.lastModified() < oneDayAgo) {
+                    dir.deleteRecursively()
+                }
+            }
+        }
         // One directory per handoff: a basename-only staging path made two same-named files share a
         // URI, so the recipient got the last copy twice and an earlier grant could read it.
-        val sharedDir = File(context.cacheDir, "shared/${java.util.UUID.randomUUID()}").apply { mkdirs() }
+        val sharedDir = File(rootShared, java.util.UUID.randomUUID().toString()).apply { mkdirs() }
         val copy = File(sharedDir, file.name)
         file.copyTo(copy, overwrite = false)
         FileProvider.getUriForFile(context, authority(context), copy)

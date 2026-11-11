@@ -423,13 +423,21 @@ fun PresentationViewerScreen(
                 onNextMatch = {
                     if (searchMatches.isNotEmpty()) {
                         currentMatchIndex = (currentMatchIndex + 1) % searchMatches.size
-                        scope.launch { pagerState.animateScrollToPage(searchMatches[currentMatchIndex]) }
+                        val target = searchMatches[currentMatchIndex]
+                        scope.launch {
+                            if (isContinuousVertical) lazyListState.animateScrollToItem(target)
+                            else pagerState.animateScrollToPage(target)
+                        }
                     }
                 },
                 onPreviousMatch = {
                     if (searchMatches.isNotEmpty()) {
                         currentMatchIndex = (currentMatchIndex - 1 + searchMatches.size) % searchMatches.size
-                        scope.launch { pagerState.animateScrollToPage(searchMatches[currentMatchIndex]) }
+                        val target = searchMatches[currentMatchIndex]
+                        scope.launch {
+                            if (isContinuousVertical) lazyListState.animateScrollToItem(target)
+                            else pagerState.animateScrollToPage(target)
+                        }
                     }
                 },
                 onCloseSearch = {
@@ -636,24 +644,20 @@ fun PresentationViewerScreen(
                                     }
                                 )
                             }
-                            .then(
-                                if (zoomScale > 1.05f) {
-                                    Modifier.pointerInput(Unit) {
-                                        detectTransformGestures { _, pan, zoom, _ ->
-                                            zoomScale = (zoomScale * zoom).coerceIn(1f, 5f)
-                                            if (zoomScale > 1f) {
-                                                val maxPan = 500f * (zoomScale - 1f)
-                                                panOffset = Offset(
-                                                    x = (panOffset.x + pan.x).coerceIn(-maxPan, maxPan),
-                                                    y = (panOffset.y + pan.y).coerceIn(-maxPan, maxPan)
-                                                )
-                                            } else {
-                                                panOffset = Offset.Zero
-                                            }
-                                        }
+                            .pointerInput(Unit) {
+                                detectTransformGestures { _, pan, zoom, _ ->
+                                    zoomScale = (zoomScale * zoom).coerceIn(1f, 5f)
+                                    if (zoomScale > 1f) {
+                                        val maxPan = 500f * (zoomScale - 1f)
+                                        panOffset = Offset(
+                                            x = (panOffset.x + pan.x).coerceIn(-maxPan, maxPan),
+                                            y = (panOffset.y + pan.y).coerceIn(-maxPan, maxPan)
+                                        )
+                                    } else {
+                                        panOffset = Offset.Zero
                                     }
-                                } else Modifier
-                            )
+                                }
+                            }
                             .graphicsLayer {
                                 scaleX = zoomScale
                                 scaleY = zoomScale

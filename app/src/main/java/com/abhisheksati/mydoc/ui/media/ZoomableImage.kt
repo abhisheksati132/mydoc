@@ -73,10 +73,11 @@ fun ZoomableImage(
                                 val newScale = (scale * zoomChange).coerceIn(1f, 5f)
                                 scale = newScale
                                 if (newScale > 1.02f) {
-                                    val maxPan = 700f * (newScale - 1f)
+                                    val maxPanX = (this.size.width.toFloat() * (newScale - 1f)) / 2f
+                                    val maxPanY = (this.size.height.toFloat() * (newScale - 1f)) / 2f
                                     offset = Offset(
-                                        x = (offset.x + panChange.x).coerceIn(-maxPan, maxPan),
-                                        y = (offset.y + panChange.y).coerceIn(-maxPan, maxPan)
+                                        x = (offset.x + panChange.x).coerceIn(-maxPanX, maxPanX),
+                                        y = (offset.y + panChange.y).coerceIn(-maxPanY, maxPanY)
                                     )
                                 } else {
                                     offset = Offset.Zero

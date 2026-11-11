@@ -20,7 +20,9 @@ enum class TtsPlaybackState {
 class DocumentTtsManager(private val context: Context) : TextToSpeech.OnInitListener {
 
     private var tts: TextToSpeech? = null
-    private var isInitialized = false
+    @Volatile private var isInitialized = false
+    private val ttsLock = Any()
+    private var pendingText: String? = null
 
     private val _playbackState = MutableStateFlow(TtsPlaybackState.IDLE)
     val playbackState: StateFlow<TtsPlaybackState> = _playbackState.asStateFlow()
@@ -33,7 +35,7 @@ class DocumentTtsManager(private val context: Context) : TextToSpeech.OnInitList
 
     private var fullText: String = ""
     private var chunks: List<String> = emptyList()
-    private var currentChunkIndex = 0
+    @Volatile private var currentChunkIndex = 0
 
     init {
         _playbackState.value = TtsPlaybackState.INITIALIZING
@@ -54,12 +56,14 @@ class DocumentTtsManager(private val context: Context) : TextToSpeech.OnInitList
                     }
 
                     override fun onDone(utteranceId: String?) {
-                        currentChunkIndex++
-                        if (currentChunkIndex < chunks.size) {
-                            speakCurrentChunk()
-                        } else {
-                            _playbackState.value = TtsPlaybackState.IDLE
-                            currentChunkIndex = 0
+                        synchronized(ttsLock) {
+                            currentChunkIndex++
+                            if (currentChunkIndex < chunks.size) {
+                                speakCurrentChunk()
+                            } else {
+                                _playbackState.value = TtsPlaybackState.IDLE
+                                currentChunkIndex = 0
+                            }
                         }
                     }
 
@@ -72,8 +76,14 @@ class DocumentTtsManager(private val context: Context) : TextToSpeech.OnInitList
                         _playbackState.value = TtsPlaybackState.ERROR
                     }
                 })
-                isInitialized = true
-                _playbackState.value = TtsPlaybackState.IDLE
+                synchronized(ttsLock) {
+                    isInitialized = true
+                    _playbackState.value = TtsPlaybackState.IDLE
+                    if (pendingText != null) {
+                        pendingText = null
+                        speakCurrentChunk()
+                    }
+                }
             }
         } else {
             _playbackState.value = TtsPlaybackState.ERROR
@@ -82,11 +92,17 @@ class DocumentTtsManager(private val context: Context) : TextToSpeech.OnInitList
 
     fun startReading(text: String) {
         if (text.isBlank()) return
-        fullText = text
-        // Break by sentences or chunks of ~250 words
-        chunks = chunkText(text)
-        currentChunkIndex = 0
-        speakCurrentChunk()
+        synchronized(ttsLock) {
+            fullText = text
+            // Break by sentences or chunks of ~250 words
+            chunks = chunkText(text)
+            currentChunkIndex = 0
+            if (!isInitialized) {
+                pendingText = text
+                return
+            }
+            speakCurrentChunk()
+        }
     }
 
     private fun speakCurrentChunk() {
@@ -111,28 +127,36 @@ class DocumentTtsManager(private val context: Context) : TextToSpeech.OnInitList
     }
 
     fun pause() {
-        if (_playbackState.value == TtsPlaybackState.PLAYING) {
-            tts?.stop()
-            _playbackState.value = TtsPlaybackState.PAUSED
+        synchronized(ttsLock) {
+            if (_playbackState.value == TtsPlaybackState.PLAYING) {
+                tts?.stop()
+                _playbackState.value = TtsPlaybackState.PAUSED
+            }
         }
     }
 
     fun resume() {
-        if (_playbackState.value == TtsPlaybackState.PAUSED) {
-            speakCurrentChunk()
+        synchronized(ttsLock) {
+            if (_playbackState.value == TtsPlaybackState.PAUSED) {
+                speakCurrentChunk()
+            }
         }
     }
 
     fun stop() {
-        tts?.stop()
-        currentChunkIndex = 0
-        _currentUtterance.value = ""
-        _playbackState.value = TtsPlaybackState.IDLE
+        synchronized(ttsLock) {
+            tts?.stop()
+            currentChunkIndex = 0
+            _currentUtterance.value = ""
+            _playbackState.value = TtsPlaybackState.IDLE
+        }
     }
 
     fun setSpeed(rate: Float) {
-        _speechRate.value = rate
-        tts?.setSpeechRate(rate)
+        synchronized(ttsLock) {
+            _speechRate.value = rate
+            tts?.setSpeechRate(rate)
+        }
     }
 
     private fun chunkText(text: String): List<String> {

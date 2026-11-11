@@ -658,6 +658,7 @@ class FileManagerViewModelTest {
     ) : StorageRepository {
         override suspend fun renameBatch(plan: com.abhisheksati.mydoc.domain.model.ExplorerRenamePlan) = com.abhisheksati.mydoc.domain.model.ExplorerRenameResult(false)
         override suspend fun pendingRenameRecovery(): List<String> = emptyList()
+        override suspend fun dismissRenameRecovery() = Unit
         var copyGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
         var propertiesGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
         var lastPasteTarget: File? = null

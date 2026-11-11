@@ -109,8 +109,12 @@ fun PhotoViewerScreen(
     val coroutineScope = rememberCoroutineScope()
 
     val photoList = remember(items) { mutableStateListOf(*items.toTypedArray()) }
+    LaunchedEffect(photoList.isEmpty()) {
+        if (photoList.isEmpty()) {
+            onBackClick()
+        }
+    }
     if (photoList.isEmpty()) {
-        onBackClick()
         return
     }
 
@@ -122,7 +126,6 @@ fun PhotoViewerScreen(
 
     val currentItem = photoList.getOrNull(pagerState.currentPage.coerceIn(0, (photoList.size - 1).coerceAtLeast(0))) ?: photoList.firstOrNull()
     if (currentItem == null) {
-        onBackClick()
         return
     }
 
@@ -455,7 +458,18 @@ fun PhotoViewerScreen(
                     val itemToDelete = currentItem
                     coroutineScope.launch {
                         val app = context.applicationContext as? MyDocApp
-                        val file = itemToDelete.filePath?.let { File(it).takeIf { f -> f.exists() } }
+                        val resolvedPath = if (itemToDelete.uri.scheme == "content") {
+                            runCatching {
+                                context.contentResolver.query(
+                                    itemToDelete.uri,
+                                    arrayOf(android.provider.MediaStore.MediaColumns.DATA),
+                                    null, null, null
+                                )?.use { cursor ->
+                                    if (cursor.moveToFirst()) cursor.getString(0) else null
+                                }
+                            }.getOrNull()
+                        } else null
+                        val file = (itemToDelete.filePath ?: resolvedPath)?.let { File(it).takeIf { f -> f.exists() } }
                         val trashTarget = file?.let { f -> app?.let { a -> f to a } }
                         // The dialog promises the Recycle Bin, so a photo the app cannot move
                         // there is left alone: falling back to ContentResolver deletion destroyed

@@ -184,10 +184,14 @@ class PdfSecurityEngine(private val context: Context) {
             val totalPages = srcDoc.countPages()
             val query = options.redactQuery.ifBlank { "CONFIDENTIAL" }
             var redacted = 0
+            var pagesWithText = 0
 
             for (p in 0 until totalPages) {
                 currentCoroutineContext().ensureActive()
                 val page = srcDoc.loadPage(p) as? PDFPage ?: continue
+                val st = runCatching { page.toStructuredText() }.getOrNull()
+                val hasText = st != null && st.blocks.any { b -> b.lines.any { l -> l.chars.isNotEmpty() } }
+                if (hasText) pagesWithText++
                 val quads = page.search(query)
                 if (quads != null && quads.isNotEmpty()) {
                     for (hit in quads) {
@@ -208,7 +212,11 @@ class PdfSecurityEngine(private val context: Context) {
             }
 
             if (redacted == 0) {
-                throw IllegalArgumentException("No match for \"$query\" was found. Nothing was redacted.")
+                if (pagesWithText == 0) {
+                    throw IllegalArgumentException("This PDF has no selectable text layer (it may be a scanned image). Text redaction cannot find \"$query\".")
+                } else {
+                    throw IllegalArgumentException("No match for \"$query\" was found. Nothing was redacted.")
+                }
             }
 
             val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "redacted", "pdf")
@@ -228,14 +236,31 @@ class PdfSecurityEngine(private val context: Context) {
         try {
             FileInputStream(file).use { fis ->
                 PDDocument.load(fis).use { doc ->
+                    if (doc.isEncrypted) {
+                        throw IllegalArgumentException("Cannot sanitize an encrypted document. Unlock the PDF before stripping metadata.")
+                    }
                     doc.documentCatalog?.metadata = null
-                    doc.documentInformation = PDDocumentInformation()
+                    doc.documentCatalog?.structureTreeRoot = null
+                    doc.documentInformation = PDDocumentInformation().apply {
+                        author = null
+                        title = null
+                        subject = null
+                        creator = null
+                        producer = null
+                        keywords = null
+                        creationDate = null
+                        modificationDate = null
+                    }
                     FileOutputStream(intermediate).use { fos -> doc.save(fos) }
                     pdfBoxSucceeded = true
                 }
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
+            if (e is IllegalArgumentException) {
+                try { if (intermediate.exists()) intermediate.delete() } catch (_: Exception) {}
+                throw e
+            }
             android.util.Log.w("PdfSecurityEngine", "PDFBox metadata clear failed: ${e.message}")
             file.copyTo(intermediate, overwrite = true)
         }
@@ -260,6 +285,9 @@ class PdfSecurityEngine(private val context: Context) {
         }
 
         try {
+            if (srcDoc.needsPassword()) {
+                throw IllegalArgumentException("Cannot sanitize an encrypted document. Unlock the PDF before stripping metadata.")
+            }
             srcDoc.setMetaData(Document.META_INFO_AUTHOR, "")
             srcDoc.setMetaData(Document.META_INFO_TITLE, "")
             srcDoc.setMetaData(Document.META_INFO_CREATOR, "")

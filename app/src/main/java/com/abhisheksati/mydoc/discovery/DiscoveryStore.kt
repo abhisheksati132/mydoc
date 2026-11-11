@@ -112,7 +112,7 @@ class DiscoveryStore private constructor(context: Context) : SQLiteOpenHelper(co
             // Choose one matching page per document before applying the result limit.
             // Otherwise a long book can occupy every result slot by itself.
             val ids=mutableListOf<Long>()
-            db.rawQuery("SELECT MIN(pages.rowid) FROM pages JOIN files f ON f.uri=pages.uri WHERE pages MATCH ?$filter GROUP BY f.uri ORDER BY f.name LIMIT 200",
+            db.rawQuery("SELECT MIN(pages.rowid) FROM pages JOIN files f ON f.uri=pages.uri WHERE pages MATCH ?$filter GROUP BY f.uri ORDER BY f.name LIMIT 1000",
                 arrayOf(match)+filters).use { c ->while(c.moveToNext())ids.add(c.getLong(0)) }
             for(id in ids) read("SELECT f.*,$tags,CAST(pages.page AS INTEGER),snippet(pages,'','', '…',2,18) FROM pages JOIN files f ON f.uri=pages.uri WHERE pages MATCH ? AND pages.rowid=?",
                 arrayOf(match,id.toString()))

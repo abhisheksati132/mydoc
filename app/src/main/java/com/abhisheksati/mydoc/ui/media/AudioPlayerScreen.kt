@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Audiotrack
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.SliderDefaults
@@ -40,6 +42,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -101,6 +104,8 @@ fun AudioPlayerScreen(
 
     val mediaPlayer = remember(item.uri) { MediaPlayer() }
     var ready by remember(item.uri) { mutableStateOf(false) }
+    var hasError by remember(item.uri) { mutableStateOf(false) }
+    var prepareRetryTrigger by remember(item.uri) { mutableIntStateOf(0) }
     val app = context.applicationContext as? MyDocApp
     // Writes are checkpoints, not every frame; see PlaybackCheckpoints for the rule and what it costs.
     val checkpoints = remember(item.uri, app) {
@@ -126,9 +131,21 @@ fun AudioPlayerScreen(
     val focusRequest = remember(mediaPlayer) {
         android.media.AudioFocusRequest.Builder(android.media.AudioManager.AUDIOFOCUS_GAIN)
             .setAudioAttributes(audioAttributes)
-            .setWillPauseWhenDucked(true)
+            .setWillPauseWhenDucked(false)
             .setOnAudioFocusChangeListener { change ->
-                if (change < 0) pauseAudio()
+                when (change) {
+                    android.media.AudioManager.AUDIOFOCUS_LOSS -> pauseAudio()
+                    android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> pauseAudio()
+                    android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                        runCatching { mediaPlayer.setVolume(0.2f, 0.2f) }
+                    }
+                    android.media.AudioManager.AUDIOFOCUS_GAIN -> {
+                        runCatching { mediaPlayer.setVolume(1.0f, 1.0f) }
+                        if (!isPlaying && ready) {
+                            isPlaying = runCatching { mediaPlayer.start() }.isSuccess
+                        }
+                    }
+                }
             }
             .build()
     }
@@ -150,7 +167,7 @@ fun AudioPlayerScreen(
     }
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    DisposableEffect(mediaPlayer) {
+    DisposableEffect(mediaPlayer, prepareRetryTrigger) {
         var resumeJob: kotlinx.coroutines.Job? = null
         val disconnect = object : android.content.BroadcastReceiver() {
             override fun onReceive(context: android.content.Context, intent: android.content.Intent) = stopAudio()
@@ -161,6 +178,7 @@ fun AudioPlayerScreen(
         mediaPlayer.setOnErrorListener { _, _, _ ->
             resumeJob?.cancel()
             ready = false
+            hasError = true
             stopAudio()
             context.showMessage(resources.getString(R.string.audio_cant_play))
             true
@@ -175,6 +193,7 @@ fun AudioPlayerScreen(
         mediaPlayer.setOnPreparedListener { player ->
             totalDurationMs = player.duration.toLong().coerceAtLeast(item.durationMs)
             player.isLooping = isLooping
+            runCatching { player.playbackParams = player.playbackParams.setSpeed(playbackSpeed) }
             resumeJob = scope.launch {
                 val saved = app?.database?.mediaPlaybackDao()?.getPlaybackPosition(item.uri.toString())
                 val resume = saved?.let { PlaybackCheckpoints.valueToSave(it.positionMs, totalDurationMs) }
@@ -184,14 +203,17 @@ fun AudioPlayerScreen(
                     checkpoints.seed(resume)
                 }
                 ready = true
+                hasError = false
                 if (lifecycleOwner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) startAudio()
             }
         }
         try {
+            mediaPlayer.reset()
             mediaPlayer.setAudioAttributes(audioAttributes)
             mediaPlayer.setDataSource(context, item.uri)
             mediaPlayer.prepareAsync()
         } catch (_: Exception) {
+            hasError = true
             context.showMessage(resources.getString(R.string.audio_cant_play))
         }
 
@@ -430,26 +452,50 @@ fun AudioPlayerScreen(
 
             Spacer(modifier = Modifier.width(28.dp))
 
-            // Play / Pause (64dp circular mint button)
-            Surface(
-                shape = CircleShape,
-                color = mintAccent,
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .clickable {
-                        haptics.heavy()
-                        if (!ready) return@clickable
-                        if (isPlaying) stopAudio() else startAudio()
+            // Play / Pause (64dp circular mint button) or Retry
+            if (hasError) {
+                Surface(
+                    shape = CircleShape,
+                    color = colors.accent,
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .clickable {
+                            haptics.heavy()
+                            hasError = false
+                            prepareRetryTrigger++
+                        }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Outlined.Refresh,
+                            contentDescription = stringResource(R.string.video_retry),
+                            tint = Color.White,
+                            modifier = Modifier.size(34.dp)
+                        )
                     }
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
-                        tint = onMint,
-                        modifier = Modifier.size(34.dp)
-                    )
+                }
+            } else {
+                Surface(
+                    shape = CircleShape,
+                    color = mintAccent,
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .clickable {
+                            haptics.heavy()
+                            if (!ready) return@clickable
+                            if (isPlaying) stopAudio() else startAudio()
+                        }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            tint = onMint,
+                            modifier = Modifier.size(34.dp)
+                        )
+                    }
                 }
             }
 
@@ -505,7 +551,11 @@ fun AudioPlayerScreen(
                         val nextIdx = (speeds.indexOf(playbackSpeed) + 1).let { if (it in speeds.indices) it else 0 }
                         playbackSpeed = speeds[nextIdx]
                         try {
-                            mediaPlayer.playbackParams = mediaPlayer.playbackParams.setSpeed(playbackSpeed)
+                            if (ready) {
+                                val wasPlaying = mediaPlayer.isPlaying
+                                mediaPlayer.playbackParams = mediaPlayer.playbackParams.setSpeed(playbackSpeed)
+                                if (!wasPlaying) mediaPlayer.pause()
+                            }
                         } catch (_: Exception) {}
                     }
             ) {

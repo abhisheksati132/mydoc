@@ -65,8 +65,10 @@ object XlsxRefs {
             return CellRange.of(0, c1, MaxRow, c2)
         }
         if (a.all { it.isDigit() } && b.all { it.isDigit() }) {
-            val r1 = a.toInt() - 1; val r2 = b.toInt() - 1
-            return CellRange.of(r1, 0, r2, MaxCol)
+            val r1 = (a.toIntOrNull() ?: return null) - 1
+            val r2 = (b.toIntOrNull() ?: return null) - 1
+            if (r1 < 0 || r2 < 0) return null
+            return CellRange.of(r1.coerceIn(0, MaxRow), 0, r2.coerceIn(0, MaxRow), MaxCol)
         }
         val p1 = parseCell(a) ?: return null
         val p2 = parseCell(b) ?: return null

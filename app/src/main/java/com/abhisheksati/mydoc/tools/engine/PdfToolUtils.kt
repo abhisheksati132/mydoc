@@ -15,16 +15,23 @@ object PdfToolUtils {
             val clean = part.trim()
             if (clean.contains("-")) {
                 val bounds = clean.split("-")
-                val rawStart = bounds.getOrNull(0)?.trim()?.toIntOrNull()
-                val rawEnd = bounds.getOrNull(1)?.trim()?.toIntOrNull()
+                if (bounds.size != 2) {
+                    continue
+                }
+                val startStr = bounds[0].trim()
+                val endStr = bounds[1].trim()
 
                 // If neither bound was a valid number (e.g. lone "-" or "- -"), skip
-                if (rawStart == null && rawEnd == null) {
+                if (startStr.isEmpty() && endStr.isEmpty()) {
                     continue
                 }
 
-                var start = (rawStart ?: 1) - 1
-                var end = (rawEnd ?: maxPages) - 1
+                // If non-empty but not a valid number (e.g. "abc-3"), skip
+                val rawStart = if (startStr.isEmpty()) 1 else startStr.toIntOrNull() ?: continue
+                val rawEnd = if (endStr.isEmpty()) maxPages else endStr.toIntOrNull() ?: continue
+
+                var start = rawStart - 1
+                var end = rawEnd - 1
 
                 // If entire requested range lies strictly outside the document, skip
                 if (minOf(start, end) >= maxPages || maxOf(start, end) < 0) {

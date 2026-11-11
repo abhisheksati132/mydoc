@@ -177,6 +177,9 @@ class PdfPageOperationsEngine(private val context: Context) {
             } else {
                 (0 until totalPages).toList()
             }
+            if (order.isEmpty()) {
+                throw IllegalArgumentException("No valid pages selected for reordering.")
+            }
 
             return usePdfDocument { outDoc ->
                 order.forEachIndexed { idx, p ->
@@ -240,7 +243,7 @@ class PdfPageOperationsEngine(private val context: Context) {
                     currentCoroutineContext().ensureActive()
                     if (p in indices) {
                         val page = doc.getPage(p)
-                        page.rotation = (page.rotation + degrees) % 360
+                        page.rotation = ((page.rotation + degrees) % 360 + 360) % 360
                     }
                     val pct = 20 + ((p.toFloat() / totalPages) * 70).toInt()
                     onProgress(ToolProgress(p + 1, totalPages, pct, "Rotating page ${p + 1} of $totalPages...", false))

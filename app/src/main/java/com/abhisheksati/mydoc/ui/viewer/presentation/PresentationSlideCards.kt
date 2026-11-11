@@ -479,11 +479,8 @@ fun HighlightableText(
     if (query.isNotBlank() && query.length >= 2 && text.contains(query, ignoreCase = true)) {
         val annotated = buildAnnotatedString {
             var searchStart = 0
-            val lowerText = text.lowercase()
-            val lowerQuery = query.lowercase()
-
             while (searchStart < text.length) {
-                val matchIdx = lowerText.indexOf(lowerQuery, searchStart)
+                val matchIdx = text.indexOf(query, searchStart, ignoreCase = true)
                 if (matchIdx == -1) {
                     append(text.substring(searchStart))
                     break

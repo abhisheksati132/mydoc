@@ -49,7 +49,7 @@ internal object NativeOfficeConverter {
                 val output = File(job, "output.pdf")
                 val result = withTimeout(60_000) {
                     var reply = WordEngineConnection.convert(context.applicationContext, input, output, password)
-                    if (reply.busy || (!reply.success && reply.processId < 0)) {
+                    if (reply.busy) {
                         delay(200)
                         reply = WordEngineConnection.convert(context.applicationContext, input, output, password)
                     }

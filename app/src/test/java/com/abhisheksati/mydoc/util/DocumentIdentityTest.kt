@@ -95,4 +95,25 @@ class DocumentIdentityTest {
         assertFalse(name.substringAfter('_').contains("/"))
         assertEquals("document", DocumentIdentity.sanitizeDisplayName(null))
     }
+
+    @Test
+    fun `staging and meta files are never usable copies`() {
+        val dir = File.createTempFile("test_saved_docs", "dir").parentFile
+        val tmpFile = File(dir, "${DocumentIdentity.savedDocsName(uriA, "Report.pdf")}.12345.tmp").apply {
+            writeText("partial bytes")
+            deleteOnExit()
+        }
+        val metaFile = File(dir, "${DocumentIdentity.savedDocsName(uriA, "Report.pdf")}.meta").apply {
+            writeText("meta")
+            deleteOnExit()
+        }
+        val partFile = File(dir, "${DocumentIdentity.savedDocsName(uriA, "Report.pdf")}.part").apply {
+            writeText("part")
+            deleteOnExit()
+        }
+
+        assertFalse("tmp staging file must never be a usable saved copy", DocumentIdentity.isSavedCopyOf(tmpFile, uriA))
+        assertFalse("meta file must never be a usable saved copy", DocumentIdentity.isSavedCopyOf(metaFile, uriA))
+        assertFalse("part file must never be a usable saved copy", DocumentIdentity.isSavedCopyOf(partFile, uriA))
+    }
 }

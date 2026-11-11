@@ -155,5 +155,9 @@ class LibraryRepositoryImpl(
         documentRepository.clearAllRecents()
         mediaPlaybackDao.clearAllPlaybacks()
     }
+
+    override suspend fun removeMediaPlayback(uri: String) = withContext(Dispatchers.IO) {
+        mediaPlaybackDao.deletePlaybackPosition(uri)
+    }
 }
 

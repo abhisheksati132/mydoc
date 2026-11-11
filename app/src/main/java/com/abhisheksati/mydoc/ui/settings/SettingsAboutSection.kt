@@ -57,6 +57,8 @@ fun SettingsAboutSection(
     if(showGuide) com.abhisheksati.mydoc.ui.onboarding.OnboardingGuide { showGuide = false }
     var showWordLicenses by rememberSaveable { mutableStateOf(false) }
     if (showWordLicenses) WordEngineLicensesDialog { showWordLicenses = false }
+    var showOpenSourceLicenses by rememberSaveable { mutableStateOf(false) }
+    if (showOpenSourceLicenses) OpenSourceLicensesDialog { showOpenSourceLicenses = false }
 
     SettingsCard(
         showHeader = false,
@@ -79,9 +81,12 @@ fun SettingsAboutSection(
 
         SettingsDivider()
 
-        TextButton(onClick = { showGuide = true }) { Text("Tour & new features") }
+        TextButton(onClick = { showGuide = true }) { Text(stringResource(R.string.tour_new_features)) }
         TextButton(onClick = { showWordLicenses = true }) {
             Text(stringResource(R.string.word_engine_licenses))
+        }
+        TextButton(onClick = { showOpenSourceLicenses = true }) {
+            Text(stringResource(R.string.open_source_licenses))
         }
 
         SettingsDivider()

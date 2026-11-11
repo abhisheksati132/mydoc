@@ -31,10 +31,26 @@ data class StorageCleanScanResult(
 ) {
     val totalReclaimableBytes: Long
         get() {
-            val duplicateBytes = duplicateGroups.sumOf { it.wastedBytes }
-            val tempBytes = tempFiles.sumOf { it.length() }
-            val apkBytes = apkFiles.sumOf { it.length() }
-            return duplicateBytes + tempBytes + apkBytes
+            val reclaimableFiles = mutableSetOf<String>()
+            var bytes = 0L
+            for (group in duplicateGroups) {
+                for (dup in group.duplicates) {
+                    if (reclaimableFiles.add(dup.absolutePath)) {
+                        bytes += group.size
+                    }
+                }
+            }
+            for (f in tempFiles) {
+                if (reclaimableFiles.add(f.absolutePath)) {
+                    bytes += f.length()
+                }
+            }
+            for (f in apkFiles) {
+                if (reclaimableFiles.add(f.absolutePath)) {
+                    bytes += f.length()
+                }
+            }
+            return bytes
         }
 }
 
@@ -121,6 +137,10 @@ class StorageCleanerManager {
 
             dirCount++
             for (entry in entries) {
+                if (fileCount + dirCount >= maxEntries || android.os.SystemClock.elapsedRealtime() > deadline) {
+                    outOfBudget = true
+                    break
+                }
                 if (outOfBudget) break
                 val canonicalEntry = try { entry.canonicalFile.canonicalPath } catch (_: Exception) { null } ?: continue
                 if (!canonicalEntry.startsWith(canonicalRoot + File.separator) && canonicalEntry != canonicalRoot) {
@@ -178,13 +198,29 @@ class StorageCleanerManager {
         val duplicateGroups = mutableListOf<DuplicateGroup>()
         for ((size, files) in sizeCandidates) {
             if (files.size < 2) continue
-            if (android.os.SystemClock.elapsedRealtime() > deadline) break
-            if (scanJob?.isActive == false) break
+            if (android.os.SystemClock.elapsedRealtime() > deadline) {
+                outOfBudget = true
+                break
+            }
+            if (scanJob?.isActive == false) {
+                outOfBudget = true
+                break
+            }
 
             val hashGroups = mutableMapOf<String, MutableList<File>>()
+            val seenCanonicalPaths = mutableSetOf<String>()
             for (file in files) {
-                if (android.os.SystemClock.elapsedRealtime() > deadline) break
-                if (scanJob?.isActive == false) break
+                if (android.os.SystemClock.elapsedRealtime() > deadline) {
+                    outOfBudget = true
+                    break
+                }
+                if (scanJob?.isActive == false) {
+                    outOfBudget = true
+                    break
+                }
+                val canonical = runCatching { file.canonicalPath }.getOrNull() ?: file.absolutePath
+                if (!seenCanonicalPaths.add(canonical)) continue
+
                 // Full-file hash. A prefix hash calls distinct files duplicates and the
                 // cleaner then deletes one of them, so partial hashing is not acceptable.
                 val hash = calculateSha256(file) ?: continue

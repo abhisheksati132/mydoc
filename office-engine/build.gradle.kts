@@ -64,3 +64,41 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.org.json)
 }
+
+gradle.taskGraph.whenReady {
+    val isReleaseBuildRequested = allTasks.any { task ->
+        task.project == project &&
+        task.name.contains("Release", ignoreCase = true) &&
+        (task.name.startsWith("assemble") || task.name.startsWith("bundle"))
+    }
+    if (isReleaseBuildRequested) {
+        val keystorePath = System.getenv("MYDOC_KEYSTORE_PATH")
+            ?: (project.findProperty("mydoc.keystore.path") as? String)
+        val keystorePass = System.getenv("MYDOC_KEYSTORE_PASSWORD")
+            ?: (project.findProperty("mydoc.keystore.password") as? String)
+        val keyAlias = System.getenv("MYDOC_KEY_ALIAS")
+            ?: (project.findProperty("mydoc.key.alias") as? String)
+        val keyPass = System.getenv("MYDOC_KEY_PASSWORD")
+            ?: (project.findProperty("mydoc.key.password") as? String)
+
+        val missing = mutableListOf<String>()
+        if (keystorePath.isNullOrBlank()) missing.add("MYDOC_KEYSTORE_PATH (or mydoc.keystore.path)")
+        if (keystorePass.isNullOrBlank()) missing.add("MYDOC_KEYSTORE_PASSWORD (or mydoc.keystore.password)")
+        if (keyAlias.isNullOrBlank()) missing.add("MYDOC_KEY_ALIAS (or mydoc.key.alias)")
+        if (keyPass.isNullOrBlank()) missing.add("MYDOC_KEY_PASSWORD (or mydoc.key.password)")
+
+        if (missing.isNotEmpty()) {
+            throw GradleException(
+                "Office Engine release signing failed: missing required release keystore credentials: ${missing.joinToString(", ")}. " +
+                        "Companion release builds must be signed with the same key as the main app."
+            )
+        }
+
+        val keystoreFile = file(keystorePath!!)
+        if (!keystoreFile.exists()) {
+            throw GradleException(
+                "Office Engine release signing failed: keystore file does not exist at '${keystoreFile.absolutePath}'."
+            )
+        }
+    }
+}

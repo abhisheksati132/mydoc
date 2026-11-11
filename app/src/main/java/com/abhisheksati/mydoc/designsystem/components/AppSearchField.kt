@@ -46,14 +46,7 @@ fun AppSearchField(
         onValueChange = onQueryChanged,
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .border(
-                BorderStroke(
-                    0.8.dp,
-                    if (isOled) Color.White.copy(alpha = 0.08f) else colors.cardBorder
-                ),
-                shape = shape
-            ),
+            .heightIn(min = 48.dp),
         placeholder = {
             Text(
                 text = placeholder,
@@ -93,7 +86,7 @@ fun AppSearchField(
             focusedContainerColor = colors.surfaceContainerHigh,
             unfocusedContainerColor = colors.surfaceContainer,
             focusedBorderColor = colors.accent,
-            unfocusedBorderColor = Color.Transparent,
+            unfocusedBorderColor = if (isOled) Color.White.copy(alpha = 0.08f) else colors.cardBorder,
             cursorColor = colors.accent
         )
     )

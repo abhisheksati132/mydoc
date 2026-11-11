@@ -178,6 +178,7 @@ class HomeViewModel(
     fun removeFromRecents(document: DocumentFile) {
         viewModelScope.launch {
             repository.removeFromRecents(document.uri)
+            libraryRepository.removeMediaPlayback(document.uri)
             _selectedRecentUris.update { it - document.uri }
         }
     }
@@ -185,7 +186,35 @@ class HomeViewModel(
     fun removeFromRecents(documents: List<DocumentFile>) {
         if (documents.isEmpty()) return
         viewModelScope.launch {
-            documents.forEach { repository.removeFromRecents(it.uri) }
+            documents.forEach {
+                repository.removeFromRecents(it.uri)
+                libraryRepository.removeMediaPlayback(it.uri)
+            }
+            clearRecentSelection()
+        }
+    }
+
+    fun removeFromRecents(item: LibraryItem) {
+        viewModelScope.launch {
+            if (item.kind == MediaKind.DOCUMENT) {
+                repository.removeFromRecents(item.uri)
+            } else {
+                libraryRepository.removeMediaPlayback(item.uri)
+            }
+            _selectedRecentUris.update { it - item.uri }
+        }
+    }
+
+    fun removeLibraryItemsFromRecents(items: List<LibraryItem>) {
+        if (items.isEmpty()) return
+        viewModelScope.launch {
+            items.forEach { item ->
+                if (item.kind == MediaKind.DOCUMENT) {
+                    repository.removeFromRecents(item.uri)
+                } else {
+                    libraryRepository.removeMediaPlayback(item.uri)
+                }
+            }
             clearRecentSelection()
         }
     }

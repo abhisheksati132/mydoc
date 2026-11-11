@@ -169,7 +169,7 @@ fun WordViewerScreen(
     }
 
     // Smart Resume: Restore position
-    LaunchedEffect(blocks.size) {
+    LaunchedEffect(document.uri, blocks.isNotEmpty()) {
         if (blocks.isNotEmpty()) {
             withContext(Dispatchers.IO) {
                 val saved = app?.documentRepository?.getViewState(document.uri)
@@ -184,7 +184,7 @@ fun WordViewerScreen(
     }
 
     // Smart Resume: Persist progress
-    LaunchedEffect(blocks.size) {
+    LaunchedEffect(document.uri, blocks.isNotEmpty()) {
         if (blocks.isEmpty()) return@LaunchedEffect
         snapshotFlow { lazyListState.firstVisibleItemIndex }
             .distinctUntilChanged()

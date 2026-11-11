@@ -84,8 +84,9 @@ internal object ExcelCellFormat {
         val value = raw.trim().toDoubleOrNull() ?: return raw
 
         val sections = splitSections(code)
+        val isExplicitNegativeSection = sections.size >= 2 && value < 0
         val section = when {
-            value < 0 && sections.size >= 2 -> sections[1]
+            isExplicitNegativeSection -> sections[1]
             value == 0.0 && sections.size >= 3 -> sections[2]
             else -> sections[0]
         }
@@ -93,7 +94,7 @@ internal object ExcelCellFormat {
         if (body.isBlank()) return raw
 
         return runCatching {
-            if (isDateTime(body)) formatDateTime(value, body, date1904) else formatNumber(value, body)
+            if (isDateTime(body)) formatDateTime(value, body, date1904) else formatNumber(value, body, isExplicitNegativeSection)
         }.getOrDefault(raw)
     }
 
@@ -250,7 +251,7 @@ internal object ExcelCellFormat {
         return false
     }
 
-    private fun formatNumber(value: Double, code: String): String {
+    private fun formatNumber(value: Double, code: String, isExplicitNegativeSection: Boolean = false): String {
         val pattern = StringBuilder()
         var i = 0
         while (i < code.length) {
@@ -271,7 +272,12 @@ internal object ExcelCellFormat {
         }
         val text = pattern.toString()
         if (text.none { it == '#' || it == '0' }) return trimTrailingZeros(value)
-        return DecimalFormat(text, java.text.DecimalFormatSymbols(java.util.Locale.US)).format(if (value < 0) -value else value).let { if (value < 0) "-$it" else it }
+        val cleanText = text.replace("E+", "E", ignoreCase = true).replace("E-", "E", ignoreCase = true)
+        return runCatching {
+            val formatted = DecimalFormat(cleanText, java.text.DecimalFormatSymbols(java.util.Locale.US))
+                .format(Math.abs(value))
+            if (value < 0 && !isExplicitNegativeSection) "-$formatted" else formatted
+        }.getOrElse { trimTrailingZeros(value) }
     }
 
     private fun trimTrailingZeros(value: Double): String =

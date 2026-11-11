@@ -30,7 +30,11 @@ fun Modifier.horizontalScrollWithFade(state: ScrollState): Modifier {
         .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
         .drawWithContent {
             drawContent()
-            if (!atStart) {
+            val isRtl = layoutDirection == androidx.compose.ui.unit.LayoutDirection.Rtl
+            val leftFade = if (isRtl) !atEnd else !atStart
+            val rightFade = if (isRtl) !atStart else !atEnd
+
+            if (leftFade) {
                 drawRect(
                     brush = Brush.horizontalGradient(
                         colors = listOf(Color.Black, Color.Transparent),
@@ -40,7 +44,7 @@ fun Modifier.horizontalScrollWithFade(state: ScrollState): Modifier {
                     blendMode = BlendMode.DstOut
                 )
             }
-            if (!atEnd) {
+            if (rightFade) {
                 drawRect(
                     brush = Brush.horizontalGradient(
                         colors = listOf(Color.Transparent, Color.Black),

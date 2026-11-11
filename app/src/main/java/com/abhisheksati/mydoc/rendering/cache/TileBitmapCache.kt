@@ -97,16 +97,8 @@ class TileBitmapCache(
     }
 
     fun recycleAll() = synchronized(lock) {
-        val bitmaps = cache.values.toList()
         cache.clear()
         currentBytes = 0
-        for (bmp in bitmaps) {
-            runCatching {
-                if (!bmp.isRecycled) {
-                    bmp.recycle()
-                }
-            }
-        }
     }
 
     private fun cacheKey(pageIndex: Int, scale: Float, mode: ReadingMode): String {

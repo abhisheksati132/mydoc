@@ -28,7 +28,7 @@ object XlsxReader {
             while (count < 2000) {
                 val e = zip.nextEntry ?: break
                 count++
-                val n = e.name.removePrefix("/")
+                val n = e.name.replace('\\', '/').removePrefix("/")
                 if (isNeeded(n)) {
                     if (totalBytesRead < maxTotalBytes) {
                         val baos = java.io.ByteArrayOutputStream(minOf(maxEntryBytes, 64 * 1024))
@@ -377,7 +377,8 @@ object XlsxReader {
                         for (c in min..max) if (c >= 1) sheet.cols[c - 1] = info
                     }
                     "row" -> {
-                        rowIdx = (p.attr("r")?.toIntOrNull() ?: (rowIdx + 2)) - 1
+                        val parsedR = p.attr("r")?.toIntOrNull()
+                        rowIdx = if (parsedR != null) (parsedR.coerceAtLeast(1) - 1) else (rowIdx + 1).coerceAtLeast(0)
                         if (rowIdx >= MaxRows) { sheet.truncated = true; return }
                         val rd = RowData(
                             heightPt = if (p.attr("customHeight").isTrue() || p.attr("ht") != null) p.attr("ht")?.toFloatOrNull() else null,

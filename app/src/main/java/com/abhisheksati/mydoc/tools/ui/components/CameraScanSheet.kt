@@ -90,6 +90,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.content.ContextCompat
+import androidx.exifinterface.media.ExifInterface
+import com.abhisheksati.mydoc.tools.scan.cropper.BitmapRotation
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -207,18 +209,41 @@ fun CameraScanSheet(
         if (cropTarget != null) {
             FreeCornersCropperDialog(
                 bitmap = cropTarget.second,
-                onDismiss = { editingPageForCrop = null },
+                onDismiss = {
+                    val bmp = editingPageForCrop?.second
+                    editingPageForCrop = null
+                    if (bmp != null && !bmp.isRecycled) {
+                        bmp.recycle()
+                    }
+                },
                 onCropped = { croppedBitmap ->
                     val pageIdx = cropTarget.first
+                    val originalBmp = cropTarget.second
                     editingPageForCrop = null
                     scope.launch(Dispatchers.IO) {
                         try {
-                            val file = capturedFiles[pageIdx]
-                            FileOutputStream(file).use { out ->
-                                croppedBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 94, out)
-                                out.flush()
+                            val originalFile = capturedFiles[pageIdx]
+                            val stagedFile = File.createTempFile("crop_staged_", ".jpg", context.cacheDir)
+                            val compressSucceeded = try {
+                                FileOutputStream(stagedFile).use { out ->
+                                    croppedBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 94, out).also {
+                                        out.flush()
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                stagedFile.delete()
+                                throw e
+                            }
+                            if (!compressSucceeded || !stagedFile.exists() || stagedFile.length() == 0L) {
+                                stagedFile.delete()
+                                throw java.io.IOException("Failed to write cropped image to disk.")
+                            }
+                            if (!stagedFile.renameTo(originalFile)) {
+                                stagedFile.copyTo(originalFile, overwrite = true)
+                                stagedFile.delete()
                             }
                             withContext(Dispatchers.Main) {
+                                coil.Coil.imageLoader(context).memoryCache?.remove(coil.memory.MemoryCache.Key(originalFile.absolutePath))
                                 val f = capturedFiles[pageIdx]
                                 capturedFiles.removeAt(pageIdx)
                                 capturedFiles.add(pageIdx, f)
@@ -227,6 +252,13 @@ fun CameraScanSheet(
                         } catch (e: Exception) {
                             withContext(Dispatchers.Main) {
                                 context.showMessage(UserMessages.actionFailed(R.string.action_save, e, "Scan").resolve(context))
+                            }
+                        } finally {
+                            if (croppedBitmap !== originalBmp && !croppedBitmap.isRecycled) {
+                                croppedBitmap.recycle()
+                            }
+                            if (!originalBmp.isRecycled) {
+                                originalBmp.recycle()
                             }
                         }
                     }
@@ -709,7 +741,8 @@ fun CameraScanSheet(
                                 .clickable(
                                     interactionSource = shutterInteraction,
                                     indication = ripple(),
-                                    enabled = !isCapturing
+                                    enabled = !isCapturing,
+                                    onClickLabel = "Capture photo"
                                 ) {
                                     haptics.confirm()
                                     val capture = imageCapture ?: return@clickable
@@ -777,29 +810,50 @@ fun CameraScanSheet(
                                         } else {
                                             isApplyingFilterAndSaving = true
                                             scope.launch(Dispatchers.IO) {
+                                                val stagedFiles = mutableListOf<File>()
                                                 try {
-                                                    for (file in capturedFiles) {
-                                                        val bmp = BitmapFactory.decodeFile(file.absolutePath) ?: continue
+                                                    for ((idx, file) in capturedFiles.withIndex()) {
+                                                        val bmp = BitmapFactory.decodeFile(file.absolutePath)
+                                                            ?: throw java.io.IOException("Cannot read captured page ${idx + 1}")
                                                         val filtered = ScanFilterEngine.applyFilter(bmp, selectedScanFilter)
-                                                        FileOutputStream(file).use { out ->
-                                                            filtered.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, out)
-                                                            out.flush()
+                                                        val staged = File.createTempFile("filter_staged_${idx + 1}_", ".jpg", context.cacheDir)
+                                                        stagedFiles.add(staged)
+                                                        val ok = try {
+                                                            FileOutputStream(staged).use { out ->
+                                                                filtered.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, out).also {
+                                                                    out.flush()
+                                                                }
+                                                            }
+                                                        } finally {
+                                                            if (filtered != bmp) {
+                                                                filtered.recycle()
+                                                            }
+                                                            bmp.recycle()
                                                         }
-                                                        if (filtered != bmp) {
-                                                            filtered.recycle()
+                                                        if (!ok || !staged.exists() || staged.length() == 0L) {
+                                                            throw java.io.IOException("Failed to compress filtered page ${idx + 1}")
                                                         }
-                                                        bmp.recycle()
+                                                    }
+                                                    for ((idx, staged) in stagedFiles.withIndex()) {
+                                                        val original = capturedFiles[idx]
+                                                        if (!staged.renameTo(original)) {
+                                                            staged.copyTo(original, overwrite = true)
+                                                            staged.delete()
+                                                        }
+                                                        coil.Coil.imageLoader(context).memoryCache?.remove(coil.memory.MemoryCache.Key(original.absolutePath))
                                                     }
                                                     withContext(Dispatchers.Main) {
                                                         isApplyingFilterAndSaving = false
                                                         val uris = capturedFiles.map { Uri.fromFile(it) }
                                                         onScannedUris(uris)
                                                     }
-                                                } catch (_: Exception) {
+                                                } catch (e: Exception) {
+                                                    for (staged in stagedFiles) {
+                                                        staged.delete()
+                                                    }
                                                     withContext(Dispatchers.Main) {
                                                         isApplyingFilterAndSaving = false
-                                                        val uris = capturedFiles.map { Uri.fromFile(it) }
-                                                        onScannedUris(uris)
+                                                        context.showMessage("Filter could not be applied. Original scans retained.")
                                                     }
                                                 }
                                             }
@@ -832,34 +886,67 @@ fun CameraScanSheet(
 }
 
 private fun cropToAspectRatio(file: File, targetRatio: Float) {
-    if (targetRatio <= 0f) return
-    val original = BitmapFactory.decodeFile(file.absolutePath) ?: return
+    var original = BitmapFactory.decodeFile(file.absolutePath) ?: return
+    try {
+        val exif = ExifInterface(file.absolutePath)
+        val rotationDegrees = exif.rotationDegrees
+        if (rotationDegrees != 0) {
+            val rotated = BitmapRotation.rotate(original, rotationDegrees)
+            if (rotated !== original) {
+                original.recycle()
+                original = rotated
+            }
+        }
+    } catch (_: Exception) {}
+
     val origW = original.width
     val origH = original.height
     val currentRatio = origW.toFloat() / origH.toFloat()
 
     val cropW: Int
     val cropH: Int
-    if (currentRatio > targetRatio) {
-        // Image is wider than target: crop width centered
-        cropH = origH
-        cropW = (origH * targetRatio).toInt().coerceIn(1, origW)
+    if (targetRatio > 0f) {
+        if (currentRatio > targetRatio) {
+            // Image is wider than target: crop width centered
+            cropH = origH
+            cropW = (origH * targetRatio).toInt().coerceIn(1, origW)
+        } else {
+            // Image is taller than target: crop height centered
+            cropW = origW
+            cropH = (origW / targetRatio).toInt().coerceIn(1, origH)
+        }
     } else {
-        // Image is taller than target: crop height centered
         cropW = origW
-        cropH = (origW / targetRatio).toInt().coerceIn(1, origH)
+        cropH = origH
     }
 
     val startX = (origW - cropW) / 2
     val startY = (origH - cropH) / 2
 
-    val cropped = Bitmap.createBitmap(original, startX, startY, cropW, cropH)
+    val cropped = if (cropW != origW || cropH != origH) {
+        Bitmap.createBitmap(original, startX, startY, cropW, cropH)
+    } else {
+        original
+    }
     if (cropped !== original) {
         original.recycle()
     }
-    FileOutputStream(file).use { out ->
-        cropped.compress(Bitmap.CompressFormat.JPEG, 92, out)
-        out.flush()
+    val staged = File.createTempFile("aspect_staged_", ".jpg", file.parentFile ?: file)
+    try {
+        val ok = FileOutputStream(staged).use { out ->
+            cropped.compress(Bitmap.CompressFormat.JPEG, 92, out).also { out.flush() }
+        }
+        if (ok && staged.exists() && staged.length() > 0L) {
+            if (!staged.renameTo(file)) {
+                staged.copyTo(file, overwrite = true)
+                staged.delete()
+            }
+        } else {
+            staged.delete()
+        }
+    } catch (_: Exception) {
+        staged.delete()
+    } finally {
+        cropped.recycle()
     }
-    cropped.recycle()
 }

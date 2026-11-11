@@ -490,8 +490,15 @@ class FileManagerViewModel(
                     result.unresolvedPaths.isEmpty() -> UiText.Res(R.string.explorer_rename_rolled_back)
                     else -> UiText.Res(R.string.explorer_rename_recovery, listOf(result.unresolvedPaths.joinToString("\n")))
                 }) }
-            loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+            reloadCurrentSource()
             refreshRenameRecovery()
+        }
+    }
+
+    fun dismissRenameRecovery() {
+        viewModelScope.launch {
+            storageRepository.dismissRenameRecovery()
+            _uiState.update { it.copy(renameRecovery = emptyList()) }
         }
     }
 
@@ -515,11 +522,12 @@ class FileManagerViewModel(
     }
 
     fun createNewFolder(name: String) {
+        if (_uiState.value.activeOperation != null) return
         viewModelScope.launch {
             val result = storageRepository.createDirectory(_uiState.value.currentDirectory, name)
             result.onSuccess {
                 _uiState.update { it.copy(userMessage = UiText.Res(R.string.fm_folder_created, listOf(name))) }
-                loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+                reloadCurrentSource()
             }.onFailure { err ->
                 _uiState.update { it.copy(userMessage = UserMessages.actionFailed(R.string.fm_verb_create_folder, err)) }
             }
@@ -527,11 +535,12 @@ class FileManagerViewModel(
     }
 
     fun createNewFile(name: String) {
+        if (_uiState.value.activeOperation != null) return
         viewModelScope.launch {
             val result = storageRepository.createFile(_uiState.value.currentDirectory, name)
             result.onSuccess {
                 _uiState.update { it.copy(userMessage = UiText.Res(R.string.fm_file_created, listOf(name))) }
-                loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+                reloadCurrentSource()
             }.onFailure { err ->
                 _uiState.update { it.copy(userMessage = UserMessages.actionFailed(R.string.fm_verb_create_file, err)) }
             }
@@ -539,11 +548,12 @@ class FileManagerViewModel(
     }
 
     fun renameItem(file: File, newName: String) {
+        if (_uiState.value.activeOperation != null) return
         viewModelScope.launch {
             val result = storageRepository.rename(file, newName)
             result.onSuccess {
                 _uiState.update { it.copy(userMessage = UiText.Res(R.string.fm_renamed)) }
-                loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+                reloadCurrentSource()
             }.onFailure { err ->
                 _uiState.update { it.copy(userMessage = UserMessages.actionFailed(R.string.action_rename, err)) }
             }
@@ -551,6 +561,7 @@ class FileManagerViewModel(
     }
 
     fun deleteSelected() {
+        if (_uiState.value.activeOperation != null) return
         val files = _uiState.value.selectedFiles.toList()
         if (files.isEmpty()) return
 
@@ -567,7 +578,7 @@ class FileManagerViewModel(
                         userMessage = UiText.Res(R.string.fm_deleted_many, listOf(count))
                     )
                 }
-                loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+                reloadCurrentSource()
                 refreshVolumes()
             }.onFailure { err ->
                 _uiState.update {
@@ -582,11 +593,12 @@ class FileManagerViewModel(
     }
 
     fun deleteSingle(file: File) {
+        if (_uiState.value.activeOperation != null) return
         viewModelScope.launch {
             val result = storageRepository.delete(listOf(file))
             result.onSuccess {
                 _uiState.update { it.copy(userMessage = UiText.Res(R.string.fm_deleted_one, listOf(file.name))) }
-                loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+                reloadCurrentSource()
                 refreshVolumes()
             }.onFailure { err ->
                 _uiState.update { it.copy(userMessage = UserMessages.actionFailed(R.string.action_delete, err)) }
@@ -595,6 +607,7 @@ class FileManagerViewModel(
     }
 
     fun moveToTrashSelected() {
+        if (_uiState.value.activeOperation != null) return
         val files = _uiState.value.selectedFiles.toList()
         if (files.isEmpty()) return
 
@@ -612,21 +625,29 @@ class FileManagerViewModel(
                         userMessage = UiText.Res(R.string.fm_moved_many, listOf(trashed.size))
                     )
                 }
-                loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+                reloadCurrentSource()
                 refreshVolumes()
             }.onFailure { err ->
+                val partial = err as? com.abhisheksati.mydoc.domain.model.PartialStorageOperationException
                 _uiState.update {
                     it.copy(
+                        selectedFiles = if (partial != null && partial.completed > 0) emptySet() else it.selectedFiles,
+                        isSelectionMode = if (partial != null && partial.completed > 0) false else it.isSelectionMode,
                         activeOperation = null,
                         isLoading = false,
                         userMessage = UserMessages.actionFailed(R.string.fm_verb_move_trash, err)
                     )
+                }
+                if (partial != null && partial.completed > 0) {
+                    reloadCurrentSource()
+                    refreshVolumes()
                 }
             }
         }
     }
 
     fun moveToTrashSingle(file: File) {
+        if (_uiState.value.activeOperation != null) return
         viewModelScope.launch {
             val result = storageRepository.moveToTrash(listOf(file))
             result.onSuccess { trashed ->
@@ -636,7 +657,7 @@ class FileManagerViewModel(
                         userMessage = UiText.Res(R.string.fm_moved_one, listOf(file.name))
                     )
                 }
-                loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+                reloadCurrentSource()
                 refreshVolumes()
             }.onFailure { err ->
                 _uiState.update { it.copy(userMessage = UserMessages.actionFailed(R.string.fm_verb_move_trash, err)) }
@@ -645,7 +666,7 @@ class FileManagerViewModel(
     }
 
     fun moveToTrashFiles(files: List<File>, onComplete: (() -> Unit)? = null) {
-        if (files.isEmpty()) return
+        if (files.isEmpty() || _uiState.value.activeOperation != null) return
         viewModelScope.launch {
             val result = storageRepository.moveToTrash(files)
             result.onSuccess { trashed ->
@@ -655,7 +676,7 @@ class FileManagerViewModel(
                         userMessage = UiText.Res(R.string.fm_moved_many, listOf(trashed.size))
                     )
                 }
-                loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+                reloadCurrentSource()
                 refreshVolumes()
                 onComplete?.invoke()
             }.onFailure { err ->
@@ -673,7 +694,7 @@ class FileManagerViewModel(
     }
 
     fun undoTrash(items: List<com.abhisheksati.mydoc.domain.model.TrashItem>) {
-        if (items.isEmpty()) return
+        if (items.isEmpty() || _uiState.value.activeOperation != null) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(activeOperation = "Restoring...", isLoading = true) }
@@ -687,7 +708,7 @@ class FileManagerViewModel(
                         userMessage = UiText.Res(R.string.fm_restored_many, listOf(count))
                     )
                 }
-                loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+                reloadCurrentSource()
                 refreshVolumes()
             }.onFailure { err ->
                 _uiState.update {
@@ -702,6 +723,7 @@ class FileManagerViewModel(
     }
 
     fun restoreTrashItems(items: List<com.abhisheksati.mydoc.domain.model.TrashItem>, onComplete: (() -> Unit)? = null) {
+        if (_uiState.value.activeOperation != null) return
         viewModelScope.launch {
             _uiState.update { it.copy(activeOperation = "Restoring...", isLoading = true) }
             val result = storageRepository.restoreFromTrash(items)
@@ -713,7 +735,7 @@ class FileManagerViewModel(
                         userMessage = UiText.Res(R.string.fm_restored_many, listOf(count))
                     )
                 }
-                loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+                reloadCurrentSource()
                 refreshVolumes()
                 onComplete?.invoke()
             }.onFailure { err ->
@@ -729,6 +751,7 @@ class FileManagerViewModel(
     }
 
     fun permanentlyDeleteTrashItems(items: List<com.abhisheksati.mydoc.domain.model.TrashItem>, onComplete: (() -> Unit)? = null) {
+        if (_uiState.value.activeOperation != null) return
         viewModelScope.launch {
             val result = storageRepository.deletePermanently(items)
             result.onSuccess { count ->
@@ -742,6 +765,7 @@ class FileManagerViewModel(
     }
 
     fun emptyTrash(onComplete: (() -> Unit)? = null) {
+        if (_uiState.value.activeOperation != null) return
         viewModelScope.launch {
             val result = storageRepository.emptyTrash()
             result.onSuccess {
@@ -831,7 +855,7 @@ class FileManagerViewModel(
 
     fun compressSelected(archiveName: String) {
         val files = _uiState.value.selectedFiles.toList()
-        if (files.isEmpty()) return
+        if (files.isEmpty() || _uiState.value.activeOperation != null) return
         val finalName = if (archiveName.endsWith(".zip", ignoreCase = true)) archiveName else "$archiveName.zip"
         val destinationZip = File(_uiState.value.currentDirectory, finalName)
 
@@ -857,7 +881,7 @@ class FileManagerViewModel(
                         userMessage = UiText.Res(R.string.fm_archive_created, listOf(zipFile.name))
                     )
                 }
-                loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+                reloadCurrentSource()
                 refreshVolumes()
             }.onFailure { err ->
                 _uiState.update {
@@ -872,6 +896,7 @@ class FileManagerViewModel(
     }
 
     fun compressSingle(file: File, archiveName: String) {
+        if (_uiState.value.activeOperation != null) return
         val finalName = if (archiveName.endsWith(".zip", ignoreCase = true)) archiveName else "$archiveName.zip"
         val destinationZip = File(file.parentFile ?: _uiState.value.currentDirectory, finalName)
 
@@ -891,7 +916,7 @@ class FileManagerViewModel(
                         userMessage = UiText.Res(R.string.fm_archive_created, listOf(zipFile.name))
                     )
                 }
-                loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+                reloadCurrentSource()
                 refreshVolumes()
             }.onFailure { err ->
                 _uiState.update {
@@ -945,6 +970,7 @@ class FileManagerViewModel(
     }
 
     fun extractArchive(file: File) {
+        if (_uiState.value.activeOperation != null) return
         val parent = file.parentFile ?: _uiState.value.currentDirectory
         val folderName = file.nameWithoutExtension.ifEmpty { "Extracted" }
         val targetDir = File(parent, folderName)
@@ -969,7 +995,7 @@ class FileManagerViewModel(
                         userMessage = UiText.Res(R.string.fm_extracted, listOf(dir.name))
                     )
                 }
-                loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
+                reloadCurrentSource()
                 refreshVolumes()
             }.onFailure { err ->
                 _uiState.update {

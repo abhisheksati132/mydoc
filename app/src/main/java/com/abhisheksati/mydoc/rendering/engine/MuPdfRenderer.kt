@@ -239,7 +239,7 @@ class MuPdfRenderer(
                     ReadingMode.NORMAL -> baseBitmap
                 }
 
-                tileCache.put(pageIndex, effectiveScale, mode, finalBitmap)
+                tileCache.put(pageIndex, scale, mode, finalBitmap)
                 finalBitmap
             } catch (_: Throwable) {
                 baseBitmap?.recycle()
@@ -278,7 +278,11 @@ class MuPdfRenderer(
                     Canvas(tile).drawColor(Color.WHITE)
                     try {
                         val device = com.artifex.mupdf.fitz.android.AndroidDrawDevice(tile)
-                        page.run(device, Matrix(s).translate(-regionLeft, -regionTop), null)
+                        try {
+                            page.run(device, Matrix(s).translate(-regionLeft, -regionTop), null)
+                        } finally {
+                            device.destroy()
+                        }
                     } catch (t: Throwable) {
                         android.util.Log.w("MuPdfRenderer", "clipped tile render failed", t)
                         if (!tile.isRecycled) tile.recycle()
@@ -441,7 +445,7 @@ class MuPdfRenderer(
         val sb = StringBuilder()
         for (b in st.blocks) {
             for (l in b.lines) {
-                for (c in l.chars) sb.append(c.c.toChar())
+                for (c in l.chars) sb.appendCodePoint(c.c)
                 sb.append("\n")
             }
         }

@@ -60,6 +60,7 @@ fun PdfViewerDialogsAndSheets(
     onCloseTts: () -> Unit,
     currentTtsText: String,
     ttsManager: DocumentTtsManager,
+    onRemoveDocument: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     // Consolidated Reading Controls Bottom Sheet
@@ -88,7 +89,10 @@ fun PdfViewerDialogsAndSheets(
             onDismiss = onDismissDocumentDetails,
             onOpen = { onDismissDocumentDetails() },
             onShare = { onShareClick() },
-            onRemove = { onDismissDocumentDetails() }
+            onRemove = {
+                onDismissDocumentDetails()
+                onRemoveDocument?.invoke()
+            }
         )
     }
 

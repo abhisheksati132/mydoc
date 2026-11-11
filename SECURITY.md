@@ -6,10 +6,10 @@ Security fixes and updates are provided for the following releases:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 1.9.x   | :white_check_mark: |
-| < 1.9.0 | :x:                |
+| 2.0.x   | :white_check_mark: |
+| < 2.0.0 | :x:                |
 
-Current version: **1.9.6** (`versionCode` 186), produced by the tag-triggered release workflow. Older
+Current version: **2.0.2** (`versionCode` 192), produced by the tag-triggered release workflow. Older
 lines are not maintained: fixes land on the current build only, so the security
 behaviour described below is the behaviour of the latest release, not of an older APK you may still
 have installed.
@@ -55,10 +55,10 @@ Please do not open public issues detailing reproducible exploit details before a
 ### 1. On-Device Document Processing
 All document reading, parsing, conversion, and compression operations are performed locally using embedded native rendering libraries:
 - **PDF Rendering:** MuPDF 1.28.5 Fitz native vector engine with viewport tiling and thread-safe locking.
-- **Office Documents:** Word-family pages are converted locally using the bundled LibreOfficeKit engine in a dedicated worker process. PowerPoint and spreadsheet page conversion and the simpler reflow readers use MyDoc's Kotlin parsers. No document is sent to a cloud conversion service. See [Word engine boundaries and provenance](docs/WORD_ENGINE.md).
+- **Office Documents:** Word-family pages are converted locally using the bundled LibreOfficeKit engine in a dedicated companion worker process (`com.abhisheksati.mydoc.office`). The reader authenticates the companion worker via cryptographic package signature verification (`checkSignatures()`) before establishing IPC. PowerPoint and spreadsheet page conversion and the simpler reflow readers use MyDoc's Kotlin parsers. No document is sent to a cloud conversion service. See [Word engine boundaries and provenance](docs/WORD_ENGINE.md).
 - **PDF Manipulation & Tools:** Apache PDFBox 2.0.27.0 (merge, split, compress, watermark, reorder, sign).
 - **Text Recognition:** Google ML Kit on-device text recognition (`com.google.mlkit:text-recognition:16.0.1`, the bundled-model artifact). The models ship inside the APK — `assets/mlkit-google-ocr-models/**` plus `lib/<abi>/libmlkit_google_ocr_pipeline.so`, both read out of a built artifact — so nothing is downloaded on first use. The document itself is never sent.
-- **Multimedia Engine:** Google AndroidX Media3 ExoPlayer (hardware-accelerated, zero JNI crash risk).
+- **Multimedia Engine:** Google AndroidX Media3 ExoPlayer (hardware-accelerated, zero JNI crash risk). Local media and HTTPS streaming only; cleartext HTTP traffic is disabled.
 
 Document and media content does not leave the device through MyDoc: no code path uploads one. The only outbound connection MyDoc itself makes is the optional GitHub update check and download described in section 5. Separately, ML Kit's Google DataTransport/Firebase components are packaged in the APK and registered in its merged manifest (section 4). MyDoc never invokes them, and no traffic from them was observed while testing — that is a report about what was measured, not proof that they cannot transmit.
 

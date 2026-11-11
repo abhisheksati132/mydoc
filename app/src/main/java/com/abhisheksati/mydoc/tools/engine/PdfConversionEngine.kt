@@ -67,10 +67,10 @@ class PdfConversionEngine(private val context: Context) {
 
             files.forEachIndexed { index, imgFile ->
                 currentCoroutineContext().ensureActive()
-                // FIT_IMAGE sizes the page from the image, so it keeps full resolution; a fixed page
-                // only needs enough pixels to fill it, so the rest is sampled away while decoding.
+                // FIT_IMAGE sizes the page from the image, bounded to prevent OutOfMemory on huge images;
+                // a fixed page only needs enough pixels to fill it, so the rest is sampled away while decoding.
                 val budgetPx = when (options.pageSizeFormat) {
-                    PageSizeFormat.FIT_IMAGE -> Int.MAX_VALUE
+                    PageSizeFormat.FIT_IMAGE -> 4096
                     PageSizeFormat.A4 -> (max(
                         PageSizeFormat.A4.widthPt, PageSizeFormat.A4.heightPt) * PAGE_SUPERSAMPLE).toInt()
                     PageSizeFormat.LETTER -> (max(
@@ -412,7 +412,7 @@ class PdfConversionEngine(private val context: Context) {
                 for (block in st.blocks) {
                     for (line in block.lines) {
                         for (charItem in line.chars) {
-                            pageSb.append(charItem.c.toChar())
+                            pageSb.appendCodePoint(charItem.c)
                         }
                         pageSb.append("\n")
                     }
@@ -427,12 +427,23 @@ class PdfConversionEngine(private val context: Context) {
                     // fallback ran only when no page anywhere had text.
                     val engine = ocrEngine ?: OcrEngine(context).also { ocrEngine = it }
                     val ocrPage = srcDoc.loadPage(p)
-                    val pixmap = ocrPage.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, true)
-                    val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
-                    pixmap.destroy()
-                    ocrPage.destroy()
-                    pageStr = runCatching { engine.recognizeText(bmp) }.getOrDefault("").trim()
-                    bmp.recycle()
+                    val pixmap = try {
+                        ocrPage.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, true)
+                    } finally {
+                        ocrPage.destroy()
+                    }
+                    val bmp = try {
+                        Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
+                    } finally {
+                        pixmap.destroy()
+                    }
+                    pageStr = try {
+                        engine.recognizeText(bmp).trim()
+                    } catch (_: Exception) {
+                        ""
+                    } finally {
+                        bmp.recycle()
+                    }
                 }
                 if (pageStr.isNotBlank()) {
                     sb.append("## Page ${p + 1}\n\n").append(pageStr).append("\n\n")
@@ -442,6 +453,10 @@ class PdfConversionEngine(private val context: Context) {
                 onProgress(ToolProgress(p + 1, totalPages, pct, "Extracting text from page ${p + 1}...", false))
             }
 
+            val textContent = sb.toString().trim()
+            if (textContent.isEmpty()) {
+                throw IllegalStateException("No readable or extractable text found in this document.")
+            }
             val outFile = createTempOutputFile("extracted", "md")
             outFile.writeText(sb.toString())
             return outFile
@@ -470,7 +485,7 @@ class PdfConversionEngine(private val context: Context) {
                 for (b in st.blocks) {
                     val pText = StringBuilder()
                     for (l in b.lines) {
-                        for (c in l.chars) pText.append(c.c.toChar())
+                        for (c in l.chars) pText.appendCodePoint(c.c)
                         pText.append(" ")
                     }
                     if (pText.isNotBlank()) paragraphs.add(pText.toString().trim())
@@ -483,12 +498,23 @@ class PdfConversionEngine(private val context: Context) {
                     // ran only when no page anywhere contributed text.
                     val engine = ocrEngine ?: OcrEngine(context).also { ocrEngine = it }
                     val ocrPage = srcDoc.loadPage(p)
-                    val pixmap = ocrPage.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, true)
-                    val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
-                    pixmap.destroy()
-                    ocrPage.destroy()
-                    val ocrText = runCatching { engine.recognizeText(bmp) }.getOrDefault("")
-                    bmp.recycle()
+                    val pixmap = try {
+                        ocrPage.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, true)
+                    } finally {
+                        ocrPage.destroy()
+                    }
+                    val bmp = try {
+                        Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
+                    } finally {
+                        pixmap.destroy()
+                    }
+                    val ocrText = try {
+                        engine.recognizeText(bmp)
+                    } catch (_: Exception) {
+                        ""
+                    } finally {
+                        bmp.recycle()
+                    }
                     for (l in ocrText.lines()) {
                         val trimmed = l.trim()
                         if (trimmed.isNotBlank()) paragraphs.add(trimmed)
@@ -499,10 +525,8 @@ class PdfConversionEngine(private val context: Context) {
                 onProgress(ToolProgress(p + 1, totalPages, pct, "Converting page ${p + 1}...", false))
             }
 
-            ocrEngine?.close()
-
             if (paragraphs.isEmpty()) {
-                paragraphs.add("[Document has no extractable text content]")
+                throw IllegalStateException("No readable or extractable text found to convert into Office document.")
             }
 
             // Create valid OOXML DOCX ZIP
@@ -543,6 +567,7 @@ class PdfConversionEngine(private val context: Context) {
             }
             return outFile
         } finally {
+            ocrEngine?.close()
             srcDoc.destroy()
         }
     }
@@ -604,7 +629,7 @@ class PdfConversionEngine(private val context: Context) {
                         val pageTextSb = StringBuilder()
                         for (b in st.blocks) {
                             for (l in b.lines) {
-                                for (c in l.chars) pageTextSb.append(c.c.toChar())
+                                for (c in l.chars) pageTextSb.appendCodePoint(c.c)
                                 pageTextSb.append("\n")
                             }
                         }

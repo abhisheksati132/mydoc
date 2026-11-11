@@ -24,3 +24,5 @@ skills-lock.json
 coverage-ui.json
 .coverage
 .playwright/
+MyDoc_Audit_Report_*.txt
+MyDoc_Conversation_History.txt

@@ -50,7 +50,12 @@ class UpdateManager(
     }
 
     suspend fun checkForUpdates(isLaunchCheck: Boolean = false) {
-        if (!operation.tryLock()) return
+        if (!operation.tryLock()) {
+            if (!isLaunchCheck && _state.value is UpdateUiState.Idle) {
+                _state.value = UpdateUiState.Checking
+            }
+            return
+        }
         try {
             // Debug builds use the debug signing key, so a release APK can never install
             // over them. Don't offer an update the device would reject.

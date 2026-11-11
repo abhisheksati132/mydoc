@@ -35,7 +35,7 @@ class ExplorerZipExtraction(
             check(cacheRoot.isDirectory || cacheRoot.mkdirs())
             require(!Files.isSymbolicLink(cacheRoot.toPath()))
             perform(archive, setOf(member), cacheRoot, minOf(maxBytes, 128L * 1024 * 1024), previewCacheBytes, expected) { _, _ -> }
-                .resolve(member)
+                .resolve(member.replace(':', '_'))
         }
     }
 
@@ -64,8 +64,13 @@ class ExplorerZipExtraction(
                     if (file.bytes > limit - expected) throw IOException("Selected entries exceed size limit")
                     expected += file.bytes
                 }
-                val cachedBytes = if (cacheLimit == null) 0L else cachedBytes(destination)
-                if (cacheLimit != null && expected > cacheLimit - cachedBytes) throw ZipPreviewCacheFull()
+                var cachedBytes = 0L
+                if (cacheLimit != null) {
+                    if (expected > cacheLimit) throw ZipPreviewCacheFull()
+                    evictLruIfNeeded(destination, expected, cacheLimit)
+                    cachedBytes = cachedBytes(destination)
+                    if (expected > cacheLimit - cachedBytes) throw ZipPreviewCacheFull()
+                }
                 if (expected > 0 && destination.usableSpace - 16L * 1024 * 1024 < expected) throw IOException("Not enough free space for extraction")
                 currentCoroutineContext().ensureActive()
                 val stage = Files.createTempDirectory(destination.toPath(), ".mydoc-extract-").toFile().also { staging = it }
@@ -87,11 +92,14 @@ class ExplorerZipExtraction(
                 for (node in entries) {
                     currentCoroutineContext().ensureActive()
                     check(unchanged()) { "Archive changed" }
-                    val target = File(stage, node.path.removeSuffix("/"))
+                    val target = File(stage, node.path.removeSuffix("/").replace(':', '_'))
                     check(safe(target))
                     if (node.directory) { directory(target); continue }
                     directory(requireNotNull(target.parentFile))
-                    val entry = requireNotNull(zip.getEntry(node.path))
+                    val entry = zip.getEntry(node.path)
+                        ?: zip.getEntry(node.path.replace('/', '\\'))
+                        ?: zip.entries().asSequence().firstOrNull { it.name.replace('\\', '/') == node.path }
+                        ?: requireNotNull(zip.getEntry(node.path))
                     val crc = CRC32()
                     var count = 0L
                     zip.getInputStream(entry).use { input ->
@@ -132,6 +140,26 @@ class ExplorerZipExtraction(
                 if (stage.exists()) throw ZipExtractionRecovery(stage, error)
             }
             throw error
+        }
+    }
+
+    private suspend fun evictLruIfNeeded(root: File, requiredBytes: Long, cacheLimit: Long) {
+        var currentCached = cachedBytes(root)
+        if (currentCached + requiredBytes <= cacheLimit) return
+
+        val entries = root.listFiles()?.filter { !Files.isSymbolicLink(it.toPath()) }
+            ?.sortedBy { it.lastModified() } ?: return
+
+        for (entry in entries) {
+            currentCoroutineContext().ensureActive()
+            if (currentCached + requiredBytes <= cacheLimit) break
+            val entrySize = if (entry.isDirectory) {
+                entry.walkBottomUp().filter { it.isFile }.sumOf { it.length() }
+            } else {
+                entry.length()
+            }
+            entry.deleteRecursively()
+            currentCached = (currentCached - entrySize).coerceAtLeast(0L)
         }
     }
 

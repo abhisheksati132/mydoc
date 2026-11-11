@@ -98,7 +98,7 @@ fun SpotlightSearchSheet(
         Text(stringResource(R.string.search_index_scope_hint), style = MaterialTheme.typography.bodySmall,
             color = scheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
         TextButton(onClick = { showContents = true }, modifier = Modifier.padding(horizontal = 8.dp)) {
-            Text("Contents, tags & smart collections")
+            Text(stringResource(R.string.spotlight_search_subtitle))
         }
         FileSearchField(query, { query = it }, Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         if (onBrowseFolders != null) TextButton(onClick = { onDismiss(); onBrowseFolders() }, modifier = Modifier.padding(horizontal = 8.dp)) {

@@ -2,6 +2,7 @@ package com.abhisheksati.mydoc.tools.ui.components
 
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
+import kotlinx.coroutines.CancellationException
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.foundation.Image
@@ -52,7 +53,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
-import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
@@ -109,12 +111,19 @@ fun ReorderPagesSheet(
 
         DisposableEffect(Unit) {
             onDispose {
-                thumbnailCache.values.forEach { it.recycle() }
-                thumbnailCache.clear()
-                try { sourceDocument?.destroy() } catch (_: Exception) {}
+                val docToDestroy = sourceDocument
+                val tempToDelete = sourceTempFile
                 sourceDocument = null
-                try { sourceTempFile?.delete() } catch (_: Exception) {}
                 sourceTempFile = null
+                thumbnailCache.clear()
+                // Safely destroy native document under thumbnailMutex off the Main thread
+                // so no in-flight thumbnail render touches a destroyed native pointer.
+                CoroutineScope(Dispatchers.IO).launch {
+                    thumbnailMutex.withLock {
+                        try { docToDestroy?.destroy() } catch (_: Exception) {}
+                        try { tempToDelete?.delete() } catch (_: Exception) {}
+                    }
+                }
             }
         }
 
@@ -519,7 +528,7 @@ private suspend fun renderPageThumbnail(
         }
         while (cache.size >= 48) {
             val evictKey = cache.keys.maxByOrNull { kotlin.math.abs(it - index) } ?: break
-            cache.remove(evictKey)?.recycle()
+            cache.remove(evictKey) // Let GC reclaim safely; do not recycle in case Compose is rendering it
         }
         cache[index] = bitmap
     }

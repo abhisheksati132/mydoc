@@ -69,9 +69,10 @@ it as well.
 
 ### 6. Jetpack Compose and AndroidX
 - **Projects**: [AndroidX](https://developer.android.com/jetpack/androidx/startups/dependencies) —
-  `androidx.compose:compose-bom:2026.09.00`, `androidx.activity:activity-compose:1.13.0`,
-  `androidx.core:core-ktx:1.19.1`, `androidx.core:core-splashscreen:1.2.0`,
-  `androidx.lifecycle:*:2.11.0`, `androidx.exifinterface:exifinterface:1.4.2`,
+  `androidx.compose:compose-bom:2026.09.00`, `androidx.compose.material3:material3:1.5.0-rc01`,
+  `androidx.activity:activity-compose:1.13.0`, `androidx.core:core-ktx:1.19.1`,
+  `androidx.core:core-splashscreen:1.2.0`, `androidx.lifecycle:*:2.11.0`,
+  `androidx.exifinterface:exifinterface:1.4.2`,
   `androidx.compose.material:material-icons-extended:1.7.8`
 - **Copyright**: © The Android Open Source Project
 - **License**: Apache License, Version 2.0
@@ -90,7 +91,7 @@ it as well.
 - **Use**: Thumbnail, GIF and video-frame loading in Compose.
 
 ### 9. Haze
-- **Project**: [Haze](https://github.com/chrisbanes/haze) — `dev.chrisbanes.haze:haze:1.3.1`
+- **Project**: [Haze](https://github.com/chrisbanes/haze) — `dev.chrisbanes.haze:haze:2.1.0`, `dev.chrisbanes.haze:haze-glass:2.1.0`, `dev.chrisbanes.haze:haze-blur:2.1.0`
 - **Copyright**: © Chris Banes (named in the artifact's POM)
 - **License**: Apache License, Version 2.0 (declared in the artifact's POM)
 - **Use**: The backdrop blur that gives the glass surfaces their optics.

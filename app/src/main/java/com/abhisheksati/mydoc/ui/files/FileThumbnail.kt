@@ -536,8 +536,22 @@ private fun findLibraryPdf(context: Context, item: LibraryItem): File? {
     if (item.sizeBytes > MAX_THUMBNAIL_COPY_BYTES) return null
     val stream = DocumentStreamResolver.openStream(context, Uri.parse(item.uri))
         ?: return null
-    stream.use { input -> target.outputStream().use { input.copyTo(it) } }
-    return target.takeIf { it.length() > 0L }
+    val tmp = File(dir, "$key.${java.util.UUID.randomUUID()}.tmp")
+    val ok = runCatching {
+        stream.use { input -> tmp.outputStream().use { input.copyTo(it) } }
+        if (tmp.exists() && tmp.length() > 0L) {
+            if (!tmp.renameTo(target)) {
+                tmp.copyTo(target, overwrite = true)
+                tmp.delete()
+            }
+            true
+        } else {
+            tmp.delete()
+            false
+        }
+    }.getOrDefault(false)
+    if (!ok) tmp.delete()
+    return target.takeIf { it.exists() && it.length() > 0L }
 }
 
 private fun readLibraryText(context: Context, item: LibraryItem): String? = runCatching {

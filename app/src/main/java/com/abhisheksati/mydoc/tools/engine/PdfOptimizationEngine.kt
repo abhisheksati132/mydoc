@@ -145,6 +145,7 @@ class PdfOptimizationEngine(private val context: Context) {
         } catch (e: Exception) {
             android.util.Log.w("PdfOptimize", "image recompression strategy failed", e)
             pdfBoxSucceeded = false
+            if (boxOutFile.exists()) boxOutFile.delete()
         }
 
         // Strategy C: Pure object and xref compaction via MuPDF
@@ -166,8 +167,9 @@ class PdfOptimizationEngine(private val context: Context) {
         if (srcDoc != null) {
             try {
                 srcDoc.save(cleanOutFile.absolutePath, cleanParams)
-                cleanSucceeded = true
+                cleanSucceeded = cleanOutFile.exists() && cleanOutFile.length() > 0 && isValidPdf(cleanOutFile)
             } catch (_: Exception) {
+                cleanSucceeded = false
                 cleanOutFile.delete()
             }
         }
@@ -180,11 +182,11 @@ class PdfOptimizationEngine(private val context: Context) {
                 (cleanOutFile.exists() && cleanOutFile.length() > 0 && cleanOutFile.length() < originalSize * 0.95f)
 
         if (srcDoc != null && options.compressionLevel == CompressionLevel.STRONG && !nonDestructiveReduced) {
+            val outDoc = AndroidPdfDocument()
             try {
                 val totalPages = srcDoc.countPages()
-                val (renderScale, jpegQuality) = Pair(0.85f, 45)
+                val renderScale = 0.85f
 
-                val outDoc = AndroidPdfDocument()
                 for (p in 0 until totalPages) {
                     currentCoroutineContext().ensureActive()
                     val page = srcDoc.loadPage(p)
@@ -197,28 +199,26 @@ class PdfOptimizationEngine(private val context: Context) {
                     pixmap.destroy()
                     page.destroy()
 
-                    val baos = java.io.ByteArrayOutputStream()
-                    bmp.compress(Bitmap.CompressFormat.JPEG, jpegQuality, baos)
-                    bmp.recycle()
-
                     val pageInfo = AndroidPdfDocument.PageInfo.Builder(w, h, p + 1).create()
                     val aPage = outDoc.startPage(pageInfo)
-                    val compressedBmp = BitmapFactory.decodeByteArray(baos.toByteArray(), 0, baos.size())
-                    if (compressedBmp != null) {
-                        aPage.canvas.drawBitmap(compressedBmp, null, RectF(0f, 0f, w.toFloat(), h.toFloat()), null)
-                        compressedBmp.recycle()
+                    try {
+                        aPage.canvas.drawBitmap(bmp, null, RectF(0f, 0f, w.toFloat(), h.toFloat()), null)
+                    } finally {
+                        outDoc.finishPage(aPage)
+                        bmp.recycle()
                     }
-                    outDoc.finishPage(aPage)
 
                     val pct = 45 + ((p.toFloat() / totalPages) * 45).toInt()
                     onProgress(ToolProgress(p + 1, totalPages, pct, "Compressing page ${p + 1} of $totalPages...", false))
                 }
 
                 FileOutputStream(rasterOutFile).use { outDoc.writeTo(it) }
-                outDoc.close()
-                rasterSucceeded = true
+                rasterSucceeded = rasterOutFile.exists() && rasterOutFile.length() > 0 && isValidPdf(rasterOutFile)
             } catch (_: Exception) {
                 rasterSucceeded = false
+                rasterOutFile.delete()
+            } finally {
+                outDoc.close()
             }
         }
         srcDoc?.destroy()
@@ -227,11 +227,16 @@ class PdfOptimizationEngine(private val context: Context) {
 
         // Choose the best candidate that preserves text/vector, or raster if strong compression succeeded
         val nonDestructiveCandidates = mutableListOf<File>()
-        if (pdfBoxSucceeded && boxOutFile.exists() && boxOutFile.length() > 0 && boxOutFile.length() < originalSize) {
+        if (pdfBoxSucceeded && boxOutFile.exists() && boxOutFile.length() > 0 && boxOutFile.length() < originalSize && isValidPdf(boxOutFile)) {
             nonDestructiveCandidates.add(boxOutFile)
+        } else if (boxOutFile.exists()) {
+            boxOutFile.delete()
         }
-        if (cleanOutFile.exists() && cleanOutFile.length() > 0 && cleanOutFile.length() < originalSize) {
+
+        if (cleanSucceeded && cleanOutFile.exists() && cleanOutFile.length() > 0 && cleanOutFile.length() < originalSize && isValidPdf(cleanOutFile)) {
             nonDestructiveCandidates.add(cleanOutFile)
+        } else if (cleanOutFile.exists()) {
+            cleanOutFile.delete()
         }
 
         val bestNonDestructive = nonDestructiveCandidates.minByOrNull { it.length() }
@@ -242,13 +247,15 @@ class PdfOptimizationEngine(private val context: Context) {
             return bestNonDestructive
         }
 
-        if (rasterSucceeded && rasterOutFile.exists() && rasterOutFile.length() > 0 && rasterOutFile.length() < originalSize * 0.85f) {
+        if (rasterSucceeded && rasterOutFile.exists() && rasterOutFile.length() > 0 && rasterOutFile.length() < originalSize * 0.85f && isValidPdf(rasterOutFile)) {
             if (boxOutFile.exists()) boxOutFile.delete()
             if (cleanOutFile.exists()) cleanOutFile.delete()
             return rasterOutFile
+        } else if (rasterOutFile.exists()) {
+            rasterOutFile.delete()
         }
 
-        if (cleanOutFile.exists() && cleanOutFile.length() > 0 && cleanOutFile.length() <= originalSize) {
+        if (cleanSucceeded && cleanOutFile.exists() && cleanOutFile.length() > 0 && cleanOutFile.length() <= originalSize && isValidPdf(cleanOutFile)) {
             if (boxOutFile.exists()) boxOutFile.delete()
             if (rasterOutFile.exists()) rasterOutFile.delete()
             return cleanOutFile
@@ -256,15 +263,28 @@ class PdfOptimizationEngine(private val context: Context) {
 
         // Guarantee a standalone new temp file is returned so caller's finally cleanup never deletes the result
         val fallbackOut = createTempOutputFile("compressed_fallback", "pdf")
-        if (boxOutFile.exists() && boxOutFile.length() > 0) {
+        if (pdfBoxSucceeded && boxOutFile.exists() && isValidPdf(boxOutFile)) {
             boxOutFile.copyTo(fallbackOut, overwrite = true)
             boxOutFile.delete()
         } else {
             file.copyTo(fallbackOut, overwrite = true)
         }
+        if (boxOutFile.exists()) boxOutFile.delete()
         if (cleanOutFile.exists()) cleanOutFile.delete()
         if (rasterOutFile.exists()) rasterOutFile.delete()
         return fallbackOut
+    }
+
+    private fun isValidPdf(file: File): Boolean {
+        if (!file.exists() || file.length() <= 0L) return false
+        return try {
+            val doc = Document.openDocument(file.absolutePath)
+            val pages = doc.countPages()
+            doc.destroy()
+            pages > 0
+        } catch (_: Throwable) {
+            false
+        }
     }
 
     suspend fun repairPdf(file: File, onProgress: (ToolProgress) -> Unit): File {

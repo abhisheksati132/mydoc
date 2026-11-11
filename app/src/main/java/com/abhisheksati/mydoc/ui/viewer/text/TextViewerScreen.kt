@@ -112,16 +112,17 @@ private fun buildInlineSpan(
         val segment = raw.substring(plainFrom, end)
         var from = 0
         while (from < segment.length) {
-            val hit = if (query.isNotBlank()) segment.lowercase().indexOf(lowerQuery, from) else -1
+            val hit = if (query.isNotBlank()) segment.indexOf(query, from, ignoreCase = true) else -1
             if (hit == -1) {
                 withStyle(base) { append(segment.substring(from)) }
                 break
             }
             if (hit > from) withStyle(base) { append(segment.substring(from, hit)) }
+            val end = minOf(hit + query.length, segment.length)
             withStyle(base.copy(background = highlight.background, color = highlight.color)) {
-                append(segment.substring(hit, hit + query.length))
+                append(segment.substring(hit, end))
             }
-            from = hit + query.length
+            from = end
         }
     }
     mdInlineRegex.findAll(raw).forEach { match ->
@@ -173,6 +174,7 @@ fun TextViewerScreen(
     val colors = LocalAppColors.current
 
     var lines by remember { mutableStateOf<List<String>>(emptyList()) }
+    var isTruncated by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var loadFailure by remember { mutableStateOf<LoadFailure?>(null) }
@@ -204,6 +206,7 @@ fun TextViewerScreen(
         when (outcome) {
             is TextLoadOutcome.Loaded -> {
                 lines = outcome.lines
+                isTruncated = outcome.truncated
             }
 
             is TextLoadOutcome.Failed -> {
@@ -226,7 +229,7 @@ fun TextViewerScreen(
     val visibleLineIndex by remember { derivedStateOf { listState.firstVisibleItemIndex } }
 
     // Smart Resume: Restore last read position on open
-    LaunchedEffect(lines.size) {
+    LaunchedEffect(document.uri, lines.isNotEmpty()) {
         if (lines.isNotEmpty()) {
             withContext(Dispatchers.IO) {
                 val saved = app?.documentRepository?.getViewState(document.uri)
@@ -241,7 +244,7 @@ fun TextViewerScreen(
     }
 
     // Smart Resume: Persist reading progress on scroll
-    LaunchedEffect(lines.size) {
+    LaunchedEffect(document.uri, lines.isNotEmpty()) {
         if (lines.isEmpty()) return@LaunchedEffect
         snapshotFlow { listState.firstVisibleItemIndex }
             .distinctUntilChanged()
@@ -260,7 +263,7 @@ fun TextViewerScreen(
     }
 
     // Volume key line scrolling
-    LaunchedEffect(lines.size) {
+    LaunchedEffect(document.uri, lines.isNotEmpty()) {
         if (lines.isNotEmpty()) {
             MainActivity.pageTurnEvents.collect { isNext ->
                 val current = listState.firstVisibleItemIndex
@@ -392,20 +395,41 @@ fun TextViewerScreen(
                 modifier = Modifier.statusBarsPadding()
             )
         } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .edgeFlingToDocument(
-                        atFirstPage = { listState.firstVisibleItemIndex == 0 },
-                        atLastPage = { !listState.canScrollForward },
-                        onPrevious = onSwipeToPreviousDocument,
-                        onNext = onSwipeToNextDocument
-                    )
-                    .padding(horizontal = 16.dp)
-                    .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(top = 64.dp, bottom = 64.dp)
-            ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (isTruncated) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .windowInsetsPadding(WindowInsets.statusBars)
+                            .padding(top = 56.dp, start = 16.dp, end = 16.dp, bottom = 4.dp)
+                            .background(
+                                color = colors.warning.copy(alpha = 0.12f),
+                                shape = MaterialTheme.shapes.small
+                            )
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = TextBudget.noteFor(TextBudget.DEFAULT),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = colors.warning
+                        )
+                    }
+                }
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f, fill = false)
+                        .edgeFlingToDocument(
+                            atFirstPage = { listState.firstVisibleItemIndex == 0 },
+                            atLastPage = { !listState.canScrollForward },
+                            onPrevious = onSwipeToPreviousDocument,
+                            onNext = onSwipeToNextDocument
+                        )
+                        .padding(horizontal = 16.dp)
+                        .then(if (!isTruncated) Modifier.windowInsetsPadding(WindowInsets.statusBars).padding(top = 64.dp) else Modifier)
+                        .padding(bottom = 64.dp)
+                ) {
                 if (isMarkdown) {
                     val scale = readingPrefs.fontScale
                     fun styled(raw: String, size: Float, weight: FontWeight = FontWeight.Normal): Pair<AnnotatedString, TextUnit> =
@@ -555,4 +579,5 @@ fun TextViewerScreen(
             }
         }
     }
+}
 }

@@ -40,7 +40,11 @@ object PdfPageNumberer {
                     val h = box.height
                     val originX = box.lowerLeftX
                     val originY = box.lowerLeftY
-                    val fontSize = (min(w, h) * 0.018f).coerceIn(9f, 14f)
+                    val pageRotation = (page.rotation ?: 0) % 360
+                    val isRotated = pageRotation == 90 || pageRotation == 270
+                    val visW = if (isRotated) h else w
+                    val visH = if (isRotated) w else h
+                    val fontSize = (min(visW, visH) * 0.018f).coerceIn(9f, 14f)
                     val margin = fontSize * 2.2f
 
                     val currNum = startAt + i
@@ -52,21 +56,28 @@ object PdfPageNumberer {
                     }
 
                     val textWidth = font.getStringWidth(text) / 1000f * fontSize
-                    val x = when (position) {
-                        PageNumberPosition.BOTTOM_CENTER, PageNumberPosition.TOP_CENTER -> originX + w / 2f - textWidth / 2f
-                        PageNumberPosition.BOTTOM_RIGHT, PageNumberPosition.TOP_RIGHT -> originX + w - margin - textWidth
-                        PageNumberPosition.BOTTOM_LEFT -> originX + margin
+                    val vx = when (position) {
+                        PageNumberPosition.BOTTOM_CENTER, PageNumberPosition.TOP_CENTER -> visW / 2f - textWidth / 2f
+                        PageNumberPosition.BOTTOM_RIGHT, PageNumberPosition.TOP_RIGHT -> visW - margin - textWidth
+                        PageNumberPosition.BOTTOM_LEFT -> margin
                     }
-                    val y = when (position) {
-                        PageNumberPosition.TOP_CENTER, PageNumberPosition.TOP_RIGHT -> originY + h - margin
-                        else -> originY + margin - fontSize / 2f
+                    val vy = when (position) {
+                        PageNumberPosition.TOP_CENTER, PageNumberPosition.TOP_RIGHT -> visH - margin
+                        else -> margin - fontSize / 2f
+                    }
+
+                    val matrix = when (pageRotation) {
+                        90 -> com.tom_roush.pdfbox.util.Matrix(0f, 1f, -1f, 0f, originX + w - vy, originY + vx)
+                        180 -> com.tom_roush.pdfbox.util.Matrix(-1f, 0f, 0f, -1f, originX + w - vx, originY + h - vy)
+                        270 -> com.tom_roush.pdfbox.util.Matrix(0f, -1f, 1f, 0f, originX + vy, originY + h - vx)
+                        else -> com.tom_roush.pdfbox.util.Matrix(1f, 0f, 0f, 1f, originX + vx, originY + vy)
                     }
 
                     PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
                         cs.beginText()
                         cs.setNonStrokingColor(c.red(), c.green(), c.blue())
                         cs.setFont(font, fontSize)
-                        cs.newLineAtOffset(x, y)
+                        cs.setTextMatrix(matrix)
                         runCatching { cs.showText(text) }
                         cs.endText()
                     }
@@ -104,7 +115,11 @@ object PdfPageNumberer {
                     val h = box.height
                     val originX = box.lowerLeftX
                     val originY = box.lowerLeftY
-                    val fontSize = (min(w, h) * 0.018f).coerceIn(9f, 14f)
+                    val pageRotation = (page.rotation ?: 0) % 360
+                    val isRotated = pageRotation == 90 || pageRotation == 270
+                    val visW = if (isRotated) h else w
+                    val visH = if (isRotated) w else h
+                    val fontSize = (min(visW, visH) * 0.018f).coerceIn(9f, 14f)
                     val margin = fontSize * 2.2f
 
                     val currNum = startAt + i
@@ -116,21 +131,28 @@ object PdfPageNumberer {
                     }
 
                     val textWidth = font.getStringWidth(text) / 1000f * fontSize
-                    val x = when (position) {
-                        PageNumberPosition.BOTTOM_CENTER, PageNumberPosition.TOP_CENTER -> originX + w / 2f - textWidth / 2f
-                        PageNumberPosition.BOTTOM_RIGHT, PageNumberPosition.TOP_RIGHT -> originX + w - margin - textWidth
-                        PageNumberPosition.BOTTOM_LEFT -> originX + margin
+                    val vx = when (position) {
+                        PageNumberPosition.BOTTOM_CENTER, PageNumberPosition.TOP_CENTER -> visW / 2f - textWidth / 2f
+                        PageNumberPosition.BOTTOM_RIGHT, PageNumberPosition.TOP_RIGHT -> visW - margin - textWidth
+                        PageNumberPosition.BOTTOM_LEFT -> margin
                     }
-                    val y = when (position) {
-                        PageNumberPosition.TOP_CENTER, PageNumberPosition.TOP_RIGHT -> originY + h - margin
-                        else -> originY + margin - fontSize / 2f
+                    val vy = when (position) {
+                        PageNumberPosition.TOP_CENTER, PageNumberPosition.TOP_RIGHT -> visH - margin
+                        else -> margin - fontSize / 2f
+                    }
+
+                    val matrix = when (pageRotation) {
+                        90 -> com.tom_roush.pdfbox.util.Matrix(0f, 1f, -1f, 0f, originX + w - vy, originY + vx)
+                        180 -> com.tom_roush.pdfbox.util.Matrix(-1f, 0f, 0f, -1f, originX + w - vx, originY + h - vy)
+                        270 -> com.tom_roush.pdfbox.util.Matrix(0f, -1f, 1f, 0f, originX + vy, originY + h - vx)
+                        else -> com.tom_roush.pdfbox.util.Matrix(1f, 0f, 0f, 1f, originX + vx, originY + vy)
                     }
 
                     PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
                         cs.beginText()
                         cs.setNonStrokingColor(c.red(), c.green(), c.blue())
                         cs.setFont(font, fontSize)
-                        cs.newLineAtOffset(x, y)
+                        cs.setTextMatrix(matrix)
                         runCatching { cs.showText(text) }
                         cs.endText()
                     }

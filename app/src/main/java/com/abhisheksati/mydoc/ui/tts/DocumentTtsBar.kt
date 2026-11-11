@@ -106,9 +106,9 @@ fun DocumentTtsBar(
                             ttsManager.stop()
                             onClose()
                         },
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close), tint = colors.textSecondary, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close), tint = colors.textSecondary, modifier = Modifier.size(20.dp))
                     }
                 }
 
@@ -141,14 +141,18 @@ fun DocumentTtsBar(
                                 else -> ttsManager.startReading(documentText)
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.accent,
+                            contentColor = colors.onAccent
+                        ),
                         shape = AppRadius.cardShape,
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                        modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                     ) {
                         Icon(
                             imageVector = if (state == TtsPlaybackState.PLAYING) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = colors.onAccent,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
@@ -160,7 +164,7 @@ fun DocumentTtsBar(
                                     else -> R.string.tts_start
                                 }
                             ),
-                            color = Color.White,
+                            color = colors.onAccent,
                             style = AppTheme.typography.bodyStrong
                         )
                     }
@@ -169,7 +173,8 @@ fun DocumentTtsBar(
                     OutlinedButton(
                         onClick = { ttsManager.stop() },
                         shape = AppRadius.cardShape,
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                     ) {
                         Icon(Icons.Default.Stop, contentDescription = null, tint = colors.error, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
@@ -181,6 +186,7 @@ fun DocumentTtsBar(
                         color = colors.background,
                         shape = AppRadius.cardShape,
                         modifier = Modifier
+                            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
                             .clip(AppRadius.cardShape)
                             .clickable {
                                 val nextIdx = (speeds.indexOf(speed) + 1) % speeds.size

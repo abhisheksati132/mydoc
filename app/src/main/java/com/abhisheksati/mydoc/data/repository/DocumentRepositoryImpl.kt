@@ -13,6 +13,7 @@ import com.abhisheksati.mydoc.data.local.OfflineCopyStamp
 import com.abhisheksati.mydoc.data.local.entity.FavoriteDocumentEntity
 import com.abhisheksati.mydoc.data.local.entity.RecentDocumentEntity
 import com.abhisheksati.mydoc.data.local.entity.ViewStateEntity
+import androidx.room.withTransaction
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.domain.model.ViewState
@@ -229,23 +230,34 @@ class DocumentRepositoryImpl(
                     // Write to a temp file then rename: opening localFile's own outputStream would
                     // truncate it to 0 before the copy, destroying the backup when the resolved
                     // stream is this same saved_docs file (tier-2 fallback).
-                    val tmpFile = java.io.File(savedDocsDir, "$cacheName.tmp")
-                    com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri)?.use { input ->
-                        tmpFile.outputStream().use { output ->
-                            input.copyTo(output)
+                    val tmpFile = java.io.File(savedDocsDir, "$cacheName.${java.util.UUID.randomUUID()}.tmp")
+                    try {
+                        val copySuccess = runCatching {
+                            com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri)?.use { input ->
+                                tmpFile.outputStream().use { output ->
+                                    input.copyTo(output)
+                                }
+                            }
+                        }.isSuccess
+                        if (copySuccess && tmpFile.exists() && tmpFile.length() > 0L) {
+                            if (!tmpFile.renameTo(localFile)) {
+                                tmpFile.copyTo(localFile, overwrite = true)
+                                tmpFile.delete()
+                            }
+                            // Atomic write for .meta: write to temp and rename
+                            val metaTmp = java.io.File(savedDocsDir, "${metaFile.name}.${java.util.UUID.randomUUID()}.tmp")
+                            try {
+                                metaTmp.writeText(OfflineCopyPolicy.format(source))
+                                if (!metaTmp.renameTo(metaFile)) {
+                                    metaTmp.copyTo(metaFile, overwrite = true)
+                                    metaTmp.delete()
+                                }
+                            } finally {
+                                if (metaTmp.exists()) metaTmp.delete()
+                            }
                         }
-                    }
-                    if (tmpFile.exists() && tmpFile.length() > 0L) {
-                        if (!tmpFile.renameTo(localFile)) {
-                            tmpFile.copyTo(localFile, overwrite = true)
-                            tmpFile.delete()
-                        }
-                        // The stamp is only written for a copy that completed, so an interrupted
-                        // refresh is retried next time instead of being believed current.
-                        runCatching { metaFile.writeText(OfflineCopyPolicy.format(source)) }
-                    } else {
-                        tmpFile.delete()
-                        metaFile.delete()
+                    } finally {
+                        if (tmpFile.exists()) tmpFile.delete()
                     }
                 }
                 localFile.setLastModified(System.currentTimeMillis())
@@ -284,50 +296,56 @@ class DocumentRepositoryImpl(
 
     override suspend fun replaceDocument(oldUri: String, newUri: Uri): Result<DocumentFile> = withContext(Dispatchers.IO) {
         runCatching {
-            val oldRecent = recentDao.getRecentByUri(oldUri)
-            val oldFavorite = favoriteDao.isFavorite(oldUri)
-            val oldViewState = viewStateDao.getViewState(oldUri)
-
             val newDocRes = registerOpenedDocument(newUri)
             val newDoc = newDocRes.getOrThrow()
 
-            // Preserve reading progress from old document if new document has none
-            val targetPage = if (newDoc.lastPage > 0) newDoc.lastPage else (oldRecent?.lastPage ?: 0)
-            val targetPageCount = if (newDoc.pageCount > 0) newDoc.pageCount else (oldRecent?.pageCount ?: 0)
-            if (targetPage > 0 || targetPageCount > 0) {
-                recentDao.updatePageProgress(
-                    uri = newDoc.uri,
-                    lastPage = targetPage,
-                    pageCount = targetPageCount,
-                    timestamp = System.currentTimeMillis()
-                )
-            }
+            var targetPage = 0
+            var targetPageCount = 0
+            var oldFavorite = false
 
-            // Preserve favorite status
-            if (oldFavorite && !favoriteDao.isFavorite(newDoc.uri)) {
-                favoriteDao.insertFavorite(
-                    FavoriteDocumentEntity(
+            database.withTransaction {
+                val oldRecent = recentDao.getRecentByUri(oldUri)
+                oldFavorite = favoriteDao.isFavorite(oldUri)
+                val oldViewState = viewStateDao.getViewState(oldUri)
+
+                // Preserve reading progress from old document if new document has none
+                targetPage = if (newDoc.lastPage > 0) newDoc.lastPage else (oldRecent?.lastPage ?: 0)
+                targetPageCount = if (newDoc.pageCount > 0) newDoc.pageCount else (oldRecent?.pageCount ?: 0)
+                if (targetPage > 0 || targetPageCount > 0) {
+                    recentDao.updatePageProgress(
                         uri = newDoc.uri,
-                        displayName = newDoc.displayName,
-                        sizeBytes = newDoc.sizeBytes,
-                        mimeType = newDoc.mimeType,
-                        addedTimestamp = System.currentTimeMillis()
+                        lastPage = targetPage,
+                        pageCount = targetPageCount,
+                        timestamp = System.currentTimeMillis()
                     )
-                )
-            }
+                }
 
-            // Preserve view state
-            if (oldViewState != null) {
-                viewStateDao.saveViewState(
-                    oldViewState.copy(uri = newDoc.uri, updatedTimestamp = System.currentTimeMillis())
-                )
-            }
+                // Preserve favorite status
+                if (oldFavorite && !favoriteDao.isFavorite(newDoc.uri)) {
+                    favoriteDao.insertFavorite(
+                        FavoriteDocumentEntity(
+                            uri = newDoc.uri,
+                            displayName = newDoc.displayName,
+                            sizeBytes = newDoc.sizeBytes,
+                            mimeType = newDoc.mimeType,
+                            addedTimestamp = System.currentTimeMillis()
+                        )
+                    )
+                }
 
-            // Remove stale broken URI
-            if (oldUri != newDoc.uri) {
-                recentDao.deleteRecent(oldUri)
-                favoriteDao.deleteFavorite(oldUri)
-                viewStateDao.deleteViewState(oldUri)
+                // Preserve view state
+                if (oldViewState != null) {
+                    viewStateDao.saveViewState(
+                        oldViewState.copy(uri = newDoc.uri, updatedTimestamp = System.currentTimeMillis())
+                    )
+                }
+
+                // Remove stale broken URI
+                if (oldUri != newDoc.uri) {
+                    recentDao.deleteRecent(oldUri)
+                    favoriteDao.deleteFavorite(oldUri)
+                    viewStateDao.deleteViewState(oldUri)
+                }
             }
 
             newDoc.copy(
@@ -357,10 +375,12 @@ class DocumentRepositoryImpl(
 
     override suspend fun removeFromRecents(uri: String) = withContext(Dispatchers.IO) {
         recentDao.deleteRecent(uri)
+        database.mediaPlaybackDao().deletePlaybackPosition(uri)
     }
 
     override suspend fun clearAllRecents() = withContext(Dispatchers.IO) {
         recentDao.clearAllRecents()
+        database.mediaPlaybackDao().clearAllPlaybacks()
     }
 
     override suspend fun updatePageProgress(uri: String, lastPage: Int, pageCount: Int) = withContext(Dispatchers.IO) {
@@ -420,12 +440,12 @@ class DocumentRepositoryImpl(
                         if (sizeIndex != -1 && !cursor.isNull(sizeIndex)) {
                             sizeBytes = cursor.getLong(sizeIndex)
                         }
-                        // Providers are not obliged to report it, and it is in seconds.
+                        // DocumentsContract.Document.COLUMN_LAST_MODIFIED is reported in milliseconds.
                         val modifiedIndex = cursor.getColumnIndex(
                             android.provider.DocumentsContract.Document.COLUMN_LAST_MODIFIED
                         )
                         if (modifiedIndex != -1 && !cursor.isNull(modifiedIndex)) {
-                            lastModified = cursor.getLong(modifiedIndex) * 1000L
+                            lastModified = cursor.getLong(modifiedIndex)
                         }
                     }
                 }

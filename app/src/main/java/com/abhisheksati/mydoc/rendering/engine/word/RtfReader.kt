@@ -44,6 +44,7 @@ object RtfReader {
         var unicodeFallbackCount = 1
         var pendingUnicodeSkip = 0
         var skipDepth = -1
+        var isIgnorableGroup = false
 
         data class Frame(val bold: Boolean, val italic: Boolean, val underline: Boolean)
         val stack = ArrayDeque<Frame>()
@@ -75,6 +76,7 @@ object RtfReader {
             when {
                 ch == '{' -> {
                     stack.addLast(Frame(bold, italic, underline))
+                    isIgnorableGroup = false
                     i++
                 }
 
@@ -87,14 +89,16 @@ object RtfReader {
                         underline = frame.underline
                     }
                     if (stack.size < skipDepth) skipDepth = -1
+                    isIgnorableGroup = false
                     i++
                 }
 
                 ch == '\\' -> {
+                    var binarySkip = 0
                     i = readControl(text, i + 1) { word, argument, digitArg ->
                         if (skipping()) {
                             // Still needed: \bin must consume its payload even inside a skipped group.
-                            if (word == "bin") i += digitArg.coerceAtLeast(0)
+                            if (word == "bin") binarySkip = digitArg.coerceAtLeast(0)
                         } else {
                             when {
                                 word == HEX_ESCAPE ->
@@ -102,8 +106,10 @@ object RtfReader {
                                 word == LITERAL -> when (argument) {
                                     "~" -> paragraph.append(' ')
                                     "-" -> Unit
+                                    "*" -> isIgnorableGroup = true
                                     else -> paragraph.append(argument)
                                 }
+                                word == "bin" -> binarySkip = digitArg.coerceAtLeast(0)
                                 word == "par" || word == "line" || word == "sect" -> endParagraph()
                                 word == "tab" -> paragraph.append('\t')
                                 word == "uc" -> unicodeFallbackCount = digitArg.coerceAtLeast(0)
@@ -123,10 +129,11 @@ object RtfReader {
                                 word == "plain" -> setStyle {
                                     bold = false; italic = false; underline = false
                                 }
-                                word in ignoredDestinations -> skipDepth = stack.size
+                                word in ignoredDestinations || isIgnorableGroup -> skipDepth = stack.size
                             }
                         }
                     }
+                    i = (i + binarySkip).coerceAtMost(text.length)
                 }
 
                 ch == '\r' || ch == '\n' -> i++

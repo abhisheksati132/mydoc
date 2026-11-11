@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.SealMark
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
@@ -72,7 +74,7 @@ fun OnboardingGuide(onDone: (Boolean)->Unit) {
                         SealMark(Modifier.size(32.dp))
                         Text("MyDoc", style = AppTheme.typography.titleSmall, color = AppTheme.colors.ink)
                     }
-                    TextButton(onClick={onDone(false)}) { Text("Skip") }
+                    TextButton(onClick={onDone(false)}) { Text(stringResource(R.string.onboarding_skip)) }
                 }
                 Column(Modifier.weight(1f).verticalScroll(scrollState),verticalArrangement=Arrangement.spacedBy(22.dp)) {
                 Spacer(Modifier.height(20.dp))
@@ -94,11 +96,11 @@ fun OnboardingGuide(onDone: (Boolean)->Unit) {
                         if(index==page) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,CircleShape)) }
                 }
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
-                    TextButton(onClick={if(page>0)page-- else onDone(false)}) { Text(if(page>0)"Back" else "Start browsing") }
-                    Button(onClick={if(page<2)page++ else onDone(true)}) { Text(if(page<2)"Next" else "Explore collections") }
+                    TextButton(onClick={if(page>0)page-- else onDone(false)}) { Text(if(page>0) stringResource(R.string.onboarding_back) else stringResource(R.string.onboarding_start_browsing)) }
+                    Button(onClick={if(page<2)page++ else onDone(true)}) { Text(if(page<2) stringResource(R.string.onboarding_next) else stringResource(R.string.onboarding_explore_collections)) }
                 }
-                if(page==2) TextButton(onClick={onDone(false)}) { Text("Start browsing") }
-                Text("${page+1} of 3 · Replay from Settings → About",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                if(page==2) TextButton(onClick={onDone(false)}) { Text(stringResource(R.string.onboarding_start_browsing)) }
+                Text(stringResource(R.string.onboarding_replay_hint, page + 1, 3),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

@@ -148,9 +148,9 @@ internal object Biff8Reader {
                     val count = u16(workbook, record.start + 6)
                     val flags = workbook.getOrElse(record.start + 8) { 0 }.toInt() and 0xFF
                     val text = if (flags and 0x01 != 0) {
-                        ascii(workbook, record.start + 9, count)
-                    } else {
                         unicode(workbook, record.start + 9, count)
+                    } else {
+                        ascii(workbook, record.start + 9, count)
                     }
                     if (text.isNotEmpty()) put(cells, row, col, text) { r, c ->
                         maxRow = maxOf(maxRow, r); maxCol = maxOf(maxCol, c)
@@ -194,31 +194,42 @@ internal object Biff8Reader {
                 FORMULA -> {
                     val row = u16(workbook, record.start)
                     val col = u16(workbook, record.start + 2)
-                    val special = workbook.getOrElse(record.start + 6) { 0 }.toInt() and 0xFF
-                    val byte0 = workbook.getOrElse(record.start + 7) { 0 }.toInt() and 0xFF
-                    when {
-                        special != 0xFF -> put(cells, row, col, formatNumber(doubleAt(workbook, record.start + 6))) { r, c ->
+                    val isSpecial = (record.start + 13 < workbook.size) &&
+                            (workbook[record.start + 12].toInt() and 0xFF == 0xFF) &&
+                            (workbook[record.start + 13].toInt() and 0xFF == 0xFF)
+                    if (isSpecial) {
+                        val byteType = workbook.getOrElse(record.start + 6) { 0 }.toInt() and 0xFF
+                        when (byteType) {
+                            0x00 -> pendingFormula = row to col
+                            0x01 -> {
+                                val boolVal = workbook.getOrElse(record.start + 8) { 0 }.toInt() != 0
+                                put(cells, row, col, if (boolVal) "TRUE" else "FALSE") { r, c ->
+                                    maxRow = maxOf(maxRow, r); maxCol = maxOf(maxCol, c)
+                                }
+                            }
+                            0x02 -> {
+                                val errCode = workbook.getOrElse(record.start + 8) { 0 }.toInt() and 0xFF
+                                put(cells, row, col, errorText(errCode)) { r, c ->
+                                    maxRow = maxOf(maxRow, r); maxCol = maxOf(maxCol, c)
+                                }
+                            }
+                            else -> Unit
+                        }
+                    } else {
+                        put(cells, row, col, formatNumber(doubleAt(workbook, record.start + 6))) { r, c ->
                             maxRow = maxOf(maxRow, r); maxCol = maxOf(maxCol, c)
                         }
-
-                        byte0 == 0x01 -> pendingFormula = row to col
-                        byte0 == 0x02 -> put(cells, row, col, errorText(workbook[record.start + 3].toInt() and 0xFF)) { r, c ->
-                            maxRow = maxOf(maxRow, r); maxCol = maxOf(maxCol, c)
-                        }
-
-                        byte0 == 0x00 -> pendingFormula = row to col
-                        else -> Unit
                     }
                 }
 
                 STRING -> {
                     val target = pendingFormula ?: break
-                    val count = u16(workbook, record.start + 6)
-                    val flags = workbook.getOrElse(record.start + 8) { 0 }.toInt() and 0xFF
+                    val count = u16(workbook, record.start)
+                    val flags = workbook.getOrElse(record.start + 2) { 0 }.toInt() and 0xFF
                     val text = if (flags and 0x01 != 0) {
-                        ascii(workbook, record.start + 9, count)
+                        unicode(workbook, record.start + 3, count)
                     } else {
-                        unicode(workbook, record.start + 9, count)
+                        ascii(workbook, record.start + 3, count)
                     }
                     put(cells, target.first, target.second, text) { r, c ->
                         maxRow = maxOf(maxRow, r); maxCol = maxOf(maxCol, c)
@@ -427,13 +438,16 @@ internal object Biff8Reader {
         fun chars(count: Int, compressed: Boolean): String {
             val sb = StringBuilder(count.coerceAtMost(65_535))
             var produced = 0
+            var currentCompressed = compressed
             while (produced < count) {
                 if (pos >= blocks[block].size) {
                     if (!advance()) break
+                    val flag = blocks[block].getOrElse(pos) { 0 }.toInt() and 0xFF
+                    currentCompressed = (flag and 0x01 == 0)
                     pos++ // the repeated flag byte
                 }
                 val available = blocks[block].size - pos
-                if (compressed) {
+                if (currentCompressed) {
                     val take = minOf(available, count - produced)
                     for (i in 0 until take) sb.append((blocks[block][pos + i].toInt() and 0xFF).toChar())
                     pos += take
@@ -442,6 +456,8 @@ internal object Biff8Reader {
                     if (take == 0) {
                         // A single stray byte cannot form a character; it belongs to the next block.
                         if (!advance()) break
+                        val flag = blocks[block].getOrElse(pos) { 0 }.toInt() and 0xFF
+                        currentCompressed = (flag and 0x01 == 0)
                         pos++
                         continue
                     }

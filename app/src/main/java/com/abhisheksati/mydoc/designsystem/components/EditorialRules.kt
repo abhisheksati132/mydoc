@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -108,10 +109,12 @@ fun EditorialAction(
 
     Box(
         modifier = modifier
+            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
             .clip(AppRadius.pillShape)
             .background(colors.accent.copy(alpha = 0.14f))
             .pressScaleEffect(onClick = onClick)
-            .padding(horizontal = AppSpacing.small + 2.dp, vertical = AppSpacing.xSmall)
+            .padding(horizontal = AppSpacing.small + 4.dp, vertical = AppSpacing.small),
+        contentAlignment = Alignment.Center
     ) {
         Text(
             text = label,

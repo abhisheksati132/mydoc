@@ -133,39 +133,69 @@ class PdfEditingEngine(private val context: Context) {
         val sigBmp = SignatureStorage.loadSignature(context)
             ?: throw IllegalStateException(SignatureStorage.problemMessage(context) ?: "No signature found.")
 
-        PdfBoxHelper.ensureInitialized(context)
-        val outFile = createTempOutputFile("signed", "pdf")
+        try {
+            PdfBoxHelper.ensureInitialized(context)
+            val outFile = createTempOutputFile("signed", "pdf")
 
-        FileInputStream(file).use { fis ->
-            PDDocument.load(fis).use { doc ->
-                val totalPages = doc.numberOfPages
-                // A negative choice means the last page; a fixed sentinel signed page 1000 of a
-                // longer document instead.
-                val targetPageIdx =
-                    if (options.signaturePage < 0) totalPages - 1
-                    else options.signaturePage.coerceIn(0, totalPages - 1)
-                val pdImage = LosslessFactory.createFromImage(doc, sigBmp)
+            FileInputStream(file).use { fis ->
+                PDDocument.load(fis).use { doc ->
+                    val totalPages = doc.numberOfPages
+                    // A negative choice means the last page; a fixed sentinel signed page 1000 of a
+                    // longer document instead.
+                    val targetPageIdx =
+                        if (options.signaturePage < 0) totalPages - 1
+                        else options.signaturePage.coerceIn(0, totalPages - 1)
+                    val pdImage = LosslessFactory.createFromImage(doc, sigBmp)
 
-                val page = doc.getPage(targetPageIdx)
-                val box = page.cropBox ?: page.mediaBox ?: PDRectangle(0f, 0f, 612f, 792f)
-                val w = box.width
-                val h = box.height
-                val originX = box.lowerLeftX
-                val originY = box.lowerLeftY
+                    val page = doc.getPage(targetPageIdx)
+                    val box = page.cropBox ?: page.mediaBox ?: PDRectangle(0f, 0f, 612f, 792f)
+                    val w = box.width
+                    val h = box.height
+                    val originX = box.lowerLeftX
+                    val originY = box.lowerLeftY
+                    val rotation = (page.rotation ?: 0) % 360
 
-                val sigW = (w * options.signatureScale).coerceIn(80f, w * 0.85f)
-                val sigH = sigW * (sigBmp.height.toFloat() / sigBmp.width.toFloat())
-                val sigX = originX + (w * options.signatureXPercent) - (sigW / 2f)
-                val sigY = originY + (h * options.signatureYPercent) - (sigH / 2f)
+                    val isRotated = rotation == 90 || rotation == 270
+                    val visW = if (isRotated) h else w
+                    val visH = if (isRotated) w else h
 
-                PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
-                    cs.drawImage(pdImage, sigX, sigY, sigW, sigH)
+                    val sigW = (visW * options.signatureScale).coerceIn(80f, visW * 0.85f)
+                    val sigH = sigW * (sigBmp.height.toFloat() / sigBmp.width.toFloat())
+                    val vx = (visW * options.signatureXPercent) - (sigW / 2f)
+                    val vy = (visH * options.signatureYPercent) - (sigH / 2f)
+
+                    PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
+                        when (rotation) {
+                            90 -> {
+                                cs.saveGraphicsState()
+                                cs.transform(com.tom_roush.pdfbox.util.Matrix(0f, 1f, -1f, 0f, originX + w - vy, originY + vx))
+                                cs.drawImage(pdImage, 0f, 0f, sigW, sigH)
+                                cs.restoreGraphicsState()
+                            }
+                            180 -> {
+                                cs.saveGraphicsState()
+                                cs.transform(com.tom_roush.pdfbox.util.Matrix(-1f, 0f, 0f, -1f, originX + w - vx, originY + h - vy))
+                                cs.drawImage(pdImage, 0f, 0f, sigW, sigH)
+                                cs.restoreGraphicsState()
+                            }
+                            270 -> {
+                                cs.saveGraphicsState()
+                                cs.transform(com.tom_roush.pdfbox.util.Matrix(0f, -1f, 1f, 0f, originX + vy, originY + h - vx))
+                                cs.drawImage(pdImage, 0f, 0f, sigW, sigH)
+                                cs.restoreGraphicsState()
+                            }
+                            else -> {
+                                cs.drawImage(pdImage, originX + vx, originY + vy, sigW, sigH)
+                            }
+                        }
+                    }
+
+                    FileOutputStream(outFile).use { fos -> doc.save(fos) }
                 }
-
-                FileOutputStream(outFile).use { fos -> doc.save(fos) }
             }
+            return outFile
+        } finally {
+            sigBmp.recycle()
         }
-        sigBmp.recycle()
-        return outFile
     }
 }

@@ -306,7 +306,16 @@ fun kindContainer(kind: MediaKind, isDark: Boolean = false): Color {
 }
 
 fun onKindColor(kind: MediaKind, isDark: Boolean = false): Color {
-    return Color(0xFFFFFFFF)
+    return if (isDark) {
+        when (kind) {
+            MediaKind.DOCUMENT -> Color(0xFF1F0D0A)
+            MediaKind.PHOTO -> Color(0xFF1C1724)
+            MediaKind.VIDEO -> Color(0xFF261908)
+            MediaKind.AUDIO -> Color(0xFF06231F)
+        }
+    } else {
+        Color(0xFFFFFFFF)
+    }
 }
 
 fun onKindContainer(kind: MediaKind, isDark: Boolean = false): Color {

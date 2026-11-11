@@ -94,9 +94,11 @@ class PackageInstallerHelper(private val context: Context) {
         }
 
         // 1. Installed signature compatibility check
-        val matchesInstalled = newSignatures.any { newSig ->
-            currentSignatures.any { currSig -> currSig.contentEquals(newSig) }
-        }
+        val matchesInstalled = if (newSignatures.isNotEmpty() && currentSignatures.isNotEmpty()) {
+            newSignatures.all { newSig ->
+                currentSignatures.any { currSig -> currSig.contentEquals(newSig) }
+            }
+        } else false
         if (!matchesInstalled) {
             throw SecurityException(
                 "Cannot update automatically: The downloaded APK certificate differs from this installed build " +
@@ -133,7 +135,7 @@ class PackageInstallerHelper(private val context: Context) {
             }
 
             val newSignaturesSha256 = newSignatures.map { computeCertSha256(it) }
-            val matchesPinned = newSignaturesSha256.any { newCertSha ->
+            val matchesPinned = newSignaturesSha256.all { newCertSha ->
                 pinnedFingerprints.contains(newCertSha)
             }
 
@@ -149,13 +151,9 @@ class PackageInstallerHelper(private val context: Context) {
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 val signingInfo = packageInfo.signingInfo
                 if (signingInfo != null) {
-                    if (signingInfo.hasMultipleSigners()) {
-                        signingInfo.apkContentsSigners?.map { it.toByteArray() } ?: emptyList()
-                    } else {
-                        val history = signingInfo.signingCertificateHistory?.map { it.toByteArray() }
-                        if (!history.isNullOrEmpty()) history
-                        else signingInfo.apkContentsSigners?.map { it.toByteArray() } ?: emptyList()
-                    }
+                    val signers = signingInfo.apkContentsSigners?.map { it.toByteArray() }
+                    if (!signers.isNullOrEmpty()) signers
+                    else signingInfo.signingCertificateHistory?.map { it.toByteArray() } ?: emptyList()
                 } else {
                     @Suppress("DEPRECATION")
                     packageInfo.signatures?.map { it.toByteArray() } ?: emptyList()

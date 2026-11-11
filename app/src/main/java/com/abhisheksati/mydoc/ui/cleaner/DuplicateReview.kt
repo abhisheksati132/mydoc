@@ -8,9 +8,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.domain.model.LibraryItem
 import com.abhisheksati.mydoc.domain.model.MediaKind
 import com.abhisheksati.mydoc.tools.cleaner.DuplicateGroup
@@ -61,32 +64,34 @@ internal fun DuplicateReview(groups: List<DuplicateGroup>,keepers: Map<String,St
         val size=groups.firstOrNull { group -> (listOf(group.original)+group.duplicates).any { it.absolutePath==path } }?.size ?: 0L
         val ext=file.extension.lowercase(java.util.Locale.ROOT)
         val kind=if(ext in setOf("png","jpg","jpeg","gif","webp","bmp","heic")) MediaKind.PHOTO else MediaKind.DOCUMENT
+        val context = LocalContext.current
         Dialog(onDismissRequest={previewPath=null}) {
             Surface(shape=MaterialTheme.shapes.large) {
                 Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                    Text("First-page / image preview",style=MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.cleaner_review_image_preview),style=MaterialTheme.typography.titleMedium)
                     LibraryThumbnail(LibraryItem(android.net.Uri.fromFile(file).toString(),file.name,kind,
                         if(kind==MediaKind.PHOTO) "image/$ext" else "application/octet-stream",size,0),Modifier.fillMaxWidth().height(260.dp))
                     Text(file.name)
                     Text(file.absolutePath,style=MaterialTheme.typography.bodySmall)
-                    TextButton(onClick={previewPath=null}) { Text("Back to review") }
-                    TextButton(onClick={previewPath=null;onPreview(file)}) { Text("Open original") }
+                    TextButton(onClick={previewPath=null}) { Text(stringResource(R.string.cleaner_review_back)) }
+                    TextButton(onClick={previewPath=null;onPreview(file)}) { Text(stringResource(R.string.cleaner_review_open_original)) }
                 }
             }
         }
     }
     if(previewPath==null) Dialog(onDismissRequest=onDismiss,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+        val context = LocalContext.current
         Surface(Modifier.fillMaxWidth().fillMaxHeight(0.92f).padding(12.dp),shape=MaterialTheme.shapes.large) {
             Column(Modifier.padding(16.dp)) {
-                Text("Review duplicate copies",style=MaterialTheme.typography.titleLarge)
-                Text("Choose one keeper in each group. Other copies in reviewed groups are selected for Trash. Preview files before confirming. Contents are rechecked before moving.",style=MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.cleaner_review_duplicates_title),style=MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.cleaner_review_duplicates_desc),style=MaterialTheme.typography.bodySmall)
                 LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     for(group in groups) {
                         item("header-${group.checksum}") {
                             Column {
                                 HorizontalDivider(Modifier.padding(top=12.dp))
-                                Text("${group.duplicates.size+1} identical copies • ${group.size} bytes each",style=MaterialTheme.typography.titleSmall)
-                                TextButton(onClick={onKeep(group.checksum,null)}) { Text("Leave this group unchanged") }
+                                Text(stringResource(R.string.cleaner_review_identical_copies, group.duplicates.size + 1, android.text.format.Formatter.formatFileSize(context, group.size)),style=MaterialTheme.typography.titleSmall)
+                                TextButton(onClick={onKeep(group.checksum,null)}) { Text(stringResource(R.string.cleaner_review_leave_group)) }
                             }
                         }
                         items(listOf(group.original)+group.duplicates,key={group.checksum+it.absolutePath}) { file ->
@@ -100,15 +105,15 @@ internal fun DuplicateReview(groups: List<DuplicateGroup>,keepers: Map<String,St
                                     Text(file.absolutePath,style=MaterialTheme.typography.bodySmall)
                                     FlowRow {
                                         RadioButton(selected=keepers[group.checksum]==file.absolutePath,onClick={onKeep(group.checksum,file.absolutePath)})
-                                        TextButton(onClick={onKeep(group.checksum,file.absolutePath)}) { Text("Keep this copy") }
-                                        TextButton(onClick={previewPath=file.absolutePath}) { Text("Preview") }
+                                        TextButton(onClick={onKeep(group.checksum,file.absolutePath)}) { Text(stringResource(R.string.cleaner_review_keep_copy)) }
+                                        TextButton(onClick={previewPath=file.absolutePath}) { Text(stringResource(R.string.cleaner_review_preview)) }
                                     }
                                 }
                             }
                         }
                     }
                 }
-                TextButton(onClick=onDismiss,modifier=Modifier.fillMaxWidth()) { Text("Done reviewing") }
+                TextButton(onClick=onDismiss,modifier=Modifier.fillMaxWidth()) { Text(stringResource(R.string.cleaner_review_done)) }
             }
         }
     }

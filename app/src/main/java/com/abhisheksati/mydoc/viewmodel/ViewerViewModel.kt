@@ -454,9 +454,11 @@ class ViewerViewModel(
                             }
                         }
                         val initialPage = savedState?.lastPage?.coerceIn(0, maxOf(0, totalPages - 1)) ?: 0
-                        val defaultMode = (context.applicationContext as? com.abhisheksati.mydoc.MyDocApp)?.settingsRepository?.defaultReadingMode?.value ?: ReadingMode.NORMAL
+                        val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
+                        val defaultMode = app?.settingsRepository?.defaultReadingMode?.value ?: ReadingMode.NORMAL
                         val initialMode = savedState?.readingMode ?: defaultMode
                         val initialContinuous = savedState?.isContinuousScroll ?: true
+                        val initialFitPage = app?.settingsRepository?.readingPrefs?.value?.isFitPage ?: false
 
                         // PageItemView asks for each page's size while composing. Priming the
                         // first screenful here turns those into cache hits instead of native
@@ -473,6 +475,7 @@ class ViewerViewModel(
                                 currentPage = initialPage,
                                 readingMode = initialMode,
                                 isContinuousScroll = initialContinuous,
+                                isFitPage = initialFitPage,
                                 outline = outline
                             )
                         }
@@ -518,6 +521,7 @@ class ViewerViewModel(
     }
 
     fun authenticatePassword(password: String) {
+        val generation = loadGeneration
         if (waitingForOfficePassword) {
             officePassword = password
             waitingForOfficePassword = false
@@ -527,17 +531,19 @@ class ViewerViewModel(
         val rend = renderer ?: return
         viewModelScope.launch(ioDispatcher) {
             val success = rend.authenticatePassword(password)
+            if (generation != loadGeneration) return@launch
             if (!success) {
-                _uiState.update { it.copy(isPasswordIncorrect = true) }
+                _uiState.update { if (generation != loadGeneration) it else it.copy(isPasswordIncorrect = true) }
                 return@launch
             }
             val totalPages = rend.pageCount
+            if (generation != loadGeneration) return@launch
             if (totalPages <= 0) {
                 // Authenticated, but there is nothing to show. Say so instead of opening an
                 // empty reader, and give the native document back.
                 rendererSlot.release()
                 _uiState.update {
-                    it.copy(
+                    if (generation != loadGeneration) it else it.copy(
                         isPasswordRequired = false,
                         isPasswordIncorrect = false,
                         isLoading = false,
@@ -548,12 +554,13 @@ class ViewerViewModel(
                 return@launch
             }
             val outline = rend.getOutline()
+            if (generation != loadGeneration) return@launch
             // The saved reading position belongs to this document whether or not the password
             // was needed to reach it; writing page 0 here used to erase it on every unlock.
             val resume = (repository.getViewState(activeDocumentFile.uri)?.lastPage ?: 0)
                 .coerceIn(0, totalPages - 1)
             _uiState.update {
-                it.copy(
+                if (generation != loadGeneration) it else it.copy(
                     isPasswordRequired = false,
                     isPasswordIncorrect = false,
                     pageCount = totalPages,

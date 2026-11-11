@@ -314,7 +314,7 @@ class AndroidPdfRenderer(
         }
     }
 
-    private fun parsePdfBoxOutline(doc: PDDocument, node: PDOutlineNode): List<OutlineItem> {
+    private fun parsePdfBoxOutline(doc: PDDocument, node: PDOutlineNode, currentLevel: Int = 0): List<OutlineItem> {
         val items = mutableListOf<OutlineItem>()
         var current: PDOutlineItem? = node.firstChild
         while (current != null) {
@@ -325,12 +325,12 @@ class AndroidPdfRenderer(
             } catch (_: Throwable) {
                 0
             }
-            val children = parsePdfBoxOutline(doc, current)
+            val children = parsePdfBoxOutline(doc, current, currentLevel + 1)
             items.add(
                 OutlineItem(
                     title = title,
                     pageIndex = pageNumber,
-                    level = 0,
+                    level = currentLevel,
                     children = children
                 )
             )

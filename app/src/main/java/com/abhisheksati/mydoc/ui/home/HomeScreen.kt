@@ -218,7 +218,7 @@ fun HomeScreen(
                                     selectedDocForDetails = item.toDocumentFile()
                                 },
                                 onRemoveFromRecents = { item ->
-                                    viewModel.removeFromRecents(item.toDocumentFile())
+                                    viewModel.removeFromRecents(item)
                                 },
                                 onShareDocument = { item ->
                                     onShareDocument(item.toDocumentFile())
@@ -236,7 +236,7 @@ fun HomeScreen(
                                     }
                                 },
                                 onRemoveSelectedRecents = { items ->
-                                    viewModel.removeFromRecents(items.map { it.toDocumentFile() })
+                                    viewModel.removeLibraryItemsFromRecents(items)
                                 },
                                 onSpotlightSearch = onSpotlightSearch,
                                 onSettingsClick = onSettingsClick,
@@ -471,7 +471,7 @@ fun HomeScreen(
                 currentTab = currentTab,
                 onTabSelected = viewModel::selectTab,
                 onScanClick = { documentScanner() },
-                hazeState = if (reducedMotion || pagerState.isScrollInProgress) null else when (currentTab) {
+                hazeState = if (reducedMotion) null else when (currentTab) {
                     HomeTab.HOME -> homeHazeState
                     HomeTab.LIBRARY -> libraryHazeState
                     HomeTab.TOOLS -> toolsHazeState

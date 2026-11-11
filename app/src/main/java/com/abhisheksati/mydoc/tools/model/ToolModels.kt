@@ -51,7 +51,7 @@ data class ToolProgress(
 )
 
 enum class CompressionLevel(val label: String, val description: String) {
-    LIGHT("Light", "Removes unused objects and flattens metadata."),
+    LIGHT("Light", "High quality (200 DPI). Compacts streams and cleans unused objects."),
     BALANCED("Balanced", "Recommended. Optimizes image streams (150 DPI) with minimal visual loss."),
     STRONG("Strong", "Maximum compression (100 DPI). Best for email attachments.")
 }

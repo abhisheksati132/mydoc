@@ -4,6 +4,7 @@
 #include <linux/audit.h>
 #include <linux/filter.h>
 #include <linux/seccomp.h>
+#include <signal.h>
 #include <sys/prctl.h>
 #include <sys/socket.h>
 #include <sys/syscall.h>
@@ -25,6 +26,8 @@ JNIEXPORT jboolean JNICALL
 Java_com_abhisheksati_mydoc_rendering_engine_word_WordEngineGuard_blockNetwork(JNIEnv *env, jobject self) {
     (void)env;
     (void)self;
+    // Ignore SIGXFSZ so writes over 256MB fail with EFBIG instead of killing process
+    signal(SIGXFSZ, SIG_IGN);
     const struct rlimit file_limit = { .rlim_cur = 256L * 1024 * 1024, .rlim_max = 256L * 1024 * 1024 };
     if (setrlimit(RLIMIT_FSIZE, &file_limit) != 0) return JNI_FALSE;
     struct sock_filter rules[] = {
@@ -36,12 +39,11 @@ Java_com_abhisheksati_mydoc_rendering_engine_word_WordEngineGuard_blockNetwork(J
         BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, 0x40000000U, 0, 1),
         BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM),
 #endif
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_connect, 0, 1),
-        BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_execve, 0, 1),
         BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_execveat, 0, 1),
         BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM),
+        /* Block internet sockets (AF_INET, AF_INET6) while preserving AF_UNIX for liblog/system IPC */
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_socket, 0, 5),
         BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, args[0])),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AF_INET, 1, 0),

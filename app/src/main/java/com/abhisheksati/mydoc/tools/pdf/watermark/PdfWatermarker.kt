@@ -52,6 +52,7 @@ object PdfWatermarker {
                         val h = boxRect.height
                         val originX = boxRect.lowerLeftX
                         val originY = boxRect.lowerLeftY
+                        val pageRotation = (page.rotation ?: 0) % 360
 
                         val fontSize = (min(w, h) * 0.11f).coerceIn(18f, 120f)
                         val textWidth = font.getStringWidth(trimmed) / 1000f * fontSize
@@ -65,7 +66,8 @@ object PdfWatermarker {
                             cs.setNonStrokingColor(c.red(), c.green(), c.blue())
                             cs.beginText()
                             cs.setFont(font, fontSize)
-                            val rad = Math.toRadians(rotationDegrees.toDouble())
+                            val effectiveRotation = rotationDegrees - pageRotation
+                            val rad = Math.toRadians(effectiveRotation.toDouble())
                             cs.setTextMatrix(Matrix.getRotateInstance(rad, cx, cy))
                             cs.newLineAtOffset(-textWidth / 2f, -fontSize / 2.6f)
                             cs.showText(trimmed)
@@ -87,6 +89,7 @@ object PdfWatermarker {
                         val h = boxRect.height
                         val originX = boxRect.lowerLeftX
                         val originY = boxRect.lowerLeftY
+                        val pageRotation = (page.rotation ?: 0) % 360
 
                         val targetW = (min(w, h) * 0.7f).coerceIn(1f, w.coerceAtLeast(1f))
                         val targetH = targetW * (pdImage.height.toFloat() / pdImage.width.toFloat())
@@ -97,7 +100,8 @@ object PdfWatermarker {
                             cs.saveGraphicsState()
                             val gs = PDExtendedGraphicsState().apply { nonStrokingAlphaConstant = alpha }
                             cs.setGraphicsStateParameters(gs)
-                            val rad = Math.toRadians(rotationDegrees.toDouble())
+                            val effectiveRotation = rotationDegrees - pageRotation
+                            val rad = Math.toRadians(effectiveRotation.toDouble())
                             cs.transform(Matrix.getRotateInstance(rad, cx, cy))
                             cs.drawImage(pdImage, -targetW / 2f, -targetH / 2f, targetW, targetH)
                             cs.restoreGraphicsState()

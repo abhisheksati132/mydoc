@@ -26,7 +26,10 @@
         <exclude domain="database" path="discovery.db-wal" />
         <exclude domain="database" path="discovery.db-shm" />
         <exclude domain="database" path="mydoc.db" />
+    <exclude domain="database" path="mydoc.db-journal" />
     <exclude domain="database" path="mydoc.db-wal" />
     <exclude domain="database" path="mydoc.db-shm" />
     <exclude domain="sharedpref" path="pinned_folders_prefs.xml" />
+    <exclude domain="sharedpref" path="mydoc_welcome.xml" />
+    <exclude domain="file" path="rename_journals" />
 </full-backup-content>

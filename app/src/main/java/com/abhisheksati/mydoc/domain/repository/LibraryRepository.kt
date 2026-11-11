@@ -18,5 +18,6 @@ interface LibraryRepository {
     fun continueItems(limit: Int = 10): Flow<List<LibraryItem>>
     fun recentlyAdded(limit: Int = 20): Flow<List<LibraryItem>>
     suspend fun clearAllRecents()
+    suspend fun removeMediaPlayback(uri: String)
 }
 

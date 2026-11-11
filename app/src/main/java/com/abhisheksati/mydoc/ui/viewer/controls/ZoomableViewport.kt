@@ -105,6 +105,7 @@ fun ZoomableViewport(
                                     currentScale = currentScale,
                                     newScale = newScale,
                                     centroid = centroid,
+                                    viewportSize = zoomState.viewportSize,
                                     pan = panChange
                                 )
 
@@ -129,7 +130,7 @@ fun ZoomableViewport(
                                         val newOffsetX = zoomState.offset.x + dragDelta.x
                                         zoomState.updateScaleAndOffset(
                                             newScale = zoomState.scale,
-                                            newOffset = Offset(newOffsetX, zoomState.offset.y)
+                                            newOffset = Offset(newOffsetX, 0f)
                                         )
                                         change.consume()
                                     }
@@ -185,7 +186,8 @@ fun ZoomableViewport(
                                         currentOffset = Offset.Zero,
                                         currentScale = 1.0f,
                                         newScale = ZoomMath.DOUBLE_TAP_SCALE,
-                                        centroid = downPosition
+                                        centroid = downPosition,
+                                        viewportSize = zoomState.viewportSize
                                     )
                                     zoomState.animateTo(ZoomMath.DOUBLE_TAP_SCALE, targetOffset)
                                 }

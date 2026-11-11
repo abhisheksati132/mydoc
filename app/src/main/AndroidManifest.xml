@@ -44,12 +44,12 @@
             <action android:name="android.intent.action.INSTALL_PACKAGE" />
             <data android:scheme="package" />
         </intent>
-        <package android:name="com.abhisheksati.mydoc.debug" />
     </queries>
 
     <application
         android:name=".MyDocApp"
         android:allowBackup="true"
+        android:requestLegacyExternalStorage="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"

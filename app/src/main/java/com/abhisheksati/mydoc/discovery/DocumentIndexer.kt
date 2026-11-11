@@ -24,7 +24,7 @@ class DocumentIndexer(private val context: Context,private val store: DiscoveryS
                 if(depth>=12) { limit=true;continue }
                 for(child in SelectedDocument.children(context,dir)) {
                     currentCoroutineContext().ensureActive()
-                    if(files.size>=200) { limit=true;pending.clear();break }
+                    if(files.size>=1000) { limit=true;pending.clear();break }
                     if(child.isDirectory) pending.add(child to depth+1) else files.add(child.uri)
                 }
             }
@@ -80,6 +80,7 @@ class DocumentIndexer(private val context: Context,private val store: DiscoveryS
                     try {
                         if(renderer.isPasswordProtected) error("Locked file: text not indexed")
                         val total=renderer.pageCount
+                        if(total <= 0) error("Corrupt or invalid document")
                         var remaining=200_000
                         var indexed=0
                         for(p in 0 until minOf(200,total)) {

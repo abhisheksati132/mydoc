@@ -51,34 +51,33 @@ internal class Ole2File(private val data: ByteArray) {
             val difatEntriesPerSector = (sectorSize / 4) - 1
             val visitedDifat = HashSet<Int>()
             while (curDifatSec >= 0 && difatCount < numDifatSectors && visitedDifat.add(curDifatSec)) {
-                val offset = (curDifatSec + 1) * sectorSize
-                if (offset + sectorSize > data.size) break
+                val offset = (curDifatSec.toLong() + 1L) * sectorSize
+                if (offset < 0 || offset + sectorSize > data.size) break
                 for (i in 0 until difatEntriesPerSector) {
-                    val sec = getIntLE(data, offset + (i * 4))
+                    val sec = getIntLE(data, (offset + (i * 4)).toInt())
                     if (sec >= 0) {
                         fatSectorLocations.add(sec)
                     }
                 }
-                curDifatSec = getIntLE(data, offset + difatEntriesPerSector * 4)
+                curDifatSec = getIntLE(data, (offset + difatEntriesPerSector * 4).toInt())
                 difatCount++
             }
         }
 
-        // 3. Assemble FAT table. The sector count is read straight from the header, so a few hundred
-        // bytes of crafted file could ask for a gigabyte-scale array before anything is validated.
-        // The container cannot hold more sectors than it has bytes, so the file size is the ceiling.
+        // 3. Assemble FAT table bounded by actual sector count in the file to prevent OOM
+        val totalSectorsInFile = (data.size.toLong() / sectorSize.toLong()) + 128L
+        val maxReasonableFat = totalSectorsInFile.coerceAtLeast(1024L)
         val declaredFatInts = numFatSectors.coerceAtLeast(0).toLong() * (sectorSize / 4)
-        val ceiling = data.size.toLong() + 1024L
-        val listedFatInts = (fatSectorLocations.size.toLong() * (sectorSize / 4)).coerceAtMost(ceiling)
-        val fatIntCount = maxOf(declaredFatInts.coerceAtMost(ceiling), listedFatInts, 1024L).toInt()
+        val listedFatInts = fatSectorLocations.size.toLong() * (sectorSize / 4)
+        val fatIntCount = minOf(maxOf(declaredFatInts, listedFatInts, 1024L), maxReasonableFat).toInt()
         fat = IntArray(fatIntCount)
         var fatIndex = 0
         for (fatSec in fatSectorLocations) {
-            val secOffset = (fatSec + 1) * sectorSize
-            if (secOffset + sectorSize <= data.size) {
+            val secOffset = (fatSec.toLong() + 1L) * sectorSize
+            if (secOffset >= 0 && secOffset + sectorSize <= data.size) {
                 for (j in 0 until (sectorSize / 4)) {
                     if (fatIndex < fat.size) {
-                        fat[fatIndex++] = getIntLE(data, secOffset + (j * 4))
+                        fat[fatIndex++] = getIntLE(data, (secOffset + (j * 4)).toInt())
                     }
                 }
             }
@@ -91,7 +90,8 @@ internal class Ole2File(private val data: ByteArray) {
             val nameLen = getShortLE(dirBytes, dirOffset + 64).toInt()
             val type = dirBytes[dirOffset + 66].toInt() and 0xFF
             val startSec = getIntLE(dirBytes, dirOffset + 116)
-            val streamSize = getLongLE(dirBytes, dirOffset + 120)
+            val rawStreamSize = getLongLE(dirBytes, dirOffset + 120)
+            val streamSize = if (sectorSize == 512) rawStreamSize and 0xFFFFFFFFL else rawStreamSize
 
             val name = if (nameLen > 2) {
                 String(dirBytes, dirOffset, minOf(nameLen - 2, 64), Charsets.UTF_16LE).trim()
@@ -144,11 +144,11 @@ internal class Ole2File(private val data: ByteArray) {
 
         while (curSector >= 0 && curSector < miniFat.size && remaining > 0) {
             if (!visited.add(curSector)) break
-            val offset = curSector * miniSectorSize
-            if (offset >= miniStream.size) break
+            val offset = curSector.toLong() * miniSectorSize
+            if (offset < 0 || offset >= miniStream.size) break
             val toRead = minOf(miniSectorSize.toLong(), remaining).toInt()
             if (offset + toRead <= miniStream.size) {
-                out.write(miniStream, offset, toRead)
+                out.write(miniStream, offset.toInt(), toRead)
                 remaining -= toRead
             } else break
 
@@ -168,11 +168,11 @@ internal class Ole2File(private val data: ByteArray) {
 
         while (curSector >= 0 && curSector < fat.size && remaining > 0) {
             if (!visited.add(curSector)) break // Cycle detected in FAT table
-            val offset = (curSector + 1) * sectorSize
-            if (offset >= data.size) break
+            val offset = (curSector.toLong() + 1L) * sectorSize
+            if (offset < 0 || offset >= data.size) break
             val toRead = minOf(sectorSize.toLong(), remaining).toInt()
             if (offset + toRead <= data.size) {
-                out.write(data, offset, toRead)
+                out.write(data, offset.toInt(), toRead)
                 remaining -= toRead
             } else break
 

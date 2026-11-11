@@ -278,9 +278,12 @@ fun PdfViewerScreen(
     LaunchedEffect(lazyListState) {
         snapshotFlow { lazyListState.firstVisibleItemIndex }
             .distinctUntilChanged()
-            .collect { page ->
-                if (state.isContinuousScroll && !state.isDualPageView) {
+            .collect { index ->
+                if (state.isDualPageView) {
+                    val page = (index * 2).coerceAtMost(state.pageCount - 1).coerceAtLeast(0)
                     viewModel.onPageChanged(page)
+                } else if (state.isContinuousScroll) {
+                    viewModel.onPageChanged(index)
                 }
             }
     }
@@ -295,8 +298,8 @@ fun PdfViewerScreen(
             }
     }
 
-    // Auto-scroll viewer when navigating through search matches
-    LaunchedEffect(state.currentMatchIndex) {
+    // Auto-scroll viewer when navigating through search matches or when new search matches arrive
+    LaunchedEffect(state.currentMatchIndex, state.searchMatches) {
         if (state.currentMatchIndex in state.searchMatches.indices) {
             val targetPage = state.searchMatches[state.currentMatchIndex].pageIndex
             scrollViewerTo(targetPage, animate = true)
@@ -603,21 +606,27 @@ fun PdfViewerScreen(
             },
             onTtsClick = {
                 coroutineScope.launch {
-                    val pageText = viewModel.getPageText(state.currentPage)
-                    if (!pageText.isNullOrBlank()) {
-                        currentTtsText = pageText
-                        isTtsVisible = true
-                    } else {
-                        val pageBmp = withContext(Dispatchers.Default) { viewModel.renderPageBitmap(state.currentPage, 1.5f) }
-                        if (pageBmp != null) {
-                            val ocr = ocrEngine.recognizeText(pageBmp)
-                            if (ocr.isNotBlank()) {
-                                currentTtsText = ocr
-                                isTtsVisible = true
-                            } else {
-                                context.showMessage(resources.getString(R.string.pdf_no_text_to_read))
+                    try {
+                        val pageText = viewModel.getPageText(state.currentPage)
+                        if (!pageText.isNullOrBlank()) {
+                            currentTtsText = pageText
+                            isTtsVisible = true
+                        } else {
+                            val pageBmp = withContext(Dispatchers.Default) { viewModel.renderPageBitmap(state.currentPage, 1.5f) }
+                            if (pageBmp != null) {
+                                val ocr = runCatching { ocrEngine.recognizeText(pageBmp) }.getOrNull()
+                                if (!ocr.isNullOrBlank()) {
+                                    currentTtsText = ocr
+                                    isTtsVisible = true
+                                } else {
+                                    context.showMessage(resources.getString(R.string.pdf_no_text_to_read))
+                                }
                             }
                         }
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        context.showMessage(resources.getString(R.string.pdf_no_text_to_read))
                     }
                 }
             },
@@ -703,6 +712,7 @@ fun PdfViewerScreen(
             onCloseTts = { isTtsVisible = false },
             currentTtsText = currentTtsText,
             ttsManager = ttsManager,
+            onRemoveDocument = onBackClick,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
 

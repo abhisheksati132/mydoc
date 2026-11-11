@@ -114,7 +114,7 @@ class ApkDownloader(private val context: Context, private val cacheFolder: Strin
                         }
                         val location = connection.getHeaderField("Location")
                             ?: throw IllegalStateException("Redirected with no Location header")
-                        currentUrl = location
+                        currentUrl = URL(validatedUrl, location).toExternalForm()
                         connection.disconnect()
                         redirectCount++
                     } else if (code == HttpURLConnection.HTTP_OK) {

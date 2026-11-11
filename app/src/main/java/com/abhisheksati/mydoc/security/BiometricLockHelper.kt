@@ -13,6 +13,15 @@ import java.util.concurrent.Executor
 
 object BiometricLockHelper {
 
+    private var activeCancellationSignal: CancellationSignal? = null
+
+    fun cancelAuthentication() {
+        try {
+            activeCancellationSignal?.cancel()
+        } catch (_: Exception) {}
+        activeCancellationSignal = null
+    }
+
     fun isDeviceSecure(context: Context): Boolean {
         val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
         return keyguardManager?.isDeviceSecure == true
@@ -37,7 +46,9 @@ object BiometricLockHelper {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             try {
+                cancelAuthentication()
                 val cancellationSignal = CancellationSignal()
+                activeCancellationSignal = cancellationSignal
                 val executor: Executor = activity.mainExecutor
 
                 val builder = android.hardware.biometrics.BiometricPrompt.Builder(activity)
@@ -65,11 +76,13 @@ object BiometricLockHelper {
                     object : android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
                         override fun onAuthenticationSucceeded(result: android.hardware.biometrics.BiometricPrompt.AuthenticationResult?) {
                             super.onAuthenticationSucceeded(result)
+                            activeCancellationSignal = null
                             onSuccess()
                         }
 
                         override fun onAuthenticationError(errorCode: Int, errString: CharSequence?) {
                             super.onAuthenticationError(errorCode, errString)
+                            activeCancellationSignal = null
                             // If biometric is not enrolled or hardware unavailable, fallback to Keyguard PIN
                             if (errorCode == android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_NO_BIOMETRICS ||
                                 errorCode == android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_HW_NOT_PRESENT ||

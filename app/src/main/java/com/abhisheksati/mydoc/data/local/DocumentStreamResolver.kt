@@ -69,10 +69,37 @@ object DocumentStreamResolver {
             // and overwrite cached copy when a fresh live stream is obtained from the original external source
             try {
                 val savedDocsDir = File(context.filesDir, "saved_docs").apply { mkdirs() }
-                val backupFile = File(savedDocsDir, DocumentIdentity.savedDocsName(uri.toString(), displayName))
+                val cacheName = DocumentIdentity.savedDocsName(uri.toString(), displayName)
+                val backupFile = File(savedDocsDir, cacheName)
+                val metaFile = File(savedDocsDir, "$cacheName.meta")
                 if (streamResult.source != "saved_docs_key") {
-                    targetCacheFile.copyTo(backupFile, overwrite = true)
-                    backupFile.setLastModified(System.currentTimeMillis())
+                    val tmpBackup = File(savedDocsDir, "$cacheName.${java.util.UUID.randomUUID()}.tmp")
+                    try {
+                        targetCacheFile.copyTo(tmpBackup, overwrite = true)
+                        if (tmpBackup.exists() && tmpBackup.length() > 0L) {
+                            if (!tmpBackup.renameTo(backupFile)) {
+                                tmpBackup.copyTo(backupFile, overwrite = true)
+                                tmpBackup.delete()
+                            }
+                            val now = System.currentTimeMillis()
+                            backupFile.setLastModified(now)
+                            val stamp = sourceStamp(context, uri)
+                            val metaTmp = File(savedDocsDir, "${metaFile.name}.${java.util.UUID.randomUUID()}.tmp")
+                            try {
+                                metaTmp.writeText(OfflineCopyPolicy.format(
+                                    OfflineCopyStamp(stamp.first, stamp.second)
+                                ))
+                                if (!metaTmp.renameTo(metaFile)) {
+                                    metaTmp.copyTo(metaFile, overwrite = true)
+                                    metaTmp.delete()
+                                }
+                            } finally {
+                                if (metaTmp.exists()) metaTmp.delete()
+                            }
+                        }
+                    } finally {
+                        if (tmpBackup.exists()) tmpBackup.delete()
+                    }
                 } else {
                     backupFile.setLastModified(System.currentTimeMillis())
                 }
@@ -160,10 +187,14 @@ object DocumentStreamResolver {
             if (savedDocsDir.exists() && savedDocsDir.isDirectory) {
                 val files = savedDocsDir.listFiles() ?: emptyArray()
 
-                // Only a copy whose name carries this exact URI identity counts; a similar
-                // display name never matches.
+                // Only a committed copy whose name carries this exact URI identity counts; a similar
+                // display name never matches. Staging and incomplete files are excluded.
                 val byKey = files.firstOrNull {
-                    !OfflineCopyPolicy.isMetaFile(it.name) && DocumentIdentity.isSavedCopyOf(it, uriString)
+                    !OfflineCopyPolicy.isMetaFile(it.name) &&
+                    !it.name.endsWith(".tmp") &&
+                    !it.name.contains(".tmp") &&
+                    !it.name.endsWith(".part") &&
+                    DocumentIdentity.isSavedCopyOf(it, uriString)
                 }
                 if (byKey != null) {
                     byKey.setLastModified(System.currentTimeMillis())

@@ -216,6 +216,9 @@ gradle.taskGraph.whenReady {
         if (keystorePass.isNullOrBlank()) missing.add("MYDOC_KEYSTORE_PASSWORD (or mydoc.keystore.password)")
         if (keyAlias.isNullOrBlank()) missing.add("MYDOC_KEY_ALIAS (or mydoc.key.alias)")
         if (keyPass.isNullOrBlank()) missing.add("MYDOC_KEY_PASSWORD (or mydoc.key.password)")
+        val releaseCert = (project.findProperty("mydoc.release.cert.sha256") as? String)
+            ?: System.getenv("MYDOC_RELEASE_CERT_SHA256")
+        if (releaseCert.isNullOrBlank()) missing.add("MYDOC_RELEASE_CERT_SHA256 (or mydoc.release.cert.sha256)")
 
         if (missing.isNotEmpty()) {
             throw GradleException(

@@ -14,21 +14,32 @@ object ZoomMath {
 
     /**
      * Calculates the new pan offset when scaling around an arbitrary centroid:
-     * newOffset = centroid - (centroid - currentOffset) * (newScale / currentScale) + pan
+     * When [viewportSize] is provided, accounts for Compose graphicsLayer's TransformOrigin.Center.
+     * When [viewportSize] is Size.Zero, uses un-centered top-left reference.
      */
     fun calculateCentroidOffset(
         currentOffset: Offset,
         currentScale: Float,
         newScale: Float,
         centroid: Offset,
+        viewportSize: Size = Size.Zero,
         pan: Offset = Offset.Zero
     ): Offset {
         if (currentScale <= 0f) return currentOffset
         val scaleRatio = newScale / currentScale
-        return Offset(
-            x = centroid.x - (centroid.x - currentOffset.x) * scaleRatio + pan.x,
-            y = centroid.y - (centroid.y - currentOffset.y) * scaleRatio + pan.y
-        )
+        return if (viewportSize.width > 0f && viewportSize.height > 0f) {
+            val center = Offset(viewportSize.width / 2f, viewportSize.height / 2f)
+            val focal = centroid - center
+            Offset(
+                x = currentOffset.x * scaleRatio - focal.x * (scaleRatio - 1f) + pan.x,
+                y = currentOffset.y * scaleRatio - focal.y * (scaleRatio - 1f) + pan.y
+            )
+        } else {
+            Offset(
+                x = centroid.x - (centroid.x - currentOffset.x) * scaleRatio + pan.x,
+                y = centroid.y - (centroid.y - currentOffset.y) * scaleRatio + pan.y
+            )
+        }
     }
 
     /**

@@ -23,26 +23,32 @@ class GitHubUpdateService(
         runCatching {
             val endpoint = "https://api.github.com/repos/$owner/$repo/releases/latest"
             val url = URL(endpoint)
-            val connection = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                connectTimeout = 10000
-                readTimeout = 10000
-                setRequestProperty("Accept", "application/vnd.github+json")
-                setRequestProperty("User-Agent", "mydoc-android-updater")
-            }
+            var connection: HttpURLConnection? = null
+            try {
+                connection = (url.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                    instanceFollowRedirects = false
+                    setRequestProperty("Accept", "application/vnd.github+json")
+                    setRequestProperty("User-Agent", "mydoc-android-updater")
+                }
 
-            val responseCode = connection.responseCode
-            if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
-                // No releases have been published yet in this repository
-                return@runCatching null
-            }
+                val responseCode = connection.responseCode
+                if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
+                    // No releases have been published yet in this repository
+                    return@runCatching null
+                }
 
-            if (responseCode != HttpURLConnection.HTTP_OK) {
-                throw IllegalStateException("GitHub API returned HTTP $responseCode")
-            }
+                if (responseCode != HttpURLConnection.HTTP_OK) {
+                    throw IllegalStateException("GitHub API returned HTTP $responseCode")
+                }
 
-            val responseText = connection.inputStream.bufferedReader().use(BufferedReader::readText)
-            parseReleaseJson(responseText)
+                val responseText = connection.inputStream.bufferedReader().use(BufferedReader::readText)
+                parseReleaseJson(responseText)
+            } finally {
+                connection?.disconnect()
+            }
         }
     }
 
@@ -87,8 +93,8 @@ class GitHubUpdateService(
                     apiAssets[name] = "https://api.github.com/repos/$owner/$repo/releases/assets/$id" to digest
                 }
             } else if (name.endsWith(".sha256", ignoreCase = true)) {
-                // Strict match: <apk name>.sha256
-                val exactBaseApkName = name.removeSuffix(".sha256")
+                // Strict match: <apk name>.sha256 (case-insensitive stripping)
+                val exactBaseApkName = name.substring(0, name.length - ".sha256".length)
                 checksumMap[exactBaseApkName] = downloadUrl
             }
         }

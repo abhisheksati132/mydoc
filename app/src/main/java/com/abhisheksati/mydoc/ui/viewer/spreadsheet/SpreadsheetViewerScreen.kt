@@ -3,7 +3,13 @@ package com.abhisheksati.mydoc.ui.viewer.spreadsheet
 import com.abhisheksati.mydoc.designsystem.components.AppModalSheet
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -106,6 +112,11 @@ fun SpreadsheetViewerScreen(
         }
     }
 
+    BackHandler(enabled = isSearchOpen) {
+        isSearchOpen = false
+        viewModel.onSearchQueryChanged("")
+    }
+
     ViewerScaffold(
         document = document,
         capabilities = ViewerCapabilities(
@@ -114,7 +125,7 @@ fun SpreadsheetViewerScreen(
             supportsPageGrid = false,
             supportsSlideshow = false,
             supportsTts = false,
-            supportsZoom = true
+            supportsZoom = false
         ),
         currentPage = state.selectedSheetIndex,
         pageCount = state.model.sheets.size.coerceAtLeast(1),
@@ -153,6 +164,22 @@ fun SpreadsheetViewerScreen(
                     value = state.searchQuery,
                     onValueChange = viewModel::onSearchQueryChanged,
                     placeholder = { Text(stringResource(R.string.sheet_search_placeholder)) },
+                    leadingIcon = {
+                        Icon(Icons.Outlined.Search, contentDescription = null)
+                    },
+                    trailingIcon = {
+                        IconButton(
+                            onClick = {
+                                if (state.searchQuery.isNotEmpty()) {
+                                    viewModel.onSearchQueryChanged("")
+                                } else {
+                                    isSearchOpen = false
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.cd_close_search))
+                        }
+                    },
                     singleLine = true,
                     shape = MaterialTheme.shapes.extraLarge,
                     modifier = Modifier

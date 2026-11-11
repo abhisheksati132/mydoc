@@ -43,7 +43,11 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -108,14 +112,14 @@ fun FreeCornersCropperDialog(
         BackHandler(onBack = onDismiss)
 
         var currentBitmap by remember { mutableStateOf(bitmap) }
-        // Bitmaps this screen created. The incoming bitmap belongs to the caller, so only these
-        // are ever recycled — and they are recycled as soon as a rotation replaces them, because a
-        // camera-size ARGB bitmap is tens of megabytes and each tap used to leave one behind.
         var createdBitmaps by remember { mutableStateOf(listOf<Bitmap>()) }
+        var deliveredBitmap by remember { mutableStateOf<Bitmap?>(null) }
         DisposableEffect(bitmap) {
             onDispose {
                 createdBitmaps.forEach { candidate ->
-                    if (candidate !== bitmap && !candidate.isRecycled) candidate.recycle()
+                    if (candidate !== bitmap && candidate !== deliveredBitmap && !candidate.isRecycled) {
+                        candidate.recycle()
+                    }
                 }
             }
         }
@@ -182,7 +186,8 @@ fun FreeCornersCropperDialog(
                     FreeCornersCropperCanvas(
                         bitmap = currentBitmap,
                         accentColor = accentColor,
-                        onCropped = onCropped
+                        onCropped = onCropped,
+                        onDelivered = { deliveredBitmap = it }
                     )
                 }
             }
@@ -194,8 +199,10 @@ fun FreeCornersCropperDialog(
 private fun FreeCornersCropperCanvas(
     bitmap: Bitmap,
     accentColor: Color,
-    onCropped: (Bitmap) -> Unit
+    onCropped: (Bitmap) -> Unit,
+    onDelivered: (Bitmap) -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val haptics = rememberAppHaptics()
     val handleTouchRadiusPx = with(density) { 36.dp.toPx() }
@@ -632,19 +639,23 @@ private fun FreeCornersCropperCanvas(
                 IconButton(
                     onClick = {
                         haptics.confirm()
-                        val autoQuad = DocumentEdgeDetector.detectDocumentQuad(bitmap)
-                        if (autoQuad != null && scaleFactor > 0f) {
-                            quadPoints[0] = Offset(imageBounds.left + autoQuad.topLeft.x * scaleFactor, imageBounds.top + autoQuad.topLeft.y * scaleFactor)
-                            quadPoints[1] = Offset(imageBounds.left + autoQuad.topRight.x * scaleFactor, imageBounds.top + autoQuad.topRight.y * scaleFactor)
-                            quadPoints[2] = Offset(imageBounds.left + autoQuad.bottomRight.x * scaleFactor, imageBounds.top + autoQuad.bottomRight.y * scaleFactor)
-                            quadPoints[3] = Offset(imageBounds.left + autoQuad.bottomLeft.x * scaleFactor, imageBounds.top + autoQuad.bottomLeft.y * scaleFactor)
-                        } else if (imageBounds.width > 0) {
-                            val insetX = imageBounds.width * 0.05f
-                            val insetY = imageBounds.height * 0.05f
-                            quadPoints[0] = Offset(imageBounds.left + insetX, imageBounds.top + insetY)
-                            quadPoints[1] = Offset(imageBounds.right - insetX, imageBounds.top + insetY)
-                            quadPoints[2] = Offset(imageBounds.right - insetX, imageBounds.bottom - insetY)
-                            quadPoints[3] = Offset(imageBounds.left + insetX, imageBounds.bottom - insetY)
+                        scope.launch {
+                            val autoQuad = withContext(Dispatchers.Default) {
+                                DocumentEdgeDetector.detectDocumentQuad(bitmap)
+                            }
+                            if (autoQuad != null && scaleFactor > 0f) {
+                                quadPoints[0] = Offset(imageBounds.left + autoQuad.topLeft.x * scaleFactor, imageBounds.top + autoQuad.topLeft.y * scaleFactor)
+                                quadPoints[1] = Offset(imageBounds.left + autoQuad.topRight.x * scaleFactor, imageBounds.top + autoQuad.topRight.y * scaleFactor)
+                                quadPoints[2] = Offset(imageBounds.left + autoQuad.bottomRight.x * scaleFactor, imageBounds.top + autoQuad.bottomRight.y * scaleFactor)
+                                quadPoints[3] = Offset(imageBounds.left + autoQuad.bottomLeft.x * scaleFactor, imageBounds.top + autoQuad.bottomLeft.y * scaleFactor)
+                            } else if (imageBounds.width > 0) {
+                                val insetX = imageBounds.width * 0.05f
+                                val insetY = imageBounds.height * 0.05f
+                                quadPoints[0] = Offset(imageBounds.left + insetX, imageBounds.top + insetY)
+                                quadPoints[1] = Offset(imageBounds.right - insetX, imageBounds.top + insetY)
+                                quadPoints[2] = Offset(imageBounds.right - insetX, imageBounds.bottom - insetY)
+                                quadPoints[3] = Offset(imageBounds.left + insetX, imageBounds.bottom - insetY)
+                            }
                         }
                     },
                     modifier = Modifier
@@ -671,8 +682,13 @@ private fun FreeCornersCropperCanvas(
                                 y = ((pt.y - imageBounds.top) / scaleFactor).coerceIn(0f, bitmap.height.toFloat())
                             )
                         }
-                        val warped = FreeCrop.crop(bitmap, pointsInBitmap)
-                        onCropped(warped)
+                        scope.launch {
+                            val warped = withContext(Dispatchers.Default) {
+                                FreeCrop.crop(bitmap, pointsInBitmap)
+                            }
+                            onDelivered(warped)
+                            onCropped(warped)
+                        }
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = accentColor),

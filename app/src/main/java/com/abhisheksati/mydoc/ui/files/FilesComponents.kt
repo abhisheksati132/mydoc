@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -651,9 +653,11 @@ fun BreadcrumbRow(
                 style = MaterialTheme.typography.labelLarge,
                 color = if (isLast) scheme.onSurface else scheme.onSurfaceVariant,
                 modifier = Modifier
+                    .defaultMinSize(minHeight = 48.dp)
                     .clip(AppRadius.microShape)
                     .clickable(onClick = onClick)
-                    .padding(horizontal = 6.dp, vertical = 4.dp)
+                    .wrapContentHeight(Alignment.CenterVertically)
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
             )
             if (!isLast) {
                 Icon(

@@ -28,9 +28,14 @@ object DocumentIdentity {
     fun savedDocsName(uri: String, displayName: String?): String =
         "${ofText(uri)}_${sanitizeDisplayName(displayName)}"
 
-    /** True when [file] is a non-empty offline copy of [uri]. Matched on the key, never the name. */
-    fun isSavedCopyOf(file: File, uri: String): Boolean =
-        file.name.startsWith("${ofText(uri)}_") && file.length() > 0L
+    /** True when [file] is a non-empty, committed offline copy of [uri]. Staging and metadata files are never valid copies. */
+    fun isSavedCopyOf(file: File, uri: String): Boolean {
+        val name = file.name
+        if (name.endsWith(".tmp") || name.contains(".tmp") || name.endsWith(".meta") || name.endsWith(".part")) {
+            return false
+        }
+        return name.startsWith("${ofText(uri)}_") && file.length() > 0L
+    }
 
     fun sanitizeDisplayName(displayName: String?): String =
         (displayName ?: "document").replace(UNSAFE_NAME, "_")

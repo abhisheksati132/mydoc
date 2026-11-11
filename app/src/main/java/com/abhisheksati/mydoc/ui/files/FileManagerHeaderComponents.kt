@@ -4,6 +4,7 @@ import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.util.UserMessages
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -72,37 +73,14 @@ fun StoragePermissionBanner(
 fun shareFiles(context: Context, files: List<File>) {
     if (files.isEmpty()) return
     try {
-        val sharedRoot = File(context.cacheDir, "shared").apply { if (!exists()) mkdirs() }
-        // Each attachment gets its own directory. Staging both under cache/shared/<basename> made
-        // two same-named files resolve to one URI, so the recipient received the last copy twice -
-        // and an earlier grant could read the replacement through it.
-        val uris = files.map { file ->
-            val shareFile = if (file.parentFile?.absolutePath?.startsWith(sharedRoot.absolutePath) == true) {
-                file
-            } else {
-                val stageDir = File(sharedRoot, java.util.UUID.randomUUID().toString()).apply { mkdirs() }
-                val dest = File(stageDir, file.name)
-                file.copyTo(dest, overwrite = false)
-                dest
-            }
-            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", shareFile)
+        val success = com.abhisheksati.mydoc.util.shareUris(
+            context,
+            files.map { Uri.fromFile(it) },
+            context.getString(R.string.share_via)
+        )
+        if (!success) {
+            context.showMessage(context.getString(R.string.file_share_failed))
         }
-
-        val intent = if (uris.size == 1) {
-            Intent(Intent.ACTION_SEND).apply {
-                type = "*/*"
-                putExtra(Intent.EXTRA_STREAM, uris[0])
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-        } else {
-            Intent(Intent.ACTION_SEND_MULTIPLE).apply {
-                type = "*/*"
-                putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-        }
-
-        context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_via)))
     } catch (e: Exception) {
         context.showMessage(context.getString(R.string.file_share_failed))
     }
