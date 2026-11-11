@@ -197,10 +197,7 @@ jobs:
           JAR=$(ls -1 "$ANDROID_HOME"/build-tools/*/lib/apksigner.jar 2>/dev/null | tail -1 || true)
           if [ -n "$JAR" ] && [ -f "$JAR" ]; then
             echo "Configuring apksigner wrapper for $JAR"
-            sudo tee /usr/local/bin/apksigner > /dev/null <<EOF
-#!/bin/sh
-exec java -jar "$JAR" "\$@"
-EOF
+            printf '#!/bin/sh\nexec java -jar "%s" "$@"\n' "$JAR" | sudo tee /usr/local/bin/apksigner > /dev/null
             sudo chmod +x /usr/local/bin/apksigner
           else
             sudo DEBIAN_FRONTEND=noninteractive apt-get update -y || true

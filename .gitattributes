@@ -1,3 +1,4 @@
+# MyDoc 2.0.5 Git Attributes Configuration
 * text=auto eol=lf
 *.kt text eol=lf
 *.kts text eol=lf
@@ -5,3 +6,4 @@
 *.md text eol=lf
 *.gradle text eol=lf
 *.properties text eol=lf
+*.sh text eol=lf

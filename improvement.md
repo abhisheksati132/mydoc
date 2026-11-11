@@ -86,6 +86,8 @@ override fun renderRegion(
 | **Security Hardening** | Pinned release certificate fingerprint checks, private storage isolation, and continuous `FLAG_SECURE`. | **Complete** |
 | **Release & CI Automation** | Pinned Gradle wrapper verification, cold-home release builds, and automated API 35 emulator smoke tests. | **Complete** |
 | **Audit Resolution (v2.0.3)** | Fixed scanner image staging, structural PDF validation, Compose lint compliance, and version alignment. | **Complete** |
+| **Audit Hardening (v2.0.4)** | Fixed ODS coordinate parsing bounds, hardened PDF redaction checks, scoped storage permissions, and Material You dynamic color adaptation. | **Complete** |
+| **Studio UX & Cache Hygiene (v2.0.5)** | Storage cache clearing across memory and multi-volume disks, silenced layout fidelity dialog, unified Presentation viewer with ZoomableViewport, and 2-box-per-row Bento category grid. | **Complete** |
 
 ---
 

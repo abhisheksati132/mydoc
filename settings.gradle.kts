@@ -1,3 +1,5 @@
+// MyDoc 2.0.5 Multi-Module Project Configuration
+// Modules: :app (Main Application), :lint-rules (Accessibility & Quality Lint), :office-engine (Decoupled Office Companion)
 pluginManagement {
     repositories {
         google()
