@@ -264,6 +264,8 @@ class SettingsRepository(private val context: Context) {
     fun clearCache(context: Context): Long {
         val sizeBefore = getCacheSizeBytes(context)
         context.cacheDir.listFiles()?.forEach { file ->
+            // Preserve updates directory so pending or active APK installations are not destroyed
+            if (file.name == "updates") return@forEach
             deleteRecursive(file)
         }
         context.externalCacheDir?.listFiles()?.forEach { file ->
@@ -271,7 +273,8 @@ class SettingsRepository(private val context: Context) {
         }
         // NOTE: filesDir/saved_docs (offline document backups) is intentionally NOT cleared here —
         // this row is labelled "Thumbnail & render cache" and must not destroy readable-offline copies.
-        return sizeBefore
+        val sizeAfter = getCacheSizeBytes(context)
+        return (sizeBefore - sizeAfter).coerceAtLeast(0L)
     }
 
     private fun getFolderSize(file: File?): Long {

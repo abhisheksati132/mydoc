@@ -47,6 +47,7 @@ fun SettingsAboutSection(
     checkUpdatesOnLaunch: Boolean,
     onCheckUpdatesOnLaunchChange: (Boolean) -> Unit,
     onDesignSystemPreviewClick: () -> Unit = {},
+    onExplore: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -54,7 +55,10 @@ fun SettingsAboutSection(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var showGuide by rememberSaveable { mutableStateOf(false) }
-    if(showGuide) com.abhisheksati.mydoc.ui.onboarding.OnboardingGuide { showGuide = false }
+    if(showGuide) com.abhisheksati.mydoc.ui.onboarding.OnboardingGuide { explore ->
+        showGuide = false
+        if (explore) onExplore()
+    }
     var showWordLicenses by rememberSaveable { mutableStateOf(false) }
     if (showWordLicenses) WordEngineLicensesDialog { showWordLicenses = false }
     var showOpenSourceLicenses by rememberSaveable { mutableStateOf(false) }

@@ -15,6 +15,7 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import com.abhisheksati.mydoc.util.copyBounded
 
 data class AppInfoItem(
     val appName: String,
@@ -33,20 +34,28 @@ class AppManagerHelper(private val context: Context) {
 
     suspend fun getInstalledApps(includeSystemApps: Boolean = false): List<AppInfoItem> = withContext(Dispatchers.IO) {
         val pm = context.packageManager
-        val launcherIntent = Intent(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_LAUNCHER)
-        }
-        val resolveInfos = try {
-            pm.queryIntentActivities(launcherIntent, 0)
+        val applicationInfos: List<ApplicationInfo> = try {
+            if (includeSystemApps) {
+                pm.getInstalledApplications(PackageManager.GET_META_DATA)
+            } else {
+                val launcherIntent = Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                }
+                val resolveInfos = pm.queryIntentActivities(launcherIntent, 0)
+                if (resolveInfos.isNotEmpty()) {
+                    resolveInfos.mapNotNull { it.activityInfo?.applicationInfo }
+                } else {
+                    pm.getInstalledApplications(PackageManager.GET_META_DATA)
+                        .filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 }
+                }
+            }
         } catch (_: Exception) {
-            emptyList()
+            runCatching { pm.getInstalledApplications(0) }.getOrDefault(emptyList())
         }
 
         val seenPackages = mutableSetOf<String>()
         val appList = mutableListOf<AppInfoItem>()
-        for (resolveInfo in resolveInfos) {
-            val activityInfo = resolveInfo.activityInfo ?: continue
-            val info = activityInfo.applicationInfo ?: continue
+        for (info in applicationInfos) {
             if (!seenPackages.add(info.packageName)) continue
 
             val isSystem = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0
@@ -120,6 +129,11 @@ class AppManagerHelper(private val context: Context) {
             val baseName = "${sanitizedName}_${app.packageName.replace('.', '_')}_v$sanitizedVersion"
             if (app.isSplitApk && app.splitApkFiles.isNotEmpty()) {
                 val allApks = listOf(app.apkFile) + app.splitApkFiles
+                for (apk in allApks) {
+                    if (!apk.exists() || !apk.canRead()) {
+                        throw java.io.FileNotFoundException("Required APK component not found or unreadable: ${apk.name}")
+                    }
+                }
                 val target = writeStaged(targetDir, baseName, "apks") { staging ->
                     ZipOutputStream(FileOutputStream(staging)).use { zos ->
                         val infoJson = org.json.JSONObject().apply {
@@ -137,9 +151,8 @@ class AppManagerHelper(private val context: Context) {
                         zos.closeEntry()
 
                         for (apk in allApks) {
-                            if (!apk.exists()) continue
                             zos.putNextEntry(ZipEntry(apk.name))
-                            FileInputStream(apk).use { it.copyTo(zos) }
+                            FileInputStream(apk).use { it.copyBounded(zos) }
                             zos.closeEntry()
                         }
                     }
@@ -147,10 +160,13 @@ class AppManagerHelper(private val context: Context) {
                 android.media.MediaScannerConnection.scanFile(context, arrayOf(target.absolutePath), null, null)
                 Result.success(target)
             } else {
+                if (!app.apkFile.exists() || !app.apkFile.canRead()) {
+                    throw java.io.FileNotFoundException("Required APK component not found or unreadable: ${app.apkFile.name}")
+                }
                 val target = writeStaged(targetDir, baseName, "apk") { staging ->
                     FileInputStream(app.apkFile).use { input ->
                         FileOutputStream(staging).use { output ->
-                            input.copyTo(output)
+                            input.copyBounded(output)
                         }
                     }
                 }

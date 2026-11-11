@@ -198,3 +198,21 @@ what's next; never hype.
 - `ui/files/FileThumbnail.kt` — `TypeTint` → desaturated format table.
 - Home wordmark + launcher icon + `res/` adaptive icons → the Seal + Fraunces wordmark.
 - Launch banner → this palette + wordmark + seal.
+
+---
+
+## 11. Material You on top of Ink & Seal (Hybrid Design Architecture)
+
+MyDoc marries Google's **Material You (Material 3 Expressive)** with the bespoke **Ink & Seal** design craft:
+
+- **Ink & Seal as the Foundation:**
+  - Warm bone canvas (`#F5F3EE`), warm near-white cards (`#FCFBF8`), and graphite darks (`#0F0E0C` / `#1A1815`) provide an editorial, book-like substrate that feels physical and timeless.
+  - Typographic hierarchy anchored by **Fraunces** display serif, **Inter** functional sans, and **JetBrains Mono** tabular metrics.
+  - Desaturated, letterpress format chips with WCAG AAA contrast ratios.
+
+- **Material You as the Expressive Dynamic Layer:**
+  - **Dynamic Theming (Monet):** When dynamic color is enabled, system color seeds cleanly tint the `AppColors.fromMaterialScheme` bridge while respecting warm luminance scales.
+  - **M3 Expressive Motion:** Fluid spring easing (`Spring.StiffnessMediumLow`) on bottom sheets, search overlays, and page turn gestures.
+  - **Pill Indicators & Floating Chrome:** Full support for Material 3 pill indicators, expressive fab morphing, and continuous squircle corners (`AppRadius.roundShape`).
+  - **Tactile Accessibility:** High-contrast focus boundaries, explicit touch targets (≥48dp), and complete screen-reader semantics for all interactive swatches and controls.
+

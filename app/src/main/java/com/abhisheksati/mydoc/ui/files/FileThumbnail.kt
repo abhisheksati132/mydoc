@@ -1,6 +1,7 @@
 package com.abhisheksati.mydoc.ui.files
 
 import com.abhisheksati.mydoc.util.DocumentIdentity
+import com.abhisheksati.mydoc.util.copyBounded
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -61,7 +62,11 @@ import com.abhisheksati.mydoc.domain.model.MediaKind
 import com.abhisheksati.mydoc.domain.model.StorageFileType
 import com.abhisheksati.mydoc.domain.model.StorageItem
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 
 fun getFileTypeIcon(type: StorageFileType): ImageVector = when (type) {
@@ -97,7 +102,7 @@ private val officePreviewExtensions: Set<String> = DocumentFormats.thumbnailExte
 // A grid of Word/Excel/Slide tiles would otherwise stampede the parsers on first paint;
 // one page of tiles is enough to keep the list feeling alive.
 private const val MAX_CONCURRENT_OFFICE_CONVERSIONS = 2
-private val officeConversionsInFlight = java.util.concurrent.atomic.AtomicInteger(0)
+private val officeThumbnailSemaphore = Semaphore(MAX_CONCURRENT_OFFICE_CONVERSIONS)
 
 private object TypeTint {
     val pdf = Color(0xFF8C3B34)      // brick
@@ -403,17 +408,11 @@ private fun OfficeThumbnail(
 private suspend fun loadOfficeThumbnail(key: String, convert: suspend () -> File?): ImageBitmap? =
     withContext(Dispatchers.IO) {
         pdfThumbnailCache.get(key)?.let { return@withContext it }
-        while (officeConversionsInFlight.get() >= MAX_CONCURRENT_OFFICE_CONVERSIONS) {
-            kotlinx.coroutines.delay(80)
-        }
-        officeConversionsInFlight.incrementAndGet()
-        try {
+        officeThumbnailSemaphore.withPermit {
             if (pdfThumbnailCache.get(key) != null) return@withContext pdfThumbnailCache.get(key)
             val pdf = runCatching { convert() }.getOrNull() ?: return@withContext null
             val bitmap = renderFirstPage(pdf) ?: return@withContext null
             bitmap.asImageBitmap().also { pdfThumbnailCache.put(key, it) }
-        } finally {
-            officeConversionsInFlight.decrementAndGet()
         }
     }
 
@@ -538,12 +537,9 @@ private fun findLibraryPdf(context: Context, item: LibraryItem): File? {
         ?: return null
     val tmp = File(dir, "$key.${java.util.UUID.randomUUID()}.tmp")
     val ok = runCatching {
-        stream.use { input -> tmp.outputStream().use { input.copyTo(it) } }
+        stream.use { input -> tmp.outputStream().use { input.copyBounded(it, maxBytes = MAX_THUMBNAIL_COPY_BYTES) } }
         if (tmp.exists() && tmp.length() > 0L) {
-            if (!tmp.renameTo(target)) {
-                tmp.copyTo(target, overwrite = true)
-                tmp.delete()
-            }
+            Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
             true
         } else {
             tmp.delete()

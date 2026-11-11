@@ -345,6 +345,7 @@ fun PhotoViewerScreen(
                             items(photoList.size) { idx ->
                                 val p = photoList[idx]
                                 val isSelected = idx == pagerState.currentPage
+                                val photoLabel = p.displayName.ifBlank { "Photo ${idx + 1}" }
                                 Surface(
                                     shape = AppRadius.cardShape,
                                     border = if (isSelected) BorderStroke(2.dp, colors.accent) else null,
@@ -352,7 +353,7 @@ fun PhotoViewerScreen(
                                     modifier = Modifier
                                         .size(46.dp)
                                         .clip(AppRadius.cardShape)
-                                        .clickable {
+                                        .clickable(onClickLabel = photoLabel) {
                                             coroutineScope.launch {
                                                 pagerState.animateScrollToPage(idx)
                                             }
@@ -363,7 +364,7 @@ fun PhotoViewerScreen(
                                             .data(p.uri)
                                             .crossfade(true)
                                             .build(),
-                                        contentDescription = null,
+                                        contentDescription = photoLabel,
                                         contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                                         modifier = Modifier.fillMaxSize()
                                     )

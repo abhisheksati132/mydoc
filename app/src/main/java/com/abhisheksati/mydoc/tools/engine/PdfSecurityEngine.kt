@@ -221,6 +221,26 @@ class PdfSecurityEngine(private val context: Context) {
 
             val outFile = PdfToolUtils.createTempOutputFile(context.cacheDir, "redacted", "pdf")
             srcDoc.save(outFile.absolutePath, "compress,clean,garbage=4")
+
+            // Verify that the redacted text has been permanently purged and does not remain in output
+            val verifiedDoc = Document.openDocument(outFile.absolutePath)
+            try {
+                for (p in 0 until verifiedDoc.countPages()) {
+                    val page = verifiedDoc.loadPage(p)
+                    try {
+                        val remainingQuads = page.search(query)
+                        if (remainingQuads != null && remainingQuads.isNotEmpty()) {
+                            outFile.delete()
+                            throw IllegalStateException("Redaction verification failed: instances of \"$query\" still remain in the document.")
+                        }
+                    } finally {
+                        page.destroy()
+                    }
+                }
+            } finally {
+                verifiedDoc.destroy()
+            }
+
             return outFile
         } finally {
             srcDoc.destroy()

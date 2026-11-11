@@ -1,7 +1,7 @@
 # Document Engine Architecture & Engineering Plan
 
 > **Project Target:** `mydoc` (`com.abhisheksati.mydoc`)  
-> **Current Version:** 2.0.3 (minSdk 26, targetSdk 35)  
+> **Current Version:** 2.0.4 (minSdk 26, targetSdk 35)  
 > **Core Engine:** Artifex MuPDF Fitz 1.28.5 (16KB aligned) & LibreOfficeKit 26.2.6.3 companion module  
 > **Focus:** High-fidelity document rendering, memory-safe sub-pixel viewport tiling, untrusted-input hardening, and on-device privacy.
 

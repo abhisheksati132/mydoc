@@ -1,6 +1,6 @@
 # Quick preview
 
-Added 2026-11-08, unreleased.
+Shipped in v2.0.0.
 
 In an explorer list or grid, open a file or folder action menu and choose **Quick preview**. The sheet shows a large thumbnail, full selectable name and location, format, size or folder count, and modification date. It uses MyDoc’s existing typography, tonal surfaces and thumbnail renderer.
 

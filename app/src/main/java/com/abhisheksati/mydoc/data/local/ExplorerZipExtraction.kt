@@ -164,20 +164,25 @@ class ExplorerZipExtraction(
     }
 
     private suspend fun cachedBytes(root: File): Long {
+        if (!root.exists()) return 0L
         var bytes = 0L
         var visited = 0
-        Files.walk(root.toPath()).use { paths ->
-            val iterator = paths.iterator()
-            while (iterator.hasNext()) {
-                currentCoroutineContext().ensureActive()
-                val path = iterator.next()
-                if (++visited > 10_000 || Files.isSymbolicLink(path)) throw ZipPreviewCacheFull()
-                if (Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
-                    val size = Files.size(path)
-                    if (size > previewCacheBytes - bytes) throw ZipPreviewCacheFull()
-                    bytes += size
+        try {
+            Files.walk(root.toPath()).use { paths ->
+                val iterator = paths.iterator()
+                while (iterator.hasNext()) {
+                    currentCoroutineContext().ensureActive()
+                    val path = iterator.next()
+                    if (++visited > 10_000 || Files.isSymbolicLink(path)) break
+                    if (Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
+                        val size = runCatching { Files.size(path) }.getOrDefault(0L)
+                        bytes += size
+                    }
                 }
             }
+        } catch (_: Throwable) {
+            // Fall back to standard file walk if Files.walk encounters an IO failure
+            bytes = root.walkBottomUp().filter { it.isFile && !Files.isSymbolicLink(it.toPath()) }.sumOf { it.length() }
         }
         return bytes
     }

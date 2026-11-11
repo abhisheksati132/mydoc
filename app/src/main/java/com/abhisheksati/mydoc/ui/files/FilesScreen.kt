@@ -184,11 +184,8 @@ fun FilesPaneScreen(
         if (granted) {
             viewModel.refreshVolumes()
             storageViewModel.refresh()
-            if (viewModel.uiState.value.isBrowsingStorage) {
-                viewModel.loadDirectory(
-                    viewModel.uiState.value.currentDirectory,
-                    addToHistory = false
-                )
+            if (viewModel.uiState.value.isBrowsingStorage || viewModel.uiState.value.activeCategory != null) {
+                viewModel.reloadCurrentSource()
             }
         }
     }
@@ -202,11 +199,8 @@ fun FilesPaneScreen(
                     if (granted) {
                         viewModel.refreshVolumes()
                         storageViewModel.refresh()
-                        if (viewModel.uiState.value.isBrowsingStorage) {
-                            viewModel.loadDirectory(
-                                viewModel.uiState.value.currentDirectory,
-                                addToHistory = false
-                            )
+                        if (viewModel.uiState.value.isBrowsingStorage || viewModel.uiState.value.activeCategory != null) {
+                            viewModel.reloadCurrentSource()
                         }
                     }
                 }
@@ -780,15 +774,17 @@ private fun FilesHeader(
                             onToggleHidden()
                         }
                     )
-                    HorizontalDivider()
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_new_folder)) },
-                        leadingIcon = { Icon(Icons.Outlined.CreateNewFolder, contentDescription = null) },
-                        onClick = {
-                            menuOpen = false
-                            onNewFolder()
-                        }
-                    )
+                    if (uiState.isBrowsingStorage && uiState.activeCategory == null) {
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_new_folder)) },
+                            leadingIcon = { Icon(Icons.Outlined.CreateNewFolder, contentDescription = null) },
+                            onClick = {
+                                menuOpen = false
+                                onNewFolder()
+                            }
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_new_file)) },
                         leadingIcon = { Icon(Icons.AutoMirrored.Outlined.NoteAdd, contentDescription = null) },

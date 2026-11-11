@@ -179,12 +179,13 @@ class StorageCleanerManager {
                     }
 
                     // Temp / junk files (exclude active/download files)
-                    if (!isDownload && (ext in TEMP_EXTENSIONS || entry.name.startsWith(".~") || entry.name.endsWith(".tmp", ignoreCase = true))) {
+                    val isTemp = !isDownload && (ext in TEMP_EXTENSIONS || entry.name.startsWith(".~") || entry.name.endsWith(".tmp", ignoreCase = true))
+                    if (isTemp) {
                         tempFiles.add(entry)
                     }
 
-                    // Potential duplicate candidate (files between 4KB and 500MB, never active downloads)
-                    if (!isDownload && length in 4096..(500L * 1024 * 1024)) {
+                    // Potential duplicate candidate (files between 4KB and 500MB, never active downloads or temp files)
+                    if (!isDownload && !isTemp && length in 4096..(500L * 1024 * 1024)) {
                         val list = sizeCandidates.getOrPut(length) { mutableListOf() }
                         list.add(entry)
                     }

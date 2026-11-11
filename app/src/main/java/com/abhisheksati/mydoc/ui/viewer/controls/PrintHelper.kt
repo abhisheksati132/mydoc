@@ -11,6 +11,7 @@ import android.print.PrintDocumentAdapter
 import android.print.PrintDocumentInfo
 import android.print.PrintManager
 import com.abhisheksati.mydoc.domain.model.DocumentFile
+import com.abhisheksati.mydoc.util.copyBounded
 import java.io.FileOutputStream
 
 object PrintHelper {
@@ -65,10 +66,19 @@ object PrintHelper {
 
                     try {
                         val uri = Uri.parse(document.uri)
-                        com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri)?.use { input ->
+                        val stream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri)
+                        if (stream == null) {
+                            callback?.onWriteFailed("Unable to read document stream for printing")
+                            return
+                        }
+                        stream.use { input ->
                             FileOutputStream(destination.fileDescriptor).use { output ->
-                                input.copyTo(output)
+                                input.copyBounded(output)
                             }
+                        }
+                        if (cancellationSignal?.isCanceled == true) {
+                            callback?.onWriteCancelled()
+                            return
                         }
                         callback?.onWriteFinished(arrayOf(PageRange.ALL_PAGES))
                     } catch (e: Exception) {

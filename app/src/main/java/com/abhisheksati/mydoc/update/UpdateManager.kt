@@ -40,11 +40,14 @@ class UpdateManager(
             BuildConfig.VERSION_NAME
         }
 
-    fun cleanUpdatesCache() {
+    fun cleanUpdatesCache(preserveActive: Boolean = false) {
         val updatesDir = File(context.cacheDir, "updates")
         if (updatesDir.exists()) {
+            val activeApk = (_state.value as? UpdateUiState.ReadyToInstall)?.apkFile
             updatesDir.listFiles()?.forEach { file ->
-                runCatching { file.delete() }
+                if (!preserveActive || file.absolutePath != activeApk?.absolutePath) {
+                    runCatching { file.delete() }
+                }
             }
         }
     }
@@ -123,7 +126,7 @@ class UpdateManager(
             _state.value = UpdateUiState.Downloading(0, 0, release.apkSizeBytes)
 
             // Delete old APK files before attempt
-            cleanUpdatesCache()
+            cleanUpdatesCache(preserveActive = false)
 
             val targetName = "mydoc-v${release.versionName}.apk"
             val onProgress: (Long, Long) -> Unit = { downloaded, total ->
@@ -146,15 +149,18 @@ class UpdateManager(
                     runCatching {
                         installerHelper.installApk(file)
                     }.onFailure { ex ->
-                        cleanUpdatesCache()
+                        cleanUpdatesCache(preserveActive = false)
                         _state.value = UpdateUiState.Error("The download could not be verified, so it was not installed.")
                     }
                 }
             }.onFailure { err ->
                 if (err is kotlinx.coroutines.CancellationException) throw err
-                cleanUpdatesCache()
+                cleanUpdatesCache(preserveActive = false)
                 _state.value = UpdateUiState.Error("The download failed. Check your connection and try again.")
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            _state.value = UpdateUiState.Idle
+            throw e
         } finally {
             operation.unlock()
         }
@@ -163,7 +169,7 @@ class UpdateManager(
     fun install(apkFile: File) {
         runCatching { installerHelper.installApk(apkFile) }
             .onFailure { ex ->
-                cleanUpdatesCache()
+                cleanUpdatesCache(preserveActive = false)
                 _state.value = UpdateUiState.Error("The download could not be verified, so it was not installed.")
             }
     }

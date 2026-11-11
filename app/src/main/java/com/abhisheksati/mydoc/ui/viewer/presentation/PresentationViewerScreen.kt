@@ -2,12 +2,17 @@ package com.abhisheksati.mydoc.ui.viewer.presentation
 
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
+import com.abhisheksati.mydoc.domain.model.RenderFidelity
+import com.abhisheksati.mydoc.ui.viewer.FidelityNotice
+import com.abhisheksati.mydoc.ui.viewer.fidelityDisclosureFor
+import com.abhisheksati.mydoc.util.copyBounded
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -115,7 +120,7 @@ fun openPresentationInOfficeApp(context: Context, document: DocumentFile) {
             ?: return
         stream.use { input ->
             targetFile.outputStream().use { output ->
-                input.copyTo(output)
+                input.copyBounded(output)
             }
         }
 
@@ -278,6 +283,11 @@ fun PresentationViewerScreen(
             if (isContinuousVertical) lazyListState.firstVisibleItemIndex.coerceIn(0, (effectiveSlideCount - 1).coerceAtLeast(0))
             else pagerState.currentPage
         }
+    }
+
+    val presentationFidelity = if (presentationData?.recovered == true) RenderFidelity.RECOVERED_SCRAPE else null
+    val fidelityDisclosure = remember(document.extension, presentationFidelity) {
+        fidelityDisclosureFor(document.extension, presentationFidelity)
     }
 
     // Smart Resume: Restore last viewed slide on open
@@ -644,20 +654,20 @@ fun PresentationViewerScreen(
                                     }
                                 )
                             }
-                            .pointerInput(Unit) {
-                                detectTransformGestures { _, pan, zoom, _ ->
-                                    zoomScale = (zoomScale * zoom).coerceIn(1f, 5f)
+                            .transformable(
+                                state = rememberTransformableState { zoomChange, panChange, _ ->
+                                    zoomScale = (zoomScale * zoomChange).coerceIn(1f, 5f)
                                     if (zoomScale > 1f) {
                                         val maxPan = 500f * (zoomScale - 1f)
                                         panOffset = Offset(
-                                            x = (panOffset.x + pan.x).coerceIn(-maxPan, maxPan),
-                                            y = (panOffset.y + pan.y).coerceIn(-maxPan, maxPan)
+                                            x = (panOffset.x + panChange.x).coerceIn(-maxPan, maxPan),
+                                            y = (panOffset.y + panChange.y).coerceIn(-maxPan, maxPan)
                                         )
                                     } else {
                                         panOffset = Offset.Zero
                                     }
                                 }
-                            }
+                            )
                             .graphicsLayer {
                                 scaleX = zoomScale
                                 scaleY = zoomScale
@@ -737,6 +747,15 @@ fun PresentationViewerScreen(
                 notes = effectiveSlides.getOrNull(currentSlideIndex)?.notes ?: "",
                 onDismiss = { isNotesSheetOpen = false }
             )
+
+            if (!isSlideshowMode && fidelityDisclosure != null) {
+                FidelityNotice(
+                    disclosure = fidelityDisclosure,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(AppSpacing.paddingSmall)
+                )
+            }
         }
     }
 }

@@ -171,7 +171,7 @@ fun VideoPlayerScreen(
     var scrubPositionMs by remember { mutableStateOf<Long?>(null) }
     var totalDurationMs by remember { mutableLongStateOf(item.durationMs) }
     var areControlsVisible by remember { mutableStateOf(true) }
-    var volumeAccumulator by remember { mutableFloatStateOf(0f) }
+    var initialDragVolume by remember { mutableIntStateOf(0) }
     var isLooping by remember { mutableStateOf(autoLoop) }
     var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
     var resizeModeIndex by remember { mutableIntStateOf(0) }
@@ -458,9 +458,11 @@ fun VideoPlayerScreen(
             .pointerInput(isScreenLocked) {
                 var totalDragY = 0f
                 detectDragGestures(
-                    onDragStart = { totalDragY = 0f },
+                    onDragStart = {
+                        totalDragY = 0f
+                        initialDragVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                    },
                     onDragEnd = {
-                        volumeAccumulator = 0f
                         scope.launch {
                             delay(600)
                             gestureOverlayText = null
@@ -487,17 +489,17 @@ fun VideoPlayerScreen(
                                     gestureOverlayText = "${(newBrightness * 100).toInt()}%"
                                     gestureOverlayIcon = Icons.Default.BrightnessMedium
                                 } else {
-                                    // Volume control
-                                    volumeAccumulator += -dragAmount.y / (size.height * 0.5f)
-                                    val steps = (volumeAccumulator * maxSystemVolume).toInt()
-                                    if (steps != 0) {
-                                        val currentVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                                        val newVol = (currentVol + steps).coerceIn(0, maxSystemVolume)
+                                    // Volume control: calculate absolute volume relative to drag start
+                                    val effectiveDragY = totalDragY - (if (totalDragY > 0f) 20f else -20f)
+                                    val deltaFraction = -effectiveDragY / (size.height * 0.5f)
+                                    val newVol = (initialDragVolume + kotlin.math.round(deltaFraction * maxSystemVolume).toInt())
+                                        .coerceIn(0, maxSystemVolume)
+                                    val currentVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                                    if (newVol != currentVol) {
                                         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
-                                        volumeAccumulator -= steps.toFloat() / maxSystemVolume
-                                        gestureOverlayText = "${((newVol.toFloat() / maxSystemVolume) * 100).toInt()}%"
-                                        gestureOverlayIcon = Icons.AutoMirrored.Filled.VolumeUp
                                     }
+                                    gestureOverlayText = "${((newVol.toFloat() / maxSystemVolume) * 100).toInt()}%"
+                                    gestureOverlayIcon = Icons.AutoMirrored.Filled.VolumeUp
                                 }
                             }
                         }

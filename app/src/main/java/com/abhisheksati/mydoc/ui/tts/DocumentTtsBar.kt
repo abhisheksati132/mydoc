@@ -201,6 +201,14 @@ fun DocumentTtsBar(
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.tts_engine_notice),
+                    style = typography.micro,
+                    color = colors.textSecondary.copy(alpha = 0.7f),
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
             }
         }
     }

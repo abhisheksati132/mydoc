@@ -151,6 +151,7 @@ fun CameraScanSheet(
         }
 
         val context = LocalContext.current
+        val resources = androidx.compose.ui.platform.LocalResources.current
         val lifecycleOwner = LocalLifecycleOwner.current
         val haptics = rememberAppHaptics()
         val haptic = rememberGatedHaptics()
@@ -178,7 +179,7 @@ fun CameraScanSheet(
         ) { granted ->
             hasCameraPermission = granted
             if (!granted) {
-                context.showMessage("Camera permission is required to scan documents.")
+                context.showMessage(resources.getString(R.string.scan_permission_required))
                 onDismiss()
             }
         }
@@ -247,7 +248,7 @@ fun CameraScanSheet(
                                 val f = capturedFiles[pageIdx]
                                 capturedFiles.removeAt(pageIdx)
                                 capturedFiles.add(pageIdx, f)
-                                context.showMessage("Page ${pageIdx + 1} deskewed & cropped.")
+                                context.showMessage(resources.getString(R.string.scan_page_deskewed_cropped, pageIdx + 1))
                             }
                         } catch (e: Exception) {
                             withContext(Dispatchers.Main) {
@@ -346,7 +347,7 @@ fun CameraScanSheet(
                             )
                             cameraControl = camera.cameraControl
                         } catch (e: Exception) {
-                            ctx.showMessage("The camera could not be started. Check that MyDoc has camera permission.")
+                            ctx.showMessage(ctx.getString(R.string.scan_camera_start_failed))
                         }
                     }, ContextCompat.getMainExecutor(ctx))
 
@@ -773,7 +774,7 @@ fun CameraScanSheet(
 
                                             override fun onError(exception: ImageCaptureException) {
                                                 isCapturing = false
-                                                context.showMessage("The photo could not be captured.")
+                                                context.showMessage(resources.getString(R.string.scan_photo_capture_failed))
                                             }
                                         }
                                     )
@@ -853,7 +854,7 @@ fun CameraScanSheet(
                                                     }
                                                     withContext(Dispatchers.Main) {
                                                         isApplyingFilterAndSaving = false
-                                                        context.showMessage("Filter could not be applied. Original scans retained.")
+                                                        context.showMessage(resources.getString(R.string.scan_filter_failed))
                                                     }
                                                 }
                                             }

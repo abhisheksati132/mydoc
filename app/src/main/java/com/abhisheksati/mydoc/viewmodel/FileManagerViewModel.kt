@@ -223,24 +223,40 @@ class FileManagerViewModel(
                 )
             }
 
-            val items = storageRepository.listDirectory(
-                directory = directory,
-                showHidden = _uiState.value.showHiddenFiles,
-                sortOrder = _uiState.value.sortOrder
-            )
-
-            if (generation != listRequestGeneration) return@launch
-            val state = _uiState.value
-            val sorted = withContext(ioDispatcher) { sortSearchResults(items, state.sortOrder) }
-            if (generation != listRequestGeneration) return@launch
-
-            _uiState.update {
-                it.copy(
-                    items = sorted,
-                    filteredItems = visibleItems(sorted, it),
-                    isLoading = false,
-                    isRefreshing = false
+            try {
+                val items = storageRepository.listDirectory(
+                    directory = directory,
+                    showHidden = _uiState.value.showHiddenFiles,
+                    sortOrder = _uiState.value.sortOrder
                 )
+
+                if (generation != listRequestGeneration) return@launch
+                val state = _uiState.value
+                val sorted = withContext(ioDispatcher) { sortSearchResults(items, state.sortOrder) }
+                if (generation != listRequestGeneration) return@launch
+
+                _uiState.update {
+                    it.copy(
+                        items = sorted,
+                        filteredItems = visibleItems(sorted, it),
+                        isLoading = false,
+                        isRefreshing = false
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (generation == listRequestGeneration) {
+                    _uiState.update {
+                        it.copy(
+                            items = emptyList(),
+                            filteredItems = emptyList(),
+                            isLoading = false,
+                            isRefreshing = false,
+                            userMessage = UserMessages.actionFailed(R.string.action_open, e, directory.name)
+                        )
+                    }
+                }
             }
         }
     }
@@ -661,6 +677,8 @@ class FileManagerViewModel(
                 refreshVolumes()
             }.onFailure { err ->
                 _uiState.update { it.copy(userMessage = UserMessages.actionFailed(R.string.fm_verb_move_trash, err)) }
+                reloadCurrentSource()
+                refreshVolumes()
             }
         }
     }
@@ -681,6 +699,9 @@ class FileManagerViewModel(
                 onComplete?.invoke()
             }.onFailure { err ->
                 _uiState.update { it.copy(userMessage = UserMessages.actionFailed(R.string.photo_move_to_bin_title, err)) }
+                reloadCurrentSource()
+                refreshVolumes()
+                onComplete?.invoke()
             }
         }
     }
@@ -806,6 +827,7 @@ class FileManagerViewModel(
         advancedSearchJob?.cancel()
         _uiState.update { it.copy(advancedSearch = null, searchIncomplete = false) }
         if (category == null) {
+            ++listRequestGeneration
             _uiState.update { it.copy(activeCategory = null, imageFolder = null, canGoBack = _uiState.value.isBrowsingStorage) }
             if (_uiState.value.isBrowsingStorage) {
                 loadDirectory(_uiState.value.currentDirectory, addToHistory = false)
@@ -1031,7 +1053,7 @@ class FileManagerViewModel(
      * `loadDirectory` unconditionally, which drops the active category and leaves the reader in a
      * folder they had not opened.
      */
-    private fun reloadCurrentSource() {
+    fun reloadCurrentSource() {
         _uiState.value.advancedSearch?.let { searchAdvanced(it); return }
         val category = _uiState.value.activeCategory
         if (category != null) {

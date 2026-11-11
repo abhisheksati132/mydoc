@@ -58,12 +58,14 @@ internal object NativeWordCore {
         engine.setOptionalFeatures(org.libreoffice.kit.Document.LOK_FEATURE_DOCUMENT_PASSWORD)
         engine.setMessageCallback { signal, requestedUrl ->
             if (signal == org.libreoffice.kit.Document.CALLBACK_DOCUMENT_PASSWORD) {
-                val isTarget = requestedUrl != null && (
-                    requestedUrl == url ||
-                    requestedUrl.trimEnd('/') == url.trimEnd('/') ||
-                    requestedUrl == source.absolutePath ||
-                    requestedUrl.endsWith(source.name)
-                )
+                val targetUri = Uri.fromFile(source)
+                val isTarget = requestedUrl != null && runCatching {
+                    val req = requestedUrl.trimEnd('/')
+                    req == url.trimEnd('/') ||
+                    req == source.absolutePath.trimEnd('/') ||
+                    req == targetUri.toString().trimEnd('/') ||
+                    (req.startsWith("file://") && Uri.parse(req).path == source.absolutePath)
+                }.getOrDefault(false)
                 val response = if (isTarget) {
                     passwordNeeded.set(true)
                     if (password != null && submitted.compareAndSet(false, true)) password else null

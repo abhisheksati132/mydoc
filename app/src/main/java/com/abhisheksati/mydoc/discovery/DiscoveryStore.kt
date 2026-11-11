@@ -21,7 +21,7 @@ internal fun normalizedTags(value: String): List<String> = value.split(',').map 
     .filter { it.isNotBlank() }.distinct().take(20)
 
 /** Separate, private, rebuildable index. Existing reading history and Room migrations stay intact. */
-class DiscoveryStore private constructor(context: Context) : SQLiteOpenHelper(context, "discovery.db", null, 1) {
+class DiscoveryStore internal constructor(context: Context, dbName: String = "discovery.db") : SQLiteOpenHelper(context, dbName, null, 1) {
     val revision = MutableStateFlow(0L)
     private val lock = Mutex()
     override fun onCreate(db: SQLiteDatabase) {
@@ -70,9 +70,23 @@ class DiscoveryStore private constructor(context: Context) : SQLiteOpenHelper(co
     }
     suspend fun clear() = access { db ->
         db.beginTransaction()
-        try { for (table in listOf("pages","tags","files")) db.delete(table,null,null);db.setTransactionSuccessful() }
+        try { for (table in listOf("pages","tags","files","folders")) runCatching { db.delete(table,null,null) };db.setTransactionSuccessful() }
         finally { db.endTransaction() }
         revision.value++
+    }
+    suspend fun addFolder(uri: String) = access { db ->
+        db.execSQL("CREATE TABLE IF NOT EXISTS folders(uri TEXT PRIMARY KEY NOT NULL)")
+        val v = ContentValues().apply { put("uri", uri) }
+        db.insertWithOnConflict("folders", null, v, SQLiteDatabase.CONFLICT_IGNORE)
+        revision.value++
+    }
+    suspend fun folders(): List<String> = access { db ->
+        db.execSQL("CREATE TABLE IF NOT EXISTS folders(uri TEXT PRIMARY KEY NOT NULL)")
+        buildList {
+            db.rawQuery("SELECT uri FROM folders", null).use { c ->
+                while (c.moveToNext()) add(c.getString(0))
+            }
+        }
     }
     suspend fun saveCollection(rule: SmartCollection) = access { db ->
         require(rule.name.isNotBlank() && rule.name.length<=60)
@@ -122,9 +136,13 @@ class DiscoveryStore private constructor(context: Context) : SQLiteOpenHelper(co
         found.values.toList()
     }
     companion object {
-        @Volatile private var instance: DiscoveryStore?=null
+        @Volatile private var instance: DiscoveryStore? = null
         fun get(context: Context): DiscoveryStore = instance ?: synchronized(this) {
-            instance ?: DiscoveryStore(context.applicationContext).also { instance=it }
+            instance ?: DiscoveryStore(context.applicationContext).also { instance = it }
         }
+
+        /** Creates an isolated instance for tests to protect production user data. */
+        fun forTesting(context: Context, dbName: String = "discovery_test.db"): DiscoveryStore =
+            DiscoveryStore(context.applicationContext, dbName)
     }
 }

@@ -1,6 +1,7 @@
 package com.abhisheksati.mydoc.data.repository
 
 import com.abhisheksati.mydoc.util.DocumentIdentity
+import com.abhisheksati.mydoc.util.copyBounded
 import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
@@ -235,7 +236,7 @@ class DocumentRepositoryImpl(
                         val copySuccess = runCatching {
                             com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri)?.use { input ->
                                 tmpFile.outputStream().use { output ->
-                                    input.copyTo(output)
+                                    input.copyBounded(output)
                                 }
                             }
                         }.isSuccess

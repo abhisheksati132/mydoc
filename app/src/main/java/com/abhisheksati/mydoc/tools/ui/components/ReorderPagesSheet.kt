@@ -3,6 +3,7 @@ package com.abhisheksati.mydoc.tools.ui.components
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.runBlocking
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.foundation.Image
@@ -113,15 +114,19 @@ fun ReorderPagesSheet(
             onDispose {
                 val docToDestroy = sourceDocument
                 val tempToDelete = sourceTempFile
+                val bitmaps = thumbnailCache.values.toList()
                 sourceDocument = null
                 sourceTempFile = null
                 thumbnailCache.clear()
+                bitmaps.forEach { runCatching { if (!it.isRecycled) it.recycle() } }
                 // Safely destroy native document under thumbnailMutex off the Main thread
                 // so no in-flight thumbnail render touches a destroyed native pointer.
-                CoroutineScope(Dispatchers.IO).launch {
-                    thumbnailMutex.withLock {
-                        try { docToDestroy?.destroy() } catch (_: Exception) {}
-                        try { tempToDelete?.delete() } catch (_: Exception) {}
+                java.util.concurrent.ForkJoinPool.commonPool().execute {
+                    runBlocking {
+                        thumbnailMutex.withLock {
+                            try { docToDestroy?.destroy() } catch (_: Exception) {}
+                            try { tempToDelete?.delete() } catch (_: Exception) {}
+                        }
                     }
                 }
             }
@@ -483,7 +488,7 @@ fun ReorderPagesSheet(
                 ) {
                     Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.action_apply_save))
+                    Text(stringResource(R.string.action_apply_order))
                 }
             }
         }

@@ -82,7 +82,12 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
         }
     }
     val pick=rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { index(it,false) }
-    val folder=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { it?.let { uri->index(listOf(uri),true) } }
+    val folder=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) {
+        it?.let { uri ->
+            scope.launch { store.addFolder(uri.toString()) }
+            index(listOf(uri), true)
+        }
+    }
     val relink=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         val old=relinkTarget
         if(uri!=null && old!=null && !working) {
@@ -103,15 +108,24 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
         }
     }
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
-        AppTopBar(title="Contents & collections",onBack=onBack,isGlass=false)
-        Text("Search snapshots stay on this device. Up to 1,000 selected files; 200 pages / 200,000 characters per document. Locked files and image-only scans are not text-indexed.",Modifier.padding(horizontal=16.dp),style=MaterialTheme.typography.bodySmall)
+        AppTopBar(title=stringResource(R.string.discovery_title),onBack=onBack,isGlass=false)
+        Text(stringResource(R.string.discovery_snapshots_disclaimer),Modifier.padding(horizontal=16.dp),style=MaterialTheme.typography.bodySmall)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal=8.dp)) {
             TextButton(onClick={pick.launch(arrayOf("*/*"))},enabled=!working) { Text(stringResource(R.string.discovery_add_files)) }
             TextButton(onClick={folder.launch(null)},enabled=!working) { Text(stringResource(R.string.discovery_add_folder)) }
             TextButton(onClick={
                 working=true
                 job=scope.launch {
-                    try { DocumentIndexer(app,store).selected(store.files().map { Uri.parse(it.uri) },false) { status->scope.launch { message=status } } }
+                    try {
+                        val folderUris = store.folders().map { Uri.parse(it) }
+                        val fileUris = store.files().map { Uri.parse(it.uri) }
+                        if (folderUris.isNotEmpty()) {
+                            DocumentIndexer(app,store).selected(folderUris, true) { status -> scope.launch { message = status } }
+                        }
+                        if (fileUris.isNotEmpty()) {
+                            DocumentIndexer(app,store).selected(fileUris, false) { status -> scope.launch { message = status } }
+                        }
+                    }
                     catch(e: CancellationException) { throw e }
                     catch(e: Exception) { message="Refresh failed: ${e.message}" }
                     finally { working=false }
@@ -135,17 +149,17 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
             },label={Text(rule.name)},modifier=Modifier.padding(horizontal=4.dp))
         }
         if(collectionName.isNotEmpty()) TextButton(onClick={mutate { store.deleteCollection(collectionName);collectionName="" }}) { Text(stringResource(R.string.discovery_delete_collection, collectionName)) }
-        Text("${results.size} results • refresh after changing or moving files",Modifier.padding(horizontal=16.dp,vertical=4.dp),style=MaterialTheme.typography.labelMedium)
+        Text(stringResource(R.string.discovery_results_count, results.size),Modifier.padding(horizontal=16.dp,vertical=4.dp),style=MaterialTheme.typography.labelMedium)
         LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            if(results.isEmpty()) item { Text("No matching files. Add documents, refresh the index, or clear the filters.",Modifier.padding(16.dp)) }
+            if(results.isEmpty()) item { Text(stringResource(R.string.discovery_no_matching_files),Modifier.padding(16.dp)) }
             items(results,key={it.uri}) { file ->
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(12.dp)) {
                         Text(file.name,style=MaterialTheme.typography.titleSmall)
                         Text(file.uri,maxLines=2,style=MaterialTheme.typography.bodySmall)
-                        if(file.snippet.isNotEmpty()) Text("Page ${file.page+1}: ${file.snippet}",Modifier.padding(vertical=6.dp))
+                        if(file.snippet.isNotEmpty()) Text(stringResource(R.string.discovery_snippet_page, file.page+1, file.snippet),Modifier.padding(vertical=6.dp))
                         Text("${file.status} • snapshot ${java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT,java.text.DateFormat.SHORT).format(java.util.Date(file.indexedAt))}",style=MaterialTheme.typography.bodySmall)
-                        if(file.tags.isNotEmpty()) Text("Tags: ${file.tags}",style=MaterialTheme.typography.labelMedium)
+                        if(file.tags.isNotEmpty()) Text(stringResource(R.string.discovery_tags_prefix, file.tags),style=MaterialTheme.typography.labelMedium)
                         androidx.compose.foundation.layout.FlowRow {
                             TextButton(onClick={scope.launch {
                                 try {

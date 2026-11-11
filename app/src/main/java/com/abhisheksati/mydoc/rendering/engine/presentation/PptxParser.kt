@@ -61,6 +61,7 @@ class PptxParser {
         val isOle2 = bytes.size >= 8 &&
             bytes[0] == 0xD0.toByte() && bytes[1] == 0xCF.toByte() &&
             bytes[2] == 0x11.toByte() && bytes[3] == 0xE0.toByte() // D0 CF 11 E0
+        val isXml = bytes.size >= 5 && (bytes[0] == '<'.code.toByte() || (bytes[0] == 0xEF.toByte() && bytes[1] == 0xBB.toByte() && bytes[2] == 0xBF.toByte()))
 
         if (isZip) {
             // 1. Try ODP parser (OpenDocument Presentation)
@@ -73,6 +74,17 @@ class PptxParser {
             val pres = parsePptxZip(bytes, cacheDir)
             if (pres.slides.isNotEmpty()) {
                 return@withContext pres
+            }
+        }
+
+        if (isXml) {
+            // Try flat XML OpenDocument presentation (.fodp)
+            val head = String(bytes.copyOf(minOf(bytes.size, 1024)), Charsets.UTF_8)
+            if (head.contains("office:document") || head.contains("draw:page") || head.contains("office:presentation")) {
+                val fodpPres = parseOdpContentXml(bytes, emptyMap())
+                if (!fodpPres.isEmpty) {
+                    return@withContext fodpPres
+                }
             }
         }
 
@@ -2691,7 +2703,7 @@ class PptxParser {
             }
         }
 
-        return PptxPresentation(slides = slides, aspectRatio = 4f / 3f)
+        return PptxPresentation(slides = slides, aspectRatio = 4f / 3f, recovered = true)
     }
 
     private fun extractReadableStrings(bytes: ByteArray): List<String> {

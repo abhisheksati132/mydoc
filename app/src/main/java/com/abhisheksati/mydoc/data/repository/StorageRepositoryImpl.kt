@@ -171,11 +171,15 @@ class StorageRepositoryImpl(
         showHidden: Boolean,
         sortOrder: FileSortOrder
     ): List<StorageItem> = withContext(Dispatchers.IO) {
-        if (!directory.exists() || !directory.isDirectory) {
-            return@withContext emptyList()
+        if (!directory.exists()) {
+            throw java.io.FileNotFoundException("Directory not found: ${directory.name}")
+        }
+        if (!directory.isDirectory) {
+            throw java.io.IOException("Not a directory: ${directory.name}")
         }
 
-        val rawFiles = directory.listFiles() ?: return@withContext emptyList()
+        val rawFiles = directory.listFiles()
+            ?: throw java.io.IOException("Cannot read folder: Permission denied or storage detached")
 
         val items = rawFiles
             .filter { file ->
@@ -286,22 +290,39 @@ class StorageRepositoryImpl(
     }
 
     override suspend fun delete(files: List<File>): Result<Int> = withContext(Dispatchers.IO) {
-        try {
-            var count = 0
-            for (file in files) {
-                if (file.exists()) {
+        mutationLock.withLock {
+            try {
+                var count = 0
+                var failed = 0
+                val failedNames = mutableListOf<String>()
+                for (file in files) {
+                    currentCoroutineContext().ensureActive()
+                    if (!file.exists()) {
+                        failed++
+                        failedNames += file.name
+                        continue
+                    }
                     val deleted = if (file.isDirectory) {
                         file.deleteRecursively()
                     } else {
-                        file.delete()
+                        entryMutator.delete(file)
                     }
-                    if (deleted) count++
+                    if (deleted) {
+                        count++
+                    } else {
+                        failed++
+                        failedNames += file.name
+                    }
                 }
+                if (failed == 0) {
+                    Result.success(count)
+                } else {
+                    Result.failure(PartialStorageOperationException(count, failed, null, failedNames))
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Result.failure(e)
             }
-            Result.success(count)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Result.failure(e)
         }
     }
 
@@ -489,10 +510,29 @@ class StorageRepositoryImpl(
      * recursive copy that stopped early is still reported as success by some filesystems, so a
      * directory is verified entry by entry rather than by the return value.
      */
+    /**
+     * Copies [src] into [dest] and proves the copy is whole before anything is deleted.
+     * Uses staging to prevent corrupted or truncated partial files at the destination.
+     */
     private fun copyAndVerify(src: File, dest: File): Throwable? =
         runCatching {
-            if (src.isDirectory) src.copyRecursively(dest, overwrite = true) else src.copyTo(dest, overwrite = true)
-            verifyCopy(src, dest)
+            if (src.isDirectory) {
+                src.copyRecursively(dest, overwrite = true)
+                verifyCopy(src, dest)
+            } else {
+                val staging = File(dest.parentFile ?: dest.absoluteFile.parentFile, ".staging-${java.util.UUID.randomUUID().toString().take(8)}-${dest.name}")
+                try {
+                    src.copyTo(staging, overwrite = true)
+                    verifyCopy(src, staging)
+                    if (!staging.renameTo(dest)) {
+                        staging.copyTo(dest, overwrite = true)
+                        staging.delete()
+                    }
+                } finally {
+                    if (staging.exists()) staging.delete()
+                }
+                verifyCopy(src, dest)
+            }
         }.fold(onSuccess = { null }, onFailure = { it })
 
     private fun verifyCopy(src: File, dest: File) {
@@ -501,13 +541,68 @@ class StorageRepositoryImpl(
                 val rel = node.relativeTo(src).path
                 val mirror = if (rel.isEmpty()) dest else File(dest, rel)
                 if (!mirror.exists()) throw java.io.IOException("Copied tree is missing $rel")
-                if (node.isFile && mirror.length() != node.length()) {
-                    throw java.io.IOException("Copy of $rel is ${mirror.length()} bytes, source is ${node.length()}")
+                if (node.isFile) {
+                    verifyFileIntegrity(node, mirror)
                 }
             }
-        } else if (!dest.isFile || dest.length() != src.length()) {
-            throw java.io.IOException("Copied file size does not match ${src.name}")
+        } else {
+            verifyFileIntegrity(src, dest)
         }
+    }
+
+    private fun verifyFileIntegrity(src: File, dest: File) {
+        if (!dest.isFile || dest.length() != src.length()) {
+            throw java.io.IOException("Copied file size (${dest.length()}) does not match source ${src.name} (${src.length()})")
+        }
+        val len = src.length()
+        if (len == 0L) return
+
+        if (len <= 4L * 1024 * 1024) {
+            val srcCrc = calculateCrc32(src)
+            val destCrc = calculateCrc32(dest)
+            if (srcCrc != destCrc) {
+                throw java.io.IOException("Copied file checksum mismatch for ${src.name}")
+            }
+        } else {
+            val sampleSize = 64 * 1024
+            val srcBuf = ByteArray(sampleSize)
+            val destBuf = ByteArray(sampleSize)
+
+            java.io.FileInputStream(src).use { sIn ->
+                java.io.FileInputStream(dest).use { dIn ->
+                    val sRead = sIn.read(srcBuf)
+                    val dRead = dIn.read(destBuf)
+                    if (sRead != dRead || !srcBuf.copyOf(sRead).contentEquals(destBuf.copyOf(dRead))) {
+                        throw java.io.IOException("Copied file head sample mismatch for ${src.name}")
+                    }
+                }
+            }
+
+            java.io.RandomAccessFile(src, "r").use { sRaf ->
+                java.io.RandomAccessFile(dest, "r").use { dRaf ->
+                    val offset = (len - sampleSize).coerceAtLeast(0L)
+                    sRaf.seek(offset)
+                    dRaf.seek(offset)
+                    val sRead = sRaf.read(srcBuf)
+                    val dRead = dRaf.read(destBuf)
+                    if (sRead != dRead || !srcBuf.copyOf(sRead).contentEquals(destBuf.copyOf(dRead))) {
+                        throw java.io.IOException("Copied file tail sample mismatch for ${src.name}")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun calculateCrc32(file: File): Long {
+        val crc = java.util.zip.CRC32()
+        val buffer = ByteArray(32 * 1024)
+        java.io.FileInputStream(file).use { input ->
+            var read: Int
+            while (input.read(buffer).also { read = it } != -1) {
+                crc.update(buffer, 0, read)
+            }
+        }
+        return crc.value
     }
 
     /**
@@ -626,11 +721,15 @@ class StorageRepositoryImpl(
             val destFile = getNonConflictingFile(parentDir, destinationZip.name)
             destFile.parentFile?.mkdirs()
 
+            val missingSources = sources.filter { !it.exists() }
+            if (missingSources.isNotEmpty()) {
+                throw java.io.FileNotFoundException("Cannot create zip: missing ${missingSources.first().name}")
+            }
+
             data class ZipTaskEntry(val file: File, val entryName: String)
             val entriesToCompress = mutableListOf<ZipTaskEntry>()
 
             for (source in sources) {
-                if (!source.exists()) continue
                 if (source.isDirectory) {
                     val baseDirName = source.name
                     val dirFiles = source.walkTopDown().toList()
@@ -648,6 +747,10 @@ class StorageRepositoryImpl(
                 } else {
                     entriesToCompress.add(ZipTaskEntry(source, source.name))
                 }
+            }
+
+            if (entriesToCompress.isEmpty()) {
+                throw java.io.IOException("No valid entries found to compress into archive")
             }
 
             val total = entriesToCompress.size
@@ -829,6 +932,9 @@ class StorageRepositoryImpl(
                     entry = zis.nextEntry
                 }
             }
+            if (extractedCount == 0) {
+                throw java.io.IOException("The archive is empty or contains no extractable entries.")
+            }
             destinationDir
         }.onFailure { error ->
             // Roll back first, then rethrow. Cancellation used to return before the rollback ran,
@@ -934,21 +1040,8 @@ class StorageRepositoryImpl(
                         val f = File(path)
                         val size = if (sizeIndex >= 0) cursor.getLong(sizeIndex) else 0L
                         val dateModified = if (dateIndex >= 0) cursor.getLong(dateIndex) * 1000L else 0L
-                        if (f.exists()) {
-                            if (!f.isDirectory) {
-                                items.add(StorageItem(f))
-                            }
-                        } else if (path.isNotEmpty() && size > 0L) {
-                            items.add(
-                                StorageItem(
-                                    file = f,
-                                    name = f.name,
-                                    path = path,
-                                    isDirectory = false,
-                                    sizeBytes = size,
-                                    lastModified = dateModified
-                                )
-                            )
+                        if (f.exists() && !f.isDirectory) {
+                            items.add(StorageItem(f))
                         }
                     }
                 }
@@ -1040,9 +1133,11 @@ class StorageRepositoryImpl(
 
                 for (expired in expiredItems) {
                     val file = File(expired.trashPath)
+                    val parent = file.parentFile
                     val deleted = try {
                         if (!file.exists()) {
-                            true
+                            // Guard against unmounted volumes: only clean DB record if volume/parent is mounted and readable
+                            parent != null && parent.exists() && parent.canRead()
                         } else {
                             if (file.isDirectory) file.deleteRecursively() else file.delete()
                         }
@@ -1199,7 +1294,11 @@ class StorageRepositoryImpl(
                     if (!trashFile.exists()) {
                         failedCount++
                         unresolved += item.displayName
-                        trashDao?.deleteByIds(listOf(item.id))
+                        val parent = trashFile.parentFile
+                        if (parent != null && parent.exists() && parent.canRead()) {
+                            // Bin volume is mounted and verified readable, file is truly gone
+                            trashDao?.deleteByIds(listOf(item.id))
+                        }
                         continue
                     }
 
@@ -1224,9 +1323,10 @@ class StorageRepositoryImpl(
                         val survivors = deleteSourceEntries(trashFile)
                         restored = survivors.isEmpty()
                         if (!restored && !resolvePartialSource(trashFile, destFile, before)) {
-                            // Part of the bin copy is already gone, so the restored copy is the only
-                            // complete version. Count it and leave the record for the survivor.
-                            restoredCount++
+                            // Part of the bin copy is already gone, destination was partially written.
+                            // Mark as failed and unresolved so the batch truthfully reports partial failure.
+                            failedCount++
+                            unresolved += item.displayName
                             restoredPaths += destFile.absolutePath
                             continue
                         }
@@ -1338,9 +1438,13 @@ class StorageRepositoryImpl(
                         stuck += f.name
                     }
                 }
-                // A record whose file is already missing describes nothing recoverable, so it goes too.
-                rows.filter { it.id !in idsToRemove && !File(it.trashPath).exists() }
-                    .forEach { idsToRemove += it.id }
+                // A record whose file is already missing describes nothing recoverable ONLY if its volume is mounted and readable
+                rows.filter { row ->
+                    if (row.id in idsToRemove) return@filter false
+                    val f = File(row.trashPath)
+                    val parent = f.parentFile
+                    !f.exists() && parent != null && parent.exists() && parent.canRead()
+                }.forEach { idsToRemove += it.id }
                 if (idsToRemove.isNotEmpty()) trashDao?.deleteByIds(idsToRemove)
                 if (failed == 0) {
                     Result.success(deleted)

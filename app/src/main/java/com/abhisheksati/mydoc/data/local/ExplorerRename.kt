@@ -27,8 +27,16 @@ class ExplorerRename(
     }
 
     suspend fun clearRecoveryJournals(): Unit = withContext(Dispatchers.IO) {
-        journalDirectory?.listFiles()?.filter { it.extension == "properties" }?.forEach {
-            runCatching { it.delete() }
+        val dir = journalDirectory ?: return@withContext
+        val archive = File(dir, "archive").apply { if (!exists()) mkdirs() }
+        dir.listFiles()?.filter { it.extension == "properties" }?.forEach {
+            runCatching {
+                val dest = File(archive, it.name)
+                if (!it.renameTo(dest)) {
+                    it.copyTo(dest, overwrite = true)
+                    it.delete()
+                }
+            }
         }
     }
     suspend fun preview(files: List<File>, options: ExplorerRenameOptions): ExplorerRenamePlan = withContext(Dispatchers.IO) {

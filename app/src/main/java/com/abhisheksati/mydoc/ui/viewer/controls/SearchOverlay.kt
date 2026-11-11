@@ -1,5 +1,7 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.abhisheksati.mydoc.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
@@ -81,12 +83,13 @@ fun SearchOverlay(
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val searchPlaceholder = stringResource(R.string.find_in_document)
                     OutlinedTextField(
                         value = query,
                         onValueChange = onQueryChanged,
                         placeholder = {
                             Text(
-                                stringResource(R.string.find_in_document),
+                                searchPlaceholder,
                                 style = AppTheme.typography.body,
                                 color = colors.inkMuted
                             )
@@ -110,7 +113,9 @@ fun SearchOverlay(
                             unfocusedBorderColor = colors.inkMuted.copy(alpha = 0.3f),
                             cursorColor = colors.accent
                         ),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .semantics { contentDescription = searchPlaceholder }
                     )
 
                     Spacer(modifier = Modifier.width(8.dp))

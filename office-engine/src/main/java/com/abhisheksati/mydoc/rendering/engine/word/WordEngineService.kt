@@ -91,10 +91,13 @@ class WordEngineService : Service() {
     override fun onCreate() {
         super.onCreate()
         check(isWordEngineProcess())
-        // A killed conversion may leave a private source copy. Reclaim it before accepting work.
-        val jobs = File(cacheDir, "word_engine_jobs").canonicalFile
-        check(jobs.parentFile == cacheDir.canonicalFile)
-        jobs.deleteRecursively()
+        // A killed conversion may leave a private source copy. Reclaim it before accepting work only if idle.
+        if (!busy.get()) {
+            val jobs = File(cacheDir, "word_engine_jobs").canonicalFile
+            if (jobs.exists() && jobs.parentFile == cacheDir.canonicalFile) {
+                jobs.deleteRecursively()
+            }
+        }
     }
 
     override fun onBind(intent: Intent): IBinder = messenger.binder

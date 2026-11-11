@@ -375,10 +375,10 @@ fun StorageCleanerScreen(
                                 )
 
                                 if (expandDuplicates) {
-                                    Text("${duplicateKeepers.size} groups reviewed. Choose the copies to keep before cleanup.",
+                                    Text(stringResource(R.string.cleaner_duplicate_groups_reviewed, duplicateKeepers.size),
                                         modifier=Modifier.padding(horizontal=16.dp),style=typography.caption)
                                     TextButton(onClick={showDuplicateReview=true},modifier=Modifier.padding(horizontal=8.dp)) {
-                                        Text("Review all duplicate groups")
+                                        Text(stringResource(R.string.cleaner_review_all_duplicate_groups))
                                     }
                                 }
                             }

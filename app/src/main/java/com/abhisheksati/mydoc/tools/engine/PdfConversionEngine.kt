@@ -373,16 +373,31 @@ class PdfConversionEngine(private val context: Context) {
                 for (p in 0 until totalPages) {
                     currentCoroutineContext().ensureActive()
                     val page = srcDoc.loadPage(p)
-                    val pixmap = page.toPixmap(Matrix(scale, scale), ColorSpace.DeviceRGB, true)
-                    val bitmap = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
-
-                    zos.putNextEntry(ZipEntry(String.format(java.util.Locale.ROOT, "page_%03d.$ext", p + 1)))
-                    bitmap.compress(compressFormat, quality, zos)
-                    zos.closeEntry()
-
-                    bitmap.recycle()
-                    pixmap.destroy()
-                    page.destroy()
+                    try {
+                        val bounds = page.bounds
+                        val rawW = (bounds.x1 - bounds.x0) * scale
+                        val rawH = (bounds.y1 - bounds.y0) * scale
+                        val effectiveScale = if (rawW > 4096f || rawH > 4096f) {
+                            scale * (4096f / max(rawW, rawH))
+                        } else {
+                            scale
+                        }
+                        val pixmap = page.toPixmap(Matrix(effectiveScale, effectiveScale), ColorSpace.DeviceRGB, true)
+                        try {
+                            val bitmap = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
+                            try {
+                                zos.putNextEntry(ZipEntry(String.format(java.util.Locale.ROOT, "page_%03d.$ext", p + 1)))
+                                bitmap.compress(compressFormat, quality, zos)
+                                zos.closeEntry()
+                            } finally {
+                                bitmap.recycle()
+                            }
+                        } finally {
+                            pixmap.destroy()
+                        }
+                    } finally {
+                        page.destroy()
+                    }
 
                     val pct = 10 + (((p + 1).toFloat() / totalPages) * 80).toInt()
                     onProgress(ToolProgress(p + 1, totalPages, pct, "Rendering page ${p + 1} of $totalPages...", false))

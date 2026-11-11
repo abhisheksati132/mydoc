@@ -26,12 +26,13 @@ data class LibraryItem(
     val pageCount: Int = 0,
     val lastPositionMs: Long = 0L,
     val durationMs: Long = 0L,
-    val progressFraction: Float = 0f
+    val progressFraction: Float = 0f,
+    val bucketId: String? = null
 ) {
-    val identityKey: String = if (!folder.isNullOrEmpty()) {
-        "$folder/$name|$sizeBytes|$kind"
-    } else {
-        "$name|$sizeBytes|$kind"
+    val identityKey: String = when {
+        !bucketId.isNullOrEmpty() -> "$bucketId/$name|$sizeBytes|$kind"
+        !folder.isNullOrEmpty() -> "$folder/$name|$sizeBytes|$kind"
+        else -> "$name|$sizeBytes|$kind"
     }
 
     val extension: String = run {

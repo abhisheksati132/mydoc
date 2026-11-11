@@ -53,7 +53,7 @@ data class ToolProgress(
 enum class CompressionLevel(val label: String, val description: String) {
     LIGHT("Light", "High quality (200 DPI). Compacts streams and cleans unused objects."),
     BALANCED("Balanced", "Recommended. Optimizes image streams (150 DPI) with minimal visual loss."),
-    STRONG("Strong", "Maximum compression (100 DPI). Best for email attachments.")
+    STRONG("Strong", "Maximum compression (100 DPI). May rasterize pages to images; searchable text and vector layers may not be preserved.")
 }
 
 enum class PageSizeFormat(val label: String, val widthPt: Float, val heightPt: Float) {

@@ -51,6 +51,7 @@ class PdfEditingEngine(private val context: Context) {
                             for (q in hit) {
                                 val annot = page.createAnnotation(PDFAnnotation.TYPE_HIGHLIGHT)
                                 annot.rect = Rect(q.ul_x, q.ul_y, q.lr_x, q.lr_y)
+                                annot.addQuadPoint(q)
                                 annot.color = floatArrayOf(1.0f, 0.9f, 0.2f)
                                 annot.contents = text
                                 annot.update()
@@ -68,9 +69,20 @@ class PdfEditingEngine(private val context: Context) {
                         val top = b.y0 + 36f
                         annot.rect = Rect(left, top, left + stampW, top + stampH)
                         annot.contents = text
+                        val stampName = when (text.uppercase()) {
+                            "DRAFT" -> "Draft"
+                            "CONFIDENTIAL" -> "Confidential"
+                            "APPROVED" -> "Approved"
+                            "FOR COMMENT", "FORCOMMENT" -> "ForComment"
+                            "FOR PUBLIC RELEASE", "FORPUBLICRELEASE" -> "ForPublicRelease"
+                            "NOT APPROVED", "NOTAPPROVED" -> "NotApproved"
+                            "TOP SECRET", "TOPSECRET" -> "TopSecret"
+                            else -> "Draft"
+                        }
+                        runCatching { annot.icon = stampName }
                         annot.color = when (text.uppercase()) {
                             "REJECTED" -> floatArrayOf(0.9f, 0.1f, 0.1f)
-                            "CONFIDENTIAL" -> floatArrayOf(0.85f, 0.2f, 0.2f)
+                            "CONFIDENTIAL", "TOP SECRET", "TOPSECRET" -> floatArrayOf(0.85f, 0.2f, 0.2f)
                             "DRAFT" -> floatArrayOf(0.9f, 0.5f, 0.1f)
                             else -> floatArrayOf(0.1f, 0.65f, 0.25f)
                         }

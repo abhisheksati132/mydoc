@@ -183,6 +183,32 @@ fun WordViewerScreen(
         }
     }
 
+    // Decouple reflow block index from page progress
+    val pageBreakIndices = remember(blocks) {
+        blocks.mapIndexedNotNull { i, block -> if (block is DocxBlock.PageBreak) i else null }
+    }
+    val effectivePageCount = remember(blocks, pageBreakIndices) {
+        if (pageBreakIndices.isNotEmpty()) pageBreakIndices.size + 1
+        else (blocks.size / 4).coerceAtLeast(1)
+    }
+    fun pageForBlockIndex(blockIdx: Int): Int {
+        if (blocks.isEmpty()) return 0
+        if (pageBreakIndices.isNotEmpty()) {
+            val idx = pageBreakIndices.indexOfFirst { it >= blockIdx }
+            return if (idx == -1) pageBreakIndices.size else idx
+        }
+        return (blockIdx / 4).coerceIn(0, effectivePageCount - 1)
+    }
+    fun blockForPageIndex(pageIdx: Int): Int {
+        if (blocks.isEmpty()) return 0
+        if (pageBreakIndices.isNotEmpty()) {
+            if (pageIdx <= 0) return 0
+            val breakIdx = pageBreakIndices.getOrNull(pageIdx - 1) ?: return blocks.lastIndex
+            return (breakIdx + 1).coerceAtMost(blocks.lastIndex)
+        }
+        return (pageIdx * 4).coerceIn(0, blocks.lastIndex)
+    }
+
     // Smart Resume: Persist progress
     LaunchedEffect(document.uri, blocks.isNotEmpty()) {
         if (blocks.isEmpty()) return@LaunchedEffect
@@ -190,7 +216,7 @@ fun WordViewerScreen(
             .distinctUntilChanged()
             .collect { index ->
                 withContext(Dispatchers.IO) {
-                    app?.documentRepository?.updatePageProgress(document.uri, index, blocks.size)
+                    app?.documentRepository?.updatePageProgress(document.uri, pageForBlockIndex(index), effectivePageCount)
                     app?.documentRepository?.saveViewState(
                         ViewState(
                             uri = document.uri,
@@ -231,8 +257,8 @@ fun WordViewerScreen(
             supportsTts = true,
             supportsZoom = false
         ),
-        currentPage = if (blocks.isNotEmpty()) visibleBlockIndex else 0,
-        pageCount = blocks.size.coerceAtLeast(1),
+        currentPage = pageForBlockIndex(visibleBlockIndex),
+        pageCount = effectivePageCount,
         isControlsVisible = !isSearchOpen,
         onBackClick = onBackClick,
         onShareClick = onShareClick,
@@ -241,7 +267,7 @@ fun WordViewerScreen(
         readingPrefs = readingPrefs,
         onPageScrubbed = { page ->
             if (blocks.isNotEmpty()) {
-                val target = page.coerceIn(0, blocks.size - 1)
+                val target = blockForPageIndex(page)
                 coroutineScope.launch {
                     lazyListState.scrollToItem(target)
                 }

@@ -174,6 +174,8 @@ class PdfToolsEngine(private val context: Context) {
                 } else 0f
                 if (resultFile.name.contains("raster")) {
                     warningNote = "Strong raster compression converted pages to images. Searchable text, links, and forms were not preserved."
+                } else if (savingsPercent <= 0.0f) {
+                    warningNote = "Document could not be further compressed. It is already optimally compressed."
                 } else if (savingsPercent < 5.0f) {
                     warningNote = "Compression saved only " +
                         "${String.format(java.util.Locale.US, "%.1f", savingsPercent.coerceAtLeast(0f))}%." +

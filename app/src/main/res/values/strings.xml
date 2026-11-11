@@ -136,7 +136,7 @@
     <string name="cleaner_reclaimable">Reclaimable Storage</string>
     <string name="cleaner_scan_limited">Scan stopped at the safety limit — some files were not checked.</string>
     <string name="cleaner_cache_temp">Cache &amp; Temporary Files</string>
-    <string name="cleaner_obsolete_apks">Obsolete APK Packages</string>
+    <string name="cleaner_obsolete_apks">APK Installers</string>
     <string name="cleaner_duplicates">Duplicate Files</string>
     <string name="cleaner_keeping_original">Keeping 1 original copy, removing duplicates:</string>
     <string name="cleaner_empty_dirs">Empty Directories</string>
@@ -332,7 +332,7 @@
     <string name="home_share_label">Share documents</string>
     <string name="home_share_failed">These documents could not be shared.</string>
     <string name="home_update_available">Update available: v%1$s</string>
-    <string name="home_tap_to_update">Tap to update mydoc</string>
+    <string name="home_tap_to_update">Tap to update MyDoc</string>
     <string name="home_update">Update</string>
     <string name="home_downloading_update">Downloading update…</string>
     <string name="home_update_downloaded">Update downloaded!</string>
@@ -463,6 +463,7 @@
     <string name="tts_pause">Pause</string>
     <string name="tts_resume">Resume</string>
     <string name="tts_start">Start</string>
+    <string name="tts_engine_notice">Uses your device\'s system text-to-speech engine.</string>
     <string name="pagejump_title">Go to page</string>
     <string name="pagejump_range">Enter a page number between 1 and %1$d.</string>
     <string name="pagejump_label">Page Number</string>
@@ -625,6 +626,7 @@
     <string name="cd_move_right">Move right</string>
     <string name="reorder_pages_organized">%1$d pages organized</string>
     <string name="action_apply_save">Apply &amp; Save</string>
+    <string name="action_apply_order">Apply Page Order</string>
     <string name="scan_requesting_permission">Requesting Camera Permission…</string>
     <string name="cd_close_scanner">Close scanner</string>
     <string name="scan_header">SCANNER</string>
@@ -736,7 +738,7 @@
     <string name="action_clear">Clear</string>
     <string name="app_version_line">%1$s • %2$s</string>
     <string name="cd_locked">Locked</string>
-    <string name="lock_title">mydoc is locked</string>
+    <string name="lock_title">MyDoc is locked</string>
     <string name="lock_message">Biometric authentication is required to access your documents.</string>
     <string name="lock_unlock">Unlock</string>
     <string name="cd_slide_image">Slide Image</string>
@@ -1092,4 +1094,22 @@
     <string name="discovery_smart_collection_desc">Uses the current words, tag and file-type filters. Matching files update after indexing. Saving the same name replaces that rule.</string>
     <string name="discovery_clear_library_title">Clear the local library?</string>
     <string name="discovery_clear_library_desc">Removes indexed text and tags from MyDoc. Your original files and saved collection rules stay in place.</string>
+
+    <!-- Newly extracted strings for i18n & accessibility -->
+    <string name="action_play">Play</string>
+    <string name="action_pause">Pause</string>
+    <string name="scan_permission_required">Camera permission is required to scan documents.</string>
+    <string name="scan_page_deskewed_cropped">Page %1$d deskewed &amp; cropped.</string>
+    <string name="scan_camera_start_failed">The camera could not be started. Check that MyDoc has camera permission.</string>
+    <string name="scan_photo_capture_failed">The photo could not be captured.</string>
+    <string name="scan_filter_failed">Filter could not be applied. Original scans retained.</string>
+    <string name="ocr_saved_to_documents">Saved to Documents/%1$s</string>
+    <string name="cleaner_review_all_duplicate_groups">Review all duplicate groups</string>
+    <string name="cleaner_duplicate_groups_reviewed">%1$d groups reviewed. Choose the copies to keep before cleanup.</string>
+    <string name="discovery_title">Contents &amp; collections</string>
+    <string name="discovery_results_count">%1$d results • refresh after changing or moving files</string>
+    <string name="discovery_snapshots_disclaimer">Search snapshots stay on this device. Up to 1,000 selected files; 200 pages / 200,000 characters per document. Locked files and image-only scans are not text-indexed.</string>
+    <string name="discovery_no_matching_files">No matching files. Add documents, refresh the index, or clear the filters.</string>
+    <string name="discovery_snippet_page">Page %1$d: %2$s</string>
+    <string name="discovery_tags_prefix">Tags: %1$s</string>
 </resources>

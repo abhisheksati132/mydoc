@@ -31,6 +31,8 @@ fun Uri.toShareableUri(context: Context): Uri? {
         if (rootShared.isDirectory) {
             val oneDayAgo = System.currentTimeMillis() - 86_400_000L
             rootShared.listFiles()?.forEach { dir ->
+                // Guard dedicated subdirectories like archive-previews or installers from opportunistic wipe
+                if (dir.name == "archive-previews" || dir.name == "installers") return@forEach
                 if (dir.isDirectory && dir.lastModified() < oneDayAgo) {
                     dir.deleteRecursively()
                 }

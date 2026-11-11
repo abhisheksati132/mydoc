@@ -24,7 +24,7 @@ object LocalApkInstaller {
         try {
             val input = if (source.scheme == "file") File(requireNotNull(source.path)).inputStream()
                 else requireNotNull(context.contentResolver.openInputStream(source))
-            input.use { from -> target.outputStream().use { to -> from.copyTo(to) } }
+            input.use { from -> target.outputStream().use { to -> from.copyBounded(to) } }
             require(target.length() > 0) { "The APK is empty" }
             FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", target)
         } catch (error: Throwable) {

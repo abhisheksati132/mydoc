@@ -12,8 +12,8 @@ plugins {
 //   4. Tag & push: git tag v1.2.1 && git push origin v1.2.1
 //   5. Create GitHub Release with tag "v1.2.1" — the in-app updater reads this tag
 // -----------------------------------------------------------------------------
-val APP_VERSION_NAME = "2.0.3"
-val APP_VERSION_CODE = 193  // Increment by 1 every release, never decrease
+val APP_VERSION_NAME = "2.0.4"
+val APP_VERSION_CODE = 194  // Increment by 1 every release, never decrease
 
 android {
     namespace = "com.abhisheksati.mydoc"

@@ -225,6 +225,20 @@ fun SpreadsheetViewerScreen(
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         Column(modifier = Modifier.fillMaxSize()) {
+                            if (currentSheet.truncated) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(MaterialTheme.colorScheme.tertiaryContainer)
+                                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = "Sheet truncated to protect device memory. Displaying first ${currentSheet.maxRow + 1} rows.",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                                    )
+                                }
+                            }
                             // Top Frozen Header (Column names: A, B, C...)
                             Row(
                                 modifier = Modifier

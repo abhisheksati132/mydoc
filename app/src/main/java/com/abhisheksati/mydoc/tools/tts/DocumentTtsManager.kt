@@ -145,8 +145,11 @@ class DocumentTtsManager(private val context: Context) : TextToSpeech.OnInitList
 
     fun stop() {
         synchronized(ttsLock) {
+            pendingText = null
             tts?.stop()
             currentChunkIndex = 0
+            chunks = emptyList()
+            fullText = ""
             _currentUtterance.value = ""
             _playbackState.value = TtsPlaybackState.IDLE
         }

@@ -39,7 +39,7 @@ internal fun OpenSourceLicensesDialog(onDismiss: () -> Unit) {
                     text = "Copyright (c) 2026 Abhishek Sati\n" +
                         "Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).\n\n" +
                         "In accordance with AGPL-3.0 § 13, complete corresponding source code is available at:\n" +
-                        "https://github.com/Abhisheksati/MyDoc\n\n" +
+                        "https://github.com/abhisheksati132/mydoc\n\n" +
                         "This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; " +
                         "without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
                     style = MaterialTheme.typography.bodySmall,

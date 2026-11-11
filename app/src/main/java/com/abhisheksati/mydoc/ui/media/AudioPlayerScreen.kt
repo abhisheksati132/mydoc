@@ -95,6 +95,7 @@ fun AudioPlayerScreen(
     val onMintContainer = onKindContainer(MediaKind.AUDIO, AppTheme.isDark)
 
     var isPlaying by remember { mutableStateOf(false) }
+    var resumeOnFocusGain by remember { mutableStateOf(false) }
     var currentPositionMs by remember { mutableLongStateOf(0L) }
     var totalDurationMs by remember { mutableLongStateOf(item.durationMs) }
     var isSeeking by remember { mutableStateOf(false) }
@@ -134,15 +135,22 @@ fun AudioPlayerScreen(
             .setWillPauseWhenDucked(false)
             .setOnAudioFocusChangeListener { change ->
                 when (change) {
-                    android.media.AudioManager.AUDIOFOCUS_LOSS -> pauseAudio()
-                    android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> pauseAudio()
+                    android.media.AudioManager.AUDIOFOCUS_LOSS -> {
+                        resumeOnFocusGain = false
+                        pauseAudio()
+                    }
+                    android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                        if (isPlaying) resumeOnFocusGain = true
+                        pauseAudio()
+                    }
                     android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
                         runCatching { mediaPlayer.setVolume(0.2f, 0.2f) }
                     }
                     android.media.AudioManager.AUDIOFOCUS_GAIN -> {
                         runCatching { mediaPlayer.setVolume(1.0f, 1.0f) }
-                        if (!isPlaying && ready) {
+                        if (resumeOnFocusGain && ready) {
                             isPlaying = runCatching { mediaPlayer.start() }.isSuccess
+                            resumeOnFocusGain = false
                         }
                     }
                 }
@@ -150,6 +158,7 @@ fun AudioPlayerScreen(
             .build()
     }
     fun startAudio() {
+        resumeOnFocusGain = false
         if (audioManager.requestAudioFocus(focusRequest) != android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             context.showMessage(resources.getString(R.string.audio_focus_unavailable))
             return
@@ -470,7 +479,7 @@ fun AudioPlayerScreen(
                         Icon(
                             imageVector = Icons.Outlined.Refresh,
                             contentDescription = stringResource(R.string.video_retry),
-                            tint = Color.White,
+                            tint = colors.onAccent,
                             modifier = Modifier.size(34.dp)
                         )
                     }
@@ -485,13 +494,18 @@ fun AudioPlayerScreen(
                         .clickable {
                             haptics.heavy()
                             if (!ready) return@clickable
-                            if (isPlaying) stopAudio() else startAudio()
+                            if (isPlaying) {
+                                resumeOnFocusGain = false
+                                stopAudio()
+                            } else {
+                                startAudio()
+                            }
                         }
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            contentDescription = stringResource(if (isPlaying) R.string.action_pause else R.string.action_play),
                             tint = onMint,
                             modifier = Modifier.size(34.dp)
                         )

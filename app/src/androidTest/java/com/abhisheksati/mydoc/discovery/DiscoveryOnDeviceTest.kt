@@ -10,9 +10,9 @@ import org.junit.Test
 import java.io.File
 
 class DiscoveryOnDeviceTest {
-    private val context=InstrumentationRegistry.getInstrumentation().targetContext
-    private val store=DiscoveryStore.get(context)
-    @Before fun setup() = runBlocking { store.clear();store.collections().forEach { store.deleteCollection(it.name) } }
+    private val context = InstrumentationRegistry.getInstrumentation().targetContext
+    private val store = DiscoveryStore.forTesting(context, "discovery_test.db")
+    @Before fun setup() = runBlocking { store.clear(); store.collections().forEach { store.deleteCollection(it.name) } }
     @After fun cleanup() = setup()
     private fun file(uri: String,name: String="Report.pdf") = DiscoveredFile(uri,name,"application/pdf",20,10,"Indexed",100)
 

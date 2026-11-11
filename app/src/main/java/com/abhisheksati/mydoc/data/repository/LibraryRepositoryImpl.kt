@@ -63,6 +63,7 @@ class LibraryRepositoryImpl(
                 sizeBytes = m.sizeBytes,
                 lastModified = if (m.dateModifiedSec > 0) m.dateModifiedSec * 1000L else m.dateAddedSec * 1000L,
                 folder = m.bucketName,
+                bucketId = m.bucketId,
                 lastPositionMs = lastPos,
                 durationMs = dur,
                 progressFraction = progress
@@ -135,6 +136,7 @@ class LibraryRepositoryImpl(
                     sizeBytes = m?.sizeBytes ?: 0L,
                     lastModified = pb.updatedTimestamp,
                     folder = m?.bucketName,
+                    bucketId = m?.bucketId,
                     lastPositionMs = pb.positionMs,
                     durationMs = dur,
                     progressFraction = progress

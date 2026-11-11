@@ -17,6 +17,8 @@ import com.abhisheksati.mydoc.domain.repository.MediaRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
@@ -33,27 +35,33 @@ class MediaRepositoryImpl(
     @Volatile
     private var snapshot: MediaSnapshot? = null
 
+    private val refreshTrigger = MutableStateFlow(0L)
+
     /**
      * MediaStore is queried with three separate cursors per ALL request, and Home subscribes to
      * the same list twice in one pass (recent and everything), so one screen refresh cost six
      * full-library queries. A short snapshot lets the second subscriber ride the first; it is
      * deliberately brief so a photo deleted elsewhere reappears as gone within about a second
-     * rather than lingering in the grid.
+     * rather than lingering in the grid. Invalidation refreshes active collectors automatically.
      */
-    override fun getMedia(filter: MediaFilter): Flow<List<MediaItem>> = flow {
-        val now = android.os.SystemClock.elapsedRealtime()
-        val cached = snapshot
-        val items = if (cached != null && cached.filter == filter && now - cached.takenAtMs < SNAPSHOT_TTL_MS) {
-            cached.items
-        } else {
-            queryMediaStore(filter).also { snapshot = MediaSnapshot(filter, it, now) }
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    override fun getMedia(filter: MediaFilter): Flow<List<MediaItem>> = refreshTrigger.flatMapLatest {
+        flow {
+            val now = android.os.SystemClock.elapsedRealtime()
+            val cached = snapshot
+            val items = if (cached != null && cached.filter == filter && now - cached.takenAtMs < SNAPSHOT_TTL_MS) {
+                cached.items
+            } else {
+                queryMediaStore(filter).also { snapshot = MediaSnapshot(filter, it, now) }
+            }
+            emit(items)
         }
-        emit(items)
     }.flowOn(Dispatchers.IO)
 
-    /** Force the next collector to re-read MediaStore, e.g. after a media file is removed. */
+    /** Force the next collector to re-read MediaStore, e.g. after a media file is removed, and notify active collectors. */
     override fun invalidateMediaSnapshot() {
         snapshot = null
+        refreshTrigger.value = android.os.SystemClock.elapsedRealtime()
     }
 
     private data class MediaSnapshot(

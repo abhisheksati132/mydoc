@@ -172,7 +172,7 @@ fun OcrResultSheet(
                                 }
                                 candidate.writeText(text)
                                 withContext(Dispatchers.Main) {
-                                    context.showMessage("Saved to Documents/${candidate.name}")
+                                    context.showMessage(resources.getString(R.string.ocr_saved_to_documents, candidate.name))
                                 }
                             } catch (e: Exception) {
                                 withContext(Dispatchers.Main) {

@@ -14,6 +14,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
 import com.abhisheksati.mydoc.util.DocumentIdentity
+import com.abhisheksati.mydoc.util.copyBounded
 
 data class ResolvedDocument(
     val file: File,
@@ -56,7 +57,7 @@ object DocumentStreamResolver {
         return runCatching {
             streamResult.stream.use { input ->
                 targetCacheFile.outputStream().use { output ->
-                    input.copyTo(output)
+                    input.copyBounded(output)
                 }
             }
 

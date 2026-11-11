@@ -145,6 +145,8 @@ class MainActivity : ComponentActivity() {
 
     @Volatile
     private var isContentReady = false
+    @Volatile
+    private var waitingForActivityResult = false
 
     // The splash may be held this long at most; a stalled first frame must not trap the user.
     private val splashDeadlineMs = SystemClock.elapsedRealtime() + 1_200L
@@ -163,6 +165,19 @@ class MainActivity : ComponentActivity() {
             isSettingsOpen = savedInstanceState.getBoolean("settings_open")
             isSpotlightSearchOpen = savedInstanceState.getBoolean("spotlight_open")
             isDesignSystemPreviewOpen = savedInstanceState.getBoolean("design_preview_open")
+            val docUri = savedInstanceState.getString("active_doc_uri")
+            if (docUri != null) {
+                currentDocument = DocumentFile(
+                    uri = docUri,
+                    displayName = savedInstanceState.getString("active_doc_name") ?: "Document",
+                    sizeBytes = savedInstanceState.getLong("active_doc_size"),
+                    mimeType = savedInstanceState.getString("active_doc_mime") ?: "application/pdf",
+                    lastOpenedTimestamp = savedInstanceState.getLong("active_doc_time"),
+                    pageCount = savedInstanceState.getInt("active_doc_pages"),
+                    lastPage = savedInstanceState.getInt("active_doc_last_page"),
+                    isFavorite = savedInstanceState.getBoolean("active_doc_fav")
+                )
+            }
         }
 
         val app = application as MyDocApp
@@ -552,6 +567,16 @@ class MainActivity : ComponentActivity() {
         outState.putBoolean("settings_open", isSettingsOpen)
         outState.putBoolean("spotlight_open", isSpotlightSearchOpen)
         outState.putBoolean("design_preview_open", isDesignSystemPreviewOpen)
+        currentDocument?.let { doc ->
+            outState.putString("active_doc_uri", doc.uri)
+            outState.putString("active_doc_name", doc.displayName)
+            outState.putLong("active_doc_size", doc.sizeBytes)
+            outState.putString("active_doc_mime", doc.mimeType)
+            outState.putLong("active_doc_time", doc.lastOpenedTimestamp)
+            outState.putInt("active_doc_pages", doc.pageCount)
+            outState.putInt("active_doc_last_page", doc.lastPage)
+            outState.putBoolean("active_doc_fav", doc.isFavorite)
+        }
     }
 
     override fun onStop() {
@@ -564,12 +589,27 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @Suppress("DEPRECATION")
+    @Deprecated("Deprecated in Java")
+    override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
+        waitingForActivityResult = true
+        super.startActivityForResult(intent, requestCode, options)
+    }
+
+    @Suppress("DEPRECATION")
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        waitingForActivityResult = false
+        stoppedTimestamp = android.os.SystemClock.elapsedRealtime()
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
     override fun onRestart() {
         super.onRestart()
         val app = application as MyDocApp
         if (app.settingsRepository.isBiometricLockEnabled.value) {
             val elapsed = android.os.SystemClock.elapsedRealtime() - stoppedTimestamp
-            if (stoppedTimestamp > 0L && elapsed > 2500L) {
+            if (!waitingForActivityResult && stoppedTimestamp > 0L && elapsed > 2500L) {
                 isAppUnlocked = false
             }
         }
@@ -617,6 +657,7 @@ class MainActivity : ComponentActivity() {
         if (intent == null) return
 
         if (intent.action == ACTION_QUICK_SCAN) {
+            intent.action = null
             pendingQuickScan.set(true)
             quickScanEvents.tryEmit(Unit)
             return
@@ -641,8 +682,9 @@ class MainActivity : ComponentActivity() {
                 val path = uri.path
                 if (path != null) {
                     val canonicalFile = runCatching { File(path).canonicalFile }.getOrNull()
-                    val privateAppDir = filesDir.parentFile?.canonicalPath
-                    if (privateAppDir != null && canonicalFile != null && canonicalFile.path.startsWith(privateAppDir)) {
+                    val privateAppDir = filesDir.parentFile?.canonicalFile?.toPath()
+                    if (privateAppDir != null && canonicalFile != null &&
+                        (canonicalFile.toPath().startsWith(privateAppDir) || canonicalFile.toPath() == privateAppDir)) {
                         android.util.Log.w("MainActivity", "Blocked attempt to open internal private file: $path")
                         showMessage("Cannot open internal private app files.")
                         return
@@ -717,23 +759,55 @@ class MainActivity : ComponentActivity() {
         file: File? = null,
         siblingFiles: List<File>? = null
     ) {
-        val detectedMime = mimeType ?: contentResolver.getType(uri) ?: when {
-            fileName?.endsWith(".jpg", true) == true || fileName?.endsWith(".jpeg", true) == true -> "image/jpeg"
-            fileName?.endsWith(".png", true) == true -> "image/png"
-            fileName?.endsWith(".webp", true) == true -> "image/webp"
-            fileName?.endsWith(".gif", true) == true -> "image/gif"
-            fileName?.endsWith(".mp4", true) == true -> "video/mp4"
-            fileName?.endsWith(".mkv", true) == true -> "video/x-matroska"
-            fileName?.endsWith(".webm", true) == true -> "video/webm"
-            fileName?.endsWith(".mp3", true) == true -> "audio/mpeg"
-            fileName?.endsWith(".m4a", true) == true -> "audio/mp4"
-            fileName?.endsWith(".aac", true) == true -> "audio/aac"
-            fileName?.endsWith(".flac", true) == true -> "audio/flac"
-            fileName?.endsWith(".wav", true) == true -> "audio/wav"
-            else -> "*/*"
+        val effectiveName = fileName ?: runCatching {
+            if (uri.scheme == "content") {
+                contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                        if (idx != -1) cursor.getString(idx) else null
+                    } else null
+                }
+            } else if (uri.scheme == "file") {
+                uri.path?.let { File(it).name }
+            } else null
+        }.getOrNull() ?: uri.lastPathSegment ?: "Media"
+
+        val resolvedMimeFromExt = when {
+            effectiveName.endsWith(".jpg", true) || effectiveName.endsWith(".jpeg", true) -> "image/jpeg"
+            effectiveName.endsWith(".png", true) -> "image/png"
+            effectiveName.endsWith(".webp", true) -> "image/webp"
+            effectiveName.endsWith(".gif", true) -> "image/gif"
+            effectiveName.endsWith(".bmp", true) -> "image/bmp"
+            effectiveName.endsWith(".heic", true) || effectiveName.endsWith(".heif", true) -> "image/heif"
+            effectiveName.endsWith(".mp4", true) -> "video/mp4"
+            effectiveName.endsWith(".mkv", true) -> "video/x-matroska"
+            effectiveName.endsWith(".webm", true) -> "video/webm"
+            effectiveName.endsWith(".mov", true) -> "video/quicktime"
+            effectiveName.endsWith(".mp3", true) -> "audio/mpeg"
+            effectiveName.endsWith(".m4a", true) -> "audio/mp4"
+            effectiveName.endsWith(".aac", true) -> "audio/aac"
+            effectiveName.endsWith(".flac", true) -> "audio/flac"
+            effectiveName.endsWith(".wav", true) -> "audio/wav"
+            effectiveName.endsWith(".ogg", true) -> "audio/ogg"
+            effectiveName.endsWith(".opus", true) -> "audio/opus"
+            effectiveName.endsWith(".pdf", true) -> "application/pdf"
+            effectiveName.endsWith(".docx", true) -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            effectiveName.endsWith(".doc", true) -> "application/msword"
+            effectiveName.endsWith(".xlsx", true) -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            effectiveName.endsWith(".xls", true) -> "application/vnd.ms-excel"
+            effectiveName.endsWith(".pptx", true) -> "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            effectiveName.endsWith(".ppt", true) -> "application/vnd.ms-powerpoint"
+            effectiveName.endsWith(".txt", true) -> "text/plain"
+            effectiveName.endsWith(".epub", true) -> "application/epub+zip"
+            else -> null
         }
 
-        val displayName = fileName ?: uri.lastPathSegment ?: "Media"
+        val detectedMime = mimeType?.takeIf { it != "*/*" }
+            ?: contentResolver.getType(uri)?.takeIf { it != "*/*" }
+            ?: resolvedMimeFromExt
+            ?: "*/*"
+
+        val displayName = effectiveName
 
         when {
             detectedMime == com.abhisheksati.mydoc.util.LocalApkInstaller.MIME ||

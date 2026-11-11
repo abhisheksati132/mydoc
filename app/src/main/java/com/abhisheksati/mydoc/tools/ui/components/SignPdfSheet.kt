@@ -41,6 +41,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -201,8 +206,10 @@ fun SignPdfSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    val inkColorNames = listOf("Black ink", "Navy ink", "Crimson ink")
                     inkColors.forEachIndexed { index, color ->
                         val isSelected = selectedColorIndex == index
+                        val colorDesc = inkColorNames.getOrElse(index) { "Ink color" }
                         Box(
                             modifier = Modifier
                                 .size(28.dp)
@@ -213,7 +220,12 @@ fun SignPdfSheet(
                                     color = if (isSelected) scheme.primary else scheme.outline,
                                     shape = CircleShape
                                 )
-                                .clickable { selectedColorIndex = index }
+                                .semantics {
+                                    contentDescription = colorDesc
+                                    role = Role.RadioButton
+                                    selected = isSelected
+                                }
+                                .clickable(onClickLabel = colorDesc) { selectedColorIndex = index }
                         )
                     }
                 }

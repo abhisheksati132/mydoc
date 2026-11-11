@@ -3,6 +3,31 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [2.0.4] — 2026-11-11
+
+### Security, Sandboxing & Storage Integrity
+- **Native Word Engine Sandbox**: Tighten seccomp filter in `word_guard.c` so `socket()` denies any family other than `AF_UNIX` with `EPERM`.
+- **Word Password Callback**: Enforce strict canonical URI and path verification in `NativeWordCore.kt` to prevent path spoofing.
+- **Copy & Move Integrity**: Implement multi-tier file integrity validation (`verifyFileIntegrity`) with exact size, CRC32 checksums (≤4MB), and 64KB head/tail sampling (>4MB) staged through temporary files.
+- **Safe Stream Bounding**: Introduce `copyBounded` stream utility across document resolvers, installers, print helpers, and thumbnail generators to prevent disk exhaustion.
+- **Zip Archive Hardening**: Guard against archive extraction deadlocks (`F32`) in `ExplorerZipExtraction.kt` and enforce zip-bomb expansion ratio limits.
+- **Trash & Cache Integrity**: Prevent database record deletion during trash purge when external volume roots are detached; preserve active update downloads during cache cleaning.
+- **Path Traversal & Intent Re-fire**: Enforce `Path.startsWith` boundaries and consume single-use quick scan intents on activity recreation.
+- **Compliance**: Update AGPL-3.0 source offer URL to canonical repository `https://github.com/abhisheksati132/mydoc`.
+
+### Document Viewers & Tools Fidelity
+- **Word Reflow Accuracy**: Decouple reflow block indexes from page numbering; calculate true page breaks (`DocxBlock.PageBreak`) or normalized estimates so recents and scrubbers report truthful page counts.
+- **Presentation Viewer**: Support Flat XML ODF (`.fodp`) presentations and surface honest `FidelityNotice` disclosures for scraped slides.
+- **PDF Annotations**: Write PDF `QuadPoints` for highlight annotations and appearance streams for stamps to ensure cross-reader visibility.
+- **Spreadsheet Viewer**: Surface memory-limit truncation warnings when large spreadsheets are truncated.
+- **Media & Presentation Navigation**: Enable smooth single-finger slide paging at 1x zoom via `Modifier.transformable`; clear pending speech on TTS stop.
+- **Discovery & Library Identity**: Incorporate MediaStore `bucketId` into `LibraryItem.identityKey` to prevent same-name folder collisions; persist discovered folder roots.
+
+### UI, Accessibility & Design Harmonization
+- **Material You on top of Ink & Seal**: Harmonize editorial warm paper surfaces, Fraunces serif headings, and Seal teal accents with Material 3 Expressive motion and dynamic Monet palette support.
+- **Accessibility**: Add TalkBack semantics, `Role.RadioButton`, and selected states to signature swatches; add accessible names and click labels to photo filmstrips and viewer search fields.
+- **App Management & Cleaner**: Retitle cleaner category truthfully to "APK Installers"; list all installed applications on API 30+; exclude temp files from duplicate scans.
+
 ## [2.0.3] — 2026-11-11
 
 ### CI & Build Fixes

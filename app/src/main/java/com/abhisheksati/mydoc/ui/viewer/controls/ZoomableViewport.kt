@@ -130,7 +130,7 @@ fun ZoomableViewport(
                                         val newOffsetX = zoomState.offset.x + dragDelta.x
                                         zoomState.updateScaleAndOffset(
                                             newScale = zoomState.scale,
-                                            newOffset = Offset(newOffsetX, 0f)
+                                            newOffset = Offset(newOffsetX, zoomState.offset.y)
                                         )
                                         change.consume()
                                     }

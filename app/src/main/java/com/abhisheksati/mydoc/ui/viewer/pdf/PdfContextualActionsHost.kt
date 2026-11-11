@@ -15,6 +15,7 @@ import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.ocr.OcrEngine
 import com.abhisheksati.mydoc.tools.tts.DocumentTtsManager
 import com.abhisheksati.mydoc.viewmodel.ViewerViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import com.abhisheksati.mydoc.designsystem.components.showMessage
 
@@ -151,7 +152,7 @@ fun PdfContextualActionsHost(
         },
         onExtractOcr = {
             onClose()
-            coroutineScope.launch {
+            viewModel.viewModelScope.launch {
                 val pageBmp = viewModel.renderPageBitmap(pageNum, 2.0f)
                 if (pageBmp != null) {
                     val ocr = ocrEngine.recognizeText(pageBmp)
