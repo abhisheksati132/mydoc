@@ -193,7 +193,20 @@ jobs:
           GRADLE_USER_HOME="$RUNNER_TEMP/gradle-cold" "$GRADLE_HOME/bin/gradle" assembleRelease --stacktrace
 
       - name: Install apksigner
-        run: sudo apt-get update -y && sudo apt-get install -y apksigner
+        run: |
+          if command -v apksigner >/dev/null 2>&1; then
+            echo "apksigner is already on PATH: $(command -v apksigner)"
+          else
+            LATEST_BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | tail -1 || true)
+            if [ -n "$LATEST_BUILD_TOOLS" ] && [ -x "$LATEST_BUILD_TOOLS/apksigner" ]; then
+              echo "Using Android SDK apksigner from $LATEST_BUILD_TOOLS"
+              sudo ln -sf "$LATEST_BUILD_TOOLS/apksigner" /usr/local/bin/apksigner
+            else
+              sudo apt-get update -y || true
+              sudo apt-get install -y apksigner || true
+            fi
+          fi
+          command -v apksigner || (echo "ERROR: apksigner could not be found" && exit 1)
 
       # H-13: every artifact that is about to be published is verified, not only the universal one.
       # A split whose signature nobody checked is a split nobody can attribute to this signing key,
