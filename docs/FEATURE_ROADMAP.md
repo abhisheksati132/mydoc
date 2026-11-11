@@ -1,6 +1,6 @@
 # Next capabilities
 
-Shipped in 1.9.7: opt-in content search, cross-folder tags and smart collections, explicit duplicate review, adaptive reader toolbar ink and focused onboarding. See [Discovery and review](DISCOVERY.md) for actual scope and limits.
+Shipped in v2.0: opt-in content search, cross-folder tags and smart collections, explicit duplicate review, adaptive reader toolbar ink, and Material 3 Expressive onboarding. See [Discovery and review](DISCOVERY.md) for actual scope and limits.
 
 The historical recommendations below motivated these features. Organisation rules and named workspaces remain future work; indexing scanned pages, background indexing, broader file lifecycle tracking, and network storage also remain separate projects.
 

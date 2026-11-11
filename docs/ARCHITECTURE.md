@@ -2,86 +2,14 @@
 
 ---
 
-## 📋 High-Priority Refactoring Plan (Large File Decomposition)
-
-Several core UI and engine files have accumulated substantial complexity and exceeded 1,000 lines. To ensure long-term maintainability, testability, and adherence to Single Responsibility principles, the following decomposition plan will be executed in upcoming minor releases.
-
-### 1. `FileManagerScreen.kt` (~1,650 lines)
-* **Current State:** Monolithic Compose file combining navigation state, path breadcrumbs, multi-select action bars, category filtering, search bars, file item rendering, sort bottom sheets, and deletion dialogs.
-* **Target Package:** `com.abhisheksati.mydoc.ui.filemanager.components`
-* **Decomposition Strategy:**
-  - `FileManagerTopBar.kt`: Header with back button, breadcrumbs, search toggle, and view mode switcher.
-  - `FileManagerMultiSelectBar.kt`: Batch action bar (Share, Move, Copy, Delete, Select All) with counter.
-  - `FileManagerListContent.kt`: The `LazyColumn` file list, swipe-to-reveal actions, and pull-to-refresh container.
-  - `FileListItemRow.kt`: Individual file/folder item row with thumbnail, metadata badges, and overflow menu.
-  - `FileManagerCategoryChips.kt`: Sub-category filter pills (`PDF`, `Word`, `Excel`, `PPT`, `Text`).
-  - `FileManagerSortSheet.kt`: Sort order selection modal sheet.
-  - `FileManagerDeleteDialog.kt`: Confirmation dialog for single and bulk deletions.
-
----
-
-### 2. `PdfToolsEngine.kt` (~1,730 lines)
-* **Current State:** Single god-object implementing 20+ disparate document manipulation tasks spanning MuPDF Fitz, Apache PDFBox Android, and Google ML Kit.
-* **Target Package:** `com.abhisheksati.mydoc.tools.engine.tasks`
-* **Decomposition Strategy:**
-  - Interface: `interface PdfToolTask { suspend fun execute(inputs: List<File>, options: ToolOptions, onProgress: (ToolProgress) -> Unit): File }`
-  - `OrganizeTasks.kt`: Implementations for `MergeTask`, `SplitTask`, `ReorderTask`, `RotateTask`, `CropTask`, `ExtractPagesTask`.
-  - `OptimizeTasks.kt`: Implementations for `CompressTask` (raster downsampling & stream compaction) and `RepairTask`.
-  - `ConvertTasks.kt`: Implementations for `ImageToPdfTask`, `PdfToImagesTask`, `TextToPdfTask`, `PdfToTextMarkdownTask`, `PdfToOfficeTask`, `PdfToPdfATask`.
-  - `SecurityTasks.kt`: Implementations for `ProtectTask`, `UnlockTask`, `RedactTask`, `StripMetadataTask`.
-  - `EditTasks.kt`: Implementations for `WatermarkTask`, `PageNumberTask`, `AnnotateTask`, `FormFillTask`, `SignTask`.
-  - `OcrTask.kt`: Dedicated ML Kit on-device OCR pipeline and searchable text layer generator.
-  - `PdfToolsEngine.kt` (Façade): Reduced to ~150 lines acting as a router and dispatcher delegating to specialized tasks.
-
----
-
-### 3. `ToolRunnerSheet.kt` (~1,220 lines)
-* **Current State:** Manages the modal execution lifecycle for all 20+ PDF tools, including parameter configuration sheets, page pickers, compression sliders, watermark text inputs, progress indicators, and result preview cards.
-* **Target Package:** `com.abhisheksati.mydoc.tools.ui.sheets`
-* **Decomposition Strategy:**
-  - `ToolOptionsContainer.kt`: Generic modal host handling sheet expansion, title bar, cancel, and start button.
-  - `ToolProgressOverlay.kt`: Unified progress bar, stage description, and cancellation token handler.
-  - `ToolResultCard.kt`: Success preview, file size delta pill, "Open Result" action, and "Share Result" button.
-  - Domain-specific option sheets:
-    - `CompressOptionsSheet.kt`: Slider for DPI / JPEG quality and rasterize toggles.
-    - `WatermarkOptionsSheet.kt`: Text, opacity, rotation, and font scale controls.
-    - `PageSelectionOptionsSheet.kt`: Page ranges, split intervals, and thumbnail selection grid.
-    - `SecurityOptionsSheet.kt`: Password inputs and encryption strength selectors.
-
----
-
-### 4. `SettingsScreen.kt` (~870 lines)
-* **Current State:** Single composable hosting Theme, Reading, Media, Storage, Security, and Software Updates controls with multiple dialogs.
-* **Target Package:** `com.abhisheksati.mydoc.ui.settings.sections`
-* **Decomposition Strategy:**
-  - `ThemeSettingsCard.kt`: Theme mode (Light, Dark, Black, System), AMOLED black toggle, dynamic color.
-  - `ReadingSettingsCard.kt`: Default reading mode, fit width/page, keep screen on, high quality rendering.
-  - `MediaSettingsCard.kt`: Video hardware acceleration, auto resume, background playback.
-  - `SecuritySettingsCard.kt`: Biometric app lock toggle and device credential confirmation.
-  - `UpdaterSettingsCard.kt`: Automatic launch check toggle, version badge, "Check for Updates" trigger, and progress bar.
-
----
-
-### 5. `PresentationViewerScreen.kt` (~1,870 lines) & `PptxParser.kt` (~2,870 lines)
-* **Current State:** Comprehensive OOXML presentation rendering and viewer system.
-* **Target Package:** `com.abhisheksati.mydoc.rendering.engine.presentation`
-* **Decomposition Strategy:**
-  - `PptxThemeResolver.kt`: Theme color schemes, luminance modifiers, font schemes, and format schemes.
-  - `PptxMasterInheritance.kt`: Slide master and layout placeholder coordinate and text property resolution.
-  - `PptxShapeRenderer.kt`: Vector geometry paths, arrowheads, callouts, and preset shapes.
-  - `PptxTableRenderer.kt`: Table grid, borders, and cell background rendering.
-  - `PresentationSlideshowControls.kt`: Bottom thumbnail carousel, slide transition animations, and fullscreen controls.
-
----
-
 ## 🏛️ System Architecture Overview
 
-MyDoc follows standard Android architectural best practices with clean layered separation:
+MyDoc is an offline-first Android document reader, file manager, and PDF toolkit built on modern Android architectural guidelines, Jetpack Compose, and Material 3 Expressive.
 
 ```
 ┌────────────────────────────────────────────────────────┐
 │                   Jetpack Compose UI                   │
-│   (HomeScreen, FileManagerScreen, PdfViewerScreen)     │
+│   (HomeScreen, FilesScreen, PdfViewerScreen, Tools)    │
 └───────────────────────────▲────────────────────────────┘
                             │ StateFlow / Events
 ┌───────────────────────────┴────────────────────────────┐
@@ -91,39 +19,80 @@ MyDoc follows standard Android architectural best practices with clean layered s
                             │ Use Cases / Repositories
 ┌───────────────────────────┴────────────────────────────┐
 │                    Repository Layer                    │
-│ (DocumentRepository, StorageRepository, MediaRepository) │
+│ (DocumentRepository, StorageRepository, LibraryRepo)   │
 └─────────────▲────────────────────────────▲─────────────┘
               │                            │
 ┌─────────────┴──────────────┐  ┌──────────┴─────────────┐
-│       Local Database       │  │     Document Engine    │
-│    (Room AppDatabase)      │  │ (MuPDF, PDFBox, Word,  │
-│  - recents, favorites,     │  │  Spreadsheet, ML Kit)  │
-│  - bookmarks, view states  │  └────────────────────────┘
-└────────────────────────────┘
+│       Local Database       │  │     Document Engines   │
+│    (Room AppDatabase)      │  │ • MuPDF Fitz 1.28.5    │
+│  - recents, favorites,     │  │ • Apache PDFBox        │
+│  - bookmarks, view states  │  │ • LibreOffice Companion│
+│  - FTS4 search index       │  │ • ML Kit On-Device OCR │
+└────────────────────────────┘  └────────────────────────┘
 ```
 
-### Layer Responsibilities
+---
 
-1. **UI Layer (`ui/`)**:
-   - Declarative Jetpack Compose components snapping strictly to Material 3 and custom AMOLED color tokens.
-   - Stateless composables consuming immutable UI states.
+## 🧱 Module Architecture
 
-2. **ViewModel Layer (`viewmodel/`)**:
-   - Manages UI state via Kotlin Coroutine `StateFlow`.
-   - Exposes clear intents/actions; contains zero Android framework View/Context dependencies.
+The project is structured into three Gradle modules:
 
-3. **Data / Repository Layer (`data/`)**:
-   - Mediates between the local Room SQLite database (`mydoc.db`), MediaStore queries, and hardware filesystem operations.
-   - Emits reactive streams via `Flow`.
+```
+├── app/             # Main Android application (UI, ViewModels, Repositories, PDF Engine)
+├── lint-rules/      # Custom Android Lint checks (enforces accessible tap target descriptions)
+└── office-engine/   # Decoupled LibreOfficeKit worker (sandboxed companion application)
+```
 
-4. **Document Engine Layer (`rendering/`, `converter/`, `tools/`)**:
-   - **PDF Engine**: Powered by Artifex MuPDF Fitz JNI with sub-pixel rendering and viewport tile slicing (`renderRegion`).
-   - **Word Engine**: Native `DocxParser` + `DocxPdfRenderer` producing vector PDF pages with no WebView involved.
-   - **Presentation Engine**: Dependency-free OOXML vector parser converting slides into crisp Android `PdfDocument` pages.
-   - **Spreadsheet Engine**: Banded table parser with formula text evaluation.
+### Module Responsibilities
 
-5. **Security & Privacy Boundary**:
-   - **On-Device Processing**: Documents, photos, and media are parsed and manipulated strictly in-process.
-   - **Restricted FileProvider**: Root storage and external directory access are forbidden. URIs are granted exclusively from private cache subdirectories (`updates/`, `shared/`, `tools_output/`) and the app-private document cache (`saved_docs/`). Sharing and open-with always use `content://`, never `file://`.
-   - **Platform Backup**: Standard Android backup may include the Room database and `saved_docs/` copies; app-lock prefs, updater state, caches, and the encrypted signature are excluded.
-   - **Cryptographic Updater**: Automatic updates query public GitHub Releases with domain allowlisting, a 384 MiB download cap (including streamed bytes), mandatory SHA-256 validation, and release certificate pinning. ABI-specific downloads are preferred over the larger universal package.
+1. **`:app` (Main Application)**:
+   - **UI & Presentation (`com.abhisheksati.mydoc.ui.*`)**: Declarative Compose components adhering to the *Ink & Seal* visual identity (Material 3 Expressive motion, Fraunces/Inter typography, and optional Haze liquid glass optics).
+   - **ViewModels (`com.abhisheksati.mydoc.viewmodel.*`)**: Unidirectional data flow (UDF) powered by Kotlin Coroutines `StateFlow` and immutable UI state models.
+   - **Data Layer (`com.abhisheksati.mydoc.data.*`)**: Room SQLite database (`mydoc.db`), MediaStore queries, and resilient scoped filesystem operations.
+   - **PDF & Tools Engine (`com.abhisheksati.mydoc.tools.engine.*`)**: Modularized PDF manipulation engines (conversion, editing, optimization, page operations, security).
+
+2. **`:office-engine` (Companion Office Module)**:
+   - Houses native LibreOfficeKit binaries (v26.2.6.3), fonts, and runtime assets.
+   - Runs in a dedicated worker process with seccomp filters blocking external socket connections.
+   - Communicates via local `AF_UNIX` IPC using caller signature verification.
+   - Keeps the core APK lean (~55 MB ARM64) while providing high-fidelity Office viewing.
+
+3. **`:lint-rules` (Quality & Accessibility Lint)**:
+   - Enforces design system and accessibility constraints (e.g., `UnlabeledTapTargetDetector` requiring `contentDescription` on icon-only tap targets).
+
+---
+
+## 🧩 Decomposed Subsystems
+
+Core UI and engine files have been modularized into domain-focused components:
+
+### 1. Files & Explorer Hub (`com.abhisheksati.mydoc.ui.files`)
+- `FilesScreen.kt`: Top-level scaffold and navigation host.
+- `FilesPanes.kt`: Adaptive single-pane and dual-pane layout rendering.
+- `FilesComponents.kt`: Individual file/folder rows, badge indicators, and sub-category chips.
+- `FileManagerHeaderComponents.kt`: Breadcrumbs, search toggle, view mode switcher, and folder tabs.
+- `FileManagerActionSheet.kt`: Batch operations (Share, Move, Copy, Delete, Recycle Bin).
+- `FileManagerDialogs.kt`: Safe delete, rename, and folder creation dialogs.
+
+### 2. PDF Tools Engine (`com.abhisheksati.mydoc.tools.engine`)
+- `PdfConversionEngine.kt`: Image to PDF, Text to PDF, and Office to PDF conversion pipelines.
+- `PdfEditingEngine.kt`: Vector watermarking, dynamic page numbering, and annotations.
+- `PdfOptimizationEngine.kt`: Stream compaction, JPEG recompression, downsampling, and rasterization.
+- `PdfPageOperationsEngine.kt`: Split, merge, reorder, rotate, and page extraction.
+- `PdfSecurityEngine.kt`: Password encryption, permissions stripping, and signature validation.
+- `PdfToolUtils.kt`: Shared validation, bounding, and stream helpers.
+
+### 3. Settings Hub (`com.abhisheksati.mydoc.ui.settings`)
+- `SettingsCategoryIndex.kt`: Category navigation and landing screen.
+- `SettingsComponents.kt`: Shared settings cards, switches, sliders, and option pickers.
+- `OfficeEngineSettings.kt`: Dedicated companion engine installation, status, and uninstallation.
+- `SettingsAboutSection.kt`: In-app updates checker, open-source licenses, and legal notices.
+
+---
+
+## 🔒 Security & Privacy Boundaries
+
+1. **Completely Local Processing**: Document rendering, text extraction, OCR, and file manipulation occur strictly on-device without telemetry or remote telemetry servers.
+2. **Strict FileProvider Access**: File URIs are shared exclusively via scoped `content://` providers with temporary read grants. Raw `file://` URIs and external root traversal are blocked.
+3. **Cryptographic Release Verification**: The in-app updater validates domain allowlists, enforces download caps, verifies SHA-256 checksums, and requires identical release certificate fingerprints (`MYDOC_RELEASE_CERT_SHA256`).
+4. **Sandboxed Office IPC**: The LibreOfficeKit companion engine runs in a separate process with seccomp filters preventing outbound internet connections.

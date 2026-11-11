@@ -1,6 +1,6 @@
-# Search, collections and review (1.9.7)
+# Search, collections and review
 
-In 1.9.8, rendered Office indexing requires the optional MyDoc Office Engine from Settings → Reading. Without it, filename search and tags remain available and text extraction reports why it is unavailable. PDF and other independent extraction routes remain available.
+Rendered Office indexing requires the optional MyDoc Office Engine from **Settings → Reading**. Without it, filename search and tags remain available and text extraction reports why it is unavailable. PDF and other independent extraction routes remain available.
 
 Open **Search → Contents, tags & smart collections**. Choose files or a folder using Android's picker. MyDoc does not crawl storage without this choice. SAF read grants are retained where supported; a revoked grant, missing file or unavailable provider is shown during refresh/open. **Relink** reconnects a file chosen at a new location while preserving its tags. **Remove from index** never deletes its original.
 

@@ -10,7 +10,7 @@ MyDoc integrates LibreOfficeKit **26.2.6.3**, copyright LibreOffice contributors
 - [F-Droid build recipes and patches](https://gitlab.com/fdroid/fdroiddata/-/blob/master/metadata/org.documentfoundation.libreoffice.yml).
 - `engine.lock.json` pins each binary's SHA-256 and the F-Droid signing certificate. `scripts/prepare_word_engine.py` verifies both before extracting runtime files. The upstream app's UI, classes, resources and identity are not included.
 
-The three Java adapters under `app/src/main/java/org/libreoffice/kit` derive from upstream `android/Bootstrap/src/org/libreoffice/kit` at this tag. MyDoc changes (2026-11-08): initialize using a service Context/private profile, disable stdout redirection, and make callback references volatile. Their MPL headers remain intact; the complete modified source is in this repository.
+The three Java adapters under `office-engine/src/main/java/org/libreoffice/kit` derive from upstream `android/Bootstrap/src/org/libreoffice/kit` at this tag. MyDoc changes: initialize using a service Context/private profile, disable stdout redirection, and make callback references volatile. Their MPL headers remain intact; the complete modified source is in this repository.
 
 ## Licenses
 

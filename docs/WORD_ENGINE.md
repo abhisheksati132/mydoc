@@ -1,6 +1,6 @@
 # Offline Office page rendering
 
-## Optional engine delivery (1.9.8)
+## Optional engine delivery (v2.0+)
 
 The `office-engine` Android application module owns the LibreOffice libraries, fonts and assets. They are no longer embedded in the main APK. Without the companion, MyDoc uses its built-in Word reflow, spreadsheet grid and presentation readers, with their existing format and fidelity limits. These readers do not provide equivalent LibreOffice compatibility. Protected OOXML containers are explicitly rejected rather than scraped into invented contents.
 

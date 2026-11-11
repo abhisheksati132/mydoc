@@ -1,67 +1,59 @@
-> **Historical document.** This file describes an earlier state of the project and is kept for
-> context. It is not the current architecture, roadmap or version; `README.md`, `SECURITY.md`,
-> `docs/ARCHITECTURE.md` and `CHANGELOG.md` are authoritative. Current version: 1.7.5.
-
-# Document Engine Architecture & Improvement Plan
+# Document Engine Architecture & Engineering Plan
 
 > **Project Target:** `mydoc` (`com.abhisheksati.mydoc`)  
-> **Version:** 1.5.12 (minSdk 26, targetSdk 35)  
-> **Inspiration & Attribution:** Architecture and design paradigms adapted with credit to `ClearPDF-5.1` (`com.chethan616.clearpdf`).  
-> **Focus:** High-fidelity document loading, visual precision, untrusted-input safety, and memory-safe rendering for PDF, PPTX, DOCX, and XLSX files.
+> **Current Version:** 2.0.3 (minSdk 26, targetSdk 35)  
+> **Core Engine:** Artifex MuPDF Fitz 1.28.5 (16KB aligned) & LibreOfficeKit 26.2.6.3 companion module  
+> **Focus:** High-fidelity document rendering, memory-safe sub-pixel viewport tiling, untrusted-input hardening, and on-device privacy.
 
 ---
 
-## 1. Executive Summary & Core Architectural Insight
+## 1. Document Engine Architecture
 
-High-fidelity mobile document reading requires a disciplined, memory-safe architecture:
+MyDoc provides a robust, memory-safe document processing architecture tailored for modern Android devices (phones, foldables, and tablets):
 
-### 🌟 The "Universal PDF Pipeline" Architecture
-Rather than creating fragile, independent layout engines for every proprietary document format in Compose:
-- **PDF:** Rendered via MuPDF Fitz native vector engine with sub-pixel vector tiling and Android OS `PdfRenderer` resilient fallback.
-- **DOCX / DOC:** Parsed natively via custom OOXML parser (`DocxConverter` / `DocxParser` / `DocxPdfRenderer`) directly into vector PDF pages with zero WebView usage.
-- **PPTX / PPT / ODP:** Parsed via OOXML shape tree, slide master/layout inheritance, and theme color palettes directly into vector PDF pages (`PptxConverter`).
-- **XLSX / XLS / ODS:** Banded column layout rendered directly into PDF pages (`XlsxConverter`).
+### 🌟 Unified Document Pipeline
+Rather than relying on insecure WebViews or fragile custom layout engines:
+- **PDF Engine:** Rendered via native MuPDF Fitz (1.28.5, 16KB page-aligned) with sub-pixel viewport tiling (`renderRegion`), quad text search, table-of-contents outline parsing, and Android OS `PdfRenderer` fallback.
+- **Office Documents (Word, PowerPoint, Excel):** Handled via the decoupled `:office-engine` companion module powered by LibreOfficeKit 26.2.6.3. Office files (`.docx`, `.doc`, `.odt`, `.pptx`, `.ppt`, `.odp`, `.xlsx`, `.ods`) are converted into vector PDF pages within an isolated worker process.
+- **Built-in Fallback Readers:** When the companion engine is uninstalled or optional, MyDoc uses lightweight built-in readers:
+  - **Excel / CSV / TSV:** Searchable, cached-value spreadsheet cell grid.
+  - **RTF / Text / Markdown:** Bounded stream text reader with syntax framing.
+- **PDF Manipulation Toolkit:** 20+ operations including vector watermarking, page reordering, compression, encryption, digital signing, and Google ML Kit on-device OCR.
 
 ```mermaid
 graph TD
-    subgraph Input Formats
-        PDF[PDF File]
-        DOCX[Word .docx / .doc / .dotx]
-        PPTX[PowerPoint .pptx / .ppt / .odp]
-        XLSX[Excel .xlsx / .xls / .ods / .csv]
+    subgraph Inputs
+        PDF[PDF Documents]
+        OFFICE[Office Documents<br/>.docx, .pptx, .xlsx, .odt, .ods, .odp]
+        DATA[Spreadsheets & Text<br/>.csv, .tsv, .txt, .rtf, .md]
     end
 
-    subgraph Converters
-        DOCX_CONV["DocxConverter<br/>(Native OOXML parser to PdfDocument)"]
-        PPTX_CONV["PptxConverter<br/>(OOXML Shape Tree + Layout/Master Inheritance to PdfDocument)"]
-        XLSX_CONV["XlsxConverter<br/>(Banded Column Layout to PdfDocument)"]
+    subgraph Engines
+        MUPDF["MuPDF Fitz Native Vector Engine<br/>• Viewport Tiling (renderRegion)<br/>• Quad Search & TOC Outline<br/>• 16KB Page-Aligned"]
+        LO_ENGINE[":office-engine Companion<br/>• LibreOfficeKit 26.2.6.3<br/>• Isolated Worker Process<br/>• seccomp Network Filter"]
+        NATIVE_GRID["Built-in Readers<br/>• Spreadsheet Cell Grid<br/>• Stream Text Reader"]
     end
 
-    subgraph Universal Document Engine
-        PDF_ENGINE["Unified PDF Engine<br/>• Viewport Tiling (renderRegion)<br/>• Thread-Safe Concurrency<br/>• OOM Protection (Throwable Catch & Recycle)<br/>• Continuous Vertical & Horizontal Pager<br/>• Bounded ZIP Extraction (per-parser limits)"]
+    subgraph Viewer UI
+        VIEWER["Unified Document Viewer<br/>• Material 3 Expressive Controls<br/>• Continuous Vertical/Horizontal Pager<br/>• Optical Zoom & Night Inversion"]
     end
 
-    PDF --> PDF_ENGINE
-    DOCX --> DOCX_CONV --> PDF_ENGINE
-    PPTX --> PPTX_CONV --> PDF_ENGINE
-    XLSX --> XLSX_CONV --> PDF_ENGINE
+    PDF --> MUPDF --> VIEWER
+    OFFICE --> LO_ENGINE --> MUPDF --> VIEWER
+    DATA --> NATIVE_GRID --> VIEWER
 ```
-
-By adopting this architecture, every improvement made to PDF viewing (smooth zoom, search, annotations, page jump, continuous vertical scrolling) automatically benefits DOCX, PPTX, and XLSX files.
 
 ---
 
-## 2. Core Rendering Principles
+## 2. Core Rendering & Memory Safety Principles
 
 | Dimension | Specification | Architectural Benefit |
 | :--- | :--- | :--- |
-| **Word (.docx)** | **`DocxConverter`** native OOXML parser & `DocxPdfRenderer`; compiles directly to `PdfDocument`. | Authentic margins, typography, page breaks, and complex tables rendered accurately with zero WebView attack surface. |
-| **PowerPoint (.pptx)** | **`PptxConverter`** reads presentation XML, theme palettes (`a:clrScheme`), slide layout & master inheritance, painting directly to `PdfDocument`. | Authentic aspect ratios (`p:sldSz`), proper slide ordering via `<p:sldIdLst>`, and accurate color contrast. |
-| **Excel (.xlsx)** | **`XlsxConverter`** banded column and multi-sheet engine converting spreadsheets into crisp vector PDF pages. | Consistent mobile readability across large datasets without horizontal clipping. |
-| **Untrusted Zip Safety** | Each OOXML parser bounds decompression (25 MB per entry; 10,000 entries for DOCX/PPTX, 2,000 for XLSX; 100 MB total for XLSX; 100:1 ratio for PPTX). | Caps decompression bombs and entry-count explosions. The shared `ZipSafeReader` is not yet wired, so limits vary by format. |
-| **PDF Zoom & Resolution** | **`renderRegion`**: Renders only the active on-screen viewport at native screen DPI while zoomed in. | Zero pixelation at 5x–10x zoom without allocating giant full-page bitmaps. |
-| **Thread Safety & OOM** | Native rendering operations protected with explicit `Throwable` handling and bitmap recycling. | Eliminates native concurrency crashes during fast scrolling or low-memory conditions. |
-| **Slide Ordering** | Resolves authoritative order through `<p:sldIdLst>` in `ppt/presentation.xml`. | Guarantees authentic presentation sequence. |
+| **PDF Viewport Tiling** | **`renderRegion`**: Computes and renders only the visible sub-pixel viewport at native screen DPI during zoom. | Crisp rendering at 5x–10x zoom without allocating giant full-page bitmaps. |
+| **Sandboxed Office Worker** | The `:office-engine` runs under an isolated worker process with seccomp filters blocking network sockets. | Complete crash isolation from the main UI process and defense-in-depth against malformed document exploits. |
+| **Memory Budgets** | Strict memory and dimension caps (e.g., 4096px image decode budget, 64 MB input limits). | Prevents out-of-memory errors on low-RAM devices and eliminates JNI memory leaks. |
+| **Atomic Cache Persistence** | Temporary renders and exports are staged with UUID filenames and committed atomically. | Eliminates corrupted, partially written files and invalid offline cache entries. |
+| **Accessible Tap Targets** | Custom lint checks (`:lint-rules`) enforce descriptive `contentDescription` on all interactive controls. | Ensures full TalkBack accessibility across all screens and bottom sheets. |
 
 ---
 
@@ -84,32 +76,24 @@ override fun renderRegion(
 
 ---
 
-## 4. Current Architecture & Implementation Status
+## 4. Engineering Milestones (v2.0.x)
 
-| Phase | Milestone | Deliverables | Status |
-| :--- | :--- | :--- | :--- |
-| **Phase 1** | **Untrusted-Input Safety** | `ZipSafeReader` added (shared guard, not yet wired), OOM guards in all parsers. | **Complete** |
-| **Phase 2** | **Build & Release Hardening** | Pinned GitHub actions, release keystore safety, ProGuard rules, debug suffixes. | **Complete** |
-| **Phase 3** | **Robustness & Cleanliness** | Eliminated all `!!` operators, cancellation propagation in coroutines. | **Complete** |
-| **Phase 4** | **UI/UX & Quality Fixes** | Biometric guard with `KeyguardManager`, system theme chip, navigation insets. | **Complete** |
-| **Phase 5** | **Architecture & Tests** | `ViewerViewModelTest` unit test suite, `UpdateManager` version comparison tests. | **Complete** |
-| **Phase 6** | **Docs & Dependencies** | Updated `SECURITY.md` and `improvement.md` to reflect actual v1.5.3 state. | **Complete** |
-
-### Key Component Paths
-- PDF Engine: `app/src/main/java/com/abhisheksati/mydoc/rendering/engine/`
-- Viewer UI: `app/src/main/java/com/abhisheksati/mydoc/ui/viewer/pdf/PdfViewerScreen.kt`
-- PPTX Parser: `app/src/main/java/com/abhisheksati/mydoc/rendering/engine/presentation/`
-- DOCX Parser: `app/src/main/java/com/abhisheksati/mydoc/rendering/engine/word/`
-- XLSX Parser: `app/src/main/java/com/abhisheksati/mydoc/rendering/engine/spreadsheet/`
-- ViewModel Layer: `app/src/main/java/com/abhisheksati/mydoc/viewmodel/ViewerViewModel.kt`
+| Milestone | Key Deliverables | Status |
+| :--- | :--- | :--- |
+| **Material 3 Expressive UI** | Complete redesign using Ink & Seal visual grammar, motion curves, and Liquid Glass optics. | **Complete** |
+| **Modular Companion Engine** | Decoupled `:office-engine` companion module with LibreOfficeKit and verified F-Droid builds. | **Complete** |
+| **Files & Storage Hub** | Decomposed `FilesScreen`, dual-pane foldable layout, Recycle Bin, and storage cleaner. | **Complete** |
+| **Security Hardening** | Pinned release certificate fingerprint checks, private storage isolation, and continuous `FLAG_SECURE`. | **Complete** |
+| **Release & CI Automation** | Pinned Gradle wrapper verification, cold-home release builds, and automated API 35 emulator smoke tests. | **Complete** |
+| **Audit Resolution (v2.0.3)** | Fixed scanner image staging, structural PDF validation, Compose lint compliance, and version alignment. | **Complete** |
 
 ---
 
 ## 5. Verification & Quality Guardrails
 
-1. **On-Device Processing, No Telemetry:** All document operations run on-device and no usage data is collected. Network access is limited to the optional GitHub update check/download and Google Play Services fetching the ML Kit OCR model on first use; document content is never uploaded.
-2. **Pure AMOLED Aesthetics:** Maintain `#000000` AMOLED Black and clean high-contrast themes.
-3. **Mandatory Build Checks:**
-   - `./gradlew testDebugUnitTest` (100% green)
-   - `./gradlew lintDebug` (0 errors)
-   - `./gradlew assembleDebug` (Clean compilation)
+1. **100% On-Device Processing:** All document operations run locally. Zero telemetry, tracking, or external analytics.
+2. **Network Scoping:** Network access is restricted to user-initiated GitHub update checks/downloads and on-demand ML Kit OCR model initialization.
+3. **Mandatory CI Build Quality Gates:**
+   - `./gradlew testDebugUnitTest` (All unit test suites green)
+   - `./gradlew lintDebug` (0 lint errors across `:app`, `:office-engine`, and `:lint-rules`)
+   - `./gradlew assembleDebug` (Clean compilation and packaging)
