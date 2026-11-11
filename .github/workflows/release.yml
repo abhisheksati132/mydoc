@@ -194,16 +194,15 @@ jobs:
 
       - name: Install apksigner
         run: |
-          JAR=$(ls -1 "$ANDROID_HOME"/build-tools/*/lib/apksigner.jar 2>/dev/null | tail -1 || true)
-          if [ -n "$JAR" ] && [ -f "$JAR" ]; then
-            echo "Configuring apksigner wrapper for $JAR"
-            printf '#!/bin/sh\nexec java -jar "%s" "$@"\n' "$JAR" | sudo tee /usr/local/bin/apksigner > /dev/null
+          sudo apt-get update -y && sudo apt-get install -y apksigner || true
+          if ! command -v apksigner >/dev/null 2>&1 || ! apksigner --version >/dev/null 2>&1; then
+            echo "apt-get apksigner not available; configuring Android SDK build-tools wrapper..."
+            BT=$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | tail -1)
+            printf '#!/bin/sh\nexec "%s/apksigner" "$@"\n' "$BT" | sudo tee /usr/local/bin/apksigner > /dev/null
             sudo chmod +x /usr/local/bin/apksigner
-          else
-            sudo DEBIAN_FRONTEND=noninteractive apt-get update -y || true
-            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends apksigner || true
           fi
           command -v apksigner
+          apksigner --version
 
       # H-13: every artifact that is about to be published is verified, not only the universal one.
       # A split whose signature nobody checked is a split nobody can attribute to this signing key,
@@ -237,10 +236,11 @@ jobs:
           echo "### APK verification (${#APKS[@]} artifacts)" >> "$GITHUB_STEP_SUMMARY"
           for apk in "${APKS[@]}"; do
             name=$(basename "$apk")
-            CERT_OUTPUT=$(apksigner verify --print-certs "$apk")
+            CERT_OUTPUT=$(apksigner verify --print-certs "$apk" 2>&1 || true)
             ACTUAL=$(echo "$CERT_OUTPUT" | grep -i "Signer #1 certificate SHA-256 digest:" | head -1 | awk '{print $NF}' | tr -d ' :' | tr '[:upper:]' '[:lower:]')
             if [ -z "$ACTUAL" ] || [ "$ACTUAL" != "$NORMALIZED_EXPECTED" ]; then
               echo "CRITICAL SECURITY FAILURE: $name is signed by '${ACTUAL:-nothing}', expected $NORMALIZED_EXPECTED."
+              echo "apksigner output was: $CERT_OUTPUT"
               exit 1
             fi
             ABIS=$(unzip -Z1 "$apk" 2>/dev/null | sed -n 's|^lib/\([^/]*\)/.*|\1|p' | sort -u | tr '\n' ',' | sed 's/,$//' || true)
