@@ -194,19 +194,17 @@ jobs:
 
       - name: Install apksigner
         run: |
-          if command -v apksigner >/dev/null 2>&1; then
-            echo "apksigner is already on PATH: $(command -v apksigner)"
+          sudo rm -f /usr/local/bin/apksigner
+          LATEST_BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | tail -1 || true)
+          if [ -n "$LATEST_BUILD_TOOLS" ] && [ -x "$LATEST_BUILD_TOOLS/apksigner" ]; then
+            echo "Adding Android SDK build-tools to PATH: $LATEST_BUILD_TOOLS"
+            echo "$LATEST_BUILD_TOOLS" >> "$GITHUB_PATH"
+            export PATH="$LATEST_BUILD_TOOLS:$PATH"
           else
-            LATEST_BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | tail -1 || true)
-            if [ -n "$LATEST_BUILD_TOOLS" ] && [ -x "$LATEST_BUILD_TOOLS/apksigner" ]; then
-              echo "Using Android SDK apksigner from $LATEST_BUILD_TOOLS"
-              sudo ln -sf "$LATEST_BUILD_TOOLS/apksigner" /usr/local/bin/apksigner
-            else
-              sudo apt-get update -y || true
-              sudo apt-get install -y apksigner || true
-            fi
+            sudo apt-get update -y || true
+            sudo apt-get install -y apksigner || true
           fi
-          command -v apksigner || (echo "ERROR: apksigner could not be found" && exit 1)
+          "$LATEST_BUILD_TOOLS/apksigner" --version || apksigner --version
 
       # H-13: every artifact that is about to be published is verified, not only the universal one.
       # A split whose signature nobody checked is a split nobody can attribute to this signing key,
@@ -225,6 +223,7 @@ jobs:
           fi
           NORMALIZED_EXPECTED=$(echo "$EXPECTED_CERT_SHA256" | tr -d ' :' | tr '[:upper:]' '[:lower:]')
           AAPT2=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 2>/dev/null | tail -1 || true)
+          APKSIGNER=$(command -v apksigner 2>/dev/null || ls "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | tail -1 || true)
           if ! command -v unzip >/dev/null 2>&1; then
             echo "ERROR: unzip is missing, so the native library layout of the release APKs cannot be checked."
             exit 1
@@ -240,7 +239,7 @@ jobs:
           echo "### APK verification (${#APKS[@]} artifacts)" >> "$GITHUB_STEP_SUMMARY"
           for apk in "${APKS[@]}"; do
             name=$(basename "$apk")
-            CERT_OUTPUT=$(apksigner verify --print-certs "$apk")
+            CERT_OUTPUT=$("$APKSIGNER" verify --print-certs "$apk")
             ACTUAL=$(echo "$CERT_OUTPUT" | grep -i "Signer #1 certificate SHA-256 digest:" | head -1 | awk '{print $NF}' | tr -d ' :' | tr '[:upper:]' '[:lower:]')
             if [ -z "$ACTUAL" ] || [ "$ACTUAL" != "$NORMALIZED_EXPECTED" ]; then
               echo "CRITICAL SECURITY FAILURE: $name is signed by '${ACTUAL:-nothing}', expected $NORMALIZED_EXPECTED."
