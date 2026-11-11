@@ -194,9 +194,18 @@ jobs:
 
       - name: Install apksigner
         run: |
-          for i in 1 2 3; do
-            sudo apt-get update -y && sudo apt-get install -y apksigner && break || sleep 5
-          done
+          JAR=$(ls -1 "$ANDROID_HOME"/build-tools/*/lib/apksigner.jar 2>/dev/null | tail -1 || true)
+          if [ -n "$JAR" ] && [ -f "$JAR" ]; then
+            echo "Configuring apksigner wrapper for $JAR"
+            sudo tee /usr/local/bin/apksigner > /dev/null <<EOF
+#!/bin/sh
+exec java -jar "$JAR" "\$@"
+EOF
+            sudo chmod +x /usr/local/bin/apksigner
+          else
+            sudo DEBIAN_FRONTEND=noninteractive apt-get update -y || true
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends apksigner || true
+          fi
           command -v apksigner
 
       # H-13: every artifact that is about to be published is verified, not only the universal one.
