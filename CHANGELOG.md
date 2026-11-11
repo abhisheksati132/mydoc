@@ -3,6 +3,12 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [2.0.3] — 2026-11-11
+
+### CI & Build Fixes
+- Fix `LocalContextConfigurationRead` Compose lint error in `VideoPlayerScreen` by migrating configuration reads to `LocalConfiguration.current`.
+- Bump application release version to 2.0.3 (`versionCode` 193).
+
 ## [2.0.2] — 2026-11-11
 
 ### Security & Hardening
