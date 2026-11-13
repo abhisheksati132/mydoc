@@ -99,7 +99,8 @@ fun ReadingControlsBottomSheet(
     document: DocumentFile,
     modifier: Modifier = Modifier,
     isFitPage: Boolean = false,
-    onFitPageChange: ((Boolean) -> Unit)? = null
+    onFitPageChange: ((Boolean) -> Unit)? = null,
+    showLayoutControls: Boolean = true
 ) {
     if (!isOpen) return
 
@@ -235,41 +236,44 @@ fun ReadingControlsBottomSheet(
 
             Spacer(modifier = Modifier.height(AppSpacing.paddingLarge))
 
-            // 3. Scroll & Page Layout Mode
-            SectionLabel(stringResource(R.string.appearance_layout))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
-            ) {
-                ThemeOptionButton(
-                    label = stringResource(R.string.appearance_scroll),
-                    icon = Icons.Outlined.SwapVert,
-                    isSelected = isContinuousScroll && !isDualPageView,
-                    onClick = {
-                        onDualPageViewChange(false)
-                        onScrollModeChange(true)
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-                ThemeOptionButton(
-                    label = stringResource(R.string.appearance_paged),
-                    icon = Icons.Outlined.ViewDay,
-                    isSelected = !isContinuousScroll && !isDualPageView,
-                    onClick = {
-                        onDualPageViewChange(false)
-                        onScrollModeChange(false)
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-                ThemeOptionButton(
-                    label = stringResource(R.string.appearance_dual_page),
-                    icon = Icons.Outlined.ViewWeek,
-                    isSelected = isDualPageView,
-                    onClick = {
-                        onDualPageViewChange(true)
-                    },
-                    modifier = Modifier.weight(1f)
-                )
+            // 3. Scroll & Page Layout Mode — only for viewers that implement these modes;
+            // a toggle the viewer never reads is a dead control.
+            if (showLayoutControls) {
+                SectionLabel(stringResource(R.string.appearance_layout))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
+                ) {
+                    ThemeOptionButton(
+                        label = stringResource(R.string.appearance_scroll),
+                        icon = Icons.Outlined.SwapVert,
+                        isSelected = isContinuousScroll && !isDualPageView,
+                        onClick = {
+                            onDualPageViewChange(false)
+                            onScrollModeChange(true)
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                    ThemeOptionButton(
+                        label = stringResource(R.string.appearance_paged),
+                        icon = Icons.Outlined.ViewDay,
+                        isSelected = !isContinuousScroll && !isDualPageView,
+                        onClick = {
+                            onDualPageViewChange(false)
+                            onScrollModeChange(false)
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                    ThemeOptionButton(
+                        label = stringResource(R.string.appearance_dual_page),
+                        icon = Icons.Outlined.ViewWeek,
+                        isSelected = isDualPageView,
+                        onClick = {
+                            onDualPageViewChange(true)
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
 
             // 4. Page Fit (Width vs Page)

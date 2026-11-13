@@ -39,7 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.ContentCut
@@ -71,6 +71,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -149,7 +150,7 @@ fun StorageOverviewCard(
                     Text(stringResource(R.string.storage_capacity_summary, formattedFree.ifEmpty { "—" }, formattedTotal.ifEmpty { "—" }),
                         style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
                 }
-                Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = scheme.onSurfaceVariant)
+                Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = scheme.onSurfaceVariant)
             }
             LinearProgressIndicator(progress = { usedRatio.coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(4.dp).clip(CircleShape),
@@ -442,7 +443,8 @@ fun FileGridCell(
             } else {
                 StorageThumbnail(
                     item = item,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    contentDescription = if (galleryTile) item.name else null
                 )
                 if (isSelected) {
                     Box(
@@ -538,7 +540,7 @@ fun LocationRow(
             )
         }
         Icon(
-            imageVector = Icons.Outlined.ChevronRight,
+            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
             contentDescription = null,
             tint = scheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp)
@@ -612,7 +614,7 @@ fun FilesSelectionBar(
             IconButton(onClick = onClose) {
                 Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.cd_close_selection))
             }
-            Text(stringResource(R.string.files_selected_count, selectedCount),
+            Text(pluralStringResource(R.plurals.files_selected_count_plural, selectedCount, selectedCount),
                 style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             if (selectedCount < totalCount) {
                 IconButton(onClick = onSelectAll) {
@@ -705,7 +707,7 @@ fun BreadcrumbRow(
             )
             if (!isLast) {
                 Icon(
-                    imageVector = Icons.Outlined.ChevronRight,
+                    imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                     contentDescription = null,
                     tint = scheme.outline,
                     modifier = Modifier.size(16.dp)

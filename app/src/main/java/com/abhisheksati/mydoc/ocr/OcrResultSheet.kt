@@ -31,9 +31,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.unit.dp
@@ -106,7 +106,9 @@ fun OcrResultSheet(
                             color = colors.textPrimary
                         )
                         Text(
-                            text = stringResource(R.string.ocr_counts, wordCount, charCount),
+                            text = pluralStringResource(R.plurals.ocr_word_count, wordCount, wordCount) +
+                                " • " +
+                                pluralStringResource(R.plurals.ocr_char_count, charCount, charCount),
                             style = typography.caption,
                             color = colors.textSecondary
                         )
@@ -133,7 +135,7 @@ fun OcrResultSheet(
                     },
                     modifier = Modifier.weight(1f),
                     shape = AppRadius.pillShape,
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.accent, contentColor = Color.Black)
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.accent, contentColor = colors.onAccent)
                 ) {
                     Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))

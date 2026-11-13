@@ -15,8 +15,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Security
@@ -90,7 +90,7 @@ internal fun SettingsCategoryIndex(onSelect: (SettingsCategory) -> Unit, modifie
                                         Icon(category.icon, contentDescription = null, tint = tone)
                                     }
                                 },
-                                trailingContent = { Icon(Icons.Outlined.ChevronRight, contentDescription = null) },
+                                trailingContent = { Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null) },
                                 colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
                                 modifier = Modifier.clickable(role = Role.Button) { onSelect(category) }.padding(vertical = 3.dp)
                             )

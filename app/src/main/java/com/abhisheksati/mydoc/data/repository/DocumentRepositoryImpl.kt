@@ -1,6 +1,7 @@
 package com.abhisheksati.mydoc.data.repository
 
 import com.abhisheksati.mydoc.util.DocumentIdentity
+import com.abhisheksati.mydoc.util.SecureLog
 import com.abhisheksati.mydoc.util.copyBounded
 import android.content.ContentUris
 import android.content.Context
@@ -169,9 +170,9 @@ class DocumentRepositoryImpl(
                     }
                 }
                         } catch (e: SecurityException) {
-                android.util.Log.w("DocumentRepository", "Permission denied reading MediaStore documents", e)
+                SecureLog.warn("DocumentRepository", "Permission denied reading MediaStore documents", e)
             } catch (e: Exception) {
-                android.util.Log.w("DocumentRepository", "Error querying MediaStore documents", e)
+                SecureLog.warn("DocumentRepository", "Error querying MediaStore documents", e)
             }
 
             // Also merge any recents that might not be indexed in MediaStore
@@ -264,9 +265,9 @@ class DocumentRepositoryImpl(
                 localFile.setLastModified(System.currentTimeMillis())
                 com.abhisheksati.mydoc.data.local.DocumentStreamResolver.trimSavedDocsCache(savedDocsDir)
             } catch (e: java.io.IOException) {
-                android.util.Log.w("DocumentRepository", "Failed caching local document copy", e)
+                SecureLog.warn("DocumentRepository", "Failed caching local document copy", e)
             } catch (e: Exception) {
-                android.util.Log.w("DocumentRepository", "Unexpected error caching local document", e)
+                SecureLog.warn("DocumentRepository", "Unexpected error caching local document", e)
             }
 
             val existing = recentDao.getRecentByUri(uri.toString())
@@ -451,9 +452,9 @@ class DocumentRepositoryImpl(
                     }
                 }
                         } catch (e: SecurityException) {
-                android.util.Log.w("DocumentRepository", "Permission denied querying document metadata for $uri", e)
+                SecureLog.warn("DocumentRepository", "Permission denied querying document metadata", e) { uri.toString() }
             } catch (e: Exception) {
-                android.util.Log.w("DocumentRepository", "Error querying document metadata for $uri", e)
+                SecureLog.warn("DocumentRepository", "Error querying document metadata", e) { uri.toString() }
             }
         } else if (uri.scheme == "file") {
             val file = File(uri.path ?: "")
@@ -472,9 +473,9 @@ class DocumentRepositoryImpl(
                     sizeBytes = pfd.statSize
                 }
                         } catch (e: java.io.FileNotFoundException) {
-                android.util.Log.w("DocumentRepository", "File not found when inspecting size for $uri", e)
+                SecureLog.warn("DocumentRepository", "File not found when inspecting size", e) { uri.toString() }
             } catch (e: Exception) {
-                android.util.Log.w("DocumentRepository", "Error opening file descriptor for size calculation", e)
+                SecureLog.warn("DocumentRepository", "Error opening file descriptor for size calculation", e)
             }
         }
 

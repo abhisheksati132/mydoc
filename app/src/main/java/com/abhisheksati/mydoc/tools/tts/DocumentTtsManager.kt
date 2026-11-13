@@ -17,6 +17,16 @@ enum class TtsPlaybackState {
     ERROR
 }
 
+/**
+ * The default engine may synthesize in the cloud, so the UI must name it rather than imply
+ * on-device processing. Falls back to the package name when no readable label exists.
+ */
+internal fun ttsEngineDisplayName(defaultEnginePackage: String?, labelFor: (String) -> String?): String? {
+    if (defaultEnginePackage.isNullOrBlank()) return null
+    val label = runCatching { labelFor(defaultEnginePackage) }.getOrNull()
+    return if (label.isNullOrBlank()) defaultEnginePackage else label
+}
+
 class DocumentTtsManager(private val context: Context) : TextToSpeech.OnInitListener {
 
     private var tts: TextToSpeech? = null
@@ -26,6 +36,9 @@ class DocumentTtsManager(private val context: Context) : TextToSpeech.OnInitList
 
     private val _playbackState = MutableStateFlow(TtsPlaybackState.IDLE)
     val playbackState: StateFlow<TtsPlaybackState> = _playbackState.asStateFlow()
+
+    private val _engineName = MutableStateFlow("")
+    val engineName: StateFlow<String> = _engineName.asStateFlow()
 
     private val _speechRate = MutableStateFlow(1.0f)
     val speechRate: StateFlow<Float> = _speechRate.asStateFlow()
@@ -45,6 +58,10 @@ class DocumentTtsManager(private val context: Context) : TextToSpeech.OnInitList
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             tts?.let { engine ->
+                _engineName.value = ttsEngineDisplayName(engine.defaultEngine) { pkg ->
+                    val pm = context.packageManager
+                    pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+                }.orEmpty()
                 val result = engine.setLanguage(Locale.getDefault())
                 if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                     engine.language = Locale.US

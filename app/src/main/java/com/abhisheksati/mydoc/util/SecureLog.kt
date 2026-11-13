@@ -44,11 +44,11 @@ object SecureLog {
     }
 
     private fun emit(level: Int, tag: String, summary: String, detail: () -> String, throwable: Throwable?) {
-        val message = messageFor(summary, detail)
+        val (message, loggedThrowable) = payloadFor(summary, detail, throwable)
         when (level) {
-            Log.INFO -> if (throwable == null) Log.i(tag, message) else Log.i(tag, message, throwable)
-            Log.WARN -> if (throwable == null) Log.w(tag, message) else Log.w(tag, message, throwable)
-            else -> if (throwable == null) Log.e(tag, message) else Log.e(tag, message, throwable)
+            Log.INFO -> if (loggedThrowable == null) Log.i(tag, message) else Log.i(tag, message, loggedThrowable)
+            Log.WARN -> if (loggedThrowable == null) Log.w(tag, message) else Log.w(tag, message, loggedThrowable)
+            else -> if (loggedThrowable == null) Log.e(tag, message) else Log.e(tag, message, loggedThrowable)
         }
     }
 
@@ -57,5 +57,14 @@ object SecureLog {
         if (!verbose) return summary
         val extra = detail()
         return if (extra.isBlank()) summary else "$summary $extra"
+    }
+
+    /** The exact message/throwable pair handed to logcat. Release keeps only the exception type:
+     * throwable messages and stack traces carry paths and URIs. */
+    internal fun payloadFor(summary: String, detail: () -> String, throwable: Throwable?): Pair<String, Throwable?> {
+        val message = messageFor(summary, detail)
+        if (verbose) return message to throwable
+        val safe = if (throwable == null) message else "$message [${throwable.javaClass.simpleName}]"
+        return safe to null
     }
 }

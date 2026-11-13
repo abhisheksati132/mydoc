@@ -66,6 +66,7 @@ import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.LoadFailure
 import com.abhisheksati.mydoc.ui.viewer.DocumentProblemScreen
 import com.abhisheksati.mydoc.domain.model.ReadingPrefs
+import com.abhisheksati.mydoc.domain.model.RenderFidelity
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SheetData
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerCapabilities
@@ -125,10 +126,13 @@ fun SpreadsheetViewerScreen(
             supportsPageGrid = false,
             supportsSlideshow = false,
             supportsTts = false,
-            supportsZoom = false
+            supportsZoom = false,
+            supportsContinuousScroll = false,
+            supportsDualPageView = false
         ),
         currentPage = state.selectedSheetIndex,
         pageCount = state.model.sheets.size.coerceAtLeast(1),
+        observedFidelity = RenderFidelity.STRUCTURED_REFLOW,
         isControlsVisible = !isSearchOpen,
         onBackClick = onBackClick,
         onShareClick = onShareClick,
@@ -233,7 +237,7 @@ fun SpreadsheetViewerScreen(
                                         .padding(horizontal = 16.dp, vertical = 6.dp)
                                 ) {
                                     Text(
-                                        text = "Sheet truncated to protect device memory. Displaying first ${currentSheet.maxRow + 1} rows.",
+                                        text = stringResource(R.string.sheet_truncated_banner, currentSheet.maxRow + 1),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onTertiaryContainer
                                     )

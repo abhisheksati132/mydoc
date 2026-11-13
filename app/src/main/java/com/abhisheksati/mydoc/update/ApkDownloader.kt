@@ -11,7 +11,7 @@ import java.net.URL
 import java.security.MessageDigest
 import java.util.Locale
 
-class ApkDownloader(private val context: Context, private val cacheFolder: String = "updates") {
+open class ApkDownloader(private val context: Context, private val cacheFolder: String = "updates") {
 
     companion object {
         // The universal APK includes all offline Word engine ABIs (~267 MiB in 1.9.6).
@@ -63,7 +63,7 @@ class ApkDownloader(private val context: Context, private val cacheFolder: Strin
         }
     }
 
-    suspend fun downloadApk(
+    open suspend fun downloadApk(
         downloadUrl: String,
         targetFileName: String,
         expectedSha256: String,
@@ -183,7 +183,7 @@ class ApkDownloader(private val context: Context, private val cacheFolder: Strin
         }
     }
 
-    suspend fun fetchChecksumText(checksumUrl: String): String = withContext(Dispatchers.IO) {
+    open suspend fun fetchChecksumText(checksumUrl: String): String = withContext(Dispatchers.IO) {
         var url = validateDownloadUrl(checksumUrl)
         repeat(MAX_REDIRECTS + 1) { redirectCount ->
             val connection = (url.openConnection() as HttpURLConnection).apply {

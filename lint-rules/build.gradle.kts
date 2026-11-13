@@ -16,6 +16,10 @@ kotlin {
 dependencies {
     compileOnly(libs.lint.api)
     compileOnly(libs.lint.checks)
+    testImplementation(libs.lint.api)
+    testImplementation(libs.lint.checks)
+    testImplementation(libs.junit)
+    testImplementation("com.android.tools.lint:lint-tests:${libs.versions.lint.get()}")
 }
 
 tasks.jar {

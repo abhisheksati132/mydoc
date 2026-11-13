@@ -18,6 +18,21 @@ data class DuplicateGroup(
     val wastedBytes: Long get() = size * duplicates.size
 }
 
+/** Files the duplicate check could not hash, so the UI can say so instead of silently omitting them. */
+data class DuplicateScanSkips(
+    val unreadable: Int = 0,
+    val oversized: Int = 0
+) {
+    val total: Int get() = unreadable + oversized
+}
+
+/** Per-category lists with shared paths attributed to one category only, so subtitle bytes sum to the headline. */
+data class DedupedCleanerCategories(
+    val tempFiles: List<File>,
+    val apkFiles: List<File>,
+    val largeFiles: List<File>
+)
+
 data class StorageCleanScanResult(
     val emptyFolders: List<File> = emptyList(),
     val duplicateGroups: List<DuplicateGroup> = emptyList(),
@@ -27,8 +42,26 @@ data class StorageCleanScanResult(
     val totalScannedFiles: Int = 0,
     val totalScannedDirectories: Int = 0,
     /** True when the entry or time budget stopped the walk before it finished. */
-    val truncated: Boolean = false
+    val truncated: Boolean = false,
+    val duplicateScanSkips: DuplicateScanSkips = DuplicateScanSkips()
 ) {
+    /**
+     * One file can be large, an APK and a duplicate copy at the same time. Duplicate copies are
+     * claimed first (they are what the duplicate subtitle already counts), then temp, APK and
+     * large files, so no byte is promised twice across category subtitles.
+     */
+    fun dedupedCategories(): DedupedCleanerCategories {
+        val claimed = mutableSetOf<String>()
+        for (group in duplicateGroups) {
+            for (dup in group.duplicates) claimed.add(dup.absolutePath)
+        }
+        fun unclaimed(files: List<File>): List<File> = files.filter { claimed.add(it.absolutePath) }
+        return DedupedCleanerCategories(
+            tempFiles = unclaimed(tempFiles),
+            apkFiles = unclaimed(apkFiles),
+            largeFiles = unclaimed(largeFiles)
+        )
+    }
     val totalReclaimableBytes: Long
         get() {
             val reclaimableFiles = mutableSetOf<String>()
@@ -54,10 +87,13 @@ data class StorageCleanScanResult(
         }
 }
 
-class StorageCleanerManager {
+class StorageCleanerManager(
+    private val hasher: (File) -> String? = ::sha256OrNull
+) {
 
     companion object {
         const val LARGE_FILE_THRESHOLD_BYTES = 50L * 1024 * 1024 // 50MB
+        const val MAX_DUPLICATE_SIZE_BYTES = 500L * 1024 * 1024
         const val FULL_SCAN_MAX_ENTRIES = 200_000
         const val FULL_SCAN_BUDGET_MS = 90_000L
         // "bak" deliberately excluded: backups are often the only copy a user has.
@@ -105,6 +141,8 @@ class StorageCleanerManager {
         var outOfBudget = false
         var fileCount = 0
         var dirCount = 0
+        var oversizedSkips = 0
+        var unreadableSkips = 0
 
         val canonicalRoot = try { rootDir.canonicalFile.canonicalPath } catch (_: Exception) { rootDir.absolutePath }
 
@@ -185,9 +223,11 @@ class StorageCleanerManager {
                     }
 
                     // Potential duplicate candidate (files between 4KB and 500MB, never active downloads or temp files)
-                    if (!isDownload && !isTemp && length in 4096..(500L * 1024 * 1024)) {
+                    if (!isDownload && !isTemp && length in 4096..MAX_DUPLICATE_SIZE_BYTES) {
                         val list = sizeCandidates.getOrPut(length) { mutableListOf() }
                         list.add(entry)
+                    } else if (!isDownload && !isTemp && length > MAX_DUPLICATE_SIZE_BYTES) {
+                        oversizedSkips++
                     }
                 }
             }
@@ -224,7 +264,11 @@ class StorageCleanerManager {
 
                 // Full-file hash. A prefix hash calls distinct files duplicates and the
                 // cleaner then deletes one of them, so partial hashing is not acceptable.
-                val hash = calculateSha256(file) ?: continue
+                val hash = hasher(file)
+                if (hash == null) {
+                    unreadableSkips++
+                    continue
+                }
                 hashGroups.getOrPut(hash) { mutableListOf() }.add(file)
             }
 
@@ -254,7 +298,8 @@ class StorageCleanerManager {
             tempFiles = tempFiles,
             totalScannedFiles = fileCount,
             totalScannedDirectories = dirCount,
-            truncated = outOfBudget
+            truncated = outOfBudget,
+            duplicateScanSkips = DuplicateScanSkips(unreadable = unreadableSkips, oversized = oversizedSkips)
         )
     }
 
@@ -286,20 +331,20 @@ class StorageCleanerManager {
         }
         removed
     }
+}
 
-    private fun calculateSha256(file: File): String? {
-        return try {
-            val digest = MessageDigest.getInstance("SHA-256")
-            FileInputStream(file).use { fis ->
-                val buffer = ByteArray(64 * 1024)
-                var bytesRead: Int
-                while (fis.read(buffer).also { bytesRead = it } != -1) {
-                    digest.update(buffer, 0, bytesRead)
-                }
+private fun sha256OrNull(file: File): String? {
+    return try {
+        val digest = MessageDigest.getInstance("SHA-256")
+        FileInputStream(file).use { fis ->
+            val buffer = ByteArray(64 * 1024)
+            var bytesRead: Int
+            while (fis.read(buffer).also { bytesRead = it } != -1) {
+                digest.update(buffer, 0, bytesRead)
             }
-            digest.digest().joinToString("") { "%02x".format(it) }
-        } catch (_: Exception) {
-            null
         }
+        digest.digest().joinToString("") { "%02x".format(it) }
+    } catch (_: Exception) {
+        null
     }
 }

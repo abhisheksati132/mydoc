@@ -46,9 +46,9 @@ data class MediaItem(
             val minutes = (totalSeconds / 60) % 60
             val hours = totalSeconds / 3600
             return if (hours > 0) {
-                String.format(Locale.US, "%d:%02d:%02d", hours, minutes, seconds)
+                String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutes, seconds)
             } else {
-                String.format(Locale.US, "%02d:%02d", minutes, seconds)
+                String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
             }
         }
 
@@ -59,9 +59,9 @@ data class MediaItem(
             val mb = kb / 1024.0
             val gb = mb / 1024.0
             return when {
-                gb >= 1.0 -> String.format(Locale.US, "%.1f GB", gb)
-                mb >= 1.0 -> String.format(Locale.US, "%.1f MB", mb)
-                kb >= 1.0 -> String.format(Locale.US, "%.1f KB", kb)
+                gb >= 1.0 -> String.format(Locale.getDefault(), "%.1f GB", gb)
+                mb >= 1.0 -> String.format(Locale.getDefault(), "%.1f MB", mb)
+                kb >= 1.0 -> String.format(Locale.getDefault(), "%.1f KB", kb)
                 else -> "$sizeBytes B"
             }
         }
@@ -93,6 +93,6 @@ data class ExifMetadata(
             if (latitude == null || longitude == null) return null
             val latRef = if (latitude >= 0) "N" else "S"
             val lonRef = if (longitude >= 0) "E" else "W"
-            return String.format(Locale.US, "%.4f° %s, %.4f° %s", Math.abs(latitude), latRef, Math.abs(longitude), lonRef)
+            return String.format(Locale.getDefault(), "%.4f° %s, %.4f° %s", Math.abs(latitude), latRef, Math.abs(longitude), lonRef)
         }
 }

@@ -9,7 +9,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.VerticalSplit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -76,7 +76,7 @@ fun FilesScreen(
     var comparisonFolders by rememberSaveable(stateSaver = FileListSaver) { mutableStateOf<List<File>?>(null) }
     val transferHistory by viewModel.explorerClipboard.transfers.state.collectAsState()
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val wide = maxWidth >= 900.dp
+        val wide = explorerSupportsSplit(maxWidth)
         LaunchedEffect(savedSearchRequest) {
             savedSearchRequest?.let { id ->
                 val target = if (wide) focused else active
@@ -171,3 +171,7 @@ fun FilesScreen(
         }, onDismiss = { showTransfers = false })
 
 }
+
+// Material medium width class: unfoldables (673–841dp) and small tablets must reach
+// split view; the old 900dp gate excluded every foldable on the market.
+internal fun explorerSupportsSplit(maxWidth: Dp): Boolean = maxWidth >= 600.dp

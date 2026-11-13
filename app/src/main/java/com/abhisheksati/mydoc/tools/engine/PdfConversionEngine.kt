@@ -17,11 +17,13 @@ import com.abhisheksati.mydoc.tools.model.PageSizeFormat
 import com.abhisheksati.mydoc.tools.model.ToolOptions
 import com.abhisheksati.mydoc.tools.model.ToolProgress
 import com.abhisheksati.mydoc.tools.pdf.internal.PdfBoxHelper
+import com.abhisheksati.mydoc.util.SecureLog
 import com.artifex.mupdf.fitz.ColorSpace
 import com.artifex.mupdf.fitz.Document
 import com.artifex.mupdf.fitz.Matrix
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import java.io.BufferedOutputStream
@@ -375,13 +377,7 @@ class PdfConversionEngine(private val context: Context) {
                     val page = srcDoc.loadPage(p)
                     try {
                         val bounds = page.bounds
-                        val rawW = (bounds.x1 - bounds.x0) * scale
-                        val rawH = (bounds.y1 - bounds.y0) * scale
-                        val effectiveScale = if (rawW > 4096f || rawH > 4096f) {
-                            scale * (4096f / max(rawW, rawH))
-                        } else {
-                            scale
-                        }
+                        val effectiveScale = cappedRenderScale(bounds.x1 - bounds.x0, bounds.y1 - bounds.y0, scale)
                         val pixmap = page.toPixmap(Matrix(effectiveScale, effectiveScale), ColorSpace.DeviceRGB, true)
                         try {
                             val bitmap = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
@@ -639,44 +635,62 @@ class PdfConversionEngine(private val context: Context) {
                     for (p in 0 until totalPages) {
                         currentCoroutineContext().ensureActive()
                         val page = srcDoc.loadPage(p)
-                        val st = page.toStructuredText()
-
-                        val pageTextSb = StringBuilder()
-                        for (b in st.blocks) {
-                            for (l in b.lines) {
-                                for (c in l.chars) pageTextSb.appendCodePoint(c.c)
-                                pageTextSb.append("\n")
-                            }
-                        }
-                        val pageText = pageTextSb.toString().trim()
-
-                        fullText.append("--- PAGE ${p + 1} ---\n")
-                        if (pageText.isNotBlank()) {
-                            fullText.append(pageText).append("\n\n")
-                        }
-
-                        // If document had no embedded individual images (e.g. raster scan), export full page
-                        if (extractedImagesCount == 0) {
-                            val pixmap = page.toPixmap(Matrix(2.0f, 2.0f), ColorSpace.DeviceRGB, true)
-                            val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
-
-                            zos.putNextEntry(ZipEntry(String.format(java.util.Locale.ROOT, "images/page_%03d.png", p + 1)))
-                            bmp.compress(Bitmap.CompressFormat.PNG, 95, zos)
-                            zos.closeEntry()
-
-                            if (pageText.isBlank()) {
-                                val ocrText = runCatching { ocrEngine.recognizeText(bmp) }.getOrDefault("")
-                                if (ocrText.isNotBlank()) {
-                                    fullText.append(ocrText).append("\n\n")
+                        try {
+                            val st = page.toStructuredText()
+                            try {
+                                val pageTextSb = StringBuilder()
+                                for (b in st.blocks) {
+                                    for (l in b.lines) {
+                                        for (c in l.chars) pageTextSb.appendCodePoint(c.c)
+                                        pageTextSb.append("\n")
+                                    }
                                 }
+                                val pageText = pageTextSb.toString().trim()
+
+                                fullText.append("--- PAGE ${p + 1} ---\n")
+                                if (pageText.isNotBlank()) {
+                                    fullText.append(pageText).append("\n\n")
+                                }
+
+                                // If document had no embedded individual images (e.g. raster scan), export full page
+                                if (extractedImagesCount == 0) {
+                                    val bounds = page.bounds
+                                    val renderScale = cappedRenderScale(bounds.x1 - bounds.x0, bounds.y1 - bounds.y0, 2.0f)
+                                    val pixmap = page.toPixmap(Matrix(renderScale, renderScale), ColorSpace.DeviceRGB, true)
+                                    try {
+                                        val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
+                                        try {
+                                            zos.putNextEntry(ZipEntry(String.format(java.util.Locale.ROOT, "images/page_%03d.png", p + 1)))
+                                            bmp.compress(Bitmap.CompressFormat.PNG, 95, zos)
+                                            zos.closeEntry()
+
+                                            if (pageText.isBlank()) {
+                                                val ocrText = try {
+                                                    ocrEngine.recognizeText(bmp)
+                                                } catch (e: Exception) {
+                                                    if (e is CancellationException) throw e
+                                                    // A failed page is a degradation the reader must hear about,
+                                                    // not a silently empty extraction.
+                                                    SecureLog.warn("PdfConversion", "OCR failed for page ${p + 1}", e) { file.name }
+                                                    ""
+                                                }
+                                                if (ocrText.isNotBlank()) {
+                                                    fullText.append(ocrText).append("\n\n")
+                                                }
+                                            }
+                                        } finally {
+                                            bmp.recycle()
+                                        }
+                                    } finally {
+                                        pixmap.destroy()
+                                    }
+                                }
+                            } finally {
+                                st.destroy()
                             }
-
-                            bmp.recycle()
-                            pixmap.destroy()
+                        } finally {
+                            page.destroy()
                         }
-
-                        st.destroy()
-                        page.destroy()
 
                         val pct = 20 + (((p + 1).toFloat() / totalPages) * 75).toInt()
                         onProgress(ToolProgress(p + 1, totalPages, pct, "Extracting page ${p + 1} assets...", false))
@@ -696,4 +710,14 @@ class PdfConversionEngine(private val context: Context) {
     }
 
     // -------------------------------------------------------------
+}
+
+/**
+ * Render scale for a page of [widthPt] x [heightPt] points, reduced so neither side exceeds
+ * [maxPx] pixels. Every raster path shares this ceiling: an oversized page rendered at the full
+ * scale is an OutOfMemoryError, not a better extraction.
+ */
+internal fun cappedRenderScale(widthPt: Float, heightPt: Float, baseScale: Float, maxPx: Float = 4096f): Float {
+    val longest = max(widthPt * baseScale, heightPt * baseScale)
+    return if (longest > maxPx) baseScale * (maxPx / longest) else baseScale
 }

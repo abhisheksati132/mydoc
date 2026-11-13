@@ -183,8 +183,8 @@ fun PresentationViewerScreen(
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    var readingMode by remember { mutableStateOf(ReadingMode.NORMAL) }
-    var isVisualMode by remember { mutableStateOf(true) }
+    var readingMode by rememberSaveable { mutableStateOf(ReadingMode.NORMAL) }
+    var isVisualMode by rememberSaveable { mutableStateOf(true) }
     var isJumpDialogOpen by remember { mutableStateOf(false) }
 
     var isSearchOpen by remember { mutableStateOf(false) }
@@ -507,6 +507,12 @@ fun PresentationViewerScreen(
                                 context.showMessage(msg)
                             }
                         }
+                    )
+                    // Chrome, so it hides with the bars: a recovered scrape must say so while
+                    // the reader can still see the controls that explain it.
+                    FidelityNotice(
+                        disclosure = fidelityDisclosure,
+                        dismissalKey = document.uri
                     )
                 }
             }

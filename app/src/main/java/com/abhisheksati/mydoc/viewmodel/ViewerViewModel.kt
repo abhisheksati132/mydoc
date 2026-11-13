@@ -453,7 +453,7 @@ class ViewerViewModel(
                                 com.abhisheksati.mydoc.rendering.engine.presentation.PptxConverter.getSlideOutlines(cacheFile.absolutePath)
                             }
                         }
-                        val initialPage = savedState?.lastPage?.coerceIn(0, maxOf(0, totalPages - 1)) ?: 0
+                        val initialPage = resumePage(savedState?.lastPage, totalPages)
                         val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
                         val defaultMode = app?.settingsRepository?.defaultReadingMode?.value ?: ReadingMode.NORMAL
                         val initialMode = savedState?.readingMode ?: defaultMode
@@ -557,8 +557,7 @@ class ViewerViewModel(
             if (generation != loadGeneration) return@launch
             // The saved reading position belongs to this document whether or not the password
             // was needed to reach it; writing page 0 here used to erase it on every unlock.
-            val resume = (repository.getViewState(activeDocumentFile.uri)?.lastPage ?: 0)
-                .coerceIn(0, totalPages - 1)
+            val resume = resumePage(repository.getViewState(activeDocumentFile.uri)?.lastPage, totalPages)
             _uiState.update {
                 if (generation != loadGeneration) it else it.copy(
                     isPasswordRequired = false,
@@ -834,5 +833,15 @@ class ViewerViewModel(
             }
             throw IllegalArgumentException("Unknown ViewModel class: ")
         }
+    }
+
+    companion object {
+        /**
+         * Paginated resume only ever consumes a page index. Reflow viewers keep their block
+         * position elsewhere (see WordReflowProgress); a value stored here is clamped to the
+         * document's page range, never interpreted as a reflow block.
+         */
+        internal fun resumePage(savedLastPage: Int?, totalPages: Int): Int =
+            savedLastPage?.coerceIn(0, maxOf(0, totalPages - 1)) ?: 0
     }
 }

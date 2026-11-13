@@ -38,6 +38,10 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
@@ -102,10 +106,35 @@ fun FastScrollbar(
         }
         val thumbYOffsetPx = currentProgress * maxTravelPx
 
+        val positionDescription = stringResource(R.string.viewer_page_of, currentPage + 1, pageCount)
+        val previousPageLabel = stringResource(R.string.cd_previous_page)
+        val nextPageLabel = stringResource(R.string.cd_next_page)
+
         // Draggable gesture detector covering full 48dp touch column
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .semantics {
+                    contentDescription = positionDescription
+                    customActions = listOf(
+                        CustomAccessibilityAction(previousPageLabel) {
+                            if (currentPage > 0) {
+                                onPageSelected(currentPage - 1)
+                                true
+                            } else {
+                                false
+                            }
+                        },
+                        CustomAccessibilityAction(nextPageLabel) {
+                            if (currentPage < pageCount - 1) {
+                                onPageSelected(currentPage + 1)
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                    )
+                }
                 .pointerInput(pageCount, availableHeightPx) {
                     detectVerticalDragGestures(
                         onDragStart = { offset ->

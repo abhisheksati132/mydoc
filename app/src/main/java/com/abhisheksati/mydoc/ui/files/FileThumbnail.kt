@@ -177,7 +177,8 @@ internal fun thumbnailKey(id: String, sizeBytes: Long, lastModified: Long): Stri
 @Composable
 fun StorageThumbnail(
     item: StorageItem,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null
 ) {
     val context = LocalContext.current
     when {
@@ -186,7 +187,7 @@ fun StorageThumbnail(
         ) {
             AsyncImage(
                 model = item.file,
-                contentDescription = null,
+                contentDescription = contentDescription,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )

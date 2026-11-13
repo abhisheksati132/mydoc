@@ -55,6 +55,9 @@ import androidx.compose.ui.graphics.Brush
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.components.showMessage
 
+internal fun formatByteCount(bytes: Long): String =
+    NumberFormat.getNumberInstance(Locale.getDefault()).format(bytes)
+
 @Composable
 fun DocumentDetailsDialog(
     document: DocumentFile?,
@@ -120,7 +123,7 @@ fun DocumentDetailsDialog(
                 )
                 DetailItem(
                     label = stringResource(R.string.details_file_size),
-                    value = "${document.formattedSize} (${NumberFormat.getNumberInstance(Locale.US).format(document.sizeBytes)} bytes)"
+                    value = "${document.formattedSize} (${formatByteCount(document.sizeBytes)} bytes)"
                 )
                 if (document.pageCount > 0) {
                     DetailItem(

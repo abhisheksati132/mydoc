@@ -236,7 +236,7 @@ internal fun PageItemView(
         if (bmp != null && !bmp.isRecycled) {
             Image(
                 bitmap = bmp.asImageBitmap(),
-                contentDescription = stringResource(R.string.page_label, pageIndex + 1),
+                contentDescription = stringResource(R.string.cd_document_page_thumbnail, pageIndex + 1),
                 colorFilter = pageColorFilter,
                 modifier = Modifier.fillMaxSize()
             )

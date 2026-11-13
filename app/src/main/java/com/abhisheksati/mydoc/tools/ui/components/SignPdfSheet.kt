@@ -22,9 +22,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material.icons.outlined.Check
@@ -123,6 +125,7 @@ fun SignPdfSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(bottom = AppSpacing.paddingLarge)
         ) {
             Row(
@@ -206,10 +209,15 @@ fun SignPdfSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    val inkColorNames = listOf("Black ink", "Navy ink", "Crimson ink")
+                    val inkColorNames = listOf(
+                        stringResource(R.string.sign_ink_black),
+                        stringResource(R.string.sign_ink_navy),
+                        stringResource(R.string.sign_ink_crimson)
+                    )
+                    val genericInkName = stringResource(R.string.sign_ink_color)
                     inkColors.forEachIndexed { index, color ->
                         val isSelected = selectedColorIndex == index
-                        val colorDesc = inkColorNames.getOrElse(index) { "Ink color" }
+                        val colorDesc = inkColorNames.getOrElse(index) { genericInkName }
                         Box(
                             modifier = Modifier
                                 .size(28.dp)

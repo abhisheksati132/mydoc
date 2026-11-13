@@ -63,6 +63,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -336,41 +339,18 @@ fun PhotoViewerScreen(
                 ) {
                     // Filmstrip of neighbours
                     if (photoList.size > 1) {
-                        androidx.compose.foundation.lazy.LazyRow(
+                        PhotoFilmstrip(
+                            photos = photoList,
+                            currentPage = pagerState.currentPage,
+                            onPageSelected = { idx ->
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(idx)
+                                }
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(photoList.size) { idx ->
-                                val p = photoList[idx]
-                                val isSelected = idx == pagerState.currentPage
-                                val photoLabel = p.displayName.ifBlank { "Photo ${idx + 1}" }
-                                Surface(
-                                    shape = AppRadius.cardShape,
-                                    border = if (isSelected) BorderStroke(2.dp, colors.accent) else null,
-                                    color = colors.surfaceMuted,
-                                    modifier = Modifier
-                                        .size(46.dp)
-                                        .clip(AppRadius.cardShape)
-                                        .clickable(onClickLabel = photoLabel) {
-                                            coroutineScope.launch {
-                                                pagerState.animateScrollToPage(idx)
-                                            }
-                                        }
-                                ) {
-                                    coil.compose.AsyncImage(
-                                        model = coil.request.ImageRequest.Builder(context)
-                                            .data(p.uri)
-                                            .crossfade(true)
-                                            .build(),
-                                        contentDescription = photoLabel,
-                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                }
-                            }
-                        }
+                                .padding(horizontal = 14.dp, vertical = 6.dp)
+                        )
                     }
 
                     // 4 labelled 56dp pills: Share, Edit, Info, Delete
@@ -505,6 +485,51 @@ fun PhotoViewerScreen(
                 dismissLabel = stringResource(R.string.action_cancel),
                 onDismiss = { showDeleteConfirmDialog = false }
             )
+        }
+    }
+}
+
+@Composable
+internal fun PhotoFilmstrip(
+    photos: List<MediaItem>,
+    currentPage: Int,
+    onPageSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val colors = LocalAppColors.current
+    androidx.compose.foundation.lazy.LazyRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(photos.size) { idx ->
+            val p = photos[idx]
+            val isSelected = idx == currentPage
+            val photoLabel = p.displayName.ifBlank { stringResource(R.string.photo_filmstrip_fallback, idx + 1) }
+            val stateLabel = stringResource(if (isSelected) R.string.cd_selected else R.string.cd_not_selected)
+            Surface(
+                shape = AppRadius.cardShape,
+                border = if (isSelected) BorderStroke(2.dp, colors.accent) else null,
+                color = colors.surfaceMuted,
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(AppRadius.cardShape)
+                    .semantics {
+                        selected = isSelected
+                        stateDescription = stateLabel
+                    }
+                    .clickable(onClickLabel = photoLabel) { onPageSelected(idx) }
+            ) {
+                coil.compose.AsyncImage(
+                    model = coil.request.ImageRequest.Builder(context)
+                        .data(p.uri)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = photoLabel,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
     }
 }

@@ -31,12 +31,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.update.UpdateManager
 import com.abhisheksati.mydoc.update.UpdateUiState
-import java.util.Locale
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -117,7 +117,7 @@ fun SettingsAboutSection(
             is UpdateUiState.NoUpdate -> {
                 UpdateLine(
                     title = stringResource(R.string.settings_up_to_date),
-                    detail = "v${state.currentVersion} installed",
+                    detail = stringResource(R.string.settings_version_installed, state.currentVersion),
                     actionLabel = stringResource(R.string.settings_check_again),
                     onAction = { scope.launch { updateManager.checkForUpdates(isLaunchCheck = false) } },
                     leadingCheck = true
@@ -150,9 +150,10 @@ fun SettingsAboutSection(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        val locale = LocalConfiguration.current.locales[0]
                         val sizeText = if (release.apkSizeBytes > 0) {
                             val mb = release.apkSizeBytes / (1024.0 * 1024.0)
-                            String.format(Locale.US, " (%.1f MB)", mb)
+                            String.format(locale, " (%.1f MB)", mb)
                         } else ""
                         TextButton(
                             onClick = { scope.launch { updateManager.downloadAndInstall(release) } },

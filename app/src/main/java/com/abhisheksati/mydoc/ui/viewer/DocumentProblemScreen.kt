@@ -1,8 +1,12 @@
 package com.abhisheksati.mydoc.ui.viewer
 
 import android.content.Context
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -29,15 +33,21 @@ fun DocumentProblemScreen(
     modifier: Modifier = Modifier
 ) {
     val copy = problemCopy(LocalContext.current, failure, extension)
-    AppEmptyState(
+    Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(AppSpacing.paddingLarge),
-        title = copy.title,
-        message = copy.message,
-        actionLabel = copy.actionLabel,
-        onAction = onRetry ?: onBackClick
-    )
+            .verticalScroll(rememberScrollState())
+    ) {
+        AppEmptyState(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(AppSpacing.paddingLarge),
+            title = copy.title,
+            message = copy.message,
+            actionLabel = copy.actionLabel,
+            onAction = onRetry ?: onBackClick
+        )
+    }
 }
 
 private class ProblemCopy(val title: String, val message: String, val actionLabel: String)

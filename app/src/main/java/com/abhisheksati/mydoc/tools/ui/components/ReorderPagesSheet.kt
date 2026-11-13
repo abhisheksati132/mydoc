@@ -119,9 +119,14 @@ fun ReorderPagesSheet(
                 sourceTempFile = null
                 thumbnailCache.clear()
                 bitmaps.forEach { runCatching { if (!it.isRecycled) it.recycle() } }
-                // Safely destroy native document under thumbnailMutex off the Main thread
-                // so no in-flight thumbnail render touches a destroyed native pointer.
-                java.util.concurrent.ForkJoinPool.commonPool().execute {
+                // Destroy the native document under thumbnailMutex on a dedicated thread, so no
+                // in-flight thumbnail render touches a destroyed native pointer. A commonPool
+                // worker must not be parked here: it is shared process-wide and has no lifecycle
+                // guarantee. shutdown() lets the queued cleanup finish, then retires the thread.
+                val cleanupExecutor = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+                    Thread(r, "reorder-pages-cleanup")
+                }
+                cleanupExecutor.execute {
                     runBlocking {
                         thumbnailMutex.withLock {
                             try { docToDestroy?.destroy() } catch (_: Exception) {}
@@ -129,6 +134,7 @@ fun ReorderPagesSheet(
                         }
                     }
                 }
+                cleanupExecutor.shutdown()
             }
         }
 

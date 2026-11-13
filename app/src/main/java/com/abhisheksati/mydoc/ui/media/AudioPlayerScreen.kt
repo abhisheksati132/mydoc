@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,7 +21,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.FastForward
@@ -265,11 +268,20 @@ fun AudioPlayerScreen(
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
 
-    Column(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .background(colors.background)
     ) {
+        // The fixed cover plus transport stack needs ~700dp; below that the weighted spacers
+        // collapse and the controls run off-screen, so the column scrolls and the cover shrinks.
+        val compact = maxHeight < 700.dp
+        val coverSize = if (compact) minOf(220.dp, maxHeight * 0.3f) else 220.dp
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (compact) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+        ) {
         // Top Toolbar
         Row(
             modifier = Modifier
@@ -317,7 +329,7 @@ fun AudioPlayerScreen(
             }
         }
 
-        Spacer(modifier = Modifier.weight(0.6f))
+        if (compact) Spacer(modifier = Modifier.height(16.dp)) else Spacer(modifier = Modifier.weight(0.6f))
 
         // Large Mint Cover Placeholder (28dp rounded box)
         Box(
@@ -328,7 +340,7 @@ fun AudioPlayerScreen(
                 shape = AppRadius.xLargeShape,
                 color = mintContainer,
                 modifier = Modifier
-                    .size(220.dp)
+                    .size(coverSize)
                     .clip(AppRadius.xLargeShape)
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -336,7 +348,7 @@ fun AudioPlayerScreen(
                         imageVector = Icons.Outlined.Audiotrack,
                         contentDescription = stringResource(R.string.cd_audio_track),
                         tint = onMintContainer,
-                        modifier = Modifier.size(90.dp)
+                        modifier = Modifier.size(coverSize * 0.41f)
                     )
                 }
             }
@@ -371,7 +383,7 @@ fun AudioPlayerScreen(
             )
         }
 
-        Spacer(modifier = Modifier.weight(0.8f))
+        if (compact) Spacer(modifier = Modifier.height(24.dp)) else Spacer(modifier = Modifier.weight(0.8f))
 
         // Scrubber Slider
         Column(
@@ -613,12 +625,13 @@ fun AudioPlayerScreen(
                 }
             }
         }
+        }
     }
 }
 
-private fun formatAudioTime(ms: Long): String {
+internal fun formatAudioTime(ms: Long): String {
     val totalSec = (ms / 1000).coerceAtLeast(0)
     val m = totalSec / 60
     val s = totalSec % 60
-    return String.format(Locale.US, "%02d:%02d", m, s)
+    return String.format(Locale.getDefault(), "%02d:%02d", m, s)
 }

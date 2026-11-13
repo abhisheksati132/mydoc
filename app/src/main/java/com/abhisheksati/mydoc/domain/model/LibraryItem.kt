@@ -115,9 +115,9 @@ fun formatBytesPrecise(sizeBytes: Long): String {
     val mb = kb / 1024.0
     val gb = mb / 1024.0
     return when {
-        gb >= 1.0 -> String.format(Locale.US, "%.1f GB", gb)
-        mb >= 1.0 -> String.format(Locale.US, "%.1f MB", mb)
-        kb >= 1.0 -> String.format(Locale.US, "%.1f KB", kb)
+        gb >= 1.0 -> String.format(Locale.getDefault(), "%.1f GB", gb)
+        mb >= 1.0 -> String.format(Locale.getDefault(), "%.1f MB", mb)
+        kb >= 1.0 -> String.format(Locale.getDefault(), "%.1f KB", kb)
         else -> "$sizeBytes B"
     }
 }

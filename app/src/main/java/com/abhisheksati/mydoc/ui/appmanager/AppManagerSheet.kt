@@ -148,6 +148,12 @@ fun AppManagerScreen(
                     onClick = { largeAppsOnly = !largeAppsOnly },
                     label = { Text(stringResource(R.string.apps_large_filter)) }
                 )
+                Text(
+                    text = stringResource(R.string.app_manager_scope_note),
+                    style = typography.micro,
+                    color = colors.textSecondary,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -328,7 +334,7 @@ private fun AppListItem(
                 Text(
                     text = app.packageName,
                     style = typography.micro,
-                    color = colors.textSecondary.copy(alpha = 0.7f),
+                    color = colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

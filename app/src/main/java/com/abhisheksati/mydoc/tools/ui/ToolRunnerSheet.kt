@@ -53,6 +53,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
@@ -519,7 +521,10 @@ private fun InputFilesSection(
                             color = scheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
+                            // Truncation is visual only: assistive tech gets the whole name.
+                            modifier = Modifier
+                                .weight(1f)
+                                .semantics { contentDescription = fileName }
                         )
                     }
                     IconButton(onClick = { onRemoveUri(uri) }) {

@@ -18,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -39,10 +40,12 @@ fun DocumentTtsBar(
 ) {
     val colors = AppTheme.colors
     val typography = AppTheme.typography
+    val context = LocalContext.current
 
     val state by ttsManager.playbackState.collectAsState()
     val speed by ttsManager.speechRate.collectAsState()
     val currentUtterance by ttsManager.currentUtterance.collectAsState()
+    val engineName by ttsManager.engineName.collectAsState()
 
     val speeds = listOf(0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
 
@@ -204,12 +207,40 @@ fun DocumentTtsBar(
 
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = stringResource(R.string.tts_engine_notice),
+                    text = if (engineName.isNotBlank()) {
+                        stringResource(R.string.tts_engine_notice_named, engineName)
+                    } else {
+                        stringResource(R.string.tts_engine_notice)
+                    },
                     style = typography.micro,
-                    color = colors.textSecondary.copy(alpha = 0.7f),
+                    color = colors.textSecondary,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
+                TextButton(
+                    onClick = { openTtsSettings(context) },
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                ) {
+                    Text(
+                        text = stringResource(R.string.tts_open_settings),
+                        style = typography.micro,
+                        color = colors.accent
+                    )
+                }
             }
+        }
+    }
+}
+
+private fun openTtsSettings(context: android.content.Context) {
+    val ttsSettings = android.content.Intent("com.android.settings.TTS_SETTINGS").apply {
+        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    runCatching { context.startActivity(ttsSettings) }.onFailure {
+        runCatching {
+            context.startActivity(
+                android.content.Intent(android.provider.Settings.ACTION_SETTINGS)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
         }
     }
 }

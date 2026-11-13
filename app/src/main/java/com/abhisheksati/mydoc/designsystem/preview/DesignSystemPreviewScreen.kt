@@ -218,7 +218,7 @@ fun DesignSystemPreviewScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text("Contrast: WCAG AA Certified", style = typography.caption, color = colors.inkMuted)
+                                        Text("Contrast targets WCAG AA", style = typography.caption, color = colors.inkMuted)
                                         Text("Active: ${glassMode.name}", style = typography.metadata, color = colors.accent)
                                     }
                                 }

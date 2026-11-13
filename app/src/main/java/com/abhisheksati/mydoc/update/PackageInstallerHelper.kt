@@ -12,9 +12,9 @@ import java.io.File
 import java.security.MessageDigest
 import java.util.Locale
 
-class PackageInstallerHelper(private val context: Context) {
+open class PackageInstallerHelper(private val context: Context) {
 
-    fun canInstallUnknownApps(): Boolean = context.packageManager.canRequestPackageInstalls()
+    open fun canInstallUnknownApps(): Boolean = context.packageManager.canRequestPackageInstalls()
 
     fun createManageUnknownAppSourcesIntent(): Intent =
         Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
@@ -22,7 +22,7 @@ class PackageInstallerHelper(private val context: Context) {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
-    fun installApk(apkFile: File) {
+    open fun installApk(apkFile: File) {
         verifyApkPackageAndSignature(apkFile)
 
         val authority = "${context.packageName}.fileprovider"

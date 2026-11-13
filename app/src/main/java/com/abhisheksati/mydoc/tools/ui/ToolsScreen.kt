@@ -10,6 +10,7 @@ import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.animation.AppMotion
 import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
@@ -37,7 +38,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.CallSplit
 import androidx.compose.material.icons.outlined.AllInclusive
 import androidx.compose.material.icons.outlined.CameraAlt
-import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Compress
 import androidx.compose.material.icons.outlined.Draw
@@ -319,7 +320,7 @@ private fun ToolsHeader(
     val scheme = MaterialTheme.colorScheme
     AppTopBar(
         title = stringResource(R.string.nav_tools),
-        subtitle = stringResource(R.string.tools_subtitle, toolCount),
+        subtitle = pluralStringResource(R.plurals.tools_subtitle, toolCount, toolCount),
         isGlass = false,
         containerColor = Color.Transparent,
         actions = {
@@ -399,7 +400,7 @@ private fun ToolRow(
             }
 
             Icon(
-                imageVector = Icons.Outlined.ChevronRight,
+                imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                 contentDescription = null,
                 tint = colors.inkMuted,
                 modifier = Modifier.size(18.dp)

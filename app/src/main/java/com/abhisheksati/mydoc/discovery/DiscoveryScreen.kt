@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.MyDocApp
@@ -31,6 +32,7 @@ import kotlinx.coroutines.*
 @Composable
 fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
     val context=LocalContext.current
+    val resources=LocalResources.current
     val app=context.applicationContext as MyDocApp
     val store=remember { DiscoveryStore.get(app) }
     val scope=rememberCoroutineScope()
@@ -38,7 +40,7 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     var tag by rememberSaveable { mutableStateOf("") }
     var extension by rememberSaveable { mutableStateOf("") }
-    var message by remember { mutableStateOf("Choose files or a folder to build your private, offline index. Indexing stops when you leave this screen.") }
+    var message by remember { mutableStateOf(resources.getString(R.string.discovery_initial_message)) }
     var results by remember { mutableStateOf(emptyList<DiscoveredFile>()) }
     var collections by remember { mutableStateOf(emptyList<SmartCollection>()) }
     var working by remember { mutableStateOf(false) }
@@ -58,15 +60,37 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
             job?.cancel()
         }
     }
+    // Folder roots are persisted, but the stored index goes stale as files change on disk;
+    // re-index them on entry instead of waiting for a manual Refresh.
+    LaunchedEffect(Unit) {
+        val roots = store.folders()
+        if (roots.isNotEmpty() && !working) {
+            working = true
+            message = resources.getString(R.string.discovery_reindexing_folders)
+            job = scope.launch {
+                try {
+                    DocumentIndexer(app, store).selected(roots.map { Uri.parse(it) }, true) { status ->
+                        scope.launch { message = status }
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (e: Exception) {
+                    message = resources.getString(R.string.discovery_refresh_failed, e.message.orEmpty())
+                } finally {
+                    working = false
+                }
+            }
+        }
+    }
     LaunchedEffect(query,tag,extension,revision) {
         delay(180)
         try { results=store.search(query.trim(),tag.trim().lowercase(java.util.Locale.ROOT),extension);collections=store.collections() }
-        catch(e: Exception) { if(e is CancellationException)throw e;message="Could not search the local index: ${e.message}" }
+        catch(e: Exception) { if(e is CancellationException)throw e;message=resources.getString(R.string.discovery_search_failed, e.message.orEmpty()) }
     }
     fun mutate(operation: suspend ()->Unit) {
         scope.launch {
             try { operation() } catch(e: CancellationException) { throw e }
-            catch(e: Exception) { message="Could not save this change: ${e.message}" }
+            catch(e: Exception) { message=resources.getString(R.string.discovery_save_failed, e.message.orEmpty()) }
         }
     }
     var relinkTarget by remember { mutableStateOf<DiscoveredFile?>(null) }
@@ -76,8 +100,8 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
         working=true
         job=scope.launch {
             try { DocumentIndexer(app,store).selected(uris,folder) { status -> scope.launch { message=status } } }
-            catch(cancelled: CancellationException) { message="Indexing stopped. Completed files are saved.";throw cancelled }
-            catch(e: Exception) { message="Could not index this selection: ${e.message}" }
+            catch(cancelled: CancellationException) { message=resources.getString(R.string.discovery_indexing_stopped);throw cancelled }
+            catch(e: Exception) { message=resources.getString(R.string.discovery_index_failed, e.message.orEmpty()) }
             finally { working=false }
         }
     }
@@ -97,12 +121,12 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
                 try {
                     DocumentIndexer(app,store).selected(listOf(uri),false) { status->scope.launch { message=status } }
                     val added=store.file(uri.toString())
-                    check(added!=null && !added.status.startsWith("Unavailable")) { "The new location could not be read; the previous reference was kept." }
+                    check(added!=null && !added.status.startsWith("Unavailable")) { resources.getString(R.string.discovery_relink_unreadable) }
                     store.setTags(uri.toString(),old.tags)
                     if(old.uri!=uri.toString())store.remove(old.uri)
-                    message="File reconnected. Tags were preserved."
+                    message=resources.getString(R.string.discovery_relink_done)
                 } catch(e: CancellationException) { throw e }
-                catch(e: Exception) { message=e.message ?: "Could not reconnect this file" }
+                catch(e: Exception) { message=e.message ?: resources.getString(R.string.discovery_relink_failed) }
                 finally { working=false;relinkTarget=null }
             }
         }
@@ -127,7 +151,7 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
                         }
                     }
                     catch(e: CancellationException) { throw e }
-                    catch(e: Exception) { message="Refresh failed: ${e.message}" }
+                    catch(e: Exception) { message=resources.getString(R.string.discovery_refresh_failed, e.message.orEmpty()) }
                     finally { working=false }
                 }
             },enabled=!working) { Text(stringResource(R.string.menu_refresh)) }
@@ -158,13 +182,13 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
                         Text(file.name,style=MaterialTheme.typography.titleSmall)
                         Text(file.uri,maxLines=2,style=MaterialTheme.typography.bodySmall)
                         if(file.snippet.isNotEmpty()) Text(stringResource(R.string.discovery_snippet_page, file.page+1, file.snippet),Modifier.padding(vertical=6.dp))
-                        Text("${file.status} • snapshot ${java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT,java.text.DateFormat.SHORT).format(java.util.Date(file.indexedAt))}",style=MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.discovery_snapshot_line, file.status, java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT,java.text.DateFormat.SHORT).format(java.util.Date(file.indexedAt))),style=MaterialTheme.typography.bodySmall)
                         if(file.tags.isNotEmpty()) Text(stringResource(R.string.discovery_tags_prefix, file.tags),style=MaterialTheme.typography.labelMedium)
                         androidx.compose.foundation.layout.FlowRow {
                             TextButton(onClick={scope.launch {
                                 try {
                                     val reachable=withContext(Dispatchers.IO) { context.contentResolver.openAssetFileDescriptor(Uri.parse(file.uri),"r")?.use { true } ?: false }
-                                    check(reachable) { "File missing or permission expired. Add its new location to reconnect it." }
+                                    check(reachable) { resources.getString(R.string.discovery_file_missing) }
                                     val kind=when { file.mime.startsWith("image/")->MediaKind.PHOTO;file.mime.startsWith("audio/")->MediaKind.AUDIO;file.mime.startsWith("video/")->MediaKind.VIDEO;else->MediaKind.DOCUMENT }
                                     if(kind==MediaKind.DOCUMENT && file.snippet.isNotEmpty()) {
                                         val existing = app.documentRepository.getViewState(file.uri)
@@ -172,7 +196,7 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
                                         app.documentRepository.saveViewState(updated)
                                     }
                                     onOpen(LibraryItem(file.uri,file.name,kind,file.mime,file.size,file.modified))
-                                } catch(e: Exception) { if(e is CancellationException)throw e;message=e.message ?: "Cannot open this file" }
+                                } catch(e: Exception) { if(e is CancellationException)throw e;message=e.message ?: resources.getString(R.string.discovery_open_failed) }
                             }}) { Text(stringResource(R.string.action_open)) }
                             TextButton(onClick={relinkTarget=file;relink.launch(arrayOf("*/*"))},enabled=!working) { Text(stringResource(R.string.discovery_relink)) }
                             TextButton(onClick={tagsForUri=file.uri;tagsForName=file.name;tagsValue=file.tags}) { Text(stringResource(R.string.discovery_edit_tags)) }

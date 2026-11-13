@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.tools.engine
 
+import com.abhisheksati.mydoc.R
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -178,7 +179,7 @@ class PdfToolsEngine(private val context: Context) {
                     warningNote = "Document could not be further compressed. It is already optimally compressed."
                 } else if (savingsPercent < 5.0f) {
                     warningNote = "Compression saved only " +
-                        "${String.format(java.util.Locale.US, "%.1f", savingsPercent.coerceAtLeast(0f))}%." +
+                        "${String.format(java.util.Locale.getDefault(), "%.1f", savingsPercent.coerceAtLeast(0f))}%." +
                         " Images in this document are already optimized."
                 }
             } else if (tool == PdfTool.PDF_TO_OFFICE) {
@@ -188,6 +189,8 @@ class PdfToolsEngine(private val context: Context) {
                     val lost = initialPages - finalPages
                     warningNote = "Recovered $finalPages of $initialPages pages. $lost damaged page(s) could not be restored."
                 }
+            } else if (tool == PdfTool.REDACT) {
+                warningNote = context.getString(R.string.pdf_redact_verification_note)
             } else if (skippedImages.isNotEmpty()) {
                 warningNote = "${skippedImages.size} of ${inputFiles.size} images could not be read and " +
                     "were left out: ${skippedImages.joinToString(", ")}."

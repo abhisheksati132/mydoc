@@ -8,7 +8,9 @@ import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
@@ -43,6 +45,12 @@ fun ZoomableViewport(
     val coroutineScope = rememberCoroutineScope()
     val viewConfig = LocalViewConfiguration.current
 
+    // Callers pass freshly-allocated lambdas on every recomposition. Keying the gesture
+    // detector on them restarted it mid-pinch; read the latest through state instead.
+    val latestOnToggleControls by rememberUpdatedState(onToggleControls)
+    val latestOnPrevPage by rememberUpdatedState(onPrevPage)
+    val latestOnNextPage by rememberUpdatedState(onNextPage)
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -53,10 +61,7 @@ fun ZoomableViewport(
                 zoomState,
                 isContinuous,
                 isDualPage,
-                isDoubleTapEnabled,
-                onToggleControls,
-                onPrevPage,
-                onNextPage
+                isDoubleTapEnabled
             ) {
                 var pendingSingleTapJob: Job? = null
                 var lastTapTime = 0L
@@ -205,15 +210,15 @@ fun ZoomableViewport(
                                     val width = zoomState.viewportSize.width
                                     if (width > 0f) {
                                         when {
-                                            downPosition.x < width * 0.2f -> onPrevPage()
-                                            downPosition.x > width * 0.8f -> onNextPage()
-                                            else -> onToggleControls()
+                                            downPosition.x < width * 0.2f -> latestOnPrevPage()
+                                            downPosition.x > width * 0.8f -> latestOnNextPage()
+                                            else -> latestOnToggleControls()
                                         }
                                     } else {
-                                        onToggleControls()
+                                        latestOnToggleControls()
                                     }
                                 } else {
-                                    onToggleControls()
+                                    latestOnToggleControls()
                                 }
                             }
                         }

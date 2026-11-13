@@ -26,7 +26,10 @@ class FidelityNoticeOnDeviceTest {
             }
         }
         compose.onNodeWithText("Re-laid out for reading").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Rendering information").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Rendering information").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Re-laid out for reading").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Rendering information").performClick()
+        compose.onNodeWithText("Re-laid out for reading").assertDoesNotExist()
     }
 
     @Test fun noticeCanBeDismissedWithLargeText() = checkDismiss(LayoutDirection.Ltr)
@@ -35,8 +38,11 @@ class FidelityNoticeOnDeviceTest {
     @Test fun newLimitationsRemainAvailableOnDemand() {
         val disclosure = mutableStateOf(FidelityDisclosure("Re-laid out for reading", emptyList()))
         compose.setContent { AppDesignSystemTheme { FidelityNotice(disclosure.value) } }
-        compose.onNodeWithContentDescription("Rendering information").assertDoesNotExist()
-        compose.onNodeWithText("Re-laid out for reading").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Rendering information").performClick()
+        compose.runOnIdle { disclosure.value = FidelityDisclosure("Only part of this file was read", listOf("Some pages are missing.")) }
+        compose.onNodeWithText("Only part of this file was read").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Rendering information").performClick()
+        compose.onNodeWithText("Only part of this file was read").assertIsDisplayed()
     }
 
     @Test fun anotherDocumentStartsWithCollapsedInformation() {
@@ -44,15 +50,23 @@ class FidelityNoticeOnDeviceTest {
         compose.setContent { AppDesignSystemTheme {
             FidelityNotice(FidelityDisclosure("Re-laid out for reading", emptyList()), dismissalKey = document.value)
         } }
-        compose.onNodeWithContentDescription("Rendering information").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Rendering information").performClick()
+        compose.runOnIdle { document.value = "second-document" }
         compose.onNodeWithText("Re-laid out for reading").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Rendering information").performClick()
+        compose.onNodeWithText("Re-laid out for reading").assertIsDisplayed()
     }
 
     @Test fun informationAutomaticallyClosesAfterThreeSeconds() {
+        compose.mainClock.autoAdvance = false
         compose.setContent { AppDesignSystemTheme {
             FidelityNotice(FidelityDisclosure("Layout information", emptyList()))
         } }
-        compose.onNodeWithContentDescription("Rendering information").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Rendering information").performClick()
+        compose.mainClock.advanceTimeBy(200)
+        compose.onNodeWithText("Layout information").assertIsDisplayed()
+        compose.mainClock.advanceTimeBy(3_100)
         compose.onNodeWithText("Layout information").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Rendering information").assertIsDisplayed()
     }
 }

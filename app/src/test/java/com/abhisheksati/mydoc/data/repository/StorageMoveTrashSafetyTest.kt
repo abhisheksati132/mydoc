@@ -408,4 +408,136 @@ class StorageMoveTrashSafetyTest {
             )
         }
     }
+
+    @Test
+    fun `a restore whose bin cleanup partially fails keeps the complete copy and closes the record`() = runBlocking {
+        val dao = InMemoryTrashDao()
+        val source = tempFolder.newFolder("launder-src")
+        val folder = File(source, "report").apply { mkdir() }
+        File(folder, "alpha.txt").writeText("A".repeat(512))
+        File(folder, "beta.txt").writeText("B".repeat(512))
+        repo(FakeMutator(forceCopyPath = false), dao).moveToTrash(listOf(folder))
+        val row = dao.getAllTrashItemsSync().single()
+        val binFolder = File(row.trashPath)
+
+        // Rename fails (cross-volume), the copy verifies complete, then one bin child refuses deletion.
+        // The destination holds the whole folder; only the bin cleanup is incomplete.
+        val mutator = FakeMutator(
+            forceCopyPath = true,
+            refuse = { it.name == "beta.txt" && it.parentFile == binFolder }
+        )
+        val result = repo(mutator, dao).restoreFromTrash(listOf(row.toDomain()))
+
+        val restored = File(source, "report")
+        assertTrue("the complete copy must survive at the destination", File(restored, "alpha.txt").exists())
+        assertTrue(
+            "the complete copy must include the child the bin could not delete",
+            File(restored, "beta.txt").exists()
+        )
+        assertEquals(
+            "the data is restored, so the record must close; keeping it lets a retry re-copy the degraded bin",
+            0,
+            dao.getAllTrashItemsSync().size
+        )
+        val failure = partial(result.exceptionOrNull())
+        assertEquals(1, failure.completed)
+        assertEquals(0, failure.failed)
+        assertTrue("bin cleanup leftovers are reported honestly", failure.retainedSources.isNotEmpty())
+
+        val retry = repo(FakeMutator(forceCopyPath = false), dao).restoreFromTrash(listOf(row.toDomain()))
+        assertTrue("a stale record must not restore degraded remnants", retry.isFailure)
+        assertEquals(listOf("report"), source.listFiles()!!.map { it.name })
+        assertEquals("A".repeat(512), File(restored, "alpha.txt").readText())
+        assertEquals("B".repeat(512), File(restored, "beta.txt").readText())
+    }
+
+    @Test
+    fun `large copy with corrupted middle is rejected`() {
+        val src = tempFolder.newFile("big-src.bin")
+        val dst = tempFolder.newFile("big-dst.bin")
+        val block = ByteArray(1024 * 1024) { 'A'.code.toByte() }
+        src.outputStream().use { out -> repeat(5) { out.write(block) } }
+        dst.outputStream().use { out ->
+            repeat(2) { out.write(block) }
+            val bad = block.clone()
+            bad[512] = 'B'.code.toByte()
+            out.write(bad)
+            repeat(2) { out.write(block) }
+        }
+        try {
+            repo(FakeMutator()).verifyFileIntegrity(src, dst)
+            org.junit.Assert.fail("middle corruption of a large copy passed verification")
+        } catch (expected: java.io.IOException) {
+        }
+    }
+
+    @Test
+    fun `identical large copy passes verification`() {
+        val src = tempFolder.newFile("big-ok-src.bin")
+        val dst = tempFolder.newFile("big-ok-dst.bin")
+        val block = ByteArray(1024 * 1024) { 'A'.code.toByte() }
+        src.outputStream().use { out -> repeat(5) { out.write(block) } }
+        dst.outputStream().use { out -> repeat(5) { out.write(block) } }
+        repo(FakeMutator()).verifyFileIntegrity(src, dst)
+    }
+
+    private class RecordingDao(
+        private val delegate: TrashDao,
+        private val log: MutableList<String>
+    ) : TrashDao by delegate {
+        override suspend fun deleteByIds(ids: List<Long>) {
+            log.add("close")
+            delegate.deleteByIds(ids)
+        }
+    }
+
+    @Test
+    fun `restore closes the record before any bin mutation when cleanup may partially fail`() = runBlocking {
+        val log = mutableListOf<String>()
+        val dao = RecordingDao(InMemoryTrashDao(), log)
+        val source = tempFolder.newFolder("order-src")
+        val dir = File(source, "bundle").apply { mkdirs() }
+        File(dir, "a.txt").writeText("A")
+        File(dir, "b.txt").writeText("B")
+        repo(FakeMutator(forceCopyPath = false), dao).moveToTrash(listOf(dir))
+        val item = dao.getAllTrashItemsSync().single().toDomain()
+
+        val mutator = object : FakeMutator(forceCopyPath = true, refuse = { it.name == "b.txt" }) {
+            override fun delete(entry: File): Boolean {
+                log.add("bin-delete")
+                return super.delete(entry)
+            }
+        }
+        val result = repo(mutator, dao).restoreFromTrash(listOf(item))
+
+        assertTrue("partial bin cleanup must be reported", result.isFailure)
+        val close = log.indexOf("close")
+        val firstBinDelete = log.indexOf("bin-delete")
+        assertTrue(
+            "the record must be closed before the bin is touched, so a crash mid-cleanup cannot leave an open record over degraded remnants",
+            close != -1 && firstBinDelete != -1 && close < firstBinDelete
+        )
+    }
+
+    @Test
+    fun `permanently deleting a missing file on a detached volume keeps the record`() = runBlocking {
+        val dao = InMemoryTrashDao()
+        val source = tempFolder.newFolder("perm-src")
+        val item = File(source, "gone.txt").apply { writeText("G") }
+        repo(FakeMutator(forceCopyPath = false), dao).moveToTrash(listOf(item))
+        val row = dao.getAllTrashItemsSync().single()
+        val binFile = File(row.trashPath)
+        binFile.delete()
+        // Detach the volume: the bin parent no longer exists, so the file is not provably gone.
+        binFile.parentFile.deleteRecursively()
+
+        val result = repo(FakeMutator(forceCopyPath = false), dao).deletePermanently(listOf(row.toDomain()))
+
+        assertTrue("a detached volume must not be reported as a clean delete", result.isFailure)
+        assertEquals(
+            "a detached volume must keep the record so the item is not silently lost",
+            1,
+            dao.getAllTrashItemsSync().size
+        )
+    }
 }

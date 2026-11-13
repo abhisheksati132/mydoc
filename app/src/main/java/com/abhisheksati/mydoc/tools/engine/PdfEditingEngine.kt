@@ -7,6 +7,7 @@ import com.abhisheksati.mydoc.tools.pdf.internal.PdfBoxHelper
 import com.abhisheksati.mydoc.tools.pdf.pagenumber.PdfPageNumberer
 import com.abhisheksati.mydoc.tools.pdf.watermark.PdfWatermarker
 import com.abhisheksati.mydoc.tools.security.SignatureStorage
+import com.abhisheksati.mydoc.util.SecureLog
 import com.artifex.mupdf.fitz.Document
 import com.artifex.mupdf.fitz.PDFAnnotation
 import com.artifex.mupdf.fitz.PDFDocument
@@ -69,17 +70,14 @@ class PdfEditingEngine(private val context: Context) {
                         val top = b.y0 + 36f
                         annot.rect = Rect(left, top, left + stampW, top + stampH)
                         annot.contents = text
-                        val stampName = when (text.uppercase()) {
-                            "DRAFT" -> "Draft"
-                            "CONFIDENTIAL" -> "Confidential"
-                            "APPROVED" -> "Approved"
-                            "FOR COMMENT", "FORCOMMENT" -> "ForComment"
-                            "FOR PUBLIC RELEASE", "FORPUBLICRELEASE" -> "ForPublicRelease"
-                            "NOT APPROVED", "NOTAPPROVED" -> "NotApproved"
-                            "TOP SECRET", "TOPSECRET" -> "TopSecret"
-                            else -> "Draft"
+                        val stampName = standardStampIcon(text)
+                        if (stampName != null) {
+                            try {
+                                annot.icon = stampName
+                            } catch (t: Throwable) {
+                                SecureLog.warn("PdfEditing", "stamp icon assignment failed", t) { stampName }
+                            }
                         }
-                        runCatching { annot.icon = stampName }
                         annot.color = when (text.uppercase()) {
                             "REJECTED" -> floatArrayOf(0.9f, 0.1f, 0.1f)
                             "CONFIDENTIAL", "TOP SECRET", "TOPSECRET" -> floatArrayOf(0.85f, 0.2f, 0.2f)
@@ -210,4 +208,21 @@ class PdfEditingEngine(private val context: Context) {
             sigBmp.recycle()
         }
     }
+}
+
+/**
+ * The standard PDF stamp icon for a recognized stamp text, or null when the text is custom.
+ * A custom stamp must not borrow "Draft": its meaning is carried by contents and color, and a
+ * Draft icon on a REJECTED or arbitrary stamp misrepresents the annotation.
+ */
+internal fun standardStampIcon(text: String): String? = when (text.uppercase()) {
+    "DRAFT" -> "Draft"
+    "CONFIDENTIAL" -> "Confidential"
+    "APPROVED" -> "Approved"
+    "FOR COMMENT", "FORCOMMENT" -> "ForComment"
+    "FOR PUBLIC RELEASE", "FORPUBLICRELEASE" -> "ForPublicRelease"
+    "NOT APPROVED", "NOTAPPROVED" -> "NotApproved"
+    "TOP SECRET", "TOPSECRET" -> "TopSecret"
+    "REJECTED" -> "NotApproved"
+    else -> null
 }

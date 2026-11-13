@@ -71,7 +71,10 @@ class StorageRepositoryImpl(
      * the auto-rename probe, so both could pick "report (1).pdf" and one overwrote the other.
      */
     private val mutationLock = Mutex()
-    private val trashLock = Mutex()
+    // Alias, not a second lock: trash operations and file mutations must serialize together, or a
+    // move and a trash of the same file race across two independent locks. No locked method calls
+    // another locked method, so sharing one non-reentrant mutex cannot deadlock.
+    private val trashLock = mutationLock
 
     private val batchRenamer = com.abhisheksati.mydoc.data.local.ExplorerRename(
         journalDirectory = File(context.filesDir, "rename_journals")
@@ -228,64 +231,70 @@ class StorageRepositoryImpl(
     }
 
     override suspend fun createDirectory(parent: File, name: String): Result<File> = withContext(Dispatchers.IO) {
-        try {
-            val cleanName = name.trim()
-            if (cleanName.isEmpty()) return@withContext Result.failure(IllegalArgumentException("Name cannot be empty"))
-            if (!isValidFileName(cleanName)) return@withContext Result.failure(IllegalArgumentException("Name contains invalid characters"))
-            val target = File(parent, cleanName)
-            if (target.exists()) {
-                return@withContext Result.failure(IllegalStateException("A file or folder with this name already exists"))
+        mutationLock.withLock {
+            try {
+                val cleanName = name.trim()
+                if (cleanName.isEmpty()) return@withContext Result.failure(IllegalArgumentException("Name cannot be empty"))
+                if (!isValidFileName(cleanName)) return@withContext Result.failure(IllegalArgumentException("Name contains invalid characters"))
+                val target = File(parent, cleanName)
+                if (target.exists()) {
+                    return@withContext Result.failure(IllegalStateException("A file or folder with this name already exists"))
+                }
+                if (target.mkdirs()) {
+                    Result.success(target)
+                } else {
+                    Result.failure(Exception("Failed to create directory"))
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Result.failure(e)
             }
-            if (target.mkdirs()) {
-                Result.success(target)
-            } else {
-                Result.failure(Exception("Failed to create directory"))
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Result.failure(e)
         }
     }
 
     override suspend fun createFile(parent: File, name: String): Result<File> = withContext(Dispatchers.IO) {
-        try {
-            val cleanName = name.trim()
-            if (cleanName.isEmpty()) return@withContext Result.failure(IllegalArgumentException("Name cannot be empty"))
-            if (!isValidFileName(cleanName)) return@withContext Result.failure(IllegalArgumentException("Name contains invalid characters"))
-            val target = File(parent, cleanName)
-            if (target.exists()) {
-                return@withContext Result.failure(IllegalStateException("File already exists"))
+        mutationLock.withLock {
+            try {
+                val cleanName = name.trim()
+                if (cleanName.isEmpty()) return@withContext Result.failure(IllegalArgumentException("Name cannot be empty"))
+                if (!isValidFileName(cleanName)) return@withContext Result.failure(IllegalArgumentException("Name contains invalid characters"))
+                val target = File(parent, cleanName)
+                if (target.exists()) {
+                    return@withContext Result.failure(IllegalStateException("File already exists"))
+                }
+                if (target.createNewFile()) {
+                    Result.success(target)
+                } else {
+                    Result.failure(Exception("Failed to create file"))
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Result.failure(e)
             }
-            if (target.createNewFile()) {
-                Result.success(target)
-            } else {
-                Result.failure(Exception("Failed to create file"))
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Result.failure(e)
         }
     }
 
     override suspend fun rename(source: File, newName: String): Result<File> = withContext(Dispatchers.IO) {
-        try {
-            val cleanName = newName.trim()
-            if (cleanName.isEmpty()) return@withContext Result.failure(IllegalArgumentException("New name cannot be empty"))
-            if (!isValidFileName(cleanName)) return@withContext Result.failure(IllegalArgumentException("New name contains invalid characters"))
-            val parent = source.parentFile
-                ?: return@withContext Result.failure(IllegalStateException("Cannot determine parent directory"))
-            val target = File(parent, cleanName)
-            if (target.exists() && target.absolutePath != source.absolutePath) {
-                return@withContext Result.failure(IllegalStateException("A file with that name already exists"))
+        mutationLock.withLock {
+            try {
+                val cleanName = newName.trim()
+                if (cleanName.isEmpty()) return@withContext Result.failure(IllegalArgumentException("New name cannot be empty"))
+                if (!isValidFileName(cleanName)) return@withContext Result.failure(IllegalArgumentException("New name contains invalid characters"))
+                val parent = source.parentFile
+                    ?: return@withContext Result.failure(IllegalStateException("Cannot determine parent directory"))
+                val target = File(parent, cleanName)
+                if (target.exists() && target.absolutePath != source.absolutePath) {
+                    return@withContext Result.failure(IllegalStateException("A file with that name already exists"))
+                }
+                if (source.renameTo(target)) {
+                    Result.success(target)
+                } else {
+                    Result.failure(Exception("Rename failed"))
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Result.failure(e)
             }
-            if (source.renameTo(target)) {
-                Result.success(target)
-            } else {
-                Result.failure(Exception("Rename failed"))
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Result.failure(e)
         }
     }
 
@@ -360,14 +369,13 @@ class StorageRepositoryImpl(
                     }
                 }
                 val dest = getNonConflictingFile(targetDir, src.name)
-                // One bad item must not abort the batch or hide what was already written.
-                runCatching {
-                    if (src.isDirectory) src.copyRecursively(dest, overwrite = true)
-                    else src.copyTo(dest, overwrite = true)
-                }.onSuccess {
+                // One bad item must not abort the batch or hide what was already written. Stage and
+                // verify the copy so a truncated write is never left at the final path as a success.
+                val error = copyAndVerify(src, dest)
+                if (error == null) {
                     copied++
                     onProgress(copied, total)
-                }.onFailure { error ->
+                } else {
                     discardPartial(dest)
                     failed++
                     firstError = firstError ?: error
@@ -550,59 +558,30 @@ class StorageRepositoryImpl(
         }
     }
 
-    private fun verifyFileIntegrity(src: File, dest: File) {
+    internal fun verifyFileIntegrity(src: File, dest: File) {
         if (!dest.isFile || dest.length() != src.length()) {
             throw java.io.IOException("Copied file size (${dest.length()}) does not match source ${src.name} (${src.length()})")
         }
-        val len = src.length()
-        if (len == 0L) return
-
-        if (len <= 4L * 1024 * 1024) {
-            val srcCrc = calculateCrc32(src)
-            val destCrc = calculateCrc32(dest)
-            if (srcCrc != destCrc) {
-                throw java.io.IOException("Copied file checksum mismatch for ${src.name}")
-            }
-        } else {
-            val sampleSize = 64 * 1024
-            val srcBuf = ByteArray(sampleSize)
-            val destBuf = ByteArray(sampleSize)
-
-            java.io.FileInputStream(src).use { sIn ->
-                java.io.FileInputStream(dest).use { dIn ->
+        if (src.length() == 0L) return
+        // Full-stream comparison at every size: head/tail sampling let middle corruption of
+        // large copies pass verification.
+        val srcBuf = ByteArray(64 * 1024)
+        val destBuf = ByteArray(64 * 1024)
+        java.io.FileInputStream(src).use { sIn ->
+            java.io.FileInputStream(dest).use { dIn ->
+                while (true) {
                     val sRead = sIn.read(srcBuf)
                     val dRead = dIn.read(destBuf)
-                    if (sRead != dRead || !srcBuf.copyOf(sRead).contentEquals(destBuf.copyOf(dRead))) {
-                        throw java.io.IOException("Copied file head sample mismatch for ${src.name}")
+                    if (sRead != dRead) {
+                        throw java.io.IOException("Copied file length diverged for ${src.name}")
                     }
-                }
-            }
-
-            java.io.RandomAccessFile(src, "r").use { sRaf ->
-                java.io.RandomAccessFile(dest, "r").use { dRaf ->
-                    val offset = (len - sampleSize).coerceAtLeast(0L)
-                    sRaf.seek(offset)
-                    dRaf.seek(offset)
-                    val sRead = sRaf.read(srcBuf)
-                    val dRead = dRaf.read(destBuf)
-                    if (sRead != dRead || !srcBuf.copyOf(sRead).contentEquals(destBuf.copyOf(dRead))) {
-                        throw java.io.IOException("Copied file tail sample mismatch for ${src.name}")
+                    if (sRead == -1) break
+                    if (!srcBuf.copyOf(sRead).contentEquals(destBuf.copyOf(dRead))) {
+                        throw java.io.IOException("Copied file checksum mismatch for ${src.name}")
                     }
                 }
             }
         }
-    }
-
-    private fun calculateCrc32(file: File): Long {
-        val crc = java.util.zip.CRC32()
-        val buffer = ByteArray(32 * 1024)
-        java.io.FileInputStream(file).use { input ->
-            var read: Int
-            while (input.read(buffer).also { read = it } != -1) {
-                crc.update(buffer, 0, read)
-            }
-        }
-        return crc.value
     }
 
     /**
@@ -715,6 +694,7 @@ class StorageRepositoryImpl(
         destinationZip: File,
         onProgress: (current: Int, total: Int) -> Unit
     ): Result<File> = withContext(Dispatchers.IO) {
+        mutationLock.withLock {
         runCatching {
             if (sources.isEmpty()) throw IllegalArgumentException("No files selected for compression")
             val parentDir = destinationZip.parentFile ?: destinationZip
@@ -816,6 +796,7 @@ class StorageRepositoryImpl(
         }.onFailure { error ->
             if (error is CancellationException) throw error
         }
+        }
     }
 
     override suspend fun unzip(
@@ -830,6 +811,7 @@ class StorageRepositoryImpl(
         collisionStrategy: ZipCollisionStrategy,
         onProgress: (extractedFiles: Int) -> Unit = {}
     ): Result<File> = withContext(Dispatchers.IO) {
+        mutationLock.withLock {
         // Hoisted out of runCatching so the failure path below can see what this run created.
         // One token per extraction: millisecond timestamps collide when two archives are unpacked
         // together, and a shared temp name corrupts both results.
@@ -945,6 +927,7 @@ class StorageRepositoryImpl(
                 runCatching { if (created.isDirectory) created.deleteRecursively() else created.delete() }
             }
             if (error is CancellationException) throw error
+        }
         }
     }
 
@@ -1068,18 +1051,14 @@ class StorageRepositoryImpl(
                 }
             }
         } else {
-            var count = 0
             try {
+                // take(200) short-circuits the walk; the old return@forEach only skipped one element
+                // and kept walking the whole tree past the cap.
                 rootDirectory.walkTopDown()
                     .maxDepth(6)
-                    .filter { it.name.contains(trimmed, ignoreCase = true) }
-                    .forEach {
-                        if (it.absolutePath != rootDirectory.absolutePath) {
-                            results.add(StorageItem(it))
-                            count++
-                            if (count >= 200) return@forEach
-                        }
-                    }
+                    .filter { it.name.contains(trimmed, ignoreCase = true) && it.absolutePath != rootDirectory.absolutePath }
+                    .take(200)
+                    .forEach { results.add(StorageItem(it)) }
             } catch (e: SecurityException) {
                 android.util.Log.w("StorageRepository", "Permission denied walking directory for search", e)
             } catch (e: Exception) {
@@ -1090,7 +1069,11 @@ class StorageRepositoryImpl(
     }
 
     private fun getTrashDir(): File {
-        val baseDir = context.getExternalFilesDir(null) ?: context.filesDir
+        // The bin lives on external app storage. Falling back to internal filesDir created a phantom
+        // second bin: restore's availability guard then checked the wrong volume, so a detached card
+        // looked like an empty, readable bin. Fail clearly instead; every caller reports the failure.
+        val baseDir = context.getExternalFilesDir(null)
+            ?: throw java.io.IOException("The Recycle Bin storage is unavailable; external storage is not mounted.")
         val trash = File(baseDir, ".trash")
         if (!trash.exists()) trash.mkdirs()
         return trash
@@ -1278,6 +1261,7 @@ class StorageRepositoryImpl(
                 var restoredCount = 0
                 var failedCount = 0
                 val unresolved = mutableListOf<String>()
+                val binLeftovers = mutableListOf<String>()
                 val restoredPaths = mutableListOf<String>()
                 val trashDir = getTrashDir()
                 // An unreadable bin may mean the volume is simply away. The records stay so the
@@ -1288,8 +1272,15 @@ class StorageRepositoryImpl(
                         java.io.IOException("The Recycle Bin storage is unavailable; nothing was restored.")
                     )
                 }
+                val recordedItems = trashDao?.getAllTrashItemsSync()
+                    ?.associateBy { it.id }?.toMutableMap()
                 for (item in items) {
                     currentCoroutineContext().ensureActive()
+                    if (recordedItems != null && recordedItems.remove(item.id)?.toDomain() != item) {
+                        failedCount++
+                        unresolved += item.displayName
+                        continue
+                    }
                     val trashFile = item.trashFile
                     if (!trashFile.exists()) {
                         failedCount++
@@ -1320,15 +1311,24 @@ class StorageRepositoryImpl(
                             continue
                         }
                         val before = snapshotSource(trashFile)
+                        // Close the record before any bin mutation: a crash mid-cleanup must never
+                        // leave an open record pointing at degraded bin remnants.
+                        trashDao?.deleteByIds(listOf(item.id))
                         val survivors = deleteSourceEntries(trashFile)
                         restored = survivors.isEmpty()
                         if (!restored && !resolvePartialSource(trashFile, destFile, before)) {
-                            // Part of the bin copy is already gone, destination was partially written.
-                            // Mark as failed and unresolved so the batch truthfully reports partial failure.
-                            failedCount++
-                            unresolved += item.displayName
+                            // The destination holds a verified-complete copy; only the bin cleanup left
+                            // survivors. The record stays closed so a retry cannot re-copy the degraded
+                            // remnants beside the complete destination.
                             restoredPaths += destFile.absolutePath
+                            restoredCount++
+                            binLeftovers += survivors.map { it.name }
                             continue
+                        }
+                        if (!restored) {
+                            // The bin proved intact (nothing was deleted) and resolvePartialSource
+                            // discarded the duplicate: reopen the record so the user can retry.
+                            trashDao?.insert(TrashEntity.fromDomain(item))
                         }
                     }
 
@@ -1343,11 +1343,11 @@ class StorageRepositoryImpl(
                     }
                 }
                 scanFilesAwait(context, restoredPaths)
-                if (failedCount == 0) {
+                if (failedCount == 0 && binLeftovers.isEmpty()) {
                     Result.success(restoredCount)
                 } else {
                     Result.failure(
-                        PartialStorageOperationException(restoredCount, failedCount, null, unresolved)
+                        PartialStorageOperationException(restoredCount, failedCount, null, unresolved + binLeftovers)
                     )
                 }
             } catch (e: Exception) {
@@ -1372,7 +1372,11 @@ class StorageRepositoryImpl(
                                 trashFile.delete()
                             }
                         } else {
-                            true
+                            // Missing file: only treat it as deleted (and drop the record) when the bin
+                            // volume is mounted and readable. A detached volume must keep the record so
+                            // the item is not silently lost from the bin.
+                            val parent = trashFile.parentFile
+                            parent != null && parent.exists() && parent.canRead()
                         }
                     } catch (_: Exception) {
                         false

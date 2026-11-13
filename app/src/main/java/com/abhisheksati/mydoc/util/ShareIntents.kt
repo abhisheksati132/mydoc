@@ -26,14 +26,15 @@ fun Uri.toShareableUri(context: Context): Uri? {
         ?.let { return it }
 
     return runCatching {
-        // Opportunistic cleanup of stale shared directories older than 24 hours
+        // Opportunistic cleanup of stale shared directories. A recipient may open a handoff days
+        // later, so keep staged copies for a week before reclaiming them; 24h deleted live shares.
         val rootShared = File(context.cacheDir, "shared")
         if (rootShared.isDirectory) {
-            val oneDayAgo = System.currentTimeMillis() - 86_400_000L
+            val cutoff = System.currentTimeMillis() - 7L * 86_400_000L
             rootShared.listFiles()?.forEach { dir ->
                 // Guard dedicated subdirectories like archive-previews or installers from opportunistic wipe
                 if (dir.name == "archive-previews" || dir.name == "installers") return@forEach
-                if (dir.isDirectory && dir.lastModified() < oneDayAgo) {
+                if (dir.isDirectory && dir.lastModified() < cutoff) {
                     dir.deleteRecursively()
                 }
             }

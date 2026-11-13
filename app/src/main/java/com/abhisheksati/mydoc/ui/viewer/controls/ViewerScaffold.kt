@@ -39,8 +39,11 @@ import com.abhisheksati.mydoc.designsystem.components.showMessage
 import com.abhisheksati.mydoc.util.openFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.domain.model.ReadingPrefs
+import com.abhisheksati.mydoc.domain.model.RenderFidelity
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import com.abhisheksati.mydoc.ui.home.DocumentDetailsDialog
+import com.abhisheksati.mydoc.ui.viewer.FidelityNotice
+import com.abhisheksati.mydoc.ui.viewer.fidelityDisclosureFor
 import androidx.core.net.toUri
 import kotlinx.coroutines.launch
 
@@ -55,7 +58,12 @@ data class ViewerCapabilities(
     val supportsTts: Boolean = false,
     val supportsZoom: Boolean = true,
     val supportsPdfTools: Boolean = false,
-    val supportsOcr: Boolean = false
+    val supportsOcr: Boolean = false,
+    // Default off: a viewer must implement a layout mode before its toggle is shown. The
+    // reflow/grid/text viewers persist these prefs but never read them, so claiming support
+    // by default put dead controls in the appearance sheet.
+    val supportsContinuousScroll: Boolean = false,
+    val supportsDualPageView: Boolean = false
 )
 
 /**
@@ -133,6 +141,8 @@ fun ViewerScaffold(
     onSheetSelect: ((Int) -> Unit)? = null,
     readingPrefs: ReadingPrefs = ReadingPrefs(),
     onReadingPrefsChange: ((ReadingPrefs) -> Unit)? = null,
+    observedFidelity: RenderFidelity? = null,
+    fidelityNotes: List<String> = emptyList(),
     onToolsClick: (() -> Unit)? = null,
     onOcrClick: (() -> Unit)? = null,
     onTtsClick: (() -> Unit)? = null,
@@ -216,6 +226,10 @@ fun ViewerScaffold(
 
     val backgroundColor = ViewerThemeTokens.getBackgroundColor(readingPrefs.readingMode, isDark, colors.surface)
 
+    val fidelityDisclosure = remember(document.extension, observedFidelity, fidelityNotes) {
+        fidelityDisclosureFor(document.extension, observedFidelity, fidelityNotes)
+    }
+
     val readerHaze = remember { dev.chrisbanes.haze.HazeState() }
     val liveReaderGlass = isControlsVisible && !LocalReducedMotion.current &&
         LocalGlassEffectMode.current == com.abhisheksati.mydoc.designsystem.components.GlassEffectMode.ON &&
@@ -263,6 +277,17 @@ fun ViewerScaffold(
 
         // Sits under the bar and hides with it, so a scraped .doc tells the reader the truth
         // without permanently covering the page.
+        if (isControlsVisible && fidelityDisclosure != null) {
+            FidelityNotice(
+                disclosure = fidelityDisclosure,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .statusBarsPadding()
+                    .padding(top = ViewerChrome.topBarHeight),
+                dismissalKey = document.uri
+            )
+        }
+
         // Bottom Bar
         ViewerBottomBar(
             currentPage = currentPage,
@@ -309,6 +334,7 @@ fun ViewerScaffold(
                 onReadingPrefsChange?.invoke(updated)
                 app?.settingsRepository?.updateReadingPrefs { it.copy(isDualPageView = dual) }
             },
+            showLayoutControls = capabilities.supportsContinuousScroll || capabilities.supportsDualPageView,
             currentBrightness = readingPrefs.brightness,
             onBrightnessChange = { newBrightness ->
                 val updated = readingPrefs.copy(brightness = newBrightness)

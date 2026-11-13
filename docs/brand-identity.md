@@ -194,7 +194,7 @@ what's next; never hype.
 - `designsystem/tokens/AppColors.kt` — Light/Dark/Black + `fromMaterialScheme` + `DocumentFormatColors`
   + media-kind helpers → the "Ink & Seal" values above.
 - `designsystem/tokens/AppTheme.kt` — `fallbackLight/fallbackDark/amoled` Material 3 schemes.
-- `designsystem/tokens/AppTypography.kt` — Fraunces display / Inter / JetBrains Mono (confirm).
+- `designsystem/tokens/AppTypography.kt` — Fraunces display / Inter / JetBrains Mono (wired via `res/font`).
 - `ui/files/FileThumbnail.kt` — `TypeTint` → desaturated format table.
 - Home wordmark + launcher icon + `res/` adaptive icons → the Seal + Fraunces wordmark.
 - Launch banner → this palette + wordmark + seal.
@@ -211,7 +211,7 @@ MyDoc marries Google's **Material You (Material 3 Expressive)** with the bespoke
   - Desaturated, letterpress format chips with WCAG AAA contrast ratios.
 
 - **Material You as the Expressive Dynamic Layer:**
-  - **Dynamic Theming (Monet):** When dynamic color is enabled, system color seeds cleanly tint the `AppColors.fromMaterialScheme` bridge while respecting warm luminance scales.
+  - **Dynamic Theming (Monet):** the `AppColors.fromMaterialScheme` bridge accepts system color seeds via `AppDesignSystemTheme(dynamicColor = true)`, but the shipped default is `false`: the fixed Ink & Seal palette is the identity, and wallpaper colours stay off until a user-facing opt-in control exists.
   - **M3 Expressive Motion:** Fluid spring easing (`Spring.StiffnessMediumLow`) on bottom sheets, search overlays, and page turn gestures.
   - **Pill Indicators & Floating Chrome:** Full support for Material 3 pill indicators, expressive fab morphing, and continuous squircle corners (`AppRadius.roundShape`).
   - **Tactile Accessibility:** High-contrast focus boundaries, explicit touch targets (≥48dp), and complete screen-reader semantics for all interactive swatches and controls.

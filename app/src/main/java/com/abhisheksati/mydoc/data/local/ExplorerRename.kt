@@ -38,6 +38,11 @@ class ExplorerRename(
                 }
             }
         }
+        // Bound the archive so dismissed journals don't accumulate without limit.
+        archive.listFiles()?.filter { it.extension == "properties" }
+            ?.sortedByDescending { it.lastModified() }
+            ?.drop(100)
+            ?.forEach { runCatching { it.delete() } }
     }
     suspend fun preview(files: List<File>, options: ExplorerRenameOptions): ExplorerRenamePlan = withContext(Dispatchers.IO) {
         val sources = files.distinctBy { it.absolutePath }.sortedBy { it.absolutePath }

@@ -171,7 +171,7 @@ class MainActivity : ComponentActivity() {
                     uri = docUri,
                     displayName = savedInstanceState.getString("active_doc_name") ?: "Document",
                     sizeBytes = savedInstanceState.getLong("active_doc_size"),
-                    mimeType = savedInstanceState.getString("active_doc_mime") ?: "application/pdf",
+                    mimeType = savedInstanceState.getString("active_doc_mime") ?: "*/*",
                     lastOpenedTimestamp = savedInstanceState.getLong("active_doc_time"),
                     pageCount = savedInstanceState.getInt("active_doc_pages"),
                     lastPage = savedInstanceState.getInt("active_doc_last_page"),
@@ -613,6 +613,9 @@ class MainActivity : ComponentActivity() {
                 isAppUnlocked = false
             }
         }
+        // Consume the exemption every restart. If a result is never delivered, leaving it set would
+        // suppress biometric re-lock indefinitely on every later return.
+        waitingForActivityResult = false
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
@@ -685,8 +688,8 @@ class MainActivity : ComponentActivity() {
                     val privateAppDir = filesDir.parentFile?.canonicalFile?.toPath()
                     if (privateAppDir != null && canonicalFile != null &&
                         (canonicalFile.toPath().startsWith(privateAppDir) || canonicalFile.toPath() == privateAppDir)) {
-                        android.util.Log.w("MainActivity", "Blocked attempt to open internal private file: $path")
-                        showMessage("Cannot open internal private app files.")
+                        android.util.Log.w("MainActivity", "Blocked attempt to open an internal private file")
+                        showMessage(getString(R.string.main_blocked_private_file))
                         return
                     }
                 }

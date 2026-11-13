@@ -18,11 +18,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.domain.model.HomeTab
-import java.util.Locale
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -56,12 +56,13 @@ fun SettingsStorageSection(
 
         SettingsDivider(modifier = Modifier.padding(top = 12.dp))
 
+        val locale = LocalConfiguration.current.locales[0]
         val formattedCache = if (cacheSizeBytes < 1024) {
             "$cacheSizeBytes B"
         } else if (cacheSizeBytes < 1024 * 1024) {
-            String.format(Locale.US, "%.1f KB", cacheSizeBytes / 1024.0)
+            String.format(locale, "%.1f KB", cacheSizeBytes / 1024.0)
         } else {
-            String.format(Locale.US, "%.1f MB", cacheSizeBytes / (1024.0 * 1024.0))
+            String.format(locale, "%.1f MB", cacheSizeBytes / (1024.0 * 1024.0))
         }
 
         SettingActionRow(

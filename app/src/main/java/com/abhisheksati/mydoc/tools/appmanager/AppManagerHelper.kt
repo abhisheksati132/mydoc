@@ -38,6 +38,9 @@ class AppManagerHelper(private val context: Context) {
             if (includeSystemApps) {
                 pm.getInstalledApplications(PackageManager.GET_META_DATA)
             } else {
+                // Android 11+ package visibility: without QUERY_ALL_PACKAGES (deliberately not
+                // requested) getInstalledApplications returns only packages visible to MyDoc,
+                // so the launcher query is the honest inventory of user-facing apps.
                 val launcherIntent = Intent(Intent.ACTION_MAIN).apply {
                     addCategory(Intent.CATEGORY_LAUNCHER)
                 }

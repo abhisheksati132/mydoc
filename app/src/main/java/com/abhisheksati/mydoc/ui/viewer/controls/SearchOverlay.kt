@@ -122,13 +122,13 @@ fun SearchOverlay(
 
                     if (matchCount > 0) {
                         Text(
-                            text = "${currentMatchIndex + 1} of $matchCount",
+                            text = stringResource(R.string.search_match_position, currentMatchIndex + 1, matchCount),
                             style = AppTheme.typography.metadataStrong,
                             color = colors.accent
                         )
                     } else if (query.isNotBlank()) {
                         Text(
-                            text = "0 matches",
+                            text = stringResource(R.string.search_zero_matches),
                             style = AppTheme.typography.metadata,
                             color = colors.inkMuted
                         )

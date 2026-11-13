@@ -4,6 +4,8 @@ import com.abhisheksati.mydoc.BuildConfig
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -49,5 +51,23 @@ class SecureLogTest {
     fun anEmptyDetailDoesNotLeaveTrailingWhitespace() {
         SecureLog.verbose = true
         assertEquals("no PDF produced", SecureLog.messageFor("no PDF produced") { "   " })
+    }
+
+    @Test
+    fun aReleaseBuildDoesNotForwardThrowableMessages() {
+        SecureLog.verbose = false
+        val secret = java.io.IOException("/storage/emulated/0/Documents/tax-return.pdf")
+        val (message, forwarded) = SecureLog.payloadFor("could not open document", { "private" }, secret)
+        assertNull("release forwarded a throwable carrying a private path", forwarded)
+        assertFalse("the throwable message reached the release log", message.contains("tax-return"))
+        assertTrue("the exception type should remain diagnosable", message.contains("IOException"))
+    }
+
+    @Test
+    fun aDebugBuildForwardsTheThrowable() {
+        SecureLog.verbose = true
+        val secret = java.io.IOException("detail")
+        val (_, forwarded) = SecureLog.payloadFor("summary", { "" }, secret)
+        assertSame(secret, forwarded)
     }
 }

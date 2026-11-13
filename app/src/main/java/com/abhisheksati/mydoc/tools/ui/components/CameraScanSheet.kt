@@ -113,10 +113,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.abhisheksati.mydoc.designsystem.components.showMessage
 
-enum class ScanAspectMode(val label: String, val ratio: Float) {
-    DOCUMENT("Document", 0.71f),
-    ID_CARD("ID Card", 0.63f),
-    FULL("Full View", 0.85f)
+enum class ScanAspectMode(val labelRes: Int, val ratio: Float) {
+    DOCUMENT(R.string.scan_aspect_document, 0.71f),
+    ID_CARD(R.string.scan_aspect_id_card, 0.63f),
+    FULL(R.string.scan_aspect_full, 0.85f)
 }
 
 @Composable
@@ -534,7 +534,7 @@ fun CameraScanSheet(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = mode.label.uppercase(),
+                                text = stringResource(mode.labelRes).uppercase(),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = if (isSelected) Color.White else CaptureChromeColors.onChromeMuted
                             )
@@ -743,7 +743,7 @@ fun CameraScanSheet(
                                     interactionSource = shutterInteraction,
                                     indication = ripple(),
                                     enabled = !isCapturing,
-                                    onClickLabel = "Capture photo"
+                                    onClickLabel = stringResource(R.string.cd_capture_photo)
                                 ) {
                                     haptics.confirm()
                                     val capture = imageCapture ?: return@clickable

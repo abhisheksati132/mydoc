@@ -14,6 +14,7 @@ import com.abhisheksati.mydoc.rendering.engine.word.DocxImageDecoder
 
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import androidx.compose.foundation.layout.statusBarsPadding
+import android.content.Context
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -65,7 +66,9 @@ import com.abhisheksati.mydoc.designsystem.tokens.DocumentReadingType
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.ui.viewer.DocumentProblemScreen
+import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.domain.model.ReadingPrefs
+import com.abhisheksati.mydoc.domain.model.RenderFidelity
 import com.abhisheksati.mydoc.domain.model.ViewState
 import com.abhisheksati.mydoc.rendering.engine.word.DocxBlock
 import com.abhisheksati.mydoc.rendering.engine.word.DocxDocument
@@ -168,45 +171,30 @@ fun WordViewerScreen(
         coroutineScope.launch { lazyListState.scrollToItem(match.blockIndex) }
     }
 
+    // Reflow positions are block indices, not pages. They live under a mode-distinct key so the
+    // paginated view of the same URI can never resume a block index as a page number.
+    val pagination = remember(blocks) { WordReflowPagination(blocks) }
+    val reflowPrefs = remember(context) {
+        context.getSharedPreferences(WordReflowProgress.PREFS_NAME, Context.MODE_PRIVATE)
+    }
+
     // Smart Resume: Restore position
     LaunchedEffect(document.uri, blocks.isNotEmpty()) {
         if (blocks.isNotEmpty()) {
-            withContext(Dispatchers.IO) {
+            val targetIndex = withContext(Dispatchers.IO) {
                 val saved = app?.documentRepository?.getViewState(document.uri)
-                val targetIndex = saved?.lastPage?.coerceIn(0, blocks.size - 1) ?: 0
-                if (targetIndex > 0) {
-                    withContext(Dispatchers.Main) {
-                        lazyListState.scrollToItem(targetIndex)
-                    }
-                }
+                val storedBlock = reflowPrefs.getInt(WordReflowProgress.keyFor(document.uri), -1)
+                WordReflowProgress.resumeBlockIndex(
+                    storedBlockIndex = storedBlock.takeIf { it >= 0 },
+                    savedViewState = saved,
+                    pagination = pagination,
+                    blockCount = blocks.size
+                )
+            }
+            if (targetIndex > 0) {
+                lazyListState.scrollToItem(targetIndex)
             }
         }
-    }
-
-    // Decouple reflow block index from page progress
-    val pageBreakIndices = remember(blocks) {
-        blocks.mapIndexedNotNull { i, block -> if (block is DocxBlock.PageBreak) i else null }
-    }
-    val effectivePageCount = remember(blocks, pageBreakIndices) {
-        if (pageBreakIndices.isNotEmpty()) pageBreakIndices.size + 1
-        else (blocks.size / 4).coerceAtLeast(1)
-    }
-    fun pageForBlockIndex(blockIdx: Int): Int {
-        if (blocks.isEmpty()) return 0
-        if (pageBreakIndices.isNotEmpty()) {
-            val idx = pageBreakIndices.indexOfFirst { it >= blockIdx }
-            return if (idx == -1) pageBreakIndices.size else idx
-        }
-        return (blockIdx / 4).coerceIn(0, effectivePageCount - 1)
-    }
-    fun blockForPageIndex(pageIdx: Int): Int {
-        if (blocks.isEmpty()) return 0
-        if (pageBreakIndices.isNotEmpty()) {
-            if (pageIdx <= 0) return 0
-            val breakIdx = pageBreakIndices.getOrNull(pageIdx - 1) ?: return blocks.lastIndex
-            return (breakIdx + 1).coerceAtMost(blocks.lastIndex)
-        }
-        return (pageIdx * 4).coerceIn(0, blocks.lastIndex)
     }
 
     // Smart Resume: Persist progress
@@ -216,14 +204,16 @@ fun WordViewerScreen(
             .distinctUntilChanged()
             .collect { index ->
                 withContext(Dispatchers.IO) {
-                    app?.documentRepository?.updatePageProgress(document.uri, pageForBlockIndex(index), effectivePageCount)
+                    app?.documentRepository?.updatePageProgress(document.uri, pagination.pageForBlockIndex(index), pagination.effectivePageCount)
                     app?.documentRepository?.saveViewState(
-                        ViewState(
+                        WordReflowProgress.viewStateFor(
                             uri = document.uri,
-                            lastPage = index,
+                            blockIndex = index,
+                            pagination = pagination,
                             readingMode = readingPrefs.readingMode
                         )
                     )
+                    reflowPrefs.edit().putInt(WordReflowProgress.keyFor(document.uri), index).apply()
                 }
             }
     }
@@ -255,10 +245,13 @@ fun WordViewerScreen(
             supportsPageGrid = false,
             supportsSlideshow = false,
             supportsTts = true,
-            supportsZoom = false
+            supportsZoom = false,
+            supportsContinuousScroll = false,
+            supportsDualPageView = false
         ),
-        currentPage = pageForBlockIndex(visibleBlockIndex),
-        pageCount = effectivePageCount,
+        currentPage = pagination.pageForBlockIndex(visibleBlockIndex),
+        pageCount = pagination.effectivePageCount,
+        observedFidelity = RenderFidelity.STRUCTURED_REFLOW,
         isControlsVisible = !isSearchOpen,
         onBackClick = onBackClick,
         onShareClick = onShareClick,
@@ -267,7 +260,7 @@ fun WordViewerScreen(
         readingPrefs = readingPrefs,
         onPageScrubbed = { page ->
             if (blocks.isNotEmpty()) {
-                val target = blockForPageIndex(page)
+                val target = pagination.blockForPageIndex(page)
                 coroutineScope.launch {
                     lazyListState.scrollToItem(target)
                 }
@@ -558,4 +551,72 @@ private fun paragraphAlignment(layout: DocxParagraphLayout): TextAlign = when (l
     DocxAlignment.JUSTIFY -> TextAlign.Justify
     DocxAlignment.END -> TextAlign.End
     else -> TextAlign.Start
+}
+
+/**
+ * Maps between reflow block indices and the viewer's synthetic page numbers. Pure so the mapping
+ * that decides what gets persisted can be tested without a composition.
+ */
+internal class WordReflowPagination(private val blocks: List<DocxBlock>) {
+    private val pageBreakIndices =
+        blocks.mapIndexedNotNull { i, block -> if (block is DocxBlock.PageBreak) i else null }
+
+    val effectivePageCount: Int =
+        if (pageBreakIndices.isNotEmpty()) pageBreakIndices.size + 1
+        else (blocks.size / 4).coerceAtLeast(1)
+
+    fun pageForBlockIndex(blockIdx: Int): Int {
+        if (blocks.isEmpty()) return 0
+        if (pageBreakIndices.isNotEmpty()) {
+            val idx = pageBreakIndices.indexOfFirst { it >= blockIdx }
+            return if (idx == -1) pageBreakIndices.size else idx
+        }
+        return (blockIdx / 4).coerceIn(0, effectivePageCount - 1)
+    }
+
+    fun blockForPageIndex(pageIdx: Int): Int {
+        if (blocks.isEmpty()) return 0
+        if (pageBreakIndices.isNotEmpty()) {
+            if (pageIdx <= 0) return 0
+            val breakIdx = pageBreakIndices.getOrNull(pageIdx - 1) ?: return blocks.lastIndex
+            return (breakIdx + 1).coerceAtMost(blocks.lastIndex)
+        }
+        return (pageIdx * 4).coerceIn(0, blocks.lastIndex)
+    }
+}
+
+/**
+ * The reflow reading position is a block index and must never enter [ViewState.lastPage], which
+ * the paginated viewer of the same URI resumes as a page. It is kept under a mode-distinct key
+ * that only the reflow viewer reads; the shared view state carries the mapped page.
+ */
+internal object WordReflowProgress {
+    const val PREFS_NAME = "word_reflow_progress"
+
+    fun keyFor(uri: String): String = "reflow_block:$uri"
+
+    fun viewStateFor(
+        uri: String,
+        blockIndex: Int,
+        pagination: WordReflowPagination,
+        readingMode: ReadingMode
+    ): ViewState = ViewState(
+        uri = uri,
+        lastPage = pagination.pageForBlockIndex(blockIndex),
+        readingMode = readingMode
+    )
+
+    fun resumeBlockIndex(
+        storedBlockIndex: Int?,
+        savedViewState: ViewState?,
+        pagination: WordReflowPagination,
+        blockCount: Int
+    ): Int {
+        if (blockCount <= 0) return 0
+        if (storedBlockIndex != null && storedBlockIndex >= 0) {
+            return storedBlockIndex.coerceIn(0, blockCount - 1)
+        }
+        val savedPage = savedViewState?.lastPage ?: return 0
+        return pagination.blockForPageIndex(savedPage).coerceIn(0, blockCount - 1)
+    }
 }

@@ -599,11 +599,16 @@ class FileManagerViewModel(
             }.onFailure { err ->
                 _uiState.update {
                     it.copy(
+                        selectedFiles = emptySet(),
+                        isSelectionMode = false,
                         activeOperation = null,
                         isLoading = false,
                         userMessage = UserMessages.actionFailed(R.string.action_delete, err)
                     )
                 }
+                // A partial delete still removed some items; refresh so the list matches reality.
+                reloadCurrentSource()
+                refreshVolumes()
             }
         }
     }
@@ -618,6 +623,8 @@ class FileManagerViewModel(
                 refreshVolumes()
             }.onFailure { err ->
                 _uiState.update { it.copy(userMessage = UserMessages.actionFailed(R.string.action_delete, err)) }
+                reloadCurrentSource()
+                refreshVolumes()
             }
         }
     }
@@ -739,6 +746,9 @@ class FileManagerViewModel(
                         userMessage = UserMessages.actionFailed(R.string.trash_restore, err)
                     )
                 }
+                // A partial restore still returned some items; refresh so the list matches reality.
+                reloadCurrentSource()
+                refreshVolumes()
             }
         }
     }
@@ -767,6 +777,9 @@ class FileManagerViewModel(
                         userMessage = UserMessages.actionFailed(R.string.trash_restore, err)
                     )
                 }
+                // A partial restore still returned some items; refresh so the list matches reality.
+                reloadCurrentSource()
+                refreshVolumes()
             }
         }
     }

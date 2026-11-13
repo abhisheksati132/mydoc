@@ -9,7 +9,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -90,7 +93,8 @@ internal fun DuplicateReview(groups: List<DuplicateGroup>,keepers: Map<String,St
                         item("header-${group.checksum}") {
                             Column {
                                 HorizontalDivider(Modifier.padding(top=12.dp))
-                                Text(stringResource(R.string.cleaner_review_identical_copies, group.duplicates.size + 1, android.text.format.Formatter.formatFileSize(context, group.size)),style=MaterialTheme.typography.titleSmall)
+                                val copyCount = group.duplicates.size + 1
+                                Text(pluralStringResource(R.plurals.cleaner_review_identical_copies, copyCount, copyCount, android.text.format.Formatter.formatFileSize(context, group.size)),style=MaterialTheme.typography.titleSmall)
                                 TextButton(onClick={onKeep(group.checksum,null)}) { Text(stringResource(R.string.cleaner_review_leave_group)) }
                             }
                         }
@@ -104,8 +108,13 @@ internal fun DuplicateReview(groups: List<DuplicateGroup>,keepers: Map<String,St
                                     Text(file.name,style=MaterialTheme.typography.titleSmall)
                                     Text(file.absolutePath,style=MaterialTheme.typography.bodySmall)
                                     FlowRow {
-                                        RadioButton(selected=keepers[group.checksum]==file.absolutePath,onClick={onKeep(group.checksum,file.absolutePath)})
-                                        TextButton(onClick={onKeep(group.checksum,file.absolutePath)}) { Text(stringResource(R.string.cleaner_review_keep_copy)) }
+                                        val keepLabel = stringResource(R.string.cleaner_review_keep_copy)
+                                        RadioButton(
+                                            selected=keepers[group.checksum]==file.absolutePath,
+                                            onClick={onKeep(group.checksum,file.absolutePath)},
+                                            modifier=Modifier.semantics { contentDescription = keepLabel }
+                                        )
+                                        TextButton(onClick={onKeep(group.checksum,file.absolutePath)}) { Text(keepLabel) }
                                         TextButton(onClick={previewPath=file.absolutePath}) { Text(stringResource(R.string.cleaner_review_preview)) }
                                     }
                                 }

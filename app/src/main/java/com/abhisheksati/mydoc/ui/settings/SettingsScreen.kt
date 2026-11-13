@@ -56,6 +56,7 @@ fun SettingsScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     onDesignSystemPreviewClick: () -> Unit = {},
+    onExplore: () -> Unit = {},
     onClearRecent: (suspend () -> Unit)? = null
 ) {
     val updateState by updateManager.state.collectAsState()
@@ -257,7 +258,8 @@ fun SettingsScreen(
                             updateState = updateState,
                             checkUpdatesOnLaunch = checkUpdatesOnLaunch,
                             onCheckUpdatesOnLaunchChange = { settingsRepository.setCheckUpdatesOnLaunch(it) },
-                            onDesignSystemPreviewClick = onDesignSystemPreviewClick
+                            onDesignSystemPreviewClick = onDesignSystemPreviewClick,
+                            onExplore = onExplore
                         )
                     }
                 }

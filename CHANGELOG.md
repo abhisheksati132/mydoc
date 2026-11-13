@@ -3,6 +3,23 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [Unreleased]
+
+### Security & Integrity
+- **Updater lifetime safety**: dismiss/reset are now atomic against in-flight state writes; a dismissed download can no longer auto-install; the APK the system installer may still be reading is protected across process restarts (persisted) and for a grace period after supersession; re-downloading the same version no longer overwrites the active APK; cache cleanup preserves in-flight downloads.
+- **Release log privacy**: `SecureLog` no longer forwards throwable messages or stack traces to logcat in release builds — only the exception type is kept. Remaining raw MediaStore/cache exception logs migrated to `SecureLog`.
+- **Copy integrity**: `verifyFileIntegrity` now compares the full stream at every file size; the previous head/tail sampling let middle corruption of large copies pass.
+- **Restore crash safety**: restore closes the trash record before any bin mutation, so a crash mid-cleanup can never leave an open record pointing at degraded bin remnants; stale or closed records can no longer be restored.
+
+### Fixed
+- Compose 1.12 test-API drift in four device tests (`assertExists`/`onNode` are members now; `CustomAccessibilityAction` rename).
+- 16 lint errors: non-observable locale reads in Settings and non-configuration-aware resource reads in Discovery.
+- TTS settings shortcut used an action string as a component class name; it now launches the system TTS settings intent with a fallback to general settings.
+- Unsupported `AutoMirrored` chevron icons replaced with supported arrows in Tools, Files and Settings.
+
+### Docs
+- Brand identity doc now states the actual dynamic-color default (off until a user opt-in control exists) and confirms the wired font stack.
+
 ## [2.0.5] — 2026-11-11
 
 ### Storage, Thumbnail & Render Cache Engine
