@@ -12,7 +12,6 @@ import dev.chrisbanes.haze.hazeSource
 import com.abhisheksati.mydoc.designsystem.components.LocalGlassEffectMode
 import com.abhisheksati.mydoc.designsystem.components.LocalGlassEnvironment
 import com.abhisheksati.mydoc.designsystem.components.shouldUseLiveGlass
-import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,6 +32,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsDark
 import com.abhisheksati.mydoc.MyDocApp
+import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.designsystem.components.showMessage
@@ -141,12 +141,22 @@ fun ViewerScaffold(
     onOcrClick: (() -> Unit)? = null,
     onTtsClick: (() -> Unit)? = null,
     onSlideshowClick: (() -> Unit)? = null,
+    onReflowClick: (() -> Unit)? = null,
+    reflowLabel: String? = null,
+    // A viewer with its own details surface (e.g. speaker notes) overrides the built-in dialog.
+    onDetailsClick: (() -> Unit)? = null,
+    documentDetailsLabel: String? = null,
+    // A viewer with its own appearance sheet overrides the built-in one.
+    onAppearanceClick: (() -> Unit)? = null,
+    // Extra dialogs/drawers the format needs (contents, jump, notes, ...).
+    overlays: (@Composable BoxScope.() -> Unit)? = null,
     searchOverlay: @Composable (BoxScope.() -> Unit)? = null,
     ttsBar: @Composable (BoxScope.() -> Unit)? = null,
     passwordDialog: @Composable (() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit
 ) {
     val context = LocalContext.current
+    val resources = androidx.compose.ui.platform.LocalResources.current
     val app = context.applicationContext as? MyDocApp
     val viewerScope = rememberCoroutineScope()
     val colors = LocalAppColors.current
@@ -221,8 +231,10 @@ fun ViewerScaffold(
     val backgroundColor = ViewerThemeTokens.getBackgroundColor(readingPrefs.readingMode, isDark, colors.surface)
 
     val readerHaze = remember { dev.chrisbanes.haze.HazeState() }
-    val liveReaderGlass = isControlsVisible && !LocalReducedMotion.current &&
-        LocalGlassEffectMode.current == com.abhisheksati.mydoc.designsystem.components.GlassEffectMode.ON &&
+    // Live glass is a material decision, not a motion one: reduced-motion users still get the
+    // refraction (its density simply stops animating). AUTO was previously excluded here, which
+    // meant every default install rendered flat chrome in the one place glass matters most.
+    val liveReaderGlass = isControlsVisible &&
         shouldUseLiveGlass(LocalGlassEffectMode.current, LocalGlassEnvironment.current)
     Box(
         modifier = modifier
@@ -241,6 +253,7 @@ fun ViewerScaffold(
             visible = isControlsVisible,
             isCondensed = isCondensed,
             isBookmarked = effectiveBookmarked,
+            showSearch = capabilities.supportsSearch,
             onBackClick = onBackClick,
             onSearchClick = { onSearchClick?.invoke() },
             onToggleBookmark = {
@@ -256,8 +269,12 @@ fun ViewerScaffold(
             onOcrClick = if (capabilities.supportsOcr) onOcrClick else null,
             onTtsClick = if (capabilities.supportsTts) onTtsClick else null,
             onSlideshowClick = if (capabilities.supportsSlideshow) onSlideshowClick else null,
-            onDocumentDetailsClick = { isDocumentDetailsOpen = true },
-            modifier = Modifier.align(Alignment.TopCenter)
+            onReflowClick = onReflowClick,
+            reflowLabel = reflowLabel,
+            onDocumentDetailsClick = onDetailsClick ?: { isDocumentDetailsOpen = true },
+            documentDetailsLabel = documentDetailsLabel,
+            modifier = Modifier.align(Alignment.TopCenter),
+            hazeState = readerHaze.takeIf { liveReaderGlass }
         )
 
         // Search overlay slot
@@ -274,7 +291,8 @@ fun ViewerScaffold(
             hasOutline = capabilities.supportsOutline && sheetItems.isNotEmpty() && onOutlineClick != null,
             onOutlineClick = { onOutlineClick?.invoke() },
             onPagesClick = onPagesClick,
-            onAppearanceClick = { isAppearanceSheetOpen = true },
+            onAppearanceClick = onAppearanceClick ?: { isAppearanceSheetOpen = true },
+            onToolsClick = if (capabilities.supportsPdfTools) onToolsClick else null,
             sheetItems = sheetItems,
             onSheetSelect = onSheetSelect,
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -286,8 +304,9 @@ fun ViewerScaffold(
             ttsBar()
         }
 
-        // Appearance bottom sheet
-        ReadingControlsBottomSheet(
+        // Appearance bottom sheet (skipped when the viewer owns its own sheet)
+        if (onAppearanceClick == null) {
+            ReadingControlsBottomSheet(
             isOpen = isAppearanceSheetOpen,
             onDismiss = { isAppearanceSheetOpen = false },
             readingMode = readingPrefs.readingMode,
@@ -334,9 +353,10 @@ fun ViewerScaffold(
                 app?.settingsRepository?.updateReadingPrefs { it.copy(isFitPage = fitPage) }
             }
         )
+        }
 
-        // Document Details Dialog
-        if (isDocumentDetailsOpen) {
+        // Document Details Dialog (skipped when the viewer owns its details surface)
+        if (isDocumentDetailsOpen && onDetailsClick == null) {
             DocumentDetailsDialog(
                 document = document,
                 onDismiss = { isDocumentDetailsOpen = false },
@@ -346,7 +366,7 @@ fun ViewerScaffold(
                 onOpen = { doc ->
                     isDocumentDetailsOpen = false
                     if (!openFile(context, doc.uri.toUri(), doc.mimeType)) {
-                        context.showMessage("No other app on this device can open ${doc.displayName}.")
+                        context.showMessage(resources.getString(R.string.error_no_app_can_open, doc.displayName))
                     }
                 },
                 onShare = { onShareClick() },
@@ -354,7 +374,7 @@ fun ViewerScaffold(
                     isDocumentDetailsOpen = false
                     viewerScope.launch {
                         app?.documentRepository?.removeFromRecents(doc.uri)
-                        context.showMessage("${doc.displayName} is no longer in recent documents.")
+                        context.showMessage(resources.getString(R.string.removed_from_recents, doc.displayName))
                     }
                 }
             )
@@ -363,6 +383,11 @@ fun ViewerScaffold(
         // Password Dialog slot
         if (passwordDialog != null) {
             passwordDialog()
+        }
+
+        // Format-specific dialogs and drawers.
+        if (overlays != null) {
+            overlays()
         }
     }
 }

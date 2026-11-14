@@ -22,3 +22,4 @@ rootProject.name = "mydoc"
 include(":app")
 include(":lint-rules")
 include(":office-engine")
+include(":macrobenchmark")

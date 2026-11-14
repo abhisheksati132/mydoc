@@ -69,6 +69,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -99,6 +100,7 @@ fun SignPdfSheet(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val scheme = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
     val haptics = rememberAppHaptics()
@@ -363,7 +365,7 @@ fun SignPdfSheet(
                             if (saved) {
                                 withContext(Dispatchers.Main) { onSignatureSaved() }
                             } else {
-                                context.showMessage("Could not save the signature")
+                                context.showMessage(resources.getString(R.string.error_save_signature))
                             }
                         }
                     },

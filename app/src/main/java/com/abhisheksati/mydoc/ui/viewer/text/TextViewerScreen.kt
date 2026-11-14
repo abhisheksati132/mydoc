@@ -224,6 +224,11 @@ fun TextViewerScreen(
     val secondaryTextColor = ViewerThemeTokens.getSecondaryTextColor(readingPrefs.readingMode, colors.textSecondary)
 
     val listState = rememberLazyListState()
+
+    // Same rule as the PDF reader: past the first screen of text the masthead folds into a pill.
+    val isCondensed by remember(listState) {
+        derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 80 }
+    }
     // Scroll position is a frequently-changing state object; reading it straight in
     // composition subscribes the whole viewer to every frame. Derive the index once.
     val visibleLineIndex by remember { derivedStateOf { listState.firstVisibleItemIndex } }
@@ -338,6 +343,7 @@ fun TextViewerScreen(
         ),
         currentPage = if (itemCount > 0) visibleLineIndex.coerceIn(0, itemCount - 1) else 0,
         pageCount = itemCount.coerceAtLeast(1),
+        isCondensed = isCondensed,
         isControlsVisible = !isSearchOpen,
         onBackClick = onBackClick,
         onShareClick = onShareClick,

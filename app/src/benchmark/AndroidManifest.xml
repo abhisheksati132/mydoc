@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Macrobenchmark reads frame/startup traces through shell profiling. This overlay keeps
+         that capability out of the shipped release APK. -->
+    <application>
+        <profileable android:shell="true" />
+    </application>
+</manifest>

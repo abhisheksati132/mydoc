@@ -29,19 +29,12 @@ object StoragePermissionHelper {
         }
     }
 
-    fun hasAnyStoragePermission(context: Context): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
-            return true
-        }
-        val perms = getRuntimePermissions()
-        return perms.any {
-            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-        }
-    }
-
     fun hasStoragePermission(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            Environment.isExternalStorageManager() || hasAnyStoragePermission(context)
+            // Android 11+ scopes raw folder traversal behind All files access. Media
+            // permissions alone leave Documents-style folders invisible, so counting them
+            // here made the app claim access it did not have.
+            Environment.isExternalStorageManager()
         } else {
             ContextCompat.checkSelfPermission(
                 context,

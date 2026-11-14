@@ -68,6 +68,7 @@ import com.abhisheksati.mydoc.MyDocApp
 import com.abhisheksati.mydoc.designsystem.animation.AppMotion
 import com.abhisheksati.mydoc.designsystem.components.AppDialog
 import com.abhisheksati.mydoc.designsystem.components.BottomNavBar
+import dev.chrisbanes.haze.hazeSource
 import com.abhisheksati.mydoc.designsystem.components.GlassMotionState
 import com.abhisheksati.mydoc.designsystem.components.TrackGlassMotion
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
@@ -143,6 +144,7 @@ fun HomeScreen(
         }
     }
 
+    val homeHazeState = remember { dev.chrisbanes.haze.HazeState() }
     val libraryHazeState = remember { dev.chrisbanes.haze.HazeState() }
     val toolsHazeState = remember { dev.chrisbanes.haze.HazeState() }
     var launchToolPicker by rememberSaveable { mutableStateOf(false) }
@@ -205,7 +207,7 @@ fun HomeScreen(
                 state = pagerState,
                 beyondViewportPageCount = 0,
                 userScrollEnabled = isPagerScrollEnabled,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize().hazeSource(homeHazeState)
             ) { page ->
                 val tab = tabs[page]
                 tabStateHolder.SaveableStateProvider(tab.name) {
@@ -470,7 +472,8 @@ fun HomeScreen(
 
             if (currentTab != HomeTab.LIBRARY || !libraryPageVisible) BottomNavBar(
                 currentTab = currentTab,
-                onTabSelected = viewModel::selectTab
+                onTabSelected = viewModel::selectTab,
+                hazeState = homeHazeState
             )
         }
     }

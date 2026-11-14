@@ -10,7 +10,6 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.FolderCopy
@@ -36,16 +35,18 @@ import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.animation.AppMotion
 import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.domain.model.HomeTab
-import androidx.compose.material3.Surface
+import dev.chrisbanes.haze.HazeState
 
-/** A bounded tonal dock; equal tab widths leave room for larger text and translations. */
+/** A bounded liquid-glass dock; equal tab widths leave room for larger text and translations. */
 @Composable
 fun BottomNavBar(
     currentTab: HomeTab,
     onTabSelected: (HomeTab) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    hazeState: HazeState? = null
 ) {
     val haptics = rememberAppHaptics()
     val scheme = MaterialTheme.colorScheme
@@ -55,10 +56,11 @@ fun BottomNavBar(
             .padding(horizontal = 16.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
-        Surface(
-            shape = RoundedCornerShape(36.dp),
-            color = scheme.surfaceContainerHigh,
-            shadowElevation = 2.dp,
+        GlassSurface(
+            shape = AppRadius.roundShape,
+            hazeState = hazeState,
+            elevation = 8.dp,
+            backgroundColor = scheme.surfaceContainerHigh,
             modifier = Modifier.widthIn(max = 400.dp).fillMaxWidth()
         ) {
             BoxWithConstraints(Modifier.fillMaxWidth().padding(6.dp)) {
@@ -71,7 +73,7 @@ fun BottomNavBar(
                 )
                 Row(Modifier.matchParentSize()) {
                     Box(Modifier.offset { IntOffset(offset.roundToPx(), 0) }.width(tabWidth).fillMaxHeight()
-                        .background(indicatorColor, RoundedCornerShape(28.dp)))
+                        .background(indicatorColor, AppRadius.pillShape))
                 }
             Row(
                 modifier = Modifier.fillMaxWidth().selectableGroup(),
@@ -120,7 +122,7 @@ private fun NavPillItem(
         if (selected) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
         animationSpec = if (reducedMotion) snap() else AppMotion.snappy(), label = "dockInk"
     )
-    val shape = RoundedCornerShape(28.dp)
+    val shape = AppRadius.pillShape
     Column(
         modifier = modifier.heightIn(min = 60.dp).clip(shape)
             .then(if (focused) Modifier.border(2.dp, scheme.primary, shape) else Modifier)

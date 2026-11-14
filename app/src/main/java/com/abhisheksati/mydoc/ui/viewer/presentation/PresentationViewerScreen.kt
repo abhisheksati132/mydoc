@@ -19,13 +19,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
@@ -49,7 +53,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -89,8 +92,9 @@ import com.abhisheksati.mydoc.util.UserMessages
 import com.abhisheksati.mydoc.MyDocApp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
-import com.abhisheksati.mydoc.ui.viewer.controls.ViewerBottomBar
-import com.abhisheksati.mydoc.ui.viewer.controls.ViewerTopBar
+import com.abhisheksati.mydoc.ui.viewer.controls.ViewerCapabilities
+import com.abhisheksati.mydoc.ui.viewer.controls.ViewerChrome
+import com.abhisheksati.mydoc.ui.viewer.controls.ViewerScaffold
 import com.abhisheksati.mydoc.ui.viewer.controls.OutlineDrawer
 import com.abhisheksati.mydoc.ui.viewer.controls.SearchOverlay
 import com.abhisheksati.mydoc.ui.viewer.controls.ReadingControlsBottomSheet
@@ -310,6 +314,17 @@ fun PresentationViewerScreen(
         }
     }
 
+    // Same rule as every other reader: once the deck advances, the masthead folds into a pill.
+    val isCondensed by remember(isContinuousVertical, effectiveSlideCount) {
+        derivedStateOf {
+            if (isContinuousVertical) {
+                lazyListState.firstVisibleItemIndex > 0 || lazyListState.firstVisibleItemScrollOffset > 80
+            } else {
+                pagerState.currentPage > 0
+            }
+        }
+    }
+
     // Smart Resume: Restore last viewed slide on open
     var resumeReady by remember(document.uri, effectiveSlideCount) { mutableStateOf(false) }
     LaunchedEffect(document.uri, effectiveSlideCount) {
@@ -431,6 +446,20 @@ fun PresentationViewerScreen(
         }
     }
     val showReaderControls = isControlsVisible && !isSlideshowMode
+    // The shared scaffold floats the chrome over the slides, so the deck pads by the bars it
+    // rests under instead of receiving a Scaffold inner padding. Slideshow stays edge to edge.
+    val statusBarsTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val navBarsBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val contentTopPadding = when {
+        isSlideshowMode -> 0.dp
+        isControlsVisible -> statusBarsTop + ViewerChrome.topBarHeight + AppSpacing.paddingSmall
+        else -> 16.dp
+    }
+    val contentBottomPadding = when {
+        isSlideshowMode -> 0.dp
+        isControlsVisible -> navBarsBottom + ViewerChrome.bottomBarHeight + AppSpacing.paddingSmall
+        else -> 24.dp
+    }
     val goToSlide: (Int) -> Unit = { index ->
         scope.launch {
             if (isContinuousVertical) lazyListState.scrollToItem(index)
@@ -448,68 +477,119 @@ fun PresentationViewerScreen(
         }
     }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            if (showReaderControls && isSearchOpen) {
-                SearchOverlay(
-                    visible = true,
-                    query = searchQuery,
-                    matchCount = searchMatches.size,
-                    currentMatchIndex = currentMatchIndex.coerceIn(0, (searchMatches.size - 1).coerceAtLeast(0)),
-                    onQueryChanged = {
-                        searchQuery = it
-                        currentMatchIndex = -1
-                    },
-                    onNextMatch = { moveSearch(1) },
-                    onPreviousMatch = { moveSearch(-1) },
-                    onCloseSearch = {
-                        isSearchOpen = false
-                        searchQuery = ""
-                        currentMatchIndex = -1
-                    }
-                )
-            } else {
-                ViewerTopBar(
-                    title = document.displayName,
-                    currentPage = currentSlideIndex,
-                    pageCount = effectiveSlideCount,
-                    visible = showReaderControls,
-                    isBookmarked = currentSlideIndex in bookmarks,
-                    onBackClick = onBackClick,
-                    onSearchClick = { isSearchOpen = true },
-                    onToggleBookmark = {
-                        app?.settingsRepository?.let { settings ->
-                            settings.toggleBookmark(document.uri, currentSlideIndex)
-                            bookmarks = settings.getBookmarks(document.uri)
-                        }
-                    },
-                    onShareClick = onShareClick,
-                    onSlideshowClick = if (effectiveSlideCount > 0) {
-                        {
-                            pagerState.requestScrollToPage(currentSlideIndex)
-                            isSlideshowMode = true
-                        }
-                    } else null,
-                    onReflowClick = if (effectiveSlideCount > 0) { { isVisualMode = !isVisualMode } } else null,
-                    reflowLabel = stringResource(if (isVisualMode) R.string.pres_menu_outline else R.string.pres_menu_visual),
-                    onDocumentDetailsClick = if (effectiveSlideCount > 0) { { isNotesSheetOpen = true } } else null,
-                    documentDetailsLabel = stringResource(R.string.pres_speaker_notes)
-                )
-            }
+    ViewerScaffold(
+        document = document,
+        onBackClick = onBackClick,
+        onShareClick = onShareClick,
+        modifier = modifier,
+        capabilities = ViewerCapabilities(
+            supportsSearch = true,
+            supportsOutline = true,
+            supportsPageGrid = true,
+            supportsSlideshow = true,
+            supportsTts = false,
+            supportsZoom = true
+        ),
+        currentPage = currentSlideIndex,
+        pageCount = effectiveSlideCount,
+        isControlsVisible = showReaderControls && effectiveSlideCount > 0,
+        isCondensed = isCondensed,
+        readingPrefs = readingPrefs,
+        onSearchClick = { isSearchOpen = true },
+        isBookmarked = currentSlideIndex in bookmarks,
+        onToggleBookmark = {
+            settings?.toggleBookmark(document.uri, currentSlideIndex)
+            bookmarks = settings?.getBookmarks(document.uri).orEmpty()
         },
-        bottomBar = {
-            ViewerBottomBar(
-                currentPage = currentSlideIndex,
-                visible = showReaderControls && effectiveSlideCount > 0,
-                hasOutline = slideContents.isNotEmpty() || bookmarks.isNotEmpty(),
-                onOutlineClick = { isContentsOpen = true },
-                onPagesClick = { isJumpDialogOpen = true },
-                onAppearanceClick = { isAppearanceOpen = true }
+        onOutlineClick = { isContentsOpen = true },
+        onPagesClick = { isJumpDialogOpen = true },
+        sheetItems = slideContents,
+        onSheetSelect = goToSlide,
+        onSlideshowClick = if (effectiveSlideCount > 0) {
+            {
+                pagerState.requestScrollToPage(currentSlideIndex)
+                isSlideshowMode = true
+            }
+        } else null,
+        onReflowClick = if (effectiveSlideCount > 0) { { isVisualMode = !isVisualMode } } else null,
+        reflowLabel = stringResource(if (isVisualMode) R.string.pres_menu_outline else R.string.pres_menu_visual),
+        onDetailsClick = if (effectiveSlideCount > 0) { { isNotesSheetOpen = true } } else null,
+        documentDetailsLabel = stringResource(R.string.pres_speaker_notes),
+        onAppearanceClick = { isAppearanceOpen = true },
+        searchOverlay = {
+            SearchOverlay(
+                visible = isSearchOpen && showReaderControls,
+                query = searchQuery,
+                matchCount = searchMatches.size,
+                currentMatchIndex = currentMatchIndex.coerceIn(0, (searchMatches.size - 1).coerceAtLeast(0)),
+                onQueryChanged = {
+                    searchQuery = it
+                    currentMatchIndex = -1
+                },
+                onNextMatch = { moveSearch(1) },
+                onPreviousMatch = { moveSearch(-1) },
+                onCloseSearch = {
+                    isSearchOpen = false
+                    searchQuery = ""
+                    currentMatchIndex = -1
+                }
             )
         },
-        containerColor = bgColor
-    ) { innerPadding ->
+        overlays = {
+            OutlineDrawer(
+                outline = slideContents,
+                isOpen = isContentsOpen,
+                onDismiss = { isContentsOpen = false },
+                onItemSelected = goToSlide,
+                bookmarks = bookmarks,
+                onRemoveBookmark = { page ->
+                    settings?.toggleBookmark(document.uri, page)
+                    bookmarks = settings?.getBookmarks(document.uri).orEmpty()
+                }
+            )
+            ReadingControlsBottomSheet(
+                isOpen = isAppearanceOpen,
+                onDismiss = { isAppearanceOpen = false },
+                document = document,
+                readingMode = readingMode,
+                onReadingModeChange = { mode -> settings?.updateReadingPrefs { it.copy(readingMode = mode) } },
+                isContinuousScroll = isContinuousVertical,
+                onScrollModeChange = { continuous ->
+                    val page = currentSlideIndex
+                    if (continuous != continuousReader) {
+                        if (continuous) lazyListState.requestScrollToItem(page)
+                        else pagerState.requestScrollToPage(page)
+                        continuousReader = continuous
+                    }
+                },
+                isDualPageView = false,
+                onDualPageViewChange = {},
+                showDualPageControl = false,
+                currentBrightness = readingPrefs.brightness,
+                onBrightnessChange = { value -> settings?.updateReadingPrefs { it.copy(brightness = value) } },
+                isKeepScreenOn = readingPrefs.keepScreenOn,
+                onKeepScreenOnChange = { value -> settings?.updateReadingPrefs { it.copy(keepScreenOn = value) } }
+            )
+            PageJumpDialog(
+                isOpen = isJumpDialogOpen,
+                currentPage = currentSlideIndex,
+                pageCount = effectiveSlideCount,
+                onJump = { page ->
+                    scope.launch {
+                        if (isContinuousVertical) lazyListState.scrollToItem(page)
+                        else pagerState.scrollToPage(page)
+                    }
+                },
+                onDismiss = { isJumpDialogOpen = false }
+            )
+            PresentationSpeakerNotesSheet(
+                isOpen = isNotesSheetOpen,
+                currentSlideIndex = currentSlideIndex,
+                notes = effectiveSlides.getOrNull(currentSlideIndex)?.notes ?: "",
+                onDismiss = { isNotesSheetOpen = false }
+            )
+        }
+    ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -580,8 +660,8 @@ fun PresentationViewerScreen(
                             state = lazyListState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(
-                                top = if (isControlsVisible) innerPadding.calculateTopPadding() + 8.dp else 16.dp,
-                                bottom = if (isControlsVisible) innerPadding.calculateBottomPadding() + 16.dp else 24.dp,
+                                top = contentTopPadding + if (isControlsVisible) 8.dp else 0.dp,
+                                bottom = contentBottomPadding + if (isControlsVisible) 16.dp else 0.dp,
                                 start = 16.dp,
                                 end = 16.dp
                             ),
@@ -647,8 +727,8 @@ fun PresentationViewerScreen(
                             state = pagerState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(
-                                top = if (isControlsVisible) innerPadding.calculateTopPadding() else 0.dp,
-                                bottom = if (isControlsVisible) innerPadding.calculateBottomPadding() else 0.dp
+                                top = contentTopPadding,
+                                bottom = contentBottomPadding
                             )
                         ) { pageIndex ->
                             val slide = effectiveSlides.getOrNull(pageIndex)
@@ -739,61 +819,6 @@ fun PresentationViewerScreen(
                     }
                 }
             }
-
-            OutlineDrawer(
-                outline = slideContents,
-                isOpen = isContentsOpen,
-                onDismiss = { isContentsOpen = false },
-                onItemSelected = goToSlide,
-                bookmarks = bookmarks,
-                onRemoveBookmark = { page ->
-                    settings?.toggleBookmark(document.uri, page)
-                    bookmarks = settings?.getBookmarks(document.uri).orEmpty()
-                }
-            )
-            ReadingControlsBottomSheet(
-                isOpen = isAppearanceOpen,
-                onDismiss = { isAppearanceOpen = false },
-                document = document,
-                readingMode = readingMode,
-                onReadingModeChange = { mode -> settings?.updateReadingPrefs { it.copy(readingMode = mode) } },
-                isContinuousScroll = isContinuousVertical,
-                onScrollModeChange = { continuous ->
-                    val page = currentSlideIndex
-                    if (continuous != continuousReader) {
-                        if (continuous) lazyListState.requestScrollToItem(page)
-                        else pagerState.requestScrollToPage(page)
-                        continuousReader = continuous
-                    }
-                },
-                isDualPageView = false,
-                onDualPageViewChange = {},
-                showDualPageControl = false,
-                currentBrightness = readingPrefs.brightness,
-                onBrightnessChange = { value -> settings?.updateReadingPrefs { it.copy(brightness = value) } },
-                isKeepScreenOn = readingPrefs.keepScreenOn,
-                onKeepScreenOnChange = { value -> settings?.updateReadingPrefs { it.copy(keepScreenOn = value) } }
-            )
-            PageJumpDialog(
-                isOpen = isJumpDialogOpen,
-                currentPage = currentSlideIndex,
-                pageCount = effectiveSlideCount,
-                onJump = { page ->
-                    scope.launch {
-                        if (isContinuousVertical) lazyListState.scrollToItem(page)
-                        else pagerState.scrollToPage(page)
-                    }
-                },
-                onDismiss = { isJumpDialogOpen = false }
-            )
-
-            // Speaker Notes Bottom Sheet
-            PresentationSpeakerNotesSheet(
-                isOpen = isNotesSheetOpen,
-                currentSlideIndex = currentSlideIndex,
-                notes = effectiveSlides.getOrNull(currentSlideIndex)?.notes ?: "",
-                onDismiss = { isNotesSheetOpen = false }
-            )
         }
     }
 }

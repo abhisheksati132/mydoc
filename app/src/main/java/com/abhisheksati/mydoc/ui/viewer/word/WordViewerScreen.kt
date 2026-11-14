@@ -161,6 +161,11 @@ fun WordViewerScreen(
     val activeMatchBlock = if (searchQuery.isBlank()) null else matches.getOrNull(currentMatchIndex)?.blockIndex
 
     val lazyListState = rememberLazyListState()
+
+    // Same rule as the PDF reader: past the first screen of text the masthead folds into a pill.
+    val isCondensed by remember(lazyListState) {
+        derivedStateOf { lazyListState.firstVisibleItemIndex > 0 || lazyListState.firstVisibleItemScrollOffset > 80 }
+    }
     // Scroll position is a frequently-changing state object; reading it straight in
     // composition subscribes the whole viewer to every frame. Derive the index once.
     val visibleBlockIndex by remember { derivedStateOf { lazyListState.firstVisibleItemIndex } }

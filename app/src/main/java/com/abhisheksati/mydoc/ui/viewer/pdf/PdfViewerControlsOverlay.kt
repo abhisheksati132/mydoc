@@ -103,6 +103,8 @@ fun BoxScope.PdfViewerControlsOverlay(
             onOutlineClick = onOpenOutlineDrawer,
             onPagesClick = onOpenThumbnailGrid,
             onAppearanceClick = onOpenReadingControls,
+            // Tools are the PDF promise, not an overflow secret: same entry point as the top bar.
+            onToolsClick = onToolsClick,
             sheetItems = state.outline,
             onSheetSelect = onPageSelected,
             hazeState = hazeState

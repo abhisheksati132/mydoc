@@ -483,9 +483,10 @@
     <string name="search_no_matches">No matches for \"%1$s\"</string>
     <string name="search_docs_hint">Browse folders to find files outside the index.</string>
     <string name="search_typo_hint">Check for typos or try a different term</string>
-    <string name="perm_required_title">Storage access required</string>
-    <string name="perm_required_message">Grant All Files Access to browse and manage files across internal storage and SD cards.</string>
-    <string name="action_grant_access">Grant access</string>
+    <string name="perm_required_title">Browse every folder</string>
+    <string name="perm_required_message">Documents open from Recents and the system picker without this. Turn on All files access to browse internal storage and SD cards in MyDoc.</string>
+    <string name="action_grant_access">Turn on</string>
+    <string name="action_not_now">Not now</string>
     <string name="share_via">Share via</string>
     <string name="file_share_failed">This file could not be shared.</string>
     <string name="find_in_document">Find in document…</string>
@@ -1158,4 +1159,16 @@
     <string name="search_zero_matches">0 matches</string>
     <string name="settings_wallpaper_colors">Wallpaper colors</string>
     <string name="settings_wallpaper_colors_description">Use your Android color palette across MyDoc.</string>
+    <string name="viewer_tools">Tools</string>
+    <string name="viewer_tools_description">Organize, convert, compress or secure this PDF</string>
+    <!-- System feedback shared across features -->
+    <string name="error_open_package_installer">Unable to open the package installer</string>
+    <string name="error_read_apk">Unable to read this APK or open the package installer</string>
+    <string name="error_split_bundle">This is a split app bundle. Open it with a compatible split-package installer.</string>
+    <string name="error_no_share_app">No app available to share this file</string>
+    <string name="error_save_signature">Could not save the signature</string>
+    <string name="saved_successfully">Saved successfully.</string>
+    <string name="copied_confirmation">%1$s copied</string>
+    <string name="error_no_app_can_open">No other app on this device can open %1$s.</string>
+    <string name="removed_from_recents">%1$s is no longer in recent documents.</string>
 </resources>

@@ -53,6 +53,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -92,6 +93,7 @@ fun ToolRunnerSheet(
     val typography = MaterialTheme.typography
     val haptics = rememberAppHaptics()
     val context = LocalContext.current
+    val resources = LocalResources.current
 
     var showVisualPageOrganizer by remember { mutableStateOf(false) }
     var showSignaturePad by remember { mutableStateOf(false) }
@@ -135,7 +137,7 @@ fun ToolRunnerSheet(
             context = context,
             destinationUri = destUri,
             onSuccess = {
-                context.showMessage("Saved successfully.")
+                context.showMessage(resources.getString(R.string.saved_successfully))
             },
             onError = { err ->
                 context.showMessage(err, long = true)

@@ -176,6 +176,9 @@ fun FilesPaneScreen(
     val pinnedFolders by pinnedFoldersManager.pinnedFolders.collectAsState()
 
     var hasPermission by remember { mutableStateOf(StoragePermissionHelper.hasStoragePermission(context)) }
+    // All files access is optional: Recents and the system picker keep working without it, so
+    // the ask stays inside the Storage tab and can be waved away instead of nagging the library.
+    var isPermissionAskDismissed by rememberSaveable { mutableStateOf(false) }
     val runtimePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) {
@@ -495,7 +498,7 @@ fun FilesPaneScreen(
             val listInset = chromeInset + clipboardInset
             CompositionLocalProvider(LocalFloatingChromeInset provides listInset) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    if (!hasPermission) {
+                    if (!hasPermission && insideBrowse && !isPermissionAskDismissed) {
                         StoragePermissionBanner(
                             onRequestPermission = {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -503,7 +506,8 @@ fun FilesPaneScreen(
                                 } else {
                                     runtimePermissionLauncher.launch(StoragePermissionHelper.getRuntimePermissions())
                                 }
-                            }
+                            },
+                            onDismiss = { isPermissionAskDismissed = true }
                         )
                     }
 

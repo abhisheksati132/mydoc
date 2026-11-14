@@ -45,6 +45,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -293,12 +294,13 @@ fun FilePropertiesDialog(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val context = LocalContext.current
+    val resources = LocalResources.current
     val file = properties.file
 
     fun copyToClipboard(label: String, text: String) {
         val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         cm.setPrimaryClip(ClipData.newPlainText(label, text))
-        context.showMessage("$label copied")
+        context.showMessage(resources.getString(R.string.copied_confirmation, label))
     }
 
     val isOled = LocalIsOled.current

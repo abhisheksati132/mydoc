@@ -3,8 +3,6 @@ package com.abhisheksati.mydoc.ui.viewer.controls
 import com.abhisheksati.mydoc.R
 import android.graphics.Bitmap
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -24,7 +22,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.animation.AppMotion
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
@@ -64,17 +62,17 @@ fun ThumbnailStrip(
         visible = visible,
         enter = slideInVertically(
             initialOffsetY = { it },
-            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-        ) + fadeIn(spring(stiffness = Spring.StiffnessMediumLow)),
+            animationSpec = AppMotion.settle()
+        ) + fadeIn(AppMotion.settle()),
         exit = slideOutVertically(
             targetOffsetY = { it },
-            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-        ) + fadeOut(spring(stiffness = Spring.StiffnessMediumLow)),
+            animationSpec = AppMotion.settle()
+        ) + fadeOut(AppMotion.settle()),
         modifier = modifier
     ) {
         GlassSurface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+            shape = AppRadius.topRoundedShape,
             elevation = 6.dp
         ) {
             LazyRow(

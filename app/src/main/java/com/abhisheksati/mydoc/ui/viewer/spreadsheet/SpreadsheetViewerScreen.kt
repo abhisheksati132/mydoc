@@ -39,6 +39,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -102,6 +103,11 @@ fun SpreadsheetViewerScreen(
     val horizontalScrollState = rememberScrollState()
     val verticalScrollState = rememberScrollState()
 
+    // Same rule as the other readers: once the sheet scrolls, the masthead folds into a pill.
+    val isCondensed by remember(gridState) {
+        derivedStateOf { gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 80 }
+    }
+
     val defaultPrefs = remember { ReadingPrefs() }
     val readingPrefs by (app?.settingsRepository?.readingPrefs ?: remember { kotlinx.coroutines.flow.MutableStateFlow(defaultPrefs) }).collectAsState()
 
@@ -140,6 +146,7 @@ fun SpreadsheetViewerScreen(
         ),
         currentPage = state.selectedSheetIndex,
         pageCount = state.model.sheets.size.coerceAtLeast(1),
+        isCondensed = isCondensed,
         isControlsVisible = !isSearchOpen,
         onBackClick = onBackClick,
         onShareClick = onShareClick,

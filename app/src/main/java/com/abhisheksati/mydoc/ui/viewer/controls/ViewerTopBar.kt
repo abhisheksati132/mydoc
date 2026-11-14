@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
@@ -75,6 +74,7 @@ fun ViewerTopBar(
     onShareClick: () -> Unit,
     modifier: Modifier = Modifier,
     isCondensed: Boolean = false,
+    showSearch: Boolean = true,
     onToolsClick: (() -> Unit)? = null,
     onOcrClick: (() -> Unit)? = null,
     onTtsClick: (() -> Unit)? = null,
@@ -170,16 +170,18 @@ fun ViewerTopBar(
                                 }
                             }
 
-                            AdaptiveIconButton(
-                                onClick = onSearchClick,
-                                modifier = Modifier.size(48.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Search,
-                                    contentDescription = stringResource(R.string.viewer_search),
-                                    tint = androidx.compose.material3.LocalContentColor.current,
-                                    modifier = Modifier.size(18.dp)
-                                )
+                            if (showSearch) {
+                                AdaptiveIconButton(
+                                    onClick = onSearchClick,
+                                    modifier = Modifier.size(48.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Search,
+                                        contentDescription = stringResource(R.string.viewer_search),
+                                        tint = androidx.compose.material3.LocalContentColor.current,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
 
                             AdaptiveIconButton(
@@ -228,7 +230,7 @@ fun ViewerTopBar(
                 // Expanded masthead
                 GlassSurface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
+                    shape = AppRadius.bottomRoundedShape,
                     elevation = 6.dp,
                     hazeState = hazeState.takeIf { condensed == isCondensed }
                 ) {
@@ -273,12 +275,14 @@ fun ViewerTopBar(
                                 }
                             }
 
-                            AdaptiveIconButton(onClick = onSearchClick) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Search,
-                                    contentDescription = stringResource(R.string.viewer_search),
-                                    tint = androidx.compose.material3.LocalContentColor.current
-                                )
+                            if (showSearch) {
+                                AdaptiveIconButton(onClick = onSearchClick) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Search,
+                                        contentDescription = stringResource(R.string.viewer_search),
+                                        tint = androidx.compose.material3.LocalContentColor.current
+                                    )
+                                }
                             }
 
                             AdaptiveIconButton(onClick = onToggleBookmark) {

@@ -739,7 +739,7 @@ class MainActivity : ComponentActivity() {
         pendingInstallUri = null
         if (pending != null && packageManager.canRequestPackageInstalls()) {
             runCatching { com.abhisheksati.mydoc.util.LocalApkInstaller.open(this, pending) }
-                .onFailure { showMessage("Unable to open the package installer") }
+                .onFailure { showMessage(getString(R.string.error_open_package_installer)) }
         }
     }
 
@@ -820,12 +820,12 @@ class MainActivity : ComponentActivity() {
                     } catch (cancelled: kotlinx.coroutines.CancellationException) {
                         throw cancelled
                     } catch (_: Exception) {
-                        showMessage("Unable to read this APK or open the package installer")
+                        showMessage(getString(R.string.error_read_apk))
                     }
                 }
             }
             displayName.endsWith(".apks", true) || displayName.endsWith(".xapk", true) -> {
-                showMessage("This is a split app bundle. Open it with a compatible split-package installer.")
+                showMessage(getString(R.string.error_split_bundle))
             }
             detectedMime.startsWith("image/") -> {
                 val mediaItem = com.abhisheksati.mydoc.domain.model.MediaItem(
@@ -942,7 +942,7 @@ class MainActivity : ComponentActivity() {
 
     private fun shareDocument(document: DocumentFile) {
         if (!shareFile(this, Uri.parse(document.uri), document.mimeType, "Share ${document.displayName}")) {
-            showMessage("No app available to share this file")
+            showMessage(getString(R.string.error_no_share_app))
         }
     }
 

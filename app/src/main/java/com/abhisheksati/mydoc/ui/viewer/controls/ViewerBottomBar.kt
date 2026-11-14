@@ -23,13 +23,12 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.TextFormat
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -69,6 +68,8 @@ fun ViewerBottomBar(
     onPagesClick: (() -> Unit)?,
     onAppearanceClick: () -> Unit,
     modifier: Modifier = Modifier,
+    // PDF-only: surfaced as a first-class action instead of hiding behind the overflow menu.
+    onToolsClick: (() -> Unit)? = null,
     sheetItems: List<OutlineItem> = emptyList(),
     onSheetSelect: ((Int) -> Unit)? = null,
     hazeState: dev.chrisbanes.haze.HazeState? = null
@@ -89,9 +90,9 @@ fun ViewerBottomBar(
     ) {
         GlassSurface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+            shape = AppRadius.topRoundedShape,
             elevation = 2.dp,
-            backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
+            backgroundColor = AppTheme.colors.surfaceContainerHigh,
             hazeState = hazeState
         ) {
             Column(
@@ -154,6 +155,16 @@ fun ViewerBottomBar(
                         onClick = onAppearanceClick,
                         modifier = Modifier.weight(1f)
                     )
+
+                    if (onToolsClick != null) {
+                        BottomBarActionButton(
+                            icon = Icons.Outlined.Build,
+                            label = stringResource(R.string.viewer_tools),
+                            contentDescription = stringResource(R.string.viewer_tools_description),
+                            onClick = onToolsClick,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
         }

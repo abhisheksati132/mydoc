@@ -13,9 +13,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -30,7 +32,8 @@ import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 @Composable
 fun StoragePermissionBanner(
-    onRequestPermission: () -> Unit
+    onRequestPermission: () -> Unit,
+    onDismiss: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
     Surface(
@@ -51,8 +54,16 @@ fun StoragePermissionBanner(
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = stringResource(R.string.perm_required_title),
-                    style = MaterialTheme.typography.titleSmall
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f)
                 )
+                IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = stringResource(R.string.action_not_now),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
             Text(
                 text = stringResource(R.string.perm_required_message),

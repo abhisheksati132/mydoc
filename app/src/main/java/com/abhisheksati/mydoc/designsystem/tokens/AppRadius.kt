@@ -46,6 +46,12 @@ object AppRadius {
     val xLargeShape = RoundedCornerShape(xLarge)
     val roundShape = RoundedCornerShape(round)
 
+    // Full-width chrome that clings to a screen edge. Both reader bars, the search
+    // drop-down and the thumbnail strip share these so the chrome reads as one family
+    // instead of 16dp here and 20dp there. Top-rounded = anchored to the bottom edge.
+    val topRoundedShape = RoundedCornerShape(topStart = large, topEnd = large)
+    val bottomRoundedShape = RoundedCornerShape(bottomStart = large, bottomEnd = large)
+
     // Continuous-curvature (squircle) variants for glass and hero surfaces:
     // curvature ramps in instead of snapping at a circular arc boundary.
     val glassShape = ContinuousCornerShape(large)

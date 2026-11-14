@@ -92,6 +92,14 @@ android {
             versionNameSuffix = "-debug"
             signingConfig = signingConfigs.getByName("shared")
         }
+        // Mirrors release (R8 on, shrinker on) so Macrobenchmark measures what users install.
+        // The public shared keystore keeps CI and local benchmark runs installable.
+        create("benchmark") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("shared")
+            isDebuggable = false
+            matchingFallbacks += listOf("release")
+        }
     }
 
     compileOptions {
