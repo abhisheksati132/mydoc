@@ -178,7 +178,8 @@ internal fun thumbnailKey(id: String, sizeBytes: Long, lastModified: Long): Stri
 fun StorageThumbnail(
     item: StorageItem,
     modifier: Modifier = Modifier,
-    contentDescription: String? = null
+    contentDescription: String? = null,
+    generateOfficePreview: Boolean = false
 ) {
     val context = LocalContext.current
     when {
@@ -206,6 +207,7 @@ fun StorageThumbnail(
             key = thumbnailKey(item.path, item.sizeBytes, item.lastModified),
             modifier = modifier,
             badgeType = item.fileType,
+            generatePreview = generateOfficePreview,
             convert = { context ->
                 val uri = Uri.fromFile(item.file)
                 convertOfficeToPdf(context, item.extension, uri, item.name)
@@ -385,12 +387,13 @@ private fun OfficeThumbnail(
     modifier: Modifier,
     badgeType: StorageFileType,
     badge: String? = null,
+    generatePreview: Boolean = false,
     convert: suspend (Context) -> File?
 ) {
     val context = LocalContext.current
     var bitmap by remember(key) { mutableStateOf(pdfThumbnailCache.get(key)) }
-    LaunchedEffect(key) {
-        if (bitmap == null) bitmap = loadOfficeThumbnail(key) { convert(context) }
+    LaunchedEffect(key, generatePreview) {
+        if (generatePreview && bitmap == null) bitmap = loadOfficeThumbnail(key) { convert(context) }
     }
     if (bitmap == null) {
         TypePlate(type = badgeType, badge = badge, modifier = modifier)
@@ -416,7 +419,13 @@ private suspend fun loadOfficeThumbnail(key: String, convert: suspend () -> File
         pdfThumbnailCache.get(key)?.let { return@withContext it }
         officeThumbnailSemaphore.withPermit {
             if (pdfThumbnailCache.get(key) != null) return@withContext pdfThumbnailCache.get(key)
-            val pdf = runCatching { convert() }.getOrNull() ?: return@withContext null
+            val pdf = try {
+                convert()
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                null
+            } ?: return@withContext null
             val bitmap = renderFirstPage(pdf) ?: return@withContext null
             bitmap.asImageBitmap().also { pdfThumbnailCache.put(key, it) }
         }

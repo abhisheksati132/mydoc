@@ -152,9 +152,6 @@ private fun fallbackDark() = darkColorScheme(
 @Composable
 fun AppDesignSystemTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Brand default: the fixed "Ink & Seal" palette is the identity, and Material You wallpaper
-    // colours override the brand accent, so they stay off until there is a control to opt in.
-    // Previews used to default this to true, which rendered a device palette the app never shows.
     dynamicColor: Boolean = false,
     amoledBlack: Boolean = false,
     reducedMotion: Boolean = false,

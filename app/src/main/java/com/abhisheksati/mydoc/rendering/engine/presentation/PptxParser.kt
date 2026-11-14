@@ -45,6 +45,24 @@ class PptxParser {
         return baos.toByteArray()
     }
 
+    /** Use the seekable source already staged by the reader for modern PowerPoint files. */
+    suspend fun parse(file: File): PptxPresentation = withContext(Dispatchers.IO) {
+        if (file.length() > 50L * 1024 * 1024) {
+            return@withContext emptyPresentation("File too large")
+        }
+        val modern = try {
+            ZipFile(file).use { zip ->
+                if (zip.getEntry("ppt/presentation.xml") != null) parsePptxArchive(zip) else null
+            }
+        } catch (e: java.io.IOException) {
+            null
+        } catch (e: SecurityException) {
+            null
+        }
+        if (modern != null && !modern.isEmpty) return@withContext modern
+        file.inputStream().use { parse(it) }
+    }
+
     suspend fun parse(inputStream: InputStream, cacheDir: File? = null): PptxPresentation = withContext(Dispatchers.IO) {
         val bytes = try {
             readBoundedInputStream(inputStream, 50 * 1024 * 1024)
@@ -111,29 +129,34 @@ class PptxParser {
         val entryMap = mutableMapOf<String, ByteArray>()
         val picturesMap = mutableMapOf<String, ByteArray>()
         try {
-            val zis = ZipInputStream(ByteArrayInputStream(bytes))
-            var entry: ZipEntry? = zis.nextEntry
-            var entryCount = 0
-            var totalRead = 0L
-            while (entry != null) {
-                entryCount++
-                if (entryCount > 10_000) throw SecurityException("Entry count limit exceeded")
-                if (!entry.isDirectory) {
-                    val name = entry.name.replace('\\', '/').trimStart('/')
-                    val lower = name.lowercase()
-                    if (lower == "content.xml" || lower == "mimetype") {
-                        val data = readBoundedEntry(zis, entry, totalRead)
-                        totalRead += data.size
-                        entryMap[lower] = data
-                    } else if (lower.startsWith("pictures/")) {
-                        val imgData = readBoundedEntry(zis, entry, totalRead)
-                        totalRead += imgData.size
-                        picturesMap[name] = imgData
-                        picturesMap[lower] = imgData
+            ZipInputStream(ByteArrayInputStream(bytes)).use { zis ->
+                var entry: ZipEntry? = zis.nextEntry
+                var entryCount = 0
+                var totalRead = 0L
+                while (entry != null) {
+                    entryCount++
+                    if (entryCount > 10_000) throw SecurityException("Entry count limit exceeded")
+                    if (!entry.isDirectory) {
+                        val name = entry.name.replace('\\', '/').trimStart('/')
+                        val lower = name.lowercase()
+                        if (lower == "content.xml" || lower == "mimetype") {
+                            val data = readBoundedEntry(zis, entry, totalRead)
+                            totalRead += data.size
+                            entryMap[lower] = data
+                        } else if (lower.startsWith("pictures/")) {
+                            val imgData = readBoundedEntry(zis, entry, totalRead)
+                            totalRead += imgData.size
+                            picturesMap[name] = imgData
+                            picturesMap[lower] = imgData
+                        } else {
+                            readBoundedStream(zis, entry, totalRead, keep = false) { totalRead += it }
+                        }
+                    } else {
+                        readBoundedStream(zis, entry, totalRead, keep = false) { totalRead += it }
                     }
+                    zis.closeEntry()
+                    entry = zis.nextEntry
                 }
-                zis.closeEntry()
-                entry = zis.nextEntry
             }
         } catch (e: SecurityException) {
             android.util.Log.w("PptxParser", "Rejected ODP: ${e.message}")
@@ -477,37 +500,8 @@ class PptxParser {
                 val tempFile = File.createTempFile("pptx_view_", ".pptx", cacheDir)
                 try {
                     tempFile.writeBytes(bytes)
-                    val zip = ZipFile(tempFile)
-                    try {
-                        val entryMap = mutableMapOf<String, ByteArray>()
-                        val entries = zip.entries()
-                        var mediaCount = 0
-                        var currentTotal = 0L
-                        var entryCount = 0
-                        // The cached-file route used to carry only the per-entry cap, so a package of
-                        // many individually legal entries could inflate past the aggregate the
-                        // in-memory route enforces. Same budgets on both routes now.
-                        while (entries.hasMoreElements() && entryCount < 2_500 && currentTotal < MAX_TOTAL_BYTES) {
-                            entryCount++
-                            val entry = entries.nextElement()
-                            if (!entry.isDirectory) {
-                                val norm = entry.name.replace('\\', '/').trimStart('/').lowercase()
-                                if (norm.startsWith("ppt/media/")) {
-                                    if (mediaCount >= 40 || entry.size > 2_000_000L) {
-                                        continue
-                                    }
-                                    mediaCount++
-                                }
-                                val data = readBoundedStream(zip.getInputStream(entry), entry)
-                                currentTotal += data.size
-                                entryMap[norm] = data
-                            }
-                        }
-                        val pres = parseFromEntryMap(entryMap)
-                        if (pres.slides.isNotEmpty()) return pres
-                    } finally {
-                        try { zip.close() } catch (_: Throwable) {}
-                    }
+                    val presentation = ZipFile(tempFile).use(::parsePptxArchive)
+                    if (!presentation.isEmpty) return presentation
                 } finally {
                     try { tempFile.delete() } catch (_: Throwable) {}
                 }
@@ -517,34 +511,65 @@ class PptxParser {
         return parseZipInMemory(bytes)
     }
 
+    private fun parsePptxArchive(zip: ZipFile): PptxPresentation {
+        val entryMap = mutableMapOf<String, ByteArray>()
+        val entries = zip.entries()
+        var mediaCount = 0
+        var currentTotal = 0L
+        var entryCount = 0
+        // The cached-file route used to carry only the per-entry cap, so a package of
+        // many individually legal entries could inflate past the aggregate the
+        // in-memory route enforces. Same budgets on both routes now.
+        while (entries.hasMoreElements() && entryCount < 2_500 && currentTotal < MAX_TOTAL_BYTES) {
+            entryCount++
+            val entry = entries.nextElement()
+            if (!entry.isDirectory) {
+                val norm = entry.name.replace('\\', '/').trimStart('/').lowercase()
+                if (norm.startsWith("ppt/media/")) {
+                    if (mediaCount >= 40 || entry.size > 2_000_000L) {
+                        continue
+                    }
+                    mediaCount++
+                }
+                val data = zip.getInputStream(entry).use { readBoundedStream(it, entry, currentTotal) }
+                currentTotal += data.size
+                entryMap[norm] = data
+            }
+        }
+        return parseFromEntryMap(entryMap)
+    }
+
     private fun parseZipInMemory(bytes: ByteArray): PptxPresentation {
         val entryMap = mutableMapOf<String, ByteArray>()
         var stoppedEarly: String? = null
         try {
-            val zip = ZipInputStream(ByteArrayInputStream(bytes))
-            var entry: ZipEntry? = zip.nextEntry
-            var mediaCount = 0
-            var entryCount = 0
-            var totalRead = 0L
-            while (entry != null) {
-                entryCount++
-                if (entryCount > 10_000) throw SecurityException("Entry count limit exceeded")
-                if (!entry.isDirectory) {
-                    val norm = entry.name.replace('\\', '/').trimStart('/').lowercase()
-                    if (norm.startsWith("ppt/media/")) {
-                        if (mediaCount >= 40) {
-                            zip.closeEntry()
-                            entry = zip.nextEntry
-                            continue
+            ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
+                var entry: ZipEntry? = zip.nextEntry
+                var mediaCount = 0
+                var entryCount = 0
+                var totalRead = 0L
+                while (entry != null) {
+                    entryCount++
+                    if (entryCount > 10_000) throw SecurityException("Entry count limit exceeded")
+                    if (!entry.isDirectory) {
+                        val norm = entry.name.replace('\\', '/').trimStart('/').lowercase()
+                        if (norm.startsWith("ppt/media/")) {
+                            if (mediaCount >= 40) {
+                                readBoundedStream(zip, entry, totalRead, keep = false) { totalRead += it }
+                                entry = zip.nextEntry
+                                continue
+                            }
+                            mediaCount++
                         }
-                        mediaCount++
+                        val data = readBoundedEntry(zip, entry, totalRead)
+                        totalRead += data.size
+                        entryMap[norm] = data
+                    } else {
+                        readBoundedStream(zip, entry, totalRead, keep = false) { totalRead += it }
                     }
-                    val data = readBoundedEntry(zip, entry, totalRead)
-                    totalRead += data.size
-                    entryMap[norm] = data
+                    zip.closeEntry()
+                    entry = zip.nextEntry
                 }
-                zip.closeEntry()
-                entry = zip.nextEntry
             }
         } catch (e: SecurityException) {
             android.util.Log.w("PptxParser", "Rejected PPTX: ${e.message}")
@@ -571,22 +596,29 @@ class PptxParser {
             val ratio = entry.size / compressedSize
             if (ratio > 100L) throw SecurityException("Zip bomb in '${entry.name}': ratio=$ratio")
         }
-        return readBoundedStream(zip, entry)
+        return readBoundedStream(zip, entry, currentTotal)
     }
 
-    private fun readBoundedStream(input: InputStream, entry: ZipEntry? = null): ByteArray {
-        val baos = ByteArrayOutputStream(minOf(MAX_ENTRY_BYTES, 64 * 1024L).toInt())
+    private fun readBoundedStream(
+        input: InputStream,
+        entry: ZipEntry,
+        currentTotal: Long,
+        keep: Boolean = true,
+        onRead: (Long) -> Unit = {}
+    ): ByteArray {
+        val baos = if (keep) ByteArrayOutputStream(16_384) else null
         val buf = ByteArray(16_384)
         var entryRead = 0L
         var n: Int
         while (input.read(buf).also { n = it } != -1) {
-            if (entryRead + n > MAX_ENTRY_BYTES) {
-                throw SecurityException("Entry '${entry?.name}' exceeds ${MAX_ENTRY_BYTES / (1024*1024)} MB limit")
+            if (entryRead + n > minOf(MAX_ENTRY_BYTES, MAX_TOTAL_BYTES - currentTotal)) {
+                throw SecurityException("Entry '${entry.name}' exceeds ${MAX_ENTRY_BYTES / (1024*1024)} MB limit")
             }
-            baos.write(buf, 0, n)
+            baos?.write(buf, 0, n)
             entryRead += n
         }
-        return baos.toByteArray()
+        onRead(entryRead)
+        return baos?.toByteArray() ?: byteArrayOf()
     }
 
     private fun optimizeImageBytes(raw: ByteArray): ByteArray {

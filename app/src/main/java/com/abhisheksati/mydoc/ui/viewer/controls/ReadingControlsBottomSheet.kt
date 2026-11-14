@@ -100,7 +100,8 @@ fun ReadingControlsBottomSheet(
     modifier: Modifier = Modifier,
     isFitPage: Boolean = false,
     onFitPageChange: ((Boolean) -> Unit)? = null,
-    showLayoutControls: Boolean = true
+    showLayoutControls: Boolean = true,
+    showDualPageControl: Boolean = true
 ) {
     if (!isOpen) return
 
@@ -264,15 +265,17 @@ fun ReadingControlsBottomSheet(
                         },
                         modifier = Modifier.weight(1f)
                     )
-                    ThemeOptionButton(
-                        label = stringResource(R.string.appearance_dual_page),
-                        icon = Icons.Outlined.ViewWeek,
-                        isSelected = isDualPageView,
-                        onClick = {
-                            onDualPageViewChange(true)
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
+                    if (showDualPageControl) {
+                        ThemeOptionButton(
+                            label = stringResource(R.string.appearance_dual_page),
+                            icon = Icons.Outlined.ViewWeek,
+                            isSelected = isDualPageView,
+                            onClick = {
+                                onDualPageViewChange(true)
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
 

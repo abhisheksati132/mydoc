@@ -90,7 +90,7 @@ internal fun PageItemView(
         }
 
         val lowRes = withContext(Dispatchers.Default) {
-            viewModel.renderPageBitmap(pageIndex, 0.35f)
+            tracePreview("MyDoc PDF preview") { viewModel.renderPageBitmap(pageIndex, 0.35f) }
         }
         if (lowRes != null) {
             value = lowRes
@@ -317,5 +317,15 @@ internal fun PageItemView(
                 AppProgressIndicator()
             }
         }
+    }
+}
+
+
+private inline fun <T> tracePreview(section: String, block: () -> T): T {
+    android.os.Trace.beginSection(section)
+    return try {
+        block()
+    } finally {
+        android.os.Trace.endSection()
     }
 }

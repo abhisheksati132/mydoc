@@ -80,6 +80,9 @@ import com.abhisheksati.mydoc.ui.viewer.controls.SearchOverlay
 import com.abhisheksati.mydoc.ui.viewer.controls.edgeFlingToDocument
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerCapabilities
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerChrome
+import com.abhisheksati.mydoc.ui.viewer.controls.OutlineDrawer
+import com.abhisheksati.mydoc.ui.viewer.controls.PageJumpDialog
+import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerScaffold
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerThemeTokens
 import kotlinx.coroutines.Dispatchers
@@ -237,11 +240,34 @@ fun WordViewerScreen(
         blocks.joinToString("\n\n") { WordViewerModel.plainText(it) }
     }
 
+    val contents = remember(blocks) {
+        blocks.mapIndexedNotNull { index, block ->
+            (block as? DocxBlock.Heading)?.let { heading ->
+                OutlineItem(heading.text, index, (heading.level - 1).coerceAtLeast(0))
+            }
+        }
+    }
+    var showContents by remember(document.uri) { mutableStateOf(false) }
+    OutlineDrawer(
+        outline = contents,
+        isOpen = showContents,
+        onDismiss = { showContents = false },
+        onItemSelected = { index -> coroutineScope.launch { lazyListState.scrollToItem(index) } }
+    )
+
+    var showPageJump by remember { mutableStateOf(false) }
+    PageJumpDialog(
+        isOpen = showPageJump,
+        currentPage = pagination.pageForBlockIndex(visibleBlockIndex),
+        pageCount = pagination.effectivePageCount,
+        onJump = { page -> coroutineScope.launch { lazyListState.scrollToItem(pagination.blockForPageIndex(page)) } },
+        onDismiss = { showPageJump = false }
+    )
     ViewerScaffold(
         document = document,
         capabilities = ViewerCapabilities(
             supportsSearch = true,
-            supportsOutline = false,
+            supportsOutline = contents.isNotEmpty(),
             supportsPageGrid = false,
             supportsSlideshow = false,
             supportsTts = true,
@@ -258,14 +284,9 @@ fun WordViewerScreen(
         onSearchClick = { isSearchOpen = true },
         onTtsClick = { isTtsVisible = true },
         readingPrefs = readingPrefs,
-        onPageScrubbed = { page ->
-            if (blocks.isNotEmpty()) {
-                val target = pagination.blockForPageIndex(page)
-                coroutineScope.launch {
-                    lazyListState.scrollToItem(target)
-                }
-            }
-        },
+        sheetItems = contents,
+        onOutlineClick = { showContents = true },
+        onPagesClick = if (pagination.effectivePageCount > 1) { { showPageJump = true } } else null,
         searchOverlay = {
             SearchOverlay(
                 visible = isSearchOpen,

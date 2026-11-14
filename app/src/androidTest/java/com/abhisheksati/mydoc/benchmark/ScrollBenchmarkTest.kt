@@ -1,6 +1,13 @@
 package com.abhisheksati.mydoc.benchmark
 
+import android.os.Handler
+import android.os.HandlerThread
 import android.os.SystemClock
+import android.view.FrameMetrics
+import android.view.Window
+import androidx.test.core.app.ActivityScenario
+import com.abhisheksati.mydoc.MainActivity
+import com.abhisheksati.mydoc.R
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -26,6 +33,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
@@ -56,6 +64,54 @@ class ScrollBenchmarkTest {
     val compose = createComposeRule()
 
     private val tag = "ScrollBenchmark"
+
+    @Test
+    fun mainTabsReportFrameDeadlineOverruns() {
+        org.junit.Assume.assumeTrue(android.os.Build.VERSION.SDK_INT >= 31)
+        org.junit.Assume.assumeTrue(
+            androidx.test.platform.app.InstrumentationRegistry.getArguments()
+                .getString("measurePerformance") == "true"
+        )
+        val thread = HandlerThread("mydoc-frame-metrics").apply { start() }
+        try {
+            val launchStart = SystemClock.elapsedRealtime()
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+                val resources = instrumentation.targetContext.resources
+                compose.onNodeWithText(resources.getString(R.string.nav_home)).assertIsDisplayed()
+                Log.i(tag, "Activity launch to ready navigation: ${SystemClock.elapsedRealtime() - launchStart}ms")
+                val overruns = java.util.concurrent.ConcurrentLinkedQueue<Double>()
+                val listener = Window.OnFrameMetricsAvailableListener { _, frame, _ ->
+                    val deadline = frame.getMetric(FrameMetrics.DEADLINE)
+                    val duration = frame.getMetric(FrameMetrics.TOTAL_DURATION)
+                    if (deadline > 0 && duration >= 0) {
+                        overruns.add((duration - deadline) / 1_000_000.0)
+                    }
+                }
+                scenario.onActivity { it.window.addOnFrameMetricsAvailableListener(listener, Handler(thread.looper)) }
+                try {
+                    for (tab in listOf(R.string.nav_library, R.string.nav_tools, R.string.nav_home)) {
+                        compose.onNodeWithText(resources.getString(tab)).performClick()
+                        compose.waitForIdle()
+                    }
+                    Handler(thread.looper).run {
+                        val drained = java.util.concurrent.CountDownLatch(1)
+                        post { drained.countDown() }
+                        check(drained.await(5, java.util.concurrent.TimeUnit.SECONDS))
+                    }
+                    val frames = overruns.sorted()
+                    check(frames.isNotEmpty()) { "No frame metrics were delivered" }
+                    fun percentile(fraction: Double): Double =
+                        frames[(kotlin.math.ceil(frames.size * fraction).toInt() - 1).coerceAtLeast(0)]
+                    Log.i(tag, "Tab switching: frames=${frames.size} p95OverrunMs=${percentile(0.95)} p99OverrunMs=${percentile(0.99)}")
+                } finally {
+                    scenario.onActivity { it.window.removeOnFrameMetricsAvailableListener(listener) }
+                }
+            }
+        } finally {
+            thread.quitSafely()
+        }
+    }
 
     @Test
     fun homeScreenScrollPerformance_measuresFrameAndScrollTimings() {
@@ -248,14 +304,11 @@ private fun PdfViewerBenchmarkHost(
 
         ViewerBottomBar(
             currentPage = 4,
-            pageCount = 40,
             visible = true,
             hasOutline = true,
-            isCondensed = isCondensed,
             onOutlineClick = {},
             onPagesClick = {},
             onAppearanceClick = {},
-            onPageScrubbed = {},
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }

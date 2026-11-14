@@ -540,4 +540,28 @@ class StorageMoveTrashSafetyTest {
             dao.getAllTrashItemsSync().size
         )
     }
+    @Test
+    fun `permanent trash deletion keeps a symlink target intact`() = runBlocking {
+        val dao = InMemoryTrashDao()
+        val repository = repo(FakeMutator(forceCopyPath = false), dao)
+        val source = tempFolder.newFolder("linked-trash")
+        val outside = tempFolder.newFolder("outside-trash")
+        val protectedFile = File(outside, "keep.txt").apply { writeText("keep") }
+
+        repository.moveToTrash(listOf(source)).getOrThrow()
+        val row = dao.getAllTrashItemsSync().single()
+        val link = File(row.trashPath, "linked-directory").toPath()
+        try {
+            java.nio.file.Files.createSymbolicLink(link, outside.toPath())
+        } catch (e: java.io.IOException) {
+            org.junit.Assume.assumeNoException(e)
+        } catch (e: UnsupportedOperationException) {
+            org.junit.Assume.assumeNoException(e)
+        }
+
+        assertEquals(1, repository.deletePermanently(listOf(row.toDomain())).getOrThrow())
+        assertEquals("keep", protectedFile.readText())
+        assertTrue(dao.getAllTrashItemsSync().isEmpty())
+    }
+
 }

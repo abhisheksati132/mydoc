@@ -72,6 +72,7 @@ import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SheetData
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerCapabilities
 import com.abhisheksati.mydoc.ui.viewer.controls.edgeFlingToDocument
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerChrome
+import com.abhisheksati.mydoc.ui.viewer.controls.OutlineDrawer
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerScaffold
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerThemeTokens
 import com.abhisheksati.mydoc.viewmodel.SpreadsheetViewModel
@@ -118,6 +119,14 @@ fun SpreadsheetViewerScreen(
         viewModel.onSearchQueryChanged("")
     }
 
+    var showSheets by remember { mutableStateOf(false) }
+    OutlineDrawer(
+        outline = outlineItems,
+        isOpen = showSheets,
+        onDismiss = { showSheets = false },
+        onItemSelected = viewModel::selectSheet
+    )
+
     ViewerScaffold(
         document = document,
         capabilities = ViewerCapabilities(
@@ -137,6 +146,8 @@ fun SpreadsheetViewerScreen(
         onBackClick = onBackClick,
         onShareClick = onShareClick,
         onSearchClick = { isSearchOpen = true },
+        onOutlineClick = { showSheets = true },
+        onPagesClick = if (outlineItems.isNotEmpty()) { { showSheets = true } } else null,
         sheetItems = outlineItems,
         onSheetSelect = { viewModel.selectSheet(it) },
         readingPrefs = readingPrefs,

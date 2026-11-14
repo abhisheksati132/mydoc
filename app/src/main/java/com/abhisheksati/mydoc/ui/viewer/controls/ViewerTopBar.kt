@@ -82,6 +82,7 @@ fun ViewerTopBar(
     onReflowClick: (() -> Unit)? = null,
     reflowLabel: String? = null,
     onDocumentDetailsClick: (() -> Unit)? = null,
+    documentDetailsLabel: String? = null,
     hazeState: dev.chrisbanes.haze.HazeState? = null
 ) {
     val colors = AppTheme.colors
@@ -216,7 +217,8 @@ fun ViewerTopBar(
                                     onSlideshowClick = onSlideshowClick,
                                     onReflowClick = onReflowClick,
                                     reflowLabel = reflowLabel,
-                                    onDocumentDetailsClick = onDocumentDetailsClick
+                                    onDocumentDetailsClick = onDocumentDetailsClick,
+                                    documentDetailsLabel = documentDetailsLabel
                                 )
                             }
                         }
@@ -306,7 +308,8 @@ fun ViewerTopBar(
                                     onSlideshowClick = onSlideshowClick,
                                     onReflowClick = onReflowClick,
                                     reflowLabel = reflowLabel,
-                                    onDocumentDetailsClick = onDocumentDetailsClick
+                                    onDocumentDetailsClick = onDocumentDetailsClick,
+                                    documentDetailsLabel = documentDetailsLabel
                                 )
                             }
                         }
@@ -328,7 +331,8 @@ private fun OverflowDropdown(
     onSlideshowClick: (() -> Unit)?,
     onReflowClick: (() -> Unit)?,
     reflowLabel: String?,
-    onDocumentDetailsClick: (() -> Unit)?
+    onDocumentDetailsClick: (() -> Unit)?,
+    documentDetailsLabel: String?
 ) {
     AppDropdownMenu(
         expanded = expanded,
@@ -400,7 +404,7 @@ private fun OverflowDropdown(
 
         if (onDocumentDetailsClick != null) {
             OverflowAction(
-                label = stringResource(R.string.viewer_action_details),
+                label = documentDetailsLabel ?: stringResource(R.string.viewer_action_details),
                 icon = Icons.Outlined.Info,
                 onClick = {
                     onDismiss()

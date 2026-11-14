@@ -47,18 +47,12 @@ fun SettingsAboutSection(
     checkUpdatesOnLaunch: Boolean,
     onCheckUpdatesOnLaunchChange: (Boolean) -> Unit,
     onDesignSystemPreviewClick: () -> Unit = {},
-    onExplore: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var showGuide by rememberSaveable { mutableStateOf(false) }
-    if(showGuide) com.abhisheksati.mydoc.ui.onboarding.OnboardingGuide { explore ->
-        showGuide = false
-        if (explore) onExplore()
-    }
     var showWordLicenses by rememberSaveable { mutableStateOf(false) }
     if (showWordLicenses) WordEngineLicensesDialog { showWordLicenses = false }
     var showOpenSourceLicenses by rememberSaveable { mutableStateOf(false) }
@@ -85,7 +79,6 @@ fun SettingsAboutSection(
 
         SettingsDivider()
 
-        TextButton(onClick = { showGuide = true }) { Text(stringResource(R.string.tour_new_features)) }
         TextButton(onClick = { showWordLicenses = true }) {
             Text(stringResource(R.string.word_engine_licenses))
         }

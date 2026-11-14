@@ -30,6 +30,7 @@
     <exclude domain="database" path="mydoc.db-wal" />
     <exclude domain="database" path="mydoc.db-shm" />
     <exclude domain="sharedpref" path="pinned_folders_prefs.xml" />
+    <exclude domain="sharedpref" path="word_reflow_progress.xml" />
     <exclude domain="sharedpref" path="mydoc_welcome.xml" />
     <exclude domain="file" path="rename_journals" />
 </full-backup-content>

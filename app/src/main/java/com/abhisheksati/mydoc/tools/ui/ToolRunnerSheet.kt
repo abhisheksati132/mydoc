@@ -77,7 +77,9 @@ import com.abhisheksati.mydoc.designsystem.components.showMessage
 fun ToolRunnerSheet(
     viewModel: ToolsViewModel,
     onOpenResultFile: (File, String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    launchInitialPicker: Boolean = false,
+    onInitialPickerLaunched: () -> Unit = {}
 ) {
     val selectedTool by viewModel.selectedTool.collectAsState()
     val tool = selectedTool ?: return
@@ -115,6 +117,16 @@ fun ToolRunnerSheet(
         contract = ActivityResultContracts.OpenMultipleDocuments()
     ) { uris ->
         uris.forEach { viewModel.addInputUri(it) }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(tool, launchInitialPicker) {
+        if (launchInitialPicker) {
+            onInitialPickerLaunched()
+            if (inputUris.isEmpty()) {
+                if (tool.acceptsMultipleInputFiles) multiplePickerLauncher.launch(pickerTypes(tool))
+                else singlePickerLauncher.launch(pickerTypes(tool))
+            }
+        }
     }
 
     fun saveResultTo(destUri: Uri?) {

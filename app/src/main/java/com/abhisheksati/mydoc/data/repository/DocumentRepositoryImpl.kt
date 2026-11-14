@@ -381,8 +381,13 @@ class DocumentRepositoryImpl(
     }
 
     override suspend fun clearAllRecents() = withContext(Dispatchers.IO) {
-        recentDao.clearAllRecents()
-        database.mediaPlaybackDao().clearAllPlaybacks()
+        context.getSharedPreferences("word_reflow_progress", Context.MODE_PRIVATE)
+            .edit().clear().apply()
+        database.withTransaction {
+            recentDao.clearAllRecents()
+            database.viewStateDao().clearAllViewStates()
+            database.mediaPlaybackDao().clearAllPlaybacks()
+        }
     }
 
     override suspend fun updatePageProgress(uri: String, lastPage: Int, pageCount: Int) = withContext(Dispatchers.IO) {

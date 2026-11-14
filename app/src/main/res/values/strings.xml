@@ -3,7 +3,6 @@
     <string name="rendering_information">Rendering information</string>
     <string name="word_engine_licenses">Office engine licenses</string>
     <string name="open_source_licenses">Open source licenses</string>
-    <string name="tour_new_features">Tour &amp; new features</string>
     <string name="app_name">MyDoc</string>
     <string name="tile_scan_doc">Quick Scan</string>
     <string name="recent_history_cleared">Recent history cleared</string>
@@ -43,7 +42,6 @@
     <string name="viewer_action_slideshow">Start slideshow</string>
     <string name="viewer_action_reflow">Reflow reading mode</string>
     <string name="viewer_action_details">Document details</string>
-    <string name="viewer_page_scrub">Page %1$d of %2$d</string>
     <string name="viewer_contents">Contents</string>
     <string name="viewer_contents_description">Document contents and outline</string>
     <string name="viewer_pages">Pages</string>
@@ -1058,8 +1056,6 @@
     <string name="cleaner_scan_failed">Could not finish the scan. Check storage access and try again.</string>
     <string name="storage_chart_unclassified">Unclassified used space</string>
     <string name="tools_search_placeholder">Search tools…</string>
-    <string name="settings_hero_title">Make MyDoc yours</string>
-    <string name="settings_hero_summary">Choose how MyDoc looks, reads, and works with your files.</string>
     <string name="office_simple_title">Office support</string>
     <string name="office_simple_active">Enhanced reading is on</string>
     <string name="office_simple_builtin">Built-in reading is on</string>
@@ -1083,14 +1079,6 @@
         <item quantity="one">%1$d identical copy • %2$s each</item>
         <item quantity="other">%1$d identical copies • %2$s each</item>
     </plurals>
-
-    <!-- Onboarding guide strings -->
-    <string name="onboarding_skip">Skip</string>
-    <string name="onboarding_back">Back</string>
-    <string name="onboarding_start_browsing">Start browsing</string>
-    <string name="onboarding_next">Next</string>
-    <string name="onboarding_explore_collections">Explore collections</string>
-    <string name="onboarding_replay_hint">%1$d of %2$d · Replay from Settings → About</string>
 
     <!-- Spotlight search strings -->
     <string name="spotlight_search_subtitle">Contents, tags &amp; smart collections</string>
@@ -1169,4 +1157,6 @@
     <string name="cd_document_page_thumbnail">Document page %1$d thumbnail</string>
     <string name="search_match_position">%1$d of %2$d</string>
     <string name="search_zero_matches">0 matches</string>
+    <string name="settings_wallpaper_colors">Wallpaper colors</string>
+    <string name="settings_wallpaper_colors_description">Use your Android color palette across MyDoc.</string>
 </resources>

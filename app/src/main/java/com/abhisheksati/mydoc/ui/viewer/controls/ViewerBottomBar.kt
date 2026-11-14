@@ -22,32 +22,29 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.TextFormat
 import androidx.compose.material3.Icon
-import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
-import com.abhisheksati.mydoc.designsystem.components.AppSlider
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.animation.AppMotion
 import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
@@ -58,38 +55,25 @@ import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
-import kotlin.math.roundToInt
 
 /**
- * Editorial "Ink & Seal" reader footer:
- * - Hosted on a tactile GlassSurface with specular gradient rim.
- * - Sheet tabs for multi-sheet workbooks.
- * - Monospace live page scrubber with Seal teal slider.
- * - Triple primary actions: Contents, Pages, Appearance.
+ * Shared reader actions with optional sheet tabs for documents that have named sections.
  */
 @Composable
 fun ViewerBottomBar(
     currentPage: Int,
-    pageCount: Int,
     visible: Boolean,
     hasOutline: Boolean,
     onOutlineClick: () -> Unit,
-    // Null when the reader has no page grid: a disabled control is honest, a tappable one that
-    // does nothing is not.
+    // Null when the reader has no page navigation.
     onPagesClick: (() -> Unit)?,
     onAppearanceClick: () -> Unit,
-    onPageScrubbed: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    isCondensed: Boolean = false,
     sheetItems: List<OutlineItem> = emptyList(),
     onSheetSelect: ((Int) -> Unit)? = null,
     hazeState: dev.chrisbanes.haze.HazeState? = null
 ) {
-    val colors = AppTheme.colors
-
     val reducedMotion = LocalReducedMotion.current
-    var isDragging by remember { mutableStateOf(false) }
-    var scrubPage by remember(currentPage) { mutableFloatStateOf(currentPage.toFloat()) }
 
     AnimatedVisibility(
         visible = visible,
@@ -106,7 +90,8 @@ fun ViewerBottomBar(
         GlassSurface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-            elevation = 8.dp,
+            elevation = 2.dp,
+            backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
             hazeState = hazeState
         ) {
             Column(
@@ -119,7 +104,8 @@ fun ViewerBottomBar(
                     LazyRow(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .selectableGroup(),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         itemsIndexed(sheetItems) { idx, item ->
@@ -131,62 +117,6 @@ fun ViewerBottomBar(
                                 onClick = { onSheetSelect(item.pageIndex) }
                             )
                         }
-                    }
-                }
-
-                // Page scrubber with live monospace bubble
-                if (pageCount > 1) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
-                            .padding(top = 6.dp, bottom = 2.dp)
-                    ) {
-                        AnimatedVisibility(
-                            visible = isDragging,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(18.dp),
-                            enter = if (reducedMotion) EnterTransition.None else fadeIn(AppMotion.fadeFast),
-                            exit = if (reducedMotion) ExitTransition.None else fadeOut(AppMotion.fadeFast)
-                        ) {
-                            Box(
-                                modifier = Modifier.fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                val target = (scrubPage.roundToInt() + 1).coerceIn(1, pageCount)
-                                Text(
-                                    text = stringResource(R.string.viewer_page_scrub, target, pageCount),
-                                    style = AppTheme.typography.metadataStrong,
-                                    color = colors.accent
-                                )
-                            }
-                        }
-
-                        AppSlider(
-                            value = if (isDragging) scrubPage else currentPage.toFloat(),
-                            onValueChange = { newVal ->
-                                isDragging = true
-                                scrubPage = newVal
-                            },
-                            onValueChangeFinished = {
-                                isDragging = false
-                                val target = scrubPage.roundToInt().coerceIn(0, pageCount - 1)
-                                onPageScrubbed(target)
-                            },
-                            valueRange = 0f..(pageCount - 1).toFloat(),
-                            steps = if (pageCount in 2..60) pageCount - 2 else 0,
-                            colors = SliderDefaults.colors(
-                                thumbColor = colors.accent,
-                                activeTrackColor = colors.accent,
-                                inactiveTrackColor = colors.inkMuted.copy(alpha = 0.2f)
-                            ),
-                            thumbSize = 12.dp,
-                            trackHeight = 2.dp,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(28.dp)
-                        )
                     }
                 }
 
@@ -243,12 +173,15 @@ private fun SheetTab(
         modifier = Modifier
             .selectable(
                 selected = selected,
+                role = Role.Tab,
                 interactionSource = interaction,
                 indication = androidx.compose.material3.ripple(),
                 onClick = onClick
             )
+            .heightIn(min = 48.dp)
             .padding(horizontal = 10.dp, vertical = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Text(
             text = label,
@@ -287,6 +220,7 @@ private fun BottomBarActionButton(
             .heightIn(min = 56.dp)
             .clickable(
                 enabled = enabled,
+                role = Role.Button,
                 interactionSource = remember { MutableInteractionSource() },
                 indication = androidx.compose.material3.ripple(),
                 onClick = onClick
@@ -317,13 +251,11 @@ private fun ViewerBottomBarLightPreview() {
     AppDesignSystemTheme(darkTheme = false, amoledBlack = false) {
         ViewerBottomBar(
             currentPage = 3,
-            pageCount = 24,
             visible = true,
             hasOutline = true,
             onOutlineClick = {},
             onPagesClick = {},
-            onAppearanceClick = {},
-            onPageScrubbed = {}
+            onAppearanceClick = {}
         )
     }
 }
@@ -334,13 +266,11 @@ private fun ViewerBottomBarDarkPreview() {
     AppDesignSystemTheme(darkTheme = true, amoledBlack = false) {
         ViewerBottomBar(
             currentPage = 3,
-            pageCount = 24,
             visible = true,
             hasOutline = true,
             onOutlineClick = {},
             onPagesClick = {},
-            onAppearanceClick = {},
-            onPageScrubbed = {}
+            onAppearanceClick = {}
         )
     }
 }

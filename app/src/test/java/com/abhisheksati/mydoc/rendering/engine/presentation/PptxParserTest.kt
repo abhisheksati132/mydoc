@@ -18,6 +18,21 @@ class PptxParserTest {
     private val parser = PptxParser()
 
     @Test
+    fun stagedPowerPointMatchesStreamReader() = runBlocking {
+        val bytes = createSyntheticPptxZip()
+        val file = java.io.File.createTempFile("staged-deck", ".pptx")
+        try {
+            file.writeBytes(bytes)
+            val staged = parser.parse(file)
+            val streamed = parser.parse(ByteArrayInputStream(bytes))
+            assertEquals(streamed.slides.map { it.title }, staged.slides.map { it.title })
+            assertEquals(streamed.slides.map { it.content }, staged.slides.map { it.content })
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
     fun `parse empty stream reports emptiness instead of inventing a slide`() = runBlocking {
         val pres = parser.parse(ByteArrayInputStream(ByteArray(0)))
         // This used to return one fabricated slide titled "Empty Presentation" carrying a

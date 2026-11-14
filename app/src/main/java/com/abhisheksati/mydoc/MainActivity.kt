@@ -199,6 +199,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             LaunchedEffect(Unit) { isContentReady = true }
 
+            val wallpaperColorsEnabled by app.settingsRepository.wallpaperColorsEnabled.collectAsStateWithLifecycle()
             val themeMode by app.settingsRepository.themeMode.collectAsStateWithLifecycle()
             val amoledBlack by app.settingsRepository.amoledBlack.collectAsStateWithLifecycle()
             val glassEffectMode by app.settingsRepository.glassEffectMode.collectAsStateWithLifecycle()
@@ -267,6 +268,7 @@ class MainActivity : ComponentActivity() {
 
             AppDesignSystemTheme(
                 darkTheme = isDark,
+                dynamicColor = wallpaperColorsEnabled,
                 amoledBlack = isBlack,
                 reducedMotion = reducedMotion
             ) {
@@ -527,10 +529,6 @@ class MainActivity : ComponentActivity() {
                                             }
                                         }
                                         ActiveScreen.Home -> {
-                                            com.abhisheksati.mydoc.ui.onboarding.FirstRunGuide(onExplore = {
-                                                isDiscoveryRequested = true
-                                                isSpotlightSearchOpen = true
-                                            })
                                             screenState.SaveableStateProvider("home") {
                                                 HomeScreen(
                                                     quickScanRequested = quickScanRequested,

@@ -36,6 +36,8 @@ fun SettingsAppearanceSection(
     onAmoledBlackChange: (Boolean) -> Unit,
     onHapticFeedbackChange: (Boolean) -> Unit,
     onGlassEffectModeChange: (GlassEffectMode) -> Unit,
+    wallpaperColorsEnabled: Boolean,
+    onWallpaperColorsChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -72,6 +74,17 @@ fun SettingsAppearanceSection(
         }
 
         SettingsDivider(modifier = Modifier.padding(top = 12.dp))
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            SettingToggleRow(
+                title = stringResource(R.string.settings_wallpaper_colors),
+                subtitle = stringResource(R.string.settings_wallpaper_colors_description),
+                icon = Icons.Outlined.Palette,
+                checked = wallpaperColorsEnabled,
+                onCheckedChange = onWallpaperColorsChange
+            )
+            SettingsDivider()
+        }
 
         SettingsSectionLabel(text = stringResource(R.string.settings_glass_effects))
         androidx.compose.foundation.layout.FlowRow(

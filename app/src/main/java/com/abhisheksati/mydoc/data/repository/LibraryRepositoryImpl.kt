@@ -155,7 +155,6 @@ class LibraryRepositoryImpl(
 
     override suspend fun clearAllRecents() = withContext(Dispatchers.IO) {
         documentRepository.clearAllRecents()
-        mediaPlaybackDao.clearAllPlaybacks()
     }
 
     override suspend fun removeMediaPlayback(uri: String) = withContext(Dispatchers.IO) {

@@ -98,13 +98,11 @@ fun BoxScope.PdfViewerControlsOverlay(
 
         ViewerBottomBar(
             currentPage = state.currentPage,
-            pageCount = state.pageCount,
             visible = state.areControlsVisible,
             hasOutline = state.outline.isNotEmpty(),
             onOutlineClick = onOpenOutlineDrawer,
             onPagesClick = onOpenThumbnailGrid,
             onAppearanceClick = onOpenReadingControls,
-            onPageScrubbed = onPageSelected,
             sheetItems = state.outline,
             onSheetSelect = onPageSelected,
             hazeState = hazeState

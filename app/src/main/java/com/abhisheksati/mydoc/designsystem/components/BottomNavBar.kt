@@ -36,43 +36,29 @@ import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.animation.AppMotion
 import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
-import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.domain.model.HomeTab
-import dev.chrisbanes.haze.HazeState
+import androidx.compose.material3.Surface
 
-/** A bounded glass dock; equal tab widths leave room for larger text and translations. */
+/** A bounded tonal dock; equal tab widths leave room for larger text and translations. */
 @Composable
 fun BottomNavBar(
     currentTab: HomeTab,
     onTabSelected: (HomeTab) -> Unit,
-    modifier: Modifier = Modifier,
-    hazeState: HazeState? = null,
-    motion: GlassMotionState? = null,
-    onScanClick: () -> Unit = {}
+    modifier: Modifier = Modifier
 ) {
     val haptics = rememberAppHaptics()
-    val colors = AppTheme.colors
-    val selectedTone = when (currentTab) {
-        HomeTab.HOME -> colors.accent
-        HomeTab.LIBRARY -> colors.accentCyan
-        HomeTab.TOOLS -> colors.accentGreen
-    }
-    val indicatorColor by animateColorAsState(
-        targetValue = selectedTone.copy(alpha = if (AppTheme.isDark) 0.24f else 0.17f),
-        animationSpec = if (LocalReducedMotion.current) snap() else AppMotion.snappy(),
-        label = "navigationTint"
-    )
+    val scheme = MaterialTheme.colorScheme
+    val indicatorColor = scheme.secondaryContainer
     Box(
         modifier = modifier.fillMaxWidth().navigationBarsPadding()
             .padding(horizontal = 16.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
-        GlassSurface(
+        Surface(
             shape = RoundedCornerShape(36.dp),
-            hazeState = hazeState,
-            motion = motion,
-            elevation = 8.dp,
+            color = scheme.surfaceContainerHigh,
+            shadowElevation = 2.dp,
             modifier = Modifier.widthIn(max = 400.dp).fillMaxWidth()
         ) {
             BoxWithConstraints(Modifier.fillMaxWidth().padding(6.dp)) {
@@ -131,7 +117,7 @@ private fun NavPillItem(
     val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
     val foreground by animateColorAsState(
-        if (selected) AppTheme.colors.ink else AppTheme.colors.inkMuted,
+        if (selected) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
         animationSpec = if (reducedMotion) snap() else AppMotion.snappy(), label = "dockInk"
     )
     val shape = RoundedCornerShape(28.dp)
@@ -146,7 +132,7 @@ private fun NavPillItem(
     ) {
         Icon(if (selected) selectedIcon else unselectedIcon,
             contentDescription = null, tint = foreground, modifier = Modifier.size(23.dp))
-        Text(label, style = AppTheme.typography.captionStrong,
+        Text(label, style = MaterialTheme.typography.labelMedium,
             color = foreground, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }

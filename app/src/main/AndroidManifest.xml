@@ -111,6 +111,9 @@
                 <!-- PowerPoint -->
                 <data android:mimeType="application/vnd.openxmlformats-officedocument.presentationml.presentation" />
                 <data android:mimeType="application/vnd.ms-powerpoint" />
+                <data android:mimeType="application/vnd.oasis.opendocument.text" />
+                <data android:mimeType="application/vnd.oasis.opendocument.spreadsheet" />
+                <data android:mimeType="application/vnd.oasis.opendocument.presentation" />
 
                 <!-- Text, Code, JSON & CSV -->
                 <data android:mimeType="text/*" />
@@ -146,6 +149,9 @@
                 <!-- PowerPoint -->
                 <data android:mimeType="application/vnd.openxmlformats-officedocument.presentationml.presentation" />
                 <data android:mimeType="application/vnd.ms-powerpoint" />
+                <data android:mimeType="application/vnd.oasis.opendocument.text" />
+                <data android:mimeType="application/vnd.oasis.opendocument.spreadsheet" />
+                <data android:mimeType="application/vnd.oasis.opendocument.presentation" />
 
                 <!-- Text, Code, JSON & CSV -->
                 <data android:mimeType="text/*" />

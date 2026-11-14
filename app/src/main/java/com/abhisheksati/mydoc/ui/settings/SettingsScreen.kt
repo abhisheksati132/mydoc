@@ -56,7 +56,6 @@ fun SettingsScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     onDesignSystemPreviewClick: () -> Unit = {},
-    onExplore: () -> Unit = {},
     onClearRecent: (suspend () -> Unit)? = null
 ) {
     val updateState by updateManager.state.collectAsState()
@@ -69,6 +68,7 @@ fun SettingsScreen(
     val haptic = LocalHapticFeedback.current
 
     // LOOK
+    val wallpaperColorsEnabled by settingsRepository.wallpaperColorsEnabled.collectAsState()
     val currentTheme by settingsRepository.themeMode.collectAsState()
     val amoledBlack by settingsRepository.amoledBlack.collectAsState()
     val hapticFeedbackEnabled by settingsRepository.isHapticFeedbackEnabled.collectAsState()
@@ -147,6 +147,8 @@ fun SettingsScreen(
                         // 1. LOOK
                         SettingsAppearanceSection(
                             currentTheme = currentTheme,
+                            wallpaperColorsEnabled = wallpaperColorsEnabled,
+                            onWallpaperColorsChange = settingsRepository::setWallpaperColorsEnabled,
                             amoledBlack = amoledBlack,
                             hapticFeedbackEnabled = hapticFeedbackEnabled,
                             glassEffectMode = glassEffectMode,
@@ -258,8 +260,7 @@ fun SettingsScreen(
                             updateState = updateState,
                             checkUpdatesOnLaunch = checkUpdatesOnLaunch,
                             onCheckUpdatesOnLaunchChange = { settingsRepository.setCheckUpdatesOnLaunch(it) },
-                            onDesignSystemPreviewClick = onDesignSystemPreviewClick,
-                            onExplore = onExplore
+                            onDesignSystemPreviewClick = onDesignSystemPreviewClick
                         )
                     }
                 }

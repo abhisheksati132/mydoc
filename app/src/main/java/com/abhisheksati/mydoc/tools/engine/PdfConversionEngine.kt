@@ -9,7 +9,6 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
 import androidx.exifinterface.media.ExifInterface
-import com.abhisheksati.mydoc.tools.scan.cropper.BitmapRotation
 import android.graphics.pdf.PdfDocument as AndroidPdfDocument
 import com.abhisheksati.mydoc.ocr.OcrEngine
 import com.abhisheksati.mydoc.tools.model.PageMargin
@@ -153,9 +152,9 @@ class PdfConversionEngine(private val context: Context) {
             BitmapFactory.Options().apply { inSampleSize = sample }
         ) ?: return null
 
-        val degrees = exifRotation(file)
-        if (degrees != 0) {
-            val rotated = BitmapRotation.rotate(bitmap, degrees)
+        val transform = exifTransform(file)
+        if (transform != null) {
+            val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, transform, true)
             if (rotated !== bitmap) {
                 bitmap.recycle()
                 bitmap = rotated
@@ -164,18 +163,14 @@ class PdfConversionEngine(private val context: Context) {
         return bitmap
     }
 
-    private fun exifRotation(file: File): Int = runCatching {
-        file.inputStream().use { input ->
-            when (ExifInterface(input).getAttributeInt(
-                ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL
-            )) {
-                ExifInterface.ORIENTATION_ROTATE_90 -> 90
-                ExifInterface.ORIENTATION_ROTATE_180 -> 180
-                ExifInterface.ORIENTATION_ROTATE_270 -> 270
-                else -> 0
-            }
+    private fun exifTransform(file: File): android.graphics.Matrix? = runCatching {
+        val exif = ExifInterface(file)
+        if (!exif.isFlipped && exif.rotationDegrees == 0) return@runCatching null
+        android.graphics.Matrix().apply {
+            if (exif.isFlipped) setScale(-1f, 1f)
+            postRotate(exif.rotationDegrees.toFloat())
         }
-    }.getOrDefault(0)
+    }.getOrNull()
 
     suspend fun textOrCsvToPdf(file: File, onProgress: (ToolProgress) -> Unit): File {
         val lines = file.readLines()

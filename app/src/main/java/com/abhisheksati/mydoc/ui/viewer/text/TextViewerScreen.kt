@@ -291,7 +291,7 @@ fun TextViewerScreen(
         else lines.mapIndexedNotNull { index, raw -> parseMarkdownLine(raw, index) }
     }
     // Markdown drops blank lines, so a line number is not a list position. Search and the page
-    // scrubber work in line space; the LazyColumn works in node space.
+    // document selection works in line space; the LazyColumn works in node space.
     val itemIndexForLine = remember(markdownNodes, isMarkdown) {
         if (!isMarkdown) emptyMap()
         else markdownNodes.mapIndexed { position, node -> node.originalIndex to position }.toMap()
@@ -318,6 +318,14 @@ fun TextViewerScreen(
         coroutineScope.launch { listState.scrollToItem(itemIndexFor(target)) }
     }
 
+    var showPageJump by remember { mutableStateOf(false) }
+    com.abhisheksati.mydoc.ui.viewer.controls.PageJumpDialog(
+        isOpen = showPageJump,
+        currentPage = visibleLineIndex,
+        pageCount = itemCount.coerceAtLeast(1),
+        onJump = { page -> coroutineScope.launch { listState.scrollToItem(page) } },
+        onDismiss = { showPageJump = false }
+    )
     ViewerScaffold(
         document = document,
         capabilities = ViewerCapabilities(
@@ -336,14 +344,7 @@ fun TextViewerScreen(
         onSearchClick = { isSearchOpen = true },
         onTtsClick = { isTtsVisible = true },
         readingPrefs = readingPrefs,
-        onPageScrubbed = { page ->
-            if (lines.isNotEmpty()) {
-                val target = page.coerceIn(0, (itemCount - 1).coerceAtLeast(0))
-                coroutineScope.launch {
-                    listState.scrollToItem(target)
-                }
-            }
-        },
+        onPagesClick = if (itemCount > 1) { { showPageJump = true } } else null,
         searchOverlay = {
             SearchOverlay(
                 visible = isSearchOpen,

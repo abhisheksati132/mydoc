@@ -42,6 +42,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.RectangleShape
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import androidx.compose.runtime.Composable
@@ -196,9 +197,9 @@ fun PhotoViewerScreen(
             exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
             modifier = Modifier.align(Alignment.TopCenter)
         ) {
-            GlassSurface(
-                shape = RectangleShape,
-                elevation = 8.dp,
+            androidx.compose.material3.Surface(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                contentColor = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -213,7 +214,7 @@ fun PhotoViewerScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = stringResource(R.string.cd_back),
-                            tint = contentColor
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
@@ -225,7 +226,7 @@ fun PhotoViewerScreen(
                         Text(
                             text = currentItem.displayName,
                             style = typography.documentName,
-                            color = contentColor,
+                            color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )

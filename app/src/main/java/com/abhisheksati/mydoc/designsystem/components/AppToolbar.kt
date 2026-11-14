@@ -28,7 +28,7 @@ import dev.chrisbanes.haze.HazeState
 /**
  * The single app bar every screen uses, so back affordance, insets, title rhythm and
  * action placement stay identical across the Files, Settings, viewer and media surfaces.
- * Hosted on a tactile GlassSurface with specular gradient rim.
+ * Uses a tonal surface, with optional glass when the screen supplies a backdrop.
  *
  * Role split, deliberately: this bar carries a *screen* title on `titleLarge`; bars that name the
  * document being read (ViewerTopBar, PresentationTopBar, the media players) use the brand's
@@ -51,8 +51,9 @@ fun AppTopBar(
     hazeState: HazeState? = null,
     motion: GlassMotionState? = null
 ) {
+    val useGlass = isGlass && hazeState != null
     val barColors = TopAppBarDefaults.topAppBarColors(
-        containerColor = if (isGlass) Color.Transparent else (containerColor ?: MaterialTheme.colorScheme.surface),
+        containerColor = if (useGlass) Color.Transparent else (containerColor ?: MaterialTheme.colorScheme.surfaceContainer),
         titleContentColor = MaterialTheme.colorScheme.onSurface,
         navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -105,7 +106,7 @@ fun AppTopBar(
         )
     }
 
-    if (isGlass) {
+    if (useGlass) {
         GlassSurface(
             shape = RectangleShape,
             elevation = 4.dp,

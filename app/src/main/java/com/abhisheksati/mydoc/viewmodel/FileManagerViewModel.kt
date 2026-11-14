@@ -201,6 +201,7 @@ class FileManagerViewModel(
             if (generation != listRequestGeneration) return@launch
             val view = if (restoreView) folderView(directory) else FolderViewPreferences(_uiState.value.sortOrder, _uiState.value.isGridView)
             _uiState.update {
+                val sameSource = it.currentDirectory == directory && originCategory == null
                 it.copy(
                     currentDirectory = directory,
                     sortOrder = view.sortOrder,
@@ -214,11 +215,11 @@ class FileManagerViewModel(
                     isBrowsingStorage = it.isBrowsingStorage || originCategory != null,
                     activeCategory = null,
                     isLoading = true,
-                    isRefreshing = it.currentDirectory == directory && originCategory == null && it.items.isNotEmpty(),
-                    items = if (it.currentDirectory == directory && originCategory == null) it.items else emptyList(),
-                    filteredItems = if (it.currentDirectory == directory && originCategory == null) it.filteredItems else emptyList(),
-                    selectedFiles = emptySet(),
-                    isSelectionMode = false,
+                    isRefreshing = sameSource && it.items.isNotEmpty(),
+                    items = if (sameSource) it.items else emptyList(),
+                    filteredItems = if (sameSource) it.filteredItems else emptyList(),
+                    selectedFiles = if (sameSource) it.selectedFiles else emptySet(),
+                    isSelectionMode = sameSource && it.isSelectionMode,
                     canGoBack = backStack.isNotEmpty() || hasParent(directory) || it.isBrowsingStorage
                 )
             }
@@ -235,8 +236,13 @@ class FileManagerViewModel(
                 val sorted = withContext(ioDispatcher) { sortSearchResults(items, state.sortOrder) }
                 if (generation != listRequestGeneration) return@launch
 
+                val survivingPaths = withContext(ioDispatcher) { sorted.mapTo(HashSet()) { it.path } }
+                if (generation != listRequestGeneration) return@launch
                 _uiState.update {
+                    val selection = it.selectedFiles.filterTo(mutableSetOf()) { file -> file.absolutePath in survivingPaths }
                     it.copy(
+                        selectedFiles = selection,
+                        isSelectionMode = selection.isNotEmpty(),
                         items = sorted,
                         filteredItems = visibleItems(sorted, it),
                         isLoading = false,
@@ -249,8 +255,6 @@ class FileManagerViewModel(
                 if (generation == listRequestGeneration) {
                     _uiState.update {
                         it.copy(
-                            items = emptyList(),
-                            filteredItems = emptyList(),
                             isLoading = false,
                             isRefreshing = false,
                             userMessage = UserMessages.actionFailed(R.string.action_open, e, directory.name)
@@ -868,19 +872,25 @@ class FileManagerViewModel(
                     isRefreshing = it.activeCategory == category && it.items.isNotEmpty(),
                     items = if (it.activeCategory == category) it.items else emptyList(),
                     filteredItems = if (it.activeCategory == category) it.filteredItems else emptyList(),
-                    selectedFiles = emptySet(),
-                    isSelectionMode = false,
+                    selectedFiles = if (it.activeCategory == category) it.selectedFiles else emptySet(),
+                    isSelectionMode = it.activeCategory == category && it.isSelectionMode,
                     canGoBack = true
                 )
             }
             val items = storageRepository.queryCategory(category)
             if (generation != listRequestGeneration) return@launch
-            val sorted = sortSearchResults(items, _uiState.value.sortOrder)
-            val filtered = visibleItems(sorted, _uiState.value)
+            val sortOrder = _uiState.value.sortOrder
+            val (sorted, survivingPaths) = withContext(ioDispatcher) {
+                sortSearchResults(items, sortOrder) to items.mapTo(HashSet()) { it.path }
+            }
+            if (generation != listRequestGeneration) return@launch
             _uiState.update {
+                val selection = it.selectedFiles.filterTo(mutableSetOf()) { file -> file.absolutePath in survivingPaths }
                 it.copy(
                     items = sorted,
-                    filteredItems = filtered,
+                    filteredItems = visibleItems(sorted, it),
+                    selectedFiles = selection,
+                    isSelectionMode = selection.isNotEmpty(),
                     isLoading = false,
                     isRefreshing = false
                 )

@@ -112,7 +112,7 @@ object ViewerThemeTokens {
  * Includes:
  * 1. ViewerTopBar with Back, middle-truncated title, page subtitle, Search, Bookmark, and Overflow menu.
  * 2. SearchOverlay slot.
- * 3. Bottom controls (ViewerBottomBar) with scrubber, floating bubble, and labeled actions.
+ * 3. Bottom controls (ViewerBottomBar) with labeled actions.
  * 4. Appearance bottom sheet (ReadingControlsBottomSheet).
  * 5. DocumentDetailsDialog.
  * 6. System bars immersion (transient swipe) with restore on exit.
@@ -136,7 +136,6 @@ fun ViewerScaffold(
     onToggleBookmark: (() -> Unit)? = null,
     onOutlineClick: (() -> Unit)? = null,
     onPagesClick: (() -> Unit)? = null,
-    onPageScrubbed: ((Int) -> Unit)? = null,
     sheetItems: List<OutlineItem> = emptyList(),
     onSheetSelect: ((Int) -> Unit)? = null,
     readingPrefs: ReadingPrefs = ReadingPrefs(),
@@ -291,16 +290,13 @@ fun ViewerScaffold(
         // Bottom Bar
         ViewerBottomBar(
             currentPage = currentPage,
-            pageCount = pageCount,
             visible = isControlsVisible,
-            isCondensed = isCondensed,
             // Contents is only live when this viewer both has an outline and a handler for it;
             // several viewers passed an empty lambda, so the enabled button did nothing.
             hasOutline = capabilities.supportsOutline && sheetItems.isNotEmpty() && onOutlineClick != null,
             onOutlineClick = { onOutlineClick?.invoke() },
             onPagesClick = onPagesClick,
             onAppearanceClick = { isAppearanceSheetOpen = true },
-            onPageScrubbed = { targetPage -> onPageScrubbed?.invoke(targetPage) },
             sheetItems = sheetItems,
             onSheetSelect = onSheetSelect,
             modifier = Modifier.align(Alignment.BottomCenter),

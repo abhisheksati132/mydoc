@@ -46,6 +46,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -142,9 +143,9 @@ fun HomeScreen(
         }
     }
 
-    val homeHazeState = remember { dev.chrisbanes.haze.HazeState() }
     val libraryHazeState = remember { dev.chrisbanes.haze.HazeState() }
     val toolsHazeState = remember { dev.chrisbanes.haze.HazeState() }
+    var launchToolPicker by rememberSaveable { mutableStateOf(false) }
     val homeListState = androidx.compose.foundation.lazy.rememberLazyListState()
     val libraryGlassMotion = remember { GlassMotionState() }
     val toolsGlassMotion = remember { GlassMotionState() }
@@ -245,7 +246,6 @@ fun HomeScreen(
                                 errorMessage = uiState.errorMessage,
                                 isLoading = uiState.isLoading,
                                 onDismissError = { viewModel.clearError() },
-                                hazeState = homeHazeState,
                                 listState = homeListState,
                                 modifier = Modifier.fillMaxSize()
                             )
@@ -281,6 +281,7 @@ fun HomeScreen(
                                     if (tool == PdfTool.SCAN_TO_PDF) {
                                         documentScanner()
                                     } else {
+                                        launchToolPicker = true
                                         toolsViewModel.selectTool(tool)
                                     }
                                 },
@@ -469,13 +470,7 @@ fun HomeScreen(
 
             if (currentTab != HomeTab.LIBRARY || !libraryPageVisible) BottomNavBar(
                 currentTab = currentTab,
-                onTabSelected = viewModel::selectTab,
-                onScanClick = { documentScanner() },
-                hazeState = if (reducedMotion) null else when (currentTab) {
-                    HomeTab.HOME -> homeHazeState
-                    HomeTab.LIBRARY -> libraryHazeState
-                    HomeTab.TOOLS -> toolsHazeState
-                }
+                onTabSelected = viewModel::selectTab
             )
         }
     }
@@ -552,6 +547,8 @@ fun HomeScreen(
     if (selectedTool != null) {
         ToolRunnerSheet(
             viewModel = toolsViewModel,
+            launchInitialPicker = launchToolPicker,
+            onInitialPickerLaunched = { launchToolPicker = false },
             onOpenResultFile = { file, _ ->
                 val uri = Uri.fromFile(file)
                 val inputUri = toolsViewModel.inputUris.value.firstOrNull()

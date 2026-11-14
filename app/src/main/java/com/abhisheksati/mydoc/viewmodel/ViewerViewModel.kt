@@ -22,6 +22,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.flow.StateFlow
@@ -617,13 +618,13 @@ class ViewerViewModel(
 
         prefetchJob?.cancel()
         prefetchJob = viewModelScope.launch(Dispatchers.Default) {
-            val pagesToPrefetch = listOf(currentPage + 1, currentPage - 1, currentPage + 2)
+            delay(180)
+            val pagesToPrefetch = listOf(currentPage + 1, currentPage - 1)
                 .filter { it in 0 until total }
             val currentMode = _uiState.value.readingMode
             for (p in pagesToPrefetch) {
-                // Prime both the low-resolution thumbnail and standard resolution tile in LRU cache
+                ensureActive()
                 rend.renderPage(p, 0.35f, currentMode)
-                rend.renderPage(p, 1.8f, currentMode)
             }
         }
     }

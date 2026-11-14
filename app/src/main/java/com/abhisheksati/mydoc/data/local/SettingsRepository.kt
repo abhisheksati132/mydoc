@@ -54,6 +54,14 @@ class SettingsRepository(private val context: Context) {
     private val _themeMode = MutableStateFlow(loadThemeMode())
     val themeMode: StateFlow<AppThemeMode> = _themeMode.asStateFlow()
 
+    private val _wallpaperColorsEnabled = MutableStateFlow(prefs.getBoolean("wallpaper_colors", false))
+    val wallpaperColorsEnabled: StateFlow<Boolean> = _wallpaperColorsEnabled.asStateFlow()
+
+    fun setWallpaperColorsEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("wallpaper_colors", enabled).apply()
+        _wallpaperColorsEnabled.value = enabled
+    }
+
     private val _defaultStartupTab = MutableStateFlow(loadDefaultStartupTab())
     val defaultStartupTab: StateFlow<HomeTab> = _defaultStartupTab.asStateFlow()
 

@@ -2,19 +2,11 @@ package com.abhisheksati.mydoc.ui.viewer.presentation
 
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
-import com.abhisheksati.mydoc.domain.model.RenderFidelity
 import com.abhisheksati.mydoc.ui.viewer.controls.ZoomableViewport
 import com.abhisheksati.mydoc.ui.viewer.controls.rememberZoomState
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.ui.viewer.FidelityNotice
-import com.abhisheksati.mydoc.ui.viewer.fidelityDisclosureFor
 import com.abhisheksati.mydoc.util.copyBounded
 import android.content.Context
 import android.content.Intent
@@ -77,6 +69,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import com.abhisheksati.mydoc.domain.model.ReadingPrefs
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -93,9 +87,15 @@ import com.abhisheksati.mydoc.rendering.engine.presentation.PptxSlide
 import com.abhisheksati.mydoc.rendering.engine.presentation.VisualElementType
 import com.abhisheksati.mydoc.util.UserMessages
 import com.abhisheksati.mydoc.MyDocApp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.abhisheksati.mydoc.rendering.engine.OutlineItem
+import com.abhisheksati.mydoc.ui.viewer.controls.ViewerBottomBar
+import com.abhisheksati.mydoc.ui.viewer.controls.ViewerTopBar
+import com.abhisheksati.mydoc.ui.viewer.controls.OutlineDrawer
+import com.abhisheksati.mydoc.ui.viewer.controls.SearchOverlay
+import com.abhisheksati.mydoc.ui.viewer.controls.ReadingControlsBottomSheet
 import com.abhisheksati.mydoc.ui.viewer.controls.PageJumpDialog
 import com.abhisheksati.mydoc.ui.viewer.controls.edgeFlingToDocument
-import com.abhisheksati.mydoc.ui.viewer.controls.PrintHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
@@ -178,43 +178,58 @@ fun PresentationViewerScreen(
     val scope = rememberCoroutineScope()
     val app = context.applicationContext as? MyDocApp
 
-    var cachedFileOnDisk by remember { mutableStateOf<File?>(null) }
-    var presentationData by remember { mutableStateOf<PptxPresentation?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var presentationData by remember(document.uri) { mutableStateOf<PptxPresentation?>(null) }
+    var isLoading by remember(document.uri) { mutableStateOf(true) }
+    var errorMessage by remember(document.uri) { mutableStateOf<String?>(null) }
 
-    var readingMode by rememberSaveable { mutableStateOf(ReadingMode.NORMAL) }
     var isVisualMode by rememberSaveable { mutableStateOf(true) }
     var isJumpDialogOpen by remember { mutableStateOf(false) }
 
     var isSearchOpen by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    var currentMatchIndex by remember { mutableIntStateOf(0) }
+    var currentMatchIndex by remember(document.uri) { mutableIntStateOf(-1) }
 
-    var isThumbnailStripOpen by remember { mutableStateOf(false) }
+    var isContentsOpen by remember { mutableStateOf(false) }
+    var isAppearanceOpen by remember { mutableStateOf(false) }
+    var bookmarks by remember(document.uri) {
+        mutableStateOf(app?.settingsRepository?.getBookmarks(document.uri).orEmpty())
+    }
+    val settings = app?.settingsRepository
+    val readingPrefs = settings?.readingPrefs?.collectAsStateWithLifecycle()?.value ?: ReadingPrefs()
     var isSlideshowMode by rememberSaveable(document.uri) { mutableStateOf(startInSlideshow) }
     var isNotesSheetOpen by remember { mutableStateOf(false) }
 
-    val zoomState = rememberZoomState(key = document.uri)
-    var isControlsVisible by rememberSaveable { mutableStateOf(true) }
-
-    DisposableEffect(document.uri) {
+    val readingMode = readingPrefs.readingMode
+    val view = LocalView.current
+    DisposableEffect(view, readingPrefs.keepScreenOn, readingPrefs.brightness) {
+        val window = (context as? android.app.Activity)?.window
+        val oldBrightness = window?.attributes?.screenBrightness
+        val oldKeepScreenOn = view.keepScreenOn
+        view.keepScreenOn = readingPrefs.keepScreenOn
+        if (window != null && readingPrefs.brightness >= 0f) {
+            window.attributes = window.attributes.apply { screenBrightness = readingPrefs.brightness }
+        }
         onDispose {
-            cachedFileOnDisk?.delete()
-            cachedFileOnDisk = null
+            view.keepScreenOn = oldKeepScreenOn
+            if (window != null && oldBrightness != null) {
+                window.attributes = window.attributes.apply { screenBrightness = oldBrightness }
+            }
         }
     }
+    val zoomState = rememberZoomState(key = document.uri)
+    var isControlsVisible by rememberSaveable { mutableStateOf(true) }
 
     LaunchedEffect(document.uri) {
         isLoading = true
         errorMessage = null
         withContext(Dispatchers.IO) {
+            var stagedFile: File? = null
             try {
                 val uri = Uri.parse(document.uri)
                 val ext = document.extension.lowercase().ifBlank { "pptx" }
                 val cacheDir = File(context.cacheDir, "pres_cache").apply { mkdirs() }
                 val tempFile = File.createTempFile("pres_", ".$ext", cacheDir)
-                cachedFileOnDisk = tempFile
+                stagedFile = tempFile
 
                 val inputStream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri)
                     ?: throw IllegalStateException("Could not open presentation stream")
@@ -243,7 +258,7 @@ fun PresentationViewerScreen(
 
                 // Parse with native Kotlin XML parser
                 try {
-                    val parsed = tempFile.inputStream().use { PptxParser().parse(it, context.cacheDir) }
+                    val parsed = PptxParser().parse(tempFile)
                     presentationData = parsed
                 } catch (e: Throwable) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
@@ -271,10 +286,10 @@ fun PresentationViewerScreen(
             } catch (t: Throwable) {
                 if (t is kotlinx.coroutines.CancellationException) throw t
                 SecureLog.error("PresentationViewer", "could not load presentation", t) { document.displayName }
-                cachedFileOnDisk?.delete()
-                cachedFileOnDisk = null
                 errorMessage = UserMessages.readFailure("PresentationViewer", t).resolve(context)
                 isLoading = false
+            } finally {
+                stagedFile?.delete()
             }
         }
     }
@@ -295,11 +310,6 @@ fun PresentationViewerScreen(
         }
     }
 
-    val presentationFidelity = if (presentationData?.recovered == true) RenderFidelity.RECOVERED_SCRAPE else null
-    val fidelityDisclosure = remember(document.extension, presentationFidelity) {
-        fidelityDisclosureFor(document.extension, presentationFidelity)
-    }
-
     // Smart Resume: Restore last viewed slide on open
     var resumeReady by remember(document.uri, effectiveSlideCount) { mutableStateOf(false) }
     LaunchedEffect(document.uri, effectiveSlideCount) {
@@ -307,11 +317,9 @@ fun PresentationViewerScreen(
             withContext(Dispatchers.IO) {
                 val savedState = app?.documentRepository?.getViewState(document.uri)
                 val targetSlide = savedState?.lastPage?.coerceIn(0, effectiveSlideCount - 1) ?: 0
-                if (targetSlide > 0) {
-                    withContext(Dispatchers.Main) {
-                        pagerState.scrollToPage(targetSlide)
-                        lazyListState.scrollToItem(targetSlide)
-                    }
+                withContext(Dispatchers.Main) {
+                    pagerState.requestScrollToPage(targetSlide)
+                    lazyListState.requestScrollToItem(targetSlide)
                 }
             }
             resumeReady = true
@@ -319,7 +327,7 @@ fun PresentationViewerScreen(
     }
 
     // Smart Resume: Persist slide progress on change
-    LaunchedEffect(document.uri, currentSlideIndex, effectiveSlideCount, resumeReady) {
+    LaunchedEffect(document.uri, currentSlideIndex, effectiveSlideCount, resumeReady, readingMode) {
         if (resumeReady && effectiveSlideCount > 0) {
             withContext(Dispatchers.IO) {
                 app?.documentRepository?.updatePageProgress(document.uri, currentSlideIndex, effectiveSlideCount)
@@ -361,22 +369,23 @@ fun PresentationViewerScreen(
     }
 
     // In-slide keyword search match indices
-    val searchMatches = remember(searchQuery, effectiveSlides) {
-        if (searchQuery.length < 2) emptyList<Int>()
-        else {
-            val list = mutableListOf<Int>()
-            effectiveSlides.forEachIndexed { idx, slide ->
-                val inTitle = slide.title.contains(searchQuery, ignoreCase = true)
-                val inContent = slide.content.any { it.contains(searchQuery, ignoreCase = true) }
-                val inVisual = slide.visualElements.any { el ->
-                    el.paragraphs.any { p -> p.plainText.contains(searchQuery, ignoreCase = true) } ||
-                    el.tableRows.any { row -> row.any { cell -> cell.contains(searchQuery, ignoreCase = true) } }
-                }
-                if (inTitle || inContent || inVisual) {
-                    list.add(idx)
-                }
+    var searchMatches by remember(document.uri, searchQuery, effectiveSlides) {
+        mutableStateOf(emptyList<Int>())
+    }
+    LaunchedEffect(searchQuery, effectiveSlides) {
+        if (searchQuery.length < 2) return@LaunchedEffect
+        val query = searchQuery
+        searchMatches = withContext(Dispatchers.Default) {
+            effectiveSlides.mapIndexedNotNull { index, slide ->
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                val matches = slide.title.contains(query, ignoreCase = true) ||
+                    slide.content.any { it.contains(query, ignoreCase = true) } ||
+                    slide.visualElements.any { element ->
+                        element.paragraphs.any { it.plainText.contains(query, ignoreCase = true) } ||
+                            element.tableRows.any { row -> row.any { it.contains(query, ignoreCase = true) } }
+                    }
+                index.takeIf { matches }
             }
-            list
         }
     }
 
@@ -416,154 +425,88 @@ fun PresentationViewerScreen(
         ReadingMode.NORMAL -> colors.textPrimary
     }
 
-    val secondaryTextColor = when (readingMode) {
-        ReadingMode.INVERTED_DARK -> DocumentCanvasColors.invertedMuted
-        ReadingMode.SEPIA -> DocumentCanvasColors.sepiaMuted
-        ReadingMode.EYE_COMFORT -> DocumentCanvasColors.eyeComfortMuted
-        ReadingMode.NORMAL -> colors.textSecondary
+    val slideContents = remember(effectiveSlides, resources) {
+        effectiveSlides.mapIndexed { index, slide ->
+            OutlineItem(slide.title.ifBlank { resources.getString(R.string.slide_label, index + 1) }, index)
+        }
+    }
+    val showReaderControls = isControlsVisible && !isSlideshowMode
+    val goToSlide: (Int) -> Unit = { index ->
+        scope.launch {
+            if (isContinuousVertical) lazyListState.scrollToItem(index)
+            else pagerState.scrollToPage(index)
+        }
+    }
+    val moveSearch: (Int) -> Unit = { direction ->
+        if (searchMatches.isNotEmpty()) {
+            currentMatchIndex = if (currentMatchIndex < 0) {
+                if (direction > 0) 0 else searchMatches.lastIndex
+            } else {
+                (currentMatchIndex + direction).mod(searchMatches.size)
+            }
+            goToSlide(searchMatches[currentMatchIndex])
+        }
     }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            AnimatedVisibility(
-                visible = isControlsVisible && !isSlideshowMode,
-                enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
-                exit = fadeOut() + slideOutVertically(targetOffsetY = { -it })
-            ) {
-                Column {
-                    PresentationTopBar(
-                        document = document,
-                        effectiveSlideCount = effectiveSlideCount,
-                        isSlideshowMode = isSlideshowMode,
-                        isSearchOpen = isSearchOpen,
-                        searchQuery = searchQuery,
-                        searchMatchesCount = searchMatches.size,
-                        currentMatchIndex = currentMatchIndex,
-                        onQueryChanged = {
-                            searchQuery = it
-                            currentMatchIndex = 0
-                        },
-                        onNextMatch = {
-                            if (searchMatches.isNotEmpty()) {
-                                currentMatchIndex = (currentMatchIndex + 1) % searchMatches.size
-                                val target = searchMatches[currentMatchIndex]
-                                scope.launch {
-                                    if (isContinuousVertical) lazyListState.animateScrollToItem(target)
-                                    else pagerState.animateScrollToPage(target)
-                                }
-                            }
-                        },
-                        onPreviousMatch = {
-                            if (searchMatches.isNotEmpty()) {
-                                currentMatchIndex = (currentMatchIndex - 1 + searchMatches.size) % searchMatches.size
-                                val target = searchMatches[currentMatchIndex]
-                                scope.launch {
-                                    if (isContinuousVertical) lazyListState.animateScrollToItem(target)
-                                    else pagerState.animateScrollToPage(target)
-                                }
-                            }
-                        },
-                        onCloseSearch = {
-                            isSearchOpen = false
-                            searchQuery = ""
-                        },
-                        onOpenSearch = { isSearchOpen = true },
-                        onBackClick = onBackClick,
-                        isContinuousVertical = isContinuousVertical,
-                        onToggleContinuousVertical = {
-                            val newMode = !isContinuousVertical
-                            continuousReader = newMode
-                            scope.launch {
-                                if (newMode) {
-                                    lazyListState.scrollToItem(pagerState.currentPage)
-                                } else {
-                                    pagerState.scrollToPage(lazyListState.firstVisibleItemIndex)
-                                }
-                            }
-                        },
-                        onStartSlideshow = {
+            if (showReaderControls && isSearchOpen) {
+                SearchOverlay(
+                    visible = true,
+                    query = searchQuery,
+                    matchCount = searchMatches.size,
+                    currentMatchIndex = currentMatchIndex.coerceIn(0, (searchMatches.size - 1).coerceAtLeast(0)),
+                    onQueryChanged = {
+                        searchQuery = it
+                        currentMatchIndex = -1
+                    },
+                    onNextMatch = { moveSearch(1) },
+                    onPreviousMatch = { moveSearch(-1) },
+                    onCloseSearch = {
+                        isSearchOpen = false
+                        searchQuery = ""
+                        currentMatchIndex = -1
+                    }
+                )
+            } else {
+                ViewerTopBar(
+                    title = document.displayName,
+                    currentPage = currentSlideIndex,
+                    pageCount = effectiveSlideCount,
+                    visible = showReaderControls,
+                    isBookmarked = currentSlideIndex in bookmarks,
+                    onBackClick = onBackClick,
+                    onSearchClick = { isSearchOpen = true },
+                    onToggleBookmark = {
+                        app?.settingsRepository?.let { settings ->
+                            settings.toggleBookmark(document.uri, currentSlideIndex)
+                            bookmarks = settings.getBookmarks(document.uri)
+                        }
+                    },
+                    onShareClick = onShareClick,
+                    onSlideshowClick = if (effectiveSlideCount > 0) {
+                        {
                             pagerState.requestScrollToPage(currentSlideIndex)
                             isSlideshowMode = true
-                        },
-                        isVisualMode = isVisualMode,
-                        onToggleVisualMode = { isVisualMode = !isVisualMode },
-                        readingMode = readingMode,
-                        onCycleReadingMode = {
-                            readingMode = when (readingMode) {
-                                ReadingMode.NORMAL -> ReadingMode.INVERTED_DARK
-                                ReadingMode.INVERTED_DARK -> ReadingMode.SEPIA
-                                ReadingMode.SEPIA -> ReadingMode.EYE_COMFORT
-                                ReadingMode.EYE_COMFORT -> ReadingMode.NORMAL
-                            }
-                        },
-                        onOpenJumpDialog = { isJumpDialogOpen = true },
-                        onToggleThumbnailStrip = { isThumbnailStripOpen = !isThumbnailStripOpen },
-                        onOpenNotesSheet = { isNotesSheetOpen = true },
-                        onShareClick = onShareClick,
-                        onOpenInOfficeApp = { openPresentationInOfficeApp(context, document) },
-                        onPrintClick = {
-                            PrintHelper.printDocument(context, document) { msg ->
-                                context.showMessage(msg)
-                            }
                         }
-                    )
-                    // Chrome, so it hides with the bars: a recovered scrape must say so while
-                    // the reader can still see the controls that explain it.
-                    FidelityNotice(
-                        disclosure = fidelityDisclosure,
-                        dismissalKey = document.uri
-                    )
-                }
+                    } else null,
+                    onReflowClick = if (effectiveSlideCount > 0) { { isVisualMode = !isVisualMode } } else null,
+                    reflowLabel = stringResource(if (isVisualMode) R.string.pres_menu_outline else R.string.pres_menu_visual),
+                    onDocumentDetailsClick = if (effectiveSlideCount > 0) { { isNotesSheetOpen = true } } else null,
+                    documentDetailsLabel = stringResource(R.string.pres_speaker_notes)
+                )
             }
         },
         bottomBar = {
-            if (effectiveSlideCount > 0) {
-                AnimatedVisibility(
-                    visible = isControlsVisible && !isSlideshowMode,
-                    enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
-                    exit = fadeOut() + slideOutVertically(targetOffsetY = { it })
-                ) {
-                    PresentationBottomBar(
-                        effectiveSlideCount = effectiveSlideCount,
-                        currentSlideIndex = currentSlideIndex,
-                        effectiveSlides = effectiveSlides,
-                        isThumbnailStripOpen = isThumbnailStripOpen,
-                        onToggleThumbnailStrip = { isThumbnailStripOpen = !isThumbnailStripOpen },
-                        onSelectSlide = { index ->
-                            scope.launch {
-                                if (isContinuousVertical) {
-                                    lazyListState.animateScrollToItem(index)
-                                } else {
-                                    pagerState.animateScrollToPage(index)
-                                }
-                            }
-                        },
-                        onPreviousSlide = {
-                            scope.launch {
-                                if (currentSlideIndex > 0) {
-                                    if (isContinuousVertical) lazyListState.animateScrollToItem(currentSlideIndex - 1)
-                                    else pagerState.animateScrollToPage(currentSlideIndex - 1)
-                                }
-                            }
-                        },
-                        onNextSlide = {
-                            scope.launch {
-                                if (currentSlideIndex < effectiveSlideCount - 1) {
-                                    if (isContinuousVertical) lazyListState.animateScrollToItem(currentSlideIndex + 1)
-                                    else pagerState.animateScrollToPage(currentSlideIndex + 1)
-                                }
-                            }
-                        },
-                        onOpenJumpDialog = { isJumpDialogOpen = true },
-                        onOpenNotesSheet = { isNotesSheetOpen = true },
-                        bgColor = bgColor,
-                        cardBgColor = cardBgColor,
-                        textColor = textColor,
-                        secondaryTextColor = secondaryTextColor
-                    )
-                }
-            }
+            ViewerBottomBar(
+                currentPage = currentSlideIndex,
+                visible = showReaderControls && effectiveSlideCount > 0,
+                hasOutline = slideContents.isNotEmpty() || bookmarks.isNotEmpty(),
+                onOutlineClick = { isContentsOpen = true },
+                onPagesClick = { isJumpDialogOpen = true },
+                onAppearanceClick = { isAppearanceOpen = true }
+            )
         },
         containerColor = bgColor
     ) { innerPadding ->
@@ -797,6 +740,40 @@ fun PresentationViewerScreen(
                 }
             }
 
+            OutlineDrawer(
+                outline = slideContents,
+                isOpen = isContentsOpen,
+                onDismiss = { isContentsOpen = false },
+                onItemSelected = goToSlide,
+                bookmarks = bookmarks,
+                onRemoveBookmark = { page ->
+                    settings?.toggleBookmark(document.uri, page)
+                    bookmarks = settings?.getBookmarks(document.uri).orEmpty()
+                }
+            )
+            ReadingControlsBottomSheet(
+                isOpen = isAppearanceOpen,
+                onDismiss = { isAppearanceOpen = false },
+                document = document,
+                readingMode = readingMode,
+                onReadingModeChange = { mode -> settings?.updateReadingPrefs { it.copy(readingMode = mode) } },
+                isContinuousScroll = isContinuousVertical,
+                onScrollModeChange = { continuous ->
+                    val page = currentSlideIndex
+                    if (continuous != continuousReader) {
+                        if (continuous) lazyListState.requestScrollToItem(page)
+                        else pagerState.requestScrollToPage(page)
+                        continuousReader = continuous
+                    }
+                },
+                isDualPageView = false,
+                onDualPageViewChange = {},
+                showDualPageControl = false,
+                currentBrightness = readingPrefs.brightness,
+                onBrightnessChange = { value -> settings?.updateReadingPrefs { it.copy(brightness = value) } },
+                isKeepScreenOn = readingPrefs.keepScreenOn,
+                onKeepScreenOnChange = { value -> settings?.updateReadingPrefs { it.copy(keepScreenOn = value) } }
+            )
             PageJumpDialog(
                 isOpen = isJumpDialogOpen,
                 currentPage = currentSlideIndex,

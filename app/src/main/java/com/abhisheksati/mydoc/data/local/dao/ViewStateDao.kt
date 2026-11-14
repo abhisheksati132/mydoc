@@ -8,6 +8,9 @@ import com.abhisheksati.mydoc.data.local.entity.ViewStateEntity
 
 @Dao
 interface ViewStateDao {
+    @Query("DELETE FROM view_states")
+    suspend fun clearAllViewStates()
+
 
     @Query("SELECT * FROM view_states WHERE uri = :uri LIMIT 1")
     suspend fun getViewState(uri: String): ViewStateEntity?

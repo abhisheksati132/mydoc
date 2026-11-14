@@ -27,13 +27,11 @@ class ViewerContentsButtonOnDeviceTest {
             AppDesignSystemTheme {
                 ViewerBottomBar(
                     currentPage = 0,
-                    pageCount = 5,
                     visible = true,
                     hasOutline = hasOutline,
                     onOutlineClick = {},
                     onPagesClick = {},
-                    onAppearanceClick = {},
-                    onPageScrubbed = {}
+                    onAppearanceClick = {}
                 )
             }
         }

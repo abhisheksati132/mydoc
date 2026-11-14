@@ -3,7 +3,7 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
-## [Unreleased]
+## [2.0.6] — 2026-11-14
 
 ### Security & Integrity
 - **Updater lifetime safety**: dismiss/reset are now atomic against in-flight state writes; a dismissed download can no longer auto-install; the APK the system installer may still be reading is protected across process restarts (persisted) and for a grace period after supersession; re-downloading the same version no longer overwrites the active APK; cache cleanup preserves in-flight downloads.
@@ -19,6 +19,30 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ### Docs
 - Brand identity doc now states the actual dynamic-color default (off until a user opt-in control exists) and confirms the wired font stack.
+
+### Unified Reader Experience
+- **Presentation viewer on shared controls**: the PowerPoint reader now uses the same `ViewerTopBar`/`ViewerBottomBar` as PDF, with a slide **Contents** drawer, **bookmarks**, shared reading preferences (theme, brightness, keep-screen-on), speaker notes behind the details action, and keyword search moved off the main thread. The bespoke presentation top/bottom bars were removed.
+- **Page navigation**: replaced the bottom page-scrubber slider with a **Pages** jump dialog across readers; the Word reader gained a heading-based Contents outline and the Spreadsheet reader a sheets drawer.
+- **Presentation lifecycle**: staged temp files are always cleaned up, slide position restores via `requestScrollToPage`, and viewer state is keyed per document.
+
+### Material 3 Tonal UI
+- **Calmer surfaces**: the navigation dock, top bars, Tools rows, and photo viewer bar moved from live glass to tonal Material 3 surfaces for legibility and smoother frame times; glass remains where content scrolls beneath it.
+- **Simplified chrome**: removed the first-run onboarding guide, the Settings hero card, and the dock scan button for a cleaner, more consistent workspace.
+- **Wallpaper colors**: new opt-in **Settings → Appearance → Wallpaper colors** toggle (Android 12+) applies the Material You palette across MyDoc; the Ink & Seal palette stays the default.
+
+### Security & Integrity
+- **Symlink-safe deletion**: Recycle Bin purge and permanent delete use `NOFOLLOW_LINKS` tree walks with trash-root validation, so a symlink planted in the bin can never delete files outside it; rollback runs `NonCancellable` and cancellation is propagated. Covered by a new regression test.
+- **Archive decompression limits**: PPTX and XLSX readers now enforce the aggregate byte budget on *every* entry (including skipped ones) and cap entry counts, closing zip-bomb gaps; PPTX adds a seekable staged-file parse path. Covered by new tests.
+- **Image→PDF orientation**: honors EXIF mirror/flip, not just rotation.
+
+### Fixed
+- File selection now survives same-folder/category refreshes and is pruned to surviving paths; a failed load no longer wipes the visible list.
+- **Clear recents** is transactional and also clears saved view states and Word reflow progress (now excluded from backup/transfer).
+- Tool selection auto-launches the file picker; Office thumbnails render on demand in Quick Preview; ODF (`.odt/.ods/.odp`) mime types added to open intent filters.
+
+### Performance & Testing
+- Gentler PDF prefetch (180 ms settle, ±1 page at preview resolution) to reduce render contention during scrolling.
+- New frame-metrics tab-switch benchmark and an emulator guard in the device-test script.
 
 ## [2.0.5] — 2026-11-11
 

@@ -25,6 +25,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
+import java.nio.file.FileVisitResult
+import java.nio.file.Files
+import java.nio.file.LinkOption.NOFOLLOW_LINKS
+import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -298,6 +304,34 @@ class StorageRepositoryImpl(
         }
     }
 
+    private suspend fun deleteTree(entry: File): Boolean {
+        val coroutine = currentCoroutineContext()
+        val path = entry.toPath()
+        Files.walkFileTree(path, object : SimpleFileVisitor<Path>() {
+            override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                coroutine.ensureActive()
+                entryMutator.delete(file.toFile())
+                return FileVisitResult.CONTINUE
+            }
+
+            override fun postVisitDirectory(dir: Path, exc: java.io.IOException?): FileVisitResult {
+                coroutine.ensureActive()
+                if (exc != null) throw exc
+                entryMutator.delete(dir.toFile())
+                return FileVisitResult.CONTINUE
+            }
+        })
+        return Files.notExists(path, NOFOLLOW_LINKS)
+    }
+
+    private suspend fun deleteTrashEntry(entry: File): Boolean {
+        val root = getTrashDir(create = false).canonicalFile
+        if (entry.parentFile?.canonicalFile != root || entry.name in setOf(".", "..")) return false
+        val path = entry.toPath()
+        return if (Files.exists(path, NOFOLLOW_LINKS)) deleteTree(entry)
+        else root.canRead() && Files.notExists(path, NOFOLLOW_LINKS)
+    }
+
     override suspend fun delete(files: List<File>): Result<Int> = withContext(Dispatchers.IO) {
         mutationLock.withLock {
             try {
@@ -306,15 +340,15 @@ class StorageRepositoryImpl(
                 val failedNames = mutableListOf<String>()
                 for (file in files) {
                     currentCoroutineContext().ensureActive()
-                    if (!file.exists()) {
+                    if (!Files.exists(file.toPath(), NOFOLLOW_LINKS)) {
                         failed++
                         failedNames += file.name
                         continue
                     }
-                    val deleted = if (file.isDirectory) {
-                        file.deleteRecursively()
-                    } else {
-                        entryMutator.delete(file)
+                    val deleted = try {
+                        deleteTree(file)
+                    } catch (e: java.io.IOException) {
+                        false
                     }
                     if (deleted) {
                         count++
@@ -924,7 +958,7 @@ class StorageRepositoryImpl(
             // An archive that failed halfway used to leave the earlier entries behind while the
             // UI reported failure; the folder looked half-extracted with nothing saying so.
             for (created in createdDuringRun.asReversed()) {
-                runCatching { if (created.isDirectory) created.deleteRecursively() else created.delete() }
+                withContext(kotlinx.coroutines.NonCancellable) { runCatching { deleteTree(created) } }
             }
             if (error is CancellationException) throw error
         }
@@ -1068,14 +1102,16 @@ class StorageRepositoryImpl(
         results
     }
 
-    private fun getTrashDir(): File {
+    private fun getTrashDir(create: Boolean = true): File {
         // The bin lives on external app storage. Falling back to internal filesDir created a phantom
         // second bin: restore's availability guard then checked the wrong volume, so a detached card
         // looked like an empty, readable bin. Fail clearly instead; every caller reports the failure.
         val baseDir = context.getExternalFilesDir(null)
             ?: throw java.io.IOException("The Recycle Bin storage is unavailable; external storage is not mounted.")
         val trash = File(baseDir, ".trash")
-        if (!trash.exists()) trash.mkdirs()
+        if (Files.isSymbolicLink(trash.toPath()) || (!trash.isDirectory && (!create || !trash.mkdirs()))) {
+            throw java.io.IOException("The Recycle Bin folder is unavailable.")
+        }
         return trash
     }
 
@@ -1116,15 +1152,10 @@ class StorageRepositoryImpl(
 
                 for (expired in expiredItems) {
                     val file = File(expired.trashPath)
-                    val parent = file.parentFile
                     val deleted = try {
-                        if (!file.exists()) {
-                            // Guard against unmounted volumes: only clean DB record if volume/parent is mounted and readable
-                            parent != null && parent.exists() && parent.canRead()
-                        } else {
-                            if (file.isDirectory) file.deleteRecursively() else file.delete()
-                        }
-                    } catch (_: Exception) {
+                        deleteTrashEntry(file)
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         false
                     }
                     if (deleted) {
@@ -1365,20 +1396,9 @@ class StorageRepositoryImpl(
                 for (item in items) {
                     val trashFile = item.trashFile
                     val deleted = try {
-                        if (trashFile.exists()) {
-                            if (trashFile.isDirectory) {
-                                trashFile.deleteRecursively()
-                            } else {
-                                trashFile.delete()
-                            }
-                        } else {
-                            // Missing file: only treat it as deleted (and drop the record) when the bin
-                            // volume is mounted and readable. A detached volume must keep the record so
-                            // the item is not silently lost from the bin.
-                            val parent = trashFile.parentFile
-                            parent != null && parent.exists() && parent.canRead()
-                        }
-                    } catch (_: Exception) {
+                        deleteTrashEntry(trashFile)
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         false
                     }
                     if (deleted) {
@@ -1424,14 +1444,9 @@ class StorageRepositoryImpl(
                 for (f in files) {
                     currentCoroutineContext().ensureActive()
                     val gone = try {
-                        if (f.isDirectory) {
-                            f.walkTopDown().sortedByDescending { it.absolutePath.length }
-                                .forEach { node -> entryMutator.delete(node) }
-                        } else {
-                            entryMutator.delete(f)
-                        }
-                        !f.exists()
-                    } catch (_: Exception) {
+                        deleteTrashEntry(f)
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         false
                     }
                     if (gone) {

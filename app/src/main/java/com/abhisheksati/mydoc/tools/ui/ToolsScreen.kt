@@ -17,7 +17,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import com.abhisheksati.mydoc.designsystem.animation.pressScaleEffect
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -77,7 +76,7 @@ import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.components.AppTopBar
-import com.abhisheksati.mydoc.designsystem.components.GlassSurface
+import androidx.compose.material3.Surface
 import com.abhisheksati.mydoc.designsystem.components.GlassMotionState
 import com.abhisheksati.mydoc.designsystem.components.TrackGlassMotion
 import com.abhisheksati.mydoc.tools.model.PdfTool
@@ -351,14 +350,11 @@ private fun ToolRow(
 ) {
     val colors = AppTheme.colors
 
-    GlassSurface(
-        shape = AppRadius.cardShape,
-        elevation = 2.dp,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clip(AppRadius.cardShape)
-            .pressScaleEffect(onClick = onClick)
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
     ) {
         Row(
             modifier = Modifier

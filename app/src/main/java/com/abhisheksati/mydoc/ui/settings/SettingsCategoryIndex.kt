@@ -3,13 +3,11 @@ package com.abhisheksati.mydoc.ui.settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.Alignment
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
-import com.abhisheksati.mydoc.designsystem.components.SealMark
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Column
@@ -48,19 +46,6 @@ internal fun SettingsCategoryIndex(onSelect: (SettingsCategory) -> Unit, modifie
         R.string.settings_group_device to listOf(SettingsCategory.STORAGE, SettingsCategory.PRIVACY, SettingsCategory.ABOUT)
     )
     Column(modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        Surface(shape = AppRadius.xLargeShape, color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.fillMaxWidth()) {
-            Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                SealMark(Modifier.size(44.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(stringResource(R.string.settings_hero_title), style = AppTheme.typography.heading,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer)
-                    Text(stringResource(R.string.settings_hero_summary), style = AppTheme.typography.body,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer)
-                }
-            }
-        }
         groups.forEach { (label, categories) ->
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(label), style = MaterialTheme.typography.labelLarge,

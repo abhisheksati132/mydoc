@@ -25,26 +25,23 @@ object XlsxReader {
 
         ZipInputStream(source).use { zip ->
             var count = 0
-            while (count < 2000) {
-                val e = zip.nextEntry ?: break
-                count++
-                val n = e.name.replace('\\', '/').removePrefix("/")
-                if (isNeeded(n)) {
-                    if (totalBytesRead < maxTotalBytes) {
-                        val baos = java.io.ByteArrayOutputStream(minOf(maxEntryBytes, 64 * 1024))
-                        var entryRead = 0
-                        var read: Int
-                        while (zip.read(buf).also { read = it } != -1) {
-                            val toWrite = minOf(read, maxEntryBytes - entryRead)
-                            baos.write(buf, 0, toWrite)
-                            entryRead += toWrite
-                            if (entryRead >= maxEntryBytes) break
-                        }
-                        val entryData = baos.toByteArray()
-                        totalBytesRead += entryData.size
-                        entries[n] = entryData
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                if (++count > 2000) throw SecurityException("Spreadsheet package has too many entries")
+                val name = entry.name.replace('\\', '/').removePrefix("/")
+                val output = if (isNeeded(name)) java.io.ByteArrayOutputStream(16_384) else null
+                var entryBytes = 0
+                while (true) {
+                    val read = zip.read(buf)
+                    if (read < 0) break
+                    entryBytes += read
+                    totalBytesRead += read
+                    if (entryBytes > maxEntryBytes || totalBytesRead > maxTotalBytes) {
+                        throw SecurityException("Spreadsheet package exceeds the decompression limit")
                     }
+                    output?.write(buf, 0, read)
                 }
+                if (output != null) entries[name] = output.toByteArray()
             }
         }
         val theme = entries.entries.firstOrNull { it.key.startsWith("xl/theme/") && it.key.endsWith(".xml") }

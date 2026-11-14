@@ -87,6 +87,18 @@ class XlsxWorksheetFailureTest {
         return out.toByteArray()
     }
 
+    @Test(expected = SecurityException::class)
+    fun oversizedIgnoredEntryIsRejected() {
+        val out = ByteArrayOutputStream()
+        ZipOutputStream(out).use { zip ->
+            zip.putNextEntry(ZipEntry("ignored.bin"))
+            val chunk = ByteArray(1024 * 1024)
+            repeat(26) { zip.write(chunk) }
+            zip.closeEntry()
+        }
+        XlsxReader.read(out.toByteArray())
+    }
+
     @Test
     fun aWellFormedWorkbookReportsNothingFailed() {
         val bytes = workbook(listOf("Keep" to goodSheet, "Also" to goodSheet))
