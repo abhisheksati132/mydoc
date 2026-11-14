@@ -160,4 +160,27 @@ class DocxParserTest {
         }
         return bos.toByteArray()
     }
+
+    @Test
+    fun parse_bombInUnwantedEntry_isRejected() = runTest {
+        // A skipped entry used to be drained by closeEntry() off the books, so a bomb built from
+        // unwanted parts could decompress unbounded. Every entry now counts toward the budget.
+        val bos = ByteArrayOutputStream()
+        ZipOutputStream(bos).use { zos ->
+            zos.putNextEntry(ZipEntry("word/document.xml"))
+            zos.write(
+                ("<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" +
+                    "<w:body><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:body></w:document>").toByteArray()
+            )
+            zos.closeEntry()
+            zos.putNextEntry(ZipEntry("word/junk.bin"))
+            val chunk = ByteArray(1024 * 1024)
+            repeat(26) { zos.write(chunk) }
+            zos.closeEntry()
+        }
+        val failure = runCatching { parser.parse(ByteArrayInputStream(bos.toByteArray())) }
+            .exceptionOrNull() as? DocumentLoadException
+        assertNotNull(failure)
+        assertEquals(LoadFailure.EXCEEDS_LIMITS, failure?.failure)
+    }
 }

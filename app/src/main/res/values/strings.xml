@@ -1,6 +1,5 @@
 <resources>
     <string name="tools_featured">Start here</string>
-    <string name="rendering_information">Rendering information</string>
     <string name="word_engine_licenses">Office engine licenses</string>
     <string name="open_source_licenses">Open source licenses</string>
     <string name="app_name">MyDoc</string>

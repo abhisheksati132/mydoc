@@ -323,6 +323,7 @@ private fun CategoryShortcutGrid(
 @Composable
 private fun StorageBreakdown(storageUiState: StorageAnalysisUiState) {
     val colors = AppTheme.colors
+    val scheme = MaterialTheme.colorScheme
     val palette = listOf(colors.accent, colors.accentAmber, colors.accentCyan, colors.accentGreen, colors.accentPink)
     val entries = storageUiState.categories
         .filter { it.type != StorageCategoryType.DOWNLOADS && it.type != StorageCategoryType.LARGE_FILES }
@@ -334,57 +335,85 @@ private fun StorageBreakdown(storageUiState: StorageAnalysisUiState) {
     val used = (total - free).coerceIn(0, total.coerceAtLeast(0))
     val unclassified = (used - categoryBytes).coerceAtLeast(0)
     val categoriesFit = categoryBytes <= used
+    val sweepProgress by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (total > 0) 1f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(900, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "storageSweep"
+    )
+    val cardShape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         if (total > 0) {
-            Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
-                androidx.compose.foundation.Canvas(Modifier.size(176.dp)) {
-                    val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = 23.dp.toPx())
-                    val inset = stroke.width / 2
-                    val topLeft = androidx.compose.ui.geometry.Offset(inset, inset)
-                    val bounds = androidx.compose.ui.geometry.Size(size.width - stroke.width, size.height - stroke.width)
-                    drawArc(freeColor, 0f, 360f, false, topLeft, bounds, style = stroke)
-                    var start = -90f
-                    if (categoriesFit && entries.isNotEmpty()) {
-                        entries.forEachIndexed { index, stat ->
-                            val sweep = (stat.bytes.toDouble() / total * 360).toFloat()
-                            if (sweep > 0f) drawArc(palette[index % palette.size], start, sweep, false,
-                                topLeft, bounds, style = stroke)
-                            start += sweep
+            androidx.compose.material3.Surface(shape = cardShape, color = scheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    Modifier.fillMaxWidth().padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(Modifier.size(184.dp), contentAlignment = Alignment.Center) {
+                        androidx.compose.foundation.Canvas(Modifier.size(184.dp)) {
+                            val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = 18.dp.toPx())
+                            val inset = stroke.width / 2
+                            val topLeft = androidx.compose.ui.geometry.Offset(inset, inset)
+                            val bounds = androidx.compose.ui.geometry.Size(size.width - stroke.width, size.height - stroke.width)
+                            drawArc(freeColor.copy(alpha = 0.45f), 0f, 360f, false, topLeft, bounds, style = stroke)
+                            var start = -90f
+                            val gap = if (entries.size > 1) 2.5f else 0f
+                            if (categoriesFit && entries.isNotEmpty()) {
+                                entries.forEachIndexed { index, stat ->
+                                    val full = (stat.bytes.toDouble() / total * 360).toFloat()
+                                    val sweep = full * sweepProgress
+                                    if (sweep > gap) drawArc(palette[index % palette.size], start, sweep - gap, false, topLeft, bounds, style = stroke)
+                                    start += full
+                                }
+                                if (unclassified > 0) {
+                                    val sweep = (unclassified.toDouble() / total * 360).toFloat() * sweepProgress
+                                    if (sweep > gap) drawArc(colors.inkMuted, start, sweep - gap, false, topLeft, bounds, style = stroke)
+                                }
+                            } else {
+                                drawArc(colors.accent, start, (used.toDouble() / total * 360).toFloat() * sweepProgress, false, topLeft, bounds, style = stroke)
+                            }
                         }
-                        if (unclassified > 0) drawArc(colors.inkMuted, start,
-                            (unclassified.toDouble() / total * 360).toFloat(), false, topLeft, bounds, style = stroke)
-                    } else {
-                        drawArc(colors.accent, start, (used.toDouble() / total * 360).toFloat(), false,
-                            topLeft, bounds, style = stroke)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(storageUiState.formattedUsed, style = AppTheme.typography.title, color = scheme.onSurface)
+                            Text(stringResource(R.string.storage_chart_used), style = AppTheme.typography.caption, color = scheme.onSurfaceVariant)
+                        }
+                    }
+                    if (!categoriesFit) {
+                        Text(stringResource(R.string.storage_chart_overlap), style = AppTheme.typography.caption, color = colors.inkMuted)
                     }
                 }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(storageUiState.formattedUsed, style = AppTheme.typography.titleSmall)
-                    Text(stringResource(R.string.storage_chart_used), style = AppTheme.typography.caption)
+            }
+        }
+        androidx.compose.material3.Surface(shape = cardShape, color = scheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
+                entries.forEachIndexed { index, stat ->
+                    val pct = if (total > 0) (stat.bytes.toDouble() / total * 100).toInt() else 0
+                    StorageLegendRow(stringResource(stat.type.titleRes), stat.formattedSize, pct,
+                        if (categoriesFit) palette[index % palette.size] else colors.inkMuted)
                 }
+                if (total > 0 && categoriesFit && unclassified > 0) {
+                    StorageLegendRow(stringResource(R.string.storage_chart_unclassified), StorageVolume.formatBytes(unclassified),
+                        (unclassified.toDouble() / total * 100).toInt(), colors.inkMuted)
+                }
+                if (total > 0) StorageLegendRow(stringResource(R.string.storage_chart_free), storageUiState.formattedFree,
+                    (free.toDouble() / total * 100).toInt(), freeColor)
             }
-            if (!categoriesFit) {
-                Text(stringResource(R.string.storage_chart_overlap), style = AppTheme.typography.caption, color = colors.inkMuted)
-            }
         }
-        entries.forEachIndexed { index, stat ->
-            StorageLegendRow(stringResource(stat.type.titleRes), stat.formattedSize,
-                if (categoriesFit) palette[index % palette.size] else colors.inkMuted)
-        }
-        if (total > 0 && categoriesFit && unclassified > 0) {
-            StorageLegendRow(stringResource(R.string.storage_chart_unclassified), StorageVolume.formatBytes(unclassified), colors.inkMuted)
-        }
-        if (total > 0) StorageLegendRow(stringResource(R.string.storage_chart_free), storageUiState.formattedFree, freeColor)
     }
 }
 
 @Composable
-private fun StorageLegendRow(label: String, value: String, color: androidx.compose.ui.graphics.Color) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(Modifier.size(9.dp).clip(CircleShape).background(color))
-        Text(label, style = AppTheme.typography.body, modifier = Modifier.weight(1f))
-        Text(value, style = AppTheme.typography.bodyStrong)
+private fun StorageLegendRow(label: String, value: String, percent: Int, color: androidx.compose.ui.graphics.Color) {
+    val scheme = MaterialTheme.colorScheme
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Box(Modifier.size(10.dp).clip(CircleShape).background(color))
+        Text(label, style = AppTheme.typography.body, modifier = Modifier.weight(1f), color = scheme.onSurface)
+        Text("$percent%", style = AppTheme.typography.caption, color = scheme.onSurfaceVariant)
+        Text(value, style = AppTheme.typography.bodyStrong, color = scheme.onSurface)
     }
 }
 
@@ -680,15 +709,28 @@ fun StorageInsightsScreen(
                 containerColor = scheme.background
             )
             Spacer(Modifier.height(4.dp))
-            Text(
-                text = if (storageUiState.totalBytes > 0) {
-                    "${storageUiState.formattedUsed} used of ${storageUiState.formattedTotal} · ${storageUiState.formattedFree} free"
-                } else {
-                    stringResource(R.string.storage_calculating)
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onSurfaceVariant
-            )
+            if (storageUiState.totalBytes > 0) {
+                val usedFraction = ((storageUiState.totalBytes - storageUiState.freeBytes).toFloat() / storageUiState.totalBytes).coerceIn(0f, 1f)
+                val animatedFraction by androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = usedFraction,
+                    animationSpec = androidx.compose.animation.core.tween(900, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                    label = "storageBar"
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(storageUiState.formattedUsed, style = MaterialTheme.typography.headlineSmall, color = scheme.onSurface)
+                    Text(
+                        "of ${storageUiState.formattedTotal} · ${storageUiState.formattedFree} free",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = scheme.onSurfaceVariant
+                    )
+                    val barShape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
+                    Box(Modifier.fillMaxWidth().height(8.dp).clip(barShape).background(scheme.surfaceContainerHighest)) {
+                        Box(Modifier.fillMaxWidth(animatedFraction).height(8.dp).clip(barShape).background(scheme.primary))
+                    }
+                }
+            } else {
+                Text(stringResource(R.string.storage_calculating), style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
+            }
             Spacer(Modifier.height(16.dp))
             StorageBreakdown(storageUiState = storageUiState)
             Spacer(Modifier.height(12.dp))

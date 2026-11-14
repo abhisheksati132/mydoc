@@ -145,14 +145,22 @@ class DocxParser {
                             // in word/_rels/document.xml.rels, list definitions in word/numbering.xml,
                             // heading levels in word/styles.xml, and footnote text in word/footnotes.xml.
                             val wanted = norm in READER_PARTS || norm.startsWith("word/media/")
-                            if (wanted) {
-                                val data = readBounded(zis, 25 * 1024 * 1024)
-                                totalExtractedBytes += data.size
-                                if (totalExtractedBytes > 100L * 1024 * 1024) {
+                            // Drain every entry through the budget, not only the ones we keep: a skipped
+                            // bomb entry left to closeEntry() would decompress unbounded off the books.
+                            val output = if (wanted) java.io.ByteArrayOutputStream(16384) else null
+                            var entryBytes = 0
+                            val buf = ByteArray(16384)
+                            while (true) {
+                                val read = zis.read(buf)
+                                if (read < 0) break
+                                entryBytes += read
+                                totalExtractedBytes += read
+                                if (entryBytes > 25 * 1024 * 1024 || totalExtractedBytes > 100L * 1024 * 1024) {
                                     throw SecurityException("Aggregate decompressed content exceeds 100 MB limit")
                                 }
-                                entryMap[norm] = data
+                                output?.write(buf, 0, read)
                             }
+                            if (output != null) entryMap[norm] = output.toByteArray()
                         }
                         zis.closeEntry()
                         entry = zis.nextEntry
@@ -1183,19 +1191,5 @@ class DocxParser {
             }
         }
         return out.toString()
-    }
-
-    private fun readBounded(input: java.io.InputStream, maxBytes: Int): ByteArray {
-        val baos = java.io.ByteArrayOutputStream(minOf(maxBytes, 64 * 1024))
-        val buf = ByteArray(16384)
-        var total = 0
-        var n: Int
-        while (input.read(buf).also { n = it } != -1) {
-            val toWrite = minOf(n, maxBytes - total)
-            baos.write(buf, 0, toWrite)
-            total += toWrite
-            if (total >= maxBytes) break
-        }
-        return baos.toByteArray()
     }
 }

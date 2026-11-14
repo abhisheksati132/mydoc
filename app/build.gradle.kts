@@ -12,8 +12,8 @@ plugins {
 //   4. Tag & push: git tag v1.2.1 && git push origin v1.2.1
 //   5. Create GitHub Release with tag "v1.2.1" — the in-app updater reads this tag
 // -----------------------------------------------------------------------------
-val APP_VERSION_NAME = "2.0.6"
-val APP_VERSION_CODE = 196  // Increment by 1 every release, never decrease
+val APP_VERSION_NAME = "2.0.7"
+val APP_VERSION_CODE = 197  // Increment by 1 every release, never decrease
 
 android {
     namespace = "com.abhisheksati.mydoc"
@@ -110,6 +110,9 @@ android {
         }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            // Bouncy Castle post-quantum (SIKE/Picnic) parameter tables are ~4 MB compressed and
+            // unreachable from MyDoc's PDF crypto, which uses only standard RSA/EC/AES.
+            excludes += "/org/bouncycastle/pqc/**"
         }
     }
 

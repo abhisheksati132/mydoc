@@ -68,7 +68,6 @@ import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.ui.viewer.DocumentProblemScreen
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.domain.model.ReadingPrefs
-import com.abhisheksati.mydoc.domain.model.RenderFidelity
 import com.abhisheksati.mydoc.domain.model.ViewState
 import com.abhisheksati.mydoc.rendering.engine.word.DocxBlock
 import com.abhisheksati.mydoc.rendering.engine.word.DocxDocument
@@ -277,7 +276,6 @@ fun WordViewerScreen(
         ),
         currentPage = pagination.pageForBlockIndex(visibleBlockIndex),
         pageCount = pagination.effectivePageCount,
-        observedFidelity = RenderFidelity.STRUCTURED_REFLOW,
         isControlsVisible = !isSearchOpen,
         onBackClick = onBackClick,
         onShareClick = onShareClick,

@@ -3,6 +3,22 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [2.0.7] — 2026-11-14
+
+### Smaller install
+- **~4 MB lighter download, ~8 MB lighter on device**: removed Bouncy Castle's unused post-quantum (SIKE/Picnic) parameter tables. MyDoc's PDF crypto uses MuPDF and standard RSA/EC/AES, so these were dead weight. The ARM64 APK drops from ~22.8 MB to ~18.9 MB.
+
+### Calmer, clearer reading
+- **Removed the floating layout warning** from every document viewer. Rendering-fidelity details remain available on demand in Document details, so the page stays free of chrome.
+- **Storage Insights redesigned**: an animated segmented donut in a tonal card with a clear used-space hero, an animated used/free progress bar, and a cleaner legend with per-category percentages.
+
+### Hardening & reliability
+- **Word parser zip-bomb fix**: the DOCX reader now drains *every* archive entry through its decompression budget, not just the parts it keeps — a bomb built from skipped entries can no longer decompress unbounded. Matches the existing PPTX/XLSX protections.
+- **Parser fuzz tests**: PPTX, XLSX, and DOCX readers are verified to fail safely (no memory-safety crashes) on random, truncated, and malformed input.
+
+### Cleanup
+- Removed the orphaned rendering-information string and dead parser code.
+
 ## [2.0.6] — 2026-11-14
 
 ### Security & Integrity

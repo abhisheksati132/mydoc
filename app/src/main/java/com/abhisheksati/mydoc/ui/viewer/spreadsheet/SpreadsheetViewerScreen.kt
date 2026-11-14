@@ -66,7 +66,6 @@ import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.LoadFailure
 import com.abhisheksati.mydoc.ui.viewer.DocumentProblemScreen
 import com.abhisheksati.mydoc.domain.model.ReadingPrefs
-import com.abhisheksati.mydoc.domain.model.RenderFidelity
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
 import com.abhisheksati.mydoc.rendering.engine.spreadsheet.SheetData
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerCapabilities
@@ -141,7 +140,6 @@ fun SpreadsheetViewerScreen(
         ),
         currentPage = state.selectedSheetIndex,
         pageCount = state.model.sheets.size.coerceAtLeast(1),
-        observedFidelity = RenderFidelity.STRUCTURED_REFLOW,
         isControlsVisible = !isSearchOpen,
         onBackClick = onBackClick,
         onShareClick = onShareClick,
