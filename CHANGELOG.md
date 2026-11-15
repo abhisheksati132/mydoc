@@ -3,13 +3,23 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
-## [Unreleased]
+## [2.0.10] — 2026-11-15
 
 ### Trust, on the surface
 - **Privacy & trust** in Settings → About: one dialog explains on-device processing, why folder access is requested, how updates are verified (SHA-256 plus the pinned certificate), and that crash reports stay local.
 - **Report an issue** opens GitHub with the app version, device, and Android version already filled in, and the repository now has bug and feature request forms.
 - **Privacy policy** ([PRIVACY.md](PRIVACY.md)) documents the complete data story — no account, no analytics, no uploads — and is linked from README and About.
 - **README screenshots** of Library, reader, tools, files, and the privacy dialog; a Contributor guide; CodeQL and Dependabot automation; historical notes and audits are now labelled as such.
+
+### Faster, quieter, better instrumented
+- **Baseline profile**: a generated startup profile ships with the ProfileInstaller so cold starts reach the compiled path sooner.
+- **Indexed recents**: newest-first queries are indexed and the recents feed is bounded, so large histories stay smooth.
+- **On-device crash capture**: crashes are recorded locally and surfaced in Settings → About — nothing is uploaded.
+- **Strict network posture**: the app refuses cleartext traffic and trusts only system CAs; the only hosts it contacts are api.github.com for update checks and github.com for downloads.
+
+### Under the hood
+- AGP 9.5.1, Kotlin 2.4.21, Gradle 9.9.1, and UiAutomator 2.4.1, with dependency-verification metadata regenerated for every artifact.
+- CodeQL v4, with action updates grouped so its init and analyze steps can never drift apart.
 
 ## [2.0.9] — 2026-11-15
 
