@@ -94,10 +94,17 @@ android {
         }
         // Mirrors release (R8 on, shrinker on) so Macrobenchmark measures what users install.
         // The public shared keystore keeps CI and local benchmark runs installable.
+        // -Pmydoc.profileGen turns R8 off so BaselineProfileGenerator records source names;
+        // AGP remaps src/main/baseline-prof.txt per variant when packaging.
+        val profileGen = project.hasProperty("mydoc.profileGen")
         create("benchmark") {
             initWith(getByName("release"))
             signingConfig = signingConfigs.getByName("shared")
             isDebuggable = false
+            if (profileGen) {
+                isMinifyEnabled = false
+                isShrinkResources = false
+            }
             matchingFallbacks += listOf("release")
         }
     }
@@ -189,6 +196,10 @@ dependencies {
     ksp(libs.room.compiler)
 
     implementation(libs.kotlinx.coroutines.android)
+
+    // Applies the bundled baseline profile on API 26–30 in the background; newer platforms
+    // compile it at install time. MyDoc ships via GitHub, so Play's cloud profiles never apply.
+    implementation(libs.androidx.profileinstaller)
 
     testImplementation(libs.junit)
     testImplementation(libs.kxml2)
