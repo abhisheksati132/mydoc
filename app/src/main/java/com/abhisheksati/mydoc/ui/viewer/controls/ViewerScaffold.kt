@@ -1,6 +1,7 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
 import android.app.Activity
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -29,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.abhisheksati.mydoc.data.local.entity.HighlightEntity
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsDark
 import com.abhisheksati.mydoc.MyDocApp
@@ -40,9 +42,14 @@ import com.abhisheksati.mydoc.util.openFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.domain.model.ReadingPrefs
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
+import com.abhisheksati.mydoc.tools.notes.NotesExporter
 import com.abhisheksati.mydoc.ui.home.DocumentDetailsDialog
+import com.abhisheksati.mydoc.ui.viewer.pdf.ExportNotesDialog
+import com.abhisheksati.mydoc.util.shareFile
 import androidx.core.net.toUri
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Declares capabilities supported by a specific document format viewer.
@@ -164,6 +171,23 @@ fun ViewerScaffold(
 
     var isAppearanceSheetOpen by remember { mutableStateOf(false) }
     var isDocumentDetailsOpen by remember { mutableStateOf(false) }
+    var notesForExport by remember { mutableStateOf<List<HighlightEntity>?>(null) }
+
+    // Notes export is document-level, so every viewer with a scaffold gets it: the saved
+    // highlights are read from the shared store rather than the format's text layer.
+    val exportNotesClick: () -> Unit = {
+        viewerScope.launch {
+            val notes = withContext(Dispatchers.IO) {
+                runCatching { app?.database?.highlightDao()?.getForDocument(document.uri) }
+                    .getOrNull()
+            }
+            if (notes.isNullOrEmpty()) {
+                context.showMessage(resources.getString(R.string.notes_none_saved))
+            } else {
+                notesForExport = notes
+            }
+        }
+    }
 
     // When no owner supplies bookmark state, read it from the store and refresh after each toggle.
     // The fallback used to write the bookmark while the icon stayed hollow, so a tap looked lost.
@@ -273,6 +297,7 @@ fun ViewerScaffold(
             reflowLabel = reflowLabel,
             onDocumentDetailsClick = onDetailsClick ?: { isDocumentDetailsOpen = true },
             documentDetailsLabel = documentDetailsLabel,
+            onExportNotesClick = exportNotesClick,
             modifier = Modifier.align(Alignment.TopCenter),
             hazeState = readerHaze.takeIf { liveReaderGlass }
         )
@@ -383,6 +408,33 @@ fun ViewerScaffold(
         // Password Dialog slot
         if (passwordDialog != null) {
             passwordDialog()
+        }
+
+        notesForExport?.let { notes ->
+            val exportNotes: (String, String) -> Unit = { mimeType, extension ->
+                notesForExport = null
+                viewerScope.launch {
+                    val file = withContext(Dispatchers.IO) {
+                        runCatching {
+                            if (extension == "md") NotesExporter.writeMarkdown(context, document.displayName, notes)
+                            else NotesExporter.writePdf(context, document.displayName, notes)
+                        }.getOrNull()
+                    }
+                    val shared = file != null && shareFile(
+                        context,
+                        Uri.fromFile(file),
+                        mimeType,
+                        resources.getString(R.string.notes_export_share_title)
+                    )
+                    if (!shared) context.showMessage(resources.getString(R.string.notes_export_failed))
+                }
+            }
+            ExportNotesDialog(
+                highlightCount = notes.size,
+                onDismiss = { notesForExport = null },
+                onExportMarkdown = { exportNotes("text/markdown", "md") },
+                onExportPdf = { exportNotes("application/pdf", "pdf") }
+            )
         }
 
         // Format-specific dialogs and drawers.

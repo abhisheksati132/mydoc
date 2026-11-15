@@ -40,8 +40,74 @@ class DocumentIndexer(private val context: Context,private val store: DiscoveryS
         }
         progress("Finished: $done files. " + if(limit) "Selection limit reached; add another folder or batch to continue." else "Refresh after files change. Scanned pages need OCR and are not text-indexed.")
     }
-    private suspend fun index(uri: Uri) {
-        val previous=store.file(uri.toString())
+    /**
+     * Index the offline copy MyDoc already keeps for [uri]. Runs after a document is opened so
+     * Spotlight can search its text without asking the user to add folders first.
+     */
+    suspend fun indexSavedCopy(uri: Uri, file: File, name: String, mime: String) = withContext(Dispatchers.IO) {
+        if (!file.isFile || file.length() <= 0L) return@withContext
+        val previous = store.file(uri.toString())
+        if (previous != null && previous.size == file.length() && previous.modified == file.lastModified()) {
+            return@withContext
+        }
+        val ext = name.substringAfterLast('.', "").lowercase(java.util.Locale.ROOT)
+        val pages = mutableListOf<Pair<Int, String>>()
+        var status = "Name and tags only — no text extractor for this format"
+        var converted: File? = null
+        try {
+            if (file.length() > 16L * 1024 * 1024) {
+                status = "Not text-indexed: source exceeds 16 MiB"
+            } else if (ext in setOf("txt", "md", "csv", "tsv", "log", "json", "xml", "html")) {
+                pages.add(0 to file.readText().take(200_000))
+                status = "Text indexed"
+            } else {
+                val converter = DocumentFormats.converterFor(ext)
+                if (converter != ConverterKind.NONE || ext in setOf("pdf", "epub", "fb2", "xps")) {
+                    val pdf = if (converter != ConverterKind.NONE) {
+                        val result = NativeOfficeConverter.convert(context, Uri.fromFile(file), name)
+                        result.pdfFile?.also { converted = it }
+                            ?: error((result as? com.abhisheksati.mydoc.rendering.engine.OfficeConversion.Failure)?.message ?: "Could not render document")
+                    } else file
+                    val renderer = MuPdfRenderer(filePath = pdf.absolutePath)
+                    try {
+                        if (renderer.isPasswordProtected) error("Locked file: text not indexed")
+                        val total = renderer.pageCount
+                        if (total <= 0) error("Corrupt or invalid document")
+                        var remaining = 200_000
+                        var indexed = 0
+                        for (p in 0 until minOf(200, total)) {
+                            currentCoroutineContext().ensureActive()
+                            if (remaining <= 0) break
+                            val text = renderer.getPageText(p).orEmpty().take(remaining)
+                            if (text.isNotBlank()) pages.add(p to text)
+                            remaining -= text.length
+                            indexed++
+                        }
+                        status = when {
+                            pages.isEmpty() -> "No text layer: scanned pages require OCR"
+                            indexed < total || remaining == 0 -> "Partial: $indexed of $total pages, up to 200,000 characters"
+                            else -> "Indexed $indexed pages"
+                        }
+                    } finally {
+                        renderer.close()
+                    }
+                }
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (e: Exception) {
+            pages.clear()
+            status = "Unavailable: ${e.message ?: "could not read file"}"
+        } finally {
+            converted?.delete()
+        }
+        store.put(
+            DiscoveredFile(uri.toString(), name, mime, file.length(), file.lastModified(), status, System.currentTimeMillis()),
+            pages
+        )
+    }
+
+    private suspend fun index(uri: Uri) {        val previous=store.file(uri.toString())
         val source=runCatching { SelectedDocument.read(context,uri) }.getOrNull()
         val name=runCatching { source?.name }.getOrNull() ?: previous?.name ?: uri.lastPathSegment ?: "Document"
         val size=runCatching { source?.size }.getOrNull() ?: previous?.size ?: 0L

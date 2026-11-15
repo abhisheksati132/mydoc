@@ -36,7 +36,8 @@ fun DocumentTtsBar(
     documentText: String,
     isVisible: Boolean,
     onClose: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onStartPlayback: (() -> Unit)? = null
 ) {
     val colors = AppTheme.colors
     val typography = AppTheme.typography
@@ -46,6 +47,20 @@ fun DocumentTtsBar(
     val speed by ttsManager.speechRate.collectAsState()
     val currentUtterance by ttsManager.currentUtterance.collectAsState()
     val engineName by ttsManager.engineName.collectAsState()
+    val spokenPage by ttsManager.currentPage.collectAsState()
+
+    val notificationPermission = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { }
+    fun ensureNotificationPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context, android.Manifest.permission.POST_NOTIFICATIONS
+            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     val speeds = listOf(0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
 
@@ -93,7 +108,9 @@ fun DocumentTtsBar(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = when (state) {
-                                TtsPlaybackState.PLAYING -> stringResource(R.string.tts_reading)
+                                TtsPlaybackState.PLAYING -> if (spokenPage >= 0) {
+                                    stringResource(R.string.tts_reading_page, spokenPage + 1)
+                                } else stringResource(R.string.tts_reading)
                                 TtsPlaybackState.PAUSED -> stringResource(R.string.tts_paused)
                                 TtsPlaybackState.INITIALIZING -> stringResource(R.string.tts_initializing)
                                 TtsPlaybackState.ERROR -> stringResource(R.string.tts_error)
@@ -141,7 +158,11 @@ fun DocumentTtsBar(
                             when (state) {
                                 TtsPlaybackState.PLAYING -> ttsManager.pause()
                                 TtsPlaybackState.PAUSED -> ttsManager.resume()
-                                else -> ttsManager.startReading(documentText)
+                                else -> {
+                                    ensureNotificationPermission()
+                                    if (onStartPlayback != null) onStartPlayback()
+                                    else ttsManager.startReading(documentText)
+                                }
                             }
                         },
                         colors = ButtonDefaults.buttonColors(

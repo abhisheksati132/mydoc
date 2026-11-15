@@ -34,6 +34,7 @@ fun BoxScope.PdfViewerControlsOverlay(
     onSlideshowClick: (() -> Unit)?,
     onReflowClick: (() -> Unit)?,
     onDocumentDetailsClick: () -> Unit,
+    onExportNotesClick: (() -> Unit)?,
     onOpenOutlineDrawer: () -> Unit,
     onOpenThumbnailGrid: () -> Unit,
     onOpenReadingControls: () -> Unit,
@@ -65,6 +66,7 @@ fun BoxScope.PdfViewerControlsOverlay(
             com.abhisheksati.mydoc.domain.model.DocumentFamily.SPREADSHEET)
             androidx.compose.ui.res.stringResource(com.abhisheksati.mydoc.R.string.viewer_action_cell_grid) else null,
         onDocumentDetailsClick = onDocumentDetailsClick,
+        onExportNotesClick = onExportNotesClick,
         hazeState = hazeState,
         modifier = Modifier.align(Alignment.TopCenter)
     )

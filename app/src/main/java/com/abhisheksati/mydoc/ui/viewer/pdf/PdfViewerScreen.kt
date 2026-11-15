@@ -61,6 +61,8 @@ import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
 import com.abhisheksati.mydoc.tools.model.PdfTool
+import com.abhisheksati.mydoc.tools.notes.NotesExporter
+import com.abhisheksati.mydoc.util.shareFile
 import com.abhisheksati.mydoc.ui.viewer.controls.FastScrollbar
 import com.abhisheksati.mydoc.ui.viewer.controls.ZoomableViewport
 import com.abhisheksati.mydoc.ui.viewer.controls.rememberZoomState
@@ -118,6 +120,28 @@ fun PdfViewerScreen(
     }
     var isTtsVisible by remember { mutableStateOf(false) }
     var currentTtsText by remember { mutableStateOf("") }
+    var notesForExport by remember { mutableStateOf<List<com.abhisheksati.mydoc.data.local.entity.HighlightEntity>?>(null) }
+    val saveHighlight: (Int, String) -> Unit = { page, text ->
+        val myApp = app
+        if (myApp != null) {
+            coroutineScope.launch {
+                runCatching {
+                    myApp.database.highlightDao().insert(
+                        com.abhisheksati.mydoc.data.local.entity.HighlightEntity(
+                            documentUri = document.uri,
+                            pageIndex = page,
+                            text = text,
+                            createdTimestamp = System.currentTimeMillis()
+                        )
+                    )
+                }.onSuccess {
+                    context.showMessage(resources.getString(R.string.notes_highlight_saved))
+                }.onFailure {
+                    context.showMessage(resources.getString(R.string.notes_highlight_failed))
+                }
+            }
+        }
+    }
     var selectedPageForActions by remember { mutableStateOf<Int?>(null) }
     var selectedTextState by remember { mutableStateOf<Pair<Int, com.abhisheksati.mydoc.rendering.engine.TextSelectionResult>?>(null) }
 
@@ -221,8 +245,43 @@ fun PdfViewerScreen(
         }
     }
 
+    // Audiobook: read from a page to the end, following the spoken page in the viewer.
+    // Pages whose digital text layer is empty (scans, fonts without ToUnicode) fall back to OCR
+    // so the audiobook still runs instead of stopping on the first unreadable page.
+    val startAudiobook: (Int) -> Unit = { fromPage ->
+        isTtsVisible = true
+        currentTtsText = ""
+        ttsManager.startReadingPages(
+            startPage = fromPage.coerceAtLeast(0),
+            pageCount = state.pageCount,
+            title = document.displayName,
+            loader = { page ->
+                val digital = runCatching { viewModel.getPageText(page) }.getOrNull()
+                if (!digital.isNullOrBlank()) {
+                    digital
+                } else {
+                    withContext(Dispatchers.Default) {
+                        val bitmap = runCatching { viewModel.renderPageBitmap(page, 1.5f) }.getOrNull()
+                        bitmap?.let { bmp -> runCatching { ocrEngine.recognizeText(bmp) }.getOrNull() }
+                    }
+                }
+            }
+        )
+    }
+    val ttsPage by ttsManager.currentPage.collectAsState()
+    val ttsPlayback by ttsManager.playbackState.collectAsState()
+    LaunchedEffect(ttsPage, ttsPlayback) {
+        if (ttsPlayback == com.abhisheksati.mydoc.tools.tts.TtsPlaybackState.PLAYING &&
+            ttsPage >= 0 && ttsPage != state.currentPage && ttsPage < state.pageCount
+        ) {
+            viewModel.jumpToPage(ttsPage)
+            scrollViewerTo(ttsPage, animate = true)
+        }
+    }
+
     // Reading immersion: hide system bars when controls are hidden, restore on exit
     val activity = context as? Activity
+
     val window = activity?.window
     val insetsController = remember(window) {
         if (window != null) {
@@ -633,6 +692,22 @@ fun PdfViewerScreen(
             onSlideshowClick = onSlideshowClick,
             onReflowClick = onReflowClick,
             onDocumentDetailsClick = { isDocumentDetailsOpen = true },
+            onExportNotesClick = {
+                val myApp = app
+                if (myApp != null) {
+                    coroutineScope.launch {
+                        val notes = withContext(Dispatchers.IO) {
+                            runCatching { myApp.database.highlightDao().getForDocument(document.uri) }
+                                .getOrDefault(emptyList())
+                        }
+                        if (notes.isEmpty()) {
+                            context.showMessage(resources.getString(R.string.notes_none_saved))
+                        } else {
+                            notesForExport = notes
+                        }
+                    }
+                }
+            },
             onOpenOutlineDrawer = { viewModel.setOutlineDrawerOpen(true) },
             onOpenThumbnailGrid = { isThumbnailGridOpen = true },
             onOpenReadingControls = { isReadingControlsOpen = true },
@@ -712,6 +787,7 @@ fun PdfViewerScreen(
             onCloseTts = { isTtsVisible = false },
             currentTtsText = currentTtsText,
             ttsManager = ttsManager,
+            onStartPlayback = { startAudiobook(state.currentPage) },
             onRemoveDocument = onBackClick,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
@@ -728,6 +804,8 @@ fun PdfViewerScreen(
                 currentTtsText = text
                 isTtsVisible = true
             },
+            onStartAudiobook = startAudiobook,
+            onSaveHighlight = saveHighlight,
             onOcrResult = { ocr ->
                 ocrExtractedText = ocr
             },
@@ -736,6 +814,36 @@ fun PdfViewerScreen(
                 selectedTextState = null
             }
         )
+
+        notesForExport?.let { notes ->
+            val exportNotes: (String, String) -> Unit = { mimeType, extension ->
+                notesForExport = null
+                coroutineScope.launch {
+                    val file = withContext(Dispatchers.IO) {
+                        runCatching {
+                            if (extension == "md") {
+                                NotesExporter.writeMarkdown(context, document.displayName, notes)
+                            } else {
+                                NotesExporter.writePdf(context, document.displayName, notes)
+                            }
+                        }.getOrNull()
+                    }
+                    val shared = file != null && shareFile(
+                        context,
+                        Uri.fromFile(file),
+                        mimeType,
+                        resources.getString(R.string.notes_export_share_title)
+                    )
+                    if (!shared) context.showMessage(resources.getString(R.string.notes_export_failed))
+                }
+            }
+            ExportNotesDialog(
+                highlightCount = notes.size,
+                onDismiss = { notesForExport = null },
+                onExportMarkdown = { exportNotes("text/markdown", "md") },
+                onExportPdf = { exportNotes("application/pdf", "pdf") }
+            )
+        }
     }
 }
 

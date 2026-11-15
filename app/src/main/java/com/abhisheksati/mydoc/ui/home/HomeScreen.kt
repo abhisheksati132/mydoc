@@ -245,6 +245,7 @@ fun HomeScreen(
                                 onSettingsClick = onSettingsClick,
                                 onScanClick = { documentScanner() },
                                 onNavigateToLibrary = { viewModel.selectTab(HomeTab.LIBRARY) },
+                                inboxItems = uiState.inboxItems,
                                 errorMessage = uiState.errorMessage,
                                 isLoading = uiState.isLoading,
                                 onDismissError = { viewModel.clearError() },
@@ -268,6 +269,15 @@ fun HomeScreen(
                                 onOpenInTools = { toolSource = it },
                                 onMergePdfs = { files ->
                                     toolsViewModel.selectTool(PdfTool.MERGE)
+                                    toolsViewModel.setInputUris(files.map(Uri::fromFile))
+                                },
+                                onConvertSelected = { files ->
+                                    val imagesOnly = files.all { file ->
+                                        file.extension.lowercase() in setOf(
+                                            "jpg", "jpeg", "png", "webp", "bmp", "heic", "heif", "gif"
+                                        )
+                                    }
+                                    toolsViewModel.selectTool(if (imagesOnly) PdfTool.IMAGE_TO_PDF else PdfTool.TEXT_TO_PDF)
                                     toolsViewModel.setInputUris(files.map(Uri::fromFile))
                                 },
                                 hazeState = libraryHazeState,

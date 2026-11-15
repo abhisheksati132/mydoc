@@ -51,6 +51,7 @@ import androidx.compose.material.icons.outlined.DonutLarge
 import androidx.compose.material.icons.outlined.DriveFileRenameOutline
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderZip
+import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.SelectAll
@@ -874,7 +875,8 @@ fun FilesSelectionBar(
     onCompress: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
-    onMergePdfs: (() -> Unit)? = null
+    onMergePdfs: (() -> Unit)? = null,
+    onConvertToPdf: (() -> Unit)? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     var isMenuOpen by remember { mutableStateOf(false) }
@@ -900,6 +902,16 @@ fun FilesSelectionBar(
                     if (onMergePdfs != null) {
                         DropdownMenuItem(text = { Text(stringResource(R.string.library_merge_pdfs)) },
                             onClick = { isMenuOpen = false; onMergePdfs() })
+                    }
+                    if (onConvertToPdf != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.batch_convert_pdf)) },
+                            leadingIcon = { Icon(Icons.Outlined.PictureAsPdf, contentDescription = null) },
+                            onClick = {
+                                isMenuOpen = false
+                                onConvertToPdf()
+                            }
+                        )
                     }
                     if (onRename != null) {
                         DropdownMenuItem(

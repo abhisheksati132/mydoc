@@ -60,6 +60,7 @@ fun PdfViewerDialogsAndSheets(
     onCloseTts: () -> Unit,
     currentTtsText: String,
     ttsManager: DocumentTtsManager,
+    onStartPlayback: (() -> Unit)? = null,
     onRemoveDocument: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -156,6 +157,7 @@ fun PdfViewerDialogsAndSheets(
         documentText = currentTtsText,
         isVisible = isTtsVisible,
         onClose = onCloseTts,
+        onStartPlayback = onStartPlayback,
         modifier = modifier
     )
 }

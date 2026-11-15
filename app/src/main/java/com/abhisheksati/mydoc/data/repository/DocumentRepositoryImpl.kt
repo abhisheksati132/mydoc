@@ -281,6 +281,10 @@ class DocumentRepositoryImpl(
                 lastPage = existing?.lastPage ?: 0
             )
             recentDao.upsertRecent(recentEntity)
+            com.abhisheksati.mydoc.widget.ContinueReadingWidget.refresh(context)
+            com.abhisheksati.mydoc.discovery.SearchIndexQueue.enqueue(
+                context, uri.toString(), metadata.displayName, metadata.mimeType
+            )
 
             val isFav = favoriteDao.isFavorite(uri.toString())
             DocumentFile(

@@ -3,6 +3,17 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [2.0.12] — 2026-11-15
+
+### Read it, find it, hear it
+- **Listening is a real audiobook now**: text-to-speech runs in a foreground service with a media session, so reading survives leaving the viewer, shows on the lock screen and in media controls, and pauses from a headset or media key. The open page follows playback, and pages without a text layer fall back to offline OCR instead of stopping.
+- **Search inside documents**: the search sheet adds an "Inside documents" section backed by an on-device full-text index — matching snippets with page numbers, and a tap opens the document at that page.
+- **Highlights become study notes**: the reader overflow can save the whole visible page as a highlight (OCR included for scans), and **Export notes** writes the saved highlights as Markdown or a clean PDF and opens the share sheet.
+- **Continue reading widget**: a 4×2 home-screen widget lists the three most recent documents with page positions; tapping a row opens the document.
+- **Launcher shortcuts**: long-press the app icon for Scan, Search, and Merge PDFs.
+- **Smart inbox**: Home leads with an Inbox of documents added in the last two weeks, so new files are where you look first.
+- **Batch actions**: selecting files in Storage gains Convert to PDF (images or text documents) beside Copy, Move, and Share.
+
 ## [2.0.11] — 2026-11-15
 
 ### The Library, calmer and faster

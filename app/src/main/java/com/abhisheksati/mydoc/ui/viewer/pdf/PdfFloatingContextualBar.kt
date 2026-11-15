@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.Icon
@@ -39,6 +40,7 @@ fun PdfFloatingContextualBar(
     onShare: () -> Unit,
     onSearch: () -> Unit,
     onSpeak: () -> Unit,
+    onHighlight: (() -> Unit)? = null,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -59,6 +61,13 @@ fun PdfFloatingContextualBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
+                if (onHighlight != null) {
+                    FloatingPillItem(
+                        icon = Icons.Outlined.Edit,
+                        label = stringResource(R.string.ctx_highlight),
+                        onClick = onHighlight
+                    )
+                }
                 FloatingPillItem(
                     icon = Icons.Outlined.ContentCopy,
                     label = stringResource(if (activeSelectionText != null) R.string.ctx_copy else R.string.ctx_copy_page),

@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
@@ -83,6 +84,7 @@ fun ViewerTopBar(
     reflowLabel: String? = null,
     onDocumentDetailsClick: (() -> Unit)? = null,
     documentDetailsLabel: String? = null,
+    onExportNotesClick: (() -> Unit)? = null,
     hazeState: dev.chrisbanes.haze.HazeState? = null
 ) {
     val colors = AppTheme.colors
@@ -220,7 +222,8 @@ fun ViewerTopBar(
                                     onReflowClick = onReflowClick,
                                     reflowLabel = reflowLabel,
                                     onDocumentDetailsClick = onDocumentDetailsClick,
-                                    documentDetailsLabel = documentDetailsLabel
+                                    documentDetailsLabel = documentDetailsLabel,
+                                    onExportNotesClick = onExportNotesClick
                                 )
                             }
                         }
@@ -313,7 +316,8 @@ fun ViewerTopBar(
                                     onReflowClick = onReflowClick,
                                     reflowLabel = reflowLabel,
                                     onDocumentDetailsClick = onDocumentDetailsClick,
-                                    documentDetailsLabel = documentDetailsLabel
+                                    documentDetailsLabel = documentDetailsLabel,
+                                    onExportNotesClick = onExportNotesClick
                                 )
                             }
                         }
@@ -336,7 +340,8 @@ private fun OverflowDropdown(
     onReflowClick: (() -> Unit)?,
     reflowLabel: String?,
     onDocumentDetailsClick: (() -> Unit)?,
-    documentDetailsLabel: String?
+    documentDetailsLabel: String?,
+    onExportNotesClick: (() -> Unit)?
 ) {
     AppDropdownMenu(
         expanded = expanded,
@@ -402,6 +407,17 @@ private fun OverflowDropdown(
                 onClick = {
                     onDismiss()
                     onReflowClick()
+                }
+            )
+        }
+
+        if (onExportNotesClick != null) {
+            OverflowAction(
+                label = stringResource(R.string.viewer_action_export_notes),
+                icon = Icons.Outlined.Description,
+                onClick = {
+                    onDismiss()
+                    onExportNotesClick()
                 }
             )
         }

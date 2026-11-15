@@ -65,6 +65,7 @@ import com.abhisheksati.mydoc.util.shareFile
 import com.abhisheksati.mydoc.viewmodel.HomeViewModel
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -98,6 +99,10 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val ACTION_QUICK_SCAN = "com.abhisheksati.mydoc.action.QUICK_SCAN"
+        const val ACTION_SEARCH = "com.abhisheksati.mydoc.action.SEARCH"
+        const val ACTION_MERGE_PDF = "com.abhisheksati.mydoc.action.MERGE_PDF"
+        const val ACTION_OPEN_RECENT = "com.abhisheksati.mydoc.action.OPEN_RECENT"
+        const val EXTRA_RECENT_INDEX = "com.abhisheksati.mydoc.extra.RECENT_INDEX"
         val pageTurnEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
         val quickScanEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     }
@@ -186,6 +191,8 @@ class MainActivity : ComponentActivity() {
         }
 
         updateManager = UpdateManager(this)
+        LauncherShortcuts.publish(this)
+        com.abhisheksati.mydoc.widget.ContinueReadingWidget.refresh(this)
 
         // Silent launch update check (throttled to max once every 24h, respecting user setting)
         if (app.settingsRepository.checkUpdatesOnLaunch.value) {
@@ -677,6 +684,37 @@ class MainActivity : ComponentActivity() {
             return
         }
 
+        if (intent.action == ACTION_SEARCH) {
+            intent.action = null
+            isDesignSystemPreviewOpen = false
+            isSettingsOpen = false
+            isSpotlightSearchOpen = true
+            return
+        }
+
+        if (intent.action == ACTION_MERGE_PDF) {
+            intent.action = null
+            isSpotlightSearchOpen = false
+            isSettingsOpen = false
+            isDesignSystemPreviewOpen = false
+            currentPhoto = null
+            currentVideo = null
+            currentAudio = null
+            currentDocument = null
+            toolsViewModel.selectTool(com.abhisheksati.mydoc.tools.model.PdfTool.MERGE)
+            return
+        }
+
+        if (intent.action == ACTION_OPEN_RECENT) {
+            // The row index is resolved against our own recents table, not a URI supplied by the
+            // caller, so a forged intent can only ask for a document the user already sees.
+            val index = intent.getIntExtra(EXTRA_RECENT_INDEX, -1)
+            intent.action = null
+            intent.removeExtra(EXTRA_RECENT_INDEX)
+            if (index >= 0) openRecentDocument(index)
+            return
+        }
+
         val uri: Uri? = when (intent.action) {
             Intent.ACTION_VIEW -> intent.data
             Intent.ACTION_SEND -> {
@@ -715,6 +753,28 @@ class MainActivity : ComponentActivity() {
     private fun handleOpenFile(file: File, siblingFiles: List<File>? = null) {
         val uri = Uri.fromFile(file)
         openUriOrFile(uri = uri, fileName = file.name, file = file, siblingFiles = siblingFiles)
+    }
+
+    /** Widget row tap: open the Nth recent document, falling back to our offline copy. */
+    private fun openRecentDocument(index: Int) {
+        val app = application as MyDocApp
+        lifecycleScope.launch {
+            val doc = runCatching {
+                app.documentRepository.getRecents().first().getOrNull(index)
+            }.getOrNull() ?: return@launch
+            val result = app.documentRepository.registerOpenedDocument(Uri.parse(doc.uri))
+            result.onSuccess { opened -> currentDocument = opened }
+                .onFailure {
+                    val saved = File(app.filesDir, "saved_docs").resolve(
+                        com.abhisheksati.mydoc.util.DocumentIdentity.savedDocsName(doc.uri, doc.displayName)
+                    )
+                    if (saved.isFile) {
+                        openUriOrFile(Uri.fromFile(saved), fileName = doc.displayName, file = saved)
+                    } else {
+                        showMessage(getString(R.string.widget_open_failed))
+                    }
+                }
+        }
     }
 
     /** Steps to the neighbouring document; false when the current one is already at the end of the folder. */

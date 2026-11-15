@@ -52,6 +52,7 @@ fun FilesScreen(
     isActive: Boolean = true,
     onOpenInTools: ((File) -> Unit)? = null,
     onMergePdfs: ((List<File>) -> Unit)? = null,
+    onConvertSelected: ((List<File>) -> Unit)? = null,
     hazeState: HazeState? = null,
     glassMotion: GlassMotionState? = null,
     onPageVisibilityChange: (Boolean) -> Unit = {}
@@ -135,6 +136,7 @@ fun FilesScreen(
                             FilesPaneScreen(tab.browser, homeViewModel, storageViewModel, onOpenFile, onLibraryItemClick,
                                 onLibraryItemDetails, onSettingsClick, onSpotlightSearch, isActive = isActive && (focused == tab.id || !wide),
                                 onMergePdfs = onMergePdfs,
+                                onConvertSelected = onConvertSelected,
                                 onOpenInTools = onOpenInTools, hazeState = hazeState, glassMotion = glassMotion,
                                 onPageVisibilityChange = onPageVisibilityChange,
                                 workspaceInsets = tabs.size > 1, onShowTransfers = { showTransfers = true },

@@ -25,10 +25,12 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +44,7 @@ import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.domain.model.DocumentFilter
 import com.abhisheksati.mydoc.domain.model.LibraryItem
 import com.abhisheksati.mydoc.domain.model.MediaKind
+import com.abhisheksati.mydoc.domain.model.ViewState
 import com.abhisheksati.mydoc.ui.files.LibraryThumbnail
 
 /** Media means every indexed photo/video/audio kind, not a hand-picked extension list that
@@ -73,6 +76,30 @@ fun SpotlightSearchSheet(
     val scheme = MaterialTheme.colorScheme
     var query by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
+    val discoveryStore = remember(app) {
+        app?.let { com.abhisheksati.mydoc.discovery.DiscoveryStore.get(it) }
+    }
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+    var contentHits by remember { mutableStateOf(emptyList<com.abhisheksati.mydoc.discovery.DiscoveredFile>()) }
+    val normalizedQuery = query.trim()
+    LaunchedEffect(normalizedQuery, selectedFilter, discoveryStore) {
+        if (discoveryStore == null || normalizedQuery.length < 2 || selectedFilter == "Media") {
+            contentHits = emptyList()
+            return@LaunchedEffect
+        }
+        kotlinx.coroutines.delay(350)
+        contentHits = runCatching { discoveryStore.search(normalizedQuery, "", "") }
+            .getOrDefault(emptyList())
+            .filter { it.snippet.isNotBlank() }
+            .filter { hit ->
+                selectedFilter == "All" ||
+                    DocumentFilter.fromLabel(selectedFilter)?.matches(hit.name.substringAfterLast('.', "")) == true
+            }
+            .take(40)
+    }
 
     val filteredItems = remember(items, query, selectedFilter) {
         val q = query.trim().lowercase()
@@ -138,7 +165,7 @@ fun SpotlightSearchSheet(
             )
         }
 
-        if (filteredItems.isEmpty()) {
+        if (filteredItems.isEmpty() && contentHits.isEmpty()) {
             AppEmptyState(
                 title = stringResource(
                         if (items.isEmpty()) R.string.search_no_docs
@@ -195,6 +222,68 @@ fun SpotlightSearchSheet(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
+                        }
+                    }
+                }
+
+                if (contentHits.isNotEmpty()) {
+                    item(key = "inside_documents_header") {
+                        Text(
+                            text = stringResource(R.string.search_inside_documents),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = scheme.onSurface,
+                            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 4.dp)
+                        )
+                    }
+                    items(
+                        items = contentHits,
+                        key = { "inside_${it.uri}" }
+                    ) { hit ->
+                        val hitItem = LibraryItem(hit.uri, hit.name, MediaKind.DOCUMENT, hit.mime, hit.size, hit.modified)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp)
+                                .clip(AppRadius.cardShape)
+                                .clickable {
+                                    coroutineScope.launch {
+                                        app?.documentRepository?.let { repo ->
+                                            runCatching {
+                                                val existing = repo.getViewState(hit.uri)
+                                                repo.saveViewState(
+                                                    (existing ?: ViewState(hit.uri)).copy(lastPage = hit.page)
+                                                )
+                                            }
+                                        }
+                                        onDismiss()
+                                        onItemClick(hitItem)
+                                    }
+                                }
+                                .padding(horizontal = 10.dp, vertical = 9.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            LibraryThumbnail(
+                                item = hitItem,
+                                modifier = Modifier.size(width = 44.dp, height = 52.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = hit.name,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = scheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = stringResource(R.string.search_inside_hit, hit.page + 1, hit.snippet),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = scheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                     }
                 }

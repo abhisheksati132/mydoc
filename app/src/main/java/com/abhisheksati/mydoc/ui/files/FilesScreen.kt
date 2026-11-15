@@ -103,6 +103,12 @@ internal val FileListSaver = Saver<List<File>?, ArrayList<String>>(
     save = { it?.mapTo(ArrayList()) { f -> f.absolutePath } ?: arrayListOf() },
     restore = { if (it.isEmpty()) null else it.map(::File) }
 )
+
+/** Formats the Image/Text to PDF tools accept; a batch is offered only when every item fits one. */
+private val CONVERTIBLE_TO_PDF = setOf(
+    "jpg", "jpeg", "png", "webp", "bmp", "heic", "heif", "gif",
+    "txt", "md", "markdown"
+)
 private val StorageItemPathSaver = Saver<StorageItem?, String>(
     save = { it?.path ?: "" },
     restore = { if (it.isEmpty()) null else StorageItem(file = File(it)) }
@@ -128,6 +134,7 @@ fun FilesPaneScreen(
     isActive: Boolean = true,
     onOpenInTools: ((File) -> Unit)? = null,
     onMergePdfs: ((List<File>) -> Unit)? = null,
+    onConvertSelected: ((List<File>) -> Unit)? = null,
     hazeState: dev.chrisbanes.haze.HazeState? = null,
     glassMotion: com.abhisheksati.mydoc.designsystem.components.GlassMotionState? = null,
     workspaceInsets: Boolean = false,
@@ -405,6 +412,13 @@ fun FilesPaneScreen(
                                 }
                             }?.let { merge -> { merge(uiState.filteredItems.map { it.file }.filter { it in uiState.selectedFiles }) } },
                             onCompress = { showCompressDialog = true },
+                            onConvertToPdf = onConvertSelected?.takeIf {
+                                val selected = uiState.selectedFiles
+                                selected.isNotEmpty() && !selected.any { it.isDirectory } &&
+                                    selected.all { it.extension.lowercase() in CONVERTIBLE_TO_PDF }
+                            }?.let { convert ->
+                                { convert(uiState.filteredItems.map { it.file }.filter { it in uiState.selectedFiles }) }
+                            },
                             onDelete = { showDeleteConfirm = true }
                         )
                     }

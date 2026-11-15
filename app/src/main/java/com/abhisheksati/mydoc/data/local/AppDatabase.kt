@@ -7,11 +7,13 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.abhisheksati.mydoc.data.local.dao.FavoriteDao
+import com.abhisheksati.mydoc.data.local.dao.HighlightDao
 import com.abhisheksati.mydoc.data.local.dao.MediaPlaybackDao
 import com.abhisheksati.mydoc.data.local.dao.RecentDao
 import com.abhisheksati.mydoc.data.local.dao.TrashDao
 import com.abhisheksati.mydoc.data.local.dao.ViewStateDao
 import com.abhisheksati.mydoc.data.local.entity.FavoriteDocumentEntity
+import com.abhisheksati.mydoc.data.local.entity.HighlightEntity
 import com.abhisheksati.mydoc.data.local.entity.MediaPlaybackEntity
 import com.abhisheksati.mydoc.data.local.entity.RecentDocumentEntity
 import com.abhisheksati.mydoc.data.local.entity.TrashEntity
@@ -63,15 +65,31 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
     }
 }
 
+/** Saved highlights and notes are new in 8; nothing existing changes. */
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `highlights` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`documentUri` TEXT NOT NULL, `pageIndex` INTEGER NOT NULL, " +
+                "`text` TEXT NOT NULL, `note` TEXT, `createdTimestamp` INTEGER NOT NULL)"
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_highlights_documentUri` ON `highlights` (`documentUri`)"
+        )
+    }
+}
+
 @Database(
     entities = [
         RecentDocumentEntity::class,
         FavoriteDocumentEntity::class,
         ViewStateEntity::class,
         MediaPlaybackEntity::class,
-        TrashEntity::class
+        TrashEntity::class,
+        HighlightEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -81,6 +99,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun viewStateDao(): ViewStateDao
     abstract fun mediaPlaybackDao(): MediaPlaybackDao
     abstract fun trashDao(): TrashDao
+    abstract fun highlightDao(): HighlightDao
 
     companion object {
         @Volatile
@@ -93,7 +112,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "mydoc.db"
                 )
-                    .addMigrations(MIGRATION_4_5, MIGRATION_3_5, MIGRATION_5_6, MIGRATION_6_7)
+                    .addMigrations(MIGRATION_4_5, MIGRATION_3_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                     .fallbackToDestructiveMigrationFrom(true, 1, 2)
                     .build()
                 INSTANCE = instance

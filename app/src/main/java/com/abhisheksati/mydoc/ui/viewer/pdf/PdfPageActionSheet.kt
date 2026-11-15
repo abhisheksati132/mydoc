@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,7 +39,8 @@ fun PdfPageActionSheet(
     onCopyPageText: () -> Unit,
     onReadPageAloud: () -> Unit,
     onSharePageText: () -> Unit,
-    onExtractOcr: () -> Unit
+    onExtractOcr: () -> Unit,
+    onSavePageHighlight: (() -> Unit)? = null
 ) {
     if (!isOpen) return
 
@@ -80,6 +82,14 @@ fun PdfPageActionSheet(
                 supporting = stringResource(R.string.page_share_supporting),
                 onClick = onSharePageText
             )
+            if (onSavePageHighlight != null) {
+                PageAction(
+                    icon = Icons.Outlined.Edit,
+                    title = stringResource(R.string.page_highlight_title),
+                    supporting = stringResource(R.string.page_highlight_supporting),
+                    onClick = onSavePageHighlight
+                )
+            }
             PageAction(
                 icon = Icons.Outlined.TextFields,
                 title = stringResource(R.string.page_ocr_title),

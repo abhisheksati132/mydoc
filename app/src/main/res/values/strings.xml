@@ -1216,4 +1216,43 @@
     <string name="copied_confirmation">%1$s copied</string>
     <string name="error_no_app_can_open">No other app on this device can open %1$s.</string>
     <string name="removed_from_recents">%1$s is no longer in recent documents.</string>
+    <!-- Launcher shortcuts -->
+    <string name="shortcut_scan_short">Scan</string>
+    <string name="shortcut_scan_long">Scan a document</string>
+    <string name="shortcut_search_short">Search</string>
+    <string name="shortcut_search_long">Search the library</string>
+    <string name="shortcut_merge_short">Merge PDFs</string>
+    <string name="shortcut_merge_long">Merge PDF files</string>
+    <!-- Continue-reading widget -->
+    <string name="widget_continue_reading_title">Continue reading</string>
+    <string name="widget_description">Resume your most recent documents from the home screen.</string>
+    <string name="widget_empty">Open a document in MyDoc and it will appear here.</string>
+    <string name="widget_open_document">Tap to open</string>
+    <string name="widget_page_progress">Page %1$d of %2$d</string>
+    <string name="widget_open_failed">That document is no longer available.</string>
+    <!-- Read-aloud notification -->
+    <string name="tts_notification_channel">Read aloud</string>
+    <string name="tts_notification_channel_description">Playback controls while MyDoc reads a document aloud.</string>
+    <string name="tts_reading_page">Reading page %1$d…</string>
+    <string name="search_inside_documents">Inside documents</string>
+    <string name="search_inside_hit">Page %1$d · %2$s</string>
+    <!-- Highlights and notes export -->
+    <string name="viewer_action_export_notes">Export notes</string>
+    <string name="ctx_highlight">Highlight</string>
+    <string name="notes_export_title">Export study notes</string>
+    <string name="notes_export_message">%1$d saved highlight(s) will be exported with their page numbers.</string>
+    <string name="notes_export_markdown">Markdown</string>
+    <string name="notes_export_pdf">PDF</string>
+    <string name="notes_export_share_title">Share notes</string>
+    <string name="notes_export_failed">Could not export notes</string>
+    <string name="notes_none_saved">No saved highlights in this document yet</string>
+    <string name="notes_highlight_saved">Highlight saved</string>
+    <string name="notes_highlight_failed">Could not save highlight</string>
+    <!-- Smart inbox and batch convert -->
+    <string name="inbox_title">Inbox</string>
+    <string name="inbox_subtitle">%1$d new document(s) to sort</string>
+    <string name="inbox_browse">Library</string>
+    <string name="batch_convert_pdf">Convert to PDF</string>
+    <string name="page_highlight_title">Save page as highlight</string>
+    <string name="page_highlight_supporting">Add this page\'s text to your study notes</string>
 </resources>

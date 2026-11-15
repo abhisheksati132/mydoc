@@ -16,7 +16,9 @@ import com.abhisheksati.mydoc.ocr.OcrEngine
 import com.abhisheksati.mydoc.tools.tts.DocumentTtsManager
 import com.abhisheksati.mydoc.viewmodel.ViewerViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.abhisheksati.mydoc.designsystem.components.showMessage
 
 @Composable
@@ -28,6 +30,8 @@ fun PdfContextualActionsHost(
     ocrEngine: OcrEngine,
     ttsManager: DocumentTtsManager,
     onStartTts: (String) -> Unit,
+    onStartAudiobook: (Int) -> Unit,
+    onSaveHighlight: (Int, String) -> Unit,
     onOcrResult: (String) -> Unit,
     onClose: () -> Unit
 ) {
@@ -92,16 +96,18 @@ fun PdfContextualActionsHost(
             }
         },
         onSpeak = {
-            coroutineScope.launch {
-                val text = activeSelectionText ?: viewModel.getPageText(pageNum)
-                if (!text.isNullOrBlank()) {
-                    onStartTts(text)
-                    ttsManager.startReading(text)
-                } else {
-                    context.showMessage(text.unreadableTextLayerMessage() ?: resources.getString(R.string.ctx_no_text_read))
-                }
-                onClose()
+            // A bare page action starts the audiobook at this page (the controller handles
+            // scanned pages via OCR); a selection reads only the selected passage.
+            if (activeSelectionText != null) {
+                onStartTts(activeSelectionText)
+                ttsManager.startReading(activeSelectionText)
+            } else {
+                onStartAudiobook(pageNum)
             }
+            onClose()
+        },
+        onHighlight = activeSelectionText?.let { text ->
+            { onSaveHighlight(pageNum, text); onClose() }
         },
         onClose = onClose
     )
@@ -125,15 +131,8 @@ fun PdfContextualActionsHost(
             }
         },
         onReadPageAloud = {
-            coroutineScope.launch {
-                val text = viewModel.getPageText(pageNum)
-                if (!text.isNullOrBlank()) {
-                    onStartTts(text)
-                } else {
-                    context.showMessage(text.unreadableTextLayerMessage() ?: resources.getString(R.string.ctx_no_text_on_page_read))
-                }
-                onClose()
-            }
+            onStartAudiobook(pageNum)
+            onClose()
         },
         onSharePageText = {
             coroutineScope.launch {
@@ -161,6 +160,28 @@ fun PdfContextualActionsHost(
                     } else {
                         context.showMessage(resources.getString(R.string.ctx_no_ocr_text))
                     }
+                }
+            }
+        },
+        onSavePageHighlight = {
+            onClose()
+            coroutineScope.launch {
+                val digital = viewModel.getPageText(pageNum)
+                val text = if (!digital.isNullOrBlank()) {
+                    digital
+                } else {
+                    // Pages without a text layer (scans, fonts without ToUnicode) still get a
+                    // highlight from what the offline OCR engine can read.
+                    withContext(Dispatchers.Default) {
+                        viewModel.renderPageBitmap(pageNum, 1.5f)?.let { bitmap ->
+                            runCatching { ocrEngine.recognizeText(bitmap) }.getOrNull()
+                        }
+                    }
+                }
+                if (!text.isNullOrBlank()) {
+                    onSaveHighlight(pageNum, text)
+                } else {
+                    context.showMessage(resources.getString(R.string.ctx_no_digital_text))
                 }
             }
         }
