@@ -3,6 +3,14 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [Unreleased]
+
+### Trust, on the surface
+- **Privacy & trust** in Settings → About: one dialog explains on-device processing, why folder access is requested, how updates are verified (SHA-256 plus the pinned certificate), and that crash reports stay local.
+- **Report an issue** opens GitHub with the app version, device, and Android version already filled in, and the repository now has bug and feature request forms.
+- **Privacy policy** ([PRIVACY.md](PRIVACY.md)) documents the complete data story — no account, no analytics, no uploads — and is linked from README and About.
+- **README screenshots** of Library, reader, tools, files, and the privacy dialog; a Contributor guide; CodeQL and Dependabot automation; historical notes and audits are now labelled as such.
+
 ## [2.0.9] — 2026-11-15
 
 ### The Library, reshaped around what is on disk

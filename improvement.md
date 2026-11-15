@@ -1,5 +1,10 @@
 # Document Engine Architecture & Engineering Plan
 
+> **Historical — written for v2.0.5.** Kept for the record, not maintained.
+> Current architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · current
+> security posture: [SECURITY.md](SECURITY.md) · what ships today:
+> [README.md](README.md) and [CHANGELOG.md](CHANGELOG.md).
+
 > **Project Target:** `mydoc` (`com.abhisheksati.mydoc`)  
 > **Current Version:** 2.0.5 (minSdk 26, targetSdk 35)  
 > **Core Engine:** Artifex MuPDF Fitz 1.28.5 (16KB aligned) & LibreOfficeKit 26.2.6.3 companion module  

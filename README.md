@@ -25,6 +25,17 @@ Android 8.0+ · 100% on-device · Free and open source · [Changelog](CHANGELOG.
 
 Also inside: a local media player (tracks, external subtitles, speed, A–B loop, HTTPS playback) and a storage view that shows what fills your phone and moves files to the Recycle Bin instead of deleting them.
 
+<p align="center">
+  <img src="assets/screenshots/home.png" width="260" alt="Home: continue reading card and recent files">
+  <img src="assets/screenshots/reader.png" width="260" alt="Reader: a PDF page with floating glass controls">
+  <img src="assets/screenshots/tools.png" width="260" alt="Tools: scan, merge, sign, and compress PDFs">
+</p>
+<p align="center">
+  <img src="assets/screenshots/library.png" width="260" alt="Library: storage card and file categories">
+  <img src="assets/screenshots/files.png" width="260" alt="File browser: folders and files with previews">
+  <img src="assets/screenshots/privacy.png" width="260" alt="Privacy and trust: what stays on the device">
+</p>
+
 ## Every format reads the same way
 
 MyDoc has one viewer shell, not one per file type. PDF, Word, Excel, PowerPoint, and text all share the same top bar, the same bottom bar, the same contents drawer, bookmarks, search, appearance sheet, and the same tap-to-immerse behavior. Learn it once and it works for every document you open — including slide decks, which now use the shared chrome instead of a lookalike.
@@ -51,6 +62,8 @@ Run it yourself on a physical device: `./gradlew :macrobenchmark:connectedBenchm
 ## Private by default
 
 Parsing, rendering, OCR, search indexing, and every document tool run on your device. No account, no cloud, no telemetry. MyDoc asks for folder access only when you browse your own storage, and declines gracefully — Recents and the system file picker keep working without it.
+
+The full details, including exactly which requests leave the device and why, are in the [privacy policy](PRIVACY.md).
 
 ## Get MyDoc for Android
 
@@ -92,4 +105,4 @@ Gradle dependency verification is enabled (`gradle/verification-metadata.xml`), 
 
 MyDoc is built by [Abhishek Sati](https://github.com/abhisheksati132). [Report a bug or suggest an improvement](https://github.com/abhisheksati132/mydoc/issues). If MyDoc earns a place on your phone, a GitHub star helps others find it.
 
-[AGPL-3.0 license](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md) · [Security policy](SECURITY.md)
+[AGPL-3.0 license](LICENSE) · [Privacy policy](PRIVACY.md) · [Third-party notices](THIRD_PARTY_NOTICES.md) · [Security policy](SECURITY.md) · [Contributing](CONTRIBUTING.md)

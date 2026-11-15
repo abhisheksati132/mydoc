@@ -1,0 +1,43 @@
+name: Feature request
+description: Suggest a capability or an improvement to something MyDoc already does.
+title: "Feature: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the situation, not only the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like MyDoc to do?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where does it fit?
+      options:
+        - Reading a PDF
+        - Editing or converting a document
+        - Photos and OCR
+        - File browser
+        - Video or audio
+        - Search
+        - Design and accessibility
+        - Something else
+    validations:
+      required: true
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Fits MyDoc's constraints
+      description: MyDoc is offline-first and ships without telemetry.
+      options:
+        - label: This can work fully on-device.
+          required: true
+        - label: This does not require an account or a cloud service.
+          required: true
