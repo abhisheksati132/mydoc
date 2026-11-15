@@ -76,9 +76,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -317,6 +319,7 @@ private fun CategoryShortcutGrid(
                     CategoryTile(
                         type = type,
                         stat = stat,
+                        totalBytes = storageUiState.totalBytes,
                         onClick = { type.fileCategory?.let(onCategory) },
                         modifier = Modifier.weight(1f)
                     )
@@ -451,9 +454,22 @@ private fun StorageBreakdown(storageUiState: StorageAnalysisUiState) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
                 entries.forEachIndexed { index, stat ->
                     val pct = if (total > 0) (stat.bytes.toDouble() / total * 100).toInt() else 0
-                    StorageLegendRow(stringResource(stat.type.titleRes), stat.formattedSize, pct,
-                        if (categoriesFit) palette[index % palette.size] else colors.inkMuted,
-                        lowShare = pct == 0 && stat.bytes > 0L)
+                    StorageLegendRow(
+                        label = stringResource(stat.type.titleRes),
+                        value = stat.formattedSize,
+                        percent = pct,
+                        color = if (categoriesFit) palette[index % palette.size] else colors.inkMuted,
+                        lowShare = pct == 0 && stat.bytes > 0L,
+                        icon = stat.type.icon,
+                        // System & Other is an estimate with a placeholder count, so it gets
+                        // no file line; app entries count packages, not files.
+                        meta = when {
+                            stat.type == StorageCategoryType.SYSTEM_OTHER || stat.fileCount <= 0 -> null
+                            stat.type == StorageCategoryType.APPS ->
+                                pluralStringResource(R.plurals.apps_count, stat.fileCount, stat.fileCount)
+                            else -> pluralStringResource(R.plurals.files_count, stat.fileCount, stat.fileCount)
+                        }
+                    )
                 }
                 if (total > 0 && categoriesFit && unclassified > 0) {
                     val pct = (unclassified.toDouble() / total * 100).toInt()
@@ -473,7 +489,9 @@ private fun StorageLegendRow(
     value: String,
     percent: Int,
     color: androidx.compose.ui.graphics.Color,
-    lowShare: Boolean = false
+    lowShare: Boolean = false,
+    icon: ImageVector? = null,
+    meta: String? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     val animatedShare by androidx.compose.animation.core.animateFloatAsState(
@@ -485,18 +503,47 @@ private fun StorageLegendRow(
         Row(
             Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Box(Modifier.size(9.dp).clip(CircleShape).background(color))
-            Text(label, style = AppTheme.typography.body, modifier = Modifier.weight(1f), color = scheme.onSurface)
-            Text(
-                text = if (lowShare) "<1%" else "$percent%",
-                style = AppTheme.typography.caption,
-                color = scheme.onSurfaceVariant
-            )
-            Text(value, style = AppTheme.typography.bodyStrong, color = scheme.onSurface)
+            if (icon != null) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(color.copy(alpha = 0.14f), AppRadius.insetShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(19.dp))
+                }
+            } else {
+                Box(Modifier.size(9.dp).clip(CircleShape).background(color))
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(
+                    label,
+                    style = AppTheme.typography.body,
+                    color = scheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (meta != null) {
+                    Text(
+                        meta,
+                        style = AppTheme.typography.caption,
+                        color = scheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+            }
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(value, style = AppTheme.typography.bodyStrong, color = scheme.onSurface)
+                Text(
+                    text = if (lowShare) "<1%" else "$percent%",
+                    style = AppTheme.typography.caption,
+                    color = scheme.onSurfaceVariant
+                )
+            }
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(7.dp))
         Box(
             Modifier
                 .fillMaxWidth()

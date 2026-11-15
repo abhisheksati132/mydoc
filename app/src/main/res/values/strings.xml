@@ -109,6 +109,14 @@
         <item quantity="one">%1$d item kept for 30 days</item>
         <item quantity="other">%1$d items kept for 30 days</item>
     </plurals>
+    <plurals name="files_count">
+        <item quantity="one">%1$d file</item>
+        <item quantity="other">%1$d files</item>
+    </plurals>
+    <plurals name="apps_count">
+        <item quantity="one">%1$d app</item>
+        <item quantity="other">%1$d apps</item>
+    </plurals>
     <string name="trash_meta_empty">Empty</string>
     <string name="trash_note">Deleted files stay here for 30 days before they are removed.</string>
     <string name="scanning_storage">Scanning storage…</string>

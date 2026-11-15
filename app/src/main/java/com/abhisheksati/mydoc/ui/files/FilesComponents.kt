@@ -405,6 +405,7 @@ internal fun SegmentedStorageBar(
 fun CategoryTile(
     type: StorageCategoryType,
     stat: StorageCategoryStat?,
+    totalBytes: Long,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -420,10 +421,17 @@ fun CategoryTile(
         else -> colors.accent
     }
     val shape = AppRadius.xLargeShape
+    val share = if (totalBytes > 0L) (stat?.bytes ?: 0L).toFloat() / totalBytes else 0f
+    val sharePercent = (share * 100f).toInt()
+    val animatedShare by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = share.coerceIn(0f, 1f),
+        animationSpec = androidx.compose.animation.core.tween(700, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "categoryShare"
+    )
 
     Column(
         modifier = modifier
-            .heightIn(min = 112.dp)
+            .heightIn(min = 128.dp)
             .clip(shape)
             .background(colors.surface, shape)
             .background(
@@ -488,14 +496,37 @@ fun CategoryTile(
             Text(
                 text = when {
                     stat == null -> stringResource(R.string.files_scanning_short)
-                    stat.fileCount == 0 -> stringResource(R.string.files_empty_short)
-                    else -> stat.formattedSize
+                    stat.bytes <= 0L -> stringResource(R.string.files_empty_short)
+                    sharePercent > 0 -> "${stat.formattedSize} · $sharePercent%"
+                    else -> "${stat.formattedSize} · <1%"
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            Spacer(Modifier.height(6.dp))
+            if (stat != null && stat.bytes > 0L) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .clip(AppRadius.roundShape)
+                        .background(scheme.surfaceVariant.copy(alpha = 0.55f))
+                ) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth(animatedShare)
+                            .height(3.dp)
+                            .clip(AppRadius.roundShape)
+                            .background(tone.copy(alpha = 0.9f))
+                    )
+                }
+            } else {
+                // A bare track under "Empty" reads as a stray underline; the spacer keeps
+                // titles aligned with neighbouring tiles that do show a bar.
+                Spacer(Modifier.height(3.dp))
+            }
         }
     }
 }
