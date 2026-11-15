@@ -3,6 +3,27 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [2.0.8] — 2026-11-15
+
+### One viewer, everywhere
+- **Presentation viewer on the shared scaffold**: PowerPoint decks now render inside the same `ViewerScaffold` as PDF, Word, Excel, and text — same top bar, bottom bar, glass, immersion, and condense-on-scroll behavior. The parallel presentation chrome and its private haze state are gone, so the readers can no longer drift apart. Speaker notes open from the top bar's details action.
+
+### Storage access is genuinely optional
+- **Fixed the all-files check**: on Android 11+ MyDoc accepted media permissions as proof of folder access, so the app believed it could browse directories it could not see. The check now requires real storage-manager access.
+- **Dismissible, contextual ask**: the permission banner appears only in the Browse pane, can be waved away with "Not now", and explains that Recents and the system picker still open documents without it.
+
+### Tools where you expect them
+- **PDF Tools promoted**: Tools now sits beside Contents, Pages, and Appearance as an always-visible bottom bar action instead of hiding behind the overflow menu.
+
+### Measured, not asserted
+- **Macrobenchmark suite**: new `:macrobenchmark` module plus a `benchmark` build type that inherits release (R8 on) measures cold-startup TTID and Tools-grid frame timing on the build users actually install. Baseline: TTID median ~0.63 s; median frame inside the 120 Hz budget with the P90 tail overrunning on the reference emulator.
+
+### Consistency & size
+- Floating-chrome corners (reader bars, search drop-down, thumbnail strip) now share `AppRadius` top/bottom-rounded tokens instead of one-off shapes.
+- Remaining hardcoded user-facing strings moved to resources.
+- Bundled Inter and JetBrains Mono fonts subset — about 560 KB less in the APK.
+- README rewritten around the current app.
+
 ## [2.0.7] — 2026-11-14
 
 ### Smaller install
