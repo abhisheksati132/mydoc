@@ -74,6 +74,11 @@ jobs:
       - name: Install pinned Gradle distribution in cold home
         env:
           GRADLE_USER_HOME: ${{ runner.temp }}/gradle-cold
+          # Anonymous api.github.com downloads share a rate limit across the runner
+          # provider's NAT IPs and can return 403 within seconds; the job token has
+          # no such limit. curl drops the header on the cross-host redirect, which
+          # is what the signed asset URL expects.
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           DIST_URL=$(sed -n 's/^distributionUrl=//p' gradle/wrapper/gradle-wrapper.properties | sed 's/\\:/:/g' | sed 's/\\//g')
@@ -90,6 +95,7 @@ jobs:
           mkdir -p "$GRADLE_USER_HOME/verified-gradle"
           archive="$RUNNER_TEMP/gradle-${DIST_VERSION}-bin.zip"
           curl --fail --location --retry 3 --retry-all-errors \
+            -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/gradle/gradle-distributions/releases/assets/451669088" \
             -H "Accept: application/octet-stream" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
