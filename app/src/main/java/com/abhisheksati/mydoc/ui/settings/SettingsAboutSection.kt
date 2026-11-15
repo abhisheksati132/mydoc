@@ -69,30 +69,26 @@ fun SettingsAboutSection(
     var crashReport by remember { mutableStateOf(CrashLog.read(context)) }
     var showCrashReport by rememberSaveable { mutableStateOf(false) }
     val crashReportTitle = stringResource(R.string.settings_crash_report_title)
-    if (showCrashReport) {
-        val report = crashReport
-        if (report != null) {
-            CrashReportDialog(
-                report = report,
-                onCopy = {
-                    context.getSystemService(ClipboardManager::class.java)
-                        ?.setPrimaryClip(ClipData.newPlainText(crashReportTitle, report))
-                    Toast.makeText(
-                        context,
-                        R.string.settings_crash_report_copied,
-                        Toast.LENGTH_SHORT
-                    ).show()
-                },
-                onDelete = {
-                    CrashLog.clear(context)
-                    crashReport = null
-                    showCrashReport = false
-                },
-                onDismiss = { showCrashReport = false }
-            )
-        } else {
-            showCrashReport = false
-        }
+    val report = crashReport
+    if (showCrashReport && report != null) {
+        CrashReportDialog(
+            report = report,
+            onCopy = {
+                context.getSystemService(ClipboardManager::class.java)
+                    ?.setPrimaryClip(ClipData.newPlainText(crashReportTitle, report))
+                Toast.makeText(
+                    context,
+                    R.string.settings_crash_report_copied,
+                    Toast.LENGTH_SHORT
+                ).show()
+            },
+            onDelete = {
+                CrashLog.clear(context)
+                crashReport = null
+                showCrashReport = false
+            },
+            onDismiss = { showCrashReport = false }
+        )
     }
 
     SettingsCard(
