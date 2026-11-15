@@ -44,7 +44,6 @@ import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.GridView
-import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.SdCard
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.Button
@@ -63,7 +62,6 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -154,13 +152,10 @@ fun RecentFileRow(
                 overflow = TextOverflow.Ellipsis
             )
         }
-        IconButton(onClick = onMoreClick, modifier = Modifier.size(48.dp)) {
-            Icon(
-                imageVector = Icons.Outlined.MoreVert,
-                contentDescription = stringResource(R.string.cd_details),
-                tint = scheme.onSurfaceVariant
-            )
-        }
+        FileOverflowButton(
+            contentDescription = stringResource(R.string.cd_details),
+            onClick = onMoreClick
+        )
     }
 }
 
@@ -326,7 +321,6 @@ private fun CategoryShortcutGrid(
                         CategoryTile(
                             type = type,
                             stat = stat,
-                            totalBytes = storageUiState.totalBytes,
                             onClick = { type.fileCategory?.let(onCategory) },
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -634,12 +628,6 @@ fun DirectoryPane(
         else emptyList()
     }
     val displayedItems = uiState.filteredItems
-    val imageSections = remember(isImagesCategory, displayedItems, uiState.sortOrder) {
-        if (isImagesCategory && uiState.sortOrder.field == FileSortField.DATE) {
-            val formatter = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM)
-            displayedItems.groupBy { formatter.format(java.util.Date(it.lastModified)) }
-        } else emptyMap()
-    }
     val docCounts = remember(uiState.items, uiState.searchQuery) {
         documentTypeCounts(uiState.items, uiState.searchQuery)
     }
@@ -786,34 +774,41 @@ fun DirectoryPane(
                 onAction = if (hasFilters) onClearFilters else null
             )
         } else if (uiState.isGridView) {
+            // The photo gallery is a wall of images: three fixed columns, no gaps, no
+            // metadata, so each picture gets the whole cell instead of a padded card.
+            val gallery = isImagesCategory
             LazyVerticalGrid(
                 state = gridState,
-                columns = GridCells.Adaptive(minSize = 108.dp * LocalDensity.current.fontScale.coerceAtLeast(1f)),
-                contentPadding = PaddingValues(start = 10.dp, top = 4.dp, end = 10.dp, bottom = LocalFloatingChromeInset.current + 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                columns = if (gallery) {
+                    GridCells.Fixed(3)
+                } else {
+                    GridCells.Adaptive(minSize = 108.dp * LocalDensity.current.fontScale.coerceAtLeast(1f))
+                },
+                contentPadding = if (gallery) {
+                    PaddingValues(bottom = LocalFloatingChromeInset.current + 24.dp)
+                } else {
+                    PaddingValues(start = 10.dp, top = 4.dp, end = 10.dp, bottom = LocalFloatingChromeInset.current + 24.dp)
+                },
+                horizontalArrangement = Arrangement.spacedBy(if (gallery) 0.dp else 4.dp),
+                verticalArrangement = Arrangement.spacedBy(if (gallery) 0.dp else 4.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(hazeModifier)
             ) {
-                val sections = imageSections.ifEmpty { mapOf("" to displayedItems) }
-                sections.forEach { (date, files) ->
-                    if (date.isNotEmpty()) item(key = "image_date_$date", span = { GridItemSpan(maxLineSpan) }) {
-                        FilesSectionHeader(title = date)
-                    }
-                    items(files, key = { it.path }) { item ->
-                        FileGridCell(
-                            item = item,
-                            isSelected = selectedFiles.contains(item.file),
-                            isSelectionMode = inSelectionMode,
-                            onClick = {
-                                if (inSelectionMode) onToggleSelection(item) else onOpenItem(item)
-                            },
-                            onLongClick = { onToggleSelection(item) },
-                            onMoreClick = { onMoreItem(item) },
-                            galleryTile = isImagesCategory
-                        )
-                    }
+                items(displayedItems, key = { it.path }) { item ->
+                    FileGridCell(
+                        item = item,
+                        isSelected = selectedFiles.contains(item.file),
+                        isSelectionMode = inSelectionMode,
+                        onClick = {
+                            if (inSelectionMode) onToggleSelection(item) else onOpenItem(item)
+                        },
+                        onLongClick = { onToggleSelection(item) },
+                        onMoreClick = { onMoreItem(item) },
+                        galleryTile = gallery,
+                        showMoreButton = !isDocumentsCategory,
+                        generateOfficePreview = isDocumentsCategory
+                    )
                 }
             }
         } else {

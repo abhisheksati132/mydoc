@@ -462,12 +462,25 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
                                         is ActiveScreen.Photo -> {
-                                            com.abhisheksati.mydoc.ui.media.PhotoViewerScreen(
-                                                items = screen.allPhotos.ifEmpty { listOf(screen.item) },
-                                                initialIndex = screen.allPhotos.indexOf(screen.item).coerceAtLeast(0),
-                                                mediaRepository = app.mediaRepository,
-                                                onBackClick = { currentPhoto = null }
-                                            )
+                                            val photos = screen.allPhotos.ifEmpty { listOf(screen.item) }
+                                            // Identity is the URI, not data-class equality: the tapped item is
+                                            // rebuilt from the intent/MediaStore while the pager list is built
+                                            // from file stamps, so equal-looking entries never compare equal.
+                                            val initialIndex = photos
+                                                .indexOfFirst { it.uri == screen.item.uri }
+                                                .takeIf { it >= 0 }
+                                                ?: photos.indexOfFirst { photo ->
+                                                    screen.item.filePath != null &&
+                                                        photo.filePath == screen.item.filePath
+                                                }
+                                            androidx.compose.runtime.key(screen.item.uri.toString()) {
+                                                com.abhisheksati.mydoc.ui.media.PhotoViewerScreen(
+                                                    items = photos,
+                                                    initialIndex = initialIndex.coerceAtLeast(0),
+                                                    mediaRepository = app.mediaRepository,
+                                                    onBackClick = { currentPhoto = null }
+                                                )
+                                            }
                                         }
                                         is ActiveScreen.Video -> {
                                             com.abhisheksati.mydoc.ui.media.VideoPlayerScreen(
@@ -834,7 +847,9 @@ class MainActivity : ComponentActivity() {
                     displayName = displayName,
                     sizeBytes = file?.length() ?: 0L,
                     mimeType = detectedMime,
-                    dateAddedSec = System.currentTimeMillis() / 1000L,
+                    // Match the stamp used by the sibling list so position and sorting agree.
+                    dateAddedSec = file?.lastModified()?.takeIf { it > 0L }?.div(1000L)
+                        ?: System.currentTimeMillis() / 1000L,
                     filePath = file?.absolutePath ?: uri.path
                 )
 

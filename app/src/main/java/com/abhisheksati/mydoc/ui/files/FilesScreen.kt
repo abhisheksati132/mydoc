@@ -294,9 +294,12 @@ fun FilesPaneScreen(
     }
 
     val hasDedicatedPage = showAppManager || showCleaner || showInsights
-    DisposableEffect(isActive, hasDedicatedPage) {
-        if (isActive) onPageVisibilityChange(hasDedicatedPage)
-        onDispose { if (isActive && hasDedicatedPage) onPageVisibilityChange(false) }
+    // A category or folder is a workspace, not a tab: while it is open the root tabs
+    // (and their swipe axis) must step out of the way.
+    val isImmersiveLibraryPage = hasDedicatedPage || insideBrowse
+    DisposableEffect(isActive, isImmersiveLibraryPage) {
+        if (isActive) onPageVisibilityChange(isImmersiveLibraryPage)
+        onDispose { if (isActive && isImmersiveLibraryPage) onPageVisibilityChange(false) }
     }
 
     if (showAppManager) {

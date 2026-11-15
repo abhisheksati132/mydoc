@@ -62,7 +62,6 @@ import androidx.compose.material3.DropdownMenuItem
 import com.abhisheksati.mydoc.designsystem.components.AppDropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -421,7 +420,6 @@ internal fun SegmentedStorageBar(
 fun CategoryTile(
     type: StorageCategoryType,
     stat: StorageCategoryStat?,
-    totalBytes: Long,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -437,14 +435,6 @@ fun CategoryTile(
         else -> colors.accent
     }
     val shape = AppRadius.xLargeShape
-    val share = if (totalBytes > 0L) (stat?.bytes ?: 0L).toFloat() / totalBytes else 0f
-    val sharePercent = (share * 100f).toInt()
-    val animatedShare by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = share.coerceIn(0f, 1f),
-        animationSpec = androidx.compose.animation.core.tween(700, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-        label = "categoryShare"
-    )
-
     Column(
         modifier = modifier
             .heightIn(min = 128.dp)
@@ -517,36 +507,13 @@ fun CategoryTile(
                 text = when {
                     stat == null -> stringResource(R.string.files_scanning_short)
                     stat.bytes <= 0L -> stringResource(R.string.files_empty_short)
-                    sharePercent > 0 -> "${stat.formattedSize} · $sharePercent%"
-                    else -> "${stat.formattedSize} · <1%"
+                    else -> stat.formattedSize
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(Modifier.height(6.dp))
-            if (stat != null && stat.bytes > 0L) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(3.dp)
-                        .clip(AppRadius.roundShape)
-                        .background(scheme.surfaceVariant.copy(alpha = 0.55f))
-                ) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth(animatedShare)
-                            .height(3.dp)
-                            .clip(AppRadius.roundShape)
-                            .background(tone.copy(alpha = 0.9f))
-                    )
-                }
-            } else {
-                // A bare track under "Empty" reads as a stray underline; the spacer keeps
-                // titles aligned with neighbouring tiles that do show a bar.
-                Spacer(Modifier.height(3.dp))
-            }
         }
     }
 }
@@ -566,6 +533,22 @@ fun FolderPlate(modifier: Modifier = Modifier, size: Int = 44) {
             contentDescription = null,
             tint = scheme.onSecondaryContainer,
             modifier = Modifier.size((size * 0.48f).dp)
+        )
+    }
+}
+
+/** The one overflow affordance: same icon, tint and 48dp target in every list and grid. */
+@Composable
+internal fun FileOverflowButton(
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    IconButton(onClick = onClick, modifier = modifier.size(48.dp)) {
+        Icon(
+            imageVector = Icons.Outlined.MoreVert,
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -659,13 +642,10 @@ fun FileRow(
                 modifier = Modifier.size(22.dp)
             )
         } else {
-            IconButton(onClick = onMoreClick, modifier = Modifier.size(48.dp)) {
-                Icon(
-                    imageVector = Icons.Outlined.MoreVert,
-                    contentDescription = stringResource(R.string.more_options_for_file, item.name),
-                    tint = scheme.onSurfaceVariant
-                )
-            }
+            FileOverflowButton(
+                contentDescription = stringResource(R.string.more_options_for_file, item.name),
+                onClick = onMoreClick
+            )
         }
     }
 }
@@ -680,7 +660,9 @@ fun FileGridCell(
     onLongClick: () -> Unit,
     onMoreClick: () -> Unit,
     modifier: Modifier = Modifier,
-    galleryTile: Boolean = false
+    galleryTile: Boolean = false,
+    showMoreButton: Boolean = true,
+    generateOfficePreview: Boolean = false
 ) {
     val scheme = MaterialTheme.colorScheme
     val haptics = rememberAppHaptics()
@@ -689,7 +671,7 @@ fun FileGridCell(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(AppRadius.cardShape)
+            .then(if (galleryTile) Modifier else Modifier.clip(AppRadius.cardShape))
             .then(
                 if (isSelectionMode) {
                     // R7: `toggleable` is what publishes a checked state to the accessibility layer.
@@ -714,13 +696,13 @@ fun FileGridCell(
                     )
                 }
             )
-            .padding(8.dp)
+            .padding(if (galleryTile) 0.dp else 8.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(if (LocalDensity.current.fontScale > 1.3f) 2f else 1f)
-                .clip(AppRadius.insetShape)
+                .then(if (galleryTile) Modifier else Modifier.clip(AppRadius.insetShape))
                 .background(if (isSelected) scheme.primaryContainer else scheme.surfaceContainerLow)
         ) {
             if (item.isDirectory) {
@@ -736,7 +718,8 @@ fun FileGridCell(
                 StorageThumbnail(
                     item = item,
                     modifier = Modifier.fillMaxSize(),
-                    contentDescription = if (galleryTile) item.name else null
+                    contentDescription = if (galleryTile) item.name else null,
+                    generateOfficePreview = generateOfficePreview
                 )
                 if (isSelected) {
                     Box(
@@ -758,16 +741,12 @@ fun FileGridCell(
                         .size(22.dp)
                         .background(scheme.surface, CircleShape)
                 )
-            } else if (!galleryTile) {
-                IconButton(
+            } else if (!galleryTile && showMoreButton) {
+                FileOverflowButton(
+                    contentDescription = stringResource(R.string.more_options_for_file, item.name),
                     onClick = onMoreClick,
-                    modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(48.dp)
-                        .background(scheme.surface, CircleShape)
-                ) {
-                    Icon(Icons.Outlined.MoreVert,
-                        contentDescription = stringResource(R.string.more_options_for_file, item.name),
-                        tint = scheme.onSurfaceVariant)
-                }
+                    modifier = Modifier.align(Alignment.TopEnd)
+                )
             }
         }
         if (galleryTile) return@Column

@@ -865,8 +865,9 @@ class FileManagerViewModel(
                     },
                     isGridView = when {
                         it.activeCategory == category -> it.isGridView
+                        // Categories are lists by default; only a photo wall wants tiles.
                         category == FileCategory.IMAGES -> true
-                        else -> settingsRepository?.filesGridView?.value ?: false
+                        else -> false
                     },
                     isLoading = true,
                     isRefreshing = it.activeCategory == category && it.items.isNotEmpty(),
@@ -1089,8 +1090,10 @@ class FileManagerViewModel(
     fun toggleViewMode() {
         val next = !_uiState.value.isGridView
         _uiState.update { it.copy(isGridView = next) }
+        // A folder's choice is remembered with the folder; a category's choice only lives
+        // for that visit, so the next category always opens on its own default.
         if (_uiState.value.isBrowsingStorage && _uiState.value.activeCategory == null) rememberFolderView()
-        else settingsRepository?.setFilesGridView(next)
+        else if (_uiState.value.activeCategory == null) settingsRepository?.setFilesGridView(next)
     }
 
     fun toggleHiddenFiles() {
