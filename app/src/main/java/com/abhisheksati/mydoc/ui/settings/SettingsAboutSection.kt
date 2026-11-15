@@ -52,6 +52,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.abhisheksati.mydoc.BuildConfig
 import com.abhisheksati.mydoc.CrashLog
 import com.abhisheksati.mydoc.R
@@ -86,8 +87,8 @@ fun SettingsAboutSection(
             onViewSource = {
                 showPrivacy = false
                 context.openExternalLink(
-                    Uri.parse(MYDOC_URL),
-                    R.string.settings_report_issue_failed
+                    MYDOC_URL.toUri(),
+                    R.string.settings_link_failed
                 )
             }
         )
@@ -140,6 +141,16 @@ fun SettingsAboutSection(
 
         TextButton(onClick = { showPrivacy = true }) {
             Text(stringResource(R.string.settings_privacy_trust))
+        }
+        TextButton(
+            onClick = {
+                context.openExternalLink(
+                    "$MYDOC_URL/blob/main/PRIVACY.md".toUri(),
+                    R.string.settings_link_failed
+                )
+            }
+        ) {
+            Text(stringResource(R.string.settings_privacy_policy))
         }
         TextButton(onClick = { context.openIssueTracker() }) {
             Text(stringResource(R.string.settings_report_issue))
@@ -442,7 +453,7 @@ private fun Context.openIssueTracker() {
         Build.VERSION.RELEASE,
         Build.VERSION.SDK_INT
     )
-    val uri = Uri.parse("$MYDOC_URL/issues/new").buildUpon()
+    val uri = "$MYDOC_URL/issues/new".toUri().buildUpon()
         .appendQueryParameter("title", getString(R.string.settings_issue_title))
         .appendQueryParameter("body", body)
         .build()

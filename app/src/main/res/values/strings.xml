@@ -230,6 +230,7 @@
     <string name="settings_crash_report_close">Close</string>
     <string name="settings_crash_report_copied">Crash report copied</string>
     <string name="settings_privacy_trust">Privacy &amp; trust</string>
+    <string name="settings_privacy_policy">Privacy policy</string>
     <string name="settings_privacy_title">Privacy &amp; trust</string>
     <string name="settings_privacy_offline_title">On-device by default</string>
     <string name="settings_privacy_offline_body">Reading, search, OCR and every tool run on your phone. No account, no cloud, no analytics.</string>
@@ -243,6 +244,7 @@
     <string name="settings_view_source">View source</string>
     <string name="settings_report_issue">Report an issue</string>
     <string name="settings_report_issue_failed">No app available to open the issue tracker</string>
+    <string name="settings_link_failed">No app available to open this link</string>
     <string name="settings_issue_title">Bug: </string>
     <string name="settings_issue_body">\n\n---\nMyDoc %1$s (%2$d)\nDevice: %3$s\nAndroid %4$s (API %5$d)\n</string>
     <string name="settings_storage_title">Storage &amp; files</string>
