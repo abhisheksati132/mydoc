@@ -1,8 +1,14 @@
 package com.abhisheksati.mydoc.ui.settings
 
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -18,9 +24,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -36,13 +46,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.BuildConfig
 import com.abhisheksati.mydoc.CrashLog
 import com.abhisheksati.mydoc.R
+import com.abhisheksati.mydoc.designsystem.components.AppAlertDialog
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.update.UpdateManager
 import com.abhisheksati.mydoc.update.UpdateUiState
@@ -66,6 +79,19 @@ fun SettingsAboutSection(
     if (showWordLicenses) WordEngineLicensesDialog { showWordLicenses = false }
     var showOpenSourceLicenses by rememberSaveable { mutableStateOf(false) }
     if (showOpenSourceLicenses) OpenSourceLicensesDialog { showOpenSourceLicenses = false }
+    var showPrivacy by rememberSaveable { mutableStateOf(false) }
+    if (showPrivacy) {
+        PrivacyTrustDialog(
+            onDismiss = { showPrivacy = false },
+            onViewSource = {
+                showPrivacy = false
+                context.openExternalLink(
+                    Uri.parse(MYDOC_URL),
+                    R.string.settings_report_issue_failed
+                )
+            }
+        )
+    }
     var crashReport by remember { mutableStateOf(CrashLog.read(context)) }
     var showCrashReport by rememberSaveable { mutableStateOf(false) }
     val crashReportTitle = stringResource(R.string.settings_crash_report_title)
@@ -112,6 +138,12 @@ fun SettingsAboutSection(
 
         SettingsDivider()
 
+        TextButton(onClick = { showPrivacy = true }) {
+            Text(stringResource(R.string.settings_privacy_trust))
+        }
+        TextButton(onClick = { context.openIssueTracker() }) {
+            Text(stringResource(R.string.settings_report_issue))
+        }
         TextButton(onClick = { showWordLicenses = true }) {
             Text(stringResource(R.string.word_engine_licenses))
         }
@@ -308,6 +340,121 @@ private fun CrashReportDialog(
             }
         }
     )
+}
+
+@Composable
+private fun PrivacyTrustDialog(
+    onDismiss: () -> Unit,
+    onViewSource: () -> Unit
+) {
+    AppAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_privacy_title)) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                TrustPoint(
+                    icon = Icons.Outlined.Shield,
+                    title = R.string.settings_privacy_offline_title,
+                    body = R.string.settings_privacy_offline_body
+                )
+                TrustPoint(
+                    icon = Icons.Outlined.FolderOpen,
+                    title = R.string.settings_privacy_storage_title,
+                    body = R.string.settings_privacy_storage_body
+                )
+                TrustPoint(
+                    icon = Icons.Outlined.SystemUpdate,
+                    title = R.string.settings_privacy_updates_title,
+                    body = R.string.settings_privacy_updates_body
+                )
+                TrustPoint(
+                    icon = Icons.Outlined.BugReport,
+                    title = R.string.settings_privacy_crash_title,
+                    body = R.string.settings_privacy_crash_body
+                )
+                Text(
+                    text = stringResource(R.string.settings_privacy_source),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_close))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onViewSource) {
+                Text(stringResource(R.string.settings_view_source))
+            }
+        }
+    )
+}
+
+@Composable
+private fun TrustPoint(
+    icon: ImageVector,
+    @StringRes title: Int,
+    @StringRes body: Int
+) {
+    val scheme = MaterialTheme.colorScheme
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = scheme.primary,
+            modifier = Modifier
+                .padding(top = 2.dp)
+                .size(20.dp)
+        )
+        Column {
+            Text(
+                text = stringResource(title),
+                style = MaterialTheme.typography.bodyLarge,
+                color = scheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = stringResource(body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/** GitHub is the only distribution channel, so it is also the only issue tracker. */
+private const val MYDOC_URL = "https://github.com/abhisheksati132/mydoc"
+
+private fun Context.openIssueTracker() {
+    val body = getString(
+        R.string.settings_issue_body,
+        BuildConfig.VERSION_NAME,
+        BuildConfig.VERSION_CODE,
+        "${Build.MANUFACTURER} ${Build.MODEL}",
+        Build.VERSION.RELEASE,
+        Build.VERSION.SDK_INT
+    )
+    val uri = Uri.parse("$MYDOC_URL/issues/new").buildUpon()
+        .appendQueryParameter("title", getString(R.string.settings_issue_title))
+        .appendQueryParameter("body", body)
+        .build()
+    openExternalLink(uri, R.string.settings_report_issue_failed)
+}
+
+private fun Context.openExternalLink(uri: Uri, @StringRes failureMessage: Int) {
+    try {
+        startActivity(Intent(Intent.ACTION_VIEW, uri))
+    } catch (_: ActivityNotFoundException) {
+        Toast.makeText(this, failureMessage, Toast.LENGTH_SHORT).show()
+    }
 }
 
 @Composable

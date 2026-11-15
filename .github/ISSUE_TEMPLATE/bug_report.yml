@@ -1,0 +1,65 @@
+name: Bug report
+description: Something in MyDoc is broken or behaves unexpectedly.
+title: "Bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. MyDoc runs entirely on your device —
+        please don't attach documents that contain anything private.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what did MyDoc do instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Tap ...
+        3. See ...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where in the app?
+      options:
+        - Reading a PDF
+        - Editing or converting a document
+        - Photos and OCR
+        - File browser
+        - Video or audio
+        - Search
+        - Updating MyDoc
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: MyDoc version
+      description: Shown in Settings → About, for example "2.0.9 (199)".
+      placeholder: "2.0.9 (199)"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+      placeholder: "Pixel 8, Android 15"
+    validations:
+      required: true
+  - type: textarea
+    id: crash-report
+    attributes:
+      label: Crash report (optional)
+      description: |
+        If MyDoc crashed, open **Settings → About → Last crash report**, tap Copy,
+        and paste it here.
+      render: text

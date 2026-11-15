@@ -60,6 +60,10 @@ Parsing, rendering, OCR, search indexing, and every document tool run on your de
 
 Already installed? Use **Settings → About** to check for updates.
 
+Prefer automatic updates? Add `https://github.com/abhisheksati132/mydoc` to [Obtainium](https://github.com/ImranR98/Obtainium) — it follows GitHub Releases directly and hands each new APK to Android's installer.
+
+Every build is verified twice: the in-app updater checks the published SHA-256 and the APK's signing certificate before it will install anything, and **Settings → Privacy & trust** explains what stays on your device.
+
 ## Build from source
 
 Requirements: JDK 21, Android SDK with platform 37, and Git.
