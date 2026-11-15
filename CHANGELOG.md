@@ -3,6 +3,22 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [2.0.11] — 2026-11-15
+
+### The Library, calmer and faster
+- **Image gallery**: Images opens as a dense three-column gallery with no gaps and no date headers, so thumbnails are larger and more of them fit on screen.
+- **The photo you tapped**: opening any photo now shows that photo. The viewer matches the tapped item by URI instead of a rebuilt list position, which previously sent older photos back to the first image.
+- **Focused browsing**: opening a category or folder (Images, Documents, Downloads, Internal storage) hides the bottom navigation and stops the Home/Library/Tools swipe, so browsing no longer fights the tab pager.
+- **Document previews**: the Documents grid drops the per-file overflow menu and shows real previews for every type — PDF and text, plus Office documents when the engine is installed.
+- **Transparent overflow**: grid overflow buttons are now just the three dots on the surface, and one shared 48 dp menu button is used across lists, grids, and recents.
+
+### Consistency
+- Category tiles show count and size only; the percentage and share bar are gone.
+- Every category except Images opens in list view, and a grid toggle applies only to the category you are in.
+
+### Office documents open faster
+- The optional Office engine stays warm for two minutes after a conversion, so opening several documents no longer pays LibreOffice startup every time. Warm opens measured ~2.4 s against ~5.0 s cold on the reference emulator.
+
 ## [2.0.10] — 2026-11-15
 
 ### Trust, on the surface
