@@ -33,6 +33,8 @@
         <exclude domain="sharedpref" path="word_reflow_progress.xml" />
         <exclude domain="sharedpref" path="mydoc_welcome.xml" />
         <exclude domain="file" path="rename_journals" />
+        <!-- Crash logs describe one device's failure and are not useful elsewhere. -->
+        <exclude domain="file" path="crash" />
     </cloud-backup>
 
     <device-transfer>
@@ -68,5 +70,7 @@
         <exclude domain="sharedpref" path="word_reflow_progress.xml" />
         <exclude domain="sharedpref" path="mydoc_welcome.xml" />
         <exclude domain="file" path="rename_journals" />
+        <!-- Crash logs describe one device's failure and are not useful elsewhere. -->
+        <exclude domain="file" path="crash" />
     </device-transfer>
 </data-extraction-rules>

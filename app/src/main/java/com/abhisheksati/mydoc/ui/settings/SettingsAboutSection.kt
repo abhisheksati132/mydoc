@@ -1,5 +1,8 @@
 package com.abhisheksati.mydoc.ui.settings
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -9,12 +12,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -32,7 +39,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.CrashLog
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.tokens.withTabularFigures
 import com.abhisheksati.mydoc.update.UpdateManager
@@ -57,6 +66,34 @@ fun SettingsAboutSection(
     if (showWordLicenses) WordEngineLicensesDialog { showWordLicenses = false }
     var showOpenSourceLicenses by rememberSaveable { mutableStateOf(false) }
     if (showOpenSourceLicenses) OpenSourceLicensesDialog { showOpenSourceLicenses = false }
+    var crashReport by remember { mutableStateOf(CrashLog.read(context)) }
+    var showCrashReport by rememberSaveable { mutableStateOf(false) }
+    val crashReportTitle = stringResource(R.string.settings_crash_report_title)
+    if (showCrashReport) {
+        val report = crashReport
+        if (report != null) {
+            CrashReportDialog(
+                report = report,
+                onCopy = {
+                    context.getSystemService(ClipboardManager::class.java)
+                        ?.setPrimaryClip(ClipData.newPlainText(crashReportTitle, report))
+                    Toast.makeText(
+                        context,
+                        R.string.settings_crash_report_copied,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                },
+                onDelete = {
+                    CrashLog.clear(context)
+                    crashReport = null
+                    showCrashReport = false
+                },
+                onDismiss = { showCrashReport = false }
+            )
+        } else {
+            showCrashReport = false
+        }
+    }
 
     SettingsCard(
         showHeader = false,
@@ -84,6 +121,11 @@ fun SettingsAboutSection(
         }
         TextButton(onClick = { showOpenSourceLicenses = true }) {
             Text(stringResource(R.string.open_source_licenses))
+        }
+        if (crashReport != null) {
+            TextButton(onClick = { showCrashReport = true }) {
+                Text(stringResource(R.string.settings_crash_report))
+            }
         }
 
         SettingsDivider()
@@ -219,6 +261,57 @@ fun SettingsAboutSection(
             }
         }
     }
+}
+
+@Composable
+private fun CrashReportDialog(
+    report: String,
+    onCopy: () -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_crash_report_title)) },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(R.string.settings_crash_report_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = scheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = report,
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    color = scheme.onSurface,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 320.dp)
+                        .verticalScroll(rememberScrollState())
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onCopy) {
+                Text(stringResource(R.string.settings_crash_report_copy))
+            }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = onDelete) {
+                    Text(
+                        text = stringResource(R.string.settings_crash_report_delete),
+                        color = scheme.error
+                    )
+                }
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.settings_crash_report_close))
+                }
+            }
+        }
+    )
 }
 
 @Composable

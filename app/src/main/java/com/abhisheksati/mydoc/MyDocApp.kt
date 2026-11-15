@@ -46,6 +46,7 @@ class MyDocApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        CrashLog.install(this)
         database = AppDatabase.getInstance(this)
         documentRepository = DocumentRepositoryImpl(this, database)
         mediaRepository = MediaRepositoryImpl(this, database)

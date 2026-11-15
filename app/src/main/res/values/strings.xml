@@ -222,6 +222,13 @@
     <string name="settings_download_install">Download &amp; install%1$s</string>
     <string name="settings_dismiss">Dismiss</string>
     <string name="settings_downloading">Downloading %1$d%%</string>
+    <string name="settings_crash_report">Last crash report</string>
+    <string name="settings_crash_report_title">Crash report</string>
+    <string name="settings_crash_report_hint">Stored on this device only. Nothing is sent automatically.</string>
+    <string name="settings_crash_report_copy">Copy</string>
+    <string name="settings_crash_report_delete">Delete</string>
+    <string name="settings_crash_report_close">Close</string>
+    <string name="settings_crash_report_copied">Crash report copied</string>
     <string name="settings_storage_title">Storage &amp; files</string>
     <string name="settings_startup_destination">Default startup destination</string>
     <string name="settings_cleaner_title">Storage cleaner</string>
