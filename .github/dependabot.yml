@@ -20,3 +20,11 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 5
+    groups:
+      # init and analyze must always move together; split bumps fail CodeQL.
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
+      actions:
+        patterns:
+          - "*"
