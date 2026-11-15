@@ -72,6 +72,7 @@ jobs:
         uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
 
       - name: Install pinned Gradle distribution in cold home
+        id: gradle-install
         env:
           GRADLE_USER_HOME: ${{ runner.temp }}/gradle-cold
           # Anonymous api.github.com downloads share a rate limit across the runner
@@ -88,19 +89,26 @@ jobs:
           fi
           DIST_VERSION="${DIST_URL##*/gradle-}"
           DIST_VERSION="${DIST_VERSION%-bin.zip}"
-          if [[ "$DIST_VERSION" != 9.6.0 ]]; then
-            echo "ERROR: No checksum pin is configured for Gradle $DIST_VERSION."
+          DIST_SHA=$(sed -n 's/^distributionSha256Sum=//p' gradle/wrapper/gradle-wrapper.properties)
+          if [[ -z "$DIST_SHA" ]]; then
+            echo "ERROR: No distributionSha256Sum is configured for Gradle $DIST_VERSION."
+            exit 1
+          fi
+          ASSET_ID=$(gh api "repos/gradle/gradle-distributions/releases/tags/v${DIST_VERSION}" \
+            --jq ".assets[] | select(.name == \"gradle-${DIST_VERSION}-bin.zip\") | .id")
+          if [[ -z "$ASSET_ID" ]]; then
+            echo "ERROR: No gradle-${DIST_VERSION}-bin.zip asset in gradle/gradle-distributions v${DIST_VERSION}."
             exit 1
           fi
           mkdir -p "$GRADLE_USER_HOME/verified-gradle"
           archive="$RUNNER_TEMP/gradle-${DIST_VERSION}-bin.zip"
           curl --fail --location --retry 3 --retry-all-errors \
             -H "Authorization: Bearer $GH_TOKEN" \
-            "https://api.github.com/repos/gradle/gradle-distributions/releases/assets/451669088" \
+            "https://api.github.com/repos/gradle/gradle-distributions/releases/assets/${ASSET_ID}" \
             -H "Accept: application/octet-stream" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             -o "$archive"
-          echo "bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01  $archive" | sha256sum --check --status
+          echo "$DIST_SHA  $archive" | sha256sum --check --status
           unzip -q "$archive" -d "$GRADLE_USER_HOME/verified-gradle"
           rm "$archive"
           test -x "$GRADLE_USER_HOME/verified-gradle/gradle-${DIST_VERSION}/bin/gradle"
@@ -110,7 +118,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Set verified Gradle home
-        run: echo "GRADLE_HOME=$RUNNER_TEMP/gradle-cold/verified-gradle/gradle-9.6.0" >> "$GITHUB_ENV"
+        run: echo "GRADLE_HOME=${{ steps.gradle-install.outputs.gradle_home }}" >> "$GITHUB_ENV"
 
       - name: Run Unit Tests
         # Run against an empty Gradle home on purpose: a warm cache or a local keyring lets an
