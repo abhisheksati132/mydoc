@@ -30,7 +30,7 @@ jobs:
           java-version: '21'
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -40,7 +40,7 @@ jobs:
 
       - name: Upload Test Report
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: unit-test-report
           path: |
@@ -53,7 +53,7 @@ jobs:
 
       - name: Upload Lint Report
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: lint-report
           path: |
@@ -76,7 +76,7 @@ jobs:
           ls -la app/build/outputs/apk/debug/
 
       - name: Upload Debug APK
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mydoc-debug-apk
           path: |
@@ -101,7 +101,7 @@ jobs:
           java-version: '21'
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -127,7 +127,7 @@ jobs:
 
       - name: Upload Instrumented Test Report
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: instrumented-test-report
           path: |
