@@ -84,9 +84,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.components.GlassMotionState
 import com.abhisheksati.mydoc.designsystem.components.TrackGlassMotion
+import com.abhisheksati.mydoc.designsystem.components.tonalSheen
+import com.abhisheksati.mydoc.designsystem.animation.StaggeredReveal
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.domain.model.DocumentTypeFilter
@@ -308,21 +311,26 @@ private fun CategoryShortcutGrid(
 ) {
     val columns = if (androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f) 1 else 2
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        shortcutCategories.chunked(columns).forEach { row ->
+        shortcutCategories.chunked(columns).forEachIndexed { rowIndex, row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                row.forEach { type ->
+                row.forEachIndexed { columnIndex, type ->
                     val statType = if (type == StorageCategoryType.APKS) StorageCategoryType.APPS else type
                     val stat = storageUiState.categories.firstOrNull { it.type == statType }
-                    CategoryTile(
-                        type = type,
-                        stat = stat,
-                        totalBytes = storageUiState.totalBytes,
-                        onClick = { type.fileCategory?.let(onCategory) },
+                    StaggeredReveal(
+                        index = rowIndex * columns + columnIndex,
                         modifier = Modifier.weight(1f)
-                    )
+                    ) {
+                        CategoryTile(
+                            type = type,
+                            stat = stat,
+                            totalBytes = storageUiState.totalBytes,
+                            onClick = { type.fileCategory?.let(onCategory) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
                 repeat(columns - row.size) {
                     Spacer(Modifier.weight(1f))
@@ -369,6 +377,7 @@ private fun StorageBreakdown(storageUiState: StorageAnalysisUiState) {
                         ),
                         shape
                     )
+                    .tonalSheen()
                     .border(1.dp, colors.accent.copy(alpha = 0.18f), shape)
                     .padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -422,7 +431,10 @@ private fun StorageBreakdown(storageUiState: StorageAnalysisUiState) {
                         )
                         Text(
                             text = storageUiState.formattedUsed,
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = AppTheme.typography.title.copy(
+                                fontFeatureSettings = "tnum",
+                                letterSpacing = (-0.6).sp
+                            ),
                             fontWeight = FontWeight.Bold,
                             color = scheme.onSurface
                         )
@@ -454,30 +466,41 @@ private fun StorageBreakdown(storageUiState: StorageAnalysisUiState) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
                 entries.forEachIndexed { index, stat ->
                     val pct = if (total > 0) (stat.bytes.toDouble() / total * 100).toInt() else 0
-                    StorageLegendRow(
-                        label = stringResource(stat.type.titleRes),
-                        value = stat.formattedSize,
-                        percent = pct,
-                        color = if (categoriesFit) palette[index % palette.size] else colors.inkMuted,
-                        lowShare = pct == 0 && stat.bytes > 0L,
-                        icon = stat.type.icon,
-                        // System & Other is an estimate with a placeholder count, so it gets
-                        // no file line; app entries count packages, not files.
-                        meta = when {
-                            stat.type == StorageCategoryType.SYSTEM_OTHER || stat.fileCount <= 0 -> null
-                            stat.type == StorageCategoryType.APPS ->
-                                pluralStringResource(R.plurals.apps_count, stat.fileCount, stat.fileCount)
-                            else -> pluralStringResource(R.plurals.files_count, stat.fileCount, stat.fileCount)
-                        }
-                    )
+                    StaggeredReveal(index = index, modifier = Modifier.fillMaxWidth()) {
+                        StorageLegendRow(
+                            label = stringResource(stat.type.titleRes),
+                            value = stat.formattedSize,
+                            percent = pct,
+                            color = if (categoriesFit) palette[index % palette.size] else colors.inkMuted,
+                            lowShare = pct == 0 && stat.bytes > 0L,
+                            icon = stat.type.icon,
+                            // System & Other is an estimate with a placeholder count, so it gets
+                            // no file line; app entries count packages, not files.
+                            meta = when {
+                                stat.type == StorageCategoryType.SYSTEM_OTHER || stat.fileCount <= 0 -> null
+                                stat.type == StorageCategoryType.APPS ->
+                                    pluralStringResource(R.plurals.apps_count, stat.fileCount, stat.fileCount)
+                                else -> pluralStringResource(R.plurals.files_count, stat.fileCount, stat.fileCount)
+                            }
+                        )
+                    }
                 }
                 if (total > 0 && categoriesFit && unclassified > 0) {
                     val pct = (unclassified.toDouble() / total * 100).toInt()
-                    StorageLegendRow(stringResource(R.string.storage_chart_unclassified), StorageVolume.formatBytes(unclassified),
-                        pct, colors.inkMuted, lowShare = pct == 0)
+                    StaggeredReveal(index = entries.size, modifier = Modifier.fillMaxWidth()) {
+                        StorageLegendRow(stringResource(R.string.storage_chart_unclassified), StorageVolume.formatBytes(unclassified),
+                            pct, colors.inkMuted, lowShare = pct == 0)
+                    }
                 }
-                if (total > 0) StorageLegendRow(stringResource(R.string.storage_chart_free), storageUiState.formattedFree,
-                    (free.toDouble() / total * 100).toInt(), freeColor)
+                if (total > 0) {
+                    StaggeredReveal(
+                        index = entries.size + if (categoriesFit && unclassified > 0) 1 else 0,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        StorageLegendRow(stringResource(R.string.storage_chart_free), storageUiState.formattedFree,
+                            (free.toDouble() / total * 100).toInt(), freeColor)
+                    }
+                }
             }
         }
     }
@@ -515,7 +538,10 @@ private fun StorageLegendRow(
                     Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(19.dp))
                 }
             } else {
-                Box(Modifier.size(9.dp).clip(CircleShape).background(color))
+                // Same 36dp slot as the icon wells so every label starts on one axis.
+                Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(9.dp).clip(CircleShape).background(color))
+                }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(

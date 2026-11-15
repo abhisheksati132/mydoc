@@ -81,6 +81,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.abhisheksati.mydoc.designsystem.components.tonalSheen
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
@@ -169,6 +171,7 @@ fun StorageOverviewCard(
                 Brush.verticalGradient(listOf(accent.copy(alpha = 0.15f), accent.copy(alpha = 0.02f))),
                 shape
             )
+            .tonalSheen()
             .border(1.dp, accent.copy(alpha = 0.18f), shape)
             .padding(18.dp)
     ) {
@@ -215,7 +218,12 @@ fun StorageOverviewCard(
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = formattedUsed.ifEmpty { "—" },
-                    style = MaterialTheme.typography.headlineSmall,
+                    // Tabular figures keep the number from shifting while scans refresh, and
+                    // the display size gives the card its editorial centre of gravity.
+                    style = AppTheme.typography.display.copy(
+                        fontFeatureSettings = "tnum",
+                        letterSpacing = (-1).sp
+                    ),
                     fontWeight = FontWeight.Bold,
                     color = scheme.onSurface
                 )
@@ -293,13 +301,21 @@ private fun StorageQuickAction(
     Column(
         modifier = modifier
             .clip(AppRadius.cardShape)
-            .background(tone.copy(alpha = 0.12f))
+            .background(tone.copy(alpha = 0.10f))
+            .border(1.dp, tone.copy(alpha = 0.14f), AppRadius.cardShape)
             .pressScaleEffect(onClick = onClick)
             .padding(vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Icon(icon, contentDescription = null, tint = tone, modifier = Modifier.size(20.dp))
+        Box(
+            modifier = Modifier
+                .size(30.dp)
+                .background(tone.copy(alpha = 0.16f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = tone, modifier = Modifier.size(17.dp))
+        }
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
@@ -443,6 +459,7 @@ fun CategoryTile(
                 ),
                 shape
             )
+            .tonalSheen()
             .border(1.dp, tone.copy(alpha = 0.22f), shape)
             .pressScaleEffect(onClick = onClick)
             .padding(14.dp),
@@ -456,7 +473,10 @@ fun CategoryTile(
             Box(
                 modifier = Modifier
                     .size(38.dp)
-                    .background(tone.copy(alpha = 0.18f), AppRadius.insetShape),
+                    .background(
+                        Brush.verticalGradient(listOf(tone.copy(alpha = 0.26f), tone.copy(alpha = 0.10f))),
+                        AppRadius.insetShape
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

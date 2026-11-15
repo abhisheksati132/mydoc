@@ -45,6 +45,7 @@ import com.abhisheksati.mydoc.designsystem.components.AppEmptyState
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.components.showMessage
+import com.abhisheksati.mydoc.designsystem.components.tonalSheen
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
@@ -292,6 +293,7 @@ fun StorageCleanerScreen(
                                     ),
                                     heroShape
                                 )
+                                .tonalSheen()
                                 .border(1.dp, colors.accent.copy(alpha = 0.18f), heroShape)
                                 .padding(18.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -321,7 +323,10 @@ fun StorageCleanerScreen(
                                     )
                                     Text(
                                         text = formatSize(res.totalReclaimableBytes),
-                                        style = typography.title,
+                                        style = typography.display.copy(
+                                            fontFeatureSettings = "tnum",
+                                            letterSpacing = (-1).sp
+                                        ),
                                         fontWeight = FontWeight.Bold,
                                         color = colors.accent
                                     )

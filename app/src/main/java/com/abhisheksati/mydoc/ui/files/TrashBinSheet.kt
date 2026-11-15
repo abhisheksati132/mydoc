@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
+import com.abhisheksati.mydoc.designsystem.components.tonalSheen
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import androidx.compose.material.icons.Icons
@@ -118,7 +119,7 @@ fun TrashBinSheet(
             topBar = {
                 AppTopBar(
                     title = if (isSelectionMode) stringResource(R.string.trash_selected_count, selectedIds.size) else stringResource(R.string.menu_recycle_bin),
-                    subtitle = if (isSelectionMode) null
+                    subtitle = if (isSelectionMode || trashItems.isEmpty()) null
                         else pluralStringResource(R.plurals.trash_meta_count, trashItems.size, trashItems.size),
                     onBack = onClose,
                     isGlass = false,
@@ -366,6 +367,7 @@ private fun TrashHeroCard(count: Int, totalBytes: Long, modifier: Modifier = Mod
                 ),
                 shape
             )
+            .tonalSheen()
             .border(1.dp, tone.copy(alpha = 0.18f), shape)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
