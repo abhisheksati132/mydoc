@@ -3,6 +3,15 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [2.0.9] — 2026-11-15
+
+### The Library, reshaped around what is on disk
+- **Storage card**: one clean capacity bar, the used figure up front, free space below, and Insights / Recycle Bin / Clean as tonal quick actions instead of links.
+- **Category tiles**: each tile now shows its share of total storage next to its size and a thin share bar, with sub-2% slices labelled rather than rounding to 0%.
+- **Storage insights**: category rows lead with icon wells and file or app counts, and each keeps its own share bar; System & Other no longer shows a placeholder file count because it is an estimate.
+- **Recycle bin**: centered empty state, an amber summary hero with item count and the 30-day retention note, and per-item metadata without the redundant "Deleted" prefix.
+- **Storage cleaner**: compact reclaimable-space hero, tinted scan chips, a short explanation of how temp files, duplicates, and large files are matched, and an accurate subtitle in the top bar.
+
 ## [2.0.8] — 2026-11-15
 
 ### One viewer, everywhere
