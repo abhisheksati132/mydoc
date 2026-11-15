@@ -11,6 +11,7 @@ import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.util.UserMessages
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -66,13 +67,6 @@ fun StorageCleanerScreen(
     val cleanerManager = remember { StorageCleanerManager() }
     val app = LocalContext.current.applicationContext as MyDocApp
     val resources = LocalResources.current
-    // The sheet only ever scans one root; naming it stops the reader assuming it covers a card
-    // they have mounted.
-    val rootLabel = if (rootDir.absolutePath == android.os.Environment.getExternalStorageDirectory().absolutePath) {
-        stringResource(R.string.cleaner_root_internal)
-    } else {
-        rootDir.name.ifBlank { rootDir.absolutePath }
-    }
 
     var isScanning by remember { mutableStateOf(true) }
     var scanAttempt by remember { mutableIntStateOf(0) }
@@ -164,7 +158,7 @@ fun StorageCleanerScreen(
         ) {
             com.abhisheksati.mydoc.designsystem.components.AppTopBar(
                 title = stringResource(R.string.cleaner_title),
-                subtitle = stringResource(R.string.cleaner_subtitle, rootLabel),
+                subtitle = stringResource(R.string.cleaner_subtitle),
                 onBack = onDismiss,
                 actions = {
                     if (!isScanning && !isCleaning) TextButton(onClick = { scanAttempt++ }) {
@@ -284,56 +278,118 @@ fun StorageCleanerScreen(
                     contentPadding = PaddingValues(bottom = AppSpacing.paddingLarge),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    item {
-                        Text(stringResource(R.string.cleaner_review_explanation),
-                            style = typography.caption, color = colors.inkMuted)
-                    }
                     // Summary card
                     item {
-                        Surface(
-                            color = colors.accent.copy(alpha = 0.1f),
-                            shape = AppRadius.largeShape,
-                            modifier = Modifier.fillMaxWidth()
+                        val heroShape = AppRadius.xLargeShape
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(heroShape)
+                                .background(colors.surface, heroShape)
+                                .background(
+                                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                                        listOf(colors.accent.copy(alpha = 0.15f), colors.accent.copy(alpha = 0.02f))
+                                    ),
+                                    heroShape
+                                )
+                                .border(1.dp, colors.accent.copy(alpha = 0.18f), heroShape)
+                                .padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    text = stringResource(R.string.cleaner_reclaimable),
-                                    style = typography.overline,
-                                    color = colors.textSecondary
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = formatSize(res.totalReclaimableBytes),
-                                    style = typography.title,
-                                    color = colors.accent
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = stringResource(R.string.cleaner_scan_summary, res.totalScannedFiles, res.totalScannedDirectories),
-                                    style = typography.metadata,
-                                    color = colors.textSecondary
-                                )
-                                if (res.truncated) {
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = stringResource(R.string.cleaner_scan_limited),
-                                        style = typography.caption,
-                                        color = colors.warning
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .background(colors.accent.copy(alpha = 0.16f), AppRadius.insetShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.AutoAwesome,
+                                        contentDescription = null,
+                                        tint = colors.accent,
+                                        modifier = Modifier.size(22.dp)
                                     )
                                 }
-                                if (res.duplicateScanSkips.total > 0) {
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = stringResource(
-                                            R.string.cleaner_duplicate_check_skipped,
-                                            res.duplicateScanSkips.unreadable,
-                                            res.duplicateScanSkips.oversized
-                                        ),
-                                        style = typography.caption,
-                                        color = colors.warning
+                                        text = stringResource(R.string.cleaner_reclaimable),
+                                        style = typography.overline,
+                                        color = colors.textSecondary
+                                    )
+                                    Text(
+                                        text = formatSize(res.totalReclaimableBytes),
+                                        style = typography.title,
+                                        fontWeight = FontWeight.Bold,
+                                        color = colors.accent
                                     )
                                 }
                             }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Surface(
+                                    shape = AppRadius.pillShape,
+                                    color = colors.accent.copy(alpha = 0.10f)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.cleaner_scan_files_chip, res.totalScannedFiles),
+                                        style = typography.label,
+                                        color = colors.accent,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                    )
+                                }
+                                Surface(
+                                    shape = AppRadius.pillShape,
+                                    color = colors.accent.copy(alpha = 0.10f)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.cleaner_scan_folders_chip, res.totalScannedDirectories),
+                                        style = typography.label,
+                                        color = colors.accent,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                            if (res.truncated) {
+                                Text(
+                                    text = stringResource(R.string.cleaner_scan_limited),
+                                    style = typography.caption,
+                                    color = colors.warning
+                                )
+                            }
+                            if (res.duplicateScanSkips.total > 0) {
+                                Text(
+                                    text = stringResource(
+                                        R.string.cleaner_duplicate_check_skipped,
+                                        res.duplicateScanSkips.unreadable,
+                                        res.duplicateScanSkips.oversized
+                                    ),
+                                    style = typography.caption,
+                                    color = colors.warning
+                                )
+                            }
+                        }
+                    }
+
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Info,
+                                contentDescription = null,
+                                tint = colors.textSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.cleaner_review_explanation),
+                                style = typography.caption,
+                                color = colors.textSecondary
+                            )
                         }
                     }
 
@@ -504,13 +560,14 @@ fun StorageCleanerScreen(
                 // Bottom Action Button
                 if (res.tempFiles.isNotEmpty() || res.apkFiles.isNotEmpty() || res.duplicateGroups.isNotEmpty() || res.emptyFolders.isNotEmpty()) {
                     Surface(
+                        shape = AppRadius.xLargeShape,
                         color = if (isOled) colors.surfaceContainerHigh else colors.surface,
                         border = androidx.compose.foundation.BorderStroke(1.dp, colors.line),
-                        tonalElevation = 4.dp,
+                        tonalElevation = 8.dp,
                         modifier = Modifier
                             .fillMaxWidth()
                             .navigationBarsPadding()
-                            .padding(bottom = 16.dp, top = 8.dp)
+                            .padding(horizontal = 12.dp, vertical = 10.dp)
                     ) {
                         Button(
                             onClick = { showConfirm = true },
@@ -524,6 +581,7 @@ fun StorageCleanerScreen(
                             shape = AppRadius.cardShape,
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .padding(10.dp)
                                 .height(52.dp)
                         ) {
                             // No explicit colors: the button's own content color is the one
@@ -752,6 +810,7 @@ private fun CleanerCategoryCard(
     GlassSurface(
         shape = AppRadius.cardShape,
         elevation = 2.dp,
+        backgroundColor = if (checked) colors.accent.copy(alpha = 0.06f) else null,
         modifier = Modifier
             .fillMaxWidth()
             .clip(AppRadius.cardShape)
@@ -766,7 +825,7 @@ private fun CleanerCategoryCard(
         Box(
             modifier = Modifier
                 .size(38.dp)
-                .clip(CircleShape)
+                .clip(AppRadius.insetShape)
                 .background(badgeColor.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {

@@ -38,6 +38,7 @@ import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.ArrowDownward
 import androidx.compose.material.icons.outlined.ArrowUpward
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Folder
@@ -60,6 +61,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -75,6 +77,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
@@ -244,8 +249,12 @@ fun BrowseHomePane(
         item(key = "browse_storage") {
             StorageOverviewCard(
                 usedRatio = storageUiState.usedRatio,
+                formattedUsed = storageUiState.formattedUsed,
                 formattedTotal = storageUiState.formattedTotal,
                 formattedFree = storageUiState.formattedFree,
+                usedBytes = storageUiState.usedBytes,
+                totalBytes = storageUiState.totalBytes,
+                categories = storageUiState.categories,
                 onOpenTrash = onOpenTrash,
                 onBrowse = onBrowseInternal,
                 onInsights = onInsights,
@@ -325,8 +334,10 @@ private fun StorageBreakdown(storageUiState: StorageAnalysisUiState) {
     val colors = AppTheme.colors
     val scheme = MaterialTheme.colorScheme
     val palette = listOf(colors.accent, colors.accentAmber, colors.accentCyan, colors.accentGreen, colors.accentPink)
+    // Empty categories are rows of "0%" noise: the list is a breakdown of what *is*
+    // holding the disk, so only categories with bytes are read out.
     val entries = storageUiState.categories
-        .filter { it.type != StorageCategoryType.DOWNLOADS && it.type != StorageCategoryType.LARGE_FILES }
+        .filter { it.type != StorageCategoryType.DOWNLOADS && it.type != StorageCategoryType.LARGE_FILES && it.bytes > 0L }
         .sortedByDescending { it.bytes }
     val total = storageUiState.totalBytes
     val free = storageUiState.freeBytes
@@ -340,25 +351,44 @@ private fun StorageBreakdown(storageUiState: StorageAnalysisUiState) {
         animationSpec = androidx.compose.animation.core.tween(900, easing = androidx.compose.animation.core.FastOutSlowInEasing),
         label = "storageSweep"
     )
-    val cardShape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
+    val usedPercent = if (total > 0) (used * 100 / total).toInt().coerceIn(0, 100) else 0
+    val shape = AppRadius.xLargeShape
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         if (total > 0) {
-            androidx.compose.material3.Surface(shape = cardShape, color = scheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    Modifier.fillMaxWidth().padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(shape)
+                    .background(colors.surface, shape)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(colors.accent.copy(alpha = 0.15f), colors.accent.copy(alpha = 0.02f))
+                        ),
+                        shape
+                    )
+                    .border(1.dp, colors.accent.copy(alpha = 0.18f), shape)
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    Box(Modifier.size(184.dp), contentAlignment = Alignment.Center) {
-                        androidx.compose.foundation.Canvas(Modifier.size(184.dp)) {
-                            val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = 18.dp.toPx())
+                    Box(Modifier.size(142.dp), contentAlignment = Alignment.Center) {
+                        androidx.compose.foundation.Canvas(Modifier.size(142.dp)) {
+                            val stroke = androidx.compose.ui.graphics.drawscope.Stroke(
+                                width = 16.dp.toPx(),
+                                cap = StrokeCap.Round
+                            )
                             val inset = stroke.width / 2
                             val topLeft = androidx.compose.ui.geometry.Offset(inset, inset)
                             val bounds = androidx.compose.ui.geometry.Size(size.width - stroke.width, size.height - stroke.width)
                             drawArc(freeColor.copy(alpha = 0.45f), 0f, 360f, false, topLeft, bounds, style = stroke)
                             var start = -90f
-                            val gap = if (entries.size > 1) 2.5f else 0f
-                            if (categoriesFit && entries.isNotEmpty()) {
+                            if (!categoriesFit || entries.isEmpty()) {
+                                drawArc(colors.accent, start, (used.toDouble() / total * 360).toFloat() * sweepProgress, false, topLeft, bounds, style = stroke)
+                            } else {
+                                val gap = if (entries.size > 1) 2.5f else 0f
                                 entries.forEachIndexed { index, stat ->
                                     val full = (stat.bytes.toDouble() / total * 360).toFloat()
                                     val sweep = full * sweepProgress
@@ -369,31 +399,66 @@ private fun StorageBreakdown(storageUiState: StorageAnalysisUiState) {
                                     val sweep = (unclassified.toDouble() / total * 360).toFloat() * sweepProgress
                                     if (sweep > gap) drawArc(colors.inkMuted, start, sweep - gap, false, topLeft, bounds, style = stroke)
                                 }
-                            } else {
-                                drawArc(colors.accent, start, (used.toDouble() / total * 360).toFloat() * sweepProgress, false, topLeft, bounds, style = stroke)
                             }
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(storageUiState.formattedUsed, style = AppTheme.typography.title, color = scheme.onSurface)
+                            Text(
+                                text = "$usedPercent%",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = scheme.onSurface
+                            )
                             Text(stringResource(R.string.storage_chart_used), style = AppTheme.typography.caption, color = scheme.onSurfaceVariant)
                         }
                     }
-                    if (!categoriesFit) {
-                        Text(stringResource(R.string.storage_chart_overlap), style = AppTheme.typography.caption, color = colors.inkMuted)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = stringResource(R.string.storage_chart_used).uppercase(),
+                            style = AppTheme.typography.overline,
+                            color = scheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = storageUiState.formattedUsed,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = scheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.storage_of_total, storageUiState.formattedTotal),
+                            style = AppTheme.typography.caption,
+                            color = scheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(Modifier.size(8.dp).clip(CircleShape).background(freeColor))
+                            Text(
+                                text = stringResource(R.string.storage_free_line, storageUiState.formattedFree),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = scheme.onSurfaceVariant
+                            )
+                        }
                     }
+                }
+                if (!categoriesFit) {
+                    Text(stringResource(R.string.storage_chart_overlap), style = AppTheme.typography.caption, color = colors.inkMuted)
                 }
             }
         }
-        androidx.compose.material3.Surface(shape = cardShape, color = scheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
+        androidx.compose.material3.Surface(shape = AppRadius.xLargeShape, color = scheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
                 entries.forEachIndexed { index, stat ->
                     val pct = if (total > 0) (stat.bytes.toDouble() / total * 100).toInt() else 0
                     StorageLegendRow(stringResource(stat.type.titleRes), stat.formattedSize, pct,
-                        if (categoriesFit) palette[index % palette.size] else colors.inkMuted)
+                        if (categoriesFit) palette[index % palette.size] else colors.inkMuted,
+                        lowShare = pct == 0 && stat.bytes > 0L)
                 }
                 if (total > 0 && categoriesFit && unclassified > 0) {
+                    val pct = (unclassified.toDouble() / total * 100).toInt()
                     StorageLegendRow(stringResource(R.string.storage_chart_unclassified), StorageVolume.formatBytes(unclassified),
-                        (unclassified.toDouble() / total * 100).toInt(), colors.inkMuted)
+                        pct, colors.inkMuted, lowShare = pct == 0)
                 }
                 if (total > 0) StorageLegendRow(stringResource(R.string.storage_chart_free), storageUiState.formattedFree,
                     (free.toDouble() / total * 100).toInt(), freeColor)
@@ -403,17 +468,50 @@ private fun StorageBreakdown(storageUiState: StorageAnalysisUiState) {
 }
 
 @Composable
-private fun StorageLegendRow(label: String, value: String, percent: Int, color: androidx.compose.ui.graphics.Color) {
+private fun StorageLegendRow(
+    label: String,
+    value: String,
+    percent: Int,
+    color: androidx.compose.ui.graphics.Color,
+    lowShare: Boolean = false
+) {
     val scheme = MaterialTheme.colorScheme
-    Row(
-        Modifier.fillMaxWidth().padding(vertical = 9.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Box(Modifier.size(10.dp).clip(CircleShape).background(color))
-        Text(label, style = AppTheme.typography.body, modifier = Modifier.weight(1f), color = scheme.onSurface)
-        Text("$percent%", style = AppTheme.typography.caption, color = scheme.onSurfaceVariant)
-        Text(value, style = AppTheme.typography.bodyStrong, color = scheme.onSurface)
+    val animatedShare by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = (percent / 100f).coerceIn(0f, 1f),
+        animationSpec = androidx.compose.animation.core.tween(700, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "legendShare"
+    )
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(Modifier.size(9.dp).clip(CircleShape).background(color))
+            Text(label, style = AppTheme.typography.body, modifier = Modifier.weight(1f), color = scheme.onSurface)
+            Text(
+                text = if (lowShare) "<1%" else "$percent%",
+                style = AppTheme.typography.caption,
+                color = scheme.onSurfaceVariant
+            )
+            Text(value, style = AppTheme.typography.bodyStrong, color = scheme.onSurface)
+        }
+        Spacer(Modifier.height(6.dp))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .clip(AppRadius.roundShape)
+                .background(scheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
+            Box(
+                Modifier
+                    .fillMaxWidth(animatedShare)
+                    .height(4.dp)
+                    .clip(AppRadius.roundShape)
+                    .background(color.copy(alpha = 0.85f))
+            )
+        }
     }
 }
 
@@ -693,57 +791,66 @@ fun StorageInsightsScreen(
     onClean: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
+    val colors = AppTheme.colors
     androidx.compose.material3.Surface(Modifier.fillMaxSize(), color = scheme.background) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .safeDrawingPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 24.dp, end = 24.dp, bottom = 28.dp)
+                .padding(start = 20.dp, end = 20.dp, bottom = 28.dp)
         ) {
             com.abhisheksati.mydoc.designsystem.components.AppTopBar(
                 title = stringResource(R.string.storage_insights),
+                subtitle = stringResource(R.string.storage_insights_subtitle),
                 onBack = onDismiss,
                 contentInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
                 isGlass = false,
                 containerColor = scheme.background
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(8.dp))
             if (storageUiState.totalBytes > 0) {
-                val usedFraction = ((storageUiState.totalBytes - storageUiState.freeBytes).toFloat() / storageUiState.totalBytes).coerceIn(0f, 1f)
-                val animatedFraction by androidx.compose.animation.core.animateFloatAsState(
-                    targetValue = usedFraction,
-                    animationSpec = androidx.compose.animation.core.tween(900, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-                    label = "storageBar"
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(storageUiState.formattedUsed, style = MaterialTheme.typography.headlineSmall, color = scheme.onSurface)
-                    Text(
-                        "of ${storageUiState.formattedTotal} · ${storageUiState.formattedFree} free",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = scheme.onSurfaceVariant
-                    )
-                    val barShape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
-                    Box(Modifier.fillMaxWidth().height(8.dp).clip(barShape).background(scheme.surfaceContainerHighest)) {
-                        Box(Modifier.fillMaxWidth(animatedFraction).height(8.dp).clip(barShape).background(scheme.primary))
-                    }
-                }
+                StorageBreakdown(storageUiState = storageUiState)
             } else {
                 Text(stringResource(R.string.storage_calculating), style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
             }
-            Spacer(Modifier.height(16.dp))
-            StorageBreakdown(storageUiState = storageUiState)
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(14.dp))
             Text(stringResource(R.string.storage_measurement_note),
                 style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
             val reclaimable = storageUiState.cleanSummary.totalReclaimableBytes
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(20.dp))
             Button(
                 onClick = onClean,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = AppRadius.cardShape,
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = colors.accent,
+                    contentColor = colors.onAccent
+                )
             ) {
-                Text(if (reclaimable > 0) stringResource(R.string.storage_free_up, StorageVolume.formatBytes(reclaimable))
-                    else stringResource(R.string.settings_cleaner_title))
+                Icon(Icons.Outlined.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = if (reclaimable > 0) stringResource(R.string.storage_free_up, StorageVolume.formatBytes(reclaimable))
+                    else stringResource(R.string.settings_cleaner_title),
+                    style = AppTheme.typography.bodyStrong
+                )
+            }
+            if (reclaimable > 0) {
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(Modifier.size(6.dp).clip(CircleShape).background(colors.accentGreen))
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = stringResource(R.string.storage_insights_clean_hint),
+                        style = AppTheme.typography.caption,
+                        color = scheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
