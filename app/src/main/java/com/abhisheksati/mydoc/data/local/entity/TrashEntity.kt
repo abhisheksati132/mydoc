@@ -1,10 +1,14 @@
 package com.abhisheksati.mydoc.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.abhisheksati.mydoc.domain.model.TrashItem
 
-@Entity(tableName = "trash_items")
+@Entity(
+    tableName = "trash_items",
+    indices = [Index("deletedTimestamp")]
+)
 data class TrashEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

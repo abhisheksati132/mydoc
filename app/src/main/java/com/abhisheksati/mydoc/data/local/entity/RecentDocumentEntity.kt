@@ -1,9 +1,13 @@
 package com.abhisheksati.mydoc.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "recent_documents")
+@Entity(
+    tableName = "recent_documents",
+    indices = [Index("lastOpenedTimestamp")]
+)
 data class RecentDocumentEntity(
     @PrimaryKey
     val uri: String,

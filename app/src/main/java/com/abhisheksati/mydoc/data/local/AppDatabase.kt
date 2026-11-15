@@ -49,6 +49,20 @@ val MIGRATION_3_5 = object : Migration(3, 5) {
     }
 }
 
+/** Recents and trash are both read newest-first on every visit to the home feed and bin. */
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_recent_documents_lastOpenedTimestamp` " +
+                "ON `recent_documents` (`lastOpenedTimestamp`)"
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_trash_items_deletedTimestamp` " +
+                "ON `trash_items` (`deletedTimestamp`)"
+        )
+    }
+}
+
 @Database(
     entities = [
         RecentDocumentEntity::class,
@@ -57,7 +71,7 @@ val MIGRATION_3_5 = object : Migration(3, 5) {
         MediaPlaybackEntity::class,
         TrashEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -79,7 +93,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "mydoc.db"
                 )
-                    .addMigrations(MIGRATION_4_5, MIGRATION_3_5, MIGRATION_5_6)
+                    .addMigrations(MIGRATION_4_5, MIGRATION_3_5, MIGRATION_5_6, MIGRATION_6_7)
                     .fallbackToDestructiveMigrationFrom(true, 1, 2)
                     .build()
                 INSTANCE = instance

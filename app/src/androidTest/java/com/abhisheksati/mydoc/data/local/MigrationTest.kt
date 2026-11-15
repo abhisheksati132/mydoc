@@ -5,7 +5,9 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.abhisheksati.mydoc.data.local.dao.FavoriteDao
+import com.abhisheksati.mydoc.data.local.dao.RecentDao
 import com.abhisheksati.mydoc.data.local.entity.FavoriteDocumentEntity
+import com.abhisheksati.mydoc.data.local.entity.RecentDocumentEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -87,6 +89,87 @@ class MigrationTest {
             playbacks.close()
         } finally {
             migrated.close()
+        }
+    }
+
+    /** Recents and trash are read newest-first; the index must not cost a single row. */
+    @Test
+    fun migrate6to7AddsIndexesAndKeepsEveryRecord() {
+        val name = "migrate-6-7"
+        helper.createDatabase(name, 6).apply {
+            execSQL(
+                "INSERT INTO recent_documents (uri, displayName, sizeBytes, mimeType, " +
+                    "lastOpenedTimestamp, pageCount, lastPage) " +
+                    "VALUES ('content://six', 'recent.pdf', 10, 'application/pdf', 3000, 0, 0)"
+            )
+            execSQL(
+                "INSERT INTO trash_items (originalPath, trashPath, displayName, sizeBytes, " +
+                    "deletedTimestamp, isDirectory) " +
+                    "VALUES ('/storage/a.pdf', '/trash/a.pdf', 'a.pdf', 10, 4000, 0)"
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(name, 7, true, MIGRATION_6_7)
+        try {
+            val indexes = migrated.query(
+                "SELECT name FROM sqlite_master WHERE type = 'index' " +
+                    "AND tbl_name IN ('recent_documents','trash_items')"
+            ).use { cursor ->
+                buildList {
+                    while (cursor.moveToNext()) add(cursor.getString(0))
+                }
+            }
+            assertTrue(
+                "recents index missing after migration: $indexes",
+                indexes.contains("index_recent_documents_lastOpenedTimestamp")
+            )
+            assertTrue(
+                "trash index missing after migration: $indexes",
+                indexes.contains("index_trash_items_deletedTimestamp")
+            )
+
+            val recents = migrated.query(
+                "SELECT displayName FROM recent_documents WHERE uri = 'content://six'"
+            )
+            assertTrue("the recent row did not survive the migration", recents.moveToFirst())
+            assertEquals("recent.pdf", recents.getString(0))
+            recents.close()
+
+            val trash = migrated.query(
+                "SELECT displayName FROM trash_items WHERE trashPath = '/trash/a.pdf'"
+            )
+            assertTrue("the trash row did not survive the migration", trash.moveToFirst())
+            assertEquals("a.pdf", trash.getString(0))
+            trash.close()
+        } finally {
+            migrated.close()
+        }
+    }
+
+    /** The recents feed is capped like favourites and playback. */
+    @Test
+    fun recentsListIsBounded(): Unit = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+        try {
+            val total = RecentDao.MAX_LISTED + 120
+            repeat(total) { index ->
+                db.recentDao().upsertRecent(
+                    RecentDocumentEntity(
+                        uri = "content://recent/$index",
+                        displayName = "r$index.pdf",
+                        sizeBytes = 1L,
+                        mimeType = "application/pdf",
+                        lastOpenedTimestamp = index.toLong()
+                    )
+                )
+            }
+            val listed = db.recentDao().getAllRecents().first()
+            assertEquals(RecentDao.MAX_LISTED, listed.size)
+            assertEquals("content://recent/${total - 1}", listed.first().uri)
+        } finally {
+            db.close()
         }
     }
 

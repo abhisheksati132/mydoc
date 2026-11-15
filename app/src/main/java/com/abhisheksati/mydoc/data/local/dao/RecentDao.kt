@@ -10,8 +10,9 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface RecentDao {
 
-    @Query("SELECT * FROM recent_documents ORDER BY lastOpenedTimestamp DESC")
-    fun getAllRecents(): Flow<List<RecentDocumentEntity>>
+    /** Same cap as favourites and playback: the home feed never needs an unbounded list. */
+    @Query("SELECT * FROM recent_documents ORDER BY lastOpenedTimestamp DESC LIMIT :limit")
+    fun getAllRecents(limit: Int = MAX_LISTED): Flow<List<RecentDocumentEntity>>
 
     @Query("SELECT * FROM recent_documents WHERE uri = :uri LIMIT 1")
     suspend fun getRecentByUri(uri: String): RecentDocumentEntity?
@@ -27,4 +28,8 @@ interface RecentDao {
 
     @Query("DELETE FROM recent_documents")
     suspend fun clearAllRecents()
+
+    companion object {
+        const val MAX_LISTED = 500
+    }
 }
