@@ -20,24 +20,23 @@ class FileActionsOnDeviceTest {
     @get:Rule val compose = createComposeRule()
     private val file = StorageItem(File("/sdcard/report.pdf"))
 
-    @Test fun gridActionsDoNotOpenTheFile() {
+    @Test fun gridTileKeepsNoHiddenOverflow() {
         var opened = false
-        var more = false
         compose.setContent { AppDesignSystemTheme {
             Box(Modifier.width(120.dp)) {
-                FileGridCell(file, false, false, { opened = true }, {}, { more = true })
+                FileGridCell(file, false, false, { opened = true }, {})
             }
         } }
-        compose.onNodeWithContentDescription("More options for report.pdf").performClick()
-        assertTrue(more)
-        assertFalse(opened)
+        compose.onNodeWithContentDescription("More options for report.pdf").assertDoesNotExist()
+        compose.onNodeWithText("report.pdf").performClick()
+        assertTrue(opened)
     }
 
-    @Test fun selectionGridKeepsItsCheckboxAndHidesTheOverflow() {
+    @Test fun selectionGridKeepsItsCheckbox() {
         var toggled = false
         compose.setContent { AppDesignSystemTheme {
             Box(Modifier.width(120.dp)) {
-                FileGridCell(file, true, true, { toggled = true }, {}, {})
+                FileGridCell(file, true, true, { toggled = true }, {})
             }
         } }
         compose.onNodeWithContentDescription("More options for report.pdf").assertDoesNotExist()

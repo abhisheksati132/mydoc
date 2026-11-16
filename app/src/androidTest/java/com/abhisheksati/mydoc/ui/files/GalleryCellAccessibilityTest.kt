@@ -29,7 +29,6 @@ class GalleryCellAccessibilityTest {
                     isSelectionMode = false,
                     onClick = {},
                     onLongClick = {},
-                    onMoreClick = {},
                     galleryTile = true
                 )
             }
@@ -48,8 +47,7 @@ class GalleryCellAccessibilityTest {
                     isSelected = false,
                     isSelectionMode = false,
                     onClick = {},
-                    onLongClick = {},
-                    onMoreClick = {}
+                    onLongClick = {}
                 )
             }
         }
