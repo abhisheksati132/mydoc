@@ -45,7 +45,11 @@ jobs:
       - name: Build for CodeQL
         run: |
           chmod +x gradlew
-          ./gradlew :app:assembleDebug --no-daemon --stacktrace
+          # CodeQL's tracer only records real compiler invocations. A FROM-CACHE
+          # compile (e.g. a commit that only touches androidTest sources) leaves
+          # the database empty and finalize fails with "could not process any of
+          # it" (exit 32), so the traced build must compile from source.
+          ./gradlew :app:assembleDebug --no-daemon --no-build-cache --stacktrace
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
