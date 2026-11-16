@@ -35,7 +35,7 @@ class CoreUxOnDeviceTest {
                 com.abhisheksati.mydoc.tools.ui.ToolsScreen(viewModel, {})
             }
         }
-        compose.onNodeWithText("All categories").performClick()
+        compose.onNode(hasText("Start here") and hasClickAction()).performClick()
         compose.onNodeWithText("Secure").performClick()
         compose.onNodeWithContentDescription("Search tools").performClick()
         compose.onNode(hasSetTextAction()).performTextInput("merge")
