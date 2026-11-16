@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.DonutLarge
@@ -35,6 +36,7 @@ import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.DropdownMenuItem
@@ -139,6 +141,8 @@ fun FilesPaneScreen(
     workspaceInsets: Boolean = false,
     onPageVisibilityChange: (Boolean) -> Unit = {},
     onShowTransfers: () -> Unit = {},
+    onOpenSavedSearches: () -> Unit = {},
+    showWorkspaceTools: Boolean = false,
     workspaceMenu: @Composable androidx.compose.foundation.layout.ColumnScope.(() -> Unit) -> Unit = {}
 ) {
 
@@ -438,6 +442,9 @@ fun FilesPaneScreen(
                             onSettingsClick = onSettingsClick,
                             workspaceInsets = workspaceInsets,
                             workspaceMenu = workspaceMenu,
+                            showWorkspaceTools = showWorkspaceTools,
+                            onOpenSavedSearches = onOpenSavedSearches,
+                            onShowTransfers = onShowTransfers,
                             onFolderInsights = { showFolderInsights = true },
                             onResetFolderView = viewModel::resetFolderView,
                             onToggleHidden = { viewModel.toggleHiddenFiles() },
@@ -714,7 +721,10 @@ private fun FilesHeader(
     onOpenTrash: () -> Unit,
     onRefresh: () -> Unit,
     workspaceInsets: Boolean = false,
+    showWorkspaceTools: Boolean = false,
     onPageVisibilityChange: (Boolean) -> Unit = {},
+    onOpenSavedSearches: () -> Unit = {},
+    onShowTransfers: () -> Unit = {},
     onFolderInsights: () -> Unit = {},
     onResetFolderView: () -> Unit = {},
     workspaceMenu: @Composable androidx.compose.foundation.layout.ColumnScope.(() -> Unit) -> Unit = {}
@@ -738,7 +748,9 @@ private fun FilesHeader(
                 )
             }
 
-            Box {
+            // The workspace menu is a multi-tab power tool; on the single Library tab it only
+            // added a third icon, so its two everyday actions moved into the folder overflow.
+            if (showWorkspaceTools) Box {
                 var workspaceOpen by remember { mutableStateOf(false) }
                 IconButton(onClick = { workspaceOpen = true }) {
                     Icon(Icons.Outlined.Tab, contentDescription = stringResource(R.string.workspace_tools), tint = scheme.onSurface)
@@ -752,6 +764,14 @@ private fun FilesHeader(
                     Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.cd_more_options), tint = scheme.onSurface)
                 }
                 AppDropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.saved_searches_title)) },
+                        leadingIcon = { Icon(Icons.Outlined.BookmarkBorder, contentDescription = null) },
+                        onClick = { menuOpen = false; onOpenSavedSearches() })
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.transfers_title)) },
+                        leadingIcon = { Icon(Icons.Outlined.SwapVert, contentDescription = null) },
+                        onClick = { menuOpen = false; onShowTransfers() })
                     if (uiState.isBrowsingStorage && uiState.activeCategory == null) DropdownMenuItem(
                         text = { Text(stringResource(R.string.folder_insights_title)) },
                         leadingIcon = { Icon(Icons.Outlined.DonutLarge, contentDescription = null) },

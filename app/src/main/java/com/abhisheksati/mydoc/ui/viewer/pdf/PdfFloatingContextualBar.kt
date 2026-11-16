@@ -40,9 +40,9 @@ fun PdfFloatingContextualBar(
     onShare: () -> Unit,
     onSearch: () -> Unit,
     onSpeak: () -> Unit,
+    modifier: Modifier = Modifier,
     onHighlight: (() -> Unit)? = null,
-    onClose: () -> Unit,
-    modifier: Modifier = Modifier
+    onClose: () -> Unit
 ) {
     Box(
         modifier = modifier

@@ -28,9 +28,9 @@ import com.abhisheksati.mydoc.domain.model.RenderFidelity
 fun DocumentProblemScreen(
     failure: LoadFailure,
     extension: String?,
+    modifier: Modifier = Modifier,
     onBackClick: (() -> Unit)? = null,
-    onRetry: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    onRetry: (() -> Unit)? = null
 ) {
     val copy = problemCopy(LocalContext.current, failure, extension)
     Box(

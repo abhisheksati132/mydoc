@@ -53,18 +53,7 @@ data class MediaItem(
         }
 
     val formattedSize: String
-        get() {
-            if (sizeBytes <= 0) return "0 B"
-            val kb = sizeBytes / 1024.0
-            val mb = kb / 1024.0
-            val gb = mb / 1024.0
-            return when {
-                gb >= 1.0 -> String.format(Locale.getDefault(), "%.1f GB", gb)
-                mb >= 1.0 -> String.format(Locale.getDefault(), "%.1f MB", mb)
-                kb >= 1.0 -> String.format(Locale.getDefault(), "%.1f KB", kb)
-                else -> "$sizeBytes B"
-            }
-        }
+        get() = StorageVolume.formatBytes(sizeBytes)
 
     val formattedDate: String
         get() {

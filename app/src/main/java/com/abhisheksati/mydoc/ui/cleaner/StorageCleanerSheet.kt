@@ -50,6 +50,7 @@ import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentFormatColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalIsOled
+import com.abhisheksati.mydoc.domain.model.StorageVolume
 import com.abhisheksati.mydoc.tools.cleaner.StorageCleanScanResult
 import com.abhisheksati.mydoc.tools.cleaner.StorageCleanerManager
 import java.io.File
@@ -260,7 +261,7 @@ fun StorageCleanerScreen(
                             text = stringResource(
                                 R.string.cleaner_moved_summary,
                                 cleanedCount,
-                                formatSize(cleanedBytes ?: 0L),
+                                StorageVolume.formatBytes(cleanedBytes ?: 0L),
                                 stringResource(R.string.cleaner_empty_trash_hint)
                             ),
                             style = typography.body,
@@ -329,7 +330,7 @@ fun StorageCleanerScreen(
                                         color = colors.textSecondary
                                     )
                                     Text(
-                                        text = formatSize(res.totalReclaimableBytes),
+                                        text = StorageVolume.formatBytes(res.totalReclaimableBytes),
                                         style = typography.display.copy(
                                             fontFeatureSettings = "tnum",
                                             letterSpacing = (-1).sp
@@ -410,7 +411,7 @@ fun StorageCleanerScreen(
                         item {
                             CleanerCategoryCard(
                                 title = stringResource(R.string.cleaner_cache_temp),
-                                subtitle = stringResource(R.string.cleaner_temp_subtitle, categories.tempFiles.size, formatSize(categories.tempFiles.sumOf { it.length() })),
+                                subtitle = stringResource(R.string.cleaner_temp_subtitle, categories.tempFiles.size, StorageVolume.formatBytes(categories.tempFiles.sumOf { it.length() })),
                                 icon = Icons.Outlined.DeleteSweep,
                                 checked = cleanTempFiles,
                                 onCheckedChange = { cleanTempFiles = it },
@@ -424,7 +425,7 @@ fun StorageCleanerScreen(
                         item {
                             CleanerCategoryCard(
                                 title = stringResource(R.string.cleaner_obsolete_apks),
-                                subtitle = stringResource(R.string.cleaner_apk_subtitle, categories.apkFiles.size, formatSize(categories.apkFiles.sumOf { it.length() })),
+                                subtitle = stringResource(R.string.cleaner_apk_subtitle, categories.apkFiles.size, StorageVolume.formatBytes(categories.apkFiles.sumOf { it.length() })),
                                 icon = Icons.Outlined.Android,
                                 checked = cleanApks,
                                 onCheckedChange = { cleanApks = it },
@@ -445,7 +446,7 @@ fun StorageCleanerScreen(
                             ) {
                                 CleanerCategoryCard(
                                     title = stringResource(R.string.cleaner_duplicates),
-                                    subtitle = stringResource(R.string.cleaner_dup_subtitle, res.duplicateGroups.size, formatSize(res.duplicateGroups.sumOf { it.wastedBytes })),
+                                    subtitle = stringResource(R.string.cleaner_dup_subtitle, res.duplicateGroups.size, StorageVolume.formatBytes(res.duplicateGroups.sumOf { it.wastedBytes })),
                                     icon = Icons.Outlined.CopyAll,
                                     checked = cleanDuplicates,
                                     onCheckedChange = { cleanDuplicates = it },
@@ -511,7 +512,7 @@ fun StorageCleanerScreen(
                                             color = colors.textPrimary
                                         )
                                         Text(
-                                            text = stringResource(R.string.cleaner_large_subtitle, categories.largeFiles.size, formatSize(categories.largeFiles.sumOf { it.length() })),
+                                            text = stringResource(R.string.cleaner_large_subtitle, categories.largeFiles.size, StorageVolume.formatBytes(categories.largeFiles.sumOf { it.length() })),
                                             style = typography.caption,
                                             color = colors.textSecondary
                                         )
@@ -544,7 +545,7 @@ fun StorageCleanerScreen(
                                                 )
                                                 Spacer(modifier = Modifier.width(8.dp))
                                                 Text(
-                                                    text = formatSize(file.length()),
+                                                    text = StorageVolume.formatBytes(file.length()),
                                                     style = typography.metadataStrong,
                                                     color = colors.error
                                                 )
@@ -612,7 +613,7 @@ fun StorageCleanerScreen(
                                         !hasSelection -> stringResource(R.string.cleaner_select_category)
                                         selectedFiles.isEmpty() ->
                                             stringResource(R.string.cleaner_remove_folders, selectedEmptyDirs.size)
-                                        else -> stringResource(R.string.cleaner_move_to_trash_size, formatSize(selectedBytesToFree))
+                                        else -> stringResource(R.string.cleaner_move_to_trash_size, StorageVolume.formatBytes(selectedBytesToFree))
                                     },
                                     style = typography.bodyStrong
                                 )
@@ -636,7 +637,7 @@ fun StorageCleanerScreen(
                 ) {
                     Text(
                         text = buildString {
-                            append(stringResource(R.string.cleaner_confirm_files, selectedFiles.size, formatSize(selectedBytesToFree)))
+                            append(stringResource(R.string.cleaner_confirm_files, selectedFiles.size, StorageVolume.formatBytes(selectedBytesToFree)))
                             if (selectedEmptyDirs.isNotEmpty()) {
                                 append(stringResource(R.string.cleaner_confirm_folders, selectedEmptyDirs.size))
                             }
@@ -687,7 +688,7 @@ fun StorageCleanerScreen(
                                 }
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = formatSize(file.length()),
+                                    text = StorageVolume.formatBytes(file.length()),
                                     style = typography.micro,
                                     color = colors.textSecondary
                                 )
@@ -788,7 +789,7 @@ fun StorageCleanerScreen(
                                     R.string.cleaner_result_complete,
                                     moved.size,
                                     deletedDirs,
-                                    formatSize(cleanedBytes ?: 0L)
+                                    StorageVolume.formatBytes(cleanedBytes ?: 0L)
                                 )
                             )
                         }
@@ -879,18 +880,4 @@ private fun CleanerCategoryCard(
         )
     }
 }
-}
-
-internal fun formatSize(bytes: Long): String {
-    if (bytes <= 0) return "0 B"
-    val locale = java.util.Locale.getDefault()
-    val kb = bytes / 1024.0
-    val mb = kb / 1024.0
-    val gb = mb / 1024.0
-    return when {
-        gb >= 1.0 -> String.format(locale, "%.1f GB", gb)
-        mb >= 1.0 -> String.format(locale, "%.1f MB", mb)
-        kb >= 1.0 -> String.format(locale, "%.1f KB", kb)
-        else -> String.format(locale, "%d B", bytes)
-    }
 }

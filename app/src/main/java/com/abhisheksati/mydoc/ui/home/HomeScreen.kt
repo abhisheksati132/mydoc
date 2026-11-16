@@ -103,11 +103,11 @@ fun HomeScreen(
     storageViewModel: StorageViewModel,
     onLibraryItemClick: (LibraryItem) -> Unit,
     onDocumentClick: (DocumentFile) -> Unit,
+    modifier: Modifier = Modifier,
     onOpenFile: (File, List<File>?) -> Unit = { _, _ -> },
     onSettingsClick: () -> Unit,
     onSpotlightSearch: () -> Unit,
     onShareDocument: (DocumentFile) -> Unit,
-    modifier: Modifier = Modifier,
     updateManager: UpdateManager? = null,
     quickScanRequested: Boolean = false,
     onQuickScanShown: () -> Unit = {}

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -18,20 +19,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
+import com.abhisheksati.mydoc.data.local.DocumentSortOrder
 import com.abhisheksati.mydoc.domain.model.HomeTab
+import com.abhisheksati.mydoc.domain.model.StorageVolume
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun SettingsStorageSection(
     startupTab: HomeTab,
     cacheSizeBytes: Long,
+    documentSortOrder: DocumentSortOrder,
+    showHiddenFiles: Boolean,
     onStartupTabChange: (HomeTab) -> Unit,
     onClearCacheClick: () -> Unit,
     onClearRecentClick: (() -> Unit)?,
+    onDocumentSortOrderChange: (DocumentSortOrder) -> Unit,
+    onShowHiddenFilesChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     SettingsCard(
@@ -56,14 +62,33 @@ fun SettingsStorageSection(
 
         SettingsDivider(modifier = Modifier.padding(top = 12.dp))
 
-        val locale = LocalConfiguration.current.locales[0]
-        val formattedCache = if (cacheSizeBytes < 1024) {
-            "$cacheSizeBytes B"
-        } else if (cacheSizeBytes < 1024 * 1024) {
-            String.format(locale, "%.1f KB", cacheSizeBytes / 1024.0)
-        } else {
-            String.format(locale, "%.1f MB", cacheSizeBytes / (1024.0 * 1024.0))
+        SettingsSectionLabel(text = stringResource(R.string.settings_library_order))
+        androidx.compose.foundation.layout.FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            DocumentSortOrder.entries.forEach { order ->
+                FilterChip(
+                    selected = documentSortOrder == order,
+                    onClick = { onDocumentSortOrderChange(order) },
+                    label = { Text(order.displayName) }
+                )
+            }
         }
+
+        SettingsDivider(modifier = Modifier.padding(top = 12.dp))
+
+        SettingToggleRow(
+            title = stringResource(R.string.settings_hidden_files_title),
+            subtitle = stringResource(R.string.settings_hidden_files_subtitle),
+            icon = Icons.Outlined.Visibility,
+            checked = showHiddenFiles,
+            onCheckedChange = onShowHiddenFilesChange
+        )
+
+        SettingsDivider()
+
+        val formattedCache = StorageVolume.formatBytes(cacheSizeBytes)
 
         SettingActionRow(
             title = stringResource(R.string.settings_cache_title),

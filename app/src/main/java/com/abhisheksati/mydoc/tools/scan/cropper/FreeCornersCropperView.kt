@@ -98,8 +98,8 @@ fun FreeCornersCropperDialog(
     bitmap: Bitmap,
     onDismiss: () -> Unit,
     onCropped: (Bitmap) -> Unit,
-    accentColor: Color = LightAppColors.accent,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    accentColor: Color = LightAppColors.accent
 ) {
     Dialog(
         onDismissRequest = onDismiss,

@@ -1129,7 +1129,7 @@ class DocxParser {
         val numbering = numId?.let { ctx.numbering[it] }
         val level = numbering?.levels?.get(ilvl)
         if (numbering != null && level != null) {
-            val counter = counters.getOrPut(numId) { IntArray(9) { 0 } }
+            val counter = counters.getOrPut(numId) { IntArray(9) }
             val slot = ilvl.coerceIn(0, 8)
             counter[slot] = if (counter[slot] == 0) level.start else counter[slot] + 1
             for (deeper in (slot + 1)..8) counter[deeper] = 0

@@ -129,6 +129,15 @@ class SettingsRepository(private val context: Context) {
     private val _checkUpdatesOnLaunch = MutableStateFlow(prefs.getBoolean(KEY_CHECK_UPDATES_ON_LAUNCH, true))
     val checkUpdatesOnLaunch: StateFlow<Boolean> = _checkUpdatesOnLaunch.asStateFlow()
 
+    private val _hasSeenIntro = MutableStateFlow(prefs.getBoolean(KEY_INTRO_SEEN, false))
+    val hasSeenIntro: StateFlow<Boolean> = _hasSeenIntro.asStateFlow()
+
+    fun markIntroSeen() {
+        if (_hasSeenIntro.value) return
+        prefs.edit().putBoolean(KEY_INTRO_SEEN, true).apply()
+        _hasSeenIntro.value = true
+    }
+
     fun setCheckUpdatesOnLaunch(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_CHECK_UPDATES_ON_LAUNCH, enabled).apply()
         _checkUpdatesOnLaunch.value = enabled
@@ -384,6 +393,7 @@ class SettingsRepository(private val context: Context) {
         private const val KEY_FILES_GRID_VIEW = "files_grid_view"
         private const val KEY_AMOLED_BLACK = "amoled_black_enabled"
         private const val KEY_CHECK_UPDATES_ON_LAUNCH = "check_updates_on_launch"
+        private const val KEY_INTRO_SEEN = "intro_seen"
         private const val KEY_READING_BRIGHTNESS = "reading_brightness"
         private const val KEY_READING_FONT_SCALE = "reading_font_scale"
         private const val KEY_READING_CONTINUOUS_SCROLL = "reading_continuous_scroll"

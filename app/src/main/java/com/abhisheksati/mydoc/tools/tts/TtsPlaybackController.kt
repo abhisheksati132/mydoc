@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.tools.tts
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
@@ -314,6 +315,8 @@ class TtsPlaybackController private constructor(private val context: Context) : 
     }
 
     companion object {
+        // Holds the application context only, so the singleton cannot outlive the process.
+        @SuppressLint("StaticFieldLeak")
         @Volatile
         private var instance: TtsPlaybackController? = null
 

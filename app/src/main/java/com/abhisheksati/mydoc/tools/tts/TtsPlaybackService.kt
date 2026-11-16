@@ -109,12 +109,7 @@ class TtsPlaybackService : Service() {
 
     private fun stopForegroundCompat() {
         if (!foregroundStarted) return
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-        } else {
-            @Suppress("DEPRECATION")
-            stopForeground(true)
-        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
         foregroundStarted = false
     }
 
@@ -235,13 +230,7 @@ class TtsPlaybackService : Service() {
 
         fun ensureStarted(context: Context) {
             val intent = Intent(context, TtsPlaybackService::class.java)
-            runCatching {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(intent)
-                } else {
-                    context.startService(intent)
-                }
-            }
+            runCatching { context.startForegroundService(intent) }
         }
 
         fun stopSession(context: Context) {

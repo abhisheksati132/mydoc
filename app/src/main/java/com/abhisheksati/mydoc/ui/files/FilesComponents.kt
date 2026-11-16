@@ -141,8 +141,8 @@ fun StorageOverviewCard(
     onOpenTrash: () -> Unit,
     onBrowse: () -> Unit,
     onInsights: () -> Unit,
-    onClean: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClean: () -> Unit = {}
 ) {
     val scheme = MaterialTheme.colorScheme
     val colors = AppTheme.colors
@@ -609,9 +609,7 @@ fun FileGridCell(
     isSelectionMode: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    galleryTile: Boolean = false,
-    generateOfficePreview: Boolean = false
+    modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
     val haptics = rememberAppHaptics()
@@ -620,7 +618,7 @@ fun FileGridCell(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (galleryTile) Modifier else Modifier.clip(AppRadius.cardShape))
+            .clip(AppRadius.cardShape)
             .then(
                 if (isSelectionMode) {
                     // R7: `toggleable` is what publishes a checked state to the accessibility layer.
@@ -645,13 +643,13 @@ fun FileGridCell(
                     )
                 }
             )
-            .padding(if (galleryTile) 0.dp else 8.dp)
+            .padding(8.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(if (LocalDensity.current.fontScale > 1.3f) 2f else 1f)
-                .then(if (galleryTile) Modifier else Modifier.clip(AppRadius.insetShape))
+                .clip(AppRadius.insetShape)
                 .background(if (isSelected) scheme.primaryContainer else scheme.surfaceContainerLow)
         ) {
             if (item.isDirectory) {
@@ -666,10 +664,7 @@ fun FileGridCell(
             } else {
                 StorageThumbnail(
                     item = item,
-                    modifier = Modifier.fillMaxSize(),
-                    contentDescription = if (galleryTile) item.name else null,
-                    generateOfficePreview = generateOfficePreview,
-                    clipToShape = !galleryTile
+                    modifier = Modifier.fillMaxSize()
                 )
                 if (isSelected) {
                     Box(
@@ -693,7 +688,6 @@ fun FileGridCell(
                 )
             }
         }
-        if (galleryTile) return@Column
         Spacer(Modifier.height(8.dp))
         Text(
             text = item.name,

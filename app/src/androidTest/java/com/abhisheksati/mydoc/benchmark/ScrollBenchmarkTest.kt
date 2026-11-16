@@ -234,7 +234,7 @@ class ScrollBenchmarkTest {
         // Condensed pill displays monospace page indicator
         compose.onNodeWithText("5/40").assertIsDisplayed()
 
-        // Fling scroll back to top: expands back to full Fraunces masthead
+        // Fling scroll back to top: expands the masthead again
         val t1 = SystemClock.elapsedRealtime()
         compose.onNodeWithTag("pdf_scroll_pages").performTouchInput {
             swipeDown(durationMillis = 200)

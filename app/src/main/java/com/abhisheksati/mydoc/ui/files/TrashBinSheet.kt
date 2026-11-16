@@ -73,8 +73,8 @@ import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppColors
 import com.abhisheksati.mydoc.designsystem.tokens.LocalAppTypography
+import com.abhisheksati.mydoc.domain.model.StorageVolume
 import com.abhisheksati.mydoc.domain.model.TrashItem
-import com.abhisheksati.mydoc.ui.cleaner.formatSize
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -393,7 +393,7 @@ private fun TrashHeroCard(count: Int, totalBytes: Long, modifier: Modifier = Mod
                 color = colors.textPrimary
             )
             Text(
-                text = stringResource(R.string.trash_hero_caption, formatSize(totalBytes)),
+                text = stringResource(R.string.trash_hero_caption, StorageVolume.formatBytes(totalBytes)),
                 style = typography.caption,
                 color = colors.textSecondary
             )

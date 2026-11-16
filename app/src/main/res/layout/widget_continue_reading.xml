@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             android:text="@string/widget_continue_reading_title"
             android:textColor="@color/widget_accent"
-            android:textSize="10sp"
+            android:textSize="11sp"
             android:textStyle="bold"
             android:textAllCaps="true"
             android:letterSpacing="0.12"

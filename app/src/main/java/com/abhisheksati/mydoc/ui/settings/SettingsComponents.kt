@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.Surface
@@ -176,8 +177,59 @@ fun SettingToggleRow(
 
 
 @Composable
-internal fun SettingsPageIntro(category: SettingsCategory) {
+fun SettingSliderRow(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int,
+    valueLabel: String,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val scheme = MaterialTheme.colorScheme
+
+    Column(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = scheme.onSurfaceVariant,
+                modifier = Modifier
+                    .padding(end = 16.dp)
+                    .size(20.dp)
+            )
+            Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                Text(
+                    text = title,
+                    style = AppTheme.typography.bodyLargeStrong,
+                    color = scheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = scheme.onSurfaceVariant
+                )
+            }
+            Text(
+                text = valueLabel,
+                style = MaterialTheme.typography.labelLarge,
+                color = scheme.primary
+            )
+        }
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            steps = steps,
+            modifier = Modifier.padding(start = 36.dp, top = 6.dp, end = 8.dp)
+        )
+    }
+}
+
+@Composable
+internal fun SettingsPageIntro(category: SettingsCategory) {    val scheme = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         shape = AppRadius.xLargeShape,

@@ -215,6 +215,7 @@ class MainActivity : ComponentActivity() {
             val videoSeekSeconds by app.settingsRepository.videoSeekSeconds.collectAsStateWithLifecycle()
             val videoAutoLoop by app.settingsRepository.videoAutoLoop.collectAsStateWithLifecycle()
             val isBiometricLockEnabled by app.settingsRepository.isBiometricLockEnabled.collectAsStateWithLifecycle()
+            val introSeen by app.settingsRepository.hasSeenIntro.collectAsStateWithLifecycle()
             val isDark = when (themeMode) {
                 AppThemeMode.BLACK, AppThemeMode.DARK -> true
                 AppThemeMode.LIGHT -> false
@@ -573,6 +574,11 @@ class MainActivity : ComponentActivity() {
                         }
                         AppSnackbarHost()
                     }
+                }
+                if (!introSeen) {
+                    com.abhisheksati.mydoc.ui.onboarding.FirstRunFlow(
+                        onFinish = { app.settingsRepository.markIntroSeen() }
+                    )
                 }
                 }
             }

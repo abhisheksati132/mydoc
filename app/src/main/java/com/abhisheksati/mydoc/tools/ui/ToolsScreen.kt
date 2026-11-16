@@ -96,7 +96,7 @@ private data class ToolNavCategory(
  * Organize, Edit & Sign, Compress, Convert, Secure, Scan.
  */
 private val toolCategories = listOf(
-    ToolNavCategory(null, Icons.Outlined.AllInclusive, R.string.tools_all_categories),
+    ToolNavCategory(null, Icons.Outlined.AllInclusive, R.string.tools_featured),
     ToolNavCategory(ToolGroup.ORGANIZE, Icons.AutoMirrored.Outlined.CallSplit, R.string.tools_filter_organize),
     ToolNavCategory(ToolGroup.EDIT_SIGN, Icons.Outlined.Draw, R.string.tools_filter_edit_sign),
     ToolNavCategory(ToolGroup.COMPRESS, Icons.Outlined.Compress, R.string.tools_filter_compress),
@@ -278,8 +278,12 @@ fun ToolsScreen(
                     )
                 }
             } else {
-                val groupsToDisplay = selectedGroup?.let { listOf(it) }
-                    ?: ToolGroup.entries.filter { !groupedTools[it].isNullOrEmpty() }
+                val groupsToDisplay = when {
+                    // Categories stay folded until asked for: Start here is the whole default view.
+                    selectedGroup != null -> listOfNotNull(selectedGroup)
+                    searchQuery.isNotBlank() -> ToolGroup.entries.filter { !groupedTools[it].isNullOrEmpty() }
+                    else -> emptyList()
+                }
 
                 groupsToDisplay.forEachIndexed { groupIndex, group ->
                     val toolsInGroup = groupedTools[group].orEmpty()

@@ -2,7 +2,6 @@ package com.abhisheksati.mydoc.ui.files
 
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
 import com.abhisheksati.mydoc.domain.model.StorageItem
@@ -20,26 +19,7 @@ class GalleryCellAccessibilityTest {
     )
 
     @Test
-    fun galleryTile_announcesFileName() {
-        compose.setContent {
-            AppDesignSystemTheme {
-                FileGridCell(
-                    item = photo,
-                    isSelected = false,
-                    isSelectionMode = false,
-                    onClick = {},
-                    onLongClick = {},
-                    galleryTile = true
-                )
-            }
-        }
-        compose.onNodeWithContentDescription(photo.name)
-            .assertExists()
-            .assertHasClickAction()
-    }
-
-    @Test
-    fun regularGridTile_keepsVisibleName() {
+    fun gridTile_keepsVisibleNameAndClickAction() {
         compose.setContent {
             AppDesignSystemTheme {
                 FileGridCell(
@@ -51,6 +31,8 @@ class GalleryCellAccessibilityTest {
                 )
             }
         }
-        compose.onNodeWithText(photo.name).assertExists()
+        compose.onNodeWithText(photo.name)
+            .assertExists()
+            .assertHasClickAction()
     }
 }

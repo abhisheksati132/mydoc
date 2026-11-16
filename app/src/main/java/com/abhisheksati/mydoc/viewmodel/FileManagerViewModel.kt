@@ -142,6 +142,16 @@ class FileManagerViewModel(
                 }
             }
         }
+        // Settings writes the same preference the toolbar menu does; keep an open browser in step.
+        settingsRepository?.let { repo ->
+            viewModelScope.launch {
+                repo.showHiddenFiles.drop(1).collect { hidden ->
+                    if (_uiState.value.showHiddenFiles == hidden) return@collect
+                    _uiState.update { it.copy(showHiddenFiles = hidden) }
+                    reloadCurrentSource()
+                }
+            }
+        }
         viewModelScope.launch { refreshRenameRecovery() }
         viewModelScope.launch { explorerClipboard.state.collect { clip -> _uiState.update { it.copy(clipboardState = clip) } } }
         viewModelScope.launch { explorerClipboard.revision.drop(1).collect { reloadCurrentSource() } }

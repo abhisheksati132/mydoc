@@ -164,22 +164,23 @@ private fun tintFor(type: StorageFileType, isDark: Boolean = false): Color = if 
 }
 
 /**
+ * Path/URI alone never changes when a file is edited in place; size+mtime make the cache key
+ * change with the content, so a stale thumbnail is not served forever.
+ */
+internal fun thumbnailKey(id: String, sizeBytes: Long, lastModified: Long): String =
+    "$id|$sizeBytes|$lastModified"
+
+/**
  * A real preview where one exists: image content, a rendered PDF first page, the opening lines
  * of a text file, or the first page of a Word/Excel/Slide document run through the same
  * converter the viewer uses. Everything else is a quiet format plate so the list never
  * invents a page.
  */
-/** Path/URI alone never changes when a file is edited in place; size+mtime make the cache key
- *  change with the content, so a stale thumbnail is not served forever. */
-internal fun thumbnailKey(id: String, sizeBytes: Long, lastModified: Long): String =
-    "$id|$sizeBytes|$lastModified"
-
 @Composable
 fun StorageThumbnail(
     item: StorageItem,
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
-    generateOfficePreview: Boolean = false,
     clipToShape: Boolean = true
 ) {
     val context = LocalContext.current
@@ -208,10 +209,13 @@ fun StorageThumbnail(
             key = thumbnailKey(item.path, item.sizeBytes, item.lastModified),
             modifier = modifier,
             badgeType = item.fileType,
-            generatePreview = generateOfficePreview,
             convert = { context ->
                 val uri = Uri.fromFile(item.file)
                 convertOfficeToPdf(context, item.extension, uri, item.name)
+            },
+            nativePreview = {
+                OfficePreviewRenderer.render(item.extension, context.cacheDir) { item.file.inputStream() }
+                    ?.asImageBitmap()
             }
         )
         else -> TypePlate(
@@ -255,6 +259,11 @@ fun LibraryThumbnail(
             badge = item.typeBadge,
             convert = { ctx ->
                 convertOfficeToPdf(ctx, item.extension, Uri.parse(item.uri), item.name)
+            },
+            nativePreview = {
+                OfficePreviewRenderer.render(item.extension, context.cacheDir) {
+                    context.contentResolver.openInputStream(Uri.parse(item.uri))
+                }?.asImageBitmap()
             }
         )
         else -> TypePlate(
@@ -388,13 +397,16 @@ private fun OfficeThumbnail(
     modifier: Modifier,
     badgeType: StorageFileType,
     badge: String? = null,
-    generatePreview: Boolean = false,
-    convert: suspend (Context) -> File?
+    convert: suspend (Context) -> File?,
+    nativePreview: suspend () -> ImageBitmap? = { null }
 ) {
     val context = LocalContext.current
     var bitmap by remember(key) { mutableStateOf(pdfThumbnailCache.get(key)) }
-    LaunchedEffect(key, generatePreview) {
-        if (generatePreview && bitmap == null) bitmap = loadOfficeThumbnail(key) { convert(context) }
+    LaunchedEffect(key) {
+        if (bitmap != null) return@LaunchedEffect
+        // The engine gives a real page; without it the parsers still know enough to draw one.
+        bitmap = loadOfficeThumbnail(key) { convert(context) }
+            ?: loadNativeOfficeThumbnail(key, nativePreview)
     }
     if (bitmap == null) {
         TypePlate(type = badgeType, badge = badge, modifier = modifier)
@@ -431,6 +443,24 @@ private suspend fun loadOfficeThumbnail(key: String, convert: suspend () -> File
             bitmap.asImageBitmap().also { pdfThumbnailCache.put(key, it) }
         }
     }
+
+private suspend fun loadNativeOfficeThumbnail(
+    key: String,
+    render: suspend () -> ImageBitmap?
+): ImageBitmap? = withContext(Dispatchers.IO) {
+    pdfThumbnailCache.get(key)?.let { return@withContext it }
+    officeThumbnailSemaphore.withPermit {
+        pdfThumbnailCache.get(key)?.let { return@withContext it }
+        val bitmap = try {
+            render()
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            null
+        } ?: return@withContext null
+        bitmap.also { pdfThumbnailCache.put(key, it) }
+    }
+}
 
 private suspend fun convertOfficeToPdf(
     context: Context,
@@ -573,6 +603,3 @@ private fun readLibraryText(context: Context, item: LibraryItem): String? = runC
         if (read <= 0) null else String(buffer, 0, read).trim()
     }
 }.getOrNull()
-
-/** Small fixed format plate used by the section shortcuts. */
-val TypeBadgePad = 20.dp

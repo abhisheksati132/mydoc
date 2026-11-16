@@ -7,8 +7,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.VerticalSplit
+import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material.icons.outlined.Vibration
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -29,11 +32,17 @@ fun SettingsReadingSection(
     doubleTapZoom: Boolean,
     keepScreenOn: Boolean,
     volumeKeyTurning: Boolean,
+    fontScale: Float,
+    continuousScroll: Boolean,
+    dualPageView: Boolean,
     onReadingModeChange: (ReadingMode) -> Unit,
     onPdfFitModeChange: (String) -> Unit,
     onDoubleTapZoomChange: (Boolean) -> Unit,
     onKeepScreenOnChange: (Boolean) -> Unit,
     onVolumeKeyTurningChange: (Boolean) -> Unit,
+    onFontScaleChange: (Float) -> Unit,
+    onContinuousScrollChange: (Boolean) -> Unit,
+    onDualPageViewChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     SettingsCard(
@@ -85,6 +94,39 @@ fun SettingsReadingSection(
         }
 
         SettingsDivider(modifier = Modifier.padding(top = 12.dp))
+
+        SettingSliderRow(
+            title = stringResource(R.string.settings_text_size_title),
+            subtitle = stringResource(R.string.settings_text_size_subtitle),
+            icon = Icons.Outlined.FormatSize,
+            value = fontScale,
+            valueRange = 0.8f..1.6f,
+            steps = 7,
+            valueLabel = stringResource(R.string.settings_text_size_value, (fontScale * 100).toInt()),
+            onValueChange = onFontScaleChange
+        )
+
+        SettingsDivider(modifier = Modifier.padding(top = 4.dp))
+
+        SettingToggleRow(
+            title = stringResource(R.string.settings_continuous_scroll_title),
+            subtitle = stringResource(R.string.settings_continuous_scroll_subtitle),
+            icon = Icons.Outlined.ViewAgenda,
+            checked = continuousScroll,
+            onCheckedChange = onContinuousScrollChange
+        )
+
+        SettingsDivider()
+
+        SettingToggleRow(
+            title = stringResource(R.string.settings_dual_page_title),
+            subtitle = stringResource(R.string.settings_dual_page_subtitle),
+            icon = Icons.Outlined.VerticalSplit,
+            checked = dualPageView,
+            onCheckedChange = onDualPageViewChange
+        )
+
+        SettingsDivider()
 
         SettingToggleRow(
             title = stringResource(R.string.settings_double_tap_title),

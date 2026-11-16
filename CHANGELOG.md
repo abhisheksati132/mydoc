@@ -3,6 +3,25 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [2.0.14] — 2026-11-16
+
+### Previews that show the page, settings that do something
+- **Office previews without the engine**: Word and PowerPoint files in Downloads, folders, and quick preview now render a real first-page thumbnail from their own content when the optional converter is not installed — typography, headings, tables, and slide shapes instead of a file-type plate.
+- **A first-run introduction**: a three-page walkthrough (offline by default, one place for every document, safe by design) shows once on first launch and never again after it is dismissed.
+- **Reading settings work for every document**: text size, continuous scrolling, and two-page spread are now wired to real preferences, apply to documents that were never opened before, keep the two layout choices mutually exclusive, and persist from the viewer as well as Settings.
+- **Documents settings wired**: default sort order and hidden-file visibility are backed by the same preferences the Library uses.
+
+### Quieter chrome
+- **Two icons, nothing between**: Home, Library, and everywhere else the saved-searches/transfers menu only appears when a multi-tab workspace is open; the everyday actions moved into the folder overflow.
+- **Tools organised around "Start here"**: Scan to PDF, Merge PDF, Sign, and Compress lead the tab, while categories stay folded until one is picked from the dropdown.
+- **Settings index**: sections are grouped behind a clean index with real values shown on each row.
+
+### Under the hood
+- **One size formatter**: five duplicate implementations now route through `StorageVolume.formatBytes`, with locale-correct sub-kilobyte output and every existing special case preserved.
+- **Removed dead weight**: unused parameters, branches, strings, splash colors, the unused Fraunces font, and ten legacy launcher PNGs (the adaptive icon covers every supported density).
+- **Lint and code hygiene**: modifier-parameter ordering, en dashes in page-range hints, a foreground-service start guarded against `ForegroundServiceStartNotAllowedException`, the TTS singleton's justified leak annotation, and a scoped `app/lint.xml` note for the adaptive-icon folder, whose lint "fix" breaks aapt2 linking.
+- **Accessibility test repaired**: the gallery cell test now asserts what the merged tile actually exposes — a visible name and a click action.
+
 ## [2.0.13] — 2026-11-16
 
 ### Less noise, more paper

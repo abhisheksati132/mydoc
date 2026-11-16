@@ -29,14 +29,15 @@ data class StorageVolume(
     companion object {
         fun formatBytes(bytes: Long): String {
             if (bytes <= 0) return "0 B"
+            val locale = Locale.getDefault()
             val kb = bytes / 1024.0
             val mb = kb / 1024.0
             val gb = mb / 1024.0
             return when {
-                gb >= 1.0 -> String.format(Locale.getDefault(), "%.1f GB", gb)
-                mb >= 1.0 -> String.format(Locale.getDefault(), "%.1f MB", mb)
-                kb >= 1.0 -> String.format(Locale.getDefault(), "%.1f KB", kb)
-                else -> "$bytes B"
+                gb >= 1.0 -> String.format(locale, "%.1f GB", gb)
+                mb >= 1.0 -> String.format(locale, "%.1f MB", mb)
+                kb >= 1.0 -> String.format(locale, "%.1f KB", kb)
+                else -> String.format(locale, "%d B", bytes)
             }
         }
     }

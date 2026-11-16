@@ -100,7 +100,7 @@ internal fun FileQuickPreviewSheet(
                         contentAlignment = Alignment.Center
                     ) {
                         if (item.isDirectory) FolderPlate(size = 72)
-                        else StorageThumbnail(item, Modifier.fillMaxSize(), generateOfficePreview = true)
+                        else StorageThumbnail(item, Modifier.fillMaxSize())
                     }
                 }
                 if (item.formattedLastModified.isNotBlank()) item(key = "modified") {

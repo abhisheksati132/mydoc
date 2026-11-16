@@ -60,9 +60,9 @@ fun PdfViewerDialogsAndSheets(
     onCloseTts: () -> Unit,
     currentTtsText: String,
     ttsManager: DocumentTtsManager,
+    modifier: Modifier = Modifier,
     onStartPlayback: (() -> Unit)? = null,
-    onRemoveDocument: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    onRemoveDocument: (() -> Unit)? = null
 ) {
     // Consolidated Reading Controls Bottom Sheet
     ReadingControlsBottomSheet(

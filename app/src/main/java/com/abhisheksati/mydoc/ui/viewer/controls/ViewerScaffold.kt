@@ -342,15 +342,31 @@ fun ViewerScaffold(
             },
             isContinuousScroll = readingPrefs.isContinuousScroll,
             onScrollModeChange = { continuous ->
-                val updated = readingPrefs.copy(isContinuousScroll = continuous)
+                val updated = readingPrefs.copy(
+                    isContinuousScroll = continuous,
+                    isDualPageView = if (continuous) false else readingPrefs.isDualPageView
+                )
                 onReadingPrefsChange?.invoke(updated)
-                app?.settingsRepository?.updateReadingPrefs { it.copy(isContinuousScroll = continuous) }
+                app?.settingsRepository?.updateReadingPrefs {
+                    it.copy(
+                        isContinuousScroll = continuous,
+                        isDualPageView = if (continuous) false else it.isDualPageView
+                    )
+                }
             },
             isDualPageView = readingPrefs.isDualPageView,
             onDualPageViewChange = { dual ->
-                val updated = readingPrefs.copy(isDualPageView = dual)
+                val updated = readingPrefs.copy(
+                    isDualPageView = dual,
+                    isContinuousScroll = if (dual) false else readingPrefs.isContinuousScroll
+                )
                 onReadingPrefsChange?.invoke(updated)
-                app?.settingsRepository?.updateReadingPrefs { it.copy(isDualPageView = dual) }
+                app?.settingsRepository?.updateReadingPrefs {
+                    it.copy(
+                        isDualPageView = dual,
+                        isContinuousScroll = if (dual) false else it.isContinuousScroll
+                    )
+                }
             },
             showLayoutControls = capabilities.supportsContinuousScroll || capabilities.supportsDualPageView,
             currentBrightness = readingPrefs.brightness,

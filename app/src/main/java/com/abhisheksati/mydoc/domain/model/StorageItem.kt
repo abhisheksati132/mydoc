@@ -60,20 +60,10 @@ data class StorageItem(
         }
 
     val formattedSize: String
-        get() {
-            if (isDirectory) {
-                return if (itemCount == 1) "1 item" else "$itemCount items"
-            }
-            if (sizeBytes <= 0) return "0 B"
-            val kb = sizeBytes / 1024.0
-            val mb = kb / 1024.0
-            val gb = mb / 1024.0
-            return when {
-                gb >= 1.0 -> String.format(Locale.getDefault(), "%.1f GB", gb)
-                mb >= 1.0 -> String.format(Locale.getDefault(), "%.1f MB", mb)
-                kb >= 1.0 -> String.format(Locale.getDefault(), "%.1f KB", kb)
-                else -> "$sizeBytes B"
-            }
+        get() = if (isDirectory) {
+            if (itemCount == 1) "1 item" else "$itemCount items"
+        } else {
+            StorageVolume.formatBytes(sizeBytes)
         }
 
     val formattedLastModified: String

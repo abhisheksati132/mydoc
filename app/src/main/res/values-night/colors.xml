@@ -3,12 +3,6 @@
     <!-- Matches the brand dark canvas so cold start has no flash. -->
     <color name="app_window_background">#0F0E0C</color>
 
-    <color name="splash_ink">#4FB0A6</color>
-    <color name="splash_plate">#0F0E0C</color>
-    <color name="splash_rule_one">#4FB0A6</color>
-    <color name="splash_rule_two">#C79A55</color>
-    <color name="splash_rule_three">#A8A090</color>
-
     <!-- Continue Reading widget (Ink & Seal, night) -->
     <color name="widget_surface">#1A1815</color>
     <color name="widget_row">#24211C</color>

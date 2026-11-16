@@ -140,6 +140,8 @@ fun FilesScreen(
                                 onOpenInTools = onOpenInTools, hazeState = hazeState, glassMotion = glassMotion,
                                 onPageVisibilityChange = onPageVisibilityChange,
                                 workspaceInsets = tabs.size > 1, onShowTransfers = { showTransfers = true },
+                                onOpenSavedSearches = { showSavedSearches = true },
+                                showWorkspaceTools = tabs.size > 1,
                                 workspaceMenu = { closeMenu ->
                                     DropdownMenuItem(text = { Text(stringResource(R.string.saved_searches_title)) },
                                         onClick = { closeMenu(); showSavedSearches = true })

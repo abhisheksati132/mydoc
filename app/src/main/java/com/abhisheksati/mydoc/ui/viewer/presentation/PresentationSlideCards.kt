@@ -468,13 +468,13 @@ fun HighlightableText(
     text: String,
     query: String,
     fontSize: androidx.compose.ui.unit.TextUnit,
+    modifier: Modifier = Modifier,
     fontWeight: FontWeight = FontWeight.Normal,
     fontStyle: FontStyle = FontStyle.Normal,
     fontFamily: FontFamily = FontFamily.Default,
     textDecoration: TextDecoration = TextDecoration.None,
     color: Color,
     textAlign: TextAlign = TextAlign.Start,
-    modifier: Modifier = Modifier
 ) {
     if (query.isNotBlank() && query.length >= 2 && text.contains(query, ignoreCase = true)) {
         val annotated = buildAnnotatedString {

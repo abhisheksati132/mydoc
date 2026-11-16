@@ -3,13 +3,6 @@
     <!-- Matches the brand light canvas so cold start has no flash. -->
     <color name="app_window_background">#F5F3EE</color>
 
-    <!-- Splash mark palette (Ink & Seal). Retained for theming parity; no rainbow hues. -->
-    <color name="splash_ink">#0E5C57</color>
-    <color name="splash_plate">#F5F3EE</color>
-    <color name="splash_rule_one">#0E5C57</color>
-    <color name="splash_rule_two">#A67C3D</color>
-    <color name="splash_rule_three">#6B6558</color>
-
     <!-- Continue Reading widget (Ink & Seal, day) -->
     <color name="widget_surface">#FCFBF8</color>
     <color name="widget_row">#F3F0E9</color>

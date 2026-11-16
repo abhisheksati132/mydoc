@@ -78,8 +78,7 @@ internal fun OpenSourceLicensesDialog(onDismiss: () -> Unit) {
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = "- Fraunces: Copyright (c) 2020 Undercase Type (Phaedra Charles, Flavia Zimbardi)\n" +
-                        "- Inter: Copyright (c) 2016-2026 Rasmus Andersson\n" +
+                    text = "- Inter: Copyright (c) 2016-2026 Rasmus Andersson\n" +
                         "- JetBrains Mono: Copyright (c) 2020-2026 JetBrains s.r.o.\n" +
                         "All bundled fonts are licensed under the SIL Open Font License, Version 1.1.",
                     style = MaterialTheme.typography.bodySmall,

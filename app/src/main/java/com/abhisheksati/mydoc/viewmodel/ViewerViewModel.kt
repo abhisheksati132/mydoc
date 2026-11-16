@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.abhisheksati.mydoc.domain.model.DocumentFile
 import com.abhisheksati.mydoc.domain.model.ReadingMode
+import com.abhisheksati.mydoc.domain.model.ReadingPrefs
 import com.abhisheksati.mydoc.domain.model.ViewState
 import com.abhisheksati.mydoc.util.SecureLog
 import com.abhisheksati.mydoc.util.UserMessages
@@ -456,10 +457,13 @@ class ViewerViewModel(
                         }
                         val initialPage = resumePage(savedState?.lastPage, totalPages)
                         val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
+                        val prefs = app?.settingsRepository?.readingPrefs?.value
                         val defaultMode = app?.settingsRepository?.defaultReadingMode?.value ?: ReadingMode.NORMAL
                         val initialMode = savedState?.readingMode ?: defaultMode
-                        val initialContinuous = savedState?.isContinuousScroll ?: true
-                        val initialFitPage = app?.settingsRepository?.readingPrefs?.value?.isFitPage ?: false
+                        // A document's own remembered layout wins; otherwise Settings supplies the default.
+                        val initialContinuous = savedState?.isContinuousScroll ?: prefs?.isContinuousScroll ?: true
+                        val initialDualPage = prefs?.isDualPageView ?: false
+                        val initialFitPage = prefs?.isFitPage ?: false
 
                         // PageItemView asks for each page's size while composing. Priming the
                         // first screenful here turns those into cache hits instead of native
@@ -476,6 +480,7 @@ class ViewerViewModel(
                                 currentPage = initialPage,
                                 readingMode = initialMode,
                                 isContinuousScroll = initialContinuous,
+                                isDualPageView = initialDualPage,
                                 isFitPage = initialFitPage,
                                 outline = outline
                             )
@@ -658,25 +663,53 @@ class ViewerViewModel(
     fun setReadingMode(mode: ReadingMode) {
         _uiState.update { it.copy(readingMode = mode) }
         persistViewState()
+        updateReadingPrefs { it.copy(readingMode = mode) }
     }
 
     fun toggleScrollMode() {
-        _uiState.update { it.copy(isContinuousScroll = !it.isContinuousScroll) }
-        persistViewState()
+        setContinuousScroll(!_uiState.value.isContinuousScroll)
     }
 
     fun setContinuousScroll(continuous: Boolean) {
-        _uiState.update { it.copy(isContinuousScroll = continuous) }
+        _uiState.update {
+            it.copy(
+                isContinuousScroll = continuous,
+                isDualPageView = if (continuous) false else it.isDualPageView
+            )
+        }
         persistViewState()
+        updateReadingPrefs {
+            it.copy(
+                isContinuousScroll = continuous,
+                isDualPageView = if (continuous) false else it.isDualPageView
+            )
+        }
     }
 
     fun setFitPage(fitPage: Boolean) {
         _uiState.update { it.copy(isFitPage = fitPage) }
         persistViewState()
+        updateReadingPrefs { it.copy(isFitPage = fitPage) }
     }
 
     fun setDualPageView(dual: Boolean) {
-        _uiState.update { it.copy(isDualPageView = dual) }
+        _uiState.update {
+            it.copy(
+                isDualPageView = dual,
+                isContinuousScroll = if (dual) false else it.isContinuousScroll
+            )
+        }
+        updateReadingPrefs {
+            it.copy(
+                isDualPageView = dual,
+                isContinuousScroll = if (dual) false else it.isContinuousScroll
+            )
+        }
+    }
+
+    /** The viewer's last layout choice also becomes Settings' default for the next document. */
+    private fun updateReadingPrefs(update: (ReadingPrefs) -> ReadingPrefs) {
+        (context as? com.abhisheksati.mydoc.MyDocApp)?.settingsRepository?.updateReadingPrefs(update)
     }
 
     fun toggleControls() {
@@ -818,7 +851,6 @@ class ViewerViewModel(
         ++loadGeneration
         officePassword = null
         waitingForOfficePassword = false
-        super.onCleared()
         releaseSession()
     }
 

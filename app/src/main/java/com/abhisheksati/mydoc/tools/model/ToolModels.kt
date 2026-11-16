@@ -1,6 +1,7 @@
 package com.abhisheksati.mydoc.tools.model
 
 import android.net.Uri
+import com.abhisheksati.mydoc.domain.model.StorageVolume
 import java.io.File
 
 /**
@@ -26,18 +27,7 @@ data class ToolExecutionResult(
     } else 0f
 }
 
-fun formatByteSize(bytes: Long): String {
-    if (bytes <= 0) return "0 B"
-    val kb = bytes / 1024.0
-    val mb = kb / 1024.0
-    val gb = mb / 1024.0
-    return when {
-        gb >= 1.0 -> String.format(java.util.Locale.getDefault(), "%.1f GB", gb)
-        mb >= 1.0 -> String.format(java.util.Locale.getDefault(), "%.1f MB", mb)
-        kb >= 1.0 -> String.format(java.util.Locale.getDefault(), "%.1f KB", kb)
-        else -> "$bytes B"
-    }
-}
+fun formatByteSize(bytes: Long): String = StorageVolume.formatBytes(bytes)
 
 /**
  * Real-time progress update for background processing.

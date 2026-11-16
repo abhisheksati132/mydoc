@@ -109,18 +109,8 @@ private fun mediumDateFormatter(): DateFormat =
     mediumDateFormatterLocal.get()
         ?: DateFormat.getDateInstance(DateFormat.MEDIUM).also { mediumDateFormatterLocal.set(it) }
 
-fun formatBytesPrecise(sizeBytes: Long): String {
-    if (sizeBytes <= 0) return "Unknown size"
-    val kb = sizeBytes / 1024.0
-    val mb = kb / 1024.0
-    val gb = mb / 1024.0
-    return when {
-        gb >= 1.0 -> String.format(Locale.getDefault(), "%.1f GB", gb)
-        mb >= 1.0 -> String.format(Locale.getDefault(), "%.1f MB", mb)
-        kb >= 1.0 -> String.format(Locale.getDefault(), "%.1f KB", kb)
-        else -> "$sizeBytes B"
-    }
-}
+fun formatBytesPrecise(sizeBytes: Long): String =
+    if (sizeBytes <= 0) "Unknown size" else StorageVolume.formatBytes(sizeBytes)
 
 fun formatRelativeTimestamp(lastModified: Long): String {
     if (lastModified <= 0) return ""

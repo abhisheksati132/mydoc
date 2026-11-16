@@ -69,8 +69,8 @@ fun SettingsAboutSection(
     updateState: UpdateUiState,
     checkUpdatesOnLaunch: Boolean,
     onCheckUpdatesOnLaunchChange: (Boolean) -> Unit,
-    onDesignSystemPreviewClick: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onDesignSystemPreviewClick: () -> Unit = {}
 ) {
     val scheme = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography

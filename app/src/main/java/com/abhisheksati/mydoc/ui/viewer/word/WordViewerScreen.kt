@@ -370,7 +370,7 @@ fun WordViewerScreen(
                                 ranges = ranges,
                                 active = isActiveBlock,
                                 lineHeight = null,
-                                modifier = paragraphModifier(block.layout, 8f, 8f),
+                                modifier = Modifier.paragraphPadding(block.layout, 8f, 8f),
                                 textAlign = paragraphAlignment(block.layout)
                             )
                         }
@@ -388,7 +388,7 @@ fun WordViewerScreen(
 
                         is DocxBlock.ListItem -> {
                             Row(
-                                modifier = paragraphModifier(block.layout).padding(
+                                modifier = Modifier.paragraphPadding(block.layout).padding(
                                     // A nested level indents; the marker comes from the document's own
                                     // numbering definition, so an ordered list reads "1." here and
                                     // "1." in the converted PDF instead of becoming a bullet.
@@ -449,7 +449,7 @@ private fun DocxParagraphView(
         ranges = ranges,
         active = active,
         lineHeight = DocumentReadingType.bodyLineHeight * fontScale,
-        modifier = paragraphModifier(paragraph.layout).fillMaxWidth(),
+        modifier = Modifier.paragraphPadding(paragraph.layout).fillMaxWidth(),
         textAlign = paragraphAlignment(paragraph.layout)
     )
 }
@@ -562,8 +562,8 @@ private fun DocxPictureView(block: DocxBlock.Image) {
 }
 
 // Reflow adapts large source indents to a phone while the PDF keeps their physical point values.
-private fun paragraphModifier(layout: DocxParagraphLayout, defaultBefore: Float = 0f, defaultAfter: Float = 0f) =
-    Modifier.padding(start = (layout.left ?: 0f).coerceIn(0f, 96f).dp,
+private fun Modifier.paragraphPadding(layout: DocxParagraphLayout, defaultBefore: Float = 0f, defaultAfter: Float = 0f) =
+    this.padding(start = (layout.left ?: 0f).coerceIn(0f, 96f).dp,
         end = (layout.right ?: 0f).coerceIn(0f, 96f).dp,
         top = (layout.before ?: defaultBefore).coerceIn(0f, 72f).dp,
         bottom = (layout.after ?: defaultAfter).coerceIn(0f, 72f).dp)

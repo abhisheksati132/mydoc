@@ -845,9 +845,7 @@ fun DirectoryPane(
                             onClick = {
                                 if (inSelectionMode) onToggleSelection(item) else onOpenItem(item)
                             },
-                            onLongClick = { onToggleSelection(item) },
-                            galleryTile = false,
-                            generateOfficePreview = isDocumentsCategory
+                            onLongClick = { onToggleSelection(item) }
                         )
                     }
                 }

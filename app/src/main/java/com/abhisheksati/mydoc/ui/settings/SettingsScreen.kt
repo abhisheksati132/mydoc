@@ -91,6 +91,8 @@ fun SettingsScreen(
 
     // LIBRARY
     val startupTab by settingsRepository.defaultStartupTab.collectAsState()
+    val documentSortOrder by settingsRepository.sortOrder.collectAsState()
+    val showHiddenFiles by settingsRepository.showHiddenFiles.collectAsState()
     var cacheSizeBytes by remember { mutableLongStateOf(0L) }
     LaunchedEffect(Unit) {
         // The size is a recursive walk of both cache trees; doing it in composition stalled the
@@ -168,6 +170,9 @@ fun SettingsScreen(
                             doubleTapZoom = doubleTapZoom,
                             keepScreenOn = keepScreenOn,
                             volumeKeyTurning = volumeKeyTurning,
+                            fontScale = readingPrefs.fontScale,
+                            continuousScroll = readingPrefs.isContinuousScroll,
+                            dualPageView = readingPrefs.isDualPageView,
                             onReadingModeChange = { settingsRepository.setDefaultReadingMode(it) },
                             onPdfFitModeChange = { mode ->
                                 settingsRepository.updateReadingPrefs {
@@ -176,7 +181,28 @@ fun SettingsScreen(
                             },
                             onDoubleTapZoomChange = { settingsRepository.setDoubleTapZoom(it) },
                             onKeepScreenOnChange = { settingsRepository.setKeepScreenOn(it) },
-                            onVolumeKeyTurningChange = { settingsRepository.setVolumeKeyPageTurning(it) }
+                            onVolumeKeyTurningChange = { settingsRepository.setVolumeKeyPageTurning(it) },
+                            onFontScaleChange = { scale ->
+                                settingsRepository.updateReadingPrefs { it.copy(fontScale = scale) }
+                            },
+                            onContinuousScrollChange = { continuous ->
+                                // The reader treats continuous scroll and two-page spread as mutually
+                                // exclusive, so the default must not describe a layout it cannot show.
+                                settingsRepository.updateReadingPrefs {
+                                    it.copy(
+                                        isContinuousScroll = continuous,
+                                        isDualPageView = if (continuous) false else it.isDualPageView
+                                    )
+                                }
+                            },
+                            onDualPageViewChange = { dual ->
+                                settingsRepository.updateReadingPrefs {
+                                    it.copy(
+                                        isDualPageView = dual,
+                                        isContinuousScroll = if (dual) false else it.isContinuousScroll
+                                    )
+                                }
+                            }
                         )
                     }
 
@@ -197,6 +223,10 @@ fun SettingsScreen(
                         SettingsStorageSection(
                             startupTab = startupTab,
                             cacheSizeBytes = cacheSizeBytes,
+                            documentSortOrder = documentSortOrder,
+                            showHiddenFiles = showHiddenFiles,
+                            onDocumentSortOrderChange = { settingsRepository.setSortOrder(it) },
+                            onShowHiddenFilesChange = { settingsRepository.setShowHiddenFiles(it) },
                             onStartupTabChange = { settingsRepository.setDefaultStartupTab(it) },
                             onClearCacheClick = {
                                 if (hapticFeedbackEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
